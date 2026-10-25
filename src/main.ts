@@ -1,6 +1,7 @@
 import { setupPvp, stopPvp } from "./pvp";
 import { setupGame, stopPlay } from "./play";
 import { showAdmin } from "./admin";
+import { showSlopStudio } from "./slop";
 import "./style.css";
 const root = document.querySelector<HTMLDivElement>("#app")!;
 export const escape = (s: unknown) =>
@@ -87,6 +88,7 @@ export async function render() {
   else if (location.pathname === "/tempo") await setupGame("timed");
   else if (location.pathname === "/pvp") await setupPvp();
   else if (location.pathname === "/admin") await showAdmin();
+  else if (location.pathname === "/admin/slop") await showSlopStudio();
   else
     content().innerHTML =
       '<section class="page"><h1>Pagina non trovata.</h1><a href="/">Torna all’inizio</a></section>';

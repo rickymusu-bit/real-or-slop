@@ -1,3 +1,5 @@
+import { prepareImport } from "./import";
+import { slopStudio } from "./slop";
 import {
   body,
   hash,
@@ -27,6 +29,7 @@ function url(value: string) {
   return value;
 }
 export async function moderation(request: Request, env: Env, path: string) {
+  if (path === "/api/admin/slop" || path.startsWith("/api/admin/slop/")) return slopStudio(request, env, path);
   const curationPath = path.match(/^\/api\/admin\/images\/([\w-]+)\/curation$/);
   if (curationPath) return curation(request, env, curationPath[1]);
   if (path === "/api/admin/images" && request.method === "GET") {
@@ -34,7 +37,7 @@ export async function moderation(request: Request, env: Env, path: string) {
       new URL(request.url).searchParams.get("status") || "in-review";
     const items = (
       await env.DB.prepare(
-        "SELECT i.*,s.page_url AS source_url,s.evidence,l.url AS license_url FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id WHERE i.status=? ORDER BY i.created_at DESC LIMIT 100",
+        "SELECT i.*,s.page_url AS source_url,s.evidence,l.url AS license_url,p.id AS studio_plan_id FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id LEFT JOIN slop_plans p ON p.image_id=i.id WHERE i.status=? ORDER BY i.created_at DESC LIMIT 100",
       )
         .bind(filter)
         .all()
@@ -53,83 +56,9 @@ export async function moderation(request: Request, env: Env, path: string) {
   }
   if (path === "/api/admin/import" && request.method === "POST") {
     const data = await body(request);
-    const uid = id();
-    const source = id();
-    const license = id();
-    if (!["REAL", "AI"].includes(String(data.type)))
-      throw new HttpError(400, "Tipo immagine non valido");
-    const type = String(data.type);
-    const title = text(data, "title", 300);
-    const author = text(data, "author", 300);
-    const explanation = text(data, "explanation");
-    const evidence = text(data, "evidence");
-    const licenseUrl = data.license_url
-      ? url(text(data, "license_url", 500))
-      : "";
-    const sourceUrl = url(text(data, "source_url", 1000));
-    const provider = text(data, "provider", 100);
-    const sourceId = text(data, "source_id", 300);
-    const difficulty = String(data.difficulty || "medio");
-    if (!["facile", "medio", "difficile"].includes(difficulty))
-      throw new HttpError(400, "Difficoltà non valida");
-    if (type === "AI" && data.owner_declaration !== true)
-      throw new HttpError(400, "Dichiarazione del proprietario richiesta");
-    const generationDate =
-      type === "AI" ? text(data, "generation_date", 40) : null;
-    if (generationDate && !/^\d{4}-\d{2}-\d{2}$/.test(generationDate))
-      throw new HttpError(400, "Data di generazione YYYY-MM-DD richiesta");
-    if (generationDate && Number.isNaN(Date.parse(generationDate)))
-      throw new HttpError(400, "Data non valida");
-    const model = type === "AI" ? text(data, "ai_model", 300) : null;
-    const prompt = type === "AI" ? text(data, "ai_prompt", 8000) : null;
-    const categories = Array.isArray(data.categories)
-      ? data.categories.map(String).slice(0, 12)
-      : [];
-    if (!categories.length) throw new HttpError(400, "Categoria richiesta");
-    await env.DB.batch([
-      env.DB.prepare("INSERT INTO sources VALUES(?,?,?,?,?)").bind(
-        source,
-        provider,
-        sourceId,
-        sourceUrl,
-        evidence,
-      ),
-      env.DB.prepare("INSERT INTO licenses VALUES(?,?,?,?)").bind(
-        license,
-        String(data.license_name || "Da verificare").slice(0, 200),
-        licenseUrl,
-        "Obblighi da verificare editorialmente",
-      ),
-      env.DB.prepare(
-        "INSERT INTO images(id,type,title,description,author,source_id,license_id,authenticity_evidence,r2_key,ai_model,ai_prompt,difficulty,status,sha256,explanation,demo,generation_date,owner_declaration) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'in-review','pending',?,0,?,?)",
-      ).bind(
-        uid,
-        type,
-        title,
-        String(data.description || ""),
-        author,
-        source,
-        license,
-        evidence,
-        id(),
-        model,
-        prompt,
-        difficulty,
-        explanation,
-        generationDate,
-        type === "AI" ? 1 : 0,
-      ),
-      ...categories.map((category) =>
-        env.DB.prepare("INSERT INTO image_categories VALUES(?,?)").bind(
-          uid,
-          category,
-        ),
-      ),
-    ]);
-    return json(
-      { id: uid, status: "in-review", upload: `/api/admin/assets/${uid}` },
-      201,
-    );
+    const prepared = prepareImport(env, data);
+    await env.DB.batch(prepared.statements);
+    return json({ id: prepared.id, status: "in-review", upload: `/api/admin/assets/${prepared.id}` }, 201);
   }
   const asset = path.match(/^\/api\/admin\/assets\/([\w-]+)$/);
   if (asset) {
@@ -223,6 +152,9 @@ export async function moderation(request: Request, env: Env, path: string) {
     const verifiedLicense = data.license_url
       ? url(text(data, "license_url", 500))
       : image.license_url;
+    const notes = text(data, "notes");
+    const explanation = data.explanation === undefined ? image.explanation : text(data, "explanation");
+    const auditNotes = explanation === image.explanation ? notes : JSON.stringify({ notes, changes: { explanation: { before: image.explanation, after: explanation } } });
     if (decision === "approved") {
       if (
         !allowedLicenses.includes(verifiedLicense) ||
@@ -241,7 +173,6 @@ export async function moderation(request: Request, env: Env, path: string) {
         httpMetadata: object.httpMetadata,
       });
     }
-    const notes = text(data, "notes");
     const eventId = id();
     const audit = await env.DB.batch([
       env.DB.prepare(
@@ -251,12 +182,12 @@ export async function moderation(request: Request, env: Env, path: string) {
         image.id,
         (await hash(env.ADMIN_TOKEN!)).slice(0, 12),
         decision,
-        notes,
+        auditNotes,
         image.id,
       ),
       env.DB.prepare(
-        "UPDATE images SET status=?,difficulty=?,rights_verified_at=CURRENT_TIMESTAMP WHERE id=? AND status='in-review' AND EXISTS(SELECT 1 FROM review_events WHERE id=?)",
-      ).bind(decision, difficulty, image.id, eventId),
+        "UPDATE images SET status=?,difficulty=?,explanation=?,rights_verified_at=CURRENT_TIMESTAMP WHERE id=? AND status='in-review' AND EXISTS(SELECT 1 FROM review_events WHERE id=?)",
+      ).bind(decision, difficulty, explanation, image.id, eventId),
       env.DB.prepare(
         "UPDATE licenses SET url=?,name=? WHERE id=(SELECT license_id FROM images WHERE id=?) AND EXISTS(SELECT 1 FROM review_events WHERE id=?)",
       ).bind(
