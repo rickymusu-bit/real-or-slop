@@ -4,7 +4,7 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-25",
   "build": {
-    "command": "npm run build"
+    "command": "npm run build",
   },
   "assets": {
     "directory": "./dist",
@@ -20,6 +20,7 @@
       "binding": "DB",
       "database_name": "real-or-slop-local",
       "migrations_dir": "migrations",
+      "database_id": "98a3e712-d9f9-4510-91ab-2b80329be753",
     },
   ],
   "previews": {
@@ -35,16 +36,6 @@
       ],
     },
   },
-  "r2_buckets": [
-    {
-      "binding": "IMAGES",
-      "bucket_name": "real-or-slop-approved-local",
-    },
-    {
-      "binding": "QUARANTINE",
-      "bucket_name": "real-or-slop-quarantine-local",
-    },
-  ],
   "durable_objects": {
     "bindings": [
       {
@@ -59,4 +50,37 @@
       "new_sqlite_classes": ["GameRoom"],
     },
   ],
+  "env": {
+    "local": {
+      "vars": {
+        "DATA_MODE": "demo",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "real-or-slop-local",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "IMAGES",
+          "bucket_name": "real-or-slop-approved-local",
+        },
+        {
+          "binding": "QUARANTINE",
+          "bucket_name": "real-or-slop-quarantine-local",
+        },
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "ROOMS",
+            "class_name": "GameRoom",
+          },
+        ],
+      },
+    },
+  },
+  "account_id": "89bb1f60467dcfd2147871748f0f9645",
 }

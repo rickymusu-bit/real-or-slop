@@ -7,15 +7,17 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "npm run build && wrangler dev --local --ip 0.0.0.0",
+    "dev": "npm run build && wrangler dev --local --env local --ip 0.0.0.0",
     "build": "tsc --noEmit && tsc -p tsconfig.worker.json --noEmit && vite build && node scripts/check-assets.mjs",
-    "lint": "eslint src worker tests",
+    "lint": "eslint src worker tests scripts/deploy-demo.mjs",
     "test": "node --import tsx --test tests/*.test.ts && python3 -m unittest discover -s tests -p '*_test.py'",
-    "db:migrate": "wrangler d1 migrations apply DB --local",
-    "db:seed": "wrangler d1 execute DB --local --file scripts/seed.sql",
+    "db:migrate": "wrangler d1 migrations apply DB --local --env local",
+    "db:seed": "wrangler d1 execute DB --local --env local --file scripts/seed.sql",
     "dry-run": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
     "preview": "node scripts/check-preview.mjs && wrangler preview --ignore-base-config",
-    "test:integration": "python3 scripts/integration.py"
+    "test:integration": "python3 scripts/integration.py",
+    "deploy:demo": "node scripts/deploy-demo.mjs",
+    "deploy:check": "node scripts/deploy-demo.mjs --check"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261025.1",

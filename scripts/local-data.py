@@ -6,7 +6,7 @@ from pathlib import Path
 p=argparse.ArgumentParser();p.add_argument('action',choices=['backup','restore-test']);args=p.parse_args()
 env={**os.environ,'XDG_CONFIG_HOME':os.environ.get('XDG_CONFIG_HOME','/tmp/real-or-slop-config')}
 backup=Path('.wrangler/backups/metadata.sql');backup.parent.mkdir(parents=True,exist_ok=True)
-def run(arguments):subprocess.run(['npx','wrangler','d1',*arguments],check=True,env=env,stdout=subprocess.DEVNULL)
+def run(arguments):subprocess.run(['npx','wrangler','d1',*arguments,'--env','local'],check=True,env=env,stdout=subprocess.DEVNULL)
 if args.action=='backup':
     run(['export','DB','--local','--output',str(backup)])
     print('Backup locale creato in .wrangler/backups/metadata.sql')

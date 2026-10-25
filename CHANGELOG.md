@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Demo remota senza dipendenza da R2, D1 esistente con ID esplicito e profilo separato per gli emulatori locali.
+- Rilascio demo con destinazione verificata, migrazioni/seed separati dalla build e provisioning automatico disabilitato.
 - Corretto il flusso build/packaging Cloudflare: output Vite esplicito, build Wrangler da checkout pulito e verifica index/risorse pubblicate.
 - Documentata la dipendenza dal codice applicativo ancora fuori da main e le impostazioni della dashboard esistente.
 
