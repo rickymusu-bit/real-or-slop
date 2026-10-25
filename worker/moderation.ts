@@ -157,6 +157,9 @@ export async function moderation(request: Request, env: Env, path: string) {
         )
       )
         throw new HttpError(409, "Immagine già revisionata");
+      const perceptualHash = request.headers.get("X-Perceptual-Hash");
+      if (perceptualHash !== null && !/^[0-9a-f]{16}$/i.test(perceptualHash))
+        throw new HttpError(400, "dHash richiesto in 16 caratteri esadecimali");
       if (Number(request.headers.get("content-length") || 0) > 12000000)
         throw new HttpError(413, "File troppo grande");
       const buffer = await request.arrayBuffer();
@@ -187,8 +190,10 @@ export async function moderation(request: Request, env: Env, path: string) {
       await env.QUARANTINE.put(image.r2_key, buffer, {
         httpMetadata: { contentType: mime },
       });
-      await env.DB.prepare("UPDATE images SET sha256=? WHERE id=?")
-        .bind(digest, image.id)
+      // The trusted reviewer may supply the offline pipeline's dHash for these
+      // bytes. A replacement without it must clear any previous fingerprint.
+      await env.DB.prepare("UPDATE images SET sha256=?,perceptual_hash=? WHERE id=?")
+        .bind(digest, perceptualHash?.toLowerCase() || null, image.id)
         .run();
       return json({ uploaded: true });
     }

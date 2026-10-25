@@ -1,5 +1,11 @@
 # Real or Slop — Protocollo di selezione delle immagini REAL e bilanciamento del dataset
 
+> **Correzione del campionamento, 25 ottobre 2026:** i requisiti qui sotto che
+> impongono proporzioni REAL/AI quasi uguali nella singola partita sono superati.
+> Vale il [contratto v2.0.0](campionamento-stratificato-v2.0.0.md): monete 50/50
+> indipendenti, preflight della capacità e comparabilità editoriale nel lungo periodo.
+> Le restanti regole editoriali di selezione e verifica restano valide.
+
 **Versione:** 1.0.0  
 **Data:** 25 ottobre 2026  
 **Stato:** specifica editoriale e tecnica approvata; implementazione da eseguire in PR separata.  
