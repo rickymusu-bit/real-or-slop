@@ -50,7 +50,21 @@ Piano Workers Free; nessun upgrade o billing autorizzato. D1, R2 Standard e buil
 
 Niente dati identificativi obbligatori. Sessioni anonime, nickname facoltativo; nessun analytics o cookie pubblicitario. Fonte/licenza/spiegazione soltanto dopo la risposta. Crediti delle immagini pubbliche devono rispettare attribuzioni e share-alike. Le immagini IA del catalogo futuro sono create per un gioco di fantasia. Informativa nell'app. Prima di un lancio pubblico definire titolare, contatti e tempi di conservazione effettivi.
 
-Specifiche versionate in `docs/specification-v1.1.0.md`. Versione app distinta: vedere `CHANGELOG.md`. La PR #10 è stata integrata dopo approvazione esplicita; lo studio SLOP successivo resta in una PR in bozza. Nessun comando di deploy eseguito in questa fase.
+Specifiche versionate in `docs/specification-v1.1.0.md`. Versione app distinta: vedere `CHANGELOG.md`. Le PR #10 e #11 sono state integrate dopo approvazione esplicita; il tema Digital Gallery successivo resta in una PR in bozza. Nessun comando di deploy eseguito in questa fase.
+
+## Digital Gallery (0.9.0)
+
+Tema scuro con palette REAL turchese / SLOP viola, Space Grotesk Bold e Inter
+locali con licenza OFL, immagini integre e pulsanti simmetrici. Le API mantengono
+`REAL`/`AI`. Home, impostazioni, gioco, risultati e PvP condividono il nuovo tema;
+le indicazioni demo rimangono esplicite. Accessibilità da tastiera, contrasto,
+progresso e movimento ridotto sono verificati in Chromium già disponibile.
+
+`npm run test:gallery` esegue controlli browser locali e salva screenshot in
+`artifacts/gallery/`. Eseguire in sequenza con le altre suite Wrangler.
+[Design, font, verifiche e misure](docs/digital-gallery-v1.0.0.md).
+Questa fase cambia soltanto l'interfaccia: precaricamento e preparazione dei timer
+restano alla fase successiva, con comportamento server attuale invariato.
 
 ## Studio SLOP (0.8.0)
 
@@ -130,7 +144,7 @@ L’integrazione avvia un Worker con stato **locale isolato** sulla porta 8788 e
 
 Configurazione anteprime, credenziali, guardia sui binding, backup e rilascio in [docs/cloudflare.md](docs/cloudflare.md). `node scripts/check-preview.mjs` blocca volontariamente le preview finché non sono indicati DB/bucket di test verificati. Il modello con segnaposto è separato dalla config attiva. L’accesso Cloudflare e l’isolamento remoto non sono certificati da un test locale o dry-run.
 
-Stato finale e limiti effettivi: [docs/verification.md](docs/verification.md). Le quattro PR sono dipendenti e restano in bozza verso main; l’ultima include l’intera demo. Nessuna verifica locale equivale a una pubblicazione Cloudflare riuscita.
+Stato finale e limiti effettivi: [docs/verification.md](docs/verification.md). Le quattro PR iniziali erano dipendenti; lo stato delle consegne successive è riportato nel documento di verifica. Nessuna verifica locale equivale a una pubblicazione Cloudflare riuscita.
 
 
 ## Demo Cloudflare senza bucket R2

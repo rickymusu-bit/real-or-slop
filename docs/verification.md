@@ -1,5 +1,15 @@
 # Verifiche effettive
 
+## Digital Gallery — 0.9.0
+
+- PR #11 integrata dopo approvazione esplicita, commit main `be86312`; branch `codex/10-digital-gallery` creato da quel main. La consegna del prompt 4 resta in una nuova PR in bozza, senza merge o pubblicazione.
+- Palette approvata, marchio REAL or SLOP, Space Grotesk Bold e Inter locali OFL, pulsanti simmetrici REAL/SLOP con valori API REAL/AI invariati. Home, modalità, domande, risultati, pagine informative, PvP e controlli amministrativi aggiornati; demo sempre dichiarata.
+- Nessuna modifica a Worker, schema, campionamento, dati, timer o protocollo delle sessioni. Precaricamento e fase di preparazione server-side restano al prompt 5; non viene dichiarato risolto il costo del caricamento durante il countdown.
+- Lint, 30 test Node esistenti (7 file nell'esecuzione isolata), 11 test Python, build TypeScript/Vite/asset e controllo diff superati. Integrazione locale con R2 e profilo demo senza R2: curatela/studio, autenticazione, anti-spoiler, campionamento indipendente, Allenamento/A tempo, timer server e PvP con due WebSocket, riconnessione e timeout superati.
+- `npm run test:gallery`: Chromium già installato, nessuna nuova dipendenza. Home/impostazioni/info/crediti e domande su viewport 1440×1000, 768×1024, 390×844 e 360×640; nessun overflow orizzontale, nessuno scroll verticale nelle domande verificate, immagini integre senza filtri e azioni simmetriche. Partite singole completate, timer a tempo visibile, due veri client PvP senza reveal anticipato. Verificati albero di accessibilità, tastiera, zoom con Spazio/Escape, focus, nomi REAL/SLOP, movimento ridotto, font locali e assenza di richieste esterne delle pagine. Screenshot/JSON in `artifacts/gallery/`, ignorati da Git.
+- Contrasti: testo secondario/superficie 7,75:1, testo su REAL 11,56:1 e su SLOP 7,84:1, bordi dei controlli/superficie 3,29:1. Font WOFF2 complessivi 60.956 byte, con licenze e provenienza; CSS 12,88 kB / JS 49,47 kB. Misure e confronto con 0.8.0 nel [documento del tema](digital-gallery-v1.0.0.md).
+- `npm run deploy:check` e packaging `npm run dry-run` eseguiti senza pubblicazione. Le suite Wrangler sono eseguite in sequenza per non ricostruire contemporaneamente lo stesso `dist/`. Limiti: fixture geometriche, Chromium/AX tree e non tutti gli screen reader; viewport bassi o zoom elevato possono richiedere scroll. Nessun benchmark di preloading, tema chiaro o risorsa Cloudflare aggiunti.
+
 ## Studio SLOP — 0.8.0
 
 - PR #10 integrata dopo approvazione esplicita, commit main `be91f8a`; branch `codex/09-studio-generazione-slop` creato da quel main. Questa fase prepara una nuova PR in bozza, senza merge o deploy.
