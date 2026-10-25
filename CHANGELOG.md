@@ -11,3 +11,8 @@
 ## 0.3.0 — 2026-10-25
 - Allenamento e A tempo completi con filtri, bilanciamento, sessioni e scadenze D1 server-side.
 - Crediti dopo risposta, ripresa, tasti rapidi, zoom, punteggio e statistiche editoriali private.
+
+## 0.4.0 — 2026-10-25
+- PvP due giocatori su Durable Objects SQLite e WebSocket hibernation, reveal comune, scadenze e audit D1.
+- Riconnessione HTTP/WebSocket, rate limit, abbandono e test con due client reali.
+- Backup/restore locali verificabili, configurazione preview fail-closed e piano di rilascio separato dalla produzione.

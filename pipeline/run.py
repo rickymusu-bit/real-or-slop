@@ -6,7 +6,8 @@ import sqlite3
 import uuid
 from pathlib import Path
 from urllib.parse import urlparse
-from urllib.request import Request,urlopen
+from urllib.request import Request,build_opener,HTTPRedirectHandler
+from urllib.error import HTTPError,URLError
 from .providers import Client,PROVIDERS
 
 LICENSES={'https://creativecommons.org/publicdomain/zero/1.0/':'CC0','https://creativecommons.org/publicdomain/mark/1.0/':'Public Domain Mark','https://creativecommons.org/licenses/by/4.0/':'CC BY 4.0','https://creativecommons.org/licenses/by-sa/4.0/':'CC BY-SA 4.0'}
@@ -33,16 +34,39 @@ def download(row, client, allowed_hosts):
     from PIL import Image, ImageOps
     parsed=urlparse(row['image_url'])
     if parsed.scheme!='https' or parsed.hostname not in allowed_hosts: raise ValueError('Host download non autorizzato dalla configurazione')
-    with urlopen(Request(row['image_url'],headers={'User-Agent':client.ua}),timeout=20) as r:
-        # Refuse redirects outside the explicit reviewed host list.
-        if urlparse(r.geturl()).hostname not in allowed_hosts: raise ValueError('Redirect non autorizzato')
-        data=r.read(12_000_001)
+    class ReviewedRedirect(HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            target=urlparse(newurl)
+            if target.scheme!='https' or target.hostname not in allowed_hosts: raise ValueError('Redirect non autorizzato')
+            return super().redirect_request(req,fp,code,msg,headers,newurl)
+    opener=build_opener(ReviewedRedirect())
+    for attempt in range(4):
+        client.sleep(client.delay)
+        try:
+            with opener.open(Request(row['image_url'],headers={'User-Agent':client.ua}),timeout=20) as r:
+                data=r.read(12_000_001)
+            break
+        except HTTPError as e:
+            if e.code not in (429,500,502,503,504) or attempt==3: raise
+            client.sleep(2**attempt)
+        except (TimeoutError,URLError):
+            if attempt==3: raise
+            client.sleep(2**attempt)
     if len(data)>12_000_000: raise ValueError('Immagine troppo grande')
     Image.MAX_IMAGE_PIXELS=30_000_000
     with Image.open(io.BytesIO(data)) as image:
         image.load(); tiny=ImageOps.grayscale(image).resize((9,8))
         pix=list(tiny.getdata()); bits=sum((pix[y*9+x]>pix[y*9+x+1])<<(y*8+x) for y in range(8) for x in range(8))
         return data,hashlib.sha256(data).hexdigest(),f'{bits:016x}'
+
+def optimize(data, target):
+    """Whole-frame derivative; original and editorial credits remain private and intact."""
+    from PIL import Image,ImageOps
+    with Image.open(io.BytesIO(data)) as image:
+        derivative=ImageOps.exif_transpose(image).convert('RGB')
+        derivative.thumbnail((1600,1600))
+        derivative.save(target,format='WEBP',quality=85,method=6)
+
 
 def ingest(db,rows,config,client=None,fetch_files=False,folder=Path('.pipeline/quarantine')):
     folder.mkdir(parents=True,exist_ok=True)
@@ -52,6 +76,8 @@ def ingest(db,rows,config,client=None,fetch_files=False,folder=Path('.pipeline/q
         if not row.get('source_id') or not row.get('source_url'): continue
         if db.execute('SELECT 1 FROM candidates WHERE (provider=? AND source_id=?) OR source_url=?',(row['provider'],row['source_id'],row['source_url'])).fetchone(): continue
         row={**row,'status':'in-review','rights_assessment':rights_check(row),'categories':config.get('categories',[]),'license_filter':config.get('licenses',[])}
+        if config.get('licenses') and LICENSES.get(row.get('rights','').rstrip('/')+'/') not in config['licenses']:
+            row['rights_assessment']='outside-license-filter'
         sha=phash=file=None
         uid=str(uuid.uuid4())
         if fetch_files and row['rights_assessment']=='eligible-needs-review':
@@ -60,6 +86,8 @@ def ingest(db,rows,config,client=None,fetch_files=False,folder=Path('.pipeline/q
             # Similarity suggests a duplicate, never proves authenticity.
             row['possible_duplicate']=any((int(phash,16)^int(p,16)).bit_count()<=5 for (p,) in db.execute('SELECT phash FROM candidates WHERE phash IS NOT NULL'))
             file=str(folder/uid); Path(file).write_bytes(data)
+            derived=folder/(uid+'.webp'); optimize(data,derived)
+            row['derived_file']=str(derived);row['transformation']='Whole-frame resize <=1600px, WebP q85; original and attribution retained privately'
         db.execute('INSERT INTO candidates VALUES(?,?,?,?,?,?,?,?)',(uid,row['provider'],row['source_id'],row['source_url'],json.dumps(row),sha,phash,file));count+=1
     db.commit();return count
 
@@ -67,11 +95,14 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--config',required=True);parser.add_argument('--provider',choices=PROVIDERS,required=True);parser.add_argument('--fixture');parser.add_argument('--live',action='store_true');parser.add_argument('--download',action='store_true');parser.add_argument('--out',default='.pipeline');args=parser.parse_args()
     config=json.loads(Path(args.config).read_text()); limit=config.get('max_results',10)
     if not isinstance(limit,int) or not 1<=limit<=50: raise ValueError('max_results deve essere tra 1 e 50')
+    config['max_results']=limit
     folder=Path(args.out);folder.mkdir(parents=True,exist_ok=True);db=connect(folder/'queue.sqlite')
     if args.fixture: rows=json.loads(Path(args.fixture).read_text());client=None
     elif args.live:
         client=Client(config.get('user_agent'));rows=[]
-        for q in queries(config): rows.extend(PROVIDERS[args.provider].search(client,q,limit-len(rows))); rows=rows[:limit]
+        for q in queries(config):
+            if len(rows)>=limit:break
+            rows.extend(PROVIDERS[args.provider].search(client,q,limit-len(rows)));rows=rows[:limit]
     else: parser.error('Usare --fixture oppure --live esplicito')
     if args.download and not args.live: parser.error('--download richiede --live')
     count=ingest(db,rows,config,client,args.download,folder/'quarantine')

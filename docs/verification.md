@@ -24,3 +24,21 @@
 - `python3 tests/game.integration.py`: sessioni con cookie HttpOnly, assenza di spiegazioni/crediti prima della risposta, bilanciamento, non ripetizione, refresh stabile, invii concorrenti idempotenti, riepilogo e punteggio verificati su D1 locale.
 - Scadenza forzata su una sessione di test tramite comando D1 **--local**: risposta tardiva rifiutata con 410 e sessione conclusa. Nessuna modifica remota.
 - Interfaccia con tastiera, ingrandimento, timer e ripresa rete implementata; test visuale su dispositivi fisici ancora da eseguire.
+
+## Fase 4 — stato finale locale
+- Node 24.19.0, Python 3.12.14, Vite 8.3.5, Wrangler 4.152.0; build frontend e Worker verificata con tsconfig separati, asset effettivi in dist/.
+- Suite finale: lint, **9 test Node e 9 test Python** superati. Fixture non vuote per tutti i sei provider, test retry 429, schema, indici univoci, seed idempotente e statistiche comuni solo/PvP.
+- `npm run test:integration` avvia un Worker locale distinto sulla porta 8788 con stato in `.wrangler/integration`, applica migrazioni/seed ed esegue controlli HTTP di navigazione/asset, moderazione, sessioni e due client WebSocket reali.
+- PvP verificato: stessa immagine e deadline, nessuna soluzione prima di entrambe le risposte, invii duplicati e round obsoleti rifiutati, riconnessione e scadenza con Durable Object alarm; risultati persistiti D1. Nessun browser aggiuntivo scaricato.
+- Moderazione: autenticazione, caricamento privato, conferme editoriali, licenze ambigue non approvabili, decisioni concorrenti con singola transizione audit. Metadati IA includono data e dichiarazione proprietario.
+- Tre migrazioni D1 locali; indice SHA-256 e vista statistiche per partite solo/PvP. Backup D1 esportato e ripristinato su un nuovo stato locale: almeno 24 immagini e nessuna violazione di chiave esterna.
+- `npx wrangler deploy --dry-run --outdir .wrangler/dry-run` superato: ASSETS, DB locale, R2 locale approvato/quarantena e ROOMS GameRoom con migrazione **new_sqlite_classes**. Nessuna distribuzione remota.
+- Guardia preview testata: rifiuta binding mancanti, segnaposto o risorse uguali a produzione. Configurazione attiva volutamente priva di ID DB/bucket preview reali. Esempi separati con segnaposto in docs/preview.example.jsonc.
+
+## Passaggi ancora necessari nell’account reale
+- L’ultima lettura del runtime non espone CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID né una regola per api.cloudflare.com. `wrangler whoami` risponde non autenticato; non è stato avviato un login interattivo o un account temporaneo.
+- Associare il segreto alla configurazione dell’ambiente e verificare account/permessi. Poi identificare o configurare risorse **di test** D1/R2 e Worker Previews senza avviare la produzione. Nessun ID o URL remoto inventato.
+- Verificare isolamento DO e binding sul vero URL di preview con due client; verificare quote Free e possibili condizioni R2 prima di eventuali attivazioni. Il dry-run locale non certifica queste operazioni.
+- Raccogliere e revisionare un catalogo reale con prove/licenze e immagini IA del proprietario. Tutti gli asset della demo sono sintetici, con etichette simulate; nessun archivio esterno è stato importato live.
+- Test visuali su dispositivi Android/desktop fisici, definizione dei contatti privacy e conservazione prima del lancio pubblico.
+- Quattro branch/PR dipendenti con destinazione main; nessun merge, auto-merge, push diretto a main, deploy produzione, Workers Builds, billing o DNS modificato. Il piano di rilascio e rollback è in docs/cloudflare.md.

@@ -73,7 +73,7 @@ class Smithsonian:
             content=r.get('content',{}); descriptive=content.get('descriptiveNonRepeating',{}); media=descriptive.get('online_media',{}).get('media',[])
             for m in media[:1]:
                 usage=m.get('usage',{}); freetext=content.get('freetext',{})
-                yield candidate(self.name,r['id'],r.get('title'),descriptive.get('record_link'),m.get('content'),freetext.get('name'),usage.get('access'),json.dumps(r),freetext.get('date'))
+                yield candidate(self.name,r['id'],r.get('title'),descriptive.get('record_link'),m.get('content'),freetext.get('name'),'https://creativecommons.org/publicdomain/zero/1.0/' if usage.get('access')=='CC0' else usage.get('access'),json.dumps(r),freetext.get('date'))
 class Nasa:
     name='nasa'
     def search(self,c,q,limit):
