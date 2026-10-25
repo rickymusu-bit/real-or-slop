@@ -42,3 +42,13 @@
 - Raccogliere e revisionare un catalogo reale con prove/licenze e immagini IA del proprietario. Tutti gli asset della demo sono sintetici, con etichette simulate; nessun archivio esterno è stato importato live.
 - Test visuali su dispositivi Android/desktop fisici, definizione dei contatti privacy e conservazione prima del lancio pubblico.
 - Quattro branch/PR dipendenti con destinazione main; nessun merge, auto-merge, push diretto a main, deploy produzione, Workers Builds, billing o DNS modificato. Il piano di rilascio e rollback è in docs/cloudflare.md.
+
+## Correzione del deployment Cloudflare
+
+- Repository riletto con fetch remoto: main al commit `a5a04d0` contiene solo README.md. La versione applicativa disponibile è il branch codex/04-pvp-cloudflare, commit `0a4752b`, con Vite 8.3.5, TypeScript e Worker API. La correzione parte da quel codice e non converte l’app in un sito statico differente.
+- Configurazione preservata: name real-or-slop, compatibility_date 2026-10-25, entry worker/index.ts, assets ASSETS in ./dist, routing API/SPA e binding dati. Output Vite esplicito in vite.config.ts e hook Wrangler `build.command: npm run build`.
+- `npm ci` da lockfile, lint, 9 test Node + 9 Python e build superati. La build verifica `dist/index.html`, il JS e il CSS compilati referenziati dall’HTML.
+- Rimossa esclusivamente la cartella generata dist; `npx wrangler deploy --dry-run --outdir .wrangler/dry-run` ha eseguito l’hook, ricreato index/JS/CSS e preparato il pacchetto con successo. Nessun file sorgente o credenziale pubblicato.
+- CI aggiornata per ripetere questo controllo senza dist preesistente. Integrazione locale di navigazione/asset, admin, sessioni e due client PvP eseguita con stato isolato.
+- Dashboard: conservare repository/integrazione esistenti, main e root /; impostare Build command npm run build al posto di None, lasciare Deploy command npx wrangler deploy. L’hook protegge anche l’invocazione diretta senza build separata; con build esplicito la verifica viene ripetuta nel deploy.
+- Non sono stati modificati dashboard, segreti, risorse cloud o main; nessun merge o deploy remoto. Prima del rilascio dell’app completa verificare i binding D1/R2/DO reali: quelli con nomi local non dimostrano risorse remote configurate.

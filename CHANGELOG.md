@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Corretto il flusso build/packaging Cloudflare: output Vite esplicito, build Wrangler da checkout pulito e verifica index/risorse pubblicate.
+- Documentata la dipendenza dal codice applicativo ancora fuori da main e le impostazioni della dashboard esistente.
+
 ## 0.1.0 — 2026-10-25
 - Architettura Worker/Vite, schema D1, seed sintetico idempotente e adapter storage.
 - Navigazione responsive, protezione amministrazione, controlli API/schema e CI.

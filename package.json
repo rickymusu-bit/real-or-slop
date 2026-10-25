@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "npm run build && wrangler dev --local --ip 0.0.0.0",
-    "build": "tsc --noEmit && tsc -p tsconfig.worker.json --noEmit && vite build",
+    "build": "tsc --noEmit && tsc -p tsconfig.worker.json --noEmit && vite build && node scripts/check-assets.mjs",
     "lint": "eslint src worker tests",
     "test": "node --import tsx --test tests/*.test.ts && python3 -m unittest discover -s tests -p '*_test.py'",
     "db:migrate": "wrangler d1 migrations apply DB --local",

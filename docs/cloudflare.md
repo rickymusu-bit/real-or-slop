@@ -1,6 +1,28 @@
 # Preview e rilascio guidato
 
-Questa implementazione resta locale finché non sono verificati account e risorse di test. Non usare un deploy di produzione per sbloccare una preview. Workers Builds non è stato collegato e nessun trigger produzione è stato attivato.
+L’integrazione GitHub–Cloudflare esistente è mantenuta. Questa correzione non la sostituisce, non modifica credenziali e non avvia merge o deploy remoti. Le risorse cloud restano da verificare separatamente; non usare un deploy di produzione per sbloccare una preview.
+
+## Correzione del rilevamento degli asset
+
+Diagnosi sul contenuto effettivo del repository: `main` al commit `a5a04d0` contiene soltanto README.md. Mancano package.json, lockfile, index.html e wrangler.jsonc. Il messaggio “Could not detect a directory containing static files” è coerente con un deploy eseguito da quel branch. L’app esistente nella PR #4 usa **TypeScript/Vite + Worker API**, non è un sito HTML statico pronto da caricare senza compilazione.
+
+La PR di correzione parte dall’app della PR #4 e ha destinazione main: include pertanto anche i commit applicativi ancora da revisionare. Nessun merge è stato eseguito. Dopo che il codice sarà approvato e presente nel branch collegato, la build deve generare gli asset prima del deploy.
+
+| Impostazione dashboard | Valore |
+| --- | --- |
+| Repository | rickymusu-bit/real-or-slop, collegamento esistente |
+| Production branch | main |
+| Root directory | / |
+| Build command | npm run build (al posto di None) |
+| Deploy command | npx wrangler deploy (invariato) |
+| Node | 24, come .nvmrc |
+| Output asset | dist, tramite assets.directory in wrangler.jsonc |
+
+Non cambiare root directory in `/dist`, non usare la index.html sorgente e non aggiungere un secondo hosting. Vite emette `dist/index.html` con JS/CSS compilati in `dist/assets/`. Il controllo eseguito da npm run build verifica la presenza di index e risorse locali referenziate. Wrangler mantiene entry worker/index.ts, binding ASSETS, routing API/SPA, compatibility_date e binding D1/R2/DO.
+
+`build.command` in Wrangler esegue npm run build anche quando si invoca direttamente npx wrangler deploy senza dist preesistente. Con il build esplicito in dashboard la build viene ripetuta durante il deploy: è una verifica deliberata del contenuto del pacchetto, senza migrazioni o pubblicazioni nello script build. CI cancella dist e controlla che il dry-run lo ricrei. Il dry-run non pubblica il Worker.
+
+La correzione risolve la generazione e individuazione degli asset. I binding con suffisso local sono ancora emulatori, non risorse remote: prima di un rilascio dell’app completa verificare separatamente D1, R2 e DO nell’account esistente. Non inventare ID o creare automaticamente risorse; un dry-run riuscito non dimostra che questi binding remoti siano pronti.
 
 ## Accesso
 

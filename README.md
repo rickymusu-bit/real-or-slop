@@ -22,21 +22,27 @@ Browser → Vite dist/ → Worker router → D1 (catalogo, audit, sessioni)
 Python offline → quarantena privata → revisione autenticata → catalogo approvato
 ```
 
-La build esegue TypeScript e Vite e produce `dist/`; l'entry Worker è `worker/index.ts`. `/api/*` attraversa sempre il Worker e non restituisce il fallback SPA. Le risposte non sono incluse negli asset frontend. `/admin` e `/api/admin/*` verificano un token server-side: disabilitati se non configurato. Nessun segreto frontend.
+La build esegue TypeScript e Vite, produce `dist/` (configurato in `vite.config.ts`) e verifica che `index.html` e tutte le risorse locali referenziate siano presenti; l'entry Worker è `worker/index.ts`. `/api/*` attraversa sempre il Worker e non restituisce il fallback SPA. Le risposte non sono incluse negli asset frontend. `/admin` e `/api/admin/*` verificano un token server-side: disabilitati se non configurato. Nessun segreto frontend.
 
-## Cloudflare Workers Builds (non attivato)
+## Cloudflare Workers Builds (integrazione GitHub esistente)
 
 | Impostazione | Valore |
 |---|---|
 | Repository | `rickymusu-bit/real-or-slop` |
 | Branch produzione | `main` |
-| Directory | radice del repository |
+| Directory | `/` (radice del repository) |
 | Node | 24 |
 | Build | `npm run build` |
 | Deploy produzione | `npx wrangler deploy` **solo dopo approvazione esplicita del rilascio** |
 | Preview branch/PR | `npx wrangler preview` |
 
-Wrangler 4.152.0 fissato nel lockfile (minimo richiesto dalle specifiche: 4.135.0). Non usare deploy per ottenere preview. La configurazione attiva non contiene ID o bucket inventati: D1 senza ID è esclusivamente locale. Prima della preview assegnare risorse di TEST verificate al blocco `previews`; verificare schema effettivo Wrangler. Account, autorizzazioni e quote devono essere configurati dal proprietario. Non è stato collegato Workers Builds, né abilitato alcun trigger. La prima connessione può pubblicare: richiede approvazione prima dell'avvio.
+Impostare **Build command: `npm run build`** al posto di `None`. Lasciare **Deploy command: `npx wrangler deploy`**, branch `main` e root `/`. Per Workers l’output è configurato in `wrangler.jsonc` con `assets.directory: "./dist"`, non cambiando la root in `/dist`. Non pubblicare la `index.html` sorgente: fa riferimento a TypeScript da compilare.
+
+Wrangler esegue anche un hook `build.command: "npm run build"`: un deploy da checkout pulito ricrea `dist/` prima del packaging, anche se il comando build della dashboard è ancora `None`. Con il build esplicito in dashboard la compilazione viene ripetuta intenzionalmente prima del deploy, per verificare gli asset effettivamente inclusi. `dist/` resta generata e ignorata da Git; non servono token nei file del progetto.
+
+Al momento della diagnosi, `main` al commit `a5a04d0` conteneva solo `README.md`: l’app TypeScript/Vite + Worker è nella PR #4. La correzione mantiene quell’architettura e ne include i commit; serve portare il codice applicativo su main tramite revisione e merge approvato. Modificare soltanto la dashboard mentre main contiene solo il README non può produrre un sito. Vedere [diagnosi e impostazioni](docs/cloudflare.md#correzione-del-rilevamento-degli-asset).
+
+Wrangler 4.152.0 fissato nel lockfile (minimo richiesto dalle specifiche: 4.135.0). Non usare deploy per ottenere preview. La configurazione attiva non contiene ID o bucket inventati: D1 senza ID è esclusivamente locale. Prima della preview assegnare risorse di TEST verificate al blocco `previews`; verificare schema effettivo Wrangler. Account, autorizzazioni e quote devono essere configurati dal proprietario. L’integrazione GitHub–Cloudflare esistente viene mantenuta. Le modifiche a main possono avviare il rilascio: il merge richiede approvazione esplicita anche per la pubblicazione.
 
 Piano Workers Free; nessun upgrade o billing autorizzato. D1, R2 Standard e build hanno quote separate. Superare le franchigie R2 può costare; non attivare automaticamente. Dominio personalizzato facoltativo, DNS e acquisti separati.
 
