@@ -1,0 +1,8 @@
+{
+  "$schema":"node_modules/wrangler/config-schema.json",
+  "name":"real-or-slop", "main":"worker/index.ts", "compatibility_date":"2026-10-25",
+  "assets":{"directory":"./dist","binding":"ASSETS","not_found_handling":"single-page-application","run_worker_first":["/api/*","/admin","/admin/*"]},
+  "vars":{"DATA_MODE":"demo"},
+  "d1_databases":[{"binding":"DB","database_name":"real-or-slop-local","migrations_dir":"migrations"}],
+  "previews":{"vars":{"DATA_MODE":"demo"}}
+}
