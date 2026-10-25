@@ -7,3 +7,7 @@
 ## 0.2.0 — 2026-10-25
 - Connettori Python ufficiali, quarantena privata, controlli diritti/deduplica e workflow manuale inattivo.
 - Import REAL/AI, upload privato, revisione editoriale autenticata e audit locale.
+
+## 0.3.0 — 2026-10-25
+- Allenamento e A tempo completi con filtri, bilanciamento, sessioni e scadenze D1 server-side.
+- Crediti dopo risposta, ripresa, tasti rapidi, zoom, punteggio e statistiche editoriali private.
