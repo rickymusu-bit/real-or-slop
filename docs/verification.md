@@ -52,3 +52,13 @@
 - CI aggiornata per ripetere questo controllo senza dist preesistente. Integrazione locale di navigazione/asset, admin, sessioni e due client PvP eseguita con stato isolato.
 - Dashboard: conservare repository/integrazione esistenti, main e root /; impostare Build command npm run build al posto di None, lasciare Deploy command npx wrangler deploy. L’hook protegge anche l’invocazione diretta senza build separata; con build esplicito la verifica viene ripetuta nel deploy.
 - Non sono stati modificati dashboard, segreti, risorse cloud o main; nessun merge o deploy remoto. Prima del rilascio dell’app completa verificare i binding D1/R2/DO reali: quelli con nomi local non dimostrano risorse remote configurate.
+
+## Correzione binding della demo dopo il primo deploy remoto
+
+- Log fornito dal proprietario: il build d9400cbf-9fed-4d1e-9108-23deb470fe5a genera correttamente index/JS/CSS; fallisce con errore R2 10085 per il bucket real-or-slop-quarantine-local inesistente. Il medesimo log documenta che Wrangler ha creato D1 real-or-slop-local automaticamente.
+- ID D1 `98a3e712-d9f9-4510-91ab-2b80329be753` fornito dal proprietario, account `89bb1f60467dcfd2147871748f0f9645` verificato nel log: configurati come identificativi non segreti. Nessuna credenziale aggiunta e nessun’altra risorsa creata da questa sessione.
+- Il deploy principale non include binding R2; il renderer SVG esistente copre le immagini demo. R2 emulato separato in env.local per upload/moderazione; comandi locali aggiornati con --local --env local.
+- Lint e suite Node/Python superati. Integrazione HTTP/WebSocket passata sia nel profilo locale completo sia nella configurazione demo SENZA R2, sempre con database e Durable Objects locali. Verificate anche le immagini servite nella partita singola e nel PvP.
+- `npm run deploy:check` superato: destinazione D1/account/Worker vincolata al rilascio demo approvato, nessuna rete. `npm run deploy:demo -- --dry-run` superato: packaging ASSETS + D1 + ROOMS, nessun binding R2, nessuna migrazione/seed remoto, provisioning automatico disabilitato.
+- Il comando di rilascio demo applica separatamente le migrazioni versionate e il seed sintetico idempotente, quindi deploya con --no-experimental-provision e ambiente principale esplicito. Interrompe il flusso al primo errore; non attiva R2 o billing.
+- Per eseguirlo nell’integrazione Cloudflare già esistente occorre impostare Deploy command `npm run deploy:demo` (Build resta npm run build, main e root / invariati). L’ambiente di questa chat non espone ancora credenziali/accesso API Cloudflare: il nuovo flusso remoto è preparato, non eseguito o certificato qui.

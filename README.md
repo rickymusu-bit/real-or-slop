@@ -33,16 +33,16 @@ La build esegue TypeScript e Vite, produce `dist/` (configurato in `vite.config.
 | Directory | `/` (radice del repository) |
 | Node | 24 |
 | Build | `npm run build` |
-| Deploy produzione | `npx wrangler deploy` **solo dopo approvazione esplicita del rilascio** |
+| Deploy demo attuale | `npm run deploy:demo` **solo per il rilascio approvato** |
 | Preview branch/PR | `npx wrangler preview` |
 
-Impostare **Build command: `npm run build`** al posto di `None`. Lasciare **Deploy command: `npx wrangler deploy`**, branch `main` e root `/`. Per Workers l’output è configurato in `wrangler.jsonc` con `assets.directory: "./dist"`, non cambiando la root in `/dist`. Non pubblicare la `index.html` sorgente: fa riferimento a TypeScript da compilare.
+Impostare **Build command: `npm run build`** al posto di `None`. Per la demo attuale impostare **Deploy command: `npm run deploy:demo`**, mantenendo branch `main` e root `/`; vedere la sezione demo senza R2 sotto. Per Workers l’output è configurato in `wrangler.jsonc` con `assets.directory: "./dist"`, non cambiando la root in `/dist`. Non pubblicare la `index.html` sorgente: fa riferimento a TypeScript da compilare.
 
 Wrangler esegue anche un hook `build.command: "npm run build"`: un deploy da checkout pulito ricrea `dist/` prima del packaging, anche se il comando build della dashboard è ancora `None`. Con il build esplicito in dashboard la compilazione viene ripetuta intenzionalmente prima del deploy, per verificare gli asset effettivamente inclusi. `dist/` resta generata e ignorata da Git; non servono token nei file del progetto.
 
 Al momento della diagnosi, `main` al commit `a5a04d0` conteneva solo `README.md`: l’app TypeScript/Vite + Worker è nella PR #4. La correzione mantiene quell’architettura e ne include i commit; serve portare il codice applicativo su main tramite revisione e merge approvato. Modificare soltanto la dashboard mentre main contiene solo il README non può produrre un sito. Vedere [diagnosi e impostazioni](docs/cloudflare.md#correzione-del-rilevamento-degli-asset).
 
-Wrangler 4.152.0 fissato nel lockfile (minimo richiesto dalle specifiche: 4.135.0). Non usare deploy per ottenere preview. La configurazione attiva non contiene ID o bucket inventati: D1 senza ID è esclusivamente locale. Prima della preview assegnare risorse di TEST verificate al blocco `previews`; verificare schema effettivo Wrangler. Account, autorizzazioni e quote devono essere configurati dal proprietario. L’integrazione GitHub–Cloudflare esistente viene mantenuta. Le modifiche a main possono avviare il rilascio: il merge richiede approvazione esplicita anche per la pubblicazione.
+Wrangler 4.152.0 fissato nel lockfile (minimo richiesto dalle specifiche: 4.135.0). Non usare deploy per ottenere preview. La configurazione attiva non contiene ID o bucket inventati: il D1 principale usa l’ID reale confermato dal proprietario; il profilo local usa invece gli emulatori. Prima della preview assegnare risorse di TEST verificate al blocco `previews`; verificare schema effettivo Wrangler. Account, autorizzazioni e quote devono essere configurati dal proprietario. L’integrazione GitHub–Cloudflare esistente viene mantenuta. Le modifiche a main possono avviare il rilascio: il merge richiede approvazione esplicita anche per la pubblicazione.
 
 Piano Workers Free; nessun upgrade o billing autorizzato. D1, R2 Standard e build hanno quote separate. Superare le franchigie R2 può costare; non attivare automaticamente. Dominio personalizzato facoltativo, DNS e acquisti separati.
 
@@ -69,7 +69,7 @@ Quarantena `.pipeline/` privata e ignorata da Git. Deduplica fonte/URL prima del
 
 Admin: configurare un token casuale >=32 caratteri in `.dev.vars` (mai committarlo): `ADMIN_TOKEN=...`. Aprire `/admin`; autenticazione HTTP Basic (utente `admin`, password token), sempre HTTPS fuori localhost. API supporta anche Bearer. Import JSON con: type, title, description, author, source_url, source_id, provider, license_name, license_url, evidence, explanation, categories (ID), difficulty; per AI anche ai_model, ai_prompt, generation_date (YYYY-MM-DD), owner_declaration=true. I contenuti e gli eventi inventati devono essere verificati dall’editore prima dell’approvazione. Il file JPEG/PNG/WebP va caricato separatamente; SVG non accettati. Il menu privato consente filtri, prove, licenza, modifica categorie/difficoltà e audit della decisione. Protezione server-side su pagina, API e upload.
 
-I bucket `*-local` nella configurazione sono nomi di emulatori, non risorse remote esistenti. L’approvazione copia soltanto dallo storage quarantena allo storage approvato dell’ambiente corrente; non avvia deploy/import produzione. Le fixture demo e il catalogo verificato sono separati dal campo `demo`.
+I bucket `*-local` sono dichiarati soltanto nel profilo env.local e vengono usati con --local --env local, non nel deploy remoto. L’approvazione copia soltanto dallo storage quarantena allo storage approvato dell’ambiente corrente; non avvia deploy/import produzione. Le fixture demo e il catalogo verificato sono separati dal campo `demo`.
 
 ## Allenamento e A tempo (fase 3)
 
@@ -94,3 +94,12 @@ L’integrazione avvia un Worker con stato **locale isolato** sulla porta 8788 e
 Configurazione anteprime, credenziali, guardia sui binding, backup e rilascio in [docs/cloudflare.md](docs/cloudflare.md). `node scripts/check-preview.mjs` blocca volontariamente le preview finché non sono indicati DB/bucket di test verificati. Il modello con segnaposto è separato dalla config attiva. L’accesso Cloudflare e l’isolamento remoto non sono certificati da un test locale o dry-run.
 
 Stato finale e limiti effettivi: [docs/verification.md](docs/verification.md). Le quattro PR sono dipendenti e restano in bozza verso main; l’ultima include l’intera demo. Nessuna verifica locale equivale a una pubblicazione Cloudflare riuscita.
+
+
+## Demo Cloudflare senza bucket R2
+
+La demo pubblica genera SVG nel Worker e collega il D1 già creato `real-or-slop-local` (ID `98a3e712-d9f9-4510-91ab-2b80329be753`, confermato dal proprietario). La configurazione principale non richiede R2. L’account ID e il database ID sono pubblici identificativi di risorse, non credenziali.
+
+Impostare nella dashboard esistente **Build: npm run build**, **Deploy: npm run deploy:demo**, branch main e root /. Il rilascio demo applica schema e fixture idempotenti al D1 verificato, poi pubblica il Worker con provisioning automatico disabilitato. La build da sola non esegue migrazioni o seed remoti. Controllo senza rete: npm run deploy:check. Packaging senza modifiche remote: npm run deploy:demo -- --dry-run.
+
+Il profilo locale mantiene R2 emulato per i test di moderazione; npm run dev/db:migrate/db:seed lo selezionano automaticamente con --local. I test del gioco verificano anche la demo senza binding R2. Non creare bucket a pagamento per risolvere l’errore 10085: [procedura e limiti](docs/cloudflare.md#demo-remota-senza-r2--correzione-errore-10085).

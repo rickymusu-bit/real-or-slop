@@ -56,3 +56,26 @@ Prima di ogni migrazione remota autorizzata: esportare D1 con config e ID verifi
 Stanza privata di due giocatori, codice casuale 60 bit, scadenza 30 minuti. Stato DO SQLite; risultati D1, immagini R2 o fixture. WebSocket hibernation, massimo due connessioni per giocatore, rate limit su creazione/ingresso e messaggi, timeout con alarm server-side. HTTP di ripresa solo durante perdita WebSocket (circa una richiesta ogni 2,5 secondi/client): usare con moderazione nelle quote Free. Risposte 429/503 mostrano un errore e consentono ripresa; nessun upgrade automatico. I timeout contano come risposta errata e tempo massimo; parità per punti, poi tempo totale minore. Una parità esatta resta parità.
 
 Riconnessione nella stessa scheda tramite token in sessionStorage; il token non contiene soluzioni e non viene incluso negli URL. WebSocket trasmette il token nel subprotocollo, HTTP nel bearer header. Nessuna classifica pubblica o raccolta email. Cambiare browser senza token richiede una nuova stanza. La funzionalità remota e l’isolamento DO restano da verificare nell’account reale.
+
+## Demo remota senza R2 — correzione errore 10085
+
+Il log del build d9400cbf-9fed-4d1e-9108-23deb470fe5a conferma che compilazione e upload asset funzionano; il deployment fallisce su `R2 bucket 'real-or-slop-quarantine-local' not found` (10085). Wrangler 4.152.0 ha inoltre creato automaticamente D1 `real-or-slop-local`. Il proprietario ha fornito il suo ID: `98a3e712-d9f9-4510-91ab-2b80329be753`, nell’account `89bb1f60467dcfd2147871748f0f9645` riportato dal log. Sono identificativi non segreti, non token.
+
+La configurazione principale collega esplicitamente quel database esistente e non dichiara bucket R2: DATA_MODE=demo usa il renderer SVG già presente nel Worker. L’adapter R2 e la moderazione restano disponibili per un ambiente configurato in seguito, senza richiedere attivazioni o fatturazione per pubblicare la demo. I due bucket sintetici esistono solo nel profilo `env.local`, usato con **--local --env local**. Non eseguire mai un deploy remoto del profilo local.
+
+Per il rilascio della demo tramite l’integrazione GitHub–Cloudflare esistente:
+
+| Impostazione | Valore |
+| --- | --- |
+| Branch / root | main / / |
+| Build command | npm run build |
+| Deploy command | **npm run deploy:demo** |
+| Node | 24 |
+
+Il comando deploy:demo verifica account, Worker, DATA_MODE=demo, ID D1 confermato e assenza di bucket R2 remoti. Poi esegue, in ordine, migrazioni D1 versionate sul database esistente, seed sintetico idempotente e `wrangler deploy --no-experimental-provision`. Non crea database o bucket e non attiva R2. Migrazioni e seed rimangono separati dalla build e non vengono eseguiti nel dry-run. Se una fase fallisce il deploy non continua. Le migrazioni presenti sono additive; il seed usa INSERT OR IGNORE e non cancella dati. Questo comando è riservato alla demo, non al futuro catalogo reale.
+
+`npm run deploy:check` verifica soltanto la destinazione senza rete. `npm run deploy:demo -- --dry-run` prepara soltanto il pacchetto, senza migrazioni o seed remoti. L’ID del database va mantenuto esplicito: senza di esso Wrangler può creare automaticamente risorse; il precedente dry-run non lo mostrava perché usa risorse simulate/inheritance.
+
+Sviluppo e moderazione locali continuano con npm run db:migrate, npm run db:seed e npm run dev, che selezionano il profilo local e gli emulatori. CI prova sia quel profilo con storage R2 emulato sia le modalità di gioco con la configurazione demo SENZA alcun binding R2 e con tutti i servizi eseguiti localmente.
+
+Dopo il rilascio verificare pagina iniziale, /api/categories, una partita Allenamento e due client PvP sul vero URL workers.dev. L’admin remoto rimane disabilitato senza ADMIN_TOKEN e gli upload richiedono uno storage esplicitamente configurato; la demo pubblica non ne ha bisogno. Nessun bucket locale inesistente deve essere creato nell’account per aggirare questo errore.

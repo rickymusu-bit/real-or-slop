@@ -9,6 +9,8 @@ def req(path,method='GET',data=None,opener=client):
     except urllib.error.HTTPError as e:return e.code,json.loads(e.read())
 status,result=req('/api/sessions','POST',{'mode':'training','count':4});assert status==201,(status,result)
 sid=result['id'];status,state=req('/api/sessions/'+sid);assert state['total']==4
+with client.open(base+state['question']['image']) as image:
+    assert image.status==200 and image.headers['Content-Type']=='image/svg+xml'
 assert not any(k in json.dumps(state) for k in ['explanation','ai_prompt','author','licenseUrl'])
 assert req('/api/sessions/'+sid,opener=urllib.request.build_opener())[0]==401
 seen=set()
@@ -34,7 +36,9 @@ expiry=json.loads(Path('/tmp/ros-expiry-state.json').read_text())
 import uuid
 uuid.UUID(expiry['id'])
 command="UPDATE game_sessions SET expires_at=1 WHERE id='"+expiry['id']+"'"
-subprocess.run(['npx','wrangler','d1','execute','DB','--local','--persist-to',os.environ.get('ROS_TEST_STATE','.wrangler/state'),'--command',command],check=True,stdout=subprocess.DEVNULL,env={**os.environ,'XDG_CONFIG_HOME':'/tmp/real-or-slop-config'})
+profile=os.environ.get('ROS_TEST_PROFILE','local')
+profile_args=['--env',profile] if profile else []
+subprocess.run(['npx','wrangler','d1','execute','DB','--local','--persist-to',os.environ.get('ROS_TEST_STATE','.wrangler/state'),'--command',command,*profile_args],check=True,stdout=subprocess.DEVNULL,env={**os.environ,'XDG_CONFIG_HOME':'/tmp/real-or-slop-config'})
 assert req('/api/sessions/'+expiry['id']+'/answer','POST',{'roundId':expiry['roundId'],'choice':'REAL'})[0]==410
 assert req('/api/sessions/'+expiry['id'])[1]['done']
 Path('/tmp/ros-expiry-state.json').unlink();Path('/tmp/ros-expiry-session').unlink()
