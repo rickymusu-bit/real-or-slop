@@ -1,5 +1,16 @@
 # Verifiche effettive
 
+## Metadati editoriali — 0.5.0
+
+- Base aggiornata a `main` (`96763a4`); fase limitata ai metadati privati. Contratto e vocabolari documentati in [metadati editoriali v1.0.0](metadati-editoriali-v1.0.0.md).
+- `npm ci --cache /tmp/real-or-slop-npm --no-audit --no-fund`, lint (incluso shared), `npm test` e build TypeScript/Vite/asset superati. Nessuna dipendenza aggiunta. Esecuzione esplicita del runner Node senza isolamento: **13 test Node**; suite Python: **10 test**.
+- Migrazione additiva applicata a un database SQLite con catalogo preesistente: dati immagini/fonti/licenze/categorie/revisioni invariati, schede mancanti ammesse, chiavi esterne e vincoli controllati. Verificata immutabilità degli eventi e corrispondenza dei vocabolari SQL/API.
+- `npm run test:integration` superato su Worker, D1, R2 e Durable Objects **locali**. Test REAL e AI: autorizzazioni GET/PUT/DELETE, origine estranea, campi sconosciuti, lunghezze/tipi, conferma dei fatti, creazione/modifica/cancellazione valori, snapshot audit, revisioni obsolete, due salvataggi concorrenti sia alla creazione sia all'aggiornamento. Una sola transazione riesce; l'altra riceve 409.
+- La scheda non cambia provenienza, licenza, classe, difficoltà o approvazione. Conferme umane ancora necessarie; nessun import approvato automaticamente. Partita demo completa di 24 round con annotazioni presenti/assenti senza esposizione di indizi privati; test esistenti di timer, ownership, replay e PvP con due WebSocket superati.
+- `ROS_TEST_PROFILE= npm run test:integration` superato anche senza binding R2. `npm run deploy:check` superato come sola verifica offline della configurazione.
+- Chromium **già disponibile**, nessuna installazione: verifica browser autenticata del modulo, salvataggio, cronologia, blocco decisione con modifiche non salvate, nessuna eccezione JavaScript e nessun overflow orizzontale a 390 px. Screenshot locali in `artifacts/admin-curation-desktop.png` (1280×1000) e `artifacts/admin-curation-mobile.png` (390×844); artifact esclusi da Git. I candidati fixture senza upload mostrano l'assenza dell'anteprima, prevista fino al caricamento.
+- Nessun merge, deploy, migrazione remota, import live, generazione immagini o nuova risorsa cloud. Restano da verificare dispositivi fisici e identità individuali dei revisori (il fingerprint identifica il token amministrativo condiviso). Le fasi successive dipendono dalla revisione e dal merge approvato di questa PR.
+
 ## Fase 1
 - Node 24.19.0, npm 11.9.0, Python 3.12.14; Wrangler locale 4.152.0 e comando preview verificati.
 - `npm ci` con cache locale: completato; lockfile riproducibile.

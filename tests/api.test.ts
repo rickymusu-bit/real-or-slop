@@ -13,7 +13,7 @@ test("unknown API never falls back to SPA", async () => {
   assert.match(r.headers.get("content-type")!, /json/);
 });
 test("admin route and API are protected server-side", async () => {
-  for (const path of ["/admin", "/api/admin"])
+  for (const path of ["/admin", "/api/admin", "/api/admin/images/fixture/curation"])
     assert.equal(
       (await worker.fetch(new Request("https://test" + path), env)).status,
       503,

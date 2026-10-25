@@ -595,6 +595,37 @@ dialog img {
   color: var(--lime);
   text-decoration: underline;
 }
+.curation fieldset {
+  min-width: 0;
+  border: 1px solid var(--line);
+  margin: 18px 0;
+  padding: 12px;
+}
+.curation textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  font: inherit;
+  border: 1px solid #43515b;
+  border-radius: 6px;
+  background: #17222c;
+  color: #f1f0e9;
+  padding: 13px;
+  resize: vertical;
+}
+.curation textarea:focus-visible {
+  outline: 3px solid var(--lime);
+  outline-offset: 5px;
+}
+.curation input[type="checkbox"] {
+  width: auto;
+}
+.curation-history {
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .secondary {
   background: transparent;
 }

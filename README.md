@@ -52,6 +52,15 @@ Niente dati identificativi obbligatori. Sessioni anonime, nickname facoltativo; 
 
 Specifiche versionate in `docs/specification-v1.1.0.md`. Versione app distinta: vedere `CHANGELOG.md`. Nessun merge/auto-merge, push a main o deploy produzione eseguito.
 
+## Metadati editoriali (0.5.0)
+
+La scheda privata in `/admin` distingue contesto rappresentato, fatti verificati
+e giudizi editoriali. Ogni salvataggio conserva motivazione e snapshot con
+controllo della revisione, senza approvare l'immagine o esporre indizi al
+giocatore. La migrazione additiva `0004_image_curation.sql` lascia invariato il
+catalogo demo e ammette immagini senza scheda. Contratto API, vocabolari,
+procedura di revisione e limiti: [metadati editoriali v1.0.0](docs/metadati-editoriali-v1.0.0.md).
+
 ## Pipeline e revisione (fase 2)
 
 Python 3.12 offline/CI, mai backend Python nel Worker:

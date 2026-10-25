@@ -11,7 +11,7 @@ status,result=req('/api/sessions','POST',{'mode':'training','count':4});assert s
 sid=result['id'];status,state=req('/api/sessions/'+sid);assert state['total']==4
 with client.open(base+state['question']['image']) as image:
     assert image.status==200 and image.headers['Content-Type']=='image/svg+xml'
-assert not any(k in json.dumps(state) for k in ['explanation','ai_prompt','author','licenseUrl'])
+assert not any(k in json.dumps(state) for k in ['explanation','ai_prompt','author','licenseUrl','curation','surprise_reason','reviewer_notes','verified_place'])
 assert req('/api/sessions/'+sid,opener=urllib.request.build_opener())[0]==401
 seen=set()
 for n in range(4):
