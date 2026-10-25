@@ -52,7 +52,7 @@ function near(a: bigint, b: bigint) {
 
 // Connected duplicate families are conservative: one representative per family.
 // Conflicting REAL/AI labels invalidate the whole family; never reassign a label.
-function unique<T extends SamplingImage>(input: readonly T[], random: Random) {
+function unique<T extends SamplingImage>(input: readonly T[]) {
   const rows = input.filter((row) => row.status === "approved" && ["REAL", "AI"].includes(row.type));
   const parent = rows.map((_, i) => i);
   const root = (index: number): number => {
@@ -101,7 +101,7 @@ function unique<T extends SamplingImage>(input: readonly T[], random: Random) {
   });
   const eligible = [...groups.values()]
     .filter((group) => group.every((row) => row.type === group[0].type))
-    .map((group) => group[Math.floor(random() * group.length)]);
+    .map((group) => group.reduce((first, row) => row.id < first.id ? row : first));
   return { eligible, removed: rows.length - eligible.length };
 }
 
@@ -128,16 +128,14 @@ export function distributionDistance(rows: readonly SamplingImage[]) {
   })) as Record<Dimension, number | null>;
 }
 
-export function curatedSample<T extends SamplingImage>(input: readonly T[], count: number, random: Random = secureRandom) {
-  if (!Number.isInteger(count) || count < 0 || count > 50) throw new RangeError("Sampling count must be 0–50");
-  const { eligible, removed } = unique(input, random);
-  const pools = ["REAL", "AI"].map((type) => shuffled(eligible.filter((row) => row.type === type), random));
-  const total = Math.min(count, eligible.length);
-  const realQuota = Math.max(total - pools[1].length,
-    Math.min(pools[0].length, Math.floor(total / 2) + (total % 2 && random() < 0.5 ? 1 : 0)));
-  const quotas = [realQuota, total - realQuota];
-  const selected = pools.map((pool, type) => pool.slice(0, quotas[type]));
-  const remaining = pools.map((pool, type) => pool.slice(quotas[type]));
+// Preserve the weighted editorial optimizer for broadened strata. Each reserve
+// can support ALL slots assigned to its stratum if every coin has the same result.
+// Only the coins choose game labels; unused reserve images are never assigned.
+function editorialReserves<T extends SamplingImage>(source: T[][], reserveSize: number, random: Random) {
+  const pools = source.map((pool) => shuffled(pool, random));
+  const eligible = pools.flat();
+  const selected = pools.map((pool) => pool.slice(0, reserveSize));
+  const remaining = pools.map((pool) => pool.slice(reserveSize));
   const vectors = new Map(eligible.map((row) => [row, vector(row)]));
   const targets = new Map<string, number>();
   const binWeights = new Map<string, number>();
@@ -151,15 +149,15 @@ export function curatedSample<T extends SamplingImage>(input: readonly T[], coun
       binWeights.set(key, weights[dimension]);
     }
   }
-  const sums = selected.map((rows, type) => {
+  const sums = selected.map((rows) => {
     const bins = new Map<string, number>();
     for (const row of rows) for (const [key, value] of vectors.get(row)!)
-      bins.set(key, (bins.get(key) || 0) + value / quotas[type]);
+      bins.set(key, (bins.get(key) || 0) + value / reserveSize);
     return bins;
   });
-  const comparable = quotas.every((quota) => quota > 0) ? 1 : 0;
+  const comparable = 1;
   // Optimize population distributions, not pairs of REAL/AI images. Each move
-  // exchanges two images of the SAME class, preserving the class quotas.
+  // exchanges two images of the SAME class, aligning private counterfactual reserves, never game label counts.
   // Bound work: three passes, <=128 alternatives per selected image per pass.
   for (let pass = 0; pass < 3; pass++) {
     let changed = false;
@@ -173,22 +171,22 @@ export function curatedSample<T extends SamplingImage>(input: readonly T[], coun
           const after = vectors.get(remaining[type][other])!;
           let score = 0;
           for (const [key, fraction] of before) {
-            const value = -fraction / quotas[type];
+            const value = -fraction / reserveSize;
             const own = sums[type].get(key) || 0, opposite = sums[1 - type].get(key) || 0;
             score += binWeights.get(key)! * (2 * (comparable * (own - opposite) + 0.5 * (own - targets.get(key)!)) * value + (comparable + 0.5) * value * value);
           }
           for (const [key, fraction] of after) {
-            const value = fraction / quotas[type];
+            const value = fraction / reserveSize;
             const own = sums[type].get(key) || 0, opposite = sums[1 - type].get(key) || 0;
-            const removed = (before.get(key) || 0) / quotas[type];
+            const removed = (before.get(key) || 0) / reserveSize;
             score += binWeights.get(key)! * (2 * (comparable * (own - opposite) + 0.5 * (own - targets.get(key)!)) * value + (comparable + 0.5) * (value * value - 2 * value * removed));
           }
           if (score < best) { best = score; move = other; }
         }
         if (move !== undefined) {
           const other = move, after = vectors.get(remaining[type][other])!;
-          for (const [key, value] of before) sums[type].set(key, (sums[type].get(key) || 0) - value / quotas[type]);
-          for (const [key, value] of after) sums[type].set(key, (sums[type].get(key) || 0) + value / quotas[type]);
+          for (const [key, value] of before) sums[type].set(key, (sums[type].get(key) || 0) - value / reserveSize);
+          for (const [key, value] of after) sums[type].set(key, (sums[type].get(key) || 0) + value / reserveSize);
           [selected[type][index], remaining[type][other]] = [remaining[type][other], selected[type][index]];
           changed = true;
         }
@@ -196,15 +194,77 @@ export function curatedSample<T extends SamplingImage>(input: readonly T[], coun
     }
     if (!changed) break;
   }
-  const images = shuffled(selected.flat(), random);
-  const distances = distributionDistance(images);
+  return selected.map((pool) => shuffled(pool, random));
+}
+
+const levels = [
+  dimensions.filter((dimension) => dimension !== "category_medium"),
+  ["category", "image_medium"],
+  ["category"],
+  [],
+] as const;
+interface Stratum<T> { pools: [T[], T[]]; available: number; slots: number }
+function strata<T extends SamplingImage>(rows: readonly T[], level: readonly Dimension[]) {
+  const groups = new Map<string, Stratum<T>>();
+  for (const row of rows) {
+    const key = JSON.stringify(level.map((dimension) => values(row, dimension)));
+    const group = groups.get(key) || { pools: [[], []], available: 0, slots: 0 };
+    group.pools[row.type === "REAL" ? 0 : 1].push(row);
+    groups.set(key, group);
+  }
+  for (const group of groups.values()) group.available = Math.min(...group.pools.map((pool) => pool.length));
+  return [...groups.values()].filter((group) => group.available > 0);
+}
+
+export function curatedSample<T extends SamplingImage>(input: readonly T[], count: number, random: Random = secureRandom) {
+  if (!Number.isInteger(count) || count < 0 || count > 50) throw new RangeError("Sampling count must be 0–50");
+  const { eligible, removed } = unique(input);
+  // Determined BEFORE any coins: every possible sequence must be supportable.
+  const capacity = Math.min(count, eligible.filter((row) => row.type === "REAL").length,
+    eligible.filter((row) => row.type === "AI").length);
+  let level = 0, groups: Stratum<T>[] = [];
+  for (; level < levels.length; level++) {
+    groups = strata(eligible, levels[level]);
+    if (groups.reduce((sum, group) => sum + group.available, 0) >= capacity) break;
+  }
+  // Exactly one independent fair coin per actual position. No feedback from
+  // previous labels, realized counts, remaining images, or editorial matching.
+  const labels = Array.from({ length: capacity }, () => random() < 0.5 ? 0 : 1);
+  // Common editorial tickets have weight min(REAL supply, AI supply). Their
+  // order and availability are independent of the coins, so every drawn ticket
+  // could be filled with EITHER class, even for an all-REAL/all-AI sequence.
+  let tickets = groups.reduce((sum, group) => sum + group.available, 0);
+  const slots = labels.map(() => {
+    let draw = Math.floor(random() * tickets);
+    const group = groups.find((candidate) => {
+      if (draw < candidate.available) return true;
+      draw -= candidate.available;
+      return false;
+    })!;
+    group.available--;
+    group.slots++;
+    tickets--;
+    return group;
+  });
+  const reserves = new Map<Stratum<T>, T[][]>();
+  for (const group of groups) {
+    if (!group.slots) continue;
+    reserves.set(group, level === 0
+      ? group.pools.map((pool) => shuffled(pool, random).slice(0, group.slots))
+      : editorialReserves(group.pools, group.slots, random));
+  }
+  // Diagnose the common reserve population, NOT chance imbalances in a game.
+  // In particular, warnings cannot depend on an unrevealed label sequence.
+  const distances = distributionDistance([...reserves.values()].flat(2));
+  const images = labels.map((type, index) => reserves.get(slots[index])![type].pop()!);
   const warnings: string[] = [];
-  if (images.length < count) warnings.push("Catalogo insufficiente: numero di domande ridotto.");
-  if (Math.abs(quotas[0] - quotas[1]) > 1) warnings.push("Catalogo insufficiente per un bilanciamento 50/50.");
+  if (capacity < count) warnings.push("Catalogo insufficiente: numero di domande ridotto prima della partita.");
+  if (!capacity && count) warnings.push("Catalogo insufficiente per garantire una partita valida.");
   if (removed) warnings.push("Immagini duplicate o con classificazioni contrastanti escluse.");
-  if (images.some((row) => !row.categories?.length || !validHash(row.perceptual_hash) || dimensions.some((dimension) => !["category", "category_medium"].includes(dimension) && !row.curation?.[dimension as keyof Tags])))
+  if (eligible.some((row) => !row.categories?.length || !validHash(row.perceptual_hash) || dimensions.some((dimension) => !["category", "category_medium"].includes(dimension) && !row.curation?.[dimension as keyof Tags])))
     warnings.push("Metadati incompleti: alcune verifiche di varietà e somiglianza sono limitate.");
+  if (level > 0 && capacity) warnings.push("Strati editoriali ampliati per garantire la partita.");
   if (Object.values(distances).some((distance) => distance !== null && distance > 0.35))
     warnings.push("Catalogo limitato: alcune distribuzioni editoriali non sono comparabili.");
-  return { images, warnings, diagnostics: { removed, distances } };
+  return { images, warnings, diagnostics: { removed, capacity, level, distances } };
 }

@@ -52,13 +52,17 @@ Niente dati identificativi obbligatori. Sessioni anonime, nickname facoltativo; 
 
 Specifiche versionate in `docs/specification-v1.1.0.md`. Versione app distinta: vedere `CHANGELOG.md`. Nessun merge/auto-merge, push a main o deploy produzione eseguito.
 
-## Selezione delle immagini (0.6.0)
+## Selezione delle immagini (0.7.0)
 
-Allenamento, A tempo e PvP usano lo stesso selettore stratificato lato server:
-quote REAL/AI, distribuzioni per categoria, tipologia, medium, composizione,
-periodo, regione e plausibilità percepita, deduplica e avvisi quando il catalogo non basta. Sessioni e
-regole restano invariate. [Algoritmo, limiti e confronto riproducibile](docs/campionamento-stratificato-v1.0.0.md).
-Eseguire `npm run benchmark:sampling` per confrontare il selettore con `balanced()`.
+Ogni nuova domanda usa una moneta indipendente REAL/AI al 50%: nessuna quota per
+partita, compensazione o limite alle serie consecutive. Gli strati editoriali
+conservano caratteristiche comparabili nel lungo periodo. Prima delle estrazioni,
+il numero di round viene limitato alle capacità distinte di entrambe le classi;
+non si completa una classe esaurita con l'altra. La demo (12 immagini per classe)
+garantisce al massimo 12 nuove domande indipendenti. Le sessioni già assegnate
+restano invariate. [Algoritmo, prova e limiti](docs/campionamento-stratificato-v2.0.0.md).
+`npm run benchmark:sampling` misura frequenze, storia, varianza binomiale e
+stratificazione aggregata, usando le vecchie quote soltanto come controllo negativo.
 
 ## Metadati editoriali (0.5.0)
 

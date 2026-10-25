@@ -10,22 +10,8 @@ import {
   type ImageRow,
 } from "./core";
 import { media } from "./storage";
-import { shuffled, secureRandom, type Random } from "./random";
 import { curatedSample } from "./sampling";
-export { shuffled } from "./random";
 export { curatedSample } from "./sampling";
-// Retained for reproducible comparisons against the previous selector.
-export function balanced<T extends { type: string }>(rows: T[], count: number, random: Random = secureRandom) {
-  const a = shuffled(rows.filter((i) => i.type === "REAL"), random);
-  const b = shuffled(rows.filter((i) => i.type === "AI"), random);
-  const half = Math.floor(count / 2);
-  const chosen = [...a.slice(0, half), ...b.slice(0, half)];
-  const remaining = shuffled([...a.slice(half), ...b.slice(half)], random);
-  return shuffled([
-    ...chosen,
-    ...remaining.slice(0, Math.max(0, count - chosen.length)),
-  ], random);
-}
 export function settings(data: Record<string, unknown>) {
   const mode = data.mode;
   if (mode !== "training" && mode !== "timed")
@@ -205,13 +191,13 @@ export async function game(request: Request, env: Env, path: string) {
     const rows = await filteredCatalog(env, config);
     const sample = curatedSample(
       rows,
-      config.mode === "timed" ? Math.min(rows.length, 50) : config.count,
+      config.mode === "timed" ? 50 : config.count,
     );
     const selected = sample.images;
     if (!selected.length)
       throw new HttpError(
         409,
-        "Nessuna immagine approvata per questi filtri. Prova tutte le categorie.",
+        "Catalogo approvato insufficiente per garantire una partita con questi filtri.",
       );
     const now = Date.now(),
       sid = id();

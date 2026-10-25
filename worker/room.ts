@@ -339,7 +339,7 @@ export class GameRoom {
       const sample = curatedSample(rows, config.count);
       const selected = sample.images;
       if (!selected.length)
-        throw new HttpError(409, "Nessuna immagine approvata per questa sfida");
+        throw new HttpError(409, "Catalogo approvato insufficiente per garantire questa sfida");
       const images: ImageRow[] = [];
       for (const image of selected) {
         const full = await this.env.DB.prepare(

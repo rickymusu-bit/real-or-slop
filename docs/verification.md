@@ -1,6 +1,17 @@
 # Verifiche effettive
 
-## Campionamento stratificato — 0.6.0
+## Correzione probabilistica — 0.7.0
+
+- Aggiornamento della stessa PR #10, branch `codex/08-campionamento-stratificato`: nessuna nuova PR. Rimosso il vincolo di differenza massima 1 fra REAL/AI nella singola partita, incluso il precedente fallback che riempiva con la classe restante.
+- Preflight dopo deduplica e filtri, N limitato allo stock di entrambe le classi; monete indipendenti generate prima delle scelte editoriali. Pesi e capacità per strato comuni, ampliamento preventivo e ottimizzatore editoriale conservato per le riserve. Diagnostica e avvisi non dipendono dai conteggi segreti della partita.
+- **25 test Node** eseguiti esplicitamente senza isolamento, **10 test Python**, lint e build TypeScript/Vite/asset. Verificate tutte le 256 sequenze di 8 round, 12 REAL/12 AI, squilibri 9/3 e 10/2, storia ripetuta/mista, limiti preventivi e assenza di duplicati.
+- Simulazione principale: **10.000 partite / 120.000 domande**, 59.915 REAL (**49,9292%**), varianza conteggio REAL **3,02123** contro 3 teorico. Dopo RRRRRR: **456/900 = 50,67%**; dopo ARRA: **2414/4976 = 48,51%**, entro sei errori standard. Il controllo negativo con quote mostra varianza 0 e probabilità 0 dopo RRRRRR.
+- Stratificazione misurata sull'aggregato di 2.048 partite per catalogo: distanza categoria/medium **0,00561** nel catalogo 90/10 contro **0,80127** del vecchio selettore; tutti gli assi del catalogo comparabile sotto 0,02; nessun duplicato. Verificato separatamente l'ottimizzatore secondario su 512 partite con strati ampliati. [Contratto e risultati correnti](campionamento-stratificato-v2.0.0.md).
+- Integrazione locale con/senza R2: assegnazioni D1 reali, riduzione a 2 round su fixture con 2 immagini distinte per classe, rifiuto dei cataloghi a classe unica, filtri, nessuno spoiler, timer e punteggi coerenti con gli esiti effettivi. Una sessione preassegnata di 4 round resta di 4 round senza ricampionamento. Media, storia e deadline PvP identici fra i client, anche dopo riconnessione.
+- Le nuove partite demo possono garantire 12 domande, mentre il catalogo resta di 24 asset. Sessioni e stanze precedenti non vengono riscritte. Nessun comando di deploy, migrazione remota, merge o modifica alle risorse Cloudflare.
+- Limiti: dati sintetici; hash percettivi e metadati richiedono curatela; l'ampliamento garantisce sempre le etichette indipendenti ma non inventa comparabilità tra profili assenti. Le misure per partita della 0.6.0 sottostante sono storiche e non criteri di correttezza attuali.
+
+## Campionamento stratificato — 0.6.0 (storico, quote superate)
 
 - PR #9 integrata dopo approvazione; nuova fase basata su `main` aggiornato (`4219f7a`), branch `codex/08-campionamento-stratificato`. Nessuna migrazione o dipendenza aggiunta, fixture demo invariate.
 - Lint, `npm test`, TypeScript/Vite/asset e controllo diff superati. Esecuzione esplicita senza isolamento: **22 test Node**; **10 test Python**. Test per quote 1–50, assenza di duplicati, input immutati, seed riproducibili, ordine non alternato, tutte le dimensioni editoriali, interazione categoria/medium, metadati mancanti, classi scarse e strati disgiunti.

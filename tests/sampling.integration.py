@@ -1,4 +1,6 @@
 """Catalog/filter/deduplication checks on isolated LOCAL D1, HTTP and PvP."""
+import hashlib
+import time
 import http.cookiejar
 import json
 import os
@@ -75,20 +77,21 @@ try:
     assert any('ridotto' in warning for warning in created['warnings'])
     sessions.append(created['id'])
     sid = created['id']
-    for _ in range(4):
+    for _ in range(2):
         _, view = request('/api/sessions/'+sid)
         private(view)
-        assert view['total'] == 4 and not view['done']
+        assert view['total'] == 2 and not view['done']
         assert set(view['question']) == {'id', 'number', 'image', 'alt'}
         assert request('/api/sessions/'+sid+'/answer', 'POST', dict(roundId=view['question']['id'], choice='REAL'))[0] == 200
-    assert request('/api/sessions/'+sid)[1]['score'] == 200
+    end = request('/api/sessions/'+sid)[1]
+    assert end['score'] == 100 * sum(c['answer'] == 'REAL' for c in end['credits'])
 
     status, timed = request('/api/sessions', 'POST', dict(mode='timed', duration=60, **filters))
     assert status == 201, timed
     sessions.append(timed['id'])
     _, view = request('/api/sessions/'+timed['id'])
     private(view)
-    assert view['total'] == 4 and 55000 < view['expiresAt'] - view['serverNow'] <= 60000
+    assert view['total'] == 2 and 55000 < view['expiresAt'] - view['serverNow'] <= 60000
     assert request('/api/sessions', 'POST', dict(mode='training', count=8, categories=[prefix], difficulty='difficile'))[0] == 409
     assert request('/api/sessions', 'POST', dict(mode='training', count=8, categories=[prefix+'_missing']))[0] == 409
 
@@ -96,12 +99,27 @@ try:
     selected = sql(f"SELECT i.id,i.type,i.status,i.demo,i.difficulty,i.perceptual_hash,c.image_medium,r.session_id FROM game_rounds r JOIN images i ON i.id=r.image_id LEFT JOIN image_curation c ON c.image_id=i.id WHERE r.session_id IN ('{sessions[0]}','{sessions[1]}')")[0]['results']
     for session in sessions:
         rows = [row for row in selected if row['session_id'] == session]
-        assert len(rows) == 4 and len({row['id'] for row in rows}) == 4
-        assert sum(row['type'] == 'REAL' for row in rows) == 2
+        assert len(rows) == 2 and len({row['id'] for row in rows}) == 2
         assert all(row['status'] == 'approved' and row['demo'] == 1 and row['difficulty'] == 'facile' for row in rows)
-        assert sum(row['perceptual_hash'] in ['0000000000000000', '000000000000001f'] for row in rows) == 1
-        for kind in ['REAL', 'AI']:
-            assert {row['image_medium'] for row in rows if row['type'] == kind} == {'foto_bn', 'foto_colori'}
+        assert sum(row['perceptual_hash'] in ['0000000000000000', '000000000000001f'] for row in rows) <= 1
+        assert {row['image_medium'] for row in rows} == {'foto_bn', 'foto_colori'}
+
+    # Previously assigned sessions are read unchanged, even if they exceed the
+    # new per-class capacity. GET/reconnect must never redraw their rounds.
+    legacy = str(uuid.uuid4())
+    sessions.append(legacy)
+    owner = hashlib.sha256(next(c.value for c in jar if c.name == 'ros_owner').encode()).hexdigest()
+    legacy_sql = [f"INSERT INTO game_sessions(id,mode,created_at,owner_hash) VALUES('{legacy}','training',{int(time.time()*1000)},'{owner}')"]
+    for position in range(4):
+        legacy_sql.append(f"INSERT INTO game_rounds(id,session_id,image_id,position) VALUES('{uuid.uuid4()}','{legacy}','{prefix}_{position}',{position})")
+    sql(';'.join(legacy_sql)+';')
+    _, legacy_view = request('/api/sessions/'+legacy)
+    assert legacy_view['total'] == 4
+    assert request('/api/sessions/'+legacy)[1]['question'] == legacy_view['question']
+    single = prefix + '-single'
+    sql(f"INSERT INTO categories VALUES('{single}','Single-class fixture',NULL); INSERT INTO image_categories VALUES('{prefix}_4','{single}');")
+    assert request('/api/sessions','POST',dict(mode='training',count=8,categories=[single]))[0] == 409
+    assert request('/api/rooms','POST',dict(count=8,categories=[single]))[0] == 409
 
     status, room = request('/api/rooms', 'POST', dict(count=8, roundSeconds=10, **filters))
     assert status == 201, room
@@ -114,11 +132,11 @@ try:
     _, b = request('/api/rooms/'+code+'/state', token=guest['token'])
     players = [player['id'] for player in a['players']]
     private(a); private(b)
-    assert a['total'] == b['total'] == 4
+    assert a['total'] == b['total'] == 2
     assert a['deadline'] == b['deadline'] and a['question'] == b['question']
     assert a['warnings'] == b['warnings'] == room['warnings']
     assert request('/api/rooms/'+code+'/action', 'POST', dict(action='leave'), host)[0] == 200
-    print('Sampling integration passed: difficulty/category/environment/approval filters, real D1 assignments, near duplicates, medium distributions, opaque warnings, Training/Timed/PvP, shared images and deadlines.')
+    print('Sampling integration passed: difficulty/category/environment/approval filters, real D1 assignments, near duplicates, preflight capacity, legacy assignments, opaque warnings, Training/Timed/PvP, shared images and deadlines.')
 finally:
     if room and room.get('code'):
         request('/api/rooms/'+room['code']+'/action', 'POST', dict(action='leave'), room['token'])
@@ -133,5 +151,5 @@ finally:
     cleanup += [f"DELETE FROM players WHERE id='{player}'" for player in players]
     cleanup += [f"DELETE FROM image_curation WHERE image_id LIKE '{prefix}%'",
                 f"DELETE FROM image_categories WHERE image_id LIKE '{prefix}%'",
-                f"DELETE FROM images WHERE id LIKE '{prefix}%'", f"DELETE FROM categories WHERE id='{prefix}'"]
+                f"DELETE FROM images WHERE id LIKE '{prefix}%'", f"DELETE FROM categories WHERE id LIKE '{prefix}%'"]
     sql(';\n'.join(cleanup) + ';')

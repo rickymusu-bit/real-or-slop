@@ -1,5 +1,9 @@
 # Campionamento stratificato — v1.0.0
 
+> **SUPERATO dalla [v2.0.0](campionamento-stratificato-v2.0.0.md).** Le quote
+> REAL/AI per partita descritte qui sono logicamente errate e sono state rimosse.
+> Questo file conserva la storia della prima implementazione; non è il contratto corrente.
+
 25 ottobre 2026. Applicazione **0.6.0**, fase 2 del piano operativo.
 Prerequisito: metadati della PR #9 integrati in `main` (`4219f7a`).
 Normativa: [protocollo di selezione REAL](protocollo-selezione-real-v1.0.0.md).

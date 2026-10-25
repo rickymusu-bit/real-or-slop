@@ -23,8 +23,8 @@ for n in range(4):
     assert all(r[0]==200 for r in results),results
     assert 'explanation' in results[0][1]
     assert req('/api/sessions/'+sid+'/answer','POST',{**payload,'choice':'AI'})[0]==409
-_,end=req('/api/sessions/'+sid);assert end['done'];assert end['answered']==4;assert len(end['credits'])==4;assert end['score']==200,end
-print('Game integration passed: no leaks, ownership, balance, refresh, concurrent replay, summary.')
+_,end=req('/api/sessions/'+sid);assert end['done'];assert end['answered']==4;assert len(end['credits'])==4;assert end['score']==100*sum(c['answer']=='REAL' for c in end['credits']),end
+print('Game integration passed: no leaks, ownership, independent assignments, refresh, concurrent replay, summary.')
 # Expiry integration uses dedicated local DB command in runner to age a timed session.
 _,created=req('/api/sessions','POST',{'mode':'timed','duration':60})
 from pathlib import Path

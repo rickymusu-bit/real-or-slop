@@ -1,11 +1,41 @@
 import { createHash } from "node:crypto";
 import type { SamplingImage } from "../worker/sampling.ts";
+import { shuffled, type Random } from "../worker/random.ts";
 export function seeded(seed: number) {
   let state = seed >>> 0;
   return () => {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    return state / 0x100000000;
+    state = (state + 0x6d2b79f5) >>> 0;
+    let value = Math.imul(state ^ (state >>> 15), state | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 0x100000000;
   };
+}
+export function scriptedCoins(sequence: string, seed = 19) {
+  const rest = seeded(seed);
+  let at = 0;
+  return () => at < sequence.length ? (sequence[at++] === "R" ? 0.25 : 0.75) : rest();
+}
+// Deliberately flawed historical comparison, NEVER imported by production.
+export function quotaBaseline(rows: readonly SamplingImage[], count: number, random: Random) {
+  const a = shuffled(rows.filter((row) => row.type === "REAL"), random);
+  const b = shuffled(rows.filter((row) => row.type === "AI"), random);
+  const half = Math.floor(count / 2);
+  const chosen = [...a.slice(0, half), ...b.slice(0, half)];
+  return { images: shuffled([...chosen,
+    ...shuffled([...a.slice(half), ...b.slice(half)], random).slice(0, Math.max(0, count - chosen.length))], random), warnings: [] };
+}
+export function smallComparableCatalog() {
+  return (["REAL", "AI"] as const).flatMap((type) =>
+    Array.from({ length: 12 }, (_, i) => image(type + "-small-" + i, type, i % 2)));
+}
+export function broadenedCatalog() {
+  return (["REAL", "AI"] as const).flatMap((type) => Array.from({ length: 20 }, (_, i) => ({
+    ...image(type + "-broad-" + i, type),
+    curation: { ...image(type + "-broad-" + i, type).curation,
+      composition: i % 2 ? "ritratto" : "scena_ampia",
+      country_or_region: (i % 2 === (type === "REAL" ? 1 : 0)) ? "europa" : "asia",
+    },
+  })));
 }
 export function image(id: string, type: "REAL" | "AI", variant = 0): SamplingImage {
   return {

@@ -118,9 +118,11 @@ def game(path, method='GET', data=None):
     with client.open(req) as response: return json.loads(response.read())
 created = game('/api/sessions', 'POST', dict(mode='training', count=24))
 sid = created['id']
-for _ in range(24):
+total = game('/api/sessions/'+sid)['total']
+assert total == 12  # 12 distinct images per class guarantee every possible sequence.
+for _ in range(total):
     state = game('/api/sessions/'+sid)
-    assert state['total'] == 24 and not state['done'], state
+    assert state['total'] == total and not state['done'], state
     serialized = json.dumps(state)
     for secret in ['curation', 'PRIVATE_SURPRISE_FIXTURE', 'surprise_reason', 'familiarity', 'ai_prompt', 'evidence']:
         assert secret not in serialized, secret

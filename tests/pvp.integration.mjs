@@ -83,6 +83,10 @@ const image = await fetch(base + sa.question.image, {
 });
 assert.equal(image.status, 200);
 assert.match(image.headers.get("content-type"), /image/);
+const firstMedia = await image.text();
+assert.equal(await (await fetch(base + sb.question.image, {
+  headers: { Authorization: "Bearer " + b },
+})).text(), firstMedia);
 assert.equal(
   (
     await req("/" + code + "/action", a, {
@@ -127,10 +131,21 @@ assert.equal(
   409,
 );
 // Drop and reconnect a real WebSocket, preserving server identity and round.
+const beforeReconnect = (await req("/" + code + "/state", a)).data;
+const mediaBeforeReconnect = await (await fetch(base + beforeReconnect.question.image, {
+  headers: { Authorization: "Bearer " + a },
+})).text();
 wa.close();
 const reconnect = await socket(a);
 const state = (await req("/" + code + "/state", a)).data;
 assert.equal(state.round, 2);
+assert.equal(state.deadline, beforeReconnect.deadline);
+assert.equal(await (await fetch(base + state.question.image, {
+  headers: { Authorization: "Bearer " + a },
+})).text(), mediaBeforeReconnect);
+assert.equal(await (await fetch(base + state.question.image, {
+  headers: { Authorization: "Bearer " + b },
+})).text(), mediaBeforeReconnect);
 assert.equal(
   (
     await req("/" + code + "/action", a, {
@@ -143,6 +158,7 @@ assert.equal(
 );
 // Both receive the same reveal at the common server deadline even if Bob never answers.
 const end = await waitMessage(reconnect, (s) => s.phase === "finished", 14000);
+assert.deepEqual((await req("/" + code + "/state", b)).data.history, end.history);
 assert.equal(end.history.length, 2);
 assert.equal(end.total, 2);
 assert.equal(
