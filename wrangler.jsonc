@@ -1,0 +1,62 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "real-or-slop",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-25",
+  "build": {
+    "command": "npm run build"
+  },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/admin", "/admin/*"],
+  },
+  "vars": {
+    "DATA_MODE": "demo",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "real-or-slop-local",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "previews": {
+    "vars": {
+      "DATA_MODE": "demo",
+    },
+    "durable_objects": {
+      "bindings": [
+        {
+          "name": "ROOMS",
+          "class_name": "GameRoom",
+        },
+      ],
+    },
+  },
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "real-or-slop-approved-local",
+    },
+    {
+      "binding": "QUARANTINE",
+      "bucket_name": "real-or-slop-quarantine-local",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ROOMS",
+        "class_name": "GameRoom",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["GameRoom"],
+    },
+  ],
+}

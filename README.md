@@ -1,1 +1,96 @@
-# real-or-slop
+# Real or Slop
+
+Gioco per distinguere immagini autentiche documentate da immagini create con IA dal proprietario. La demo usa esclusivamente illustrazioni geometriche originali con **etichette simulate**: non è un archivio verificato.
+
+Node 24 (`.nvmrc`), Python 3.12 per pipeline e test schema. TypeScript, Vite, Worker Static Assets/API, D1 locale; adapter R2 pronto, nessuna risorsa remota richiesta.
+
+```sh
+npm ci
+npm run db:migrate
+npm run db:seed
+npm run dev
+# http://localhost:8787
+npm run lint
+npm test
+npm run build
+npx wrangler deploy --dry-run --outdir .wrangler/dry-run
+```
+
+```text
+Browser → Vite dist/ → Worker router → D1 (catalogo, audit, sessioni)
+                                   → storage adapter (demo / R2)
+Python offline → quarantena privata → revisione autenticata → catalogo approvato
+```
+
+La build esegue TypeScript e Vite, produce `dist/` (configurato in `vite.config.ts`) e verifica che `index.html` e tutte le risorse locali referenziate siano presenti; l'entry Worker è `worker/index.ts`. `/api/*` attraversa sempre il Worker e non restituisce il fallback SPA. Le risposte non sono incluse negli asset frontend. `/admin` e `/api/admin/*` verificano un token server-side: disabilitati se non configurato. Nessun segreto frontend.
+
+## Cloudflare Workers Builds (integrazione GitHub esistente)
+
+| Impostazione | Valore |
+|---|---|
+| Repository | `rickymusu-bit/real-or-slop` |
+| Branch produzione | `main` |
+| Directory | `/` (radice del repository) |
+| Node | 24 |
+| Build | `npm run build` |
+| Deploy produzione | `npx wrangler deploy` **solo dopo approvazione esplicita del rilascio** |
+| Preview branch/PR | `npx wrangler preview` |
+
+Impostare **Build command: `npm run build`** al posto di `None`. Lasciare **Deploy command: `npx wrangler deploy`**, branch `main` e root `/`. Per Workers l’output è configurato in `wrangler.jsonc` con `assets.directory: "./dist"`, non cambiando la root in `/dist`. Non pubblicare la `index.html` sorgente: fa riferimento a TypeScript da compilare.
+
+Wrangler esegue anche un hook `build.command: "npm run build"`: un deploy da checkout pulito ricrea `dist/` prima del packaging, anche se il comando build della dashboard è ancora `None`. Con il build esplicito in dashboard la compilazione viene ripetuta intenzionalmente prima del deploy, per verificare gli asset effettivamente inclusi. `dist/` resta generata e ignorata da Git; non servono token nei file del progetto.
+
+Al momento della diagnosi, `main` al commit `a5a04d0` conteneva solo `README.md`: l’app TypeScript/Vite + Worker è nella PR #4. La correzione mantiene quell’architettura e ne include i commit; serve portare il codice applicativo su main tramite revisione e merge approvato. Modificare soltanto la dashboard mentre main contiene solo il README non può produrre un sito. Vedere [diagnosi e impostazioni](docs/cloudflare.md#correzione-del-rilevamento-degli-asset).
+
+Wrangler 4.152.0 fissato nel lockfile (minimo richiesto dalle specifiche: 4.135.0). Non usare deploy per ottenere preview. La configurazione attiva non contiene ID o bucket inventati: D1 senza ID è esclusivamente locale. Prima della preview assegnare risorse di TEST verificate al blocco `previews`; verificare schema effettivo Wrangler. Account, autorizzazioni e quote devono essere configurati dal proprietario. L’integrazione GitHub–Cloudflare esistente viene mantenuta. Le modifiche a main possono avviare il rilascio: il merge richiede approvazione esplicita anche per la pubblicazione.
+
+Piano Workers Free; nessun upgrade o billing autorizzato. D1, R2 Standard e build hanno quote separate. Superare le franchigie R2 può costare; non attivare automaticamente. Dominio personalizzato facoltativo, DNS e acquisti separati.
+
+## Dati e privacy
+
+Niente dati identificativi obbligatori. Sessioni anonime, nickname facoltativo; nessun analytics o cookie pubblicitario. Fonte/licenza/spiegazione soltanto dopo la risposta. Crediti delle immagini pubbliche devono rispettare attribuzioni e share-alike. Le immagini IA del catalogo futuro sono create per un gioco di fantasia. Informativa nell'app. Prima di un lancio pubblico definire titolare, contatti e tempi di conservazione effettivi.
+
+Specifiche versionate in `docs/specification-v1.1.0.md`. Versione app distinta: vedere `CHANGELOG.md`. Nessun merge/auto-merge, push a main o deploy produzione eseguito.
+
+## Pipeline e revisione (fase 2)
+
+Python 3.12 offline/CI, mai backend Python nel Worker:
+
+```sh
+python3 -m pipeline.run --provider commons --config pipeline/search.example.json --fixture pipeline/fixtures.json
+# Solo dopo configurazione di contatto, termini, rete e destinazione:
+# python3 -m pipeline.run --provider met --config pipeline/search.example.json --live
+# --download è opzionale: richiede --live e download_hosts esplicitamente autorizzati.
+```
+
+Connettori separati: Commons, Openverse, Met, Library of Congress (query HABS/HAER/HALS), Smithsonian (SMITHSONIAN_API_KEY) e NASA. Ogni provider ha termini, limiti e schemi propri: validare esempi reali prima di abilitare un job. Fixture e mock non certificano l’accesso live. Massimo 50 risultati, quattro query controllate, timeout 20s, retry/backoff e User-Agent con contatto. Limiti chiamate Met/LoC maggiori perché richiedono dettagli per asset. Nessun motore generalista o scraping. Pianificazione inattiva, workflow manuale disabilitato salvo ENABLE_IMAGE_PIPELINE=true; artifact privati scadono dopo 7 giorni. Configurare destinazione di revisione e quote prima di aggiungere cron.
+
+Quarantena `.pipeline/` privata e ignorata da Git. Deduplica fonte/URL prima del download, SHA-256 dopo download, dHash percettivo solo come suggerimento. Non rimuovere crediti: gli originali restano integri, il download crea un derivato WebP dell’intero fotogramma (massimo 1600 px), conservando originale, prove e attribuzioni in quarantena. Verificare gli obblighi editoriali prima di approvare; nessun credito visibile viene ritagliato. I metadati di provenienza non sono incorporati nel file pubblico per evitare spoiler: restano nel database e vengono mostrati dopo la risposta. Nessuna etichetta REAL approvata automaticamente. Met richiede isPublicDomain sul singolo asset; NASA e istituzioni pubbliche non implicano diritti liberi. CC0/PD verificato, CC BY/SA richiedono prove e obblighi corretti; ambigui restano in revisione.
+
+Admin: configurare un token casuale >=32 caratteri in `.dev.vars` (mai committarlo): `ADMIN_TOKEN=...`. Aprire `/admin`; autenticazione HTTP Basic (utente `admin`, password token), sempre HTTPS fuori localhost. API supporta anche Bearer. Import JSON con: type, title, description, author, source_url, source_id, provider, license_name, license_url, evidence, explanation, categories (ID), difficulty; per AI anche ai_model, ai_prompt, generation_date (YYYY-MM-DD), owner_declaration=true. I contenuti e gli eventi inventati devono essere verificati dall’editore prima dell’approvazione. Il file JPEG/PNG/WebP va caricato separatamente; SVG non accettati. Il menu privato consente filtri, prove, licenza, modifica categorie/difficoltà e audit della decisione. Protezione server-side su pagina, API e upload.
+
+I bucket `*-local` nella configurazione sono nomi di emulatori, non risorse remote esistenti. L’approvazione copia soltanto dallo storage quarantena allo storage approvato dell’ambiente corrente; non avvia deploy/import produzione. Le fixture demo e il catalogo verificato sono separati dal campo `demo`.
+
+## Allenamento e A tempo (fase 3)
+
+Categorie multiple e sottocategorie, difficoltà, 1–50 domande in allenamento o 60/120/180 secondi a tempo. Il server campiona senza ripetizioni, circa metà REAL e metà AI; segnala catalogo insufficiente. Le sessioni usano D1 e un cookie tecnico HttpOnly/SameSite, Secure in HTTPS. L’ID nel sessionStorage serve solo a ritrovare la partita: da solo non autorizza letture o risposte. Timestamp, assegnazione domande, scadenza, punteggio (100/corretta, 0/errata) e replay sono validati nel Worker/SQL. A parità conta il minor tempo totale di risposta. Nessuna classifica pubblica o nickname raccolto per il gioco singolo.
+
+API: POST `/api/sessions` con mode training/timed, count, duration, difficulty e categories; GET `/api/sessions/:id`; POST `/api/sessions/:id/answer` con roundId/choice. Solo dopo la risposta vengono inviate soluzione, spiegazione e crediti. Foto servite tramite round opachi assegnati. Doppio click/retry con stessa scelta è idempotente; una scelta diversa è rifiutata. Refresh riprende la domanda corrente; errori di rete offrono ripresa. Il countdown del browser è indicativo: alla scadenza il server rifiuta ulteriori risposte.
+
+Statistiche private `/api/admin/stats`: conteggi per categoria e suggerimenti per immagine da almeno 30 risposte. Nessun cambio automatico della difficoltà. Risposte in categorie multiple possono contribuire a più aggregazioni. Test HTTP aggiuntivi: con Wrangler locale attivo, `python3 tests/game.integration.py` (modifica soltanto una sessione D1 locale per verificare la scadenza, mai risorse remote).
+
+## PvP e consegna (fase 4)
+
+Aprire `/pvp` in due schede o browser: creare stanza, copiare il codice di 12 caratteri, entrare dal secondo client e avviare dall’host. Entrambi vedono stessa immagine e scadenza; la soluzione rimane sul server fino a entrambe le risposte o timeout. D1 conserva sfida, giocatori anonimi, risposte e risultati. DO usa backend SQLite e WebSocket hibernation; HTTP consente ripresa durante le disconnessioni. Non rispondere costa il tempo massimo del round, i punti dipendono solo dalla correttezza. Il token stanza è privato della scheda e non compare negli URL.
+
+```sh
+npm run test:integration
+python3 scripts/local-data.py backup
+python3 scripts/local-data.py restore-test
+```
+
+L’integrazione avvia un Worker con stato **locale isolato** sulla porta 8788 e prova anche due veri client WebSocket con riconnessione e timeout. Nessun browser aggiuntivo necessario. Dati test in `.wrangler/integration`; log privati in `artifacts/`. I test schema/API e `npm run build` restano separati dalla pipeline Python.
+
+Configurazione anteprime, credenziali, guardia sui binding, backup e rilascio in [docs/cloudflare.md](docs/cloudflare.md). `node scripts/check-preview.mjs` blocca volontariamente le preview finché non sono indicati DB/bucket di test verificati. Il modello con segnaposto è separato dalla config attiva. L’accesso Cloudflare e l’isolamento remoto non sono certificati da un test locale o dry-run.
+
+Stato finale e limiti effettivi: [docs/verification.md](docs/verification.md). Le quattro PR sono dipendenti e restano in bozza verso main; l’ultima include l’intera demo. Nessuna verifica locale equivale a una pubblicazione Cloudflare riuscita.
