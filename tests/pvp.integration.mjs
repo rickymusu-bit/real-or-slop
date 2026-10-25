@@ -76,7 +76,7 @@ assert.equal(sa.question.image, sb.question.image);
 assert.equal(sa.reveal, null);
 assert.doesNotMatch(
   JSON.stringify(sa),
-  /explanation|ai_prompt|authenticity|licenseUrl/,
+  /explanation|ai_prompt|authenticity|licenseUrl|curation|image_medium|perceptual_hash|diagnostics|perceived_plausibility/,
 );
 const image = await fetch(base + sa.question.image, {
   headers: { Authorization: "Bearer " + a },

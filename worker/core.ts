@@ -100,7 +100,7 @@ export async function catalog(env: Env) {
       "SELECT * FROM images WHERE status='approved' AND demo=?",
     )
       .bind(env.DATA_MODE === "demo" ? 1 : 0)
-      .all<ImageRow>()
+      .all<ImageRow & { status: string; sha256: string; perceptual_hash: string | null }>()
   ).results;
 }
 export function demoSvg(key: string) {

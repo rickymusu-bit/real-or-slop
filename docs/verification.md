@@ -1,5 +1,15 @@
 # Verifiche effettive
 
+## Campionamento stratificato — 0.6.0
+
+- PR #9 integrata dopo approvazione; nuova fase basata su `main` aggiornato (`4219f7a`), branch `codex/08-campionamento-stratificato`. Nessuna migrazione o dipendenza aggiunta, fixture demo invariate.
+- Lint, `npm test`, TypeScript/Vite/asset e controllo diff superati. Esecuzione esplicita senza isolamento: **22 test Node**; **10 test Python**. Test per quote 1–50, assenza di duplicati, input immutati, seed riproducibili, ordine non alternato, tutte le dimensioni editoriali, interazione categoria/medium, metadati mancanti, classi scarse e strati disgiunti.
+- `npm run benchmark:sampling`: 64 seed, 20 round, cinque cataloghi sintetici. Nel catalogo comparabile la variazione totale media categoria/medium scende da 0,5813 a 0,0703; con distribuzioni opposte 90/10, da 0,8 a 0,0 su tutti gli assi. Sessioni con duplicati esatti: 34/64 prima, 0/64 dopo. Plausibilità percepita bilanciata separatamente per evitare scorciatoie basate sulla sorpresa. Strati disgiunti segnalati, senza dichiarare un bilanciamento inesistente. [Risultati e limiti](campionamento-stratificato-v1.0.0.md).
+- Integrazione Worker/D1/R2/DO locale: filtri categoria/difficoltà/ambiente/stato verificati sulle assegnazioni persistite, dHash vicini esclusi, distribuzioni di medium comparabili, avvisi generici senza metadati o soluzioni. Allenamento, A tempo e PvP condividono la selezione; timer e due client PvP conservano immagini/scadenze comuni e protezioni da replay.
+- Import tecnico: header dHash non valido rifiutato; impronta valida normalizzata e conservata dopo upload privato; un upload successivo senza impronta azzera il dato obsoleto. Conferme umane e quarantena restano obbligatorie.
+- Verificati sia `npm run test:integration` completo sia `ROS_TEST_PROFILE= npm run test:integration` senza R2; fixture aggiuntive locali rimosse a fine test. `npm run deploy:check` verifica soltanto la configurazione offline.
+- Limiti: il selettore è un'ottimizzazione limitata delle distribuzioni osservate, non un certificato di assenza di ogni correlazione. dHash e metadati devono essere corretti e sufficienti; impronte mancanti o somiglianze non rilevate richiedono curatela. Nessuna calibrazione su fotografie reali o certificazione di quote CPU cloud. Nessun comando di deploy o migrazione remota eseguito.
+
 ## Metadati editoriali — 0.5.0
 
 - Base aggiornata a `main` (`96763a4`); fase limitata ai metadati privati. Contratto e vocabolari documentati in [metadati editoriali v1.0.0](metadati-editoriali-v1.0.0.md).

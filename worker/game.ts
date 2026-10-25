@@ -10,24 +10,21 @@ import {
   type ImageRow,
 } from "./core";
 import { media } from "./storage";
-export function shuffled<T>(rows: T[]): T[] {
-  const out = [...rows];
-  for (let i = out.length - 1; i > 0; i--) {
-    const n = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
-    [out[i], out[n]] = [out[n], out[i]];
-  }
-  return out;
-}
-export function balanced<T extends { type: string }>(rows: T[], count: number) {
-  const a = shuffled(rows.filter((i) => i.type === "REAL"));
-  const b = shuffled(rows.filter((i) => i.type === "AI"));
+import { shuffled, secureRandom, type Random } from "./random";
+import { curatedSample } from "./sampling";
+export { shuffled } from "./random";
+export { curatedSample } from "./sampling";
+// Retained for reproducible comparisons against the previous selector.
+export function balanced<T extends { type: string }>(rows: T[], count: number, random: Random = secureRandom) {
+  const a = shuffled(rows.filter((i) => i.type === "REAL"), random);
+  const b = shuffled(rows.filter((i) => i.type === "AI"), random);
   const half = Math.floor(count / 2);
   const chosen = [...a.slice(0, half), ...b.slice(0, half)];
-  const remaining = shuffled([...a.slice(half), ...b.slice(half)]);
+  const remaining = shuffled([...a.slice(half), ...b.slice(half)], random);
   return shuffled([
     ...chosen,
     ...remaining.slice(0, Math.max(0, count - chosen.length)),
-  ]);
+  ], random);
 }
 export function settings(data: Record<string, unknown>) {
   const mode = data.mode;
@@ -60,18 +57,23 @@ export async function filteredCatalog(
   let rows = await catalog(env);
   if (filters.difficulty !== "all")
     rows = rows.filter((i) => i.difficulty === filters.difficulty);
-  if (filters.categories.length) {
-    const assigned = (
-      await env.DB.prepare(
-        `SELECT DISTINCT image_id FROM image_categories WHERE category_id IN (${filters.categories.map(() => "?").join(",")})`,
-      )
-        .bind(...filters.categories)
-        .all<{ image_id: string }>()
-    ).results;
-    const ids = new Set(assigned.map((i) => i.image_id));
-    rows = rows.filter((i) => ids.has(i.id));
+  const demo = env.DATA_MODE === "demo" ? 1 : 0;
+  const [assignments, metadata] = await Promise.all([
+    env.DB.prepare("SELECT ic.image_id,ic.category_id FROM image_categories ic JOIN images i ON i.id=ic.image_id WHERE i.status='approved' AND i.demo=?")
+      .bind(demo).all<{ image_id: string; category_id: string }>(),
+    env.DB.prepare("SELECT c.image_id,c.subject_kind,c.image_medium,c.composition,c.period_bucket,c.country_or_region,c.perceived_plausibility FROM image_curation c JOIN images i ON i.id=c.image_id WHERE i.status='approved' AND i.demo=?")
+      .bind(demo).all<{ image_id: string; subject_kind: string | null; image_medium: string | null; composition: string | null; period_bucket: string | null; country_or_region: string | null; perceived_plausibility: string | null }>(),
+  ]);
+  const categories = new Map<string, string[]>();
+  for (const assignment of assignments.results) {
+    const list = categories.get(assignment.image_id) || [];
+    list.push(assignment.category_id);
+    categories.set(assignment.image_id, list);
   }
-  return rows;
+  if (filters.categories.length)
+    rows = rows.filter((row) => categories.get(row.id)?.some((category) => filters.categories.includes(category)));
+  const tags = new Map(metadata.results.map((row) => [row.image_id, row]));
+  return rows.map((row) => ({ ...row, categories: categories.get(row.id) || [], curation: tags.get(row.id) || null }));
 }
 function cookie(request: Request) {
   return request.headers
@@ -201,10 +203,11 @@ export async function game(request: Request, env: Env, path: string) {
       20,
     );
     const rows = await filteredCatalog(env, config);
-    const selected = balanced(
+    const sample = curatedSample(
       rows,
       config.mode === "timed" ? Math.min(rows.length, 50) : config.count,
     );
+    const selected = sample.images;
     if (!selected.length)
       throw new HttpError(
         409,
@@ -228,17 +231,7 @@ export async function game(request: Request, env: Env, path: string) {
         ).bind(id(), sid, i.id, n),
       ),
     ]);
-    const warnings = [];
-    if (config.mode === "training" && selected.length < config.count)
-      warnings.push("Catalogo insufficiente: numero di domande ridotto.");
-    if (
-      Math.abs(
-        selected.filter((i) => i.type === "REAL").length -
-          selected.filter((i) => i.type === "AI").length,
-      ) > 1
-    )
-      warnings.push("Catalogo insufficiente per un bilanciamento 50/50.");
-    const response = json({ id: sid, warnings }, 201);
+    const response = json({ id: sid, warnings: sample.warnings }, 201);
     response.headers.set(
       "Set-Cookie",
       `ros_owner=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${new URL(request.url).protocol === "https:" ? "; Secure" : ""}`,

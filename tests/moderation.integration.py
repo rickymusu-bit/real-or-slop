@@ -3,9 +3,9 @@ import json,uuid,urllib.request,urllib.error,os
 from pathlib import Path
 base=os.environ.get('ROS_TEST_BASE','http://127.0.0.1:8787')
 token=Path('.dev.vars').read_text().strip().split('=',1)[1]
-def request(path,method='GET',data=None,token_value=token):
+def request(path,method='GET',data=None,token_value=token,extra_headers=None):
     raw=data if isinstance(data,bytes) else json.dumps(data).encode() if data else None
-    r=urllib.request.Request(base+path,method=method,data=raw,headers={'Authorization':'Bearer '+token_value,'Content-Type':'application/json'})
+    r=urllib.request.Request(base+path,method=method,data=raw,headers={'Authorization':'Bearer '+token_value,'Content-Type':'application/json',**(extra_headers or {})})
     try:
         with urllib.request.urlopen(r) as res:return res.status,res.read()
     except urllib.error.HTTPError as e:return e.code,e.read()
@@ -19,7 +19,12 @@ import struct,zlib
 color=uuid.uuid4().int%255
 def chunk(kind,data):return struct.pack('!I',len(data))+kind+data+struct.pack('!I',zlib.crc32(kind+data))
 png=b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('!2I5B',2,2,8,2,0,0,0))+chunk(b'IDAT',zlib.compress((b'\x00'+bytes([color,30,40])*2)*2))+chunk(b'IEND',b'')
+assert request('/api/admin/assets/'+image,'PUT',png,extra_headers={'X-Perceptual-Hash':'invalid'})[0]==400
+assert request('/api/admin/assets/'+image,'PUT',png,extra_headers={'X-Perceptual-Hash':'A5A5A5A5A5A5A5A5'})[0]==200
+listed=json.loads(request('/api/admin/images')[1]);assert next(row for row in listed if row['id']==image)['perceptual_hash']=='a5a5a5a5a5a5a5a5'
+# Replacing a file without a new offline fingerprint must not keep stale data.
 assert request('/api/admin/assets/'+image,'PUT',png)[0]==200
+listed=json.loads(request('/api/admin/images')[1]);assert next(row for row in listed if row['id']==image)['perceptual_hash'] is None
 assert request('/api/admin/assets/'+image)[0]==200
 assert request('/api/media/'+image,token_value='')[0]==404
 status,data=request('/api/admin/review/'+image,'POST',dict(decision='approved',notes='Verified synthetic fixture',rights_confirmed=True,authenticity_confirmed=True,difficulty='medio',categories=['arte']))

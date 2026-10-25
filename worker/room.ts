@@ -9,7 +9,7 @@ import {
   type Env,
   type ImageRow,
 } from "./core";
-import { balanced, filteredCatalog, reveal, settings } from "./game";
+import { curatedSample, filteredCatalog, reveal, settings } from "./game";
 import { media } from "./storage";
 interface Player {
   id: string;
@@ -336,7 +336,8 @@ export class GameRoom {
         count: data.count || 5,
       });
       const rows = await filteredCatalog(this.env, config);
-      const selected = balanced(rows, config.count);
+      const sample = curatedSample(rows, config.count);
+      const selected = sample.images;
       if (!selected.length)
         throw new HttpError(409, "Nessuna immagine approvata per questa sfida");
       const images: ImageRow[] = [];
@@ -367,10 +368,7 @@ export class GameRoom {
       this.room = {
         code: String(data.code),
         challengeId: id(),
-        warnings:
-          selected.length < config.count
-            ? ["Catalogo insufficiente: numero round ridotto."]
-            : [],
+        warnings: sample.warnings,
         phase: "lobby",
         players: [player],
         images,
@@ -407,10 +405,7 @@ export class GameRoom {
         {
           code: this.room.code,
           token,
-          warnings:
-            selected.length < config.count
-              ? ["Numero round ridotto per catalogo insufficiente"]
-              : [],
+          warnings: sample.warnings,
         },
         201,
       );

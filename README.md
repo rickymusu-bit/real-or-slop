@@ -52,6 +52,14 @@ Niente dati identificativi obbligatori. Sessioni anonime, nickname facoltativo; 
 
 Specifiche versionate in `docs/specification-v1.1.0.md`. Versione app distinta: vedere `CHANGELOG.md`. Nessun merge/auto-merge, push a main o deploy produzione eseguito.
 
+## Selezione delle immagini (0.6.0)
+
+Allenamento, A tempo e PvP usano lo stesso selettore stratificato lato server:
+quote REAL/AI, distribuzioni per categoria, tipologia, medium, composizione,
+periodo, regione e plausibilità percepita, deduplica e avvisi quando il catalogo non basta. Sessioni e
+regole restano invariate. [Algoritmo, limiti e confronto riproducibile](docs/campionamento-stratificato-v1.0.0.md).
+Eseguire `npm run benchmark:sampling` per confrontare il selettore con `balanced()`.
+
 ## Metadati editoriali (0.5.0)
 
 La scheda privata in `/admin` distingue contesto rappresentato, fatti verificati
