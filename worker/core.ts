@@ -1,4 +1,4 @@
-export interface Env { DB: D1Database; ASSETS: Fetcher; DATA_MODE: string; IMAGES?: R2Bucket; ADMIN_TOKEN?: string; ROOMS?: DurableObjectNamespace; }
+export interface Env { DB: D1Database; ASSETS: Fetcher; DATA_MODE: string; IMAGES?: R2Bucket; QUARANTINE?: R2Bucket; ADMIN_TOKEN?: string; ROOMS?: DurableObjectNamespace; }
 export class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
 export const json = (value: unknown, status = 200) => Response.json(value, {status, headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 export const id = () => crypto.randomUUID();
@@ -11,7 +11,8 @@ export async function body(request: Request): Promise<Record<string, unknown>> {
 export function sameOrigin(request: Request) { const origin=request.headers.get('Origin'); if(origin && origin!==new URL(request.url).origin) throw new HttpError(403,'Origine non consentita'); }
 export async function admin(request: Request, env: Env) {
  if(!env.ADMIN_TOKEN || env.ADMIN_TOKEN.length<32) throw new HttpError(503,'Amministrazione non configurata');
- const token = request.headers.get('Authorization')?.replace(/^Bearer /,'') || '';
+ let token = request.headers.get('Authorization')?.replace(/^Bearer /,'') || '';
+ if(token.startsWith('Basic ')){try{token=atob(token.slice(6)).split(':').slice(1).join(':');}catch{token='';}}
  if(await hash(token)!==await hash(env.ADMIN_TOKEN)) throw new HttpError(401,'Accesso amministratore richiesto');
 }
 export async function rateLimit(env: Env, key: string, max=30) {

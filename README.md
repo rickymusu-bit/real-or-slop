@@ -45,3 +45,22 @@ Piano Workers Free; nessun upgrade o billing autorizzato. D1, R2 Standard e buil
 Niente dati identificativi obbligatori. Sessioni anonime, nickname facoltativo; nessun analytics o cookie pubblicitario. Fonte/licenza/spiegazione soltanto dopo la risposta. Crediti delle immagini pubbliche devono rispettare attribuzioni e share-alike. Le immagini IA del catalogo futuro sono create per un gioco di fantasia. Informativa nell'app. Prima di un lancio pubblico definire titolare, contatti e tempi di conservazione effettivi.
 
 Specifiche versionate in `docs/specification-v1.1.0.md`. Versione app distinta: vedere `CHANGELOG.md`. Nessun merge/auto-merge, push a main o deploy produzione eseguito.
+
+## Pipeline e revisione (fase 2)
+
+Python 3.12 offline/CI, mai backend Python nel Worker:
+
+```sh
+python3 -m pipeline.run --provider commons --config pipeline/search.example.json --fixture pipeline/fixtures.json
+# Solo dopo configurazione di contatto, termini, rete e destinazione:
+# python3 -m pipeline.run --provider met --config pipeline/search.example.json --live
+# --download è opzionale: richiede --live e download_hosts esplicitamente autorizzati.
+```
+
+Connettori separati: Commons, Openverse, Met, Library of Congress (query HABS/HAER/HALS), Smithsonian (SMITHSONIAN_API_KEY) e NASA. Ogni provider ha termini, limiti e schemi propri: validare esempi reali prima di abilitare un job. Fixture e mock non certificano l’accesso live. Massimo 50 risultati, quattro query controllate, timeout 20s, retry/backoff e User-Agent con contatto. Limiti chiamate Met/LoC maggiori perché richiedono dettagli per asset. Nessun motore generalista o scraping. Pianificazione inattiva, workflow manuale disabilitato salvo ENABLE_IMAGE_PIPELINE=true; artifact privati scadono dopo 7 giorni. Configurare destinazione di revisione e quote prima di aggiungere cron.
+
+Quarantena `.pipeline/` privata e ignorata da Git. Deduplica fonte/URL prima del download, SHA-256 dopo download, dHash percettivo solo come suggerimento. Non rimuovere crediti: gli originali restano integri, ottimizzazione derivati da fare solo dopo revisione degli obblighi. Nessuna etichetta REAL approvata automaticamente. Met richiede isPublicDomain sul singolo asset; NASA e istituzioni pubbliche non implicano diritti liberi. CC0/PD verificato, CC BY/SA richiedono prove e obblighi corretti; ambigui restano in revisione.
+
+Admin: configurare un token casuale >=32 caratteri in `.dev.vars` (mai committarlo): `ADMIN_TOKEN=...`. Aprire `/admin`; autenticazione HTTP Basic (utente `admin`, password token), sempre HTTPS fuori localhost. API supporta anche Bearer. Import JSON con: type, title, description, author, source_url, source_id, provider, license_name, license_url, evidence, explanation, categories (ID), difficulty; per AI anche ai_model, ai_prompt, owner_declaration=true. I contenuti e gli eventi inventati devono essere verificati dall’editore prima dell’approvazione. Il file JPEG/PNG/WebP va caricato separatamente; SVG non accettati. Il menu privato consente filtri, prove, licenza, modifica categorie/difficoltà e audit della decisione. Protezione server-side su pagina, API e upload.
+
+I bucket `*-local` nella configurazione sono nomi di emulatori, non risorse remote esistenti. L’approvazione copia soltanto dallo storage quarantena allo storage approvato dell’ambiente corrente; non avvia deploy/import produzione. Le fixture demo e il catalogo verificato sono separati dal campo `demo`.
