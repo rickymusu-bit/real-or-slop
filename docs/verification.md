@@ -1,5 +1,16 @@
 # Verifiche effettive
 
+## Studio SLOP — 0.8.0
+
+- PR #10 integrata dopo approvazione esplicita, commit main `be91f8a`; branch `codex/09-studio-generazione-slop` creato da quel main. Questa fase prepara una nuova PR in bozza, senza merge o deploy.
+- Studio privato con concept, classificazioni condivise, fino a sei fatti con riferimenti, template versionati e spiegazione modificabile. Nessuna generazione automatica, API esterna, dipendenza aggiunta o riferimento archivistico inventato dal software. Esperto resta soltanto un template privato e non è importabile.
+- Migrazione additiva `0005_slop_studio.sql`: vecchie tabelle e fixture preservate, schema JSON validato, audit del dossier immutabile. Controlli concorrenti reali su D1 locale: un solo aggiornamento per revisione e una sola importazione, senza candidati duplicati. Retry restituisce l'immagine già collegata.
+- `npm run lint`, `npm test`, `npm run build` e `git diff --check` superati; esecuzione esplicita senza isolamento: **30 test Node**, **11 test Python**. Template, limiti, date reali/future, conferme, provenienza, compatibilità e rifiuto della quarta difficoltà pubblica verificati.
+- Integrazione locale completa con R2 emulato: autenticazione/Origin, categorie coerenti, prompt integrale mantenuto anche negli spazi iniziali/finali, modello/data/dichiarazione, provenienza congelata, upload privato, approvazione/rifiuto, spiegazione corretta dal revisore con differenza nell'audit. L'immagine importata e approvata viene assegnata a una sessione locale di test per verificare media e payload reali senza anticipare prompt, modello o classificazioni.
+- `npm run test:integration` e `ROS_TEST_PROFILE= npm run test:integration` superati: regressioni di moderazione, curatela, campionamento indipendente, Allenamento, A tempo e due client PvP con stessa sequenza/deadline, riconnessione e timeout. Il profilo senza R2 verifica il gioco demo, non l'upload. Corretta la vecchia fixture PNG di moderazione, che aveva soltanto 255 possibili contenuti e poteva collidere con test precedenti; ora usa 96 bit casuali nei pixel.
+- Chromium già disponibile, nessuna installazione: compilazione concept/fatti, proposte, modifica prompt, salvataggio/cronologia, upload manuale, approvazione dalla coda esistente, provenienza bloccata, copia iterazione e template Esperto privato. Contenuto HTML nei titoli rimane testo; nessuna eccezione runtime o overflow a 390 px. Screenshot locali ignorati da Git: `artifacts/slop-studio-desktop.png` e `artifacts/slop-studio-mobile.png`.
+- Limiti: fixture sintetiche, nessun corpus AI reale importato. Verità dei fatti, licenze, innocuità, fedeltà al prompt e comparabilità restano verifiche umane. Token condiviso, non account per revisore. Le liste mostrano gli ultimi 100 elementi/eventi senza cancellare la storia precedente. Demo remota senza R2: upload/approvazione richiedono storage configurato; questa fase non crea bucket, applica migrazioni remote o cambia risorse Cloudflare. [Procedura e contratto](studio-generazione-slop-v1.0.0.md).
+
 ## Correzione probabilistica — 0.7.0
 
 - Aggiornamento della stessa PR #10, branch `codex/08-campionamento-stratificato`: nessuna nuova PR. Rimosso il vincolo di differenza massima 1 fra REAL/AI nella singola partita, incluso il precedente fallback che riempiva con la classe restante.

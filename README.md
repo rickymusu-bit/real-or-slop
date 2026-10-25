@@ -50,7 +50,23 @@ Piano Workers Free; nessun upgrade o billing autorizzato. D1, R2 Standard e buil
 
 Niente dati identificativi obbligatori. Sessioni anonime, nickname facoltativo; nessun analytics o cookie pubblicitario. Fonte/licenza/spiegazione soltanto dopo la risposta. Crediti delle immagini pubbliche devono rispettare attribuzioni e share-alike. Le immagini IA del catalogo futuro sono create per un gioco di fantasia. Informativa nell'app. Prima di un lancio pubblico definire titolare, contatti e tempi di conservazione effettivi.
 
-Specifiche versionate in `docs/specification-v1.1.0.md`. Versione app distinta: vedere `CHANGELOG.md`. Nessun merge/auto-merge, push a main o deploy produzione eseguito.
+Specifiche versionate in `docs/specification-v1.1.0.md`. Versione app distinta: vedere `CHANGELOG.md`. La PR #10 è stata integrata dopo approvazione esplicita; lo studio SLOP successivo resta in una PR in bozza. Nessun comando di deploy eseguito in questa fase.
+
+## Studio SLOP (0.8.0)
+
+Da `/admin` aprire `/admin/slop`: concept e fatti documentati, template per
+Facile/Medio/Difficile ed Esperto soltanto editoriale, prompt e spiegazione
+modificabili, dati della generazione esterna, note e cronologia privata.
+La generazione è manuale con strumenti esterni: nessuna API o creazione automatica.
+Dopo il salvataggio si carica il file in quarantena e si usa la moderazione
+esistente per approvare o rifiutare. Il revisore può correggere la spiegazione
+finale con audit; modello e prompt effettivo del tentativo importato restano
+congelati. Nessuna quarta difficoltà pubblica o modifica al campionamento.
+
+Applicare prima la migrazione additiva `0005_slop_studio.sql`. La demo senza R2
+consente la progettazione, ma upload e approvazione richiedono storage configurato;
+questa fase verifica il flusso completo solo in locale e non crea risorse remote.
+[Procedura, API, versioni e limiti](docs/studio-generazione-slop-v1.0.0.md).
 
 ## Selezione delle immagini (0.7.0)
 
@@ -94,7 +110,7 @@ I bucket `*-local` sono dichiarati soltanto nel profilo env.local e vengono usat
 
 ## Allenamento e A tempo (fase 3)
 
-Categorie multiple e sottocategorie, difficoltà, 1–50 domande in allenamento o 60/120/180 secondi a tempo. Il server campiona senza ripetizioni, circa metà REAL e metà AI; segnala catalogo insufficiente. Le sessioni usano D1 e un cookie tecnico HttpOnly/SameSite, Secure in HTTPS. L’ID nel sessionStorage serve solo a ritrovare la partita: da solo non autorizza letture o risposte. Timestamp, assegnazione domande, scadenza, punteggio (100/corretta, 0/errata) e replay sono validati nel Worker/SQL. A parità conta il minor tempo totale di risposta. Nessuna classifica pubblica o nickname raccolto per il gioco singolo.
+Categorie multiple e sottocategorie, difficoltà, 1–50 domande in allenamento o 60/120/180 secondi a tempo. Il server campiona senza ripetizioni con etichette REAL/AI indipendenti al 50% per domanda; limita preventivamente la lunghezza o segnala catalogo insufficiente. Le sessioni usano D1 e un cookie tecnico HttpOnly/SameSite, Secure in HTTPS. L’ID nel sessionStorage serve solo a ritrovare la partita: da solo non autorizza letture o risposte. Timestamp, assegnazione domande, scadenza, punteggio (100/corretta, 0/errata) e replay sono validati nel Worker/SQL. A parità conta il minor tempo totale di risposta. Nessuna classifica pubblica o nickname raccolto per il gioco singolo.
 
 API: POST `/api/sessions` con mode training/timed, count, duration, difficulty e categories; GET `/api/sessions/:id`; POST `/api/sessions/:id/answer` con roundId/choice. Solo dopo la risposta vengono inviate soluzione, spiegazione e crediti. Foto servite tramite round opachi assegnati. Doppio click/retry con stessa scelta è idempotente; una scelta diversa è rifiutata. Refresh riprende la domanda corrente; errori di rete offrono ripresa. Il countdown del browser è indicativo: alla scadenza il server rifiuta ulteriori risposte.
 

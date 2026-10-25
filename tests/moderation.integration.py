@@ -16,9 +16,9 @@ status,data=request('/api/admin/import','POST',metadata);assert status==201,(sta
 image=json.loads(data)['id']
 assert request('/api/admin/review/'+image,'POST',dict(decision='approved',notes='Missing checks'))[0]==400
 import struct,zlib
-color=uuid.uuid4().int%255
+pixels=uuid.uuid4().bytes[:12]
 def chunk(kind,data):return struct.pack('!I',len(data))+kind+data+struct.pack('!I',zlib.crc32(kind+data))
-png=b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('!2I5B',2,2,8,2,0,0,0))+chunk(b'IDAT',zlib.compress((b'\x00'+bytes([color,30,40])*2)*2))+chunk(b'IEND',b'')
+png=b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('!2I5B',2,2,8,2,0,0,0))+chunk(b'IDAT',zlib.compress(b'\x00'+pixels[:6]+b'\x00'+pixels[6:]))+chunk(b'IEND',b'')
 assert request('/api/admin/assets/'+image,'PUT',png,extra_headers={'X-Perceptual-Hash':'invalid'})[0]==400
 assert request('/api/admin/assets/'+image,'PUT',png,extra_headers={'X-Perceptual-Hash':'A5A5A5A5A5A5A5A5'})[0]==200
 listed=json.loads(request('/api/admin/images')[1]);assert next(row for row in listed if row['id']==image)['perceptual_hash']=='a5a5a5a5a5a5a5a5'

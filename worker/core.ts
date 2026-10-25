@@ -33,11 +33,11 @@ export async function hash(value: string) {
     .map((v) => v.toString(16).padStart(2, "0"))
     .join("");
 }
-export async function body(request: Request): Promise<Record<string, unknown>> {
-  if (Number(request.headers.get("content-length") || 0) > 20000)
+export async function body(request: Request, max = 20000): Promise<Record<string, unknown>> {
+  if (Number(request.headers.get("content-length") || 0) > max)
     throw new HttpError(413, "Richiesta troppo grande");
   const text = await request.text();
-  if (text.length > 20000) throw new HttpError(413, "Richiesta troppo grande");
+  if (text.length > max) throw new HttpError(413, "Richiesta troppo grande");
   try {
     const value = JSON.parse(text);
     if (!value || typeof value !== "object" || Array.isArray(value))

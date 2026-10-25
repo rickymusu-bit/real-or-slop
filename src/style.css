@@ -601,7 +601,8 @@ dialog img {
   margin: 18px 0;
   padding: 12px;
 }
-.curation textarea {
+.curation textarea,
+.review-explanation {
   display: block;
   width: 100%;
   max-width: 100%;
@@ -613,7 +614,8 @@ dialog img {
   padding: 13px;
   resize: vertical;
 }
-.curation textarea:focus-visible {
+.curation textarea:focus-visible,
+.review-explanation:focus-visible {
   outline: 3px solid var(--lime);
   outline-offset: 5px;
 }
@@ -625,6 +627,20 @@ dialog img {
   overflow: auto;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+.studio-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0;
+}
+.studio img {
+  max-width: 100%;
+  max-height: 360px;
+}
+.studio a {
+  color: var(--lime);
+  text-decoration: underline;
 }
 .secondary {
   background: transparent;
