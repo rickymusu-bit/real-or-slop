@@ -1,4 +1,6 @@
 import { api, content, escape } from "./main";
+import { curationDirty, curationForm, rememberCuration, setupCuration } from "./curation";
+import type { CurationRecord } from "../shared/curation";
 interface Candidate {
   id: string;
   title: string;
@@ -8,6 +10,7 @@ interface Candidate {
   evidence: string;
   author: string;
   difficulty: string;
+  curation: CurationRecord | null;
 }
 export async function showAdmin() {
   content().innerHTML =
@@ -22,10 +25,11 @@ export async function showAdmin() {
         ? items
             .map(
               (i) =>
-                `<article class="review" data-id="${escape(i.id)}"><h2>${escape(i.title)} · ${escape(i.type)}</h2><p>${escape(i.author)} · ${escape(i.difficulty)}</p><a href="${safeUrl(i.source_url)}" target="_blank" rel="noopener noreferrer">Pagina della fonte ↗</a><p><a href="${safeUrl(i.license_url)}" target="_blank" rel="noopener noreferrer">Licenza ↗</a></p><details><summary>Prove</summary><p>${escape(i.evidence)}</p></details><img src="/api/admin/assets/${escape(i.id)}" alt="Anteprima privata della candidata"><label>Carica file<input class="upload" type="file" accept="image/jpeg,image/png,image/webp"></label><label>URL licenza verificata<input class="license-url" value="${escape(i.license_url)}" placeholder="https://creativecommons.org/…"></label><label>Difficoltà<select class="difficulty">${["facile", "medio", "difficile"].map((d) => `<option ${d === i.difficulty ? "selected" : ""}>${d}</option>`).join("")}</select></label><label>Categorie (ID separati da virgola, vuoto = conserva)<input class="categories"></label><label><input class="rights" type="checkbox"> Ho verificato diritti e obblighi della licenza</label><label><input class="authenticity" type="checkbox"> Ho verificato autenticità o invenzione dell’immagine IA</label><label>Nota editoriale<input class="notes" required></label>${status === "in-review" ? '<button data-decision="approved">Approva in questo ambiente</button> <button data-decision="rejected">Rifiuta</button>' : ""}<p class="status" role="status"></p></article>`,
+                `<article class="review" data-id="${escape(i.id)}"><h2>${escape(i.title)} · ${escape(i.type)}</h2><p>${escape(i.author)} · ${escape(i.difficulty)}</p><a href="${safeUrl(i.source_url)}" target="_blank" rel="noopener noreferrer">Pagina della fonte ↗</a><p><a href="${safeUrl(i.license_url)}" target="_blank" rel="noopener noreferrer">Licenza ↗</a></p><details><summary>Prove</summary><p>${escape(i.evidence)}</p></details><img src="/api/admin/assets/${escape(i.id)}" alt="Anteprima privata della candidata"><label>Carica file<input class="upload" type="file" accept="image/jpeg,image/png,image/webp"></label>${curationForm(i.curation)}<label>URL licenza verificata<input class="license-url" value="${escape(i.license_url)}" placeholder="https://creativecommons.org/…"></label><label>Difficoltà<select class="difficulty">${["facile", "medio", "difficile"].map((d) => `<option ${d === i.difficulty ? "selected" : ""}>${d}</option>`).join("")}</select></label><label>Categorie (ID separati da virgola, vuoto = conserva)<input class="categories"></label><label><input class="rights" type="checkbox"> Ho verificato diritti e obblighi della licenza</label><label><input class="authenticity" type="checkbox"> Ho verificato autenticità o invenzione dell’immagine IA</label><label>Nota editoriale<input class="notes" required></label>${status === "in-review" ? '<button data-decision="approved">Approva in questo ambiente</button> <button data-decision="rejected">Rifiuta</button>' : ""}<p class="status" role="status"></p></article>`,
             )
             .join("")
         : "<p>Nessuna candidata in questo stato.</p>";
+      rememberCuration(document.querySelector<HTMLElement>("#queue")!);
     } catch (e) {
       document.querySelector("#queue")!.textContent = String(e);
     }
@@ -33,6 +37,7 @@ export async function showAdmin() {
   document
     .querySelector("#review-filter")!
     .addEventListener("change", () => void load());
+  setupCuration(document.querySelector<HTMLElement>("#queue")!);
   document
     .querySelector("#queue")!
     .addEventListener("change", async (event) => {
@@ -55,6 +60,7 @@ export async function showAdmin() {
     const card = btn.closest<HTMLElement>(".review")!;
     btn.disabled = true;
     try {
+      if (curationDirty(card)) throw new Error("Salva prima le modifiche alla scheda editoriale privata.");
       await api("/admin/review/" + card.dataset.id, {
         method: "POST",
         body: JSON.stringify({

@@ -7,6 +7,8 @@ import {
   type Env,
   type ImageRow,
 } from "./core";
+import { curation } from "./curation";
+import type { CurationRecord } from "../shared/curation";
 const allowedLicenses = [
   "https://creativecommons.org/publicdomain/zero/1.0/",
   "https://creativecommons.org/publicdomain/mark/1.0/",
@@ -25,18 +27,29 @@ function url(value: string) {
   return value;
 }
 export async function moderation(request: Request, env: Env, path: string) {
+  const curationPath = path.match(/^\/api\/admin\/images\/([\w-]+)\/curation$/);
+  if (curationPath) return curation(request, env, curationPath[1]);
   if (path === "/api/admin/images" && request.method === "GET") {
     const filter =
       new URL(request.url).searchParams.get("status") || "in-review";
-    return json(
-      (
-        await env.DB.prepare(
-          "SELECT i.*,s.page_url AS source_url,s.evidence,l.url AS license_url FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id WHERE i.status=? ORDER BY i.created_at DESC LIMIT 100",
-        )
-          .bind(filter)
-          .all()
-      ).results,
-    );
+    const items = (
+      await env.DB.prepare(
+        "SELECT i.*,s.page_url AS source_url,s.evidence,l.url AS license_url FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id WHERE i.status=? ORDER BY i.created_at DESC LIMIT 100",
+      )
+        .bind(filter)
+        .all()
+    ).results;
+    if (!items.length) return json([]);
+    const records = (
+      await env.DB.prepare(
+        `SELECT * FROM image_curation WHERE image_id IN (${items.map(() => "?").join(",")})`,
+      ).bind(...items.map((item) => String(item.id))).all<CurationRecord>()
+    ).results;
+    const byImage = new Map(records.map((record) => [record.image_id, record]));
+    return json(items.map((item) => ({
+      ...item,
+      curation: byImage.get(String(item.id)) || null,
+    })));
   }
   if (path === "/api/admin/import" && request.method === "POST") {
     const data = await body(request);
