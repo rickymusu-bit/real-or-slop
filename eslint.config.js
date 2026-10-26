@@ -21,6 +21,10 @@ export default ts.config(
     languageOptions: {
       globals: {
         document: "readonly",
+        Image: "readonly",
+        AbortController: "readonly",
+        Blob: "readonly",
+        performance: "readonly",
         window: "readonly",
         fetch: "readonly",
         location: "readonly",

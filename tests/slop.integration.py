@@ -129,6 +129,7 @@ assert status == 200
 for private in ['PRIVATE_STUDIO', 'ai_prompt', 'ai_model', 'cognitive_mechanism', 'slop', 'template_version']:
     assert private not in json.dumps(view), private
 assert request(view['question']['image'], auth='')[1] == png
+assert request('/api/sessions/'+sid+'/ready', 'POST', dict(roundId=view['question']['id']), auth='')[0] == 200
 _, revealed = request('/api/sessions/'+sid+'/answer', 'POST', dict(roundId=view['question']['id'], choice='AI'), auth='')
 assert revealed['answer'] == 'AI' and 'generata con IA' in revealed['explanation']
 assert revealed['explanation'] == reviewed_explanation

@@ -34,7 +34,7 @@ try:
                     asset=re.search(r'src="([^"]+\.js)"',html).group(1)
                     with urllib.request.urlopen(base+asset) as js:assert js.status==200
             print('Navigation/assets HTTP checks passed.')
-            for script in (['tests/moderation.integration.py','tests/curation.integration.py','tests/slop.integration.py'] if local_profile=='local' else [])+['tests/sampling.integration.py','tests/game.integration.py']:
+            for script in (['tests/moderation.integration.py','tests/curation.integration.py','tests/slop.integration.py'] if local_profile=='local' else [])+['tests/sampling.integration.py','tests/game.integration.py','tests/preloading.integration.py']:
                 subprocess.run(['python3',script],env=env,check=True)
             subprocess.run(['node','tests/pvp.integration.mjs'],env=env,check=True)
             print('All isolated local integration checks passed.')

@@ -17,6 +17,8 @@ seen=set()
 for n in range(4):
     _,state=req('/api/sessions/'+sid);q=state['question'];assert q['id'] not in seen;seen.add(q['id'])
     assert req('/api/sessions/'+sid)[1]['question']['id']==q['id'] # refresh stable
+    assert req('/api/sessions/'+sid+'/answer','POST',{'roundId':q['id'],'choice':'REAL'})[0]==409
+    assert req('/api/sessions/'+sid+'/ready','POST',{'roundId':q['id']})[0]==200
     payload={'roundId':q['id'],'choice':'REAL'}
     with concurrent.futures.ThreadPoolExecutor(2) as executor:
         results=list(executor.map(lambda _:req('/api/sessions/'+sid+'/answer','POST',payload),range(2)))
@@ -29,7 +31,10 @@ print('Game integration passed: no leaks, ownership, independent assignments, re
 _,created=req('/api/sessions','POST',{'mode':'timed','duration':60})
 from pathlib import Path
 Path('/tmp/ros-expiry-session').write_text(created['id'])
-_,state=req('/api/sessions/'+created['id']);Path('/tmp/ros-expiry-state.json').write_text(json.dumps({'id':created['id'],'roundId':state['question']['id'],'cookie':'; '.join(c.name+'='+c.value for c in jar)}))
+_,initial=req('/api/sessions/'+created['id']);assert initial['phase']=='preparing' and initial['expiresAt'] is None and initial['question'] is None
+_,manifest=req('/api/sessions/'+created['id']+'/manifest')
+_,state=req('/api/sessions/'+created['id']+'/start','POST',{'prepared':True,'roundIds':[q['id'] for q in manifest['images']]})
+Path('/tmp/ros-expiry-state.json').write_text(json.dumps({'id':created['id'],'roundId':state['question']['id'],'cookie':'; '.join(c.name+'='+c.value for c in jar)}))
 import os,subprocess
 expiry=json.loads(Path('/tmp/ros-expiry-state.json').read_text())
 # UUID originated from server, never interpolate external user input.

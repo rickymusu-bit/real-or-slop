@@ -10,7 +10,8 @@ import {
   type ImageRow,
 } from "./core";
 import { curatedSample, filteredCatalog, reveal, settings } from "./game";
-import { media } from "./storage";
+import { media, privateMedia } from "./storage";
+import { mediaProtocol, roomPreparationTtlMs } from "../shared/preloading";
 interface Player {
   id: string;
   tokenHash: string;
@@ -19,15 +20,21 @@ interface Player {
   elapsedMs: number;
   answer: { choice: string; at: number } | null;
   ready: boolean;
+  mediaReady?: boolean;
   left: boolean;
   window: number;
   requests: number;
 }
 interface RoomState {
   code: string;
+  revision?: number;
   challengeId: string;
   warnings: string[];
-  phase: "lobby" | "playing" | "reveal" | "finished" | "abandoned";
+  phase: "lobby" | "preparing" | "playing" | "reveal" | "finished" | "abandoned" | "invalidated";
+  protocolVersion?: number;
+  preparationDeadline?: number;
+  mediaKey?: string;
+  invalidReason?: string;
   players: Player[];
   images: ImageRow[];
   round: number;
@@ -100,6 +107,7 @@ export class GameRoom {
   constructor(
     private ctx: DurableObjectState,
     private env: Env,
+    private now = () => Date.now(),
   ) {
     ctx.blockConcurrencyWhile(async () => {
       this.room = await ctx.storage.get<RoomState>("room");
@@ -123,6 +131,7 @@ export class GameRoom {
     });
   }
   private async save() {
+    this.room!.revision = (this.room!.revision || 0) + 1;
     await this.ctx.storage.put("room", this.room!);
   }
   private async authenticate(request: Request) {
@@ -140,7 +149,7 @@ export class GameRoom {
     return p;
   }
   private playerLimit(p: Player) {
-    const now = Date.now();
+    const now = this.now();
     if (now - p.window > 60000) {
       p.window = now;
       p.requests = 0;
@@ -156,27 +165,32 @@ export class GameRoom {
     const r = this.room!;
     return {
       code: r.code,
+      revision: r.revision || 0,
       warnings: r.warnings,
       you: p.id,
       phase: r.phase,
       round: r.round + 1,
       total: r.images.length,
       demo: this.env.DATA_MODE === "demo",
-      serverNow: Date.now(),
+      serverNow: this.now(),
       deadline: r.deadline,
+      protocolVersion: r.protocolVersion || 1,
+      preparationDeadline: r.preparationDeadline || null,
+      invalidReason: r.invalidReason || null,
       players: r.players.map((i) => ({
         id: i.id,
         nickname: i.nickname,
-        score: i.score,
-        elapsedMs: i.elapsedMs,
+        score: r.phase === "invalidated" ? 0 : i.score,
+        elapsedMs: r.phase === "invalidated" ? 0 : i.elapsedMs,
         answered: !!i.answer,
         ready: i.ready,
+        mediaReady: !!i.mediaReady,
         left: i.left,
       })),
       question:
-        r.phase === "playing"
+        (r.phase === "playing" || r.phase === "preparing")
           ? {
-              image: "/api/rooms/" + r.code + "/media",
+              image: "/api/rooms/" + r.code + "/media?key=" + (r.mediaKey || String(r.round + 1)),
               alt: "Immagine del round condiviso",
             }
           : null,
@@ -206,17 +220,22 @@ export class GameRoom {
   }
   private async settle() {
     const r = this.room!;
-    if (r.phase === "finished" || r.phase === "abandoned") return;
-    if (Date.now() >= r.expiresAt) {
+    if (["finished", "abandoned", "invalidated"].includes(r.phase)) return;
+    if (this.now() >= r.expiresAt) {
       r.phase = "abandoned";
+      await this.auditTerminal("abandoned", "room_expired");
       await this.save();
       this.broadcast();
       await this.ctx.storage.deleteAlarm();
       return;
     }
+    if (r.phase === "preparing" && this.now() >= (r.preparationDeadline || 0)) {
+      await this.invalidateRoom("preparation_timeout");
+      return;
+    }
     if (
       r.phase === "playing" &&
-      (Date.now() >= r.deadline || r.players.every((p) => p.answer))
+      (this.now() >= r.deadline || r.players.every((p) => p.answer))
     ) {
       const next = structuredClone(r);
       const image = next.images[next.round];
@@ -261,11 +280,12 @@ export class GameRoom {
         ...(next.phase === "finished"
           ? [
               this.env.DB.prepare(
-                "UPDATE challenges SET completed_at=? WHERE id=?",
-              ).bind(Date.now(), next.challengeId),
+                "UPDATE challenges SET completed_at=?,outcome='completed' WHERE id=? AND outcome='active'",
+              ).bind(this.now(), next.challengeId),
             ]
           : []),
       ]);
+      next.revision = (next.revision || 0) + 1;
       await this.ctx.storage.put("room", next);
       this.room = next;
       if (next.phase === "finished") await this.ctx.storage.deleteAlarm();
@@ -273,31 +293,60 @@ export class GameRoom {
       this.broadcast();
     }
   }
+  private async auditTerminal(kind: "abandoned" | "invalidated", reason: string) {
+    const r = this.room!;
+    await this.env.DB.batch([
+      this.env.DB.prepare("INSERT INTO media_events(id,challenge_id,kind,reason,created_at) SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM challenges WHERE id=? AND outcome='active') ON CONFLICT(id) DO NOTHING").bind(`${r.challengeId}:${kind}`, r.challengeId, kind, reason, this.now(), r.challengeId),
+      this.env.DB.prepare("UPDATE challenges SET outcome=? WHERE id=? AND outcome='active'").bind(kind, r.challengeId),
+    ]);
+  }
+  private async invalidateRoom(reason: string) {
+    const r = this.room!;
+    await this.auditTerminal("invalidated", reason);
+    r.phase = "invalidated"; r.invalidReason = reason; r.deadline = 0;
+    await this.save(); await this.ctx.storage.deleteAlarm(); this.broadcast();
+  }
+  private async activateRound() {
+    const r = this.room!;
+    r.phase = "playing"; r.startedAt = this.now(); r.deadline = r.startedAt + r.roundSeconds * 1000;
+    await this.save(); await this.ctx.storage.setAlarm(r.deadline);
+    await this.env.DB.prepare("INSERT INTO media_events(id,challenge_id,kind,reason,created_at) VALUES(?,?,'started','both_media_ready',?) ON CONFLICT(id) DO NOTHING")
+      .bind(`${r.challengeId}:started:${r.round}`, r.challengeId, r.startedAt).run();
+  }
   private async begin() {
     const r = this.room!;
-    r.phase = "playing";
-    r.startedAt = Date.now();
-    r.deadline = r.startedAt + r.roundSeconds * 1000;
-    for (const p of r.players) {
-      p.answer = null;
-      p.ready = false;
-    }
-    await this.ctx.storage.setAlarm(r.deadline);
+    for (const p of r.players) { p.answer = null; p.ready = false; p.mediaReady = false; }
+    if (r.protocolVersion !== 2) { await this.activateRound(); return; }
+    r.phase = "preparing"; r.startedAt = 0; r.deadline = 0; r.mediaKey = id();
+    r.preparationDeadline = Math.min(this.now() + roomPreparationTtlMs, r.expiresAt);
+    await this.save(); await this.ctx.storage.setAlarm(r.preparationDeadline);
   }
   private async action(p: Player, data: Record<string, unknown>) {
     await this.settle();
     const r = this.room!;
     p = r.players.find((i) => i.id === p.id)!;
     this.playerLimit(p);
+    if (data.action === "leave" && ["finished", "abandoned", "invalidated"].includes(r.phase)) return;
     if (p.left) throw new HttpError(409, "Hai abbandonato la stanza");
     if (data.action === "leave") {
       p.left = true;
       r.phase = "abandoned";
+      await this.auditTerminal("abandoned", "player_left");
       await this.ctx.storage.deleteAlarm();
     } else if (data.action === "start") {
-      if (p !== r.players[0] || r.phase !== "lobby" || r.players.length !== 2)
-        throw new HttpError(409, "Servono due giocatori e l’avvio dell’host");
-      await this.begin();
+      if (p !== r.players[0] || r.players.length !== 2) throw new HttpError(409, "Servono due giocatori e l’avvio dell’host");
+      if (r.phase === "lobby") await this.begin();
+      else if (!["preparing", "playing"].includes(r.phase)) throw new HttpError(409, "Sfida già avviata");
+    } else if (data.action === "media-ready") {
+      if (Number(data.round) !== r.round + 1 || r.protocolVersion !== 2) throw new HttpError(409, "Round non attivo");
+      if (r.phase === "playing" && p.mediaReady) return;
+      if (r.phase !== "preparing") throw new HttpError(410, "Preparazione terminata");
+      p.mediaReady = true;
+      if (r.players.every(i => i.mediaReady && !i.left)) await this.activateRound();
+    } else if (data.action === "media-failed") {
+      if (Number(data.round) !== r.round + 1 || !["preparing", "playing"].includes(r.phase)) throw new HttpError(409, "Round non attivo");
+      await this.invalidateRoom("media_unavailable");
+      return;
     } else if (data.action === "answer") {
       // The round number is part of the idempotency key; stale packets cannot answer a later round.
       if (Number(data.round) !== r.round + 1)
@@ -309,13 +358,13 @@ export class GameRoom {
           throw new HttpError(409, "Risposta già consegnata");
         return;
       }
-      if (r.phase !== "playing" || Date.now() >= r.deadline)
+      if (r.phase !== "playing" || this.now() >= r.deadline)
         throw new HttpError(410, "Tempo scaduto o round concluso");
-      p.answer = { choice: String(data.choice), at: Date.now() };
+      p.answer = { choice: String(data.choice), at: this.now() };
       await this.save();
       await this.settle();
     } else if (data.action === "next") {
-      if (r.phase !== "reveal") throw new HttpError(409, "Round non concluso");
+      if (r.phase !== "reveal" || (r.protocolVersion === 2 && Number(data.round) !== r.round + 1)) throw new HttpError(409, "Round non concluso o richiesta obsoleta");
       p.ready = true;
       if (r.players.every((i) => i.ready)) {
         r.round++;
@@ -340,15 +389,11 @@ export class GameRoom {
       const selected = sample.images;
       if (!selected.length)
         throw new HttpError(409, "Catalogo approvato insufficiente per garantire questa sfida");
-      const images: ImageRow[] = [];
-      for (const image of selected) {
-        const full = await this.env.DB.prepare(
-          "SELECT i.*,s.page_url AS source_url,l.name AS license_name,l.url AS license_url FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id WHERE i.id=?",
-        )
-          .bind(image.id)
-          .first<ImageRow>();
-        if (full) images.push(full);
-      }
+      const full = (await this.env.DB.prepare(`SELECT i.*,s.page_url AS source_url,l.name AS license_name,l.url AS license_url FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id WHERE i.id IN (${selected.map(() => "?").join(",")})`)
+        .bind(...selected.map(image => image.id)).all<ImageRow>()).results;
+      const byId = new Map(full.map(image => [image.id, image]));
+      if (selected.some(image => !byId.has(image.id))) throw new HttpError(409, "Catalogo modificato durante l'assegnazione: riprovare");
+      const images = selected.map(image => byId.get(image.id)!);
       const seconds = Number(data.roundSeconds || 20);
       if (![10, 20, 30].includes(seconds))
         throw new HttpError(400, "Tempo per round non valido");
@@ -362,7 +407,7 @@ export class GameRoom {
         answer: null,
         ready: false,
         left: false,
-        window: Date.now(),
+        window: this.now(),
         requests: 0,
       };
       this.room = {
@@ -370,14 +415,15 @@ export class GameRoom {
         challengeId: id(),
         warnings: sample.warnings,
         phase: "lobby",
+        protocolVersion: mediaProtocol(this.env.PRELOAD_PROTOCOL),
         players: [player],
         images,
         round: 0,
         roundSeconds: seconds,
         deadline: 0,
         startedAt: 0,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + 30 * 60000,
+        createdAt: this.now(),
+        expiresAt: this.now() + 30 * 60000,
         history: [],
       };
       await this.env.DB.batch([
@@ -388,7 +434,7 @@ export class GameRoom {
           "INSERT INTO challenges(id,created_at,settings) VALUES(?,?,?)",
         ).bind(
           this.room.challengeId,
-          Date.now(),
+          this.now(),
           JSON.stringify({
             ...config,
             roundSeconds: seconds,
@@ -426,7 +472,7 @@ export class GameRoom {
         answer: null,
         ready: false,
         left: false,
-        window: Date.now(),
+        window: this.now(),
         requests: 0,
       };
       await this.env.DB.batch([
@@ -449,9 +495,11 @@ export class GameRoom {
       return json(this.view(p));
     }
     if (path === "/media" && request.method === "GET") {
-      if (this.room.phase !== "playing")
-        throw new HttpError(404, "Immagine non attiva");
-      return media(this.env, this.room.images[this.room.round]);
+      if (!["preparing", "playing"].includes(this.room.phase) || p.left) throw new HttpError(404, "Immagine non attiva");
+      const key = new URL(request.url).searchParams.get("key");
+      if ((this.room.protocolVersion === 2 && key !== this.room.mediaKey) || (key !== null && key !== (this.room.mediaKey || String(this.room.round + 1)))) throw new HttpError(404, "Immagine non assegnata a questo round");
+      const response = await media(this.env, this.room.images[this.room.round]);
+      return key ? privateMedia(response, "Authorization") : response;
     }
     if (path === "/action" && request.method === "POST") {
       await this.action(p, await body(request));
@@ -496,7 +544,7 @@ export class GameRoom {
     });
   }
   webSocketClose(ws: WebSocket, code: number, reason: string) {
-    ws.close(code === 1006 ? 1000 : code, reason);
+    ws.close(code === 1006 || code === 1005 ? 1000 : code, reason);
   }
   async alarm() {
     await this.ctx.blockConcurrencyWhile(async () => {

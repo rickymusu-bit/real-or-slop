@@ -39,3 +39,12 @@ export async function media(env: Env, image: ImageRow) {
   if (!response) throw new HttpError(404, "Immagine non disponibile");
   return response;
 }
+
+// Never publicly cache authenticated media or reveal metadata. The opaque URL
+// and credential-specific Vary partition allow private browser cache reuse.
+export function privateMedia(response: Response, identity: "Cookie" | "Authorization") {
+  const headers = new Headers(response.headers);
+  headers.set("Cache-Control", "private, max-age=300");
+  headers.set("Vary", identity);
+  return new Response(response.body, { status: response.status, headers });
+}
