@@ -41,7 +41,7 @@ class SchemaTest(unittest.TestCase):
         db.execute("INSERT INTO game_rounds(id,session_id,image_id,position) VALUES('r','s',?,0)",(image,))
         db.execute("INSERT INTO answers VALUES('r','REAL',1,2,1)")
         db.execute("INSERT INTO players(id) VALUES('p')")
-        db.execute("INSERT INTO challenges VALUES('c',1,NULL,'{}')")
+        db.execute("INSERT INTO challenges(id,created_at,completed_at,settings) VALUES('c',1,NULL,'{}')")
         db.execute("INSERT INTO challenge_answers VALUES('c','p',0,?,'AI',0,1)",(image,))
         self.assertEqual(db.execute('SELECT COUNT(*),AVG(correct) FROM image_answer_statistics').fetchone(),(2,0.5))
         with self.assertRaises(sqlite3.IntegrityError):db.execute('UPDATE images SET sha256=(SELECT sha256 FROM images LIMIT 1)')

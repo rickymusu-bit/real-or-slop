@@ -268,3 +268,8 @@ dialog button { margin-bottom: 12px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+.preparation { min-height: 340px; }
+#preload-progress { font-variant-numeric: tabular-nums; }
+.load-actions { padding-bottom: 40px; }
+.media-loading { padding: 28px; margin: 18px 0; background: var(--surface); color: var(--muted); min-height: 120px; }

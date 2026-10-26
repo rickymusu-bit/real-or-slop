@@ -82,6 +82,7 @@ try:
         private(view)
         assert view['total'] == 2 and not view['done']
         assert set(view['question']) == {'id', 'number', 'image', 'alt'}
+        assert request('/api/sessions/'+sid+'/ready', 'POST', dict(roundId=view['question']['id']))[0] == 200
         assert request('/api/sessions/'+sid+'/answer', 'POST', dict(roundId=view['question']['id'], choice='REAL'))[0] == 200
     end = request('/api/sessions/'+sid)[1]
     assert end['score'] == 100 * sum(c['answer'] == 'REAL' for c in end['credits'])
@@ -91,6 +92,9 @@ try:
     sessions.append(timed['id'])
     _, view = request('/api/sessions/'+timed['id'])
     private(view)
+    assert view['phase'] == 'preparing' and view['expiresAt'] is None
+    _, manifest = request('/api/sessions/'+timed['id']+'/manifest')
+    _, view = request('/api/sessions/'+timed['id']+'/start', 'POST', dict(prepared=True, roundIds=[q['id'] for q in manifest['images']]))
     assert view['total'] == 2 and 55000 < view['expiresAt'] - view['serverNow'] <= 60000
     assert request('/api/sessions', 'POST', dict(mode='training', count=8, categories=[prefix], difficulty='difficile'))[0] == 409
     assert request('/api/sessions', 'POST', dict(mode='training', count=8, categories=[prefix+'_missing']))[0] == 409
@@ -128,6 +132,8 @@ try:
     assert room['warnings'] == created['warnings']
     _, guest = request('/api/rooms/'+code+'/join', 'POST', dict(nickname='Fixture guest'))
     assert request('/api/rooms/'+code+'/action', 'POST', dict(action='start'), host)[0] == 200
+    assert request('/api/rooms/'+code+'/action', 'POST', dict(action='media-ready', round=1), host)[0] == 200
+    assert request('/api/rooms/'+code+'/action', 'POST', dict(action='media-ready', round=1), guest['token'])[0] == 200
     _, a = request('/api/rooms/'+code+'/state', token=host)
     _, b = request('/api/rooms/'+code+'/state', token=guest['token'])
     players = [player['id'] for player in a['players']]

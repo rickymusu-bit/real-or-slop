@@ -1,10 +1,16 @@
 import { api, content, escape } from "./main";
+import { ImagePreloader } from "./preload";
+import { serverCountdown } from "./clock";
 import { choices, feedback, progress, zoom, type Reveal } from "./play";
 interface Connection {
   code: string;
   token: string;
 }
 interface RoomView {
+  revision: number;
+  protocolVersion: number;
+  preparationDeadline: number | null;
+  invalidReason: string | null;
   code: string;
   you: string;
   phase: string;
@@ -20,6 +26,7 @@ interface RoomView {
     elapsedMs: number;
     answered: boolean;
     ready: boolean;
+    mediaReady: boolean;
     left: boolean;
   }[];
   question: { image: string; alt: string } | null;
@@ -122,14 +129,16 @@ async function connect(c: Connection) {
     blobUrl = "",
     imageKey = "",
     pending = false;
+  let latest: RoomView | null = null, lastRevision = 0, readyRequest = "", roundExpired = false;
   const headers = { Authorization: "Bearer " + c.token };
+  const preloader = new ImagePreloader({ headers });
   stopPvp = () => {
     active = false;
     socket?.close();
     if (poll) clearInterval(poll);
     if (retry) clearTimeout(retry);
     if (clock) clearInterval(clock);
-    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    preloader.dispose();
     document.removeEventListener("keydown", key);
   };
   const key = (e: KeyboardEvent) => {
@@ -151,6 +160,11 @@ async function connect(c: Connection) {
         ?.click();
   };
   document.addEventListener("keydown", key);
+  const updateChoices = () => {
+    const me = latest?.players.find(p => p.id === latest?.you);
+    const enabled = !roundExpired && latest?.phase === "playing" && latest.question?.image === imageKey && !!blobUrl && !me?.answered && !pending;
+    document.querySelectorAll<HTMLButtonElement>("[data-pvp-choice]").forEach(button => { button.disabled = !enabled; });
+  };
   const action = async (
     action: string,
     extra: Record<string, unknown> = {},
@@ -168,7 +182,7 @@ async function connect(c: Connection) {
       const error = document.querySelector("#pvp-error");
       if (error) error.textContent = String(e);
     } finally {
-      pending = false;
+      pending = false; updateChoices();
     }
   };
   const load = async () => {
@@ -179,7 +193,7 @@ async function connect(c: Connection) {
       if (active) await draw(next);
     } catch (e) {
       if (!active) return;
-      content().innerHTML = `<section class="page narrow"><h1>Riconnessione.</h1><p>${escape(e)}</p><p>La partita resta sul server. Non chiudere questa scheda.</p><button id="reconnect-room">Riprova</button><a class="button" href="/pvp">Torna alle stanze</a></section>`;
+      content().innerHTML = `<section class="page narrow"><h1>Riconnessione.</h1><p>${escape(e)}</p><p>La partita resta sul server. Un timer già avviato continua a scorrere.</p><strong id="pvp-clock" role="timer" aria-label="Tempo rimasto"></strong><button id="reconnect-room">Riprova</button><a class="button" href="/pvp">Torna alle stanze</a></section>`;
       document
         .querySelector("#reconnect-room")!
         .addEventListener("click", () => void load());
@@ -187,103 +201,66 @@ async function connect(c: Connection) {
   };
   const draw = async (v: RoomView) => {
     if (!active) return;
+    if (v.error) { document.querySelector("#pvp-error")?.replaceChildren(document.createTextNode(v.error)); return; }
+    if ((v.revision || 0) < lastRevision) return;
     const version = ++drawVersion;
-    if (v.error) {
-      document
-        .querySelector("#pvp-error")
-        ?.replaceChildren(document.createTextNode(v.error));
-      return;
-    }
+    lastRevision = v.revision || 0; latest = v; roundExpired = false;
     if (clock) clearInterval(clock);
-    const me = v.players.find((p) => p.id === v.you)!;
-    const ranking = [...v.players].sort(
-      (a, b) => b.score - a.score || a.elapsedMs - b.elapsedMs,
-    );
-    const title =
-      v.phase === "lobby"
-        ? "Uno sguardo sta arrivando."
-        : v.phase === "finished"
-          ? ranking[0].score === ranking[1].score &&
-            ranking[0].elapsedMs === ranking[1].elapsedMs
-            ? "Sguardi alla pari."
-            : `${escape(ranking[0].nickname)} vince!`
-          : v.phase === "abandoned"
-            ? "La stanza è terminata."
-            : `Round ${v.round} di ${v.total}`;
-    content().innerHTML = `<section class="${v.phase === "lobby" || v.phase === "finished" || v.phase === "abandoned" ? "page narrow" : "play play-pvp"}"><div class="play-top"><span>PVP · DEMO${v.phase === "playing" || v.phase === "reveal" ? ` · ROUND ${v.round}/${v.total}` : ""}</span><strong id="pvp-clock" role="timer" aria-label="Tempo rimasto"></strong></div><h2 class="${v.phase === "playing" ? "sr-only" : ""}">${title}</h2>${v.phase === "playing" || v.phase === "reveal" ? progress(v.phase === "reveal" ? v.round : v.round - 1, v.total) : ""}${v.warnings?.length ? `<details class="play-warning"><summary>Nota sul catalogo</summary><p>${escape(v.warnings.join(" "))}</p></details>` : ""}<div class="player-scores" aria-label="Punteggi dei giocatori">${v.players.map((p) => `${escape(p.nickname)}: ${p.score} pt · ${(p.elapsedMs / 1000).toFixed(1)} s ${p.left ? "(uscito)" : p.answered ? "✓" : ""}`).join(" &nbsp; / &nbsp; ")}</div>${v.phase === "lobby" ? `<p>Condividi questo codice con un amico:</p><div class="room-code">${escape(v.code)}</div><p>Apri due schede o browser e inserisci lo stesso codice. Stanza privata per 2 persone.</p>${v.players.length === 2 && v.players[0].id === v.you ? '<button id="pvp-start" class="primary">Inizia la sfida</button>' : "<p>In attesa del secondo giocatore e dell’avvio dell’host…</p>"}` : ""}${v.question ? `<img class="play-image" src="${escape(blobUrl)}" alt="${escape(v.question.alt)}" role="button" tabindex="0" aria-label="Ingrandisci l’immagine">${choices("data-pvp-choice", me.answered)}${me.answered ? '<p class="answer-wait" role="status">Risposta ricevuta. Attendiamo l’altro giocatore o la scadenza.</p>' : ""}` : ""}${v.reveal ? `<div class="feedback" role="status">${feedback(v.reveal)}${v.phase === "reveal" ? `<button id="pvp-next" class="primary" ${me.ready ? "disabled" : ""}>${me.ready ? "In attesa dell’amico…" : "Prossimo round"}</button>` : ""}</div>` : ""}${v.phase === "finished" ? `<h2>Fonti e crediti</h2>${v.history.map((r) => `<div class="feedback"><p>${escape(r.title)}</p><p>${escape(r.explanation)}</p><p>${escape(r.author)} · ${escape(r.license)}</p></div>`).join("")}<a class="button" href="/pvp">Nuova sfida</a>` : ""}${v.phase === "abandoned" ? '<p>Un giocatore ha abbandonato oppure la stanza è scaduta. Nessun risultato viene aggiunto a classifiche pubbliche.</p><a class="button" href="/pvp">Crea una nuova sfida</a>' : ""}<div id="pvp-error" class="error" role="alert" hidden></div>${!["finished", "abandoned"].includes(v.phase) ? '<button id="pvp-leave" class="secondary">Abbandona stanza</button>' : ""}<p class="status" id="connection-status">${socket?.readyState === WebSocket.OPEN ? "Connessione in tempo reale" : "Sincronizzazione HTTP · riconnessione in corso"}</p></section>`;
-    const error = document.querySelector<HTMLElement>("#pvp-error")!;
-    error.hidden = false;
-    document
-      .querySelector("#pvp-start")
-      ?.addEventListener("click", () => void action("start"));
-    document
-      .querySelector("#pvp-next")
-      ?.addEventListener("click", () => void action("next"));
-    document
-      .querySelector("#pvp-leave")
-      ?.addEventListener("click", () => void action("leave"));
-    document.querySelectorAll<HTMLButtonElement>("[data-pvp-choice]").forEach(
-      (b) =>
-        (b.onclick = () => {
-          document
-            .querySelectorAll<HTMLButtonElement>("[data-pvp-choice]")
-            .forEach((btn) => (btn.disabled = true));
-          void action("answer", {
-            round: v.round,
-            choice: b.dataset.pvpChoice,
-          });
-        }),
-    );
-    if (v.question) {
-      zoom();
-      const nextKey = v.code + ":" + v.round;
-      if (imageKey !== nextKey) {
-        imageKey = nextKey;
-        try {
-          const r = await fetch(v.question.image, { headers });
-          if (!r.ok) throw Error("Immagine non disponibile");
-          const url = URL.createObjectURL(await r.blob());
-          if (!active || imageKey !== nextKey) {
-            URL.revokeObjectURL(url);
-            return;
-          }
-          if (blobUrl) URL.revokeObjectURL(blobUrl);
-          blobUrl = url;
-          const img = document.querySelector<HTMLImageElement>(".play-image");
-          if (img) img.src = url;
-        } catch (e) {
-          error.textContent = String(e);
-          imageKey = "";
-        }
-      }
-    }
-    if (version !== drawVersion) return;
-    if (v.phase === "playing") {
-      const offset = v.serverNow - Date.now();
-      const tick = () => {
-        const n = Math.max(
-          0,
-          Math.ceil((v.deadline - Date.now() - offset) / 1000),
-        );
-        const el = document.querySelector("#pvp-clock");
-        if (el) el.textContent = n + " s";
-        if (n === 0) {
-          if (clock) clearInterval(clock);
-          document
-            .querySelectorAll<HTMLButtonElement>("[data-pvp-choice]")
-            .forEach((b) => (b.disabled = true));
-          void load();
-        }
+    const me = v.players.find(p => p.id === v.you)!;
+    const ranking = [...v.players].sort((a, b) => b.score - a.score || a.elapsedMs - b.elapsedMs);
+    const terminalPhase = ["finished", "abandoned", "invalidated"].includes(v.phase);
+    const title = v.phase === "lobby" ? "Uno sguardo sta arrivando." : v.phase === "preparing" ? "Prepariamo il round." : v.phase === "invalidated" ? "Sfida annullata." : v.phase === "finished" ? ranking[0].score === ranking[1].score && ranking[0].elapsedMs === ranking[1].elapsedMs ? "Sguardi alla pari." : `${escape(ranking[0].nickname)} vince!` : v.phase === "abandoned" ? "La stanza è terminata." : `Round ${v.round} di ${v.total}`;
+    const currentUrl = v.question?.image || "";
+    const shown = currentUrl === imageKey ? blobUrl : "";
+    const image = (url: string) => `<img class="play-image" src="${escape(url)}" alt="${escape(v.question?.alt)}" loading="eager" fetchpriority="high" decoding="async" role="button" tabindex="0" aria-label="Ingrandisci l’immagine">`;
+    content().innerHTML = `<section class="${v.phase === "lobby" || terminalPhase ? "page narrow" : "play play-pvp"}"><div class="play-top"><span>PVP · DEMO${["preparing", "playing", "reveal"].includes(v.phase) ? ` · ROUND ${v.round}/${v.total}` : ""}</span><strong id="pvp-clock" role="timer" aria-label="${v.phase === "preparing" ? "Limite della preparazione" : "Tempo rimasto"}"></strong></div><h2 class="${v.phase === "playing" ? "sr-only" : ""}">${title}</h2>${["playing", "reveal"].includes(v.phase) ? progress(v.phase === "reveal" ? v.round : v.round - 1, v.total) : ""}${v.warnings?.length ? `<details class="play-warning"><summary>Nota sul catalogo</summary><p>${escape(v.warnings.join(" "))}</p></details>` : ""}<div class="player-scores" aria-label="Punteggi dei giocatori">${v.players.map(p => `${escape(p.nickname)}: ${p.score} pt · ${(p.elapsedMs / 1000).toFixed(1)} s ${p.left ? "(uscito)" : p.answered ? "✓" : ""}`).join(" &nbsp; / &nbsp; ")}</div>${v.phase === "lobby" ? `<p>Condividi questo codice con un amico:</p><div class="room-code">${escape(v.code)}</div><p>Apri due schede o browser e inserisci lo stesso codice. Stanza privata per 2 persone.</p>${v.players.length === 2 && v.players[0].id === v.you ? '<button id="pvp-start" class="primary">Inizia la sfida</button>' : '<p>In attesa del secondo giocatore e dell’avvio dell’host…</p>'}` : ""}${v.phase === "preparing" ? `<div class="media-loading" role="status">${me.mediaReady ? "Immagine verificata. Attendiamo l’altro giocatore." : "Scarichiamo e decodifichiamo l’immagine prima del countdown."} ${v.players.filter(p => p.mediaReady).length}/2 pronti. Il round non è ancora partito.</div>` : ""}${v.phase === "playing" ? `<div id="pvp-media">${shown ? image(shown) : '<div class="media-loading" role="status">Caricamento immagine. Il timer del server continua.</div>'}</div>${choices("data-pvp-choice", true)}${me.answered ? '<p class="answer-wait" role="status">Risposta ricevuta. Attendiamo l’altro giocatore o la scadenza.</p>' : ""}` : ""}${v.reveal ? `<div class="feedback" role="status">${feedback(v.reveal)}${v.phase === "reveal" ? `<button id="pvp-next" class="primary" ${me.ready ? "disabled" : ""}>${me.ready ? "In attesa dell’amico…" : "Prossimo round"}</button>` : ""}</div>` : ""}${v.phase === "finished" ? `<h2>Fonti e crediti</h2>${v.history.map(r => `<div class="feedback"><p>${escape(r.title)}</p><p>${escape(r.explanation)}</p><p>${escape(r.author)} · ${escape(r.license)}</p></div>`).join("")}<a class="button" href="/pvp">Nuova sfida</a>` : ""}${v.phase === "invalidated" ? `<p>${v.invalidReason === "preparation_timeout" ? "Uno dei client non ha completato il caricamento entro il limite." : "Non è stato possibile visualizzare il round."} Nessun risultato valido o punto di questa sfida entra nelle statistiche.</p><a class="button" href="/pvp">Nuova sfida</a>` : ""}${v.phase === "abandoned" ? '<p>Un giocatore ha abbandonato oppure la stanza è scaduta.</p><a class="button" href="/pvp">Crea una nuova sfida</a>' : ""}<div id="pvp-error" class="error" role="alert" hidden></div>${!terminalPhase ? '<button id="pvp-leave" class="secondary">Abbandona stanza</button>' : ""}<p class="status" id="connection-status">${socket?.readyState === WebSocket.OPEN ? "Connessione in tempo reale" : "Sincronizzazione HTTP · riconnessione in corso"}</p></section>`;
+    const error = document.querySelector<HTMLElement>("#pvp-error")!; error.hidden = false;
+    document.querySelector("#pvp-start")?.addEventListener("click", () => void action("start"));
+    document.querySelector("#pvp-next")?.addEventListener("click", () => void action("next", { round: v.round }));
+    document.querySelector("#pvp-leave")?.addEventListener("click", () => void action("leave"));
+    document.querySelectorAll<HTMLButtonElement>("[data-pvp-choice]").forEach(button => {
+      button.onclick = () => {
+        document.querySelectorAll<HTMLButtonElement>("[data-pvp-choice]").forEach(button => { button.disabled = true; });
+        void action("answer", { round: v.round, choice: button.dataset.pvpChoice });
       };
-      clock = setInterval(tick, 250);
-      tick();
+    });
+    // The clock is armed before awaiting media: reconnect/loading never pauses it.
+    if (v.phase === "playing" || (v.phase === "preparing" && v.preparationDeadline)) {
+      const seconds = serverCountdown(v.phase === "playing" ? v.deadline : v.preparationDeadline!, v.serverNow);
+      const tick = () => {
+        const n = seconds(), el = document.querySelector("#pvp-clock");
+        if (el) el.textContent = (v.phase === "preparing" ? "Attesa · " : "") + n + " s";
+        if (!n) { roundExpired = true; if (clock) clearInterval(clock); updateChoices(); void load(); }
+      };
+      clock = setInterval(tick, 200); tick();
     }
-    if (["finished", "abandoned"].includes(v.phase)) {
-      terminal = true;
-      sessionStorage.removeItem("ros_room");
-      if (poll) clearInterval(poll);
-      if (retry) clearTimeout(retry);
-      socket?.close();
+    if (terminalPhase) {
+      terminal = true; preloader.dispose(); sessionStorage.removeItem("ros_room");
+      if (poll) clearInterval(poll); if (retry) clearTimeout(retry); socket?.close(); return;
+    }
+    if (v.question) {
+      try {
+        preloader.retain([currentUrl], false);
+        const asset = await preloader.activate(currentUrl);
+        if (!active || version !== drawVersion) return;
+        blobUrl = asset.url; imageKey = currentUrl;
+        if (v.phase === "playing") {
+          document.querySelector("#pvp-media")!.innerHTML = image(blobUrl); zoom(); updateChoices();
+        } else if (v.phase === "preparing" && !me.mediaReady && readyRequest !== currentUrl) {
+          readyRequest = currentUrl;
+          try {
+            const next = await api<RoomView>(`/rooms/${c.code}/action`, { method: "POST", headers, body: JSON.stringify({ action: "media-ready", round: v.round }) });
+            if (active) await draw(next);
+          } finally { if (readyRequest === currentUrl) readyRequest = ""; }
+        }
+      } catch (failure) {
+        if (!active || version !== drawVersion) return;
+        blobUrl = ""; imageKey = "";
+        error.innerHTML = `${escape(failure)} <button id="retry-pvp-media">Riprova</button> <button id="cancel-pvp-media">Annulla la sfida</button>`;
+        document.querySelector("#retry-pvp-media")!.addEventListener("click", () => void load());
+        document.querySelector("#cancel-pvp-media")!.addEventListener("click", () => void action("media-failed", { round: v.round }));
+        updateChoices();
+      }
     }
   };
   const openSocket = () => {

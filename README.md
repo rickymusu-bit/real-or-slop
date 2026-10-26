@@ -50,7 +50,23 @@ Piano Workers Free; nessun upgrade o billing autorizzato. D1, R2 Standard e buil
 
 Niente dati identificativi obbligatori. Sessioni anonime, nickname facoltativo; nessun analytics o cookie pubblicitario. Fonte/licenza/spiegazione soltanto dopo la risposta. Crediti delle immagini pubbliche devono rispettare attribuzioni e share-alike. Le immagini IA del catalogo futuro sono create per un gioco di fantasia. Informativa nell'app. Prima di un lancio pubblico definire titolare, contatti e tempi di conservazione effettivi.
 
-Specifiche versionate in `docs/specification-v1.1.0.md`. Versione app distinta: vedere `CHANGELOG.md`. Le PR #10 e #11 sono state integrate dopo approvazione esplicita; il tema Digital Gallery successivo resta in una PR in bozza. Nessun comando di deploy eseguito in questa fase.
+Specifiche versionate in `docs/specification-v1.1.0.md`. Versione app distinta: vedere `CHANGELOG.md`. Le PR #10, #11 e #12 sono state integrate dopo approvazione esplicita; il precaricamento successivo resta in una PR in bozza. Nessun comando di deploy eseguito in questa fase.
+
+## Precaricamento e timer (0.10.0)
+
+Allenamento anticipa le prossime due immagini e abilita le risposte dopo decode.
+A tempo prepara tutti i file prima di mostrare “Inizia il countdown”: il server
+assegna la deadline soltanto allo start idempotente. PvP prepara lo stesso round
+per entrambi e parte dopo le due conferme, con attesa massima di 45 secondi.
+
+Cache e richieste hanno limiti espliciti; errori offrono retry o annullamento
+senza risultato valido. Un timer attivo continua durante retry e riconnessione.
+Le assegnazioni legacy e le etichette indipendenti restano invariate. Applicare
+la migrazione `0006_media_preparation.sql` prima del backend aggiornato.
+
+[Protocollo, budget, API, rollback e benchmark](docs/precaricamento-immagini-v1.0.0.md).
+`npm run benchmark:preloading` usa Chromium esistente e fixture locali con banda
+modellata; non misura una rete mobile fisica. Nessuna risorsa remota necessaria.
 
 ## Digital Gallery (0.9.0)
 
@@ -63,8 +79,8 @@ progresso e movimento ridotto sono verificati in Chromium già disponibile.
 `npm run test:gallery` esegue controlli browser locali e salva screenshot in
 `artifacts/gallery/`. Eseguire in sequenza con le altre suite Wrangler.
 [Design, font, verifiche e misure](docs/digital-gallery-v1.0.0.md).
-Questa fase cambia soltanto l'interfaccia: precaricamento e preparazione dei timer
-restano alla fase successiva, con comportamento server attuale invariato.
+La 0.9.0 cambia soltanto l'interfaccia; la preparazione dei timer è aggiunta dalla
+0.10.0 descritta sopra.
 
 ## Studio SLOP (0.8.0)
 

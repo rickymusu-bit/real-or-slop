@@ -2,6 +2,7 @@ export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
   DATA_MODE: string;
+  PRELOAD_PROTOCOL?: string;
   IMAGES?: R2Bucket;
   QUARANTINE?: R2Bucket;
   ADMIN_TOKEN?: string;

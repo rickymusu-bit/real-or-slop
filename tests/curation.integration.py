@@ -128,6 +128,7 @@ for _ in range(total):
         assert secret not in serialized, secret
     question = state['question']
     assert set(question) == {'id', 'number', 'image', 'alt'}
+    game('/api/sessions/'+sid+'/ready', 'POST', dict(roundId=question['id']))
     revealed = game('/api/sessions/'+sid+'/answer', 'POST', dict(roundId=question['id'], choice='REAL'))
     assert 'PRIVATE_SURPRISE_FIXTURE' not in json.dumps(revealed)
 assert game('/api/sessions/'+sid)['done']

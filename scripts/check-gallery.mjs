@@ -42,6 +42,7 @@ async function tab() {
   await new Promise(resolve => ws.addEventListener('open', resolve, { once: true }));
   let seq = 0;
   const pending = new Map();
+  let intercept = null;
   ws.addEventListener('message', event => {
     const message = JSON.parse(event.data);
     if (message.id) {
@@ -50,6 +51,7 @@ async function tab() {
       if (message.error) handler.reject(Error(message.error.message)); else handler.resolve(message.result);
     }
     if (message.method === 'Runtime.exceptionThrown') errors.push(message.params.exceptionDetails.text);
+    if (message.method === 'Fetch.requestPaused' && intercept) void intercept(message.params, send).catch(() => { /* An aborted image may already have released the intercepted request. */ });
     if (message.method === 'Network.requestWillBeSent') requests.push(message.params.request.url);
   });
   const send = (method, params = {}) => new Promise((resolve, reject) => {
@@ -62,7 +64,7 @@ async function tab() {
   };
   await send('Page.enable'); await send('Runtime.enable'); await send('Network.enable');
   return {
-    send, evaluate,
+    send, evaluate, intercept(handler) { intercept = handler; },
     viewport: (width, height) => send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 700 }),
     async go(path, selector) {
       await send('Page.navigate', { url: base + path });
@@ -138,8 +140,22 @@ try {
     await waitFor(() => t.evaluate('Boolean(document.querySelector(".score"))'), 'results');
     await layout(t, 'results ' + width); await t.screenshot('results-' + width);
   }
+  let mediaMode = 'delay';
+  t.intercept(async (request, send) => {
+    if (mediaMode === 'delay') await pause(350);
+    if (mediaMode === 'corrupt') await send('Fetch.fulfillRequest', { requestId: request.requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'image/png' }], body: Buffer.from('corrupt fixture').toString('base64') });
+    else await send('Fetch.continueRequest', { requestId: request.requestId });
+  });
+  await t.send('Fetch.enable', { patterns: [{ urlPattern: base + '/api/sessions/*/media/*', requestStage: 'Request' }] });
   await t.go('/tempo', '#duration');
   await t.evaluate('document.querySelector("#settings").requestSubmit()');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#preload-progress"))'), 'preparation screen');
+  const beforeStart = await t.evaluate('fetch("/api/sessions/"+sessionStorage.getItem("ros_timed")).then(r=>r.json())');
+  assert.equal(beforeStart.phase, 'preparing'); assert.equal(beforeStart.expiresAt, null); assert.equal(beforeStart.answered, 0);
+  assert.equal(await t.evaluate('Boolean(document.querySelector("[data-choice]"))'), false);
+  await t.screenshot('preparing-timed-360');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#start-prepared"))'), 'all timed images prepared');
+  await t.evaluate('document.querySelector("#start-prepared").click()');
   await imageReady(t); await waitFor(() => t.evaluate('document.querySelector("#clock").textContent.includes("s")'), 'server clock display');
   await layout(t, 'timed 360', true); await t.screenshot('timed-360');
   await t.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
@@ -147,6 +163,28 @@ try {
   await waitFor(() => t.evaluate('Boolean(document.querySelector("#next"))'), 'reduced motion feedback');
   assert.equal(await t.evaluate('getComputedStyle(document.querySelector(".feedback")).animationName'), 'none');
   await t.send('Emulation.setEmulatedMedia', { features: [] });
+  const deadline = await t.evaluate('fetch("/api/sessions/"+sessionStorage.getItem("ros_timed")).then(r=>r.json()).then(s=>s.expiresAt)');
+  mediaMode = 'corrupt'; await t.send('Network.setCacheDisabled', { cacheDisabled: true });
+  await t.go('/tempo', '#resume');
+  await t.evaluate('document.querySelector("#resume").click()');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#retry-media"))'), 'decode error during active timer');
+  assert.equal(await t.evaluate('Boolean(document.querySelector("[data-choice]"))'), false);
+  assert.equal(await t.evaluate('fetch("/api/sessions/"+sessionStorage.getItem("ros_timed")).then(r=>r.json()).then(s=>s.expiresAt)'), deadline);
+  await t.screenshot('active-load-error-360');
+  mediaMode = 'pass'; await t.evaluate('document.querySelector("#retry-media").click()');
+  await imageReady(t);
+  assert.equal(await t.evaluate('fetch("/api/sessions/"+sessionStorage.getItem("ros_timed")).then(r=>r.json()).then(s=>s.expiresAt)'), deadline);
+  mediaMode = 'corrupt'; await t.go('/tempo', '#resume'); await t.evaluate('document.querySelector("#resume").click()');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#invalidate-session"))'), 'persistent error cancellation');
+  await t.evaluate('document.querySelector("#invalidate-session").click()');
+  await waitFor(() => t.evaluate('document.querySelector(".eyebrow")?.textContent.includes("ANNULLATA")'), 'invalidated state');
+  assert.equal(await t.evaluate('Boolean(document.querySelector(".score"))'), false);
+  await t.go('/tempo', '#duration'); await t.evaluate('document.querySelector("#settings").requestSubmit()');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#retry-media"))'), 'decode failure before start');
+  assert.equal(await t.evaluate('fetch("/api/sessions/"+sessionStorage.getItem("ros_timed")).then(r=>r.json()).then(s=>s.expiresAt)'), null);
+  mediaMode = 'pass'; await t.evaluate('document.querySelector("#retry-media").click()');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#start-prepared"))'), 'preparation retry succeeds');
+  await t.send('Fetch.disable'); await t.send('Network.setCacheDisabled', { cacheDisabled: false });
   const friend = await tab(); await friend.viewport(360, 640);
   await t.go('/pvp', '#room-categories option');
   await t.evaluate('document.querySelector("#rounds").value="1";document.querySelector("#round-seconds").value="30";document.querySelector("#nickname").value="Osservatore A";document.querySelector("#create-room").requestSubmit()');
@@ -179,7 +217,7 @@ try {
   assert.ok(!requests.some(url => /^https?:/.test(url) && new URL(url).hostname !== '127.0.0.1'), 'unexpected external browser request');
   assert.deepEqual(errors, []);
   writeFileSync(resolve(output, 'measurements.json'), JSON.stringify(measurements, null, 2) + '\n');
-  console.log('Digital Gallery passed: real solo/timed/PvP, 360/390/768/1440 layouts, intact images, symmetric named actions, AX tree, keyboard zoom/answer/focus, reduced motion, local fonts and no external requests. Screenshots: artifacts/gallery/.');
+  console.log('Digital Gallery passed: real solo/timed/PvP, 360/390/768/1440 layouts, intact images, symmetric named actions, AX tree, keyboard zoom/answer/focus, reduced motion, local fonts, delayed preparation, corrupt-image retry, active-timer preservation, invalidation and no external requests. Screenshots: artifacts/gallery/.');
 } finally {
   for (const ws of clients) ws.close();
   for (const child of children) { try { process.kill(-child.pid, 'SIGTERM'); } catch { /* Already stopped. */ } }

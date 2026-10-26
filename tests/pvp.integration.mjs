@@ -70,6 +70,12 @@ assert.equal(
   (await req("/" + code + "/action", a, { action: "start" })).status,
   200,
 );
+const preparing = (await req("/" + code + "/state", a)).data;
+assert.equal(preparing.phase, "preparing"); assert.equal(preparing.deadline, 0);
+assert.equal((await req("/" + code + "/action", a, { action: "answer", round: 1, choice: "REAL" })).status, 410);
+assert.equal((await req("/" + code + "/action", a, { action: "media-ready", round: 1 })).data.phase, "preparing");
+assert.equal((await req("/" + code + "/state", b)).data.deadline, 0);
+assert.equal((await req("/" + code + "/action", b, { action: "media-ready", round: 1 })).status, 200);
 const [sa, sb] = await Promise.all(startedMessages);
 assert.equal(sa.deadline, sb.deadline);
 assert.equal(sa.question.image, sb.question.image);
@@ -113,13 +119,15 @@ const revealed = waitMessage(wa, (s) => s.phase === "reveal");
 wb.send(JSON.stringify({ action: "answer", round: 1, choice: "AI" }));
 assert.ok((await revealed).reveal.explanation);
 assert.equal(
-  (await req("/" + code + "/action", a, { action: "next" })).status,
+  (await req("/" + code + "/action", a, { action: "next", round: 1 })).status,
   200,
 );
 assert.equal(
-  (await req("/" + code + "/action", b, { action: "next" })).data.phase,
-  "playing",
+  (await req("/" + code + "/action", b, { action: "next", round: 1 })).data.phase,
+  "preparing",
 );
+assert.equal((await req("/" + code + "/action", a, { action: "media-ready", round: 2 })).status, 200);
+assert.equal((await req("/" + code + "/action", b, { action: "media-ready", round: 2 })).data.phase, "playing");
 assert.equal(
   (
     await req("/" + code + "/action", a, {
@@ -175,6 +183,7 @@ assert.equal(
   ).status,
   410,
 );
+assert.equal((await req("/" + code + "/action", a, { action: "leave" })).data.phase, "finished");
 for (const ws of sockets) ws.close();
 console.log(
   "PvP passed: two WebSocket clients, common image/deadline, no early reveal, duplicate/stale rejection, reconnect, alarm timeout and D1 scores.",
