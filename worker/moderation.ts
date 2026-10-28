@@ -1,3 +1,4 @@
+import { parseDriveArchive } from "./drive";
 import { prepareImport } from "./import";
 import { slopStudio } from "./slop";
 import {
@@ -37,7 +38,7 @@ export async function moderation(request: Request, env: Env, path: string) {
       new URL(request.url).searchParams.get("status") || "in-review";
     const items = (
       await env.DB.prepare(
-        "SELECT i.*,s.page_url AS source_url,s.evidence,l.url AS license_url,p.id AS studio_plan_id FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id LEFT JOIN slop_plans p ON p.image_id=i.id WHERE i.status=? ORDER BY i.created_at DESC LIMIT 100",
+        "SELECT i.*,s.page_url AS source_url,s.evidence,l.url AS license_url,p.id AS studio_plan_id,a.drive_file_id AS archive_drive_file_id,a.drive_manifest_id AS archive_drive_manifest_id FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id LEFT JOIN slop_plans p ON p.image_id=i.id LEFT JOIN image_archives a ON a.image_id=i.id WHERE i.status=? ORDER BY i.created_at DESC LIMIT 100",
       )
         .bind(filter)
         .all()
@@ -56,8 +57,26 @@ export async function moderation(request: Request, env: Env, path: string) {
   }
   if (path === "/api/admin/import" && request.method === "POST") {
     const data = await body(request);
+    const archive = parseDriveArchive(data.drive_archive);
+    if (archive) {
+      const existing = await env.DB.prepare(
+        "SELECT a.image_id AS id,a.original_sha256 AS sha256,i.status FROM image_archives a JOIN images i ON i.id=a.image_id WHERE a.drive_file_id=?",
+      ).bind(archive.fileId).first<{ id: string; sha256: string; status: string }>();
+      if (existing) {
+        if (existing.sha256 !== archive.sha256)
+          throw new HttpError(409, "Originale Drive modificato: revisione manuale richiesta");
+        return json({ id: existing.id, status: existing.status, already_imported: true,
+          upload: `/api/admin/assets/${existing.id}` });
+      }
+    }
     const prepared = prepareImport(env, data);
-    await env.DB.batch(prepared.statements);
+    const statements = [...prepared.statements];
+    if (archive) statements.push(env.DB.prepare(
+      "INSERT INTO image_archives(image_id,drive_file_id,drive_manifest_id,original_sha256) VALUES(?,?,?,?)",
+    ).bind(prepared.id, archive.fileId, archive.manifestId, archive.sha256));
+    // Candidate and provenance are inserted atomically; unique Drive IDs reject
+    // parallel re-imports. Retrying afterwards returns the existing candidate.
+    await env.DB.batch(statements);
     return json({ id: prepared.id, status: "in-review", upload: `/api/admin/assets/${prepared.id}` }, 201);
   }
   const asset = path.match(/^\/api\/admin\/assets\/([\w-]+)$/);
