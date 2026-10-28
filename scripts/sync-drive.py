@@ -207,6 +207,8 @@ def main() -> int:
             if paired is None:
                 continue
             metadata, image = paired
+            if Path(manifest_file["name"]).stem != Path(image["name"]).stem:
+                raise ValueError("Scheda e immagine devono condividere il nome base")
             count += 1
             if not args.apply:
                 print(f"[ANTEPRIMA] {image['name']} -> {metadata['type']} / {metadata['difficulty']}")
