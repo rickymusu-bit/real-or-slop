@@ -1,0 +1,17 @@
+{
+  "ready": false,
+  "filename": "example-image.jpg",
+  "type": "REAL",
+  "title": "Titolo verificato della fotografia",
+  "description": "Descrizione neutra senza spoiler",
+  "author": "Autore o archivio verificato",
+  "source_url": "https://example.org/original-source-page",
+  "source_id": "identificativo-unico-nell-archivio",
+  "provider": "archivio",
+  "evidence": "Prove verificabili dell'autenticità da compilare",
+  "explanation": "Spiegazione mostrata dopo la risposta",
+  "license_name": "CC0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "categories": ["ingegneria", "ingegneria-ponti"],
+  "difficulty": "medio"
+}
