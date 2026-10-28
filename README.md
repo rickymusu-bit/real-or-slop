@@ -163,6 +163,26 @@ Configurazione anteprime, credenziali, guardia sui binding, backup e rilascio in
 Stato finale e limiti effettivi: [docs/verification.md](docs/verification.md). Le quattro PR iniziali erano dipendenti; lo stato delle consegne successive è riportato nel documento di verifica. Nessuna verifica locale equivale a una pubblicazione Cloudflare riuscita.
 
 
+## Archivio Google Drive e distribuzione R2 (integrazione opzionale)
+
+Una procedura **manuale** sincronizza originali e schede editoriali da una cartella privata
+Google Drive al sistema di revisione esistente: OAuth Google di sola lettura sul
+computer dell'amministratore, WebP ottimizzati (max 1600 px) nella quarantena R2,
+metadati in D1, approvazione umana prima della copia nel bucket IMAGES.
+La tabella privata `image_archives` rende l'importazione ripetibile senza duplicare
+immagini già associate allo stesso file Drive; il gioco non accede mai a Drive.
+Non è attiva alcuna sincronizzazione pianificata o approvazione automatica.
+
+**La produzione corrente resta demo senza bucket R2 remoto:** prima di importare
+occorrono migrazione `0007_drive_archive.sql`, bucket di produzione/staging
+verificati, `ADMIN_TOKEN` e una configurazione production distinta da
+`deploy:demo`. Nessun servizio cloud viene creato automaticamente.
+
+Istruzioni operative, prerequisiti OAuth, scheda JSON ed esempi:
+[docs/google-drive-catalog.md](docs/google-drive-catalog.md).
+Script: `python3 scripts/sync-drive.py --folder-id ID_CARTELLA` (anteprima sicura);
+`--apply --site https://...` abilita l'import esplicito nella coda privata.
+
 ## Demo Cloudflare senza bucket R2
 
 La demo pubblica genera SVG nel Worker e collega il D1 già creato `real-or-slop-local` (ID `98a3e712-d9f9-4510-91ab-2b80329be753`, confermato dal proprietario). La configurazione principale non richiede R2. L’account ID e il database ID sono pubblici identificativi di risorse, non credenziali.
