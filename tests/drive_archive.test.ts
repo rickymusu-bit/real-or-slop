@@ -15,7 +15,7 @@ test("Drive provenance accepted as private metadata; optional for manual imports
 });
 test("Drive provenance rejects malformed IDs, uppercase SHA, and injected fields", () => {
   for (const value of [
-    {}, null === undefined ? null : "invalid", { ...example, file_id: "../escape" },
+    {}, "invalid", { ...example, file_id: "../escape" },
     { ...example, manifest_id: example.file_id },
     { ...example, sha256: "A".repeat(64) },
     { ...example, public_url: "https://drive.google.com/file/secret" },
