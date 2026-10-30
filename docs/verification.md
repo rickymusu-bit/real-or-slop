@@ -1,5 +1,12 @@
 # Verifiche effettive
 
+## Binding R2 confermati e comando di rilascio — 2026-10-30
+
+- `wrangler.jsonc` collega QUARANTINE a `real-or-slop-quarantine` e IMAGES a `real-or-slop-approved`, secondo la configurazione confermata dal proprietario. Account, Worker, D1, modalità demo, profilo locale e isolamento delle preview sono conservati.
+- `deploy:demo` mantiene il comando già usato da Workers Builds e richiede esattamente le risorse confermate; nessun provisioning automatico. Test dedicati rifiutano account/DB/Worker diversi, modalità produzione, bucket mancanti, aggiuntivi, locali o scambiati. `deploy:check`, lint, 11 file di test Node, 22 test Python e build superati.
+- Integrazione locale del gioco senza R2 superata: configurazione temporanea derivata priva di bucket, controllo autenticato del runtime che conferma entrambi i binding assenti, campionamento, sessioni, preload e due client WebSocket PvP. La configurazione temporanea non viene usata dal rilascio e viene eliminata insieme alla copia del segreto di test.
+- `npm run deploy:demo -- --dry-run` mostra i due binding R2 corretti e DATA_MODE=demo. Migrazioni/seed remoti, merge e pubblicazione non sono eseguiti; l’esistenza e i permessi Cloudflare dipendono dalla configurazione confermata e non sono certificati dal packaging locale.
+
 ## Catalogo diretto D1/R2 senza Google Drive — 2026-10-30
 
 - La PR #15 comprende il caricamento diretto di metadati, originali e copie per il gioco, senza dipendenze Google. Originali byte per byte nel prefisso privato `originals/` di QUARANTINE, protetti dalla sostituzione; nessuna migrazione di schema o nuovo bucket necessario oltre a quelli del catalogo.

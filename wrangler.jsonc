@@ -23,6 +23,16 @@
       "database_id": "98a3e712-d9f9-4510-91ab-2b80329be753",
     },
   ],
+  "r2_buckets": [
+    {
+      "binding": "QUARANTINE",
+      "bucket_name": "real-or-slop-quarantine",
+    },
+    {
+      "binding": "IMAGES",
+      "bucket_name": "real-or-slop-approved",
+    },
+  ],
   "previews": {
     "vars": {
       "DATA_MODE": "demo",

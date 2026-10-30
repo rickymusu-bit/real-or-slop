@@ -75,4 +75,4 @@ L'API amministrativa mantiene l’accesso ai file originali su `/api/admin/origi
 
 ## Stato delle risorse remote
 
-La sola attivazione di R2 non crea i bucket o i binding. Questa sessione non dispone ancora delle credenziali Cloudflare dell’environment corretto: l’import remoto rimane da effettuare dopo la configurazione delle risorse. Il lotto pilota locale di dieci immagini è utilizzabile da questo script senza passare da Drive. Le copie già archiviate su Drive non vengono cancellate e non sono più una dipendenza.
+Il proprietario ha confermato l’aggiunta dei binding R2; i nomi concordati sono ora riportati anche in `wrangler.jsonc`. Questa sessione non dispone ancora delle credenziali Cloudflare dell’environment corretto: l’import remoto rimane da effettuare dopo il rilascio del Worker aggiornato e la verifica dei binding tramite l’API amministrativa. Il lotto pilota locale di dieci immagini è utilizzabile da questo script senza passare da Drive. Le copie già archiviate su Drive non vengono cancellate e non sono più una dipendenza.

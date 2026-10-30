@@ -1,7 +1,10 @@
 """Start an isolated LOCAL Worker, run HTTP/WebSocket checks, then stop it."""
 import os
+import json
 import secrets
+import shutil
 import subprocess
+import tempfile
 import time
 import urllib.request
 from pathlib import Path
@@ -12,8 +15,32 @@ profile_args=['--env',local_profile] if local_profile else []
 env={**os.environ,'XDG_CONFIG_HOME':os.environ.get('XDG_CONFIG_HOME','/tmp/real-or-slop-config'),'ROS_TEST_BASE':base,'ROS_TEST_STATE':str(state),'ROS_TEST_PROFILE':local_profile}
 secret=Path('.dev.vars');created=not secret.exists()
 if created: secret.write_text('ADMIN_TOKEN='+secrets.token_urlsafe(36)+'\n')
+temporary_config = None
 def run(args):subprocess.run([*args,*profile_args],check=True,env=env,stdout=subprocess.DEVNULL)
 try:
+    if not local_profile:
+        # Exercise the actual no-R2 fallback even though production now has
+        # bucket bindings. This derived configuration is LOCAL-only and is
+        # discarded afterwards; deployment always uses wrangler.jsonc.
+        state.parent.mkdir(parents=True, exist_ok=True)
+        temporary_config = tempfile.TemporaryDirectory(prefix='no-r2-', dir=state.parent)
+        folder = Path(temporary_config.name)
+        config = json.loads(subprocess.check_output(['node', '--input-type=module', '-e',
+            "import fs from 'node:fs'; import {parse} from 'jsonc-parser'; process.stdout.write(JSON.stringify(parse(fs.readFileSync('wrangler.jsonc','utf8'))));"]))
+        config.pop('r2_buckets', None)
+        config.pop('env', None)
+        config.pop('previews', None)
+        config.pop('build', None)
+        config['main'] = str(Path(config['main']).resolve())
+        config['assets']['directory'] = str(Path(config['assets']['directory']).resolve())
+        for database in config['d1_databases']:
+            database['migrations_dir'] = str(Path(database['migrations_dir']).resolve())
+        file = folder/'wrangler.json'
+        file.write_text(json.dumps(config))
+        shutil.copyfile(secret, folder/'.dev.vars')
+        (folder/'.dev.vars').chmod(0o600)
+        profile_args.extend(['--config', str(file)])
+        subprocess.run(['npm', 'run', 'build'], check=True, env=env, stdout=subprocess.DEVNULL)
     run(['npx','wrangler','d1','migrations','apply','DB','--local','--persist-to',str(state)])
     run(['npx','wrangler','d1','execute','DB','--local','--persist-to',str(state),'--file','scripts/seed.sql'])
     Path('artifacts').mkdir(exist_ok=True)
@@ -26,6 +53,13 @@ try:
                         if r.status==200:break
                 except OSError:time.sleep(.2)
             else:raise RuntimeError('Worker locale non pronto; vedere artifacts/integration-worker.log')
+            if not local_profile:
+                token = secret.read_text().strip().split('=', 1)[1]
+                req = urllib.request.Request(base+'/api/admin/import', headers={'Authorization': 'Bearer '+token})
+                with urllib.request.urlopen(req) as response:
+                    capabilities = json.load(response)
+                    assert capabilities['quarantine_configured'] is False and capabilities['images_configured'] is False
+                print('Runtime no-R2 verified: both storage bindings absent.')
             import re,urllib.error
             for route in ['/','/allenamento','/tempo','/pvp','/informazioni','/crediti']:
                 with urllib.request.urlopen(base+route) as response:
@@ -44,3 +78,4 @@ try:
             proc.wait(timeout=10)
 finally:
     if created:secret.unlink(missing_ok=True)
+    if temporary_config:temporary_config.cleanup()
