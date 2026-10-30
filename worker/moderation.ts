@@ -11,12 +11,7 @@ import {
 } from "./core";
 import { curation } from "./curation";
 import type { CurationRecord } from "../shared/curation";
-const allowedLicenses = [
-  "https://creativecommons.org/publicdomain/zero/1.0/",
-  "https://creativecommons.org/publicdomain/mark/1.0/",
-  "https://creativecommons.org/licenses/by/4.0/",
-  "https://creativecommons.org/licenses/by-sa/4.0/",
-];
+import { recognizedLicense } from "../shared/licenses";
 function text(data: Record<string, unknown>, key: string, max = 4000) {
   const v = data[key];
   if (typeof v !== "string" || !v.trim() || v.length > max)
@@ -150,14 +145,16 @@ export async function moderation(request: Request, env: Env, path: string) {
       ? data.categories.map(String).slice(0, 12)
       : [];
     const verifiedLicense = data.license_url
-      ? url(text(data, "license_url", 500))
+      ? text(data, "license_url", 500)
       : image.license_url;
+    const license = recognizedLicense(verifiedLicense);
+    const licenseUrl = license?.url || (data.license_url ? url(verifiedLicense) : verifiedLicense);
     const notes = text(data, "notes");
     const explanation = data.explanation === undefined ? image.explanation : text(data, "explanation");
     const auditNotes = explanation === image.explanation ? notes : JSON.stringify({ notes, changes: { explanation: { before: image.explanation, after: explanation } } });
     if (decision === "approved") {
       if (
-        !allowedLicenses.includes(verifiedLicense) ||
+        !license ||
         data.rights_confirmed !== true ||
         data.authenticity_confirmed !== true
       )
@@ -191,12 +188,8 @@ export async function moderation(request: Request, env: Env, path: string) {
       env.DB.prepare(
         "UPDATE licenses SET url=?,name=? WHERE id=(SELECT license_id FROM images WHERE id=?) AND EXISTS(SELECT 1 FROM review_events WHERE id=?)",
       ).bind(
-        verifiedLicense,
-        allowedLicenses.includes(verifiedLicense)
-          ? ["CC0", "Public Domain Mark", "CC BY 4.0", "CC BY-SA 4.0"][
-              allowedLicenses.indexOf(verifiedLicense)
-            ]
-          : "Da verificare",
+        licenseUrl,
+        license?.name || "Da verificare",
         image.id,
         eventId,
       ),

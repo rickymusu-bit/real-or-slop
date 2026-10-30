@@ -1,5 +1,13 @@
 # Verifiche effettive
 
+## CC BY/BY-SA 2.0 e 3.0 — 2026-10-30
+
+- Branch `codex/cc-legacy-licenses` da main `8b93a3a`: elenco condiviso di 130 identità CC0/PDM e CC BY/BY-SA 2.0/3.0/4.0 con varianti pubblicate, estratte dal registro ufficiale CC. Versione e giurisdizione sono preservate anche nei link HTTP o `deed`/`legalcode`; nessuna riclassificazione automatica delle immagini esistenti.
+- Lint, 10 file di test Node e 16 test Python, TypeScript/Vite/asset e controllo diff superati. Casi condivisi tra TS/Python per le identità e gli alias ammessi, NC/ND, port inesistenti, host falsificati e URL ambigui; filtri della pipeline verificati senza upgrade di versione o perdita di giurisdizione.
+- Integrazione Worker/D1/R2 locale superata: importazione di otto forme 2.0/3.0, upload, rifiuto senza ciascuna conferma umana, approvazione e verifica dei nomi/URL effettivamente conservati in D1. CC BY-SA 3.0 DE rimane tale; NC/ND e port sconosciuti restano bloccati. Restano funzionanti rifiuto delle licenze mancanti, audit, concorrenza, curatela/studio, campionamento, Allenamento/A tempo, preload e due client WebSocket PvP.
+- Completate anche l’integrazione della demo senza binding R2, `npm run deploy:check` e il packaging `npm run dry-run`, senza pubblicazione remota. Nessuna regressione di navigazione/asset, sessioni, preloading o PvP nei due profili locali.
+- Nessuna migrazione di schema, nuova dipendenza, importazione del catalogo remoto o modifica ai bucket. Documentazione e avviso al revisore aggiornati; la compatibilità tecnica della licenza non sostituisce la verifica dei diritti della singola immagine. Nessun merge o deploy remoto eseguito.
+
 ## Precaricamento e timer — 0.10.0
 
 - PR #12 integrata dopo approvazione esplicita; branch `codex/11-precaricamento-immagini` da main `153f251`. La consegna del prompt 5 resta in una nuova PR in bozza, senza merge o pubblicazione.

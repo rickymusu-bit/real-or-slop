@@ -1,5 +1,6 @@
 import { validGenerationDate } from "../shared/slop";
 import { HttpError, id, type Env } from "./core";
+import { recognizedLicense } from "../shared/licenses";
 
 export function importText(data: Record<string, unknown>, key: string, max = 4000, preserve = false) {
   const value = data[key];
@@ -17,12 +18,14 @@ export function httpsUrl(value: string) {
 // Reused by manual import and studio import. A server-built SQL guard lets the
 // studio's revision/audit transition and all candidate inserts share ONE batch.
 export function prepareImport(env: Env, data: Record<string, unknown>, guard = { sql: "1", values: [] as unknown[] }) {
-  const uid = id(), source = id(), license = id();
+  const uid = id(), source = id(), licenseId = id();
   if (!["REAL", "AI"].includes(String(data.type))) throw new HttpError(400, "Tipo immagine non valido");
   const type = String(data.type);
   const title = importText(data, "title", 300), author = importText(data, "author", 300);
   const explanation = importText(data, "explanation"), evidence = importText(data, "evidence");
-  const licenseUrl = data.license_url ? httpsUrl(importText(data, "license_url", 500)) : "";
+  const licenseInput = data.license_url ? importText(data, "license_url", 500) : "";
+  const license = recognizedLicense(licenseInput);
+  const licenseUrl = license?.url || (licenseInput ? httpsUrl(licenseInput) : "");
   const sourceUrl = httpsUrl(importText(data, "source_url", 1000));
   const provider = importText(data, "provider", 100), sourceId = importText(data, "source_id", 300);
   const difficulty = String(data.difficulty || "medio");
@@ -39,8 +42,8 @@ export function prepareImport(env: Env, data: Record<string, unknown>, guard = {
       .bind(...values, ...guard.values);
   return { id: uid, statements: [
     insert("sources", [source, provider, sourceId, sourceUrl, evidence]),
-    insert("licenses", [license, String(data.license_name || "Da verificare").slice(0, 200), licenseUrl, "Obblighi da verificare editorialmente"]),
-    insert("images", [uid, type, title, String(data.description || ""), author, source, license, evidence, id(), model, prompt, difficulty, "in-review", "pending", explanation, 0, date, type === "AI" ? 1 : 0],
+    insert("licenses", [licenseId, license?.name || String(data.license_name || "Da verificare").slice(0, 200), licenseUrl, "Obblighi da verificare editorialmente"]),
+    insert("images", [uid, type, title, String(data.description || ""), author, source, licenseId, evidence, id(), model, prompt, difficulty, "in-review", "pending", explanation, 0, date, type === "AI" ? 1 : 0],
       "id,type,title,description,author,source_id,license_id,authenticity_evidence,r2_key,ai_model,ai_prompt,difficulty,status,sha256,explanation,demo,generation_date,owner_declaration"),
     ...categories.map((category) => insert("image_categories", [uid, category])),
   ] };
