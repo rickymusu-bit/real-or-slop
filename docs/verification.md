@@ -1,5 +1,13 @@
 # Verifiche effettive
 
+## Catalogo diretto D1/R2 senza Google Drive — 2026-10-30
+
+- La PR #15 comprende il caricamento diretto di metadati, originali e copie per il gioco, senza dipendenze Google. Originali byte per byte nel prefisso privato `originals/` di QUARANTINE, protetti dalla sostituzione; nessuna migrazione di schema o nuovo bucket necessario oltre a quelli del catalogo.
+- Anteprima reale sul lotto locale di dieci candidate: file, fonti, licenze e checksum controllati senza richieste di rete e senza leggere i file da Drive. I riferimenti Drive preesistenti non entrano nel payload.
+- Lint, 10 file di test Node, test Python e build TypeScript/Vite superati. Integrazione locale D1/R2 completa superata: recupero dopo POST interrotto prima del file, ripetizione della CLI senza duplicati, originali privati immutabili, collisioni di fonte/file rifiutate, conferme editoriali e retry dopo approvazione senza modifiche. Restano funzionanti campionamento, curatela, studio, sessioni, preload e PvP.
+- Il pannello permette di completare la spiegazione anche per le immagini REAL. CI installa la dipendenza Pillow già prevista dalla pipeline per verificare i file reali. Originali e copie già salvati su Drive non vengono cancellati; Google Drive non è più parte del flusso operativo.
+- L’import remoto rimane subordinato al Worker aggiornato, ai binding R2 verificati e al token dell’environment corretto. Nessuna pubblicazione, creazione bucket o scrittura D1/R2 remota effettuata da questa sessione.
+
 ## Inclusione NC e ND — 2026-10-30
 
 - La PR #15 include ora le sei famiglie CC BY/BY-SA/BY-NC/BY-ND/BY-NC-SA/BY-NC-ND 2.0/3.0/4.0, per l’uso non commerciale e senza adattamenti confermato dal proprietario. L’elenco condiviso contiene 386 identità pubblicate; nomi, vincoli, versioni e giurisdizioni vengono conservati.
