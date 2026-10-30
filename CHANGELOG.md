@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Aggiunto supporto CC BY/CC BY-SA 2.0 e 3.0, incluse le varianti pubblicate, con elenco condiviso pipeline/Worker e conservazione di versione/giurisdizione. Conferme umane obbligatorie; NC/ND restano escluse.
+- Aggiunto supporto alle sei famiglie CC BY/BY-SA/BY-NC/BY-ND/BY-NC-SA/BY-NC-ND 2.0, 3.0 e 4.0, incluse le varianti pubblicate, per il sito non commerciale e senza adattamenti. Elenco condiviso pipeline/Worker, versione e giurisdizione conservate; conferme umane obbligatorie.
 - Demo remota senza dipendenza da R2, D1 esistente con ID esplicito e profilo separato per gli emulatori locali.
 - Rilascio demo con destinazione verificata, migrazioni/seed separati dalla build e provisioning automatico disabilitato.
 - Corretto il flusso build/packaging Cloudflare: output Vite esplicito, build Wrangler da checkout pulito e verifica index/risorse pubblicate.

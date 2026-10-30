@@ -1,6 +1,13 @@
 # Verifiche effettive
 
-## CC BY/BY-SA 2.0 e 3.0 — 2026-10-30
+## Inclusione NC e ND — 2026-10-30
+
+- La PR #15 include ora le sei famiglie CC BY/BY-SA/BY-NC/BY-ND/BY-NC-SA/BY-NC-ND 2.0/3.0/4.0, per l’uso non commerciale e senza adattamenti confermato dal proprietario. L’elenco condiviso contiene 386 identità pubblicate; nomi, vincoli, versioni e giurisdizioni vengono conservati.
+- Lint, 10 file di test Node, 17 test Python e build TypeScript/Vite superati. I casi comuni di accettazione includono NC/ND e le combinazioni NC-SA/NC-ND; i casi negativi continuano a coprire identità inesistenti e URL ambigui.
+- La suite di integrazione locale esercita 24 licenze/alias ammessi attraverso importazione, upload, conferme umane, approvazione e controllo di nome/URL in D1. I vincoli NC/ND non comportano approvazioni automatiche. La pipeline conserva anche i diritti originali del provider; i filtri espliciti restano selettivi.
+- Revisione amministrativa e documentazione indicano i vincoli: uso non commerciale e assenza di adattamenti condivisi. Verificata la FAQ ufficiale CC sul cambio di formato anche con ND. Il trattamento tecnico delle immagini non è stato modificato; nessun editor o elaborazione creativa aggiunti.
+
+## Prima estensione CC BY/BY-SA — commit f94f08b, superata dall’inclusione NC/ND
 
 - Branch `codex/cc-legacy-licenses` da main `8b93a3a`: elenco condiviso di 130 identità CC0/PDM e CC BY/BY-SA 2.0/3.0/4.0 con varianti pubblicate, estratte dal registro ufficiale CC. Versione e giurisdizione sono preservate anche nei link HTTP o `deed`/`legalcode`; nessuna riclassificazione automatica delle immagini esistenti.
 - Lint, 10 file di test Node e 16 test Python, TypeScript/Vite/asset e controllo diff superati. Casi condivisi tra TS/Python per le identità e gli alias ammessi, NC/ND, port inesistenti, host falsificati e URL ambigui; filtri della pipeline verificati senza upgrade di versione o perdita di giurisdizione.

@@ -11,7 +11,7 @@ test("published license identities preserve versions and jurisdictions across UR
     assert.deepEqual(recognizedLicense(url), { url, name }, url);
 });
 
-test("NC, ND, unknown ports, ambiguous paths and forged hosts stay unrecognized", () => {
+test("unknown licenses and ports, ambiguous paths and forged hosts stay unrecognized", () => {
   for (const value of cases.rejected)
     assert.equal(recognizedLicense(value), null, JSON.stringify(value));
 });

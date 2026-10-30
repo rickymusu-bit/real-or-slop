@@ -11,13 +11,21 @@
     {"input":"https://creativecommons.org/licenses/by/4.0/","url":"https://creativecommons.org/licenses/by/4.0/","name":"CC BY 4.0"},
     {"input":" https://www.creativecommons.org/licenses/by-sa/4.0/deed.zh-Hant ","url":"https://creativecommons.org/licenses/by-sa/4.0/","name":"CC BY-SA 4.0"},
     {"input":"http://creativecommons.org/publicdomain/zero/1.0/deed.en","url":"https://creativecommons.org/publicdomain/zero/1.0/","name":"CC0"},
-    {"input":"https://creativecommons.org/publicdomain/mark/1.0/","url":"https://creativecommons.org/publicdomain/mark/1.0/","name":"Public Domain Mark"}
+    {"input":"https://creativecommons.org/publicdomain/mark/1.0/","url":"https://creativecommons.org/publicdomain/mark/1.0/","name":"Public Domain Mark"},
+    {"input":"https://creativecommons.org/licenses/by-nc/2.0/","url":"https://creativecommons.org/licenses/by-nc/2.0/","name":"CC BY-NC 2.0"},
+    {"input":"http://creativecommons.org/licenses/by-nc/3.0/de/deed.en","url":"https://creativecommons.org/licenses/by-nc/3.0/de/","name":"CC BY-NC 3.0 DE"},
+    {"input":"https://creativecommons.org/licenses/by-nc/4.0/","url":"https://creativecommons.org/licenses/by-nc/4.0/","name":"CC BY-NC 4.0"},
+    {"input":"https://creativecommons.org/licenses/by-nd/2.0/","url":"https://creativecommons.org/licenses/by-nd/2.0/","name":"CC BY-ND 2.0"},
+    {"input":"http://creativecommons.org/licenses/by-nd/3.0/it/deed.en","url":"https://creativecommons.org/licenses/by-nd/3.0/it/","name":"CC BY-ND 3.0 IT"},
+    {"input":"https://creativecommons.org/licenses/by-nd/4.0/","url":"https://creativecommons.org/licenses/by-nd/4.0/","name":"CC BY-ND 4.0"},
+    {"input":"https://creativecommons.org/licenses/by-nc-sa/2.0/","url":"https://creativecommons.org/licenses/by-nc-sa/2.0/","name":"CC BY-NC-SA 2.0"},
+    {"input":"http://creativecommons.org/licenses/by-nc-sa/3.0/de/deed.en","url":"https://creativecommons.org/licenses/by-nc-sa/3.0/de/","name":"CC BY-NC-SA 3.0 DE"},
+    {"input":"https://creativecommons.org/licenses/by-nc-sa/4.0/","url":"https://creativecommons.org/licenses/by-nc-sa/4.0/","name":"CC BY-NC-SA 4.0"},
+    {"input":"https://creativecommons.org/licenses/by-nc-nd/2.0/","url":"https://creativecommons.org/licenses/by-nc-nd/2.0/","name":"CC BY-NC-ND 2.0"},
+    {"input":"http://creativecommons.org/licenses/by-nc-nd/3.0/de/deed.en","url":"https://creativecommons.org/licenses/by-nc-nd/3.0/de/","name":"CC BY-NC-ND 3.0 DE"},
+    {"input":"https://creativecommons.org/licenses/by-nc-nd/4.0/","url":"https://creativecommons.org/licenses/by-nc-nd/4.0/","name":"CC BY-NC-ND 4.0"}
   ],
   "rejected": [
-    "https://creativecommons.org/licenses/by-nc/3.0/",
-    "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-    "https://creativecommons.org/licenses/by-nd/2.0/",
-    "https://creativecommons.org/licenses/by-nc-nd/3.0/de/",
     "https://creativecommons.org/licenses/by/2.5/",
     "https://creativecommons.org/licenses/by/1.0/",
     "https://creativecommons.org/licenses/by-sa/4.0/de/",
@@ -40,6 +48,10 @@
     "",
     null,
     3,
-    {}
+    {},
+    "https://creativecommons.org/licenses/by-nc-nd/4.0/de/",
+    "https://creativecommons.org/licenses/by-nc-sa/3.0/zz/",
+    "https://creativecommons.org/licenses/by-nc/2.5/",
+    "https://creativecommons.org/licenses/by-sa-nd/3.0/"
   ]
 }

@@ -49,10 +49,10 @@ assert request('/api/admin/review/'+ambiguous,'POST',dict(decision='approved',no
 print('Ambiguous license remains private in review and cannot be approved.')
 
 # Exercise actual imports, storage gates, approvals and persisted license names
-# for older licenses and a ported deed URL from Commons. No production data.
+# for all six CC families, versions and deed/ported URLs. No production data.
 cases=json.loads(Path('tests/license-cases.json').read_text())
 approved_licenses={}
-for case in cases['accepted'][:8]:
+for case in cases['accepted']:
     candidate={**metadata,'source_id':str(uuid.uuid4()),'source_url':'https://example.invalid/license/'+uuid.uuid4().hex,
                'license_name':'Incorrect supplied 4.0 label','license_url':case['input']}
     status,data=request('/api/admin/import','POST',candidate);assert status==201,(status,data)
@@ -81,9 +81,9 @@ result=json.loads(subprocess.check_output(command,stderr=subprocess.DEVNULL))
 rows=[row for block in result for row in block.get('results',[])]
 assert {row['id']:(row['url'],row['name']) for row in rows}==approved_licenses,rows
 
-for license_url in ['https://creativecommons.org/licenses/by-nc/3.0/',
-                    'https://creativecommons.org/licenses/by-nd/2.0/',
-                    'https://creativecommons.org/licenses/by-nc-sa/4.0/',
+for license_url in ['https://creativecommons.org/licenses/by-nc/2.5/',
+                    'https://creativecommons.org/licenses/by-nc-nd/4.0/de/',
+                    'https://creativecommons.org/licenses/by-sa-nd/3.0/',
                     'https://creativecommons.org/licenses/by-sa/3.0/zz/']:
     candidate={**metadata,'source_id':str(uuid.uuid4()),'source_url':'https://example.invalid/unsupported/'+uuid.uuid4().hex,
                'license_url':license_url}
@@ -93,4 +93,4 @@ for license_url in ['https://creativecommons.org/licenses/by-nc/3.0/',
 
 # A missing/unsupported license must still be rejectable by a human reviewer.
 assert request('/api/admin/review/'+ambiguous,'POST',dict(decision='rejected',notes='No compatible license'))[0]==200
-print('License integration passed: 2.0/3.0 ports retained in D1, confirmations required, NC/ND/unknown ports blocked.')
+print('License integration passed: BY/SA/NC/ND families and ports retained in D1, confirmations required, unknown licenses/ports blocked.')

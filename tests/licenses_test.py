@@ -16,7 +16,7 @@ class LicensePolicyTest(unittest.TestCase):
         for url, name in LICENSES.items():
             self.assertEqual(recognized_license(url), {'url': url, 'name': name})
 
-    def test_nc_nd_ambiguous_urls_and_unpublished_ports(self):
+    def test_ambiguous_urls_and_unpublished_licenses_or_ports(self):
         for value in CASES['rejected']:
             with self.subTest(value=value):
                 self.assertIsNone(recognized_license(value))
@@ -47,4 +47,19 @@ class LicensePolicyTest(unittest.TestCase):
                 ingest(db, [row], {'max_results': 1, 'licenses': [requested]}, folder=Path(folder))
                 item = json.loads(db.execute('SELECT metadata FROM candidates').fetchone()[0])
                 self.assertEqual(item['rights_assessment'], 'outside-license-filter')
+                db.close()
+
+    def test_nc_nd_candidates_keep_their_conditions_and_remain_in_review(self):
+        fixture = json.loads(Path('pipeline/fixtures.json').read_text())[0]
+        for case in CASES['accepted'][12:]:
+            with self.subTest(license=case['name']), tempfile.TemporaryDirectory() as folder:
+                db = connect(Path(folder) / 'queue.sqlite')
+                row = {**fixture, 'rights': case['input']}
+                ingest(db, [row], {'max_results': 1, 'licenses': [case['name']]}, folder=Path(folder))
+                saved = json.loads(db.execute('SELECT metadata FROM candidates').fetchone()[0])
+                self.assertEqual(saved['rights'], case['input'])
+                self.assertEqual(saved['license_name'], case['name'])
+                self.assertEqual(saved['license_url'], case['url'])
+                self.assertEqual(saved['rights_assessment'], 'eligible-needs-review')
+                self.assertEqual(saved['status'], 'in-review')
                 db.close()
