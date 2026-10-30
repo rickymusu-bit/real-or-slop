@@ -36,7 +36,7 @@ La build esegue TypeScript e Vite, produce `dist/` (configurato in `vite.config.
 | Deploy demo attuale | `npm run deploy:demo` **solo per il rilascio approvato** |
 | Preview branch/PR | `npx wrangler preview` |
 
-Impostare **Build command: `npm run build`** al posto di `None`. Per la demo attuale impostare **Deploy command: `npm run deploy:demo`**, mantenendo branch `main` e root `/`; vedere la sezione demo senza R2 sotto. Per Workers l’output è configurato in `wrangler.jsonc` con `assets.directory: "./dist"`, non cambiando la root in `/dist`. Non pubblicare la `index.html` sorgente: fa riferimento a TypeScript da compilare.
+Impostare **Build command: `npm run build`** al posto di `None`. Per la demo attuale impostare **Deploy command: `npm run deploy:demo`**, mantenendo branch `main` e root `/`; vedere la sezione demo con catalogo R2 sotto. Per Workers l’output è configurato in `wrangler.jsonc` con `assets.directory: "./dist"`, non cambiando la root in `/dist`. Non pubblicare la `index.html` sorgente: fa riferimento a TypeScript da compilare.
 
 Wrangler esegue anche un hook `build.command: "npm run build"`: un deploy da checkout pulito ricrea `dist/` prima del packaging, anche se il comando build della dashboard è ancora `None`. Con il build esplicito in dashboard la compilazione viene ripetuta intenzionalmente prima del deploy, per verificare gli asset effettivamente inclusi. `dist/` resta generata e ignorata da Git; non servono token nei file del progetto.
 
@@ -93,9 +93,9 @@ esistente per approvare o rifiutare. Il revisore può correggere la spiegazione
 finale con audit; modello e prompt effettivo del tentativo importato restano
 congelati. Nessuna quarta difficoltà pubblica o modifica al campionamento.
 
-Applicare prima la migrazione additiva `0005_slop_studio.sql`. La demo senza R2
-consente la progettazione, ma upload e approvazione richiedono storage configurato;
-questa fase verifica il flusso completo solo in locale e non crea risorse remote.
+Applicare prima la migrazione additiva `0005_slop_studio.sql`. I binding R2 del
+catalogo sono ora dichiarati nella configurazione remota; upload e approvazione
+richiedono anche il segreto ADMIN_TOKEN. La demo continua a usare le fixture.
 [Procedura, API, versioni e limiti](docs/studio-generazione-slop-v1.0.0.md).
 
 ## Selezione delle immagini (0.7.0)
@@ -134,7 +134,11 @@ Connettori separati: Commons, Openverse, Met, Library of Congress (query HABS/HA
 
 Quarantena `.pipeline/` privata e ignorata da Git. Deduplica fonte/URL prima del download, SHA-256 dopo download, dHash percettivo solo come suggerimento. Non rimuovere crediti: gli originali restano integri, il download crea un derivato WebP dell’intero fotogramma (massimo 1600 px), conservando originale, prove e attribuzioni in quarantena. Verificare gli obblighi editoriali prima di approvare; nessun credito visibile viene ritagliato. I metadati di provenienza non sono incorporati nel file pubblico per evitare spoiler: restano nel database e vengono mostrati dopo la risposta. Nessuna etichetta REAL approvata automaticamente. Met richiede isPublicDomain sul singolo asset; NASA e istituzioni pubbliche non implicano diritti liberi. CC0/PD verificato, CC BY/SA richiedono prove e obblighi corretti; ambigui restano in revisione.
 
+Sono ammesse **CC BY, CC BY-SA, CC BY-NC, CC BY-ND, CC BY-NC-SA e CC BY-NC-ND 2.0, 3.0 e 4.0**, incluse le varianti territoriali pubblicate, oltre a CC0 e Public Domain Mark verificato. Pipeline e moderazione condividono lo stesso elenco: link HTTP o a `deed`/`legalcode` vengono ricondotti all’identità HTTPS della **stessa versione e giurisdizione**, mai convertiti in 4.0. Il sito è destinato a uso non commerciale e senza adattamenti delle immagini: NC/ND sono ammesse rispettando questi vincoli. Rimangono esclusi URL e identità non censiti. I filtri di raccolta nominano la licenza esatta (es. `CC BY-SA 3.0 DE`); gli esempi configurati per CC0/4.0 non si ampliano automaticamente. Obblighi, limiti e fonte dell’elenco in [docs/licenze-immagini.md](docs/licenze-immagini.md).
+
 Admin: configurare un token casuale >=32 caratteri in `.dev.vars` (mai committarlo): `ADMIN_TOKEN=...`. Aprire `/admin`; autenticazione HTTP Basic (utente `admin`, password token), sempre HTTPS fuori localhost. API supporta anche Bearer. Import JSON con: type, title, description, author, source_url, source_id, provider, license_name, license_url, evidence, explanation, categories (ID), difficulty; per AI anche ai_model, ai_prompt, generation_date (YYYY-MM-DD), owner_declaration=true. I contenuti e gli eventi inventati devono essere verificati dall’editore prima dell’approvazione. Il file JPEG/PNG/WebP va caricato separatamente; SVG non accettati. Il menu privato consente filtri, prove, licenza, modifica categorie/difficoltà e audit della decisione. Protezione server-side su pagina, API e upload.
+
+**Importazione diretta senza Google Drive:** `python3 scripts/import-queue.py .pipeline/manifest.json --base https://IL-SITO.workers.dev` controlla il lotto senza rete; aggiungere `--apply` per caricare originali privati e copie per il gioco nella quarantena R2 e le schede in D1. Servono il Worker aggiornato, il binding `QUARANTINE` e il segreto `REAL_OR_SLOP_ADMIN_TOKEN`. Retry e upload interrotti riprendono dalla stessa candidata; non vengono approvate o pubblicate immagini automaticamente. Originali conservati in R2 e backup del catalogo indipendenti da Google: [procedura completa](docs/importazione-diretta-r2.md).
 
 I bucket `*-local` sono dichiarati soltanto nel profilo env.local e vengono usati con --local --env local, non nel deploy remoto. L’approvazione copia soltanto dallo storage quarantena allo storage approvato dell’ambiente corrente; non avvia deploy/import produzione. Le fixture demo e il catalogo verificato sono separati dal campo `demo`.
 
@@ -163,10 +167,19 @@ Configurazione anteprime, credenziali, guardia sui binding, backup e rilascio in
 Stato finale e limiti effettivi: [docs/verification.md](docs/verification.md). Le quattro PR iniziali erano dipendenti; lo stato delle consegne successive è riportato nel documento di verifica. Nessuna verifica locale equivale a una pubblicazione Cloudflare riuscita.
 
 
-## Demo Cloudflare senza bucket R2
+## Demo Cloudflare con catalogo R2
 
-La demo pubblica genera SVG nel Worker e collega il D1 già creato `real-or-slop-local` (ID `98a3e712-d9f9-4510-91ab-2b80329be753`, confermato dal proprietario). La configurazione principale non richiede R2. L’account ID e il database ID sono pubblici identificativi di risorse, non credenziali.
+La configurazione del Worker `real-or-slop` mantiene `DATA_MODE=demo` e il D1 esistente `real-or-slop-local` (ID `98a3e712-d9f9-4510-91ab-2b80329be753`). Il proprietario ha confermato la configurazione di questi binding, ora versionati anche in `wrangler.jsonc`:
 
-Impostare nella dashboard esistente **Build: npm run build**, **Deploy: npm run deploy:demo**, branch main e root /. Il rilascio demo applica schema e fixture idempotenti al D1 verificato, poi pubblica il Worker con provisioning automatico disabilitato. La build da sola non esegue migrazioni o seed remoti. Controllo senza rete: npm run deploy:check. Packaging senza modifiche remote: npm run deploy:demo -- --dry-run.
+| Binding | Bucket privato |
+| --- | --- |
+| `QUARANTINE` | `real-or-slop-quarantine` |
+| `IMAGES` | `real-or-slop-approved` |
 
-Il profilo locale mantiene R2 emulato per i test di moderazione; npm run dev/db:migrate/db:seed lo selezionano automaticamente con --local. I test del gioco verificano anche la demo senza binding R2. Non creare bucket a pagamento per risolvere l’errore 10085: [procedura e limiti](docs/cloudflare.md#demo-remota-senza-r2--correzione-errore-10085).
+La demo continua a servire le fixture SVG. Il catalogo reale può essere caricato e revisionato in D1/R2 senza passare automaticamente alle partite di produzione. Gli originali restano privati nel prefisso `originals/` di QUARANTINE; le immagini approvate vanno in IMAGES. Google Drive è escluso dal flusso.
+
+Nella dashboard esistente mantenere **Build: `npm run build`**, **Deploy: `npm run deploy:demo`**, branch `main`, root `/` e Node 24. Il comando di rilascio è stato aggiornato per verificare account, Worker, D1, modalità demo e i due bucket esatti; rifiuta risorse aggiuntive o destinazioni diverse. Poi applica migrazioni versionate e seed sintetico idempotente e pubblica con provisioning automatico disabilitato. Nessun bucket o database viene creato dal comando.
+
+Controllo senza rete: `npm run deploy:check`. Packaging senza modifiche remote: `npm run deploy:demo -- --dry-run`. L’admin richiede `ADMIN_TOKEN` come segreto del Worker; l’importatore usa lo stesso valore tramite `REAL_OR_SLOP_ADMIN_TOKEN`. Un deploy mantiene i binding dichiarati nel repository anche se erano stati aggiunti dalla dashboard.
+
+Sviluppo locale con `--local --env local`: solo emulatori `*-local`. CI verifica sia la moderazione con R2 emulato sia il gioco senza R2, ricavando per quest’ultimo una configurazione temporanea locale priva di bucket. Le preview restano bloccate fino alla configurazione di risorse di test distinte. [Procedura di rilascio](docs/cloudflare.md), [importazione diretta](docs/importazione-diretta-r2.md).

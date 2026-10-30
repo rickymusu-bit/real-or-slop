@@ -1,5 +1,35 @@
 # Verifiche effettive
 
+## Binding R2 confermati e comando di rilascio — 2026-10-30
+
+- `wrangler.jsonc` collega QUARANTINE a `real-or-slop-quarantine` e IMAGES a `real-or-slop-approved`, secondo la configurazione confermata dal proprietario. Account, Worker, D1, modalità demo, profilo locale e isolamento delle preview sono conservati.
+- `deploy:demo` mantiene il comando già usato da Workers Builds e richiede esattamente le risorse confermate; nessun provisioning automatico. Test dedicati rifiutano account/DB/Worker diversi, modalità produzione, bucket mancanti, aggiuntivi, locali o scambiati. `deploy:check`, lint, 11 file di test Node, 22 test Python e build superati.
+- Integrazione locale del gioco senza R2 superata: configurazione temporanea derivata priva di bucket, controllo autenticato del runtime che conferma entrambi i binding assenti, campionamento, sessioni, preload e due client WebSocket PvP. La configurazione temporanea non viene usata dal rilascio e viene eliminata insieme alla copia del segreto di test.
+- `npm run deploy:demo -- --dry-run` mostra i due binding R2 corretti e DATA_MODE=demo. Migrazioni/seed remoti, merge e pubblicazione non sono eseguiti; l’esistenza e i permessi Cloudflare dipendono dalla configurazione confermata e non sono certificati dal packaging locale.
+
+## Catalogo diretto D1/R2 senza Google Drive — 2026-10-30
+
+- La PR #15 comprende il caricamento diretto di metadati, originali e copie per il gioco, senza dipendenze Google. Originali byte per byte nel prefisso privato `originals/` di QUARANTINE, protetti dalla sostituzione; nessuna migrazione di schema o nuovo bucket necessario oltre a quelli del catalogo.
+- Anteprima reale sul lotto locale di dieci candidate: file, fonti, licenze e checksum controllati senza richieste di rete e senza leggere i file da Drive. I riferimenti Drive preesistenti non entrano nel payload.
+- Lint, 10 file di test Node, test Python e build TypeScript/Vite superati. Integrazione locale D1/R2 completa superata: recupero dopo POST interrotto prima del file, ripetizione della CLI senza duplicati, originali privati immutabili, collisioni di fonte/file rifiutate, conferme editoriali e retry dopo approvazione senza modifiche. Restano funzionanti campionamento, curatela, studio, sessioni, preload e PvP.
+- Il pannello permette di completare la spiegazione anche per le immagini REAL. CI installa la dipendenza Pillow già prevista dalla pipeline per verificare i file reali. Originali e copie già salvati su Drive non vengono cancellati; Google Drive non è più parte del flusso operativo.
+- L’import remoto rimane subordinato al Worker aggiornato, ai binding R2 verificati e al token dell’environment corretto. Nessuna pubblicazione, creazione bucket o scrittura D1/R2 remota effettuata da questa sessione.
+
+## Inclusione NC e ND — 2026-10-30
+
+- La PR #15 include ora le sei famiglie CC BY/BY-SA/BY-NC/BY-ND/BY-NC-SA/BY-NC-ND 2.0/3.0/4.0, per l’uso non commerciale e senza adattamenti confermato dal proprietario. L’elenco condiviso contiene 386 identità pubblicate; nomi, vincoli, versioni e giurisdizioni vengono conservati.
+- Lint, 10 file di test Node, 17 test Python e build TypeScript/Vite superati. I casi comuni di accettazione includono NC/ND e le combinazioni NC-SA/NC-ND; i casi negativi continuano a coprire identità inesistenti e URL ambigui.
+- La suite di integrazione locale esercita 24 licenze/alias ammessi attraverso importazione, upload, conferme umane, approvazione e controllo di nome/URL in D1. I vincoli NC/ND non comportano approvazioni automatiche. La pipeline conserva anche i diritti originali del provider; i filtri espliciti restano selettivi.
+- Revisione amministrativa e documentazione indicano i vincoli: uso non commerciale e assenza di adattamenti condivisi. Verificata la FAQ ufficiale CC sul cambio di formato anche con ND. Il trattamento tecnico delle immagini non è stato modificato; nessun editor o elaborazione creativa aggiunti.
+
+## Prima estensione CC BY/BY-SA — commit f94f08b, superata dall’inclusione NC/ND
+
+- Branch `codex/cc-legacy-licenses` da main `8b93a3a`: elenco condiviso di 130 identità CC0/PDM e CC BY/BY-SA 2.0/3.0/4.0 con varianti pubblicate, estratte dal registro ufficiale CC. Versione e giurisdizione sono preservate anche nei link HTTP o `deed`/`legalcode`; nessuna riclassificazione automatica delle immagini esistenti.
+- Lint, 10 file di test Node e 16 test Python, TypeScript/Vite/asset e controllo diff superati. Casi condivisi tra TS/Python per le identità e gli alias ammessi, NC/ND, port inesistenti, host falsificati e URL ambigui; filtri della pipeline verificati senza upgrade di versione o perdita di giurisdizione.
+- Integrazione Worker/D1/R2 locale superata: importazione di otto forme 2.0/3.0, upload, rifiuto senza ciascuna conferma umana, approvazione e verifica dei nomi/URL effettivamente conservati in D1. CC BY-SA 3.0 DE rimane tale; NC/ND e port sconosciuti restano bloccati. Restano funzionanti rifiuto delle licenze mancanti, audit, concorrenza, curatela/studio, campionamento, Allenamento/A tempo, preload e due client WebSocket PvP.
+- Completate anche l’integrazione della demo senza binding R2, `npm run deploy:check` e il packaging `npm run dry-run`, senza pubblicazione remota. Nessuna regressione di navigazione/asset, sessioni, preloading o PvP nei due profili locali.
+- Nessuna migrazione di schema, nuova dipendenza, importazione del catalogo remoto o modifica ai bucket. Documentazione e avviso al revisore aggiornati; la compatibilità tecnica della licenza non sostituisce la verifica dei diritti della singola immagine. Nessun merge o deploy remoto eseguito.
+
 ## Precaricamento e timer — 0.10.0
 
 - PR #12 integrata dopo approvazione esplicita; branch `codex/11-precaricamento-immagini` da main `153f251`. La consegna del prompt 5 resta in una nuova PR in bozza, senza merge o pubblicazione.

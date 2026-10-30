@@ -3,6 +3,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { parse } from "jsonc-parser";
+import { validateDemoConfig } from "./deployment-config.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const errors = [];
@@ -13,43 +14,14 @@ const config = parse(
     allowTrailingComma: true,
   },
 );
-const expectedDatabase = "98a3e712-d9f9-4510-91ab-2b80329be753";
-const db = config.d1_databases?.find((binding) => binding.binding === "DB");
-if (
-  errors.length ||
-  config.name !== "real-or-slop" ||
-  config.account_id !== "89bb1f60467dcfd2147871748f0f9645" ||
-  config.vars?.DATA_MODE !== "demo"
-) {
-  throw new Error("Il comando di rilascio è riservato alla demo real-or-slop.");
-}
-if (
-  db?.database_id !== expectedDatabase ||
-  db.database_name !== "real-or-slop-local"
-) {
-  throw new Error(
-    "Database demo diverso dalla destinazione confermata dal proprietario.",
-  );
-}
-if (config.r2_buckets?.length || (config.d1_databases?.length ?? 0) !== 1) {
-  throw new Error(
-    "Binding remoti inattesi: la demo richiede solo il D1 confermato, ASSETS e ROOMS.",
-  );
-}
-if (
-  process.env.CLOUDFLARE_ACCOUNT_ID &&
-  process.env.CLOUDFLARE_ACCOUNT_ID !== config.account_id
-) {
-  throw new Error(
-    "Account runtime diverso dalla destinazione demo confermata.",
-  );
-}
+if (errors.length) throw new Error("Configurazione JSONC non valida.");
+const { db, buckets } = validateDemoConfig(config, process.env.CLOUDFLARE_ACCOUNT_ID);
 const flags = new Set(process.argv.slice(2));
 if ([...flags].some((flag) => !["--check", "--dry-run"].includes(flag))) {
   throw new Error("Opzioni ammesse: --check, --dry-run.");
 }
 console.log(
-  `Demo: ${config.name}; D1 esistente: ${db.database_name} (${db.database_id}); nessun bucket R2.`,
+  `Demo: ${config.name}; D1 esistente: ${db.database_name} (${db.database_id}); QUARANTINE: ${buckets.QUARANTINE}; IMAGES: ${buckets.IMAGES}.`,
 );
 function wrangler(args) {
   const result = spawnSync(

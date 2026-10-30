@@ -11,12 +11,7 @@ import {
 } from "./core";
 import { curation } from "./curation";
 import type { CurationRecord } from "../shared/curation";
-const allowedLicenses = [
-  "https://creativecommons.org/publicdomain/zero/1.0/",
-  "https://creativecommons.org/publicdomain/mark/1.0/",
-  "https://creativecommons.org/licenses/by/4.0/",
-  "https://creativecommons.org/licenses/by-sa/4.0/",
-];
+import { recognizedLicense } from "../shared/licenses";
 function text(data: Record<string, unknown>, key: string, max = 4000) {
   const v = data[key];
   if (typeof v !== "string" || !v.trim() || v.length > max)
@@ -57,19 +52,57 @@ export async function moderation(request: Request, env: Env, path: string) {
   if (path === "/api/admin/import" && request.method === "POST") {
     const data = await body(request);
     const prepared = prepareImport(env, data);
-    await env.DB.batch(prepared.statements);
+    const checksum = data.file_sha256;
+    if (checksum !== undefined && (typeof checksum !== "string" || !/^[0-9a-f]{64}$/.test(checksum)))
+      throw new HttpError(400, "SHA-256 del file non valido");
+    const existing = async () => {
+      const image = await env.DB.prepare(
+        "SELECT i.id,i.type,i.status,i.sha256,i.r2_key,s.page_url FROM images i JOIN sources s ON s.id=i.source_id WHERE s.provider=? AND s.source_id=?",
+      ).bind(String(data.provider).trim(), String(data.source_id).trim())
+        .first<{ id: string; type: string; status: string; sha256: string; r2_key: string; page_url: string }>();
+      if (!image) return null;
+      if (image.type !== data.type || image.page_url !== String(data.source_url).trim() || (image.sha256 !== "pending" && image.sha256 !== checksum))
+        throw new HttpError(409, "Fonte già importata con tipo, URL o file differente");
+      const original = await env.QUARANTINE?.head(`originals/${image.id}`);
+      const uploaded = image.sha256 !== "pending" && Boolean(await env.QUARANTINE?.head(image.r2_key));
+      return json({ id: image.id, status: image.status, sha256: image.sha256, uploaded,
+        original_sha256: original?.customMetadata?.sha256 || null, already_imported: true,
+        upload: `/api/admin/assets/${image.id}` });
+    };
+    // Direct batch imports may resume after losing the POST response or failing
+    // an upload. Existing metadata/review decisions are never overwritten.
+    if (checksum) {
+      const response = await existing();
+      if (response) return response;
+      if (await env.DB.prepare("SELECT id FROM images WHERE sha256=?").bind(checksum).first())
+        throw new HttpError(409, "File già presente nel catalogo con un’altra fonte");
+    }
+    try {
+      await env.DB.batch(prepared.statements);
+    } catch (error) {
+      // A concurrent import can win the unique provider/source constraint.
+      if (checksum) {
+        const response = await existing();
+        if (response) return response;
+      }
+      throw error;
+    }
     return json({ id: prepared.id, status: "in-review", upload: `/api/admin/assets/${prepared.id}` }, 201);
   }
-  const asset = path.match(/^\/api\/admin\/assets\/([\w-]+)$/);
+  if (path === "/api/admin/import" && request.method === "GET")
+    return json({ direct_import: 1, original_archive: true, quarantine_configured: Boolean(env.QUARANTINE), images_configured: Boolean(env.IMAGES) });
+  const asset = path.match(/^\/api\/admin\/(assets|originals)\/([\w-]+)$/);
   if (asset) {
+    const original = asset[1] === "originals";
     const image = await env.DB.prepare("SELECT * FROM images WHERE id=?")
-      .bind(asset[1])
+      .bind(asset[2])
       .first<ImageRow>();
     if (!image) throw new HttpError(404, "Immagine non trovata");
     if (!env.QUARANTINE)
       throw new HttpError(503, "Quarantena privata non configurata");
+    const key = original ? `originals/${image.id}` : image.r2_key;
     if (request.method === "GET") {
-      const object = await env.QUARANTINE.get(image.r2_key);
+      const object = await env.QUARANTINE.get(key);
       if (!object) throw new HttpError(404, "File non caricato");
       return new Response(object.body, {
         headers: {
@@ -110,6 +143,21 @@ export async function moderation(request: Request, env: Env, path: string) {
       )
         .map((v) => v.toString(16).padStart(2, "0"))
         .join("");
+      if (original) {
+        const existing = await env.QUARANTINE.head(key);
+        if (existing) {
+          if (existing.customMetadata?.sha256 !== digest)
+            throw new HttpError(409, "Originale già archiviato con contenuto differente");
+          return json({ uploaded: true, sha256: digest, already_archived: true });
+        }
+        const stored = await env.QUARANTINE.put(key, buffer, {
+          httpMetadata: { contentType: mime }, customMetadata: { sha256: digest },
+          onlyIf: { etagDoesNotMatch: "*" },
+        });
+        if (!stored && (await env.QUARANTINE.head(key))?.customMetadata?.sha256 !== digest)
+          throw new HttpError(409, "Originale archiviato da un’altra importazione");
+        return json({ uploaded: true, sha256: digest });
+      }
       const duplicate = await env.DB.prepare(
         "SELECT id FROM images WHERE sha256=? AND id<>?",
       )
@@ -150,14 +198,16 @@ export async function moderation(request: Request, env: Env, path: string) {
       ? data.categories.map(String).slice(0, 12)
       : [];
     const verifiedLicense = data.license_url
-      ? url(text(data, "license_url", 500))
+      ? text(data, "license_url", 500)
       : image.license_url;
+    const license = recognizedLicense(verifiedLicense);
+    const licenseUrl = license?.url || (data.license_url ? url(verifiedLicense) : verifiedLicense);
     const notes = text(data, "notes");
     const explanation = data.explanation === undefined ? image.explanation : text(data, "explanation");
     const auditNotes = explanation === image.explanation ? notes : JSON.stringify({ notes, changes: { explanation: { before: image.explanation, after: explanation } } });
     if (decision === "approved") {
       if (
-        !allowedLicenses.includes(verifiedLicense) ||
+        !license ||
         data.rights_confirmed !== true ||
         data.authenticity_confirmed !== true
       )
@@ -191,12 +241,8 @@ export async function moderation(request: Request, env: Env, path: string) {
       env.DB.prepare(
         "UPDATE licenses SET url=?,name=? WHERE id=(SELECT license_id FROM images WHERE id=?) AND EXISTS(SELECT 1 FROM review_events WHERE id=?)",
       ).bind(
-        verifiedLicense,
-        allowedLicenses.includes(verifiedLicense)
-          ? ["CC0", "Public Domain Mark", "CC BY 4.0", "CC BY-SA 4.0"][
-              allowedLicenses.indexOf(verifiedLicense)
-            ]
-          : "Da verificare",
+        licenseUrl,
+        license?.name || "Da verificare",
         image.id,
         eventId,
       ),

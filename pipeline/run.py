@@ -9,15 +9,12 @@ from urllib.parse import urlparse
 from urllib.request import Request,build_opener,HTTPRedirectHandler
 from urllib.error import HTTPError,URLError
 from .providers import Client,PROVIDERS
-
-LICENSES={'https://creativecommons.org/publicdomain/zero/1.0/':'CC0','https://creativecommons.org/publicdomain/mark/1.0/':'Public Domain Mark','https://creativecommons.org/licenses/by/4.0/':'CC BY 4.0','https://creativecommons.org/licenses/by-sa/4.0/':'CC BY-SA 4.0'}
+from .licenses import recognized_license
 
 def rights_check(row):
-    rights=row.get('rights','').strip().replace('http://','https://')
-    if not rights.endswith('/'): rights+='/'
     if not all(row.get(k) for k in ['title','source_url','image_url','author','evidence']): return 'incomplete'
     # Eligibility is not authenticity: every candidate remains in-review.
-    return 'eligible-needs-review' if rights in LICENSES else 'ambiguous'
+    return 'eligible-needs-review' if recognized_license(row.get('rights')) else 'ambiguous'
 
 def queries(config):
     terms=[config.get(k,'') for k in ['subject','context','place','period','kind']]
@@ -76,7 +73,12 @@ def ingest(db,rows,config,client=None,fetch_files=False,folder=Path('.pipeline/q
         if not row.get('source_id') or not row.get('source_url'): continue
         if db.execute('SELECT 1 FROM candidates WHERE (provider=? AND source_id=?) OR source_url=?',(row['provider'],row['source_id'],row['source_url'])).fetchone(): continue
         row={**row,'status':'in-review','rights_assessment':rights_check(row),'categories':config.get('categories',[]),'license_filter':config.get('licenses',[])}
-        if config.get('licenses') and LICENSES.get(row.get('rights','').rstrip('/')+'/') not in config['licenses']:
+        license=recognized_license(row.get('rights'))
+        if license:
+            # Preserve the provider's raw rights string alongside the canonical
+            # identity. A port is not an upgrade to the unported/4.0 license.
+            row['license_url']=license['url'];row['license_name']=license['name']
+        if config.get('licenses') and (license or {}).get('name') not in config['licenses']:
             row['rights_assessment']='outside-license-filter'
         sha=phash=file=None
         uid=str(uuid.uuid4())

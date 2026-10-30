@@ -14,7 +14,7 @@ La PR di correzione parte dall’app della PR #4 e ha destinazione main: include
 | Production branch | main |
 | Root directory | / |
 | Build command | npm run build (al posto di None) |
-| Deploy command | npx wrangler deploy (invariato) |
+| Deploy command | npm run deploy:demo (configurazione attuale descritta sotto) |
 | Node | 24, come .nvmrc |
 | Output asset | dist, tramite assets.directory in wrangler.jsonc |
 
@@ -57,25 +57,49 @@ Stanza privata di due giocatori, codice casuale 60 bit, scadenza 30 minuti. Stat
 
 Riconnessione nella stessa scheda tramite token in sessionStorage; il token non contiene soluzioni e non viene incluso negli URL. WebSocket trasmette il token nel subprotocollo, HTTP nel bearer header. Nessuna classifica pubblica o raccolta email. Cambiare browser senza token richiede una nuova stanza. La funzionalità remota e l’isolamento DO restano da verificare nell’account reale.
 
-## Demo remota senza R2 — correzione errore 10085
+## Configurazione attuale: demo e catalogo R2 — 30 ottobre 2026
 
-Il log del build d9400cbf-9fed-4d1e-9108-23deb470fe5a conferma che compilazione e upload asset funzionano; il deployment fallisce su `R2 bucket 'real-or-slop-quarantine-local' not found` (10085). Wrangler 4.152.0 ha inoltre creato automaticamente D1 `real-or-slop-local`. Il proprietario ha fornito il suo ID: `98a3e712-d9f9-4510-91ab-2b80329be753`, nell’account `89bb1f60467dcfd2147871748f0f9645` riportato dal log. Sono identificativi non segreti, non token.
+R2 è stato attivato dal proprietario, che ha confermato l’aggiunta dei binding sul Worker. La configurazione principale versiona ora le stesse destinazioni:
 
-La configurazione principale collega esplicitamente quel database esistente e non dichiara bucket R2: DATA_MODE=demo usa il renderer SVG già presente nel Worker. L’adapter R2 e la moderazione restano disponibili per un ambiente configurato in seguito, senza richiedere attivazioni o fatturazione per pubblicare la demo. I due bucket sintetici esistono solo nel profilo `env.local`, usato con **--local --env local**. Non eseguire mai un deploy remoto del profilo local.
+| Risorsa | Destinazione |
+| --- | --- |
+| Account | `89bb1f60467dcfd2147871748f0f9645` |
+| Worker | `real-or-slop` |
+| D1 `DB` | `real-or-slop-local`, ID `98a3e712-d9f9-4510-91ab-2b80329be753` |
+| R2 `QUARANTINE` | `real-or-slop-quarantine`, privato |
+| R2 `IMAGES` | `real-or-slop-approved`, privato |
+| Modalità delle partite | `DATA_MODE=demo` |
 
-Per il rilascio della demo tramite l’integrazione GitHub–Cloudflare esistente:
+I nomi R2 sono quelli concordati durante la configurazione e confermati dal proprietario. Questa sessione non ha ancora il token Cloudflare dell’environment corretto: l’esistenza e i permessi remoti non sono certificati dal dry-run.
+
+La precedente esclusione dei bucket, adottata per risolvere l’errore R2 10085 quando R2 non era pronto, è superata. I bucket `*-local` restano riservati agli emulatori; non vanno creati o usati in remoto. Gli originali del catalogo vengono archiviati nel prefisso privato `originals/` di QUARANTINE; non serve un terzo bucket. Nessuna dipendenza Google Drive.
+
+### Rilascio con il collegamento GitHub esistente
 
 | Impostazione | Valore |
 | --- | --- |
-| Branch / root | main / / |
-| Build command | npm run build |
-| Deploy command | **npm run deploy:demo** |
+| Branch / root | `main` / `/` |
+| Build command | `npm run build` |
+| Deploy command | `npm run deploy:demo` |
 | Node | 24 |
 
-Il comando deploy:demo verifica account, Worker, DATA_MODE=demo, ID D1 confermato e assenza di bucket R2 remoti. Poi esegue, in ordine, migrazioni D1 versionate sul database esistente, seed sintetico idempotente e `wrangler deploy --no-experimental-provision`. Non crea database o bucket e non attiva R2. Migrazioni e seed rimangono separati dalla build e non vengono eseguiti nel dry-run. Se una fase fallisce il deploy non continua. Le migrazioni presenti sono additive; il seed usa INSERT OR IGNORE e non cancella dati. Questo comando è riservato alla demo, non al futuro catalogo reale.
+Il comando esistente viene mantenuto per evitare una seconda modifica alla dashboard. La sua guardia ora richiede esattamente i due binding R2 confermati, oltre al Worker, all’account e al D1 esistenti e alla modalità demo; rifiuta bucket mancanti, aggiuntivi, scambiati o locali. Controlla anche `CLOUDFLARE_ACCOUNT_ID`, se presente. Non crea risorse e pubblica con `--no-experimental-provision`.
 
-`npm run deploy:check` verifica soltanto la destinazione senza rete. `npm run deploy:demo -- --dry-run` prepara soltanto il pacchetto, senza migrazioni o seed remoti. L’ID del database va mantenuto esplicito: senza di esso Wrangler può creare automaticamente risorse; il precedente dry-run non lo mostrava perché usa risorse simulate/inheritance.
+La sequenza resta migrazioni D1 additive → seed demo `INSERT OR IGNORE` → deploy. Il seed non cancella il catalogo reale. Build, `--check` e `--dry-run` non applicano migrazioni o seed remoti. I segreti non vengono sostituiti o scritti nel repository.
 
-Sviluppo e moderazione locali continuano con npm run db:migrate, npm run db:seed e npm run dev, che selezionano il profilo local e gli emulatori. CI prova sia quel profilo con storage R2 emulato sia le modalità di gioco con la configurazione demo SENZA alcun binding R2 e con tutti i servizi eseguiti localmente.
+```sh
+npm run deploy:check
+npm run deploy:demo -- --dry-run
+```
 
-Dopo il rilascio verificare pagina iniziale, /api/categories, una partita Allenamento e due client PvP sul vero URL workers.dev. L’admin remoto rimane disabilitato senza ADMIN_TOKEN e gli upload richiedono uno storage esplicitamente configurato; la demo pubblica non ne ha bisogno. Nessun bucket locale inesistente deve essere creato nell’account per aggirare questo errore.
+Dopo l’approvazione di merge e rilascio, il collegamento esistente può utilizzare lo stesso comando dalla versione aggiornata di main. La presente modifica del repository non esegue merge o deploy. Il passaggio a `DATA_MODE=production` resta separato, dopo la verifica del catalogo REAL/AI e delle partite.
+
+### Controlli dopo il rilascio
+
+Verificare home, `/api/health` (`demo: true`), categorie, Allenamento e due client PvP. Con `ADMIN_TOKEN` configurato come segreto del Worker, `GET /api/admin/import` autenticato deve indicare `quarantine_configured: true` e `images_configured: true`. Gli endpoint admin devono continuare a negare l’accesso senza credenziali. L’importatore diretto usa `REAL_OR_SLOP_ADMIN_TOKEN` e non ha bisogno di chiavi S3 o Google.
+
+### Verifiche locali e preview
+
+`env.local` mantiene i bucket emulati e i comandi di sviluppo usano sempre `--local --env local`. Il test `ROS_TEST_PROFILE= npm run test:integration` genera sotto `.wrangler/` una configurazione temporanea derivata, senza R2, con percorsi locali assoluti: verifica esplicitamente dal runtime che entrambi i binding siano assenti e rimuove la configurazione alla fine. Nessuna risorsa remota viene usata dal test.
+
+Il blocco `previews` non collega i bucket di produzione. Per pubblicare preview restano necessari D1 e bucket di test distinti, verificati dalla guardia esistente; non utilizzare quelli del catalogo per sbloccare una preview.
