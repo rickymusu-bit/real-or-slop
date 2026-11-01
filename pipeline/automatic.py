@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 
-from .importer import main as import_batch, prepare, request
+from .importer import main as import_batch, prepare, request, RequestError
 from .licenses import recognized_license
 from .providers import Client, PROVIDERS
 from .run import connect, ingest
@@ -151,6 +151,9 @@ def main(argv=None):
         print(json.dumps(plan(day), ensure_ascii=False, indent=2))
         print('Piano soltanto: nessun accesso di rete o modifica remota.')
         return 0
+    except RequestError as error:
+        print('Pipeline interrotta: ' + str(error))
+        return 1
     except (ValueError, OSError, HTTPError, URLError):
         print('Pipeline interrotta: controllare configurazione, fonte e accesso; nessuna approvazione automatica.')
         return 1

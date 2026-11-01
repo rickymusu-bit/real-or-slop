@@ -73,3 +73,14 @@ class DirectImportTest(unittest.TestCase):
             with self.assertRaises(ValueError) as error:
                 request('https://example.invalid', secret, '/api/admin/import')
             self.assertNotIn(secret, str(error.exception))
+
+    def test_requests_identify_the_importer_and_keep_credentials_in_headers(self):
+        from unittest.mock import Mock
+        opener = Mock()
+        opener.open.return_value = io.BytesIO(b'{"ok": true}')
+        with patch('pipeline.importer.build_opener', return_value=opener):
+            self.assertEqual(request('https://example.invalid', 'test-secret', '/api/health'), {'ok': True})
+        outgoing = opener.open.call_args.args[0]
+        self.assertEqual(outgoing.get_header('User-agent'), 'RealOrSlop/0.10 (+https://example.invalid/)')
+        self.assertEqual(outgoing.get_header('Authorization'), 'Bearer test-secret')
+        self.assertNotIn('test-secret', outgoing.full_url)

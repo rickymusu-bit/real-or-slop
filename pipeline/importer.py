@@ -98,8 +98,13 @@ class NoRedirect(HTTPRedirectHandler):
         return None  # Never forward the admin credential to a redirected origin.
 
 
+class RequestError(ValueError):
+    """Only locally constructed diagnostics; never a raw transport exception."""
+
+
 def request(base, token, path, method='GET', data=None, headers=None):
-    request_headers = {'Authorization': 'Bearer ' + token, **(headers or {})}
+    request_headers = {'Authorization': 'Bearer ' + token,
+                       'User-Agent': 'RealOrSlop/0.10 (+' + base + '/)', **(headers or {})}
     if isinstance(data, dict):
         data = json.dumps(data).encode()
         request_headers['Content-Type'] = 'application/json'
@@ -108,11 +113,11 @@ def request(base, token, path, method='GET', data=None, headers=None):
         with build_opener(NoRedirect()).open(req, timeout=90) as response:
             return json.load(response)
     except HTTPError as error:
-        raise ValueError(f'API {path}: HTTP {error.code}; controllare accesso, file e configurazione') from None
+        raise RequestError(f'API {path}: HTTP {error.code}; controllare accesso, file e configurazione') from None
     except (OSError, ValueError):
         # urllib may include header values in malformed-header errors. Never
         # forward those exception strings (or credentials) to the console.
-        raise ValueError(f'API {path}: richiesta non riuscita; controllare rete e configurazione') from None
+        raise RequestError(f'API {path}: richiesta non riuscita; controllare rete e configurazione') from None
 
 
 def upload(base, token, prepared):
