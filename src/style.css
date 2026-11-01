@@ -21,17 +21,27 @@
 }
 :root {
   color-scheme: dark;
-  --bg: #0D0F14;
-  --surface: #1B2030;
-  --text: #F4F6FB;
-  --muted: #AAB4C5;
-  --real: #54DEC8;
-  --slop: #B892FF;
-  --hairline: #30394C;
-  --on-accent: #0D0F14;
-  --control-border: #657187;
+  /* Botanical Elegance v1.0.0 — tokens semanticamente centralizzati. */
+  --bg: #0F1115;
+  --surface: #1A1D24;
+  --surface-2: #232733;
+  --text: #F3F5F7;
+  --muted: #B8BEC8;
+  --real: #6F8A57;
+  --real-hover: #596F46;
+  --real-soft: #A6BA92;
+  --slop: #DA2B91;
+  --slop-soft: #FF87D2;
+  /* Il fucsia interattivo più chiaro garantisce maggiore contrasto al testo piccolo. */
+  --slop-control: #E83CA0;
+  --slop-gradient: linear-gradient(135deg, #DA2B91 0%, #FF87D2 100%);
+  --slop-control-gradient: linear-gradient(135deg, #E83CA0 0%, #FF87D2 100%);
+  --hairline: #343943;
+  --on-accent: #0F1115;
+  --control-border: #747D8C;
+  --focus-ring: #D4E2BE;
   --error: #FFB5A5;
-  --backdrop: #0D0F14E6;
+  --backdrop: #0F1115E6;
   font: 400 15px/1.6 Inter, Arial, sans-serif;
   font-synthesis: none;
   color: var(--text);
@@ -43,7 +53,7 @@ a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font: inherit; }
 button, a, input, select, summary { touch-action: manipulation; }
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 3px solid var(--real);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 4px;
 }
 #content:focus { outline: none; }
@@ -80,7 +90,7 @@ header {
   letter-spacing: -1px;
 }
 .brand-real { color: var(--real); }
-.brand-slop { color: var(--slop); }
+.brand-slop { color: var(--slop-soft); background: var(--slop-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .brand-or { font: 400 14px/1 Inter, Arial, sans-serif; letter-spacing: 0; color: var(--muted); }
 header nav { display: flex; align-items: center; gap: clamp(16px, 3vw, 38px); font-size: 13px; }
 header nav a { min-height: 44px; display: flex; align-items: center; color: var(--muted); }
@@ -89,7 +99,7 @@ header nav a:hover, header nav [aria-current] { color: var(--text); text-decorat
 main { min-height: calc(100svh - 190px); }
 h1, h2, h3 { font-family: "Space Grotesk", Arial, sans-serif; font-weight: 700; line-height: 1.12; }
 h1 { font-size: clamp(48px, 6.4vw, 88px); letter-spacing: -.055em; margin: 24px 0; }
-h1 em { color: var(--slop); font-style: normal; }
+h1 em { color: var(--slop-soft); font-style: normal; }
 h2 { font-size: 28px; letter-spacing: -.04em; margin: 16px 0; }
 h3 { font-size: 22px; letter-spacing: -.025em; }
 p { color: var(--muted); line-height: 1.75; }
@@ -114,6 +124,7 @@ strong { font-weight: 600; }
   cursor: pointer;
 }
 .primary { color: var(--on-accent); background: var(--real); border-color: var(--real); }
+.primary:hover:not(:disabled) { background: var(--real-soft); border-color: var(--real-soft); }
 .button:hover, button:hover { text-decoration: underline; text-underline-offset: 4px; }
 button:disabled { opacity: .65; cursor: default; text-decoration: none; }
 .arrow { display: block; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; }
@@ -141,7 +152,7 @@ button:disabled { opacity: .65; cursor: default; text-decoration: none; }
 .mode-card:hover { border-color: var(--real); }
 .card-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); }
 .mode-icon { color: var(--real); font-size: 28px; }
-.mode-card:nth-child(2) .mode-icon { color: var(--slop); }
+.mode-card:nth-child(2) .mode-icon { color: var(--slop-soft); }
 .mode-card h3 { margin: 24px 0 8px; }
 .mode-card p { font-size: 13px; margin: 0 0 24px; }
 .card-link { display: flex; justify-content: space-between; margin-top: auto; padding-top: 18px; border-top: 1px solid var(--hairline); font-size: 12px; }
@@ -184,9 +195,9 @@ textarea { display: block; max-width: 100%; resize: vertical; }
 .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0 0; }
 .choices button { min-height: 60px; gap: 18px; border: 2px solid transparent; color: var(--on-accent); font: 700 23px/1 "Space Grotesk", Arial, sans-serif; letter-spacing: -.03em; }
 .choices .choice-real { background: var(--real); }
-.choices .choice-slop { background: var(--slop); }
+.choices .choice-slop { background: var(--slop-control); background: var(--slop-control-gradient); }
 .choices button:hover:not(:disabled) { border-color: var(--text); text-decoration: none; }
-.choices button:focus-visible { outline-color: var(--text); }
+.choices button:focus-visible { outline-color: var(--focus-ring); }
 kbd { display: inline-grid; place-items: center; width: 23px; height: 23px; border: 1px solid currentColor; border-radius: 3px; font: 600 11px Inter, Arial, sans-serif; }
 .play-warning { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
 summary { cursor: pointer; padding: 8px 0; }
@@ -195,7 +206,7 @@ summary { cursor: pointer; padding: 8px 0; }
 .feedback { background: var(--surface); border: 1px solid var(--hairline); border-radius: 4px; padding: 24px; margin: 20px 0; animation: reveal .18s ease-out; }
 .feedback h2 { margin-top: 0; font-size: 23px; }
 .feedback p { font-size: 13px; margin: 8px 0; }
-.feedback a, .review a, .studio a { text-decoration: underline; text-underline-offset: 3px; color: var(--real); }
+.feedback a, .review a, .studio a { text-decoration: underline; text-underline-offset: 3px; color: var(--real-soft); }
 .feedback button { margin-top: 14px; }
 .score { font: 700 96px/1.1 "Space Grotesk", Arial, sans-serif; color: var(--real); letter-spacing: -.06em; margin: 24px 0; }
 .score small { font: 400 18px Inter, Arial, sans-serif; letter-spacing: 0; color: var(--muted); }
@@ -273,3 +284,45 @@ dialog button { margin-bottom: 12px; }
 #preload-progress { font-variant-numeric: tabular-nums; }
 .load-actions { padding-bottom: 40px; }
 .media-loading { padding: 28px; margin: 18px 0; background: var(--surface); color: var(--muted); min-height: 120px; }
+
+/* Botanical Elegance — componenti di brand opzionali; nessun asset non presente è richiesto. */
+:where(.ros-badge, .badge-real, .badge-slop) {
+  display: inline-flex;
+  align-items: center;
+  gap: .35em;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: .25rem .65rem;
+  font: 600 11px/1.35 Inter, Arial, sans-serif;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+.badge-real { color: var(--real-soft); background: color-mix(in srgb, var(--real) 12%, transparent); }
+.badge-slop { color: var(--slop-soft); background: color-mix(in srgb, var(--slop) 12%, transparent); }
+.ros-button-slop {
+  color: var(--on-accent);
+  border-color: var(--slop-control);
+  background: var(--slop-control);
+  background: var(--slop-control-gradient);
+}
+.ros-button-slop:hover:not(:disabled) { border-color: var(--slop-soft); }
+.ros-surface {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+}
+.ros-surface-raised { background: var(--surface-2); }
+.ros-feedback[data-source="REAL"] { border-inline-start: 3px solid var(--real); }
+.ros-feedback[data-source="AI"] { border-inline-start: 3px solid var(--slop); }
+/* data-source descrive la provenienza dell'immagine, NON corretto/errato. */
+.ros-hero-art { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; object-position: center; }
+.ros-mascot { display: block; width: 100%; max-width: 320px; height: auto; object-fit: contain; }
+.ros-logo-icon { display: inline-block; width: 44px; height: 44px; object-fit: contain; flex: 0 0 auto; }
+.ros-caption { color: var(--muted); font-size: 12px; line-height: 1.55; }
+.ros-timer-warning { color: var(--error); font-variant-numeric: tabular-nums; }
+/* Le fotografie del gioco restano integrali, neutrali, senza effetti o maschere. */
+.play-image { filter: none; mix-blend-mode: normal; }
+@media (max-width: 700px) {
+  .ros-logo-icon { width: 36px; height: 36px; }
+  .ros-mascot { max-width: 240px; }
+}
