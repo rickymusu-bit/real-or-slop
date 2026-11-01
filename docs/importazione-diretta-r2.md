@@ -11,6 +11,11 @@ Fonti ufficiali → lotto locale con fonti/licenze e file
 
 Il gioco serve le immagini da R2. Dopo il rilascio iniziale di questo codice, caricare o approvare un nuovo lotto non richiede una nuova build del sito. L'importazione non effettua approvazioni automatiche né cambia `DATA_MODE`: il catalogo reale in preparazione rimane separato dalle fixture della demo.
 
+Per alimentare la coda senza caricare manualmente i lotti, usare il workflow
+[Coda privata alimentata automaticamente](coda-automatica.md): raccoglie i file,
+li valida e richiama questo importatore. L'attivazione richiede il segreto del
+runner GitHub, distinto dal segreto già configurato sul Worker.
+
 ## Prerequisiti
 
 - Worker aggiornato con queste API, D1 esistente e i binding `QUARANTINE`/`IMAGES` verso due bucket privati verificati. Per il caricamento basta `QUARANTINE`; l’approvazione richiede anche `IMAGES`.
@@ -75,4 +80,12 @@ L'API amministrativa mantiene l’accesso ai file originali su `/api/admin/origi
 
 ## Stato delle risorse remote
 
-Il proprietario ha confermato l’aggiunta dei binding R2; i nomi concordati sono ora riportati anche in `wrangler.jsonc`. Questa sessione non dispone ancora delle credenziali Cloudflare dell’environment corretto: l’import remoto rimane da effettuare dopo il rilascio del Worker aggiornato e la verifica dei binding tramite l’API amministrativa. Il lotto pilota locale di dieci immagini è utilizzabile da questo script senza passare da Drive. Le copie già archiviate su Drive non vengono cancellate e non sono più una dipendenza.
+La verifica API del 1 novembre 2026 ha confermato account, D1, binding del Worker e
+i due bucket esistenti: storage Standard, r2.dev disabilitato e nessun dominio
+personalizzato. `DATA_MODE=demo` e la disponibilità della demo sono confermati.
+Il proprietario ha ripristinato `ADMIN_TOKEN` e confermato tramite l'API admin
+l'archivio originali e i binding. Questo non configura automaticamente il segreto
+dell'importatore sul runner GitHub. Il lotto della sessione precedente non è
+presente nel workspace corrente; il collaudo della nuova raccolta ha preparato
+cinque candidate Commons e superato l'anteprima locale, senza importazioni remote.
+Le copie già archiviate su Drive non vengono cancellate e non sono una dipendenza.
