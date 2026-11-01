@@ -2,7 +2,7 @@
 import json
 import os
 import time
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
@@ -15,7 +15,11 @@ def candidate(provider, asset_id, title, url, image, author='', rights='', evide
 
 class Client:
     def __init__(self, user_agent, delay=1, opener=urlopen, sleep=time.sleep):
-        if not user_agent or '@' not in user_agent: raise ValueError('User-Agent con contatto richiesto')
+        # Official APIs accept a project URL as well as an email contact.
+        if not user_agent or ('@' not in user_agent and not any(
+            urlsplit(word.strip('()+')).scheme == 'https' and urlsplit(word.strip('()+')).hostname
+            for word in user_agent.split()
+        )): raise ValueError('User-Agent con contatto richiesto')
         self.ua=user_agent; self.delay=delay; self.opener=opener; self.sleep=sleep; self.calls=0
     def get(self, url):
         # All endpoints are supplied by connector code, never by arbitrary search URLs.
@@ -38,8 +42,8 @@ class Client:
 
 class Commons:
     name='commons'
-    def search(self,c,q,limit):
-        data=c.get('https://commons.wikimedia.org/w/api.php?'+urlencode(dict(action='query',format='json',generator='search',gsrsearch=q,gsrnamespace=6,gsrlimit=limit,prop='imageinfo',iiprop='url|extmetadata')))
+    def search(self,c,q,limit,offset=0):
+        data=c.get('https://commons.wikimedia.org/w/api.php?'+urlencode(dict(action='query',format='json',generator='search',gsrsearch=q,gsrnamespace=6,gsrlimit=limit,gsroffset=offset,prop='imageinfo',iiprop='url|extmetadata')))
         for row in data.get('query',{}).get('pages',{}).values():
             info=(row.get('imageinfo') or [{}])[0]; m=info.get('extmetadata',{}); v=lambda k:m.get(k,{}).get('value','')
             yield candidate(self.name,row['pageid'],row['title'],info.get('descriptionurl'),info.get('url'),v('Artist'),v('LicenseUrl') or v('LicenseShortName'),json.dumps(m),v('DateTimeOriginal'))
