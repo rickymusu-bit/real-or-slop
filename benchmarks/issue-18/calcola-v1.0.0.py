@@ -20,7 +20,7 @@ for row,g in zip(rows,gemini):
  assert i==gi and all(0<=v<=5 for v in (d,s,p,l,gd,gs,gp,gl))
  out.append({'id':i+'.jpg','osservazione_visiva':obs,'motivazione':reason,'dubbio':d,'sorpresa':s,'plausibilita':p,'leggibilita':l,'punteggio':score(d,s,p,l),'decisione_proposta':decision,'limiti_visivi':uncertainty,'gemini':{'dubbio':gd,'sorpresa':gs,'plausibilita':gp,'leggibilita':gl,'punteggio_dichiarato':reported,'punteggio_ricalcolato':score(gd,gs,gp,gl),'decisione':gdecision}})
 result={'versione':'1.0.0','data':'2026-11-01','formula':'8*dubbio + 5*sorpresa + 3*plausibilita + 4*leggibilita','scala_totale':'0-100','avvertenza':'Giudizio visivo editoriale, non verifica di autenticità, provenienza o diritti. Valutazione non in cieco rispetto al testo Gemini fornito insieme alle immagini.','risultati':out}
-path=Path('outputs/benchmark-real-issue-18/risultati-v1.0.0.json')
+path=Path(__file__).resolve().with_name('risultati-v1.0.0.json')
 path.write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 for x in sorted(out,key=lambda v:(-v['punteggio'],v['id'])):
  g=x['gemini']; print(x['id'],x['punteggio'],x['decisione_proposta'],g['punteggio_dichiarato'],g['punteggio_ricalcolato'])
