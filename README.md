@@ -2,6 +2,8 @@
 
 Gioco per distinguere immagini autentiche documentate da immagini create con IA dal proprietario. La demo usa esclusivamente illustrazioni geometriche originali con **etichette simulate**: non è un archivio verificato.
 
+**Identità visiva:** [Botanical Elegance v1.0.0](docs/identita-visiva-botanical-elegance-v1.0.0.md) (verde REAL, gradiente fucsia–rosa SLOP, due raganelle). Le immagini approvate sono inventariate in [`public/brand/README.md`](public/brand/README.md); i file binari devono essere caricati e verificati prima dell'integrazione nella pagina. La documentazione precedente del tema Digital Gallery resta storica per la palette.
+
 Node 24 (`.nvmrc`), Python 3.12 per pipeline e test schema. TypeScript, Vite, Worker Static Assets/API, D1 locale; adapter R2 pronto, nessuna risorsa remota richiesta.
 
 ```sh
