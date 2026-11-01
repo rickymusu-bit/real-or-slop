@@ -1,0 +1,177 @@
+{
+  "versione": "1.0.0",
+  "data": "2026-11-01",
+  "formula": "8*dubbio + 5*sorpresa + 3*plausibilita + 4*leggibilita",
+  "scala_totale": "0-100",
+  "avvertenza": "Giudizio visivo editoriale, non verifica di autenticità, provenienza o diritti. Valutazione non in cieco rispetto al testo Gemini fornito insieme alle immagini.",
+  "risultati": [
+    {
+      "id": "01.jpg",
+      "osservazione_visiva": "Una struttura ovale argentata con una fila di oblò è appoggiata tra alberi; richiama un veicolo spaziale collocato in un ambiente quotidiano.",
+      "motivazione": "La sagoma e gli oblò possono far sembrare costruita la scena; non occorre attribuire anomalie ai sostegni.",
+      "dubbio": 4,
+      "sorpresa": 4,
+      "plausibilita": 4,
+      "leggibilita": 3,
+      "punteggio": 76,
+      "decisione_proposta": "proporre",
+      "limiti_visivi": "La struttura è in ombra e l’immagine ha definizione modesta.",
+      "gemini": {
+        "dubbio": 3,
+        "sorpresa": 3,
+        "plausibilita": 3,
+        "leggibilita": 4,
+        "punteggio_dichiarato": 51,
+        "punteggio_ricalcolato": 64,
+        "decisione": "forse"
+      }
+    },
+    {
+      "id": "02.jpg",
+      "osservazione_visiva": "Una piccola formazione irregolare arancione e verde emerge da una pianura arida, con una nube chiara sopra.",
+      "motivazione": "Il contrasto fra i colori della formazione e il paesaggio è curioso, ma la formazione occupa una parte molto piccola dell’inquadratura.",
+      "dubbio": 2,
+      "sorpresa": 3,
+      "plausibilita": 4,
+      "leggibilita": 2,
+      "punteggio": 51,
+      "decisione_proposta": "forse",
+      "limiti_visivi": "La colorazione e la forma sono poco leggibili a dimensione telefono; non è possibile inferire la causa dei colori.",
+      "gemini": {
+        "dubbio": 3,
+        "sorpresa": 3,
+        "plausibilita": 4,
+        "leggibilita": 4,
+        "punteggio_dichiarato": 61,
+        "punteggio_ricalcolato": 67,
+        "decisione": "forse"
+      }
+    },
+    {
+      "id": "03.jpg",
+      "osservazione_visiva": "Strutture rosse allungate, con materiale scuro e lucido, emergono tra foglie e frammenti vegetali.",
+      "motivazione": "L’aspetto simile a tentacoli e il contrasto rosso-nero creano una scena organica insolita.",
+      "dubbio": 4,
+      "sorpresa": 4,
+      "plausibilita": 3,
+      "leggibilita": 2,
+      "punteggio": 69,
+      "decisione_proposta": "forse",
+      "limiti_visivi": "Foglie sfocate e rametti coprono parte del soggetto; la sua forma complessiva è difficile da ricostruire.",
+      "gemini": {
+        "dubbio": 3,
+        "sorpresa": 4,
+        "plausibilita": 4,
+        "leggibilita": 4,
+        "punteggio_dichiarato": 67,
+        "punteggio_ricalcolato": 72,
+        "decisione": "proporre"
+      }
+    },
+    {
+      "id": "04.jpg",
+      "osservazione_visiva": "Un soggetto blu e argenteo presenta varie ramificazioni sottili disposte sui lati del corpo.",
+      "motivazione": "La combinazione di corpo allungato, appendici a ventaglio e colore metallico ricorda una creatura immaginaria.",
+      "dubbio": 5,
+      "sorpresa": 5,
+      "plausibilita": 3,
+      "leggibilita": 4,
+      "punteggio": 90,
+      "decisione_proposta": "proporre",
+      "limiti_visivi": "Il soggetto è leggibile, ma l’immagine è scura e altri esemplari sono tagliati ai bordi.",
+      "gemini": {
+        "dubbio": 3,
+        "sorpresa": 4,
+        "plausibilita": 3,
+        "leggibilita": 4,
+        "punteggio_dichiarato": 60,
+        "punteggio_ricalcolato": 69,
+        "decisione": "forse"
+      }
+    },
+    {
+      "id": "05.jpg",
+      "osservazione_visiva": "Un enorme macchinario cingolato con lunghi tralicci e una grande ruota occupa una cava.",
+      "motivazione": "La scala apparente e la complessità della struttura possono farla sembrare una macchina immaginaria.",
+      "dubbio": 4,
+      "sorpresa": 4,
+      "plausibilita": 4,
+      "leggibilita": 3,
+      "punteggio": 76,
+      "decisione_proposta": "proporre",
+      "limiti_visivi": "La fitta struttura e le ombre rendono meno immediati i dettagli su uno schermo piccolo.",
+      "gemini": {
+        "dubbio": 3,
+        "sorpresa": 3,
+        "plausibilita": 4,
+        "leggibilita": 4,
+        "punteggio_dichiarato": 53,
+        "punteggio_ricalcolato": 67,
+        "decisione": "forse"
+      }
+    },
+    {
+      "id": "06.jpg",
+      "osservazione_visiva": "Una vasta cavità nel terreno è attraversata da numerose fiamme, con piccole figure visibili sul bordo.",
+      "motivazione": "Il fuoco distribuito dentro una voragine e il confronto con le figure umane evocano un paesaggio infernale.",
+      "dubbio": 4,
+      "sorpresa": 5,
+      "plausibilita": 4,
+      "leggibilita": 4,
+      "punteggio": 85,
+      "decisione_proposta": "proporre",
+      "limiti_visivi": "Le zone più luminose sono bruciate e il terreno circostante è poco visibile.",
+      "gemini": {
+        "dubbio": 3,
+        "sorpresa": 4,
+        "plausibilita": 4,
+        "leggibilita": 4,
+        "punteggio_dichiarato": 70,
+        "punteggio_ricalcolato": 72,
+        "decisione": "proporre"
+      }
+    },
+    {
+      "id": "07.jpg",
+      "osservazione_visiva": "Una locomotiva blu e viola con piccoli dettagli chiari si trova su binari, parzialmente coperta da una struttura.",
+      "motivazione": "La livrea colorata è il solo elemento leggermente inconsueto; non emerge una situazione particolarmente sorprendente.",
+      "dubbio": 1,
+      "sorpresa": 1,
+      "plausibilita": 5,
+      "leggibilita": 4,
+      "punteggio": 44,
+      "decisione_proposta": "scartare",
+      "limiti_visivi": "La parte inferiore è scura e un traliccio copre una parte del mezzo.",
+      "gemini": {
+        "dubbio": 3,
+        "sorpresa": 3,
+        "plausibilita": 4,
+        "leggibilita": 4,
+        "punteggio_dichiarato": 55,
+        "punteggio_ricalcolato": 67,
+        "decisione": "forse"
+      }
+    },
+    {
+      "id": "08.jpg",
+      "osservazione_visiva": "Un battello con passeggeri passa accanto alle arcate di un ponte in pietra.",
+      "motivazione": "La scena è ordinaria: non si osserva un elemento chiaramente sorprendente o ingannevole.",
+      "dubbio": 0,
+      "sorpresa": 0,
+      "plausibilita": 5,
+      "leggibilita": 5,
+      "punteggio": 35,
+      "decisione_proposta": "scartare",
+      "limiti_visivi": "I passeggeri sono piccoli nell’inquadratura; questo non è di per sé un indizio di generazione.",
+      "gemini": {
+        "dubbio": 3,
+        "sorpresa": 2,
+        "plausibilita": 4,
+        "leggibilita": 4,
+        "punteggio_dichiarato": 51,
+        "punteggio_ricalcolato": 62,
+        "decisione": "forse"
+      }
+    }
+  ]
+}
