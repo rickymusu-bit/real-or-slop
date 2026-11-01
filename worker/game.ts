@@ -23,9 +23,6 @@ export function settings(data: Record<string, unknown>) {
     throw new HttpError(400, "Numero domande da 1 a 50");
   if (![60, 120, 180].includes(Number(duration)))
     throw new HttpError(400, "Durata non valida");
-  const difficulty = String(data.difficulty || "all");
-  if (!["all", "facile", "medio", "difficile"].includes(difficulty))
-    throw new HttpError(400, "Difficoltà non valida");
   const categories = Array.isArray(data.categories)
     ? data.categories.map(String).slice(0, 30)
     : [];
@@ -33,22 +30,19 @@ export function settings(data: Record<string, unknown>) {
     mode,
     count: Number(count),
     duration: Number(duration),
-    difficulty,
     categories,
   };
 }
 export async function filteredCatalog(
   env: Env,
-  filters: { difficulty: string; categories: string[] },
+  filters: { categories: string[] },
 ) {
   let rows = await catalog(env);
-  if (filters.difficulty !== "all")
-    rows = rows.filter((i) => i.difficulty === filters.difficulty);
   const demo = env.DATA_MODE === "demo" ? 1 : 0;
   const [assignments, metadata] = await Promise.all([
-    env.DB.prepare("SELECT ic.image_id,ic.category_id FROM image_categories ic JOIN images i ON i.id=ic.image_id WHERE i.status='approved' AND i.demo=?")
+    env.DB.prepare("SELECT ic.image_id,ic.category_id FROM image_categories ic JOIN images i ON i.id=ic.image_id WHERE i.id IN (SELECT image_id FROM published_images) AND i.demo=?")
       .bind(demo).all<{ image_id: string; category_id: string }>(),
-    env.DB.prepare("SELECT c.image_id,c.subject_kind,c.image_medium,c.composition,c.period_bucket,c.country_or_region,c.perceived_plausibility FROM image_curation c JOIN images i ON i.id=c.image_id WHERE i.status='approved' AND i.demo=?")
+    env.DB.prepare("SELECT c.image_id,c.subject_kind,c.image_medium,c.composition,c.period_bucket,c.country_or_region,c.perceived_plausibility FROM image_curation c JOIN images i ON i.id=c.image_id WHERE i.id IN (SELECT image_id FROM published_images) AND i.demo=?")
       .bind(demo).all<{ image_id: string; subject_kind: string | null; image_medium: string | null; composition: string | null; period_bucket: string | null; country_or_region: string | null; perceived_plausibility: string | null }>(),
   ]);
   const categories = new Map<string, string[]>();
@@ -265,33 +259,7 @@ export async function game(request: Request, env: Env, path: string) {
   throw new HttpError(405, "Metodo non consentito");
 }
 export async function stats(env: Env) {
-  const images = (
-    await env.DB.prepare(
-      "SELECT i.id,i.difficulty,COUNT(a.image_id) AS sample,AVG(a.correct) AS accuracy FROM images i JOIN image_answer_statistics a ON a.image_id=i.id GROUP BY i.id HAVING COUNT(a.image_id)>=30",
-    ).all<{
-      id: string;
-      difficulty: string;
-      sample: number;
-      accuracy: number;
-    }>()
-  ).results;
-  const categories = (
-    await env.DB.prepare(
-      "SELECT c.id,c.name,COUNT(*) AS sample,AVG(a.correct) AS accuracy FROM categories c JOIN image_categories ic ON ic.category_id=c.id JOIN image_answer_statistics a ON a.image_id=ic.image_id GROUP BY c.id",
-    ).all()
-  ).results;
-  return json({
-    minimumSample: 30,
-    images: images.map((i) => ({
-      ...i,
-      suggestedDifficulty:
-        i.accuracy >= 0.8
-          ? "facile"
-          : i.accuracy >= 0.4
-            ? "medio"
-            : "difficile",
-    })),
-    categories,
-    note: "Suggerimenti editoriali: nessun aggiornamento automatico. Categorie multiple possono contare la stessa risposta.",
-  });
+  const images = (await env.DB.prepare("SELECT i.id,COUNT(*) AS valid_answers,SUM(1-a.correct) AS incorrect_answers FROM images i JOIN image_answer_statistics a ON a.image_id=i.id GROUP BY i.id").all()).results;
+  const categories = (await env.DB.prepare("SELECT c.id,c.name,COUNT(*) AS valid_answers,SUM(1-a.correct) AS incorrect_answers FROM categories c JOIN image_categories ic ON ic.category_id=c.id JOIN image_answer_statistics a ON a.image_id=ic.image_id GROUP BY c.id").all()).results;
+  return json({ images, categories, note: "Conteggi descrittivi: nessun livello o classificazione. Il futuro error_rate richiederà controllo di numerosità, incertezza e risposte ripetute." });
 }

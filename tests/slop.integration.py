@@ -28,7 +28,7 @@ def request(path, method='GET', data=None, auth=token, origin=None):
         return error.code, json.loads(error.read())
 
 def draft(**changes):
-    plan = dict(title='Private studio fixture '+uuid.uuid4().hex, profile='facile', category_id='trasporti', subcategory_id='trasporti-treni',
+    plan = dict(title='Private studio fixture '+uuid.uuid4().hex, category_id='trasporti', subcategory_id='trasporti-treni',
                 country='Italia', place='Laboratorio immaginario', period='1940', subject='Strumento di calcolo', subject_kind='trasporti',
                 country_or_region='europa', period_bucket='1900_1945', image_medium='foto_bn', composition='scena_ampia', cognitive_mechanism='chronology_device',
                 scene_description='Fixture neutra: nessuna immagine generata da API.', fictional_claim='La scena fotografica è sintetica.',
@@ -52,14 +52,14 @@ assert request('/api/admin/slop', 'POST', dict(plan=draft(subcategory_id='arte-p
 plan = draft()
 status, preview = request('/api/admin/slop/preview', 'POST', dict(plan=plan))
 assert status == 200, preview
-assert 'un solo indizio verificabile' in preview['prompt'] and 'Non inventare fonti' in preview['prompt']
+assert 'Sviluppa liberamente' in preview['prompt'] and 'Non inventare fonti' in preview['prompt']
 assert 'generata con IA' in preview['reveal']
 status, created = request('/api/admin/slop', 'POST', dict(plan=plan, reason='Prima progettazione'))
 assert status == 201, created
 pid = created['id']; path = '/api/admin/slop/'+pid
 assert created['status'] == 'draft' and created['image_id'] is None and created['revision'] == 1
 assert created['plan']['prompt'] == plan['prompt']
-assert created['template_version'] == '1.0.0'
+assert created['template_version'] == '2.0.0'
 assert any(row['id'] == pid for row in request('/api/admin/slop')[1])
 assert request(path+'/import', 'POST', dict(revision=1, reason='No checks'))[0] == 400
 
@@ -135,14 +135,11 @@ assert revealed['answer'] == 'AI' and 'generata con IA' in revealed['explanation
 assert revealed['explanation'] == reviewed_explanation
 assert 'PRIVATE_STUDIO' not in json.dumps(revealed)
 
-# Expert templates stay private; the public difficulty vocabulary is unchanged.
-expert = {**draft(), 'profile':'esperto', 'cognitive_mechanism':'fictional_artifact'}
-_, expert_record = request('/api/admin/slop', 'POST', dict(plan=expert, reason='Solo profilo editoriale'))
-assert request('/api/admin/slop/'+expert_record['id']+'/import', 'POST', dict(**checks, revision=1, reason='Must remain private'))[0] == 409
-assert request('/api/sessions','POST',dict(mode='training',difficulty='esperto'),auth='')[0] == 400
+# Retired difficulty cannot change public settings or introduce a selector.
+assert request('/api/sessions','POST',dict(mode='training',difficulty='esperto'),auth='')[0] == 201
 # Rejection goes through the existing moderation endpoint for another manual import.
 _, second = request('/api/admin/slop', 'POST', dict(plan=draft(), reason='Fixture per rifiuto'))
 _, pending = request('/api/admin/slop/'+second['id']+'/import', 'POST', dict(**checks, revision=1, reason='Invio manuale'))
 assert request('/api/admin/review/'+pending['id'], 'POST', dict(decision='rejected', notes='Output non idoneo'))[0] == 200
 assert request('/api/admin/slop/'+second['id'])[1]['status'] == 'rejected'
-print('Studio integration passed: templates, auth/origin, category validation, concurrent revisions/imports, exact provenance, quarantine, human approval/rejection, Expert-only template and no gameplay spoilers.')
+print('Studio integration passed: templates, auth/origin, category validation, concurrent revisions/imports, exact provenance, quarantine, human approval/rejection, retired difficulty and no gameplay spoilers.')

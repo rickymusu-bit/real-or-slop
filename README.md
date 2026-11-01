@@ -19,7 +19,7 @@ npx wrangler deploy --dry-run --outdir .wrangler/dry-run
 ```text
 Browser → Vite dist/ → Worker router → D1 (catalogo, audit, sessioni)
                                    → storage adapter (demo / R2)
-Python offline → quarantena privata → revisione autenticata → catalogo approvato
+Python offline → quarantena privata → revisione autenticata → approvazione → pubblicazione 50/50
 ```
 
 La build esegue TypeScript e Vite, produce `dist/` (configurato in `vite.config.ts`) e verifica che `index.html` e tutte le risorse locali referenziate siano presenti; l'entry Worker è `worker/index.ts`. `/api/*` attraversa sempre il Worker e non restituisce il fallback SPA. Le risposte non sono incluse negli asset frontend. `/admin` e `/api/admin/*` verificano un token server-side: disabilitati se non configurato. Nessun segreto frontend.
@@ -82,21 +82,46 @@ progresso e movimento ridotto sono verificati in Chromium già disponibile.
 La 0.9.0 cambia soltanto l'interfaccia; la preparazione dei timer è aggiunta dalla
 0.10.0 descritta sopra.
 
-## Studio SLOP (0.8.0)
+## Pipeline editoriale REAL / SLOP (0.11.0)
 
-Da `/admin` aprire `/admin/slop`: concept e fatti documentati, template per
-Facile/Medio/Difficile ed Esperto soltanto editoriale, prompt e spiegazione
-modificabili, dati della generazione esterna, note e cronologia privata.
-La generazione è manuale con strumenti esterni: nessuna API o creazione automatica.
-Dopo il salvataggio si carica il file in quarantena e si usa la moderazione
-esistente per approvare o rifiutare. Il revisore può correggere la spiegazione
-finale con audit; modello e prompt effettivo del tentativo importato restano
-congelati. Nessuna quarta difficoltà pubblica o modifica al campionamento.
+Fino a 20 fotografie diversificate al giorno, valutate sui pixel con una sola
+classifica 0–100. Prima metà candidata REAL; seconda metà sorgenti private per
+reinterpretazioni **solo testuali**: descrizione → brief creativo → prompt aperto
+→ OpenAI text-to-image → valutazione cieca del risultato. Il generatore sviluppa
+liberamente composizione, luce, materiali e atmosfera, conservando la natura
+fotografica del gioco. Nessuna chiamata pagata è attiva per default.
 
-Applicare prima la migrazione additiva `0005_slop_studio.sql`. I binding R2 del
-catalogo sono ora dichiarati nella configurazione remota; upload e approvazione
-richiedono anche il segreto ADMIN_TOKEN. La demo continua a usare le fixture.
-[Procedura, API, versioni e limiti](docs/studio-generazione-slop-v1.0.0.md).
+Studio `/admin/slop` e admin mostrano fonte, sorgente privata, dossier, tentativi,
+valutazioni e stato. Revisione umana obbligatoria, nota facoltativa. Le approvazioni
+attendono separatamente; un'azione amministrativa esplicita pubblica gruppi
+bilanciati, con vincoli atomici D1. Il catalogo è 50/50, le singole partite
+mantengono le monete indipendenti. Le sorgenti SLOP non sono riutilizzabili come REAL.
+
+La difficoltà preassegnata è rimossa, senza valore sostitutivo. I vecchi valori
+restano solo nell'archivio privato; sessioni, risposte e audit sono preservati.
+Una futura misura empirica userà `error_rate = risposte_errate / risposte_valide`,
+con numerosità, incertezza e ripetizioni controllate; nessun livello è implementato.
+
+Migrazioni nuove **0007 / 0008**, da provare prima localmente. Le migrazioni conservano
+il catalogo preesistente e si bloccano prima di rimuovere la colonna se lo stock non è già bilanciato; occorrono
+backup e rilascio coordinato prima di qualsiasi operazione remota. Il rilascio
+esistente ha una guardia esplicita `EDITORIAL_SCHEMA_RELEASE_APPROVED=true`.
+Nessun deploy, migrazione remota, secret Actions o schedule pagato viene attivato
+qui. I modelli sono configurabili; `/v1/models` ha elencato `gpt-6.1-terra`, senza
+eseguire inferenze a pagamento.
+
+```sh
+# Manifest locale completo; entrambi senza rete/pagamenti/scritture remote:
+python3 -m pipeline.editorial .pipeline/lotto/manifest.json
+python3 -m pipeline.editorial .pipeline/lotto/manifest.json --simulate
+```
+
+[Architettura versionata](docs/pipeline-editoriale-real-slop-v1.0.0.md),
+[Studio v2](docs/studio-generazione-slop-v2.0.0.md),
+[configurazione, migrazioni, prima prova e recupero](docs/coda-automatica.md),
+[variabili senza segreti](pipeline/editorial.env.example).
+Le prescrizioni precedenti sulla difficoltà e sui vecchi template sono storiche
+e superate; diritti, originali privati, demo, autenticazione e preload restano.
 
 ## Selezione delle immagini (0.7.0)
 
@@ -136,27 +161,25 @@ Quarantena `.pipeline/` privata e ignorata da Git. Deduplica fonte/URL prima del
 
 Sono ammesse **CC BY, CC BY-SA, CC BY-NC, CC BY-ND, CC BY-NC-SA e CC BY-NC-ND 2.0, 3.0 e 4.0**, incluse le varianti territoriali pubblicate, oltre a CC0 e Public Domain Mark verificato. Pipeline e moderazione condividono lo stesso elenco: link HTTP o a `deed`/`legalcode` vengono ricondotti all’identità HTTPS della **stessa versione e giurisdizione**, mai convertiti in 4.0. Il sito è destinato a uso non commerciale e senza adattamenti delle immagini: NC/ND sono ammesse rispettando questi vincoli. Rimangono esclusi URL e identità non censiti. I filtri di raccolta nominano la licenza esatta (es. `CC BY-SA 3.0 DE`); gli esempi configurati per CC0/4.0 non si ampliano automaticamente. Obblighi, limiti e fonte dell’elenco in [docs/licenze-immagini.md](docs/licenze-immagini.md).
 
-Admin: configurare un token casuale >=32 caratteri in `.dev.vars` (mai committarlo): `ADMIN_TOKEN=...`. Aprire `/admin`; autenticazione HTTP Basic (utente `admin`, password token), sempre HTTPS fuori localhost. API supporta anche Bearer. Import JSON con: type, title, description, author, source_url, source_id, provider, license_name, license_url, evidence, explanation, categories (ID), difficulty; per AI anche ai_model, ai_prompt, generation_date (YYYY-MM-DD), owner_declaration=true. I contenuti e gli eventi inventati devono essere verificati dall’editore prima dell’approvazione. Il file JPEG/PNG/WebP va caricato separatamente; SVG non accettati. Il menu privato consente filtri, prove, licenza, modifica categorie/difficoltà e audit della decisione. Protezione server-side su pagina, API e upload.
+Admin: configurare un token casuale >=32 caratteri in `.dev.vars` (mai committarlo): `ADMIN_TOKEN=...`. Aprire `/admin`; autenticazione HTTP Basic (utente `admin`, password token), sempre HTTPS fuori localhost. API supporta anche Bearer. Import JSON con: type, title, description, author, source_url, source_id, provider, license_name, license_url, evidence, explanation, categories (ID); per AI anche ai_model, ai_prompt, generation_date (YYYY-MM-DD), owner_declaration=true. I contenuti e gli eventi inventati devono essere verificati dall’editore prima dell’approvazione. Il file JPEG/PNG/WebP va caricato separatamente; SVG non accettati. Il menu privato consente filtri, prove, licenza, modifica categorie e audit della decisione. Protezione server-side su pagina, API e upload.
 
 **Importazione diretta senza Google Drive:** `python3 scripts/import-queue.py .pipeline/manifest.json --base https://IL-SITO.workers.dev` controlla il lotto senza rete; aggiungere `--apply` per caricare originali privati e copie per il gioco nella quarantena R2 e le schede in D1. Servono il Worker aggiornato, il binding `QUARANTINE` e il segreto `REAL_OR_SLOP_ADMIN_TOKEN`. Retry e upload interrotti riprendono dalla stessa candidata; non vengono approvate o pubblicate immagini automaticamente. Originali conservati in R2 e backup del catalogo indipendenti da Google: [procedura completa](docs/importazione-diretta-r2.md).
 
-**Coda automatica, revisione umana:** il workflow separato `Automatic private review queue`
-collega raccolta Commons, download e importazione privata. Dopo l'attivazione iniziale
-alimenta la coda con un massimo di dieci candidate REAL al giorno e si ferma a cinquanta
-in attesa. Il revisore controlla e approva dal sito; non deve caricare i file.
-Richiede il segreto GitHub `REAL_OR_SLOP_ADMIN_TOKEN` e la variabile
-`ENABLE_AUTOMATIC_REVIEW_QUEUE=true`; resta inattivo finché non viene abilitato sul
-branch principale. Demo e risorse esistenti sono preservate. [Attivazione e limiti](docs/coda-automatica.md).
+**Coda editoriale, revisione umana:** il workflow combina raccolta,
+classifica unica e, solo con abilitazione esplicita, generazione e importazione
+private. Il cron quotidiano è dormiente e richiede il nuovo flag
+`ENABLE_EDITORIAL_SCHEDULE=true` oltre alle altre abilitazioni. Secret, policy e budget sono distinti fra
+esecutore, Actions e Worker. [Attivazione controllata e limiti](docs/coda-automatica.md).
 
 I bucket `*-local` sono dichiarati soltanto nel profilo env.local e vengono usati con --local --env local, non nel deploy remoto. L’approvazione copia soltanto dallo storage quarantena allo storage approvato dell’ambiente corrente; non avvia deploy/import produzione. Le fixture demo e il catalogo verificato sono separati dal campo `demo`.
 
 ## Allenamento e A tempo (fase 3)
 
-Categorie multiple e sottocategorie, difficoltà, 1–50 domande in allenamento o 60/120/180 secondi a tempo. Il server campiona senza ripetizioni con etichette REAL/AI indipendenti al 50% per domanda; limita preventivamente la lunghezza o segnala catalogo insufficiente. Le sessioni usano D1 e un cookie tecnico HttpOnly/SameSite, Secure in HTTPS. L’ID nel sessionStorage serve solo a ritrovare la partita: da solo non autorizza letture o risposte. Timestamp, assegnazione domande, scadenza, punteggio (100/corretta, 0/errata) e replay sono validati nel Worker/SQL. A parità conta il minor tempo totale di risposta. Nessuna classifica pubblica o nickname raccolto per il gioco singolo.
+Categorie multiple e sottocategorie, 1–50 domande in allenamento o 60/120/180 secondi a tempo. Il server campiona senza ripetizioni con etichette REAL/AI indipendenti al 50% per domanda; limita preventivamente la lunghezza o segnala catalogo insufficiente. Le sessioni usano D1 e un cookie tecnico HttpOnly/SameSite, Secure in HTTPS. L’ID nel sessionStorage serve solo a ritrovare la partita: da solo non autorizza letture o risposte. Timestamp, assegnazione domande, scadenza, punteggio (100/corretta, 0/errata) e replay sono validati nel Worker/SQL. A parità conta il minor tempo totale di risposta. Nessuna classifica pubblica o nickname raccolto per il gioco singolo.
 
-API: POST `/api/sessions` con mode training/timed, count, duration, difficulty e categories; GET `/api/sessions/:id`; POST `/api/sessions/:id/answer` con roundId/choice. Solo dopo la risposta vengono inviate soluzione, spiegazione e crediti. Foto servite tramite round opachi assegnati. Doppio click/retry con stessa scelta è idempotente; una scelta diversa è rifiutata. Refresh riprende la domanda corrente; errori di rete offrono ripresa. Il countdown del browser è indicativo: alla scadenza il server rifiuta ulteriori risposte.
+API: POST `/api/sessions` con mode training/timed, count, duration e categories; GET `/api/sessions/:id`; POST `/api/sessions/:id/answer` con roundId/choice. Solo dopo la risposta vengono inviate soluzione, spiegazione e crediti. Foto servite tramite round opachi assegnati. Doppio click/retry con stessa scelta è idempotente; una scelta diversa è rifiutata. Refresh riprende la domanda corrente; errori di rete offrono ripresa. Il countdown del browser è indicativo: alla scadenza il server rifiuta ulteriori risposte.
 
-Statistiche private `/api/admin/stats`: conteggi per categoria e suggerimenti per immagine da almeno 30 risposte. Nessun cambio automatico della difficoltà. Risposte in categorie multiple possono contribuire a più aggregazioni. Test HTTP aggiuntivi: con Wrangler locale attivo, `python3 tests/game.integration.py` (modifica soltanto una sessione D1 locale per verificare la scadenza, mai risorse remote).
+Statistiche private `/api/admin/stats`: conteggi descrittivi per categoria e immagine, senza livelli o suggerimenti di difficoltà. Risposte in categorie multiple possono contribuire a più aggregazioni. Test HTTP aggiuntivi: con Wrangler locale attivo, `python3 tests/game.integration.py` (modifica soltanto una sessione D1 locale per verificare la scadenza, mai risorse remote).
 
 ## PvP e consegna (fase 4)
 

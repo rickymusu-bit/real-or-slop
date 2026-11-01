@@ -1,3 +1,4 @@
+import { editorial } from "./editorial";
 import { prepareImport } from "./import";
 import { slopStudio } from "./slop";
 import {
@@ -24,6 +25,7 @@ function url(value: string) {
   return value;
 }
 export async function moderation(request: Request, env: Env, path: string) {
+  if (path.startsWith("/api/admin/editorial/")) return editorial(request, env, path);
   if (path === "/api/admin/slop" || path.startsWith("/api/admin/slop/")) return slopStudio(request, env, path);
   const curationPath = path.match(/^\/api\/admin\/images\/([\w-]+)\/curation$/);
   if (curationPath) return curation(request, env, curationPath[1]);
@@ -32,7 +34,7 @@ export async function moderation(request: Request, env: Env, path: string) {
       new URL(request.url).searchParams.get("status") || "in-review";
     const items = (
       await env.DB.prepare(
-        "SELECT i.*,s.page_url AS source_url,s.evidence,l.url AS license_url,p.id AS studio_plan_id FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id LEFT JOIN slop_plans p ON p.image_id=i.id WHERE i.status=? ORDER BY i.created_at DESC LIMIT 100",
+        "SELECT i.*,s.page_url AS source_url,s.evidence,l.url AS license_url,p.id AS studio_plan_id,pub.published_at,er.evaluation_json AS editorial_evaluation FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id LEFT JOIN slop_plans p ON p.image_id=i.id LEFT JOIN published_images pub ON pub.image_id=i.id LEFT JOIN editorial_image_reviews er ON er.image_id=i.id WHERE i.status=? ORDER BY i.created_at DESC LIMIT 100",
       )
         .bind(filter)
         .all()
@@ -85,6 +87,7 @@ export async function moderation(request: Request, env: Env, path: string) {
         const response = await existing();
         if (response) return response;
       }
+      if (error instanceof Error && /reference|queue limit/i.test(error.message)) throw new HttpError(409, "Fonte riservata alla generazione SLOP o coda privata piena");
       throw error;
     }
     return json({ id: prepared.id, status: "in-review", upload: `/api/admin/assets/${prepared.id}` }, 201);
@@ -191,9 +194,6 @@ export async function moderation(request: Request, env: Env, path: string) {
     if (!image) throw new HttpError(404, "Immagine non trovata");
     if (image.status !== "in-review")
       throw new HttpError(409, "Decisione già registrata");
-    const difficulty = String(data.difficulty || image.difficulty);
-    if (!["facile", "medio", "difficile"].includes(difficulty))
-      throw new HttpError(400, "Difficoltà non valida");
     const categories = Array.isArray(data.categories)
       ? data.categories.map(String).slice(0, 12)
       : [];
@@ -202,7 +202,8 @@ export async function moderation(request: Request, env: Env, path: string) {
       : image.license_url;
     const license = recognizedLicense(verifiedLicense);
     const licenseUrl = license?.url || (data.license_url ? url(verifiedLicense) : verifiedLicense);
-    const notes = text(data, "notes");
+    if (data.notes !== undefined && (typeof data.notes !== "string" || data.notes.length > 4000)) throw new HttpError(400, "Nota non valida");
+    const notes = String(data.notes ?? "").trim();
     const explanation = data.explanation === undefined ? image.explanation : text(data, "explanation");
     const auditNotes = explanation === image.explanation ? notes : JSON.stringify({ notes, changes: { explanation: { before: image.explanation, after: explanation } } });
     if (decision === "approved") {
@@ -236,8 +237,8 @@ export async function moderation(request: Request, env: Env, path: string) {
         image.id,
       ),
       env.DB.prepare(
-        "UPDATE images SET status=?,difficulty=?,explanation=?,rights_verified_at=CURRENT_TIMESTAMP WHERE id=? AND status='in-review' AND EXISTS(SELECT 1 FROM review_events WHERE id=?)",
-      ).bind(decision, difficulty, explanation, image.id, eventId),
+        "UPDATE images SET status=?,explanation=?,rights_verified_at=CURRENT_TIMESTAMP WHERE id=? AND status='in-review' AND EXISTS(SELECT 1 FROM review_events WHERE id=?)",
+      ).bind(decision, explanation, image.id, eventId),
       env.DB.prepare(
         "UPDATE licenses SET url=?,name=? WHERE id=(SELECT license_id FROM images WHERE id=?) AND EXISTS(SELECT 1 FROM review_events WHERE id=?)",
       ).bind(

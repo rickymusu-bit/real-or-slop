@@ -1,6 +1,6 @@
 export const slopFixture = () => ({
   title: "Concept sintetico di prova", category_id: "trasporti", subcategory_id: "trasporti-treni",
-  profile: "facile", country: "Italia", place: "Laboratorio immaginario", period: "1940",
+  country: "Italia", place: "Laboratorio immaginario", period: "1940",
   country_or_region: "europa", period_bucket: "1900_1945", subject: "Un banco di lavoro con uno strumento di calcolo",
   subject_kind: "trasporti", image_medium: "foto_bn", composition: "scena_ampia", cognitive_mechanism: "chronology_device",
   scene_description: "Scena neutra di laboratorio, costruita per una fixture di test.",

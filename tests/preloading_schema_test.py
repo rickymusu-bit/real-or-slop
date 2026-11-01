@@ -6,7 +6,7 @@ class PreparationSchemaTest(unittest.TestCase):
         db=sqlite3.connect(':memory:')
         for p in sorted(Path('migrations').glob('*.sql')):
             if p.name<'0006_media_preparation.sql': db.executescript(p.read_text())
-        db.executescript(Path('scripts/seed.sql').read_text())
+        db.executescript(Path('tests/legacy-seed.sql').read_text())
         image=db.execute('SELECT id FROM images LIMIT 1').fetchone()[0]
         db.execute("INSERT INTO game_sessions(id,mode,created_at,expires_at,owner_hash) VALUES('s','timed',1,60001,'owner')")
         db.execute("INSERT INTO game_rounds VALUES('r','s',?,0,123)",(image,))

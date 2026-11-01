@@ -1,9 +1,10 @@
-import { fictionalMechanisms, slopChoices, slopTextLimits, type SlopPlan, type SlopRecord } from "../shared/slop";
+import { editorialPanel, setupEditorial } from "./editorial";
+import { slopChoices, slopTextLimits, type SlopPlan, type SlopRecord } from "../shared/slop";
 import { api, content, escape } from "./main";
 type Field = keyof typeof slopChoices | keyof typeof slopTextLimits;
 interface Category { id: string; name: string; parent_id: string | null }
 const labels: Record<Field, string> = {
-  title: "Titolo privato", category_id: "Categoria", subcategory_id: "Sottocategoria", profile: "Difficoltà prevista / profilo editoriale",
+  title: "Titolo privato", category_id: "Categoria", subcategory_id: "Sottocategoria",
   country: "Paese rappresentato", place: "Luogo rappresentato", period: "Anno o periodo rappresentato", country_or_region: "Regione", period_bucket: "Fascia storica",
   subject: "Soggetto", subject_kind: "Tipologia", image_medium: "Medium", composition: "Composizione", cognitive_mechanism: "Meccanismo cognitivo",
   scene_description: "Descrizione della scena", fictional_claim: "Che cosa è sintetico o inventato", single_clue: "Indizio o ipotesi investigabile",
@@ -16,7 +17,7 @@ const labels: Record<Field, string> = {
 function field(key: Field) {
   if (key === "category_id" || key === "subcategory_id") return `<label>${labels[key]}<select data-plan="${key}"><option value="">Da scegliere</option></select></label>`;
   const choices = (slopChoices as Record<string, readonly string[]>)[key];
-  if (choices) return `<label>${labels[key]}<select data-plan="${key}">${key === "profile" ? "" : '<option value="">Da scegliere</option>'}${choices.map((choice) => `<option value="${choice}">${choice === "esperto" ? "Esperto · solo template, non importabile" : choice.replaceAll("_", " ")}</option>`).join("")}</select></label>`;
+  if (choices) return `<label>${labels[key]}<select data-plan="${key}"><option value="">Da scegliere</option>${choices.map((choice) => `<option value="${choice}">${choice.replaceAll("_", " ")}</option>`).join("")}</select></label>`;
   const max = (slopTextLimits as Record<string, number>)[key];
   const isUrl = key.endsWith("_url");
   const control = max > 500 && !isUrl ? `<textarea data-plan="${key}" rows="${key === "prompt" ? 10 : 4}" maxlength="${max}"></textarea>` :
@@ -33,12 +34,13 @@ function fingerprint(plan: SlopPlan) {
 }
 export async function showSlopStudio() {
   const page = content();
-  page.innerHTML = `<section class="page narrow studio"><nav aria-label="Amministrazione"><a href="/admin">← Coda di revisione</a></nav><div class="eyebrow">STUDIO PRIVATO · IMPORTAZIONE MANUALE</div><h1>Progetta le immagini SLOP.</h1><p>Qui prepari e conservi il prompt. Genera l’immagine con il tuo strumento esterno, poi carica il risultato nella quarantena per la revisione umana.</p><p>Esperto è soltanto un template editoriale: non è una quarta difficoltà pubblica.</p><label>Schede recenti<select id="slop-list"><option value="">Nessuna scheda selezionata</option></select></label><div class="studio-actions"><button id="slop-load">Carica scheda</button><button id="slop-new">Nuova scheda</button><button id="slop-copy">Nuova iterazione da questa scheda</button></div><p id="slop-state" role="status"></p><form class="curation" id="slop-form"><div id="slop-editor"><fieldset><legend>Concept e classificazione privata</legend>${(["title", "category_id", "subcategory_id", "profile", "country", "place", "period", "country_or_region", "period_bucket", "subject", "subject_kind", "image_medium", "composition", "cognitive_mechanism", "scene_description", "fictional_claim", "single_clue", "period_accurate_details", "technical_treatment"] as Field[]).map(field).join("")}</fieldset><details open><summary>Fatti documentati: distinguere il contesto dalla scena inventata</summary><p>Inserisci solo fatti controllabili e riferimenti reali. Un archivio documenta il contesto, non una fotografia generata. Massimo sei riferimenti.</p><div id="slop-facts">${factRow()}</div><button type="button" id="slop-add-fact">Aggiungi fatto</button></details><fieldset><legend>Generazione esterna e prompt</legend>${(["ai_model", "generation_owner", "generation_source_url", "generation_date", "generation_version"] as Field[]).map(field).join("")}<label>Iterazione<input id="slop-iteration" type="number" min="1" max="1000" value="1"></label><button type="button" id="slop-preview">Costruisci proposte di prompt e spiegazione</button><p>Il pulsante sostituisce i due testi con proposte basate sul concept. Verificale e adattale prima di usarle. Dopo una modifica al concept, ricostruisci o aggiorna anche i testi.</p>${field("prompt")}${field("reveal_explanation")}${field("evaluation_notes")}${field("license_name")}${field("license_url")}<label><input id="slop-owner" type="checkbox"> Dichiaro che il risultato è generato con IA e che posso presentarlo alla revisione</label></fieldset></div><label>Motivazione del salvataggio o invio<textarea id="slop-reason" maxlength="2000" rows="2"></textarea></label><div class="studio-actions"><button type="button" id="slop-save">Salva scheda privata</button><button type="button" id="slop-history">Mostra cronologia</button></div><pre id="slop-events" class="curation-history" hidden></pre><fieldset><legend>Invio manuale alla revisione</legend><p>Salva prima il prompt effettivo, i dati della generazione e le valutazioni. Dopo l’invio la provenienza della scheda resta congelata; per un altro tentativo crea una nuova iterazione.</p><label>File generato esternamente<input id="slop-file" type="file" accept="image/jpeg,image/png,image/webp"></label><label>dHash offline del file caricato (facoltativo)<input id="slop-phash" maxlength="16" placeholder="16 caratteri esadecimali"></label>${[
+  page.innerHTML = `<section class="page narrow studio"><nav aria-label="Amministrazione"><a href="/admin">← Coda di revisione</a></nav><div class="eyebrow">STUDIO PRIVATO · IMPORTAZIONE MANUALE</div><h1>Progetta le immagini SLOP.</h1><p>Qui prepari e conservi il prompt. Genera l’immagine con il tuo strumento esterno, poi carica il risultato nella quarantena per la revisione umana.</p><p>La fotografia fornisce un’idea. Il generatore sviluppa una scena autonoma, con libertà di composizione, luce e resa dei dettagli.</p><label>Schede recenti<select id="slop-list"><option value="">Nessuna scheda selezionata</option></select></label><div class="studio-actions"><button id="slop-load">Carica scheda</button><button id="slop-new">Nuova scheda</button><button id="slop-copy">Nuova iterazione da questa scheda</button></div><p id="slop-state" role="status"></p><form class="curation" id="slop-form"><div id="slop-editor"><fieldset><legend>Concept e classificazione privata</legend>${(["title", "category_id", "subcategory_id", "country", "place", "period", "country_or_region", "period_bucket", "subject", "subject_kind", "image_medium", "composition", "cognitive_mechanism", "scene_description", "fictional_claim", "single_clue", "period_accurate_details", "technical_treatment"] as Field[]).map(field).join("")}</fieldset><details open><summary>Fatti documentati: distinguere il contesto dalla scena inventata</summary><p>Inserisci solo fatti controllabili e riferimenti reali. Un archivio documenta il contesto, non una fotografia generata. Massimo sei riferimenti.</p><div id="slop-facts">${factRow()}</div><button type="button" id="slop-add-fact">Aggiungi fatto</button></details><fieldset><legend>Generazione esterna e prompt</legend>${(["ai_model", "generation_owner", "generation_source_url", "generation_date", "generation_version"] as Field[]).map(field).join("")}<label>Iterazione<input id="slop-iteration" type="number" min="1" max="1000" value="1"></label><button type="button" id="slop-preview">Costruisci proposte di prompt e spiegazione</button><p>Il pulsante sostituisce i due testi con proposte basate sul concept. Verificale e adattale prima di usarle. Dopo una modifica al concept, ricostruisci o aggiorna anche i testi.</p>${field("prompt")}${field("reveal_explanation")}${field("evaluation_notes")}${field("license_name")}${field("license_url")}<label><input id="slop-owner" type="checkbox"> Dichiaro che il risultato è generato con IA e che posso presentarlo alla revisione</label></fieldset></div><label>Motivazione del salvataggio o invio<textarea id="slop-reason" maxlength="2000" rows="2"></textarea></label><div class="studio-actions"><button type="button" id="slop-save">Salva scheda privata</button><button type="button" id="slop-history">Mostra cronologia</button></div><pre id="slop-events" class="curation-history" hidden></pre><fieldset><legend>Invio manuale alla revisione</legend><p>Salva prima il prompt effettivo, i dati della generazione e le valutazioni. Dopo l’invio la provenienza della scheda resta congelata; per un altro tentativo crea una nuova iterazione.</p><label>File generato esternamente<input id="slop-file" type="file" accept="image/jpeg,image/png,image/webp"></label><label>dHash offline del file caricato (facoltativo)<input id="slop-phash" maxlength="16" placeholder="16 caratteri esadecimali"></label>${[
     ["facts_confirmed", "Ho verificato i fatti e le cronologie nelle fonti indicate"],
     ["rights_confirmed", "Ho controllato i diritti del materiale usato e delle persone rappresentate"],
     ["safety_confirmed", "La scena è innocua: nessuna falsa accusa, evento sensibile o attribuzione archivistica inventata"],
     ["comparability_confirmed", "Ho confrontato risoluzione, composizione, epoca e medium con il catalogo REAL"],
-  ].map(([key, label]) => `<label><input type="checkbox" data-slop-check="${key}"> ${label}</label>`).join("")}<button type="button" id="slop-import">Invia alla coda e carica il file</button><button type="button" id="slop-upload">Riprova il caricamento del file</button><p id="slop-linked"></p><img id="slop-image" alt="Anteprima privata del risultato caricato" hidden></fieldset><p id="slop-status" role="status"></p></form></section>`;
+  ].map(([key, label]) => `<label><input type="checkbox" data-slop-check="${key}"> ${label}</label>`).join("")}<button type="button" id="slop-import">Invia alla coda e carica il file</button><button type="button" id="slop-upload">Riprova il caricamento del file</button><p id="slop-linked"></p><img id="slop-image" alt="Anteprima privata del risultato caricato" hidden></fieldset><p id="slop-status" role="status"></p></form>${editorialPanel()}</section>`;
+  setupEditorial(page);
   const form = page.querySelector<HTMLFormElement>("#slop-form")!;
   const status = page.querySelector<HTMLElement>("#slop-status")!;
   let current: SlopRecord | null = null, saved = "", busy = false;
@@ -47,11 +49,6 @@ export async function showSlopStudio() {
   const subcategories = (selected = "") => {
     get("subcategory_id").innerHTML = '<option value="">Da scegliere</option>' + allCategories.filter((category) => category.parent_id === get("category_id").value).map((category) => `<option value="${escape(category.id)}">${escape(category.name)}</option>`).join("");
     get("subcategory_id").value = selected;
-  };
-  const mechanisms = () => {
-    const limited = ["difficile", "esperto"].includes(get("profile").value);
-    for (const option of Array.from((get("cognitive_mechanism") as unknown as HTMLSelectElement).options)) option.disabled = limited && !!option.value && !fictionalMechanisms.includes(option.value);
-    if (limited && !fictionalMechanisms.includes(get("cognitive_mechanism").value)) get("cognitive_mechanism").value = "";
   };
   const collect = (): SlopPlan => ({
     ...Object.fromEntries(fields.map((key) => [key, key === "prompt" ? get(key).value : get(key).value.trim()])),
@@ -64,9 +61,8 @@ export async function showSlopStudio() {
     })).filter((fact) => fact.fact || fact.source_title || fact.reference_url),
   } as SlopPlan);
   const populate = (plan?: SlopPlan, keepFile = false) => {
-    for (const key of fields) get(key).value = plan?.[key] || (key === "profile" ? "facile" : "");
+    for (const key of fields) get(key).value = plan?.[key] || "";
     subcategories(plan?.subcategory_id);
-    mechanisms();
     form.querySelector("#slop-facts")!.innerHTML = plan?.documented_facts.length ? plan.documented_facts.map(factRow).join("") : factRow();
     (form.querySelector("#slop-iteration") as HTMLInputElement).value = String(plan?.iteration || 1);
     (form.querySelector("#slop-owner") as HTMLInputElement).checked = plan?.owner_declaration || false;
@@ -83,7 +79,7 @@ export async function showSlopStudio() {
     const locked = !!current?.image_id;
     page.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, select, textarea, button").forEach((element) => { element.disabled = busy || (locked && !!element.closest("#slop-editor")); });
     (form.querySelector("#slop-save") as HTMLButtonElement).disabled = busy || locked;
-    (form.querySelector("#slop-import") as HTMLButtonElement).disabled = busy || locked || current?.plan.profile === "esperto";
+    (form.querySelector("#slop-import") as HTMLButtonElement).disabled = busy || locked;
     (form.querySelector("#slop-upload") as HTMLButtonElement).disabled = busy || !locked || current?.status !== "in-review";
     const linked = form.querySelector<HTMLElement>("#slop-linked")!;
     linked.innerHTML = current?.image_id ? `Risultato in moderazione: <a href="/admin?status=${encodeURIComponent(current.status)}">Apri la coda ${escape(current.status)}</a>. L’invio non approva né pubblica l’immagine.` : "Nessuna immagine creata o importata.";
@@ -97,9 +93,9 @@ export async function showSlopStudio() {
   form.querySelector<HTMLImageElement>("#slop-image")!.addEventListener("error", (event) => { (event.target as HTMLImageElement).hidden = true; });
   form.querySelector<HTMLImageElement>("#slop-image")!.addEventListener("load", (event) => { (event.target as HTMLImageElement).hidden = !current?.image_id; });
   const list = async () => {
-    const records = await api<{ id: string; title: string; profile: string; status: string }[]>("/admin/slop");
+    const records = await api<{ id: string; title: string; status: string }[]>("/admin/slop");
     if (!page.isConnected) return;
-    page.querySelector("#slop-list")!.innerHTML = '<option value="">Scegli una scheda</option>' + records.map((record) => `<option value="${escape(record.id)}">${escape(record.title)} · ${escape(record.profile)} · ${escape(record.status)}</option>`).join("");
+    page.querySelector("#slop-list")!.innerHTML = '<option value="">Scegli una scheda</option>' + records.map((record) => `<option value="${escape(record.id)}">${escape(record.title)} · ${escape(record.status)}</option>`).join("");
     (page.querySelector("#slop-list") as HTMLSelectElement).value = current?.id || "";
   };
   const load = async (id: string) => {
@@ -119,7 +115,6 @@ export async function showSlopStudio() {
     });
   };
   get("category_id").addEventListener("change", () => subcategories());
-  get("profile").addEventListener("change", mechanisms);
   form.addEventListener("submit", (event) => event.preventDefault());
   form.addEventListener("click", (event) => {
     if (busy || current?.image_id) return;

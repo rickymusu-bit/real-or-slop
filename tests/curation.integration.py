@@ -68,7 +68,7 @@ for kind in ['REAL', 'AI']:
     assert candidate['source_url'] == metadata['source_url']
     assert candidate['evidence'] == metadata['evidence']
     assert candidate['license_url'] == metadata['license_url']
-    assert candidate['difficulty'] == 'facile'
+    assert 'difficulty' not in candidate
     assert candidate['curation']['surprise_reason'] == 'PRIVATE_SURPRISE_FIXTURE'
     assert request('/api/admin/review/'+image, 'POST', dict(decision='approved', notes='No checks'))[0] == 400
     assert request(path, 'PUT', payload)[0] == 409

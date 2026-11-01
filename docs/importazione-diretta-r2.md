@@ -1,3 +1,8 @@
+> Aggiornamento 2026-11-01T22:00:00Z — versione operativa 2.0.0.
+> Il campo `difficulty` è rimosso e gli eventuali valori di vecchi manifest
+> sono ignorati. L'importatore resta per la coda privata; approvare non pubblica.
+> Le nuove fotografie automatiche passano prima dalla [classifica unica](pipeline-editoriale-real-slop-v1.0.0.md).
+
 # Importazione diretta delle immagini in D1 e R2
 
 Il catalogo viene popolato senza Google Drive, OAuth Google o sincronizzazioni intermedie:

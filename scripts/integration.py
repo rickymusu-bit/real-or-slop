@@ -41,8 +41,10 @@ try:
         (folder/'.dev.vars').chmod(0o600)
         profile_args.extend(['--config', str(file)])
         subprocess.run(['npm', 'run', 'build'], check=True, env=env, stdout=subprocess.DEVNULL)
+    if state.exists(): shutil.rmtree(state)  # Only the dedicated local test state.
     run(['npx','wrangler','d1','migrations','apply','DB','--local','--persist-to',str(state)])
     run(['npx','wrangler','d1','execute','DB','--local','--persist-to',str(state),'--file','scripts/seed.sql'])
+    run(['npx','wrangler','d1','execute','DB','--local','--persist-to',str(state),'--file','scripts/seed-publication.sql'])
     Path('artifacts').mkdir(exist_ok=True)
     with Path('artifacts/integration-worker.log').open('w') as log:
         proc=subprocess.Popen(['npx','wrangler','dev','--local','--port','8788','--persist-to',str(state),*profile_args],env=env,stdout=log,stderr=log,start_new_session=True)
@@ -68,7 +70,7 @@ try:
                     asset=re.search(r'src="([^"]+\.js)"',html).group(1)
                     with urllib.request.urlopen(base+asset) as js:assert js.status==200
             print('Navigation/assets HTTP checks passed.')
-            for script in (['tests/moderation.integration.py','tests/direct-import.integration.py','tests/curation.integration.py','tests/slop.integration.py'] if local_profile=='local' else [])+['tests/sampling.integration.py','tests/game.integration.py','tests/preloading.integration.py']:
+            for script in (['tests/moderation.integration.py','tests/direct-import.integration.py','tests/curation.integration.py','tests/slop.integration.py','tests/editorial.integration.py'] if local_profile=='local' else [])+['tests/sampling.integration.py','tests/game.integration.py','tests/preloading.integration.py']:
                 subprocess.run(['python3',script],env=env,check=True)
             subprocess.run(['node','tests/pvp.integration.mjs'],env=env,check=True)
             print('All isolated local integration checks passed.')

@@ -1,87 +1,167 @@
-# Coda privata alimentata automaticamente
+---
+version: 2.0.0
+updated_at: 2026-11-01T22:00:00Z
+---
 
-Il revisore usa soltanto `/admin`: controlla le candidate, verifica la spiegazione
-editoriale precompilata e fonte/licenza/autenticità, poi approva o rifiuta. La raccolta e
-il caricamento dei file sono eseguiti da GitHub Actions, senza Google Drive e
-senza operazioni manuali per ciascuna immagine.
+# Esecuzione privata della pipeline editoriale
 
-## Comportamento
+Il vecchio job che importava fino a dieci fotografie tecnicamente valide come
+REAL è superato. Si applica la [pipeline editoriale 1.0.0](pipeline-editoriale-real-slop-v1.0.0.md):
+unica classifica, prima metà REAL, seconda metà sorgenti SLOP, revisione umana,
+pubblicazione esplicita in gruppi bilanciati. Nessun cron pagato è attivo.
 
-Il workflow `Automatic private review queue` parte ogni giorno alle **06:17 UTC**
-(07:17 in Italia d'inverno, 08:17 d'estate). GitHub può ritardare i job pianificati.
-Raccoglie da Wikimedia Commons fino a **10 candidate REAL al giorno** attraverso
-l'API ufficiale e scarica soltanto da `upload.wikimedia.org`. Le prime ricerche
-ruotano fra ponti storici, locomotive, architetture insolite, dipinti e automobili
-storiche, con pagina di ricerca deterministica per giorno. Non certifica che una
-candidata sia REAL: l'autenticità è verificata dal revisore.
+## Prima verifica: soltanto locale
 
-Si esaminano al massimo 30 risultati per esecuzione; sono ammessi inizialmente
-CC0, Public Domain Mark, CC BY 4.0 e CC BY-SA 4.0 dichiarati sulla singola scheda.
-File incompleti, diritti ambigui, host non autorizzati, file illeggibili e duplicati
-locali vengono esclusi. Le candidate mantengono provenienza e attribuzioni; la
-spiegazione viene precompilata con la didascalia della fonte e va verificata prima
-dell'approvazione. Le categorie e la
-difficoltà iniziale `medio` sono provvisorie e modificabili in revisione.
+```sh
+python3 -m venv .pipeline/venv
+. .pipeline/venv/bin/activate
+pip install -r pipeline/requirements.txt
+npm ci
+npm run lint
+npm test
+npm run build
+npm run db:migrate
+npm run db:seed
+npm run test:integration
+ROS_TEST_PROFILE= npm run test:integration
+```
 
-Prima dell'importazione si controllano l'intero lotto, la salute del sito,
-`demo: true`, la disponibilità del catalogo e la coda. Le immagini non-demo create
-nel giorno UTC corrente, comprese quelle già approvate o rifiutate, consumano il
-limite di dieci. Il job si ferma quando ci sono almeno **50 candidate in revisione**
-e limita il nuovo lotto allo spazio residuo. I job sono serializzati; il limite
-governa questo workflow, non importazioni manuali simultanee di altri operatori.
+I comandi database sopra usano esclusivamente `--local --env local`.
+`db:seed` pubblica soltanto le fixture locali, per consentire la demo nuova;
+non è una procedura di pubblicazione del catalogo remoto. Su database già
+popolati 0008 conserva tutte le approvate, se già bilanciate.
 
-L'importatore usa esclusivamente l'origine fissata
-`https://real-or-slop.rickymusu.workers.dev` e le API esistenti:
+Per un lotto locale JPEG/PNG/WebP completo e un manifest compatibile con
+l'importatore esistente:
 
-- D1 esistente: schede `in-review`, `demo=0`.
-- `QUARANTINE` → `real-or-slop-quarantine`: originali privati byte per byte in
-  `originals/{id}` e copia per il gioco sulla chiave opaca della candidata.
-- Revisione umana → copia approvata in `IMAGES` → `real-or-slop-approved`.
+```sh
+python3 -m pipeline.editorial .pipeline/lotto/manifest.json
+python3 -m pipeline.editorial .pipeline/lotto/manifest.json --simulate --out .pipeline/simulazione
+```
 
-Non vengono chiamate API di approvazione, Cloudflare, deploy o migrazione; non
-vengono creati bucket o database. `DATA_MODE=demo` rimane invariato: l'approvazione
-prepara il catalogo, ma il passaggio del gioco alle immagini reali è separato.
-La generazione automatica delle immagini AI non è inclusa in questo job.
+Il primo comando valida e mostra i massimi teorici. Il secondo usa un generatore
+di fixture dichiarate e valutazioni simulate, salvando solo file locali. Entrambi
+non effettuano chiamate OpenAI o scritture remote, anche in presenza di chiavi.
+Le fixture uniformi non misurano la qualità editoriale di un corpus reale.
 
-## Attivazione iniziale
+Raccolta di fotografie, con sole API documentate delle fonti e senza OpenAI:
 
-Il workflow resta disattivato finché manca la variabile di attivazione. Funziona
-soltanto sul branch `main` di questo repository **privato**, su schedule o avvio
-manuale; non è eseguito su pull request o fork.
+```sh
+python3 -m pipeline.automatic
+python3 -m pipeline.automatic --collect --out .pipeline/automatic
+```
 
-1. Dopo la revisione della PR, unire il codice a `main` soltanto nel rilascio
-   autorizzato. Il repository ha un collegamento Workers Builds: il merge può
-   attivare anche il suo deploy esistente, indipendentemente da questo workflow.
-2. In GitHub, **Settings → Secrets and variables → Actions → Secrets**, aggiungere
-   `REAL_OR_SLOP_ADMIN_TOKEN` con lo **stesso valore** di `ADMIN_TOKEN` sul Worker.
-   Il segreto del Worker non viene letto o copiato automaticamente. Non usare
-   `CLOUDFLARE_API_TOKEN`: questo workflow non ne ha bisogno. Non inserire il valore
-   in chat, comandi salvati o file Git.
-3. In **Actions → Variables**, impostare `ENABLE_AUTOMATIC_REVIEW_QUEUE=true`.
-4. Eseguire una volta **Actions → Automatic private review queue → Run workflow**
-   da `main` per verificare il primo lotto senza attendere il giorno successivo.
-5. Aprire `/admin`: le nuove immagini devono comparire in **In revisione** con
-   anteprima privata. Da quel momento il lavoro ordinario consiste nella revisione.
+Il primo è un piano senza rete; il secondo scarica originali e derivati locali.
+Conservare la cartella, inclusa `collection.sqlite`, fra giornate diverse.
+Ripetere il download può consumare quote delle fonti anche senza costi OpenAI.
+La raccolta non approva né importa nel Worker.
 
-La rotazione di `ADMIN_TOKEN` richiede di aggiornare anche il segreto GitHub.
-Il segreto dell'environment Codex è separato da quello del runner GitHub.
-Per sospendere gli import impostare `ENABLE_AUTOMATIC_REVIEW_QUEUE=false`.
+## Migrazioni e rilascio futuro, da autorizzare separatamente
 
-## Verifica e recupero
+Prima di applicare 0007/0008 su staging o produzione:
 
-`python -m pipeline.automatic` mostra soltanto il piano e non usa la rete.
-`python -m pipeline.automatic --collect` prepara e valida il lotto locale privato,
-senza scrivere sul sito. `--apply` importa un lotto già raccolto e richiede il
-segreto del runner: non è una modalità di anteprima.
+```sql
+SELECT demo,type,count(*) FROM images WHERE status='approved' GROUP BY demo,type;
+PRAGMA foreign_key_check;
+```
 
-Ogni esecuzione conserva lotto e ricevuta come artifact nel repository privato
-per sette giorni, anche dopo un errore. Gli originali già importati restano in R2
-e non dipendono dalla scadenza dell'artifact. Non pubblicare o committare i file.
-Un errore non approva le candidate già caricate: controllare il run fallito e la
-ricevuta. Il comando esistente `scripts/import-queue.py` permette di riprendere
-un lotto interrotto senza duplicare le schede o sostituire originali e decisioni.
-Una nuova esecuzione nello stesso giorno usa la stessa ricerca; risultati e file
-della fonte possono cambiare e i controlli di checksum rifiutano le sostituzioni.
-Non è garantito un numero minimo di nuove candidate: filtri, disponibilità e
-deduplica possono ridurre il lotto. Il job segnala fallimento se non raccoglie
-nessun file completo. Verifiche locali non equivalgono a un import remoto riuscito.
+Preparare backup D1 e R2 e provare il ripristino su copia isolata. Se i conteggi
+non sono uguali, completare manualmente il lato mancante nel vecchio sistema;
+0007 interrompe prima della rimozione della colonna e 0008 ricontrolla la
+precondizione, senza ritirare immagini. Non modificare la guardia
+per forzare un catalogo sbilanciato. Congelare scritture amministrative durante
+il rilascio coordinato di schema e backend; non tornare al backend precedente
+con colonna rimossa. Sessioni, risposte e audit sono preservati.
+
+Questa PR non applica migrazioni remote, non modifica permessi/billing e non
+effettua deploy. Il comando di rilascio esistente richiede l'ulteriore flag
+d'ambiente `EDITORIAL_SCHEMA_RELEASE_APPROVED=true` dopo i controlli e l'approvazione
+del rilascio, per evitare un'applicazione implicita della migrazione incompatibile.
+Un database nuovo richiede il seed demo e la sua pubblicazione esplicita; nessun
+nuovo catalogo viene pubblicato dallo script di deploy per completare una quota.
+
+## Configurazione prima di un primo lotto controllato
+
+Usare [pipeline/editorial.env.example](../pipeline/editorial.env.example) come
+elenco di variabili, senza copiarvi segreti. Le cifre zero impediscono esecuzioni
+pagate: sostituirle con stime conservative verificate per modello e parametri.
+
+| Variabile / secret | Destinazione | Significato |
+|---|---|---|
+| `OPENAI_API_KEY` | Secret dell'esecutore Python / Actions | Accesso OpenAI, mai frontend/Worker/artifact |
+| `REAL_OR_SLOP_ADMIN_TOKEN` | Secret dell'esecutore / Actions | Credenziale admin esistente del Worker |
+| `ADMIN_TOKEN` | Secret Worker esistente | Autenticazione amministrativa invariata |
+| `OPENAI_ANALYSIS_MODEL` | Python / Actions vars | Analisi visiva e brief; esempio verificato nell'elenco: `gpt-6.1-terra` |
+| `OPENAI_EVALUATOR_MODEL` | Python / Actions vars | Valutatore finale, default modello di analisi |
+| `OPENAI_IMAGE_MODEL` | Python / Actions vars | Generatore, esempio nell'elenco: `gpt-image-2` |
+| `OPENAI_IMAGE_SIZE`, `OPENAI_IMAGE_QUALITY` | Python / Actions vars | Dimensioni e qualità; default 1024x1024 / medium |
+| `EDITORIAL_THRESHOLD` | Python / Actions vars | Soglia comune di qualità 0–100, default 65 |
+| `EDITORIAL_ATTEMPTS` | Python / Actions vars | Tentativi per sorgente 1–5, default 2 |
+| `EDITORIAL_MAX_EVALUATIONS` | Python + Worker / Actions vars | Analisi, descrizioni e valutazioni per run, default 60 |
+| `EDITORIAL_MAX_GENERATIONS` | Python + Worker / Actions vars | Generazioni incluse rigenerazioni, default 20 |
+| `EDITORIAL_MAX_REGENERATIONS` | Python + Worker / Actions vars | Rigenerazioni per run, default 10 |
+| `EDITORIAL_EVALUATION_USD` | Python + Worker / Actions vars | Stima massima di una chiamata visiva |
+| `EDITORIAL_GENERATION_USD` | Python + Worker / Actions vars | Stima massima di una generazione |
+| `EDITORIAL_RUN_USD`, `EDITORIAL_DAILY_USD` | Python + Worker / Actions vars | Budget stimati per run e giorno UTC |
+| `EDITORIAL_QUEUE_LIMIT` | Python / Actions vars | Limite conservativo locale; default 100 |
+| `GENERATED_LICENSE_NAME`, `GENERATED_LICENSE_URL` | Python / Actions vars | Dichiarazione dei diritti generati dopo verifica, senza default |
+| `ENABLE_EDITORIAL_PAID` | Python + Worker / Actions vars | Abilitazione esplicita, default assente/false |
+| `ENABLE_AUTOMATIC_REVIEW_QUEUE` | Actions vars | Abilitazione del workflow, default assente |
+| `ENABLE_EDITORIAL_SCHEDULE` | Actions vars | Abilitazione esplicita del cron dormiente, default assente/false |
+| `EDITORIAL_SCHEMA_RELEASE_APPROVED` | Solo futuro esecutore di rilascio | Conferma del preflight schema e del rilascio autorizzato |
+
+Il limite D1 della coda è indipendente dal client: leggere/modificare con API
+admin `/api/admin/editorial/controls`, corpo `{"queue_limit":100}`. Vale anche per
+l'importazione manuale. Non ridurlo ignorando le immagini già in attesa.
+
+Dopo rilascio autorizzato su destinazione verificata e controlli di termini,
+licenze, quote e prezzi, iniziare da un manifest di **due fotografie** e budget
+sufficiente soltanto per quella prova. Prima leggere `/api/admin/editorial/state`.
+Poi, solo nell'esecutore privato configurato e abilitato:
+
+```sh
+python3 -m pipeline.editorial .pipeline/primo-lotto/manifest.json \
+  --execute --base https://WORKER-DI-TEST-VERIFICATO --out .pipeline/prima-esecuzione
+```
+
+Il segnaposto non è una destinazione configurata. Non usare l'URL di produzione
+per una prova. Il comando può spendere entro i limiti stimati configurati e
+scrivere soltanto registro/quarantena/coda privata, mai approvazioni o pubblicazioni.
+Il modello viene controllato con `/v1/models`; un ID elencato non garantisce che
+una generazione completi correttamente. Nessuna fallback a un altro modello.
+
+Controllare `ranking.json`, `attempts/*.json`, `summary.json`, dossier Studio e
+ledger. Il revisore decide manualmente; la pubblicazione richiede una seconda
+azione esplicita in admin. Il costo reale e la resa dei modelli vanno verificati
+prima di un lotto più grande. Non aumentare punteggi o budget per riempire la quota.
+
+## Recupero
+
+Conservare la cartella privata originale e il run ID. In caso di importazione
+interrotta, riprendere con gli stessi argomenti e aggiungere `--resume`:
+
+```sh
+python3 -m pipeline.editorial .pipeline/primo-lotto/manifest.json \
+  --execute --resume --base https://WORKER-DI-TEST-VERIFICATO --out .pipeline/prima-esecuzione
+```
+
+La ripresa conserva ruoli, ranking e tentativi. Un file già accettato viene
+reimportato idempotentemente senza rigenerazione; il budget server non si azzera.
+Un originale mancante richiede recupero da artifact/backup. Per file scaricati
+su un percorso diverso, ripristinare i percorsi originali prima del recupero;
+non cambiare i prompt dei tentativi già archiviati. Se il budget è esaurito,
+interrompere e riesaminare il costo: non cambiare giorno o run ID per aggirarlo.
+Un conflitto del registro richiede verifica editoriale, senza riclassificare una
+sorgente come REAL o rimuovere una pubblicata.
+
+## GitHub Actions
+
+Il workflow `Automatic private review queue` supporta avvio manuale e un cron
+quotidiano alle 06:17 UTC, disabilitato dal nuovo flag
+`ENABLE_EDITORIAL_SCHEDULE` assente/false. Richiede branch main e repository privato. Negli avvii manuali senza `execute_paid=true` fa soltanto raccolta locale e piano. Lo step
+pagato richiede inoltre `ENABLE_EDITORIAL_PAID=true`, secret OpenAI e admin
+**in Actions**, policy compatibili nel Worker e modelli/prezzi/diritti valorizzati.
+Le credenziali di Codex Cloud non sono trasferite automaticamente. Nessuna
+variabile, secret, fatturazione o schedule remota è stata attivata da questa PR.
+L'eventuale automazione quotidiana richiede `ENABLE_EDITORIAL_SCHEDULE=true`
+oltre a tutte le altre abilitazioni; nessuna variabile viene impostata qui.

@@ -9,7 +9,7 @@ class SlopSchemaTest(unittest.TestCase):
         migration = Path('migrations/0005_slop_studio.sql')
         for file in sorted(Path('migrations').glob('*.sql')):
             if file.name < migration.name: db.executescript(file.read_text())
-        db.executescript(Path('scripts/seed.sql').read_text())
+        db.executescript(Path('tests/legacy-seed.sql').read_text())
         tables = ['images', 'sources', 'licenses', 'image_categories', 'image_curation', 'review_events']
         before = {table: db.execute('SELECT * FROM '+table).fetchall() for table in tables}
         db.executescript(migration.read_text())

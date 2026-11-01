@@ -42,10 +42,9 @@ def prepare(item, root):
     if not isinstance(metadata, dict):
         raise ValueError('I metadati devono essere un oggetto JSON')
     fields = ('type', 'title', 'description', 'author', 'source_url', 'provider', 'source_id', 'evidence',
-              'explanation', 'categories', 'difficulty', 'ai_model', 'ai_prompt', 'generation_date', 'owner_declaration')
+              'explanation', 'categories', 'ai_model', 'ai_prompt', 'generation_date', 'owner_declaration')
     payload = {key: metadata[key] for key in fields if key in metadata}
     payload.setdefault('type', 'REAL')
-    payload.setdefault('difficulty', 'medio')
     payload.setdefault('explanation', 'Spiegazione editoriale da completare prima dell’approvazione.')
     payload.setdefault('description', metadata.get('date', ''))
     for key, limit in [('title', 300), ('author', 300), ('provider', 100), ('source_id', 300),
@@ -56,8 +55,8 @@ def prepare(item, root):
     source_url = urlsplit(payload['source_url'])
     if source_url.scheme != 'https' or not source_url.hostname or source_url.username or source_url.password:
         raise ValueError('La fonte deve avere un URL HTTPS valido')
-    if payload['type'] not in ('REAL', 'AI') or payload['difficulty'] not in ('facile', 'medio', 'difficile'):
-        raise ValueError('Tipo o difficoltà non validi')
+    if payload['type'] not in ('REAL', 'AI'):
+        raise ValueError('Tipo non valido')
     categories = payload.get('categories')
     if not isinstance(categories, list) or not 1 <= len(categories) <= 12 or not all(isinstance(c, str) and c for c in categories):
         raise ValueError('Indicare da 1 a 12 ID di categoria validi')

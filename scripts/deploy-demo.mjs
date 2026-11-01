@@ -54,7 +54,10 @@ if (!flags.has("--check")) {
       "--no-experimental-provision",
     ]);
   } else {
-    // Separate from the build: additive migrations + idempotent synthetic demo data.
+    if (process.env.EDITORIAL_SCHEMA_RELEASE_APPROVED !== "true") {
+      throw new Error("La migrazione editoriale 0007/0008 richiede preflight, backup e rilascio coordinato approvato: impostare EDITORIAL_SCHEMA_RELEASE_APPROVED=true soltanto per quel rilascio.");
+    }
+    // Separate from the build: approved coordinated migrations + synthetic demo data.
     // No billing, bucket creation, or resource provisioning is performed here.
     wrangler(["d1", "migrations", "apply", "DB", "--remote"]);
     wrangler(["d1", "execute", "DB", "--remote", "--file", "scripts/seed.sql"]);

@@ -51,23 +51,26 @@ def private(payload):
         assert key not in text, key
 
 setup = [f"INSERT INTO categories VALUES('{prefix}','Sampling fixture',NULL)"]
-for i, (kind, variant, status, demo, difficulty) in enumerate([
+for i, (kind, variant, status, demo, legacy_difficulty) in enumerate([
     ('REAL', 0, 'approved', 1, 'facile'), ('REAL', 1, 'approved', 1, 'facile'),
     ('AI', 0, 'approved', 1, 'facile'), ('AI', 1, 'approved', 1, 'facile'),
     ('REAL', 0, 'approved', 1, 'facile'),  # near duplicate of row 0
     ('REAL', 0, 'in-review', 1, 'difficile'),
     ('REAL', 0, 'approved', 0, 'difficile'), ('AI', 1, 'approved', 0, 'difficile'),
+    ('AI', 1, 'approved', 1, 'difficile'),
 ]):
     image = prefix + '_' + str(i)
     phash = ['0000000000000000', 'ffffffffffffffff', 'a5a5a5a5a5a5a5a5',
              '5a5a5a5a5a5a5a5a', '000000000000001f', '1234567812345678',
-             '9876543298765432', 'f0f0f0f0f0f0f0f0'][i]
-    setup.append(f"INSERT INTO images(id,type,title,description,author,authenticity_evidence,r2_key,ai_model,ai_prompt,difficulty,status,sha256,perceptual_hash,explanation,demo) VALUES('{image}','{kind}','PRIVATE_SAMPLING','fixture','fixture','fixture','{image}','fixture','fixture','{difficulty}','{status}','{image}','{phash}','Fixture reveal',{demo})")
+             '9876543298765432', 'f0f0f0f0f0f0f0f0', 'd3d3d3d3d3d3d3d3'][i]
+    setup.append(f"INSERT INTO images(id,type,title,description,author,authenticity_evidence,r2_key,ai_model,ai_prompt,status,sha256,perceptual_hash,explanation,demo) VALUES('{image}','{kind}','PRIVATE_SAMPLING','fixture','fixture','fixture','{image}','fixture','fixture','{status}','{image}','{phash}','Fixture reveal',{demo})")
     setup.append(f"INSERT INTO image_categories VALUES('{image}','{prefix}')")
     medium = 'foto_bn' if variant == 0 else 'foto_colori'
     plausibility = 'ordinaria' if variant == 0 else 'sorprendente'
     setup.append(f"INSERT INTO image_curation(image_id,subject_kind,country_or_region,period_bucket,image_medium,composition,perceived_plausibility,revision,reviewer,updated_at) VALUES('{image}','trasporti','europa','1900_1945','{medium}','scena_ampia','{plausibility}',1,'fixture','2026-10-25')")
 try:
+    members = json.dumps([prefix+'_'+str(n) for n in (0,1,2,3,4,8)])
+    setup.append(f"INSERT INTO publication_batches VALUES('{prefix}','{members}','fixture','2026-11-01T00:00:00Z')")
     sql(';\n'.join(setup) + ';')
     filters = dict(categories=[prefix], difficulty='facile')
     status, created = request('/api/sessions', 'POST', dict(mode='training', count=8, **filters))
@@ -96,15 +99,17 @@ try:
     _, manifest = request('/api/sessions/'+timed['id']+'/manifest')
     _, view = request('/api/sessions/'+timed['id']+'/start', 'POST', dict(prepared=True, roundIds=[q['id'] for q in manifest['images']]))
     assert view['total'] == 2 and 55000 < view['expiresAt'] - view['serverNow'] <= 60000
-    assert request('/api/sessions', 'POST', dict(mode='training', count=8, categories=[prefix], difficulty='difficile'))[0] == 409
+    retired_status, retired_game = request('/api/sessions', 'POST', dict(mode='training', count=8, categories=[prefix], difficulty='difficile'))
+    assert retired_status == 201
+    sessions.append(retired_game['id'])
     assert request('/api/sessions', 'POST', dict(mode='training', count=8, categories=[prefix+'_missing']))[0] == 409
 
     # Inspect real persisted assignments, not only the response shape.
-    selected = sql(f"SELECT i.id,i.type,i.status,i.demo,i.difficulty,i.perceptual_hash,c.image_medium,r.session_id FROM game_rounds r JOIN images i ON i.id=r.image_id LEFT JOIN image_curation c ON c.image_id=i.id WHERE r.session_id IN ('{sessions[0]}','{sessions[1]}')")[0]['results']
-    for session in sessions:
+    selected = sql(f"SELECT i.id,i.type,i.status,i.demo,i.perceptual_hash,c.image_medium,r.session_id FROM game_rounds r JOIN images i ON i.id=r.image_id LEFT JOIN image_curation c ON c.image_id=i.id WHERE r.session_id IN ('{sessions[0]}','{sessions[1]}')")[0]['results']
+    for session in sessions[:2]:
         rows = [row for row in selected if row['session_id'] == session]
         assert len(rows) == 2 and len({row['id'] for row in rows}) == 2
-        assert all(row['status'] == 'approved' and row['demo'] == 1 and row['difficulty'] == 'facile' for row in rows)
+        assert all(row['status'] == 'approved' and row['demo'] == 1 for row in rows)
         assert sum(row['perceptual_hash'] in ['0000000000000000', '000000000000001f'] for row in rows) <= 1
         assert {row['image_medium'] for row in rows} == {'foto_bn', 'foto_colori'}
 
@@ -142,7 +147,7 @@ try:
     assert a['deadline'] == b['deadline'] and a['question'] == b['question']
     assert a['warnings'] == b['warnings'] == room['warnings']
     assert request('/api/rooms/'+code+'/action', 'POST', dict(action='leave'), host)[0] == 200
-    print('Sampling integration passed: difficulty/category/environment/approval filters, real D1 assignments, near duplicates, preflight capacity, legacy assignments, opaque warnings, Training/Timed/PvP, shared images and deadlines.')
+    print('Sampling integration passed: retired difficulty/category/environment/publication filters, real D1 assignments, near duplicates, preflight capacity, legacy assignments, opaque warnings, Training/Timed/PvP, shared images and deadlines.')
 finally:
     if room and room.get('code'):
         request('/api/rooms/'+room['code']+'/action', 'POST', dict(action='leave'), room['token'])
@@ -155,6 +160,7 @@ finally:
                 f"DELETE FROM challenge_players WHERE challenge_id IN (SELECT id FROM challenges WHERE settings LIKE '%{prefix}%')",
                 f"DELETE FROM challenges WHERE settings LIKE '%{prefix}%'",]
     cleanup += [f"DELETE FROM players WHERE id='{player}'" for player in players]
+    cleanup += [f"DELETE FROM published_images WHERE image_id LIKE '{prefix}%'",]
     cleanup += [f"DELETE FROM image_curation WHERE image_id LIKE '{prefix}%'",
                 f"DELETE FROM image_categories WHERE image_id LIKE '{prefix}%'",
                 f"DELETE FROM images WHERE id LIKE '{prefix}%'", f"DELETE FROM categories WHERE id LIKE '{prefix}%'"]
