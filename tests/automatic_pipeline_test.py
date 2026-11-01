@@ -12,6 +12,7 @@ from unittest.mock import patch
 from PIL import Image
 from pipeline import automatic
 from pipeline.providers import Client
+from pipeline.importer import RequestError
 
 
 class AutomaticPipelineTest(unittest.TestCase):
@@ -151,3 +152,13 @@ class AutomaticPipelineTest(unittest.TestCase):
             self.batch(folder)
             with self.assertRaisesRegex(ValueError, 'modalità demo'):
                 self.run_apply(folder, [], demo=False)
+
+    def test_safe_http_diagnostics_are_visible_without_exposing_raw_errors(self):
+        for error, expected in [(RequestError('API /api/health: HTTP 403'), 'HTTP 403'),
+                                (ValueError('private-test-value'), 'controllare configurazione')]:
+            with self.subTest(type=type(error).__name__), \
+                 patch('pipeline.automatic.apply', side_effect=error), \
+                 contextlib.redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(automatic.main(['--apply']), 1)
+                self.assertIn(expected, output.getvalue())
+                self.assertNotIn('private-test-value', output.getvalue())
