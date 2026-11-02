@@ -30,7 +30,9 @@ class BatchAPI(OpenAI):
         try:
             with self.opener(req, timeout=180) as response: result = json.loads(response.read(100000))
             return identifier(result['id'])
-        except (HTTPError, OSError, URLError, KeyError, ValueError, TypeError):
+        except HTTPError as error:
+            raise PipelineStop(f'Upload del file Batch OpenAI HTTP {error.code}; verificare i permessi Files/Batch, nessuna generazione sincrona sostitutiva') from None
+        except (OSError, URLError, KeyError, ValueError, TypeError):
             raise PipelineStop('Upload del file Batch non riuscito; nessuna generazione sincrona sostitutiva') from None
 
     def create_batch(self, file_id, endpoint, metadata):

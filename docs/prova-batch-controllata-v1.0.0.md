@@ -46,3 +46,22 @@ Files può creare un file di prova di pochi byte soltanto se il permesso esiste;
 non invia tale file a Batch. Il gate di spesa resta disattivato durante il check.
 Non vengono caricati backup o file nascosti negli artifact. Il recupero del lotto
 usa i checkpoint privati in D1/R2.
+
+## Esito del primo invio
+
+Rilascio 0.14.0 e migrazione 0011 completati; catalogo invariato. Actions
+41495903979 ha raccolto due foto, una esclusa perché già nel catalogo. Il lotto
+nuovo ha quindi una sola fotografia (nessun riempimento o secondo ordinamento).
+L'upload Files è fallito prima di creare Batch: checkpoint ros-41495903979
+sospeso, prenotazione conservativa 0.50 USD, nessuna inferenza o immagine generata.
+
+La verifica non pagata Actions 41497428631 conferma mancanti api.files.read,
+api.files.write, api.batch.read, api.batch.write, api.model.images.request.
+Modificare i permessi della chiave dal progetto OpenAI corretto; se si crea una
+nuova chiave, aggiornare il secret Actions esistente senza inserirla nel codice.
+Non usare questa raccolta da una sola foto per promettere una generazione SLOP:
+servirà un successivo lotto con almeno due riferimenti nuovi. Il limite cumulativo
+non viene azzerato e resta 5 USD. Nessun cron o nuovo lotto automatico abilitato.
+
+Il ramo include anche errore HTTP sicuro per l'upload e ricontrollo del gate server
+prima di riprovare un job già prenotato; il replay non addebita due volte.

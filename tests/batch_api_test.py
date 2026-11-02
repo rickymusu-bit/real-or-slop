@@ -49,3 +49,12 @@ class BatchAPITest(unittest.TestCase):
                 with self.assertRaises(PipelineStop):safe_path(root,value)
             (root/'inputs/id').mkdir(parents=True);(root/'inputs/id/original.png').symlink_to('/tmp/no-source')
             with self.assertRaises(PipelineStop):safe_path(root,'inputs/id/original.png')
+
+    def test_upload_denial_reports_status_without_upstream_secrets(self):
+        def denied(req,timeout):raise HTTPError(req.full_url,401,'PRIVATE_TEST_KEY',{},None)
+        api=BatchAPI('PRIVATE_TEST_KEY',denied)
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'requests.jsonl';path.write_text('{}\n')
+            with self.assertRaises(PipelineStop) as error:api.upload_jsonl(path)
+        self.assertIn('HTTP 401',str(error.exception))
+        self.assertNotIn('PRIVATE_TEST_KEY',str(error.exception))

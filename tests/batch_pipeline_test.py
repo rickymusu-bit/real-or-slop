@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch,Mock
 from pipeline.batch import main,workspace
 from pipeline.batch_engine import Engine,initialize
 from pipeline.batch_fixtures import FixtureBatch
@@ -221,3 +221,19 @@ class BatchPipelineTest(unittest.TestCase):
             self.assertIsNotNone(result['error'])
             self.assertEqual(len(engine.api.batches),1)
             self.assertIsNone(engine.state['ranked'])
+
+    def test_reserved_retry_rechecks_server_gate_without_double_debit(self):
+        for enabled in (False,True):
+            with self.subTest(enabled=enabled),tempfile.TemporaryDirectory() as temp:
+                engine=self.setup_run(Path(temp),2);engine._setup()
+                job=engine.state['jobs'][0];engine._reserve(job)
+                before_calls=copy.deepcopy(engine.state['calls']);before_cost=engine.state['reserved_usd']
+                remote=Mock();engine.remote=remote
+                remote.reserve_batch.return_value={'reserved_usd':before_cost,'already_reserved':True}
+                if not enabled:remote.reserve_batch.side_effect=PipelineStop('Batch pagati non abilitati')
+                result=engine.tick(execute=True)
+                remote.reserve_batch.assert_called_once_with(job)
+                self.assertEqual(engine.state['calls'],before_calls)
+                self.assertEqual(engine.state['reserved_usd'],before_cost)
+                self.assertEqual(len(engine.api.batches),1 if enabled else 0)
+                self.assertEqual(result['status'],'active' if enabled else 'paused')

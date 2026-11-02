@@ -105,7 +105,11 @@ class Engine:
             self._new_phase('ranking',[self._vision_item(p['id'],'evaluation',self.cfg.analysis_model,RUBRIC,p['metadata']['derived_file']) for p in self.state['photos']])
 
     def _reserve(self,job):
-        if job['reserved']:return
+        if job['reserved']:
+            # Revalidate the paid gate/lease even after an earlier reservation.
+            # Server replay is idempotent and never debits the budget twice.
+            if self.remote:self.remote.reserve_batch(job)
+            return
         counts=self.state['calls'].copy();cost=0
         for item in job['items']:
             counts[item['kind']]+=1
