@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 import json
 import os
+import random
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 
@@ -21,6 +22,13 @@ TOPICS = (
     ('unusual architecture', ['architettura', 'architettura-edifici']),
     ('unusual wildlife photograph', ['scienza', 'scienza-ricerca']),
     ('historic automobile', ['automobili', 'automobili-classiche']),
+)
+EXPLORATORY_TOPICS = (
+    ('busy street market photograph', ['storia', 'storia-novecento']),
+    ('historic ship photograph', ['trasporti', 'trasporti-navi']),
+    ('scientific laboratory photograph', ['scienza', 'scienza-ricerca']),
+    ('sculpture public square photograph', ['arte', 'arte-scultura']),
+    ('rural village photograph', ['architettura', 'architettura-edifici']),
 )
 LICENSES = ('CC0', 'Public Domain Mark', 'CC BY 4.0', 'CC BY-SA 4.0')
 
@@ -40,30 +48,43 @@ def plain(value):
     return ' '.join(' '.join(parser.parts).split())
 
 
-def plan(day, limit=MAX_DAILY):
+def plan(day, limit=MAX_DAILY, preferences=None):
     if type(limit) is not int or not 1 <= limit <= MAX_DAILY:
         raise ValueError('Il lotto deve contenere da 1 a 20 fotografie')
     index = day.toordinal()
     topics = TOPICS[index % len(TOPICS):] + TOPICS[:index % len(TOPICS)]
+    if preferences and preferences.get('observations', 0):
+        from .preferences import model, order
+        snapshot = model(preferences)
+        rng = random.Random(day.isoformat() + json.dumps(snapshot, sort_keys=True))
+        proposals = order([*topics, *EXPLORATORY_TOPICS], lambda topic: ['category:' + key for key in topic[1]], snapshot, rng)
+        topics, groups = [], {}
+        for topic in proposals:
+            group = topic[1][0]
+            if groups.get(group, 0) >= 2:
+                continue
+            topics.append(topic); groups[group] = groups.get(group, 0) + 1
+            if len(topics) == 5:
+                break
     return dict(date=day.isoformat(), limit=limit,
                 queries=[dict(query=query + ' filetype:bitmap', categories=categories,
                               offset=((index // len(TOPICS)) % 20) * SCAN_LIMIT)
                          for query, categories in topics])
 
 
-def collect(folder, day, limit=MAX_DAILY):
+def collect(folder, day, limit=MAX_DAILY, preferences=None):
     from itertools import zip_longest
     from PIL import UnidentifiedImageError
     folder = folder.resolve()
     folder.mkdir(parents=True, exist_ok=True)
-    selection = plan(day, limit)
+    selection = plan(day, limit, preferences)
     client = Client('RealOrSlop/1.0 (+' + SITE + '/)')
     candidates, skipped = [], 0
     # Interleave independent topics AND pages. No single first page can dominate.
     streams = [iter(PROVIDERS['commons'].search(client, topic['query'], SCAN_LIMIT,
                offset=topic['offset'] + page * SCAN_LIMIT))
                for page in range(2) for topic in selection['queries']]
-    per_topic = [0] * len(TOPICS)
+    per_topic = [0] * len(selection['queries'])
     # Persistent IDs and fingerprints across collections; incomplete downloads
     # are not admitted to the daily reference lot.
     from .editorial import same_photo
@@ -72,7 +93,7 @@ def collect(folder, day, limit=MAX_DAILY):
             if len(candidates) >= limit:
                 break
             for stream_index, source in enumerate(group):
-                topic_index = stream_index % len(TOPICS)
+                topic_index = stream_index % len(selection['queries'])
                 if source is None or per_topic[topic_index] >= 4 or len(candidates) >= limit:
                     continue
                 license = recognized_license(source.get('rights'))
@@ -124,12 +145,24 @@ def main(argv=None):
     mode.add_argument('--collect', action='store_true', help='Raccolta live verso file locali privati')
     mode.add_argument('--apply', action='store_true', help='Importa il lotto locale nella coda privata')
     parser.add_argument('--limit', type=int, choices=range(1, MAX_DAILY + 1), default=MAX_DAILY, help='Massimo di fotografie per la raccolta (1–20)')
+    parser.add_argument('--preferences', action='store_true', help='Legge lo storico privato, senza chiamate OpenAI; richiede il secret admin')
     parser.add_argument('--out', type=Path, default=Path('.pipeline/automatic'))
     args = parser.parse_args(argv)
     day = datetime.now(timezone.utc).date()
     try:
         if args.collect:
-            collect(args.out, day, args.limit)
+            if args.preferences:
+                from .importer import request
+                from .preferences import model
+                token = os.getenv('REAL_OR_SLOP_ADMIN_TOKEN', '')
+                if len(token) < 32: raise ValueError('Secret amministrativo mancante per le preferenze private')
+                snapshot = model(request(SITE, token, '/api/admin/editorial/preferences'))
+                args.out.mkdir(parents=True, exist_ok=True)
+                from .editorial import write_private
+                write_private(args.out / 'preferences.json', snapshot)
+                collect(args.out, day, args.limit, preferences=snapshot)
+            else:
+                collect(args.out, day, args.limit)
             return 0
         if args.apply:
             return apply(args.out, day)

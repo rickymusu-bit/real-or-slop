@@ -1,3 +1,9 @@
+## 0.13.0 — 2026-11-02T15:58:55+01:00
+
+- Revisione visiva con immagine e Approva/Rifiuta, senza campi o checkbox; preparazione automatica prima della coda, snapshot e conferma umana atomica.
+- Preferenze bayesiane persistenti da decisioni umane, esplorazione del 25%, ricerca diversificata e brief morbidi senza cambiare classifica, soglie, libertà generativa o bilanciamento. Nessun training a pagamento.
+- Migrazione additiva 0010 e dettagli/gestione avanzata separati. Nessuna attivazione o modifica remota.
+
 ## 0.12.0 — 2026-11-02T15:25:07+01:00
 
 - A tempo: scadenze server per singola immagine, scelta 10/20/30 secondi e numero di round; manifest limitato al round corrente, timeout senza risposte fittizie e feedback senza consumo del round successivo.

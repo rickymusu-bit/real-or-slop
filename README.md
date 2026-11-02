@@ -1,5 +1,7 @@
 # Real or Slop
 
+Revisione editoriale: `/admin` mostra un’immagine e due pulsanti, **Approva / Rifiuta**. Preparazione automatica e preferenze con esplorazione del 25%: [specifica v1.0.0](docs/revisione-visiva-preferenze-v1.0.0.md). La gestione tecnica resta in `/admin?advanced=1`.
+
 > Regole di gioco aggiornate: [tempi per immagine, oscuramento e PvP sospeso](docs/gioco-tempi-protezione-v1.0.0.md).
 > Le nuove partite A tempo non usano più un countdown complessivo. La documentazione PvP sottostante è storica: la modalità pubblica è sospesa, codice e dati sono conservati.
 

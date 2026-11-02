@@ -34,7 +34,9 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r pipeline/requirements.txt
       - name: Collect a bounded, diversified reference batch locally
-        run: python -m pipeline.automatic --collect --limit "$ROS_REFERENCE_COUNT"
+        env:
+          REAL_OR_SLOP_ADMIN_TOKEN: ${{ secrets.REAL_OR_SLOP_ADMIN_TOKEN }}
+        run: python -m pipeline.automatic --collect --limit "$ROS_REFERENCE_COUNT" --preferences
       - name: Network-free editorial plan
         run: python -m pipeline.editorial .pipeline/automatic/manifest.json
       - name: Bounded paid pipeline into private review only

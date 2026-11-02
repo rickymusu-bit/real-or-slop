@@ -1,3 +1,6 @@
+import { prepareCandidate } from "./review-preparation";
+import { preferences } from "./preferences";
+import { preferenceOrder, preferenceVersion } from "../shared/editorial-preferences";
 import { editorial } from "./editorial";
 import { prepareImport } from "./import";
 import { slopStudio } from "./slop";
@@ -27,6 +30,15 @@ function url(value: string) {
 export async function moderation(request: Request, env: Env, path: string) {
   if (path.startsWith("/api/admin/editorial/")) return editorial(request, env, path);
   if (path === "/api/admin/slop" || path.startsWith("/api/admin/slop/")) return slopStudio(request, env, path);
+  if (path === "/api/admin/review-queue" && request.method === "GET") {
+    const [rows, counts, model] = await Promise.all([
+      env.DB.prepare("SELECT p.image_id,p.token,p.snapshot_json,p.features_json FROM editorial_preparations p JOIN images i ON i.id=p.image_id WHERE p.ready=1 AND i.status='in-review' ORDER BY i.created_at,i.id LIMIT 100").all<{ image_id: string; token: string; snapshot_json: string; features_json: string }>(),
+      env.DB.prepare("SELECT count(*) AS pending FROM images WHERE status='in-review'").first<{ pending: number }>(),
+      preferences(env),
+    ]);
+    const items = rows.results.map(row => ({ id: row.image_id, token: row.token, features: JSON.parse(row.features_json) as string[], details: JSON.parse(row.snapshot_json) as Record<string, unknown>, image: `/api/admin/assets/${encodeURIComponent(row.image_id)}` }));
+    return json({ images: preferenceOrder(items, model), ready: items.length, preparing: Math.max(0, (counts?.pending || 0) - items.length) });
+  }
   const curationPath = path.match(/^\/api\/admin\/images\/([\w-]+)\/curation$/);
   if (curationPath) return curation(request, env, curationPath[1]);
   if (path === "/api/admin/images" && request.method === "GET") {
@@ -178,9 +190,11 @@ export async function moderation(request: Request, env: Env, path: string) {
       return json({ uploaded: true });
     }
   }
-  const review = path.match(/^\/api\/admin\/review\/([\w-]+)$/);
+  const review = path.match(/^\/api\/admin\/(?:review|visual-review)\/([\w-]+)$/);
   if (review && request.method === "POST") {
     const data = await body(request);
+    const quick = path.includes("/visual-review/");
+    if (quick && Object.keys(data).some(key => !["decision", "token"].includes(key))) throw new HttpError(400, "La revisione visiva accetta soltanto decisione e scheda preparata");
     const decision = String(data.decision);
     if (!["approved", "rejected"].includes(decision))
       throw new HttpError(400, "Decisione non valida");
@@ -194,6 +208,8 @@ export async function moderation(request: Request, env: Env, path: string) {
     if (!image) throw new HttpError(404, "Immagine non trovata");
     if (image.status !== "in-review")
       throw new HttpError(409, "Decisione già registrata");
+    const prepared = quick ? await prepareCandidate(env, image.id) : null;
+    if (prepared && (!prepared.ready || data.token !== prepared.token)) throw new HttpError(409, "Candidata aggiornata o non pronta: ricaricare la coda");
     const categories = Array.isArray(data.categories)
       ? data.categories.map(String).slice(0, 12)
       : [];
@@ -205,12 +221,12 @@ export async function moderation(request: Request, env: Env, path: string) {
     if (data.notes !== undefined && (typeof data.notes !== "string" || data.notes.length > 4000)) throw new HttpError(400, "Nota non valida");
     const notes = String(data.notes ?? "").trim();
     const explanation = data.explanation === undefined ? image.explanation : text(data, "explanation");
-    const auditNotes = explanation === image.explanation ? notes : JSON.stringify({ notes, changes: { explanation: { before: image.explanation, after: explanation } } });
+    const auditNotes = prepared ? JSON.stringify({ interface: "visual", preparation_token: prepared.token, prepared_snapshot: prepared.snapshot }) : explanation === image.explanation ? notes : JSON.stringify({ notes, changes: { explanation: { before: image.explanation, after: explanation } } });
     if (decision === "approved") {
       if (
         !license ||
-        data.rights_confirmed !== true ||
-        data.authenticity_confirmed !== true
+        (!quick && data.rights_confirmed !== true) ||
+        (!quick && data.authenticity_confirmed !== true)
       )
         throw new HttpError(
           400,
@@ -220,6 +236,7 @@ export async function moderation(request: Request, env: Env, path: string) {
         throw new HttpError(409, "File o storage mancanti");
       const object = await env.QUARANTINE.get(image.r2_key);
       if (!object) throw new HttpError(409, "File quarantena mancante");
+      if (prepared && object.etag !== prepared.snapshot.derivative_etag) throw new HttpError(409, "File aggiornato: ricaricare la coda");
       await env.IMAGES.put(image.r2_key, object.body, {
         httpMetadata: object.httpMetadata,
       });
@@ -227,7 +244,7 @@ export async function moderation(request: Request, env: Env, path: string) {
     const eventId = id();
     const audit = await env.DB.batch([
       env.DB.prepare(
-        "INSERT INTO review_events SELECT ?,?,?,?,?,CURRENT_TIMESTAMP WHERE EXISTS(SELECT 1 FROM images WHERE id=? AND status='in-review')",
+        "INSERT INTO review_events SELECT ?,?,?,?,?,CURRENT_TIMESTAMP WHERE EXISTS(SELECT 1 FROM images WHERE id=? AND status='in-review') AND (? IS NULL OR EXISTS(SELECT 1 FROM editorial_preparations WHERE image_id=? AND token=? AND ready=1))",
       ).bind(
         eventId,
         image.id,
@@ -235,7 +252,9 @@ export async function moderation(request: Request, env: Env, path: string) {
         decision,
         auditNotes,
         image.id,
+        prepared?.token || null, image.id, prepared?.token || null,
       ),
+      ...(prepared ? [env.DB.prepare("INSERT INTO editorial_feedback SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM review_events WHERE id=?)").bind(eventId, image.id, decision, JSON.stringify(prepared.features), prepared.token, preferenceVersion, new Date().toISOString(), eventId)] : []),
       env.DB.prepare(
         "UPDATE images SET status=?,explanation=?,rights_verified_at=CURRENT_TIMESTAMP WHERE id=? AND status='in-review' AND EXISTS(SELECT 1 FROM review_events WHERE id=?)",
       ).bind(decision, explanation, image.id, eventId),

@@ -225,6 +225,48 @@ try {
   await waitFor(() => t.evaluate('Boolean(document.querySelector(".score"))'), 'timed results include timeout');
   assert.equal(await t.evaluate('document.querySelector(".page").textContent.includes("1 scadute")'), true);
   await t.send('Emulation.setEmulatedMedia', { features: [] });
+  // UI-only fixtures exercise the two-button flow without remote credentials.
+  // Real preparation/auth/approval/feedback are tested against local D1/R2 separately.
+  const decisions = [];
+  let brokenPreview = false;
+  const reviewCards = ["one", "two"].map((id, n) => ({ id, token: "prepared-" + id, image: "/api/admin/assets/" + id, details: { title: "Synthetic browser fixture", type: n ? "AI" : "REAL", author: "Fixture", source_url: "https://example.invalid/", license_url: "https://creativecommons.org/licenses/by/4.0/", explanation: "Prepared automatically for this browser test." } }));
+  t.intercept(async (request, send) => {
+    const url = new URL(request.request.url);
+    let body, mime = "application/json", status = 200;
+    if (url.pathname === "/api/admin/review-queue") {
+      const images = brokenPreview ? [{ ...reviewCards[0], id: "broken", image: "/api/admin/assets/broken" }] : reviewCards.filter(card => !decisions.some(row => row.id === card.id));
+      body = JSON.stringify({ images, ready: images.length, preparing: 0 });
+    } else if (url.pathname.startsWith("/api/admin/assets/")) {
+      await pause(350);
+      mime = "image/svg+xml";
+      body = brokenPreview ? "corrupt preview" : '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#344652"/><circle cx="300" cy="200" r="100" fill="#52d9bf"/></svg>';
+    } else if (url.pathname.startsWith("/api/admin/visual-review/")) {
+      const payload = JSON.parse(request.request.postData);
+      assert.deepEqual(Object.keys(payload).sort(), ["decision", "token"]);
+      decisions.push({ id: url.pathname.split("/").at(-1), ...payload });
+      body = JSON.stringify({ status: payload.decision });
+    } else { status = 404; body = '{}'; }
+    await send('Fetch.fulfillRequest', { requestId: request.requestId, responseCode: status, responseHeaders: [{ name: 'Content-Type', value: mime }], body: Buffer.from(body).toString('base64') });
+  });
+  await t.send('Fetch.enable', { patterns: [{ urlPattern: base + '/api/admin/*', requestStage: 'Request' }] });
+  await t.evaluate('history.pushState({},"","/admin");window.dispatchEvent(new PopStateEvent("popstate"))');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector(".visual-review-card"))'), 'visual review card');
+  assert.equal(await t.evaluate('document.querySelectorAll("#visual-queue input,#visual-queue select,#visual-queue textarea").length'), 0);
+  await waitFor(() => t.evaluate('document.querySelector("[data-visual-decision=approved]")?.disabled===false'), 'preview ready before approval');
+  assert.deepEqual(await t.evaluate('Array.from(document.querySelectorAll("[data-visual-decision]"),b=>b.textContent)'), ['Approva','Rifiuta']);
+  await t.screenshot('visual-review-360');
+  await t.evaluate('document.querySelector("[data-visual-decision=approved]").click();document.querySelector("[data-visual-decision=rejected]").click()');
+  await waitFor(() => t.evaluate('document.querySelector("#review-message").textContent==="Approvata." && document.querySelector("[data-visual-decision=rejected]")?.disabled===false'), 'next prepared candidate');
+  assert.equal(decisions.length, 1);
+  await t.evaluate('document.querySelector("[data-visual-decision=rejected]").click()');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#refresh-review"))'), 'queue completed without notes');
+  assert.deepEqual(decisions.map(row => row.decision), ['approved','rejected']);
+  brokenPreview = true;
+  await t.evaluate('document.querySelector("#refresh-review").click()');
+  await waitFor(() => t.evaluate('document.querySelector("#review-message").textContent.includes("Anteprima non disponibile")'), 'bad preview does not produce editorial feedback');
+  assert.equal(await t.evaluate('Array.from(document.querySelectorAll("[data-visual-decision]")).every(button=>button.disabled)'), true);
+  assert.equal(decisions.length, 2);
+  await t.send('Fetch.disable');
   await t.go('/', '.hero');
   await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
   assert.equal(await t.evaluate('document.activeElement.classList.contains("skip-link")'), true);
@@ -235,7 +277,7 @@ try {
   assert.ok(!requests.some(url => /^https?:/.test(url) && new URL(url).hostname !== '127.0.0.1'), 'unexpected external browser request');
   assert.deepEqual(errors, []);
   writeFileSync(resolve(output, 'measurements.json'), JSON.stringify(measurements, null, 2) + '\n');
-  console.log('Digital Gallery passed: real solo/per-image timed, suspended PvP, tab masking without timer pause, copy deterrents, timeouts, 360/390/768/1440 layouts, intact images, symmetric named actions, AX tree, keyboard zoom/answer/focus, reduced motion, local fonts, delayed preparation, corrupt-image retry, active-timer preservation, invalidation and no external requests. Screenshots: artifacts/gallery/.');
+  console.log('Digital Gallery passed: visual editorial approval/rejection without forms, broken-preview protection, real solo/per-image timed, suspended PvP, tab masking without timer pause, copy deterrents, timeouts, 360/390/768/1440 layouts, intact images, symmetric named actions, AX tree, keyboard zoom/answer/focus, reduced motion, local fonts, delayed preparation, corrupt-image retry, active-timer preservation, invalidation and no external requests. Screenshots: artifacts/gallery/.');
 } finally {
   for (const ws of clients) ws.close();
   for (const child of children) { try { process.kill(-child.pid, 'SIGTERM'); } catch { /* Already stopped. */ } }
