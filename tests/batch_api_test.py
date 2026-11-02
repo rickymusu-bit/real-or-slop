@@ -1,11 +1,13 @@
 import io
+import hashlib
 import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch,Mock
 from urllib.error import HTTPError
 from pipeline.batch_api import BatchAPI
-from pipeline.batch_store import safe_path
+from pipeline.batch_store import safe_path,BatchRemote
 from pipeline.editorial import PipelineStop
 
 class Response(io.BytesIO):
@@ -58,3 +60,18 @@ class BatchAPITest(unittest.TestCase):
             with self.assertRaises(PipelineStop) as error:api.upload_jsonl(path)
         self.assertIn('HTTP 401',str(error.exception))
         self.assertNotIn('PRIVATE_TEST_KEY',str(error.exception))
+
+    def test_private_restore_sends_application_user_agent_and_validates_blob(self):
+        raw=b'private-file';digest=hashlib.sha256(raw).hexdigest()
+        remote=BatchRemote('https://example.invalid','test-token-'+'x'*40,'run')
+        remote.call=Mock(return_value=dict(files=[dict(path='inputs/source/original.png',sha256=digest,size=len(raw))],revision=3,state={'id':'run'}))
+        def download(req,timeout):
+            if not req.get_header('User-agent','').startswith('RealOrSlop/'):
+                raise HTTPError(req.full_url,403,'Blocked generic client',{},None)
+            return Response(raw)
+        with tempfile.TemporaryDirectory() as folder,patch('urllib.request.build_opener') as opener:
+            opener.return_value.open.side_effect=download
+            state=remote.restore(Path(folder))
+            self.assertEqual(state,{'id':'run'})
+            self.assertEqual((Path(folder)/'inputs/source/original.png').read_bytes(),raw)
+            self.assertEqual(remote.revision,3)

@@ -2,6 +2,7 @@
 import hashlib
 import json
 from pathlib import Path
+from urllib.error import HTTPError
 import re
 from .editorial import Remote, PipelineStop, write_private
 from .importer import request
@@ -46,9 +47,10 @@ class BatchRemote(Remote):
         for file in result['files']:
             path = safe_path(folder, file['path'])
             if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != file['sha256']:
-                req = Request(self.base + '/api/admin/editorial/' + self.prefix + '/files/' + file['sha256'], headers={'Authorization':'Bearer '+self.token})
+                req = Request(self.base + '/api/admin/editorial/' + self.prefix + '/files/' + file['sha256'], headers={'Authorization':'Bearer '+self.token,'User-Agent':'RealOrSlop/0.14 (+'+self.base+'/)'})
                 try:
                     with build_opener(NoRedirect()).open(req, timeout=90) as response: raw = response.read(12_000_001)
+                except HTTPError as error: raise PipelineStop(f'Download checkpoint HTTP {error.code}: verificare accesso e file privati') from None
                 except OSError: raise PipelineStop('Download checkpoint non riuscito') from None
                 if len(raw) != file['size'] or hashlib.sha256(raw).hexdigest() != file['sha256']: raise PipelineStop('Checkpoint corrotto')
                 path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(raw); path.chmod(0o600)
