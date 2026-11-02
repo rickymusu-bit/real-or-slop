@@ -1,3 +1,9 @@
+> Aggiornamento 2026-11-01T22:00:00Z — documento storico. La
+> [pipeline editoriale v1.0.0](pipeline-editoriale-real-slop-v1.0.0.md) supera
+> difficoltà preassegnata, relativi filtri/template e pubblicazione per singola
+> approvazione. Restano le regole compatibili su diritti, fonti, audit e, per il
+> campionamento v2, monete Bernoulli indipendenti. La cronologia seguente è conservata.
+
 # Real or Slop — Quattro prompt operativi per Codex
 
 **Versione:** 1.1.0  

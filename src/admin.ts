@@ -1,3 +1,4 @@
+import { editorialPanel, setupEditorial } from "./editorial";
 import { api, content, escape } from "./main";
 import { curationDirty, curationForm, rememberCuration, setupCuration } from "./curation";
 import type { CurationRecord } from "../shared/curation";
@@ -9,7 +10,6 @@ interface Candidate {
   license_url: string;
   evidence: string;
   author: string;
-  difficulty: string;
   curation: CurationRecord | null;
   ai_model?: string | null;
   ai_prompt?: string | null;
@@ -17,13 +17,16 @@ interface Candidate {
   owner_declaration?: number;
   studio_plan_id?: string | null;
   explanation: string;
+  published_at?: string | null;
+  editorial_evaluation?: string | null;
 }
 function aiProvenance(image: Candidate) {
   return image.type === "AI" ? `<details><summary>Provenienza della generazione IA</summary><p>Modello: ${escape(image.ai_model)} · Data: ${escape(image.generation_date)} · Dichiarazione proprietario: ${image.owner_declaration ? "presente" : "da verificare"}</p>${image.studio_plan_id ? `<p><a href="/admin/slop?plan=${encodeURIComponent(image.studio_plan_id)}">Apri concept, fatti documentati e cronologia dello studio ↗</a></p>` : ""}<pre class="curation-history">${escape(image.ai_prompt)}</pre></details>` : "";
 }
 export async function showAdmin() {
   content().innerHTML =
-    '<section class="page narrow"><div class="eyebrow">AMMINISTRAZIONE PRIVATA</div><h1>Coda di revisione.</h1><p><a class="button" href="/admin/slop">Apri lo studio SLOP ↗</a></p><p>Le approvazioni interessano solo l’ambiente corrente. Nessuna promozione automatica in produzione.</p><p>Licenze ammesse: CC0, pubblico dominio verificato, CC BY, BY-SA, BY-NC, BY-ND, BY-NC-SA e BY-NC-ND 2.0, 3.0 e 4.0, incluse le varianti territoriali pubblicate. Conserva la versione e la giurisdizione della fonte e verifica attribuzioni, modifiche e share-alike. NC: solo uso non commerciale. ND: nessun adattamento condiviso; conserva il fotogramma intero e verifica il trattamento tecnico.</p><label>Stato<select id="review-filter"><option value="in-review">In revisione</option><option value="approved">Approvate</option><option value="rejected">Rifiutate</option></select></label><div id="queue">Caricamento…</div><details><summary>Importa metadati</summary><p>Incolla un oggetto JSON conforme all’API documentata; poi carica il file nella scheda.</p><textarea id="import-json" rows="10" style="width:100%" aria-label="Metadati JSON"></textarea><button id="import">Importa nella coda privata</button></details></section>';
+    `<section class="page narrow"><div class="eyebrow">AMMINISTRAZIONE PRIVATA</div><h1>Coda di revisione.</h1><p><a class="button" href="/admin/slop">Apri lo studio SLOP ↗</a></p><p>Le approvazioni interessano solo l’ambiente corrente. Nessuna promozione automatica in produzione.</p><p>Licenze ammesse: CC0, pubblico dominio verificato, CC BY, BY-SA, BY-NC, BY-ND, BY-NC-SA e BY-NC-ND 2.0, 3.0 e 4.0, incluse le varianti territoriali pubblicate. Conserva la versione e la giurisdizione della fonte e verifica attribuzioni, modifiche e share-alike. NC: solo uso non commerciale. ND: nessun adattamento condiviso; conserva il fotogramma intero e verifica il trattamento tecnico.</p><label>Stato<select id="review-filter"><option value="in-review">In revisione</option><option value="approved">Approvate</option><option value="rejected">Rifiutate</option></select></label><div id="queue">Caricamento…</div><details><summary>Importa metadati</summary><p>Incolla un oggetto JSON conforme all’API documentata; poi carica il file nella scheda.</p><textarea id="import-json" rows="10" style="width:100%" aria-label="Metadati JSON"></textarea><button id="import">Importa nella coda privata</button></details>${editorialPanel()}</section>`;
+  setupEditorial(content());
   const initialStatus = new URL(location.href).searchParams.get("status");
   if (initialStatus && ["in-review", "approved", "rejected"].includes(initialStatus))
     (document.querySelector("#review-filter") as HTMLSelectElement).value = initialStatus;
@@ -37,7 +40,7 @@ export async function showAdmin() {
         ? items
             .map(
               (i) =>
-                `<article class="review" data-id="${escape(i.id)}"><h2>${escape(i.title)} · ${escape(i.type)}</h2><p>${escape(i.author)} · ${escape(i.difficulty)}</p><a href="${safeUrl(i.source_url)}" target="_blank" rel="noopener noreferrer">Pagina della fonte ↗</a><p><a href="${safeUrl(i.license_url)}" target="_blank" rel="noopener noreferrer">Licenza ↗</a></p><details><summary>Prove</summary><p>${escape(i.evidence)}</p></details>${aiProvenance(i)}<label>Spiegazione post-risposta da approvare<textarea class="review-explanation" maxlength="4000" rows="4">${escape(i.explanation)}</textarea></label><img src="/api/admin/assets/${escape(i.id)}" alt="Anteprima privata della candidata"><label>Carica file<input class="upload" type="file" accept="image/jpeg,image/png,image/webp"></label>${curationForm(i.curation)}<label>URL licenza verificata<input class="license-url" value="${escape(i.license_url)}" placeholder="https://creativecommons.org/…"></label><label>Difficoltà<select class="difficulty">${["facile", "medio", "difficile"].map((d) => `<option ${d === i.difficulty ? "selected" : ""}>${d}</option>`).join("")}</select></label><label>Categorie (ID separati da virgola, vuoto = conserva)<input class="categories"></label><label><input class="rights" type="checkbox"> Ho verificato diritti e obblighi della licenza</label><label><input class="authenticity" type="checkbox"> Ho verificato autenticità o invenzione dell’immagine IA</label><label>Nota editoriale<input class="notes" required></label>${status === "in-review" ? '<button data-decision="approved">Approva in questo ambiente</button> <button data-decision="rejected">Rifiuta</button>' : ""}<p class="status" role="status"></p></article>`,
+                `<article class="review" data-id="${escape(i.id)}"><h2>${escape(i.title)} · ${escape(i.type)}</h2><p>${escape(i.author)} · ${i.published_at ? "Pubblicata" : "Non pubblicata"}</p>${i.editorial_evaluation ? `<details><summary>Valutazione editoriale automatica</summary><pre>${escape(i.editorial_evaluation)}</pre></details>` : ""}<a href="${safeUrl(i.source_url)}" target="_blank" rel="noopener noreferrer">Pagina della fonte ↗</a><p><a href="${safeUrl(i.license_url)}" target="_blank" rel="noopener noreferrer">Licenza ↗</a></p><details><summary>Prove</summary><p>${escape(i.evidence)}</p></details>${aiProvenance(i)}<label>Spiegazione post-risposta da approvare<textarea class="review-explanation" maxlength="4000" rows="4">${escape(i.explanation)}</textarea></label><img src="/api/admin/assets/${escape(i.id)}" alt="Anteprima privata della candidata"><label>Carica file<input class="upload" type="file" accept="image/jpeg,image/png,image/webp"></label>${curationForm(i.curation)}<label>URL licenza verificata<input class="license-url" value="${escape(i.license_url)}" placeholder="https://creativecommons.org/…"></label><label>Categorie (ID separati da virgola, vuoto = conserva)<input class="categories"></label><label><input class="rights" type="checkbox"> Ho verificato diritti e obblighi della licenza</label><label><input class="authenticity" type="checkbox"> Ho verificato autenticità o invenzione dell’immagine IA</label><label>Nota editoriale (facoltativa)<input class="notes"></label>${status === "in-review" ? '<button data-decision="approved">Approva in questo ambiente</button> <button data-decision="rejected">Rifiuta</button>' : ""}<p class="status" role="status"></p></article>`,
             )
             .join("")
         : "<p>Nessuna candidata in questo stato.</p>";
@@ -79,8 +82,6 @@ export async function showAdmin() {
           decision: btn.dataset.decision,
           ...(card.querySelector(".review-explanation") ? { explanation: (card.querySelector(".review-explanation") as HTMLInputElement).value } : {}),
           license_url: (card.querySelector(".license-url") as HTMLInputElement)
-            .value,
-          difficulty: (card.querySelector(".difficulty") as HTMLSelectElement)
             .value,
           categories: (
             card.querySelector(".categories") as HTMLInputElement

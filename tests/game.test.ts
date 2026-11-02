@@ -6,8 +6,13 @@ test("reject invalid settings", () => {
     { mode: "bad" },
     { mode: "timed", duration: -1 },
     { mode: "training", count: 1.5 },
-    { mode: "training", difficulty: "impossible" },
-    { mode: "training", difficulty: "esperto" },
   ])
     assert.throws(() => settings(input));
+});
+
+test("retired difficulty never filters or changes new settings, including legacy clients", () => {
+  for (const difficulty of ["facile", "medio", "difficile", "esperto", "impossible"]) {
+    assert.deepEqual(settings({mode: "training", difficulty}), settings({mode: "training"}));
+    assert.ok(!("difficulty" in settings({mode: "training", difficulty})));
+  }
 });

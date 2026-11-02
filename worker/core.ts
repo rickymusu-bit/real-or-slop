@@ -6,6 +6,14 @@ export interface Env {
   IMAGES?: R2Bucket;
   QUARANTINE?: R2Bucket;
   ADMIN_TOKEN?: string;
+  ENABLE_EDITORIAL_PAID?: string;
+  EDITORIAL_EVALUATION_USD?: string;
+  EDITORIAL_GENERATION_USD?: string;
+  EDITORIAL_RUN_USD?: string;
+  EDITORIAL_DAILY_USD?: string;
+  EDITORIAL_MAX_EVALUATIONS?: string;
+  EDITORIAL_MAX_GENERATIONS?: string;
+  EDITORIAL_MAX_REGENERATIONS?: string;
   ROOMS?: DurableObjectNamespace;
 }
 export class HttpError extends Error {
@@ -88,7 +96,6 @@ export interface ImageRow {
   description: string;
   author: string;
   explanation: string;
-  difficulty: string;
   r2_key: string;
   demo: number;
   source_url?: string;
@@ -98,7 +105,7 @@ export interface ImageRow {
 export async function catalog(env: Env) {
   return (
     await env.DB.prepare(
-      "SELECT * FROM images WHERE status='approved' AND demo=?",
+      "SELECT i.* FROM images i JOIN published_images p ON p.image_id=i.id WHERE i.status='approved' AND i.demo=?",
     )
       .bind(env.DATA_MODE === "demo" ? 1 : 0)
       .all<ImageRow & { status: string; sha256: string; perceptual_hash: string | null }>()

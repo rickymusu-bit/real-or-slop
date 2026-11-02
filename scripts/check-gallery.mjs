@@ -103,6 +103,7 @@ async function layout(t, name, isPlay = false) {
 try {
   await command(['wrangler', 'd1', 'migrations', 'apply', 'DB', '--local', '--env', 'local', '--persist-to', state]);
   await command(['wrangler', 'd1', 'execute', 'DB', '--local', '--env', 'local', '--persist-to', state, '--file', 'scripts/seed.sql']);
+  await command(['wrangler', 'd1', 'execute', 'DB', '--local', '--env', 'local', '--persist-to', state, '--file', 'scripts/seed-publication.sql']);
   start('npx', ['wrangler', 'dev', '--local', '--env', 'local', '--port', '8789', '--persist-to', state]);
   start(process.env.CHROMIUM_PATH || 'chromium', ['--headless', '--no-sandbox', '--disable-dev-shm-usage', '--remote-debugging-port=9224', '--remote-debugging-address=127.0.0.1', '--user-data-dir=' + profile, 'about:blank']);
   await waitFor(async () => { try { return (await fetch(base + '/api/health')).ok; } catch { return false; } }, 'local worker');
@@ -117,6 +118,7 @@ try {
     await t.screenshot('home-' + width);
     for (const [path, selector] of [['/allenamento', '#categories input'], ['/tempo', '#duration'], ['/pvp', '#room-categories option'], ['/informazioni', 'h1'], ['/crediti', 'h1']]) {
       await t.go(path, selector); await layout(t, path + ' ' + width);
+      assert.equal(await t.evaluate('Boolean(document.querySelector("#difficulty,#room-difficulty"))'), false);
     }
     await t.go('/allenamento', '#categories input');
     await t.evaluate('document.querySelector("#count").value="1";document.querySelector("#settings").requestSubmit()');

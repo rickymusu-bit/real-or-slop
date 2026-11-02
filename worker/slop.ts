@@ -38,7 +38,7 @@ async function wire(env: Env, row: PlanRow) {
 export async function slopStudio(request: Request, env: Env, path: string) {
   const base = "/api/admin/slop";
   if (path === base && request.method === "GET") {
-    const rows = (await env.DB.prepare("SELECT p.id,p.revision,json_extract(p.plan_json,'$.title') AS title,json_extract(p.plan_json,'$.profile') AS profile,p.image_id,COALESCE(i.status,'draft') AS status,p.updated_at FROM slop_plans p LEFT JOIN images i ON i.id=p.image_id ORDER BY p.updated_at DESC,p.id LIMIT 100").all()).results;
+    const rows = (await env.DB.prepare("SELECT p.id,p.revision,json_extract(p.plan_json,'$.title') AS title,p.image_id,COALESCE(i.status,'draft') AS status,p.updated_at FROM slop_plans p LEFT JOIN images i ON i.id=p.image_id ORDER BY p.updated_at DESC,p.id LIMIT 100").all()).results;
     return json(rows);
   }
   if (path === base + "/preview" && request.method === "POST") {
@@ -85,7 +85,7 @@ export async function slopStudio(request: Request, env: Env, path: string) {
       provider: "manual-ai-studio", source_id: current.id, source_url: plan.generation_source_url,
       evidence: `Dichiarazione di generazione IA del proprietario ${plan.generation_owner}. Modello: ${plan.ai_model}; data: ${plan.generation_date}; versione: ${plan.generation_version}; iterazione: ${plan.iteration}. Dossier privato ${current.id}, revisione ${current.revision}. Scena sintetica: nessuna attribuzione a una fotografia archivistica autentica.`,
       license_name: plan.license_name, license_url: plan.license_url, explanation: plan.reveal_explanation,
-      categories: [plan.category_id, plan.subcategory_id], difficulty: plan.profile,
+      categories: [plan.category_id, plan.subcategory_id],
       ai_model: plan.ai_model, ai_prompt: plan.prompt, generation_date: plan.generation_date, owner_declaration: true,
     }, guard);
     const next: PlanRow = { ...current, revision: current.revision + 1, image_id: prepared.id, reviewer: (await hash(env.ADMIN_TOKEN!)).slice(0, 12), updated_at: now };
@@ -94,7 +94,7 @@ export async function slopStudio(request: Request, env: Env, path: string) {
       image_medium: plan.image_medium, composition: plan.composition, cognitive_mechanism: plan.cognitive_mechanism,
       represented_country: plan.country, represented_place: plan.place, represented_period: plan.period,
       fact_evidence: `Fatti di contesto e riferimenti completi nel dossier privato ${current.id}, revisione ${current.revision}. Non attestano l'esistenza della scena sintetica.`,
-      reviewer_notes: `Studio SLOP ${current.id}; template ${current.template_version}; profilo previsto ${plan.profile}. Valutazioni e iterazioni complete conservate nel dossier privato.`,
+      reviewer_notes: `Studio SLOP ${current.id}; template ${current.template_version}. Valutazioni e iterazioni complete conservate nel dossier privato.`,
     } });
     const curationRecord = { ...curation, image_id: prepared.id, revision: 1, reviewer: next.reviewer, updated_at: now };
     const keys = Object.keys(curationRecord);

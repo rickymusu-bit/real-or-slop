@@ -7,20 +7,19 @@ import os
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 
-from .importer import main as import_batch, prepare, request, RequestError
+from .importer import prepare, RequestError
 from .licenses import recognized_license
 from .providers import Client, PROVIDERS
 from .run import connect, ingest
 
 SITE = 'https://real-or-slop.rickymusu.workers.dev'
-MAX_DAILY = 10
-MAX_PENDING = 50
+MAX_DAILY = 20
 SCAN_LIMIT = 30
 TOPICS = (
     ('historic bridge', ['ingegneria', 'ingegneria-ponti']),
     ('historic locomotive', ['trasporti', 'trasporti-treni']),
     ('unusual architecture', ['architettura', 'architettura-edifici']),
-    ('museum painting', ['arte', 'arte-pittura']),
+    ('unusual wildlife photograph', ['scienza', 'scienza-ricerca']),
     ('historic automobile', ['automobili', 'automobili-classiche']),
 )
 LICENSES = ('CC0', 'Public Domain Mark', 'CC BY 4.0', 'CC BY-SA 4.0')
@@ -43,95 +42,78 @@ def plain(value):
 
 def plan(day):
     index = day.toordinal()
-    query, categories = TOPICS[index % len(TOPICS)]
-    # Rotate topics and search pages; a retry on the same date selects the same
-    # page. Remote provider/source IDs and checksums remain the dedup authority.
-    return dict(date=day.isoformat(), query=query + ' filetype:bitmap', categories=categories,
-                offset=((index // len(TOPICS)) % 20) * SCAN_LIMIT, limit=MAX_DAILY)
+    topics = TOPICS[index % len(TOPICS):] + TOPICS[:index % len(TOPICS)]
+    return dict(date=day.isoformat(), limit=MAX_DAILY,
+                queries=[dict(query=query + ' filetype:bitmap', categories=categories,
+                              offset=((index // len(TOPICS)) % 20) * SCAN_LIMIT)
+                         for query, categories in topics])
 
 
 def collect(folder, day):
+    from itertools import zip_longest
     from PIL import UnidentifiedImageError
     folder = folder.resolve()
     folder.mkdir(parents=True, exist_ok=True)
     selection = plan(day)
-    client = Client('RealOrSlop/0.10 (+' + SITE + '/)')
-    config = dict(max_results=1, categories=selection['categories'], licenses=LICENSES,
-                  download_hosts=['upload.wikimedia.org'])
-    candidates = []
-    skipped = 0
-    # A fresh local DB per collection avoids retaining a failed download as a
-    # completed candidate. The original/derivative files stay in this folder.
-    with connect(':memory:') as db:
-        rows = PROVIDERS['commons'].search(client, selection['query'], SCAN_LIMIT, offset=selection['offset'])
-        for source in rows:
+    client = Client('RealOrSlop/1.0 (+' + SITE + '/)')
+    candidates, skipped = [], 0
+    # Interleave independent topics AND pages. No single first page can dominate.
+    streams = [iter(PROVIDERS['commons'].search(client, topic['query'], SCAN_LIMIT,
+               offset=topic['offset'] + page * SCAN_LIMIT))
+               for page in range(2) for topic in selection['queries']]
+    per_topic = [0] * len(TOPICS)
+    # Persistent IDs and fingerprints across collections; incomplete downloads
+    # are not admitted to the daily reference lot.
+    from .editorial import same_photo
+    with connect(folder / 'collection.sqlite') as db:
+        for group in zip_longest(*streams):
             if len(candidates) >= MAX_DAILY:
                 break
-            license = recognized_license(source.get('rights'))
-            if not license or license['name'] not in LICENSES:
-                skipped += 1
-                continue
-            metadata = json.loads(source['evidence'])
-            caption = plain(metadata.get('ImageDescription', {}).get('value', '')) or plain(source['title'])
-            author = plain(source['author'])
-            row = {**source, 'title': plain(source['title']), 'author': plain(source['author']),
-                   'description': caption[:2000],
-                   'explanation': (f'La scheda della fonte descrive l’immagine come: {caption[:2000]}. '
-                                   f'Autore indicato: {author}. Riferimento: {source["source_url"]}')[:3900],
-                   'evidence': ('Metadati dichiarati da Wikimedia Commons; autenticità da verificare. '
-                                + source['source_url'] + ' Licenza dichiarata: ' + license['url'] + ' '
-                                + plain(source['evidence']))[:3900]}
-            try:
-                count = ingest(db, [row], config, client, True, folder / 'quarantine')
-                if not count:
+            for stream_index, source in enumerate(group):
+                topic_index = stream_index % len(TOPICS)
+                if source is None or per_topic[topic_index] >= 4 or len(candidates) >= MAX_DAILY:
+                    continue
+                license = recognized_license(source.get('rights'))
+                if not license or license['name'] not in LICENSES or 'ND' in license['name']:
                     skipped += 1
                     continue
-                record = db.execute('SELECT id,metadata,sha256,phash,file FROM candidates WHERE provider=? AND source_id=?',
-                                    (row['provider'], row['source_id'])).fetchone()
-                item = dict(id=record[0], metadata=json.loads(record[1]), sha256=record[2], phash=record[3], file=record[4])
-                if not item['file']:
+                metadata = json.loads(source['evidence'])
+                caption = plain(metadata.get('ImageDescription', {}).get('value', '')) or plain(source['title'])
+                author = plain(source['author'])
+                row = {**source, 'title': plain(source['title']), 'author': author, 'description': caption[:2000],
+                       'explanation': (f'La scheda della fonte descrive l’immagine come: {caption[:2000]}. '
+                                       f'Autore indicato: {author}. Riferimento: {source["source_url"]}')[:3900],
+                       'evidence': ('Metadati dichiarati da Wikimedia Commons; autenticità da verificare. '
+                                    + source['source_url'] + ' Licenza dichiarata: ' + license['url'] + ' '
+                                    + plain(source['evidence']))[:3900]}
+                config = dict(max_results=1, categories=selection['queries'][topic_index]['categories'],
+                              licenses=LICENSES, download_hosts=['upload.wikimedia.org'])
+                try:
+                    if not ingest(db, [row], config, client, True, folder / 'quarantine'):
+                        skipped += 1
+                        continue
+                    record = db.execute('SELECT id,metadata,sha256,phash,file FROM candidates WHERE provider=? AND source_id=?',
+                                        (row['provider'], row['source_id'])).fetchone()
+                    item = dict(id=record[0], metadata=json.loads(record[1]), sha256=record[2], phash=record[3], file=record[4])
+                    if not item['file'] or item['metadata'].get('possible_duplicate') or any(same_photo(item, p) for p in candidates):
+                        skipped += 1
+                        continue
+                    prepare(item, folder)
+                    candidates.append(item)
+                    per_topic[topic_index] += 1
+                except (ValueError, OSError, HTTPError, URLError, UnidentifiedImageError):
                     skipped += 1
-                    continue
-                prepare(item, folder)  # Validate each complete candidate before admitting it to the batch.
-                candidates.append(item)
-            except (ValueError, OSError, HTTPError, URLError, UnidentifiedImageError):
-                # Do not print arbitrary upstream exceptions or credentials.
-                skipped += 1
     (folder / 'manifest.json').write_text(json.dumps(candidates, ensure_ascii=False, indent=2) + '\n')
     (folder / 'collection.json').write_text(json.dumps({**selection, 'candidates': len(candidates), 'skipped': skipped}, indent=2) + '\n')
-    print(f"{len(candidates)} candidate pronte; {skipped} escluse. Solo file locali, nessuna importazione remota.")
-    if not candidates:
-        raise ValueError('Nessuna candidata completa raccolta: controllare fonte, filtri e disponibilità')
+    print(f"{len(candidates)} fotografie ammissibili; {skipped} escluse. Nessuna importazione o valutazione a pagamento.")
     return folder / 'manifest.json'
 
 
 def apply(folder, day):
-    token = os.environ.get('REAL_OR_SLOP_ADMIN_TOKEN', '')
-    if len(token) < 32:
-        raise ValueError('Configurare il segreto REAL_OR_SLOP_ADMIN_TOKEN nell’esecutore GitHub')
-    # Inspect the complete local batch before any authenticated network request.
-    manifest = folder.resolve() / 'manifest.json'
-    if import_batch([str(manifest), '--base', SITE, '--limit', str(MAX_DAILY)]) != 0:
-        raise ValueError('Anteprima locale del lotto non superata')
-    health = request(SITE, token, '/api/health')
-    if health.get('demo') is not True:
-        raise ValueError('Il job è riservato al Worker esistente in modalità demo')
-    pending = request(SITE, token, '/api/admin/images?status=in-review')
-    if len(pending) >= MAX_PENDING:
-        print('Coda con almeno 50 candidate: importazione sospesa fino alla revisione umana.')
-        return 0
-    items = list(pending)
-    for status in ('approved', 'rejected'):
-        items.extend(request(SITE, token, '/api/admin/images?status=' + status))
-    today = day.isoformat()
-    used = sum(str(item.get('created_at', '')).startswith(today) and not item.get('demo') for item in items)
-    available = min(MAX_DAILY - used, MAX_PENDING - len(pending))
-    if available <= 0:
-        print('Limite giornaliero raggiunto; nessuna scrittura remota.')
-        return 0
-    # This calls only the existing import/original/asset APIs. It never calls
-    # review, deployment, migration or Cloudflare account APIs.
-    return import_batch([str(manifest), '--base', SITE, '--limit', str(available), '--apply'])
+    # The old unranked direct importer must never publish the lower half as REAL.
+    from .editorial import main as editorial_main
+    return editorial_main([str(folder.resolve() / 'manifest.json'), '--execute', '--base', SITE,
+                           '--out', str(folder.resolve() / 'editorial')])
 
 
 def main(argv=None):

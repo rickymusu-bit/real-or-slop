@@ -1,3 +1,14 @@
+## 0.11.0 — 2026-11-01T22:00:00Z (non attivata)
+
+- Classifica visiva unica REAL/SLOP, reinterpretazione testuale con generatore libero,
+  API OpenAI configurabili e valutazione finale cieca con tentativi/budget limitati.
+- Registro privato immutabile delle sorgenti, dossier e recupero senza rigenerazione.
+- Rimozione della difficoltà operativa con archivio dei dati precedenti.
+- Approvazione distinta da pubblicazione atomica 50/50, note di revisione facoltative,
+  diagnostica privata e integrazione Studio/admin; campionamento indipendente invariato.
+- Migrazioni 0007/0008 locali, test mock ed emulatori; nessuna attivazione pagata,
+  migrazione remota, pubblicazione del catalogo o deploy.
+
 # Changelog
 
 ## Unreleased

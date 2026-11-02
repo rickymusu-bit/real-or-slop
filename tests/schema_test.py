@@ -7,7 +7,7 @@ class SchemaTest(unittest.TestCase):
         migration=Path('migrations/0004_image_curation.sql')
         for file in sorted(Path('migrations').glob('*.sql')):
             if file.name < migration.name: db.executescript(file.read_text())
-        db.executescript(Path('scripts/seed.sql').read_text())
+        db.executescript(Path('tests/legacy-seed.sql').read_text())
         tables=['images','sources','licenses','categories','image_categories','review_events']
         before={t:db.execute('SELECT * FROM '+t).fetchall() for t in tables}
         db.executescript(migration.read_text())

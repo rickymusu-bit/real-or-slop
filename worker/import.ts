@@ -28,8 +28,6 @@ export function prepareImport(env: Env, data: Record<string, unknown>, guard = {
   const licenseUrl = license?.url || (licenseInput ? httpsUrl(licenseInput) : "");
   const sourceUrl = httpsUrl(importText(data, "source_url", 1000));
   const provider = importText(data, "provider", 100), sourceId = importText(data, "source_id", 300);
-  const difficulty = String(data.difficulty || "medio");
-  if (!["facile", "medio", "difficile"].includes(difficulty)) throw new HttpError(400, "Difficoltà non valida");
   if (type === "AI" && data.owner_declaration !== true) throw new HttpError(400, "Dichiarazione del proprietario richiesta");
   const date = type === "AI" ? importText(data, "generation_date", 10) : null;
   if (date && !validGenerationDate(date)) throw new HttpError(400, "Data di generazione YYYY-MM-DD valida richiesta");
@@ -43,8 +41,8 @@ export function prepareImport(env: Env, data: Record<string, unknown>, guard = {
   return { id: uid, statements: [
     insert("sources", [source, provider, sourceId, sourceUrl, evidence]),
     insert("licenses", [licenseId, license?.name || String(data.license_name || "Da verificare").slice(0, 200), licenseUrl, "Obblighi da verificare editorialmente"]),
-    insert("images", [uid, type, title, String(data.description || ""), author, source, licenseId, evidence, id(), model, prompt, difficulty, "in-review", "pending", explanation, 0, date, type === "AI" ? 1 : 0],
-      "id,type,title,description,author,source_id,license_id,authenticity_evidence,r2_key,ai_model,ai_prompt,difficulty,status,sha256,explanation,demo,generation_date,owner_declaration"),
+    insert("images", [uid, type, title, String(data.description || ""), author, source, licenseId, evidence, id(), model, prompt, "in-review", "pending", explanation, 0, date, type === "AI" ? 1 : 0],
+      "id,type,title,description,author,source_id,license_id,authenticity_evidence,r2_key,ai_model,ai_prompt,status,sha256,explanation,demo,generation_date,owner_declaration"),
     ...categories.map((category) => insert("image_categories", [uid, category])),
   ] };
 }

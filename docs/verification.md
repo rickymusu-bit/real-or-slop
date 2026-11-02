@@ -1,5 +1,127 @@
 # Verifiche effettive
 
+## Pipeline editoriale — 0.11.0
+
+Versione del rapporto **1.0.0**, `updated_at: 2026-11-01T22:15:00Z`.
+Branch `feat/editorial-real-slop-v1`, base `0ed9570` / main. Nessun AGENTS.md o
+Master presente da aggiornare; README e specifiche esistenti sono conservati.
+
+- Implementati classifica unica visiva 0–100, split 10/10 (o metà arrotondate per
+  lotti ridotti), descrizione/brief/prompt aperto, generazione text-to-image e
+  valutazione cieca, budget prenotati in D1, limiti e recupero da file accettati.
+- Rimosse difficoltà operative e relativi filtri/template; 0007 archivia i valori
+  storici e rimuove la colonna. Il guard verifica il bilanciamento **prima** della
+  modifica incompatibile. 0008 aggiunge registro, dossier, ledger, coda e pubblicazioni
+  atomiche, conservando il catalogo precedente se bilanciato. Sessioni/risposte/audit
+  sono verificati invariati. Non eseguite migrazioni remote.
+- Admin e Studio integrano dossier automatici, fonte/originali privati, note di
+  revisione facoltative e pubblicazione esplicita 50/50. Le monete Bernoulli di
+  Allenamento, A tempo e PvP restano indipendenti. Nessun modello o soglia approva
+  automaticamente un'immagine.
+- `npm run lint`, `npm run build`, `npm run deploy:check`, `git diff --check`:
+  superati. Build: CSS 13,10 kB e JS 62,69 kB, asset locali verificati.
+- Suite Node: **12 file**, tutti superati, incluse simulazioni statistiche,
+  tutte le sequenze deterministiche previste e controllo negativo delle vecchie
+  quote. Suite Python: **51 test**, tutti superati; fixture/mock, zero chiamate
+  a pagamento. Inclusi ordinamento, lotti ridotti, deduplica, sorgenti escluse da
+  REAL, conservazione del prompt, valutazione cieca, scarti, budget/API/credenziali,
+  recupero senza rigenerare, migrazioni, pubblicazione e diagnostica dei punteggi.
+- Integrazione Worker/D1/R2 **locale isolata**: superata. Registro e pubblicazioni
+  concorrenti reali via HTTP, fonte privata con hash, note vuote/assenti, revisione
+  obbligatoria e stock approvato in attesa, 50/50 per ambiente, normali import,
+  licenze, Studio e curatela. La route pagata resta disabilitata nell'emulatore.
+- Integrazione separata senza R2: superata, con controllo effettivo dei binding
+  assenti. Demo, categorie, vecchie assegnazioni, proprietà dei cookie, anti-replay,
+  Allenamento/A tempo, preload/decode/deadline/timeout e due client WebSocket PvP
+  con riconnessione verificati. Nessuna risorsa remota utilizzata per i dati test.
+- `npm run test:gallery`: Chromium esistente, nessuna nuova dipendenza. Viewport
+  360/390/768/1440, assenza dei selettori di difficoltà, immagini integre, azioni
+  simmetriche, tastiera, accessibility tree, timer/preparazione/retry e assenza
+  di richieste esterne delle pagine verificati. Screenshot in `artifacts/gallery/`,
+  non versionati. I dossier privati hanno copertura API e build TypeScript;
+  la suite browser verifica le modalità pubbliche, non il giudizio editoriale umano.
+- `npm run dry-run`: packaging riuscito, nessun deploy. `db:migrate` / `db:seed`
+  locali e backup/restore dello schema aggiornato con `scripts/local-data.py`
+  superati su stato separato. Non è una prova del ripristino remoto di produzione.
+- `/v1/models` del progetto ha elencato `gpt-6.1-terra` e `gpt-image-2` il
+  2026-11-01; nessuna inferenza/generazione live effettuata. L'uso effettivo dei
+  parametri e la resa richiedono una prima prova autorizzata e limitata.
+- Preparati ma **non attivati**: migrazioni remote, generazione API e importazione
+  remota, nuovo catalogo, cron quotidiano (richiede il nuovo flag
+  `ENABLE_EDITORIAL_SCHEDULE=true`) e altri gate espliciti. Nessun secret/permesso,
+  billing, variabile Actions/Worker, merge o deploy modificato.
+- Limiti: stime di costo conservative configurate dall'operatore, non fatture;
+  autenticità, diritti, somiglianza semantica e attribuzioni richiedono revisione;
+  dHash può produrre falsi positivi/negativi. Il backend precedente non è
+  compatibile con gli insert dopo 0007: servono preflight, backup e rilascio
+  coordinato con scritture amministrative sospese. Catalogo legacy sbilanciato:
+  arresto prima della rimozione della colonna, nessun ritiro automatico.
+
+[Architettura e procedure](pipeline-editoriale-real-slop-v1.0.0.md),
+[variabili, migrazioni, prima esecuzione controllata e recupero](coda-automatica.md),
+[Studio v2](studio-generazione-slop-v2.0.0.md).
+
+### File modificati o aggiunti
+
+- `.github/workflows/review-queue.yml`
+- `CHANGELOG.md`
+- `README.md`
+- `docs/campionamento-stratificato-v2.0.0.md`
+- `docs/coda-automatica.md`
+- `docs/importazione-diretta-r2.md`
+- `docs/metadati-editoriali-v1.0.0.md`
+- `docs/pipeline-editoriale-real-slop-v1.0.0.md`
+- `docs/protocollo-generazione-slop-v1.0.0.md`
+- `docs/protocollo-selezione-real-v1.0.0.md`
+- `docs/specification-v1.1.0.md`
+- `docs/studio-generazione-slop-v1.0.0.md`
+- `docs/studio-generazione-slop-v2.0.0.md`
+- `docs/verification.md`
+- `migrations/0007_retire_assigned_difficulty.sql`
+- `migrations/0008_editorial_publication.sql`
+- `package-lock.json`
+- `package.json`
+- `pipeline/automatic.py`
+- `pipeline/editorial.env.example`
+- `pipeline/editorial.py`
+- `pipeline/importer.py`
+- `scripts/check-gallery.mjs`
+- `scripts/deploy-demo.mjs`
+- `scripts/integration.py`
+- `scripts/make-seed.py`
+- `scripts/seed-publication.sql`
+- `scripts/seed.sql`
+- `shared/slop.ts`
+- `src/admin.ts`
+- `src/curation.ts`
+- `src/editorial.ts`
+- `src/play.ts`
+- `src/pvp.ts`
+- `src/slop.ts`
+- `tests/automatic_pipeline_test.py`
+- `tests/curation.integration.py`
+- `tests/editorial.integration.py`
+- `tests/editorial.test.ts`
+- `tests/editorial_pipeline_test.py`
+- `tests/editorial_schema_test.py`
+- `tests/game.test.ts`
+- `tests/legacy-seed.sql`
+- `tests/preloading_schema_test.py`
+- `tests/sampling.integration.py`
+- `tests/schema_test.py`
+- `tests/slop-fixtures.ts`
+- `tests/slop.integration.py`
+- `tests/slop.test.ts`
+- `tests/slop_schema_test.py`
+- `worker/core.ts`
+- `worker/editorial.ts`
+- `worker/game.ts`
+- `worker/import.ts`
+- `worker/moderation.ts`
+- `worker/publication.ts`
+- `worker/slop-validation.ts`
+- `worker/slop.ts`
+
 ## Binding R2 confermati e comando di rilascio — 2026-10-30
 
 - `wrangler.jsonc` collega QUARANTINE a `real-or-slop-quarantine` e IMAGES a `real-or-slop-approved`, secondo la configurazione confermata dal proprietario. Account, Worker, D1, modalità demo, profilo locale e isolamento delle preview sono conservati.

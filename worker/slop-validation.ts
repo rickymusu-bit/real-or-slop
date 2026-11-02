@@ -1,4 +1,4 @@
-import { buildSlopPrompt, fictionalMechanisms, proposeSlopReveal, slopChoices, slopTextLimits, validGenerationDate, type SlopPlan } from "../shared/slop";
+import { buildSlopPrompt, proposeSlopReveal, slopChoices, slopTextLimits, validGenerationDate, type SlopPlan } from "../shared/slop";
 import { HttpError } from "./core";
 import { httpsUrl } from "./import";
 
@@ -14,8 +14,8 @@ export function validateSlopPlan(value: unknown): SlopPlan {
     plan[key] = key === "prompt" ? field : field.trim();
   }
   for (const [key, choices] of Object.entries(slopChoices)) {
-    const field = input[key] ?? (key === "profile" ? "facile" : "");
-    if (typeof field !== "string" || (field !== "" && !(choices as readonly string[]).includes(field)) || (key === "profile" && !field))
+    const field = input[key] ?? "";
+    if (typeof field !== "string" || (field !== "" && !(choices as readonly string[]).includes(field)))
       throw new HttpError(400, `Classificazione SLOP non valida: ${key}`);
     plan[key] = field;
   }
@@ -37,8 +37,6 @@ export function validateSlopPlan(value: unknown): SlopPlan {
   if (plan.generation_source_url) httpsUrl(String(plan.generation_source_url));
   if (plan.license_url) httpsUrl(String(plan.license_url));
   if (plan.generation_date && !validGenerationDate(String(plan.generation_date))) throw new HttpError(400, "Data di generazione non valida");
-  if (["difficile", "esperto"].includes(String(plan.profile)) && plan.cognitive_mechanism && !fictionalMechanisms.includes(String(plan.cognitive_mechanism)))
-    throw new HttpError(400, "Difficile/Esperto: scegliere un'invenzione plausibile, senza errori tecnici o anacronismi intenzionali");
   return { ...plan, schema_version: 1, iteration: Number(iteration), owner_declaration: input.owner_declaration === true } as SlopPlan;
 }
 export function slopProposals(plan: SlopPlan) {
@@ -47,8 +45,7 @@ export function slopProposals(plan: SlopPlan) {
   return { prompt, reveal };
 }
 export function validateSlopImport(plan: SlopPlan, checks: Record<string, unknown>) {
-  if (plan.profile === "esperto") throw new HttpError(409, "Esperto è soltanto un template editoriale: importazione non abilitata");
-  const required = ["category_id", "subcategory_id", "country", "place", "period", "subject", "subject_kind", "country_or_region", "period_bucket", "image_medium", "composition", "cognitive_mechanism", "scene_description", "fictional_claim", "single_clue", "period_accurate_details", "technical_treatment", "ai_model", "generation_owner", "generation_source_url", "generation_version", "generation_date", "prompt", "reveal_explanation"] as const;
+  const required = ["category_id", "subcategory_id", "country", "place", "period", "subject", "subject_kind", "country_or_region", "period_bucket", "image_medium", "composition", "scene_description", "fictional_claim", "ai_model", "generation_owner", "generation_source_url", "generation_version", "generation_date", "prompt", "reveal_explanation"] as const;
   if (required.some((key) => !plan[key].trim()) || !plan.documented_facts.length) throw new HttpError(400, "Completare concept, fatti con fonti e dati della generazione esterna prima dell'importazione");
   if (plan.prompt.includes("[Da compilare e verificare dal revisore]") || plan.prompt.includes("[Nessun fatto documentato fornito") || plan.reveal_explanation.includes("Contesto non ancora documentato"))
     throw new HttpError(400, "Completare o ricostruire prompt e spiegazione: la proposta contiene ancora segnaposto");

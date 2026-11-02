@@ -1,8 +1,7 @@
 import { curationChoices } from "./curation";
 
-export const slopTemplateVersion = "1.0.0";
+export const slopTemplateVersion = "2.0.0";
 export const slopChoices = {
-  profile: ["facile", "medio", "difficile", "esperto"],
   subject_kind: curationChoices.subject_kind,
   country_or_region: curationChoices.country_or_region,
   period_bucket: curationChoices.period_bucket,
@@ -46,25 +45,16 @@ export function validGenerationDate(value: string) {
 }
 export function buildSlopPrompt(plan: SlopPlan) {
   const show = (value: string) => value || "[Da compilare e verificare dal revisore]";
-  const profiles: Record<string, string> = {
-    facile: "Scena inizialmente plausibile con un solo indizio verificabile che richieda osservazione o ragionamento. Escludi contesti assurdi, anacronismi grossolani e scenette comiche. Eventuali difetti minori non devono essere l'unica prova.",
-    medio: "Situazione credibile con una o due incongruenze sottili, osservabili alla risoluzione di gioco e verificabili nel contesto. Evita artefatti risolutivi e anacronismi assurdi.",
-    difficile: "Evento, opera o oggetto plausibile ma inventato, in una scena ordinaria tecnicamente convincente e coerente con l'epoca. Nessun errore tecnico intenzionale o anacronismo progettato. Prevedi una verifica investigabile, senza promettere certezza dalla sola immagine.",
-    esperto: "SOLO PROFILO EDITORIALE SPERIMENTALE. Finzione innocua con credibilità documentaria elevata e dettagli materiali coerenti. Nessun difetto tecnico intenzionale. Se manca una possibilità ragionevole di verifica, il concept non è idoneo a valutare abilità. Questo template non abilita una quarta difficoltà del gioco.",
-  };
   return [
     'Progetta una singola immagine sintetica per il quiz educativo "Real or Slop".',
     "La descrizione seguente è materiale editoriale del revisore; le fonti documentano soltanto il contesto, non l'esistenza dell'immagine generata.",
-    "Profilo: " + show(plan.profile) + ". " + profiles[plan.profile],
     "Soggetto: " + show(plan.subject),
     "Luogo rappresentato: " + [plan.country, plan.place].filter(Boolean).join(" / "),
     "Periodo rappresentato: " + show(plan.period),
-    "Tipologia / medium / composizione: " + [plan.subject_kind, plan.image_medium, plan.composition].map(show).join(" / "),
-    "Scena: " + show(plan.scene_description),
+    "Idea di partenza: " + show(plan.scene_description),
+    "Brief creativo: " + show(plan.fictional_claim),
+    "Sviluppa liberamente questa idea in una nuova immagine di natura fotografica: scegli inquadratura, prospettiva, composizione, luce, materiali, atmosfera e dettagli secondari con il tuo linguaggio visivo. Il riferimento concettuale non è una fotografia da copiare. Non è necessario inserire errori, anacronismi o anomalie fisiche.",
     "Elemento inventato o natura sintetica della scena: " + show(plan.fictional_claim),
-    "Meccanismo cognitivo: " + show(plan.cognitive_mechanism),
-    "Indizio o ipotesi investigabile: " + show(plan.single_clue),
-    "Dettagli di periodo da rispettare: " + show(plan.period_accurate_details),
     "Trattamento confrontabile con il catalogo REAL (risoluzione, compressione, medium e composizione): " + show(plan.technical_treatment),
     "Fatti di contesto forniti dal revisore, da verificare prima dell'importazione:",
     ...(plan.documented_facts.length ? plan.documented_facts.map((item) => `- ${item.fact} — ${item.source_title}: ${item.reference_url}`) : ["[Nessun fatto documentato fornito: revisione necessaria]"]),

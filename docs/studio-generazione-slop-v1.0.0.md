@@ -1,3 +1,9 @@
+> Aggiornamento 2026-11-01T22:00:00Z — documento storico. La
+> [pipeline editoriale v1.0.0](pipeline-editoriale-real-slop-v1.0.0.md) supera
+> difficoltà preassegnata, relativi filtri/template e pubblicazione per singola
+> approvazione. Restano le regole compatibili su diritti, fonti, audit e, per il
+> campionamento v2, monete Bernoulli indipendenti. La cronologia seguente è conservata.
+
 # Studio di generazione SLOP — v1.0.0
 
 Implementazione dell'app **0.8.0**, secondo il [protocollo SLOP](protocollo-generazione-slop-v1.0.0.md) e il [protocollo REAL](protocollo-selezione-real-v1.0.0.md). La sezione privata `/admin/slop` progetta concept, costruisce testi e importa manualmente risultati prodotti altrove. Non chiama generatori, non acquista crediti, non scarica riferimenti e non crea immagini.
