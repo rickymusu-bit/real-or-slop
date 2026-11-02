@@ -36,6 +36,18 @@ Il soggetto **non** è più una rana divisa a metà. Sono **due** raganelle sovr
 - **Logo:** PNG stilizzato nel marchio/header, come app icon di grandi dimensioni. Per vere favicon 16/32 px creare **derivati ottimizzati** e testarli: l'immagine originale ha molti dettagli e potrebbe essere poco leggibile a 16 px. Favicon non implicitamente approvata.
 - **Mai** utilizzare queste immagini come prova di fotografie REAL nel catalogo. Sono asset di branding generati sinteticamente.
 
+### 2.3 Integrazione della home e fallback sicuro
+
+La home e il marchio sono integrati in `src/main.ts`. `vite.config.ts` definisce `__ROS_BRAND_READY__` in base alla presenza e **identità SHA-256 esatta** di tutti e tre gli asset in `public/brand/`.
+
+- Tutti e tre i PNG corretti → header con logo stilizzato, hero fotografica con overlay testuale accessibile, mascotte trasparente nella sezione modalità, favicon PNG.
+- Uno o più PNG assenti o modificati → l'originale visualizzazione demo resta visibile, senza richieste 404, evitando di simulare un asset mancante.
+- La hero usa copy HTML indipendente: su desktop il testo sta nella zona scura a sinistra e le rane a destra; su smartphone il contenuto testuale precede l'immagine in un blocco 16:9.
+- L'icona del brand è decorativa dentro il link il cui nome accessibile è già `REAL or SLOP, inizio`. Anche la mascotte e la cover hanno `alt=""` quando decorano contenuti esplicativi già presenti.
+- L'attivazione di asset non equivale a inserimento nel catalogo REAL/AI. Le illustrazioni rimangono marcate come branding, e la demo continua a dichiarare le risposte simulate.
+
+La build non obbliga a possedere asset grafici nel checkout, ma con gli asset presenti non tollera sostituzioni silenziose: la loro integrità è verificata.
+
 ### 2.3 Derivati e performance
 
 - Pubblicare derivati WebP/AVIF opzionali solo dopo confronto visivo con gli originali; lasciare accessibili i PNG master.
