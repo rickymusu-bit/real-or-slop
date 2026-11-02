@@ -85,7 +85,18 @@ La precedente esclusione dei bucket, adottata per risolvere l’errore R2 10085 
 
 Il comando esistente viene mantenuto per evitare una seconda modifica alla dashboard. La sua guardia ora richiede esattamente i due binding R2 confermati, oltre al Worker, all’account e al D1 esistenti e alla modalità demo; rifiuta bucket mancanti, aggiuntivi, scambiati o locali. Controlla anche `CLOUDFLARE_ACCOUNT_ID`, se presente. Non crea risorse e pubblica con `--no-experimental-provision`.
 
-La sequenza resta migrazioni D1 additive → seed demo `INSERT OR IGNORE` → deploy. Il seed non cancella il catalogo reale. Build, `--check` e `--dry-run` non applicano migrazioni o seed remoti. I segreti non vengono sostituiti o scritti nel repository.
+Il comando controlla prima, in sola lettura, la cronologia delle migrazioni D1.
+Quando lo schema è già aggiornato esegue soltanto il deploy: nessuna migrazione
+o seed remoto, nessun flag di approvazione richiesto. Conserva variabili e segreti
+del Worker con `--keep-vars`. Generazioni e budget mantengono i loro valori.
+
+Se ci sono migrazioni nuove, occorrono preflight/backup e
+`EDITORIAL_SCHEMA_RELEASE_APPROVED=true` soltanto per quel rilascio. Il comando
+ricontrolla il completamento delle migrazioni prima di seed/deploy. Accesso D1
+non disponibile, storia incoerente o checkout più vecchio del database bloccano
+la pubblicazione. Non lasciare il flag permanentemente attivo in Workers Builds.
+Build, `--check` e `--dry-run` non applicano migrazioni o seed remoti.
+
 
 ```sh
 npm run deploy:check
@@ -103,3 +114,15 @@ Verificare home, `/api/health` (`demo: true`), categorie, Allenamento e due clie
 `env.local` mantiene i bucket emulati e i comandi di sviluppo usano sempre `--local --env local`. Il test `ROS_TEST_PROFILE= npm run test:integration` genera sotto `.wrangler/` una configurazione temporanea derivata, senza R2, con percorsi locali assoluti: verifica esplicitamente dal runtime che entrambi i binding siano assenti e rimuove la configurazione alla fine. Nessuna risorsa remota viene usata dal test.
 
 Il blocco `previews` non collega i bucket di produzione. Per pubblicare preview restano necessari D1 e bucket di test distinti, verificati dalla guardia esistente; non utilizzare quelli del catalogo per sbloccare una preview.
+
+## Ripresa di Workers Builds dopo la migrazione editoriale
+
+Aggiornamento `2026-11-02T09:43:07+01:00`, versione operativa `1.1.0`.
+Il primo tentativo automatico della PR #20 si è fermato alla guardia di
+approvazione; il rilascio manuale autorizzato ha applicato 0007/0008 ed è online.
+La guardia generale è corretta per richiedere approvazione solo in presenza di
+migrazioni ancora da applicare. Per riprendere l'automatismo pubblicare questa
+correzione su main e verificare il nuovo tentativo in Workers → real-or-slop →
+Deployments/Builds. Ritentare il vecchio commit riutilizza la vecchia guardia.
+Le Repository variables di GitHub Actions sono distinte dall'ambiente Builds;
+non occorre impostare una deroga permanente in nessuno dei due ambienti.

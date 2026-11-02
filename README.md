@@ -105,7 +105,8 @@ con numerosità, incertezza e ripetizioni controllate; nessun livello è impleme
 Migrazioni nuove **0007 / 0008**, da provare prima localmente. Le migrazioni conservano
 il catalogo preesistente e si bloccano prima di rimuovere la colonna se lo stock non è già bilanciato; occorrono
 backup e rilascio coordinato prima di qualsiasi operazione remota. Il rilascio
-esistente ha una guardia esplicita `EDITORIAL_SCHEMA_RELEASE_APPROVED=true`.
+esistente richiede `EDITORIAL_SCHEMA_RELEASE_APPROVED=true` soltanto quando
+ci sono migrazioni nuove da applicare; a schema aggiornato pubblica normalmente.
 Nessun deploy, migrazione remota, secret Actions o schedule pagato viene attivato
 qui. I modelli sono configurabili; `/v1/models` ha elencato `gpt-6.1-terra`, senza
 eseguire inferenze a pagamento.
@@ -209,7 +210,7 @@ La configurazione del Worker `real-or-slop` mantiene `DATA_MODE=demo` e il D1 es
 
 La demo continua a servire le fixture SVG. Il catalogo reale può essere caricato e revisionato in D1/R2 senza passare automaticamente alle partite di produzione. Gli originali restano privati nel prefisso `originals/` di QUARANTINE; le immagini approvate vanno in IMAGES. Google Drive è escluso dal flusso.
 
-Nella dashboard esistente mantenere **Build: `npm run build`**, **Deploy: `npm run deploy:demo`**, branch `main`, root `/` e Node 24. Il comando di rilascio è stato aggiornato per verificare account, Worker, D1, modalità demo e i due bucket esatti; rifiuta risorse aggiuntive o destinazioni diverse. Poi applica migrazioni versionate e seed sintetico idempotente e pubblica con provisioning automatico disabilitato. Nessun bucket o database viene creato dal comando.
+Nella dashboard esistente mantenere **Build: `npm run build`**, **Deploy: `npm run deploy:demo`**, branch `main`, root `/` e Node 24. Il comando di rilascio è stato aggiornato per verificare account, Worker, D1, modalità demo e i due bucket esatti; rifiuta risorse aggiuntive o destinazioni diverse. Legge le migrazioni D1 già applicate: se lo schema è aggiornato pubblica senza migrazioni o seed, conservando variabili e segreti esistenti. Nuove migrazioni richiedono approvazione esplicita del rilascio dello schema; il loro completamento è ricontrollato prima del deploy. Il provisioning automatico resta disabilitato. Nessun bucket o database viene creato dal comando.
 
 Controllo senza rete: `npm run deploy:check`. Packaging senza modifiche remote: `npm run deploy:demo -- --dry-run`. L’admin richiede `ADMIN_TOKEN` come segreto del Worker; l’importatore usa lo stesso valore tramite `REAL_OR_SLOP_ADMIN_TOKEN`. Un deploy mantiene i binding dichiarati nel repository anche se erano stati aggiunti dalla dashboard.
 
