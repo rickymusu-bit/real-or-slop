@@ -1,3 +1,5 @@
+import { prepareCandidate } from "./review-preparation";
+import { preferences } from "./preferences";
 import { body, hash, HttpError, id, json, type Env } from "./core";
 import { httpsUrl, importText } from "./import";
 import { recognizedLicense } from "../shared/licenses";
@@ -10,6 +12,11 @@ function hex(data: Record<string, unknown>, key: string, length: number) {
 }
 export async function editorial(request: Request, env: Env, path: string): Promise<Response> {
   const base = "/api/admin/editorial";
+  if (path === base + "/preferences" && request.method === "GET") return json(await preferences(env));
+  if (path === base + "/prepare" && request.method === "POST") {
+    const data = await body(request);
+    return json(await prepareCandidate(env, importText(data, "image_id", 100)));
+  }
   if (path === base + "/controls") {
     if (request.method === "PUT") {
       const data = await body(request);
@@ -23,7 +30,7 @@ export async function editorial(request: Request, env: Env, path: string): Promi
     const inventory = (await env.DB.prepare("SELECT i.id,i.type,i.sha256,i.perceptual_hash,s.provider,s.source_id,s.page_url AS source_url FROM images i LEFT JOIN sources s ON s.id=i.source_id").all()).results;
     const queue = await env.DB.prepare("SELECT count(*) AS count FROM images WHERE status IN ('candidate','in-review','approved') AND id NOT IN (SELECT image_id FROM published_images)").first();
     const attempts = (await env.DB.prepare("SELECT id,reference_id,image_id FROM editorial_attempts").all()).results;
-    return json({ references, inventory, queue, attempts, diagnostics: await publishedDiagnostics(env) });
+    return json({ references, inventory, queue, attempts, preferences: await preferences(env), diagnostics: await publishedDiagnostics(env) });
   }
   if (path === base + "/budget" && request.method === "POST") {
     if (env.ENABLE_EDITORIAL_PAID !== "true") throw new HttpError(503, "Chiamate a pagamento non abilitate sul server");
@@ -104,6 +111,7 @@ export async function editorial(request: Request, env: Env, path: string): Promi
     const prior = await env.DB.prepare("SELECT reference_id,image_id,dossier_json FROM editorial_attempts WHERE id=?").bind(uid).first<{ reference_id: string; image_id: string | null; dossier_json: string }>();
     if (prior) {
       if (prior.reference_id !== reference || prior.image_id !== (data.image_id ? String(data.image_id) : null) || prior.dossier_json !== JSON.stringify(data.dossier)) throw new HttpError(409,"Tentativo già archiviato con provenienza differente");
+      if (prior.image_id) await prepareCandidate(env, prior.image_id);
       return json({ saved: true, already_saved: true });
     }
     const row = await env.DB.prepare("SELECT role FROM reference_photos WHERE id=?").bind(reference).first<{ role: string }>();
@@ -114,6 +122,7 @@ export async function editorial(request: Request, env: Env, path: string): Promi
     if (imageId && (!dossier.prompt || !dossier.model || !dossier.sha256 || !dossier.evaluation || dossier.status !== "accepted")) throw new HttpError(400, "Provenienza completa richiesta");
     if (imageId && !await env.DB.prepare("SELECT id FROM images WHERE id=? AND type='AI' AND ai_prompt=? AND ai_model=? AND sha256=? AND status='in-review'").bind(imageId, String(dossier.prompt), String(dossier.model), String(dossier.sha256)).first()) throw new HttpError(409, "Il dossier non corrisponde al file importato");
     await env.DB.prepare("INSERT INTO editorial_attempts VALUES(?,?,?,?,?) ON CONFLICT(id) DO NOTHING").bind(uid, reference, imageId, JSON.stringify(dossier), new Date().toISOString()).run();
+    if (imageId) await prepareCandidate(env, imageId);
     return json({ saved: true });
   }
   if (path === base + "/reviews" && request.method === "POST") {
@@ -122,6 +131,7 @@ export async function editorial(request: Request, env: Env, path: string): Promi
     const photo = await env.DB.prepare("SELECT r.evaluation_json FROM reference_photos r JOIN images i ON i.type='REAL' AND i.sha256=r.file_sha256 JOIN sources s ON s.id=i.source_id AND s.provider=r.provider AND s.source_id=r.source_id WHERE r.id=? AND r.role='REAL' AND i.id=?").bind(reference,imageId).first<{ evaluation_json: string }>();
     if (!photo) throw new HttpError(400,"Candidata REAL e riferimento richiesti");
     await env.DB.prepare("INSERT INTO editorial_image_reviews VALUES(?,?,?,?) ON CONFLICT(image_id) DO NOTHING").bind(imageId,reference,photo.evaluation_json,new Date().toISOString()).run();
+    await prepareCandidate(env, imageId);
     return json({ saved: true });
   }
   if (path === base + "/dossiers" && request.method === "GET") {

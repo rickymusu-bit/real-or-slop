@@ -21,6 +21,7 @@ from urllib.request import Request, build_opener
 from .importer import NoRedirect, RequestError, prepare, request, site_url, upload
 from .run import optimize
 from .licenses import recognized_license
+from .preferences import TAGS, creative_hint, model as preference_model
 
 VERSION = '1.0.0'
 AXES = ('authenticity_doubt', 'surprise', 'plausibility', 'game_interest', 'readability', 'concrete_motive')
@@ -29,6 +30,7 @@ Rispondi in JSON: {"scores":{"authenticity_doubt":0,"surprise":0,"plausibility":
 Ogni asse usa 0–100: dubbio sull'autenticità percepita; sorpresa/insolito; plausibilità della scena; interesse ludico; leggibilità/qualità visiva; presenza di un motivo concreto di interesse.
 Una locomotiva ordinaria, anche storica, senza alcuna situazione riconoscibile di interesse è un caso negativo. Non inventare fatti per aumentare l'interesse.
 Distingui ciò che osservi da ciò che non puoi sapere. Un lotto ridotto è preferibile a riempitivi; non gonfiare i punteggi. photographic indica compatibilità con un gioco di immagini di natura fotografica.'''
+RUBRIC += '\nAggiungi "visual_tags": una lista fino a 12 caratteristiche direttamente osservabili, scelte soltanto fra: ' + json.dumps(TAGS) + '. Non sono fatti documentati né indizi della classe.\n'
 BRIEF = '''Analizza visivamente questa fotografia sorgente e restituisci JSON con:
 "description":{"subject":"soggetto","environment":"ambiente e contesto","objects_relations":"oggetti e relazioni spaziali","materials":"materiali","composition":"composizione generale","situation":"evento/situazione","details":"particolari utili","direct_observations":"osservazioni","documented_information":"soltanto dati documentati forniti","inferences":"inferenze esplicitamente marcate"},
 "weakness":"perché la singola fotografia è poco interessante per il gioco", "creative_brief":"reinterpretazione editoriale aperta", "prompt":"prompt effettivo aperto".
@@ -175,7 +177,7 @@ def evaluation(value):
         raise PipelineStop('Valutazione: sei assi numerici 0–100 richiesti')
     if not isinstance(value.get('reason'), str) or not value['reason'].strip() or not isinstance(value.get('concrete_motive'), str) or type(value.get('photographic')) is not bool:
         raise PipelineStop('Valutazione: motivazione visiva e natura fotografica richieste')
-    return {**value, 'score': round(sum(scores.values()) / len(AXES), 2), 'rubric_version': VERSION}
+    return {**value, 'visual_tags': sorted({tag for tag in (value.get('visual_tags') if isinstance(value.get('visual_tags'), list) else []) if isinstance(tag, str) and tag in TAGS})[:12], 'score': round(sum(scores.values()) / len(AXES), 2), 'rubric_version': VERSION}
 
 
 def same_photo(a, b):
@@ -211,7 +213,7 @@ def rank_photos(photos, api, cfg, budget):
     for photo in photos:
         budget.debit('evaluation')
         result = evaluation(api.vision(cfg.analysis_model, RUBRIC, Path(photo['metadata'].get('derived_file') or photo['file']).read_bytes()))
-        result.update(model=cfg.analysis_model, timestamp=now(), parameters=dict(detail='high', max_output_tokens=4000, format='json_object'))
+        result.update(model=cfg.analysis_model, timestamp=now(), editorial_threshold=cfg.threshold, parameters=dict(detail='high', max_output_tokens=4000, format='json_object'))
         # Non-photographic records never become source photographs or REAL.
         if not result['photographic']:
             continue
@@ -229,12 +231,12 @@ def write_private(path, value):
     temporary.replace(path)
 
 
-def reinterpret(photo, api, cfg, budget, previous=None):
+def reinterpret(photo, api, cfg, budget, previous=None, preference_hint=None):
     budget.debit('evaluation')
     source = photo['metadata']
     # Source score and ranking are not needed by the creative stage either.
     context = json.dumps(dict(documented_source={k: source[k] for k in ('title','description','evidence','source_url') if k in source},
-                              previous_result=previous), ensure_ascii=False)
+                              previous_result=previous, editorial_preferences=preference_hint), ensure_ascii=False)
     result = api.vision(cfg.analysis_model, BRIEF, Path(source.get('derived_file') or photo['file']).read_bytes(), context)
     description = result.get('description', {})
     required = {'subject','environment','objects_relations','materials','composition','situation','details','direct_observations','documented_information','inferences'}
@@ -248,7 +250,7 @@ def reinterpret(photo, api, cfg, budget, previous=None):
     return {**result, 'prompt': prompt}
 
 
-def generate_slop(photo, api, cfg, budget, folder, save_attempt=lambda record: None, previous=None, iteration_offset=0):
+def generate_slop(photo, api, cfg, budget, folder, save_attempt=lambda record: None, previous=None, iteration_offset=0, preferences=None):
     accepted = None
     for iteration in range(1, cfg.attempts + 1):
         attempt_id = str(uuid.uuid4())
@@ -258,7 +260,8 @@ def generate_slop(photo, api, cfg, budget, folder, save_attempt=lambda record: N
                       vision_parameters=dict(detail='high', max_output_tokens=4000, format='json_object'), protocol_version=VERSION,
                       editorial_threshold=cfg.threshold, max_attempts=cfg.attempts + iteration_offset, status='started')
         try:
-            creative = reinterpret(photo, api, cfg, budget, previous)
+            record['preferences'] = creative_hint(preferences, attempt_id)
+            creative = reinterpret(photo, api, cfg, budget, previous, preference_hint=record['preferences'])
             record.update(creative)
             budget.debit('generation' if iteration == 1 else 'regeneration')
             raw = api.generate(cfg.image_model, creative['prompt'], record['parameters'])
@@ -325,10 +328,13 @@ class Remote:
         self.call('attempts', dict(id=record['id'], reference_id=record['reference_id'], image_id=image_id, dossier=record))
 
 
-def execute(items, root, folder, cfg, api, budget, remote=None, known=(), pending=0, resume=None):
+def execute(items, root, folder, cfg, api, budget, remote=None, known=(), pending=0, resume=None, preferences=None):
     cfg.validate()
     if pending >= cfg.queue_limit:
         raise PipelineStop('Coda privata piena: completare la revisione')
+    preference_file = folder / 'preferences.json'
+    preferences = preference_model(json.loads(preference_file.read_text()) if resume is not None and preference_file.exists() else preferences)
+    write_private(preference_file, preferences)
     ranked = resume if resume is not None else rank_photos(candidates(items, root, known), api, cfg, budget)
     write_private(folder / 'ranking.json', ranked)
     if not ranked:
@@ -368,7 +374,7 @@ def execute(items, root, folder, cfg, api, budget, remote=None, known=(), pendin
                 from dataclasses import replace
                 record = generate_slop(photo, api, replace(cfg, attempts=remaining), budget, folder,
                     lambda attempt: remote.save_attempt(attempt) if remote and attempt['status'] != 'accepted' else None,
-                    previous=previous_records[-1].get('evaluation') if previous_records else None, iteration_offset=len(previous_records))
+                    previous=previous_records[-1].get('evaluation') if previous_records else None, iteration_offset=len(previous_records), preferences=preferences)
             if not record:
                 continue
             if remote:
@@ -377,7 +383,7 @@ def execute(items, root, folder, cfg, api, budget, remote=None, known=(), pendin
                     author='Real or Slop / OpenAI', provider='openai-editorial', source_id=record['id'], source_url='https://openai.com/',
                     license_name=os.getenv('GENERATED_LICENSE_NAME', ''), license_url=os.getenv('GENERATED_LICENSE_URL', ''),
                     evidence='Generazione text-to-image. Nessuna provenienza archivistica autentica. Diritti e termini da verificare dal revisore.',
-                    explanation='Questa immagine è generata con IA: una reinterpretazione autonoma, non una fotografia documentaria.',
+                    explanation=('Questa immagine è generata con IA: una reinterpretazione autonoma, non una fotografia documentaria. Il dettaglio osservabile: ' + record['evaluation']['concrete_motive'] + '. ' + record['evaluation']['reason'])[:3900],
                     categories=source['categories'], ai_model=cfg.image_model, ai_prompt=record['prompt'], generation_date=record['timestamp'][:10], owner_declaration=True,
                     derived_file=record['derived_file'])
                 item = dict(metadata=metadata, file=record['file'], sha256=record['original_sha256'])
@@ -456,7 +462,7 @@ def main(argv=None):
                 raise PipelineStop('Lotto giornaliero già assegnato: usare il recupero del lotto originale')
             resumed = json.loads((folder / 'ranking.json').read_text()) if args.resume and (folder / 'ranking.json').exists() else None
             summary = execute(selected, root, folder, cfg, api, Budget(cfg, remote.reserve), remote,
-                              [*state['references'], *state['inventory']], state['queue']['count'], resume=resumed)
+                              [*state['references'], *state['inventory']], state['queue']['count'], resume=resumed, preferences=preference_model(state.get('preferences')))
         print(json.dumps(summary))
         return 0
     except (ValueError, OSError, KeyError, TypeError) as error:

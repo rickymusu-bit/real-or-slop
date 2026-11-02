@@ -1,5 +1,36 @@
 # Verifiche effettive
 
+## Revisione visiva e preferenze — 0.13.0
+
+`updated_at: 2026-11-02T16:07:51+01:00`, rapporto `1.0.0`. Branch
+`feat/visual-review-preferences`, dipendente dalla PR #25 / 0.12.0.
+
+- `/admin`: un'immagine e Approva/Rifiuta, senza note, categorie o checkbox.
+  Vecchie schede, import, Studio e pubblicazione separati nella gestione avanzata.
+  I pulsanti attendono la preview; un file rotto non viene etichettato come rifiuto.
+- Preparazione automatica al collegamento di valutazione REAL/dossier SLOP:
+  file e hash, originale, diritti documentati, spiegazione, categorie, valutazione
+  e provenienza. Snapshot invalidati dalle modifiche e ricontrollati prima della
+  decisione; la transazione verifica ancora token e stato della candidata.
+- Decisione, audit e feedback una sola volta nello stesso batch D1. Migrazione
+  additiva 0010 senza riscrivere storico o risposte; controlli di immutabilità.
+- Modello bayesiano locale regolarizzato, esempi positivi/negativi, probabilità
+  di esplorazione 25% da configurazione condivisa Python/TS. Preferenze su query,
+  ordine privato e brief, nessuna correzione dei punteggi o dei ruoli. Snapshot
+  privati congelati e recupero senza nuove chiamate per file già accettati.
+- Lint, **14 file Node**, **62 test Python**, build, deploy:check e packaging
+  dry-run superati. Worker/D1/R2 locale: auth, mancata preparazione, token falsi
+  e obsoleti, modifica file, decisioni concorrenti, apprendimento positivo/negativo,
+  approvazione senza pubblicazione, campionamento e compatibilità storica verificati.
+- Demo senza R2 superata. Chromium: flusso due pulsanti con fixture UI, doppio
+  clic contraddittorio, coda esaurita, preview corrotta senza feedback; test di
+  Allenamento/A tempo, oscuramento senza pausa, accessibilità e layout preservati.
+  Immagini e misure locali in `artifacts/gallery/`.
+- Nessuna nuova chiave, dipendenza o servizio di training. Nessuna chiamata OpenAI
+  a pagamento, modifica di budget/cron/credenziali, pubblicazione, migrazione o
+  deploy remoto. Il modello parte neutro e apprende dalle nuove decisioni visive;
+  i vecchi rifiuti non sono assunti retroattivamente come giudizi di gusto.
+
 ## Tempi per immagine e PvP sospeso — 0.12.0
 
 `updated_at: 2026-11-02T15:25:07+01:00`, rapporto `1.0.0`.

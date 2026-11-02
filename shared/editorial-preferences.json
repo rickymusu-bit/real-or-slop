@@ -1,0 +1,31 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-11-02T15:57:11+01:00",
+  "exploration": 0.25,
+  "prior": 2,
+  "tags": [
+    "people",
+    "animals",
+    "plants",
+    "architecture",
+    "transport",
+    "industry",
+    "water",
+    "landscape",
+    "everyday_life",
+    "large_scale",
+    "small_details",
+    "repetition",
+    "crowded",
+    "isolated_subject",
+    "wide_scene",
+    "close_up",
+    "indoors",
+    "outdoors",
+    "black_and_white",
+    "color",
+    "unusual_relations",
+    "quiet_scene",
+    "active_scene"
+  ]
+}
