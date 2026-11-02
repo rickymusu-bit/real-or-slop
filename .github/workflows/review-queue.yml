@@ -4,6 +4,11 @@ on:
     - cron: '17 6 * * *'
   workflow_dispatch:
     inputs:
+      reference_count:
+        description: 'Maximum source photographs: 2 for the first controlled test, 20 for a normal batch'
+        type: choice
+        options: ['2', '20']
+        default: '2'
       execute_paid:
         description: 'Explicitly authorize bounded paid evaluation/generation and private imports'
         type: boolean
@@ -20,14 +25,16 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' && github.event.repository.private == true && vars.ENABLE_AUTOMATIC_REVIEW_QUEUE == 'true' && (github.event_name == 'workflow_dispatch' || vars.ENABLE_EDITORIAL_SCHEDULE == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      ROS_REFERENCE_COUNT: ${{ inputs.reference_count || '20' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: python -m pip install -r pipeline/requirements.txt
-      - name: Collect up to twenty diversified source photographs locally
-        run: python -m pipeline.automatic --collect
+      - name: Collect a bounded, diversified reference batch locally
+        run: python -m pipeline.automatic --collect --limit "$ROS_REFERENCE_COUNT"
       - name: Network-free editorial plan
         run: python -m pipeline.editorial .pipeline/automatic/manifest.json
       - name: Bounded paid pipeline into private review only
@@ -44,9 +51,9 @@ jobs:
           EDITORIAL_EVALUATION_USD: ${{ vars.EDITORIAL_EVALUATION_USD }}
           EDITORIAL_GENERATION_USD: ${{ vars.EDITORIAL_GENERATION_USD }}
           EDITORIAL_THRESHOLD: ${{ vars.EDITORIAL_THRESHOLD || '65' }}
-          EDITORIAL_ATTEMPTS: ${{ vars.EDITORIAL_ATTEMPTS || '2' }}
-          EDITORIAL_MAX_EVALUATIONS: ${{ vars.EDITORIAL_MAX_EVALUATIONS || '60' }}
-          EDITORIAL_MAX_GENERATIONS: ${{ vars.EDITORIAL_MAX_GENERATIONS || '20' }}
+          EDITORIAL_ATTEMPTS: ${{ inputs.reference_count == '2' && '1' || vars.EDITORIAL_ATTEMPTS || '2' }}
+          EDITORIAL_MAX_EVALUATIONS: ${{ inputs.reference_count == '2' && '4' || vars.EDITORIAL_MAX_EVALUATIONS || '60' }}
+          EDITORIAL_MAX_GENERATIONS: ${{ inputs.reference_count == '2' && '1' || vars.EDITORIAL_MAX_GENERATIONS || '20' }}
           EDITORIAL_MAX_REGENERATIONS: ${{ vars.EDITORIAL_MAX_REGENERATIONS || '10' }}
           EDITORIAL_QUEUE_LIMIT: ${{ vars.EDITORIAL_QUEUE_LIMIT || '100' }}
           OPENAI_IMAGE_SIZE: ${{ vars.OPENAI_IMAGE_SIZE || '1024x1024' }}

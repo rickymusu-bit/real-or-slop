@@ -56,3 +56,9 @@ Non inviare dossier, prompt o sorgenti nei payload di gioco. Le modalità,
 l'autenticazione, le URL opache e i manifest di precaricamento restano quelli
 esistenti. Procedura API, migrazioni, diritti e recupero sono normati nella
 [pipeline editoriale 1.0.0](pipeline-editoriale-real-slop-v1.0.0.md).
+
+La raccolta, l'analisi e la generazione si avviano dal workflow GitHub
+**Automatic private review queue**, non dal pulsante dei dossier. Per una prima
+prova scegliere due riferimenti e lasciare il cron disattivato. Le candidate
+accettate vengono importate nella coda; i file scartati restano nell'artifact
+privato del run, mentre il dossier registra esito e motivazione.
