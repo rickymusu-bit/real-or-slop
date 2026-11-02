@@ -1,0 +1,70 @@
+
+> real-or-slop@0.10.0 test
+> node --import tsx --test tests/*.test.ts && python3 -m unittest discover -s tests -p '*_test.py'
+
+✔ unknown API never falls back to SPA (22.048656ms)
+✔ admin route and API are protected server-side (2.519151ms)
+✔ health declares demo (1.291547ms)
+✔ cross-origin mutations denied (0.991473ms)
+✔ synthetic objects contain no label or metadata (1.165559ms)
+✔ editorial dimensions are optional, distinct from verified facts (0.943472ms)
+✔ verified places and dates require evidence and explicit human confirmation (0.647828ms)
+✔ API rejects unknown fields, invented vocabularies, wrong types and oversized text (0.825829ms)
+✔ shared controlled vocabularies agree with SQLite constraints (7.623775ms)
+✔ release keeps the existing Worker/D1 and exactly the owner-confirmed R2 bindings (1.378574ms)
+✔ release refuses changed accounts, databases, data mode or unexpected R2 resources (0.768559ms)
+✔ reject invalid settings (1.169437ms)
+✔ published license identities preserve versions and jurisdictions across URL aliases (4.079444ms)
+✔ unknown licenses and ports, ambiguous paths and forged hosts stay unrecognized (0.241167ms)
+✔ preload deduplicates concurrent fetch/decode and only resolves after decode (4.606644ms)
+✔ queue bounds concurrency and prioritizes the active image over queued future images (4.950975ms)
+✔ all 50 files can be verified while retaining only a bounded decoded window (3.583262ms)
+✔ training windows release old compressed bytes without releasing the displayed image early (0.366542ms)
+✔ download/decode/empty/dimension errors fail closed and a retry performs a new fetch (1.095104ms)
+✔ byte and decoded-memory budgets reject oversized assets before play (0.602565ms)
+✔ timeout aborts a stuck operation; disposal rejects queued work and cancels in-flight work (16.052712ms)
+✔ changing the active round cannot resolve a previous image as the current one (1.809096ms)
+✔ countdown uses monotonic elapsed time and never restarts from a wall-clock change (0.332413ms)
+✔ preview gate rejects missing, shared or unverified resources (188.720742ms)
+✔ PvP starts only after both clients are ready, and concurrent/retried readiness cannot extend time (40.745835ms)
+✔ an absent PvP client causes bounded preparation invalidation without a timeout score (4.301043ms)
+✔ stale readiness, failure and next packets cannot change a different round (4.004865ms)
+✔ legacy PvP snapshots retain their already active deadline without a preparation reset (1.905402ms)
+✔ rollback selection is explicit and never changes an already assigned protocol (2.41972ms)
+✔ A: global and position frequencies converge to 1/2 over 120000 draws (1.013625ms)
+✔ B: REAL remains a fair coin after repeated and mixed histories (0.180678ms)
+✔ C: game totals follow Binomial(12,1/2), with natural imbalance and long runs (40.784351ms)
+✔ D: editorial characteristics are comparable across games, not forced inside each game (3769.155777ms)
+✔ E: pre-reduction preserves fair coins even when every sequence can exhaust a class (591.694349ms)
+✔ weighted secondary matching remains active after broadening primary strata (609.802317ms)
+✔ preflight preserves filters, uniqueness and input for every supported game size (70.571005ms)
+✔ all 256 eight-round sequences and extreme twelve-round runs are supported without compensation (48.391986ms)
+✔ warnings and editorial diagnostics cannot disclose the realized label mix (0.918384ms)
+✔ deduplication and contradictory-label exclusions are applied before capacity and coins (0.670849ms)
+✔ small inventories are reduced in advance and never filled using the other class (2.604957ms)
+✔ strata broaden inside the eligible catalog without changing label probabilities (2.414858ms)
+✔ missing metadata remains unknown, without merging unrelated pending hashes (0.658422ms)
+✔ injected seeds reproduce the whole result (7.072934ms)
+✔ four editorial templates retain cognitive constraints and verified-context boundaries (2.812463ms)
+✔ drafts may be incomplete but never invent sources; full manual prompt is preserved (0.744933ms)
+✔ unknown fields, invalid types, sources and incompatible hard mechanisms are rejected (1.005471ms)
+✔ generation dates require actual calendar days and cannot be future at import (0.474915ms)
+✔ manual import requires human checks and complete provenance; Expert stays template-only (1.451712ms)
+ℹ tests 48
+ℹ suites 0
+ℹ pass 48
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9308.784591
+.................................
+----------------------------------------------------------------------
+Ran 33 tests in 0.099s
+
+OK
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

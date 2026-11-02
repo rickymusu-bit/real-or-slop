@@ -1,0 +1,9 @@
+{
+  "src/main.ts": "65c6fc825f8de533fded6573526fb16d28fc141cb5978f64183feca54d78998d",
+  "src/style.css": "a238be6fb0f47c5324a4a5dd7a99d4ccdef7581a4e3308e826bba8a503bf875c",
+  "scripts/check-gallery.mjs": "e79f0429335612fd1dcd294872ce1c461b9683116b117f7a3c83c6729f0785d4",
+  "vite.config.ts": "8d66330322296f201d964137fcdecccc394fc13cde2e492d1b3353f6f7dc7472",
+  "package-lock.json": "0e671ff481dc10f0c41b144eb14fffdf60a12f8730ad4758ab51f1bf97df4890",
+  "public/brand/favicon-16-v1.0.0.png": "050070bd2ea8b86ab8f4539f8086cc7f65fb1ed5c2fbc7d190d88597a219c1b1",
+  "public/brand/favicon-32-v1.0.0.png": "9ab4f7253ff524d0c6b210a132ffde4f6cd366fa077dfd22063e8a076916da66"
+}

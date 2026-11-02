@@ -19,7 +19,7 @@ Il soggetto **non** è più una rana divisa a metà. Sono **due** raganelle sovr
 - Le due rane rimangono individui distinti, non si fondono mai. Il rapporto di dimensioni e i tratti del volto restano coerenti in ogni posa.
 - **Stile render:** semi-fotorealistico raffinato per le illustrazioni principali; geometrico/minimal per l'icona. Atteggiamento curioso, affettuoso, non infantile.
 
-### 2.1 Asset approvati dall'utente (da collocare in `public/brand/`)
+### 2.1 Asset approvati dall'utente (presenti in `public/brand/`)
 
 | Ruolo | File sorgente fornito | Destinazione convenzionale | Formato |
 |---|---|---|---|
@@ -27,13 +27,13 @@ Il soggetto **non** è più una rana divisa a metà. Sono **due** raganelle sovr
 | Copertina | `Rane incantate nella foresta pluviale.png` | `public/brand/hero-real-slop-v1.0.0.png` | PNG RGB 1672×941 (16:9) |
 | Logo / illustrazione stilizzata | `Rane adorabili con ali rosa.png` | `public/brand/logo-real-slop-v1.0.0.png` | PNG RGBA quadrato 1254×1254 |
 
-**Importante:** questi percorsi sono convenzioni di destinazione; l'esistenza dei file va verificata prima di includerli in markup o build. Non usare immagini mancanti, URL temporanei o sostituti. Conservare una copia senza ritagli degli originali. Il PNG stilizzato resta un'**illustrazione raster**, non va dichiarato SVG vettoriale.
+**Stato:** i tre PNG sono versionati dal commit `c16b2a5`; hash, decodifica, dimensioni e trasparenza sono stati verificati direttamente. La build continua a verificare la loro identità prima di attivare il brand. Non usare immagini mancanti, URL temporanei o sostituti. Conservare una copia senza ritagli degli originali. Il PNG stilizzato resta un'**illustrazione raster**, non va dichiarato SVG vettoriale.
 
 ### 2.2 Impieghi consentiti
 
 - **Hero:** immagine forestale 16:9, rana a destra e spazio negativo a sinistra, testo HTML indipendente, non incorporato nell'immagine. Desktop: `object-fit: cover`, punto focale sulla rana; mobile: preferire crop mirato o immagine in blocco separato, mai tagliare gli occhi e le ali.
 - **Mascotte:** PNG trasparente in home, introduzioni, onboarding e stati vuoti. Non introdurre ombre pesanti o sfondi a scacchi.
-- **Logo:** PNG stilizzato nel marchio/header, come app icon di grandi dimensioni. Per vere favicon 16/32 px creare **derivati ottimizzati** e testarli: l'immagine originale ha molti dettagli e potrebbe essere poco leggibile a 16 px. Favicon non implicitamente approvata.
+- **Logo:** PNG stilizzato nel marchio/header, come app icon di grandi dimensioni. Favicon: derivati PNG trasparenti separati a 16/32 px, ispezionati in Chromium su sfondo chiaro/scuro. A 16 px si riconoscono silhouette e colori, non i dettagli del volto; a 32 px la coppia è più leggibile. Gli originali restano integri.
 - **Mai** utilizzare queste immagini come prova di fotografie REAL nel catalogo. Sono asset di branding generati sinteticamente.
 
 ### 2.3 Integrazione della home e fallback sicuro
@@ -41,14 +41,14 @@ Il soggetto **non** è più una rana divisa a metà. Sono **due** raganelle sovr
 La home e il marchio sono integrati in `src/main.ts`. `vite.config.ts` definisce `__ROS_BRAND_READY__` in base alla presenza e **identità SHA-256 esatta** di tutti e tre gli asset in `public/brand/`.
 
 - Tutti e tre i PNG corretti → header con logo stilizzato, hero fotografica con overlay testuale accessibile, mascotte trasparente nella sezione modalità, favicon PNG.
-- Uno o più PNG assenti o modificati → l'originale visualizzazione demo resta visibile, senza richieste 404, evitando di simulare un asset mancante.
-- La hero usa copy HTML indipendente: su desktop il testo sta nella zona scura a sinistra e le rane a destra; su smartphone il contenuto testuale precede l'immagine in un blocco 16:9.
+- Uno o più PNG assenti → visualizzazione demo senza richieste 404. Se tutti e tre sono presenti ma un hash differisce, la build fallisce.
+- La hero usa copy HTML indipendente: su desktop il testo sta nella zona scura a sinistra e le rane a destra; su tablet e smartphone (fino a 960 px) il contenuto testuale precede l'immagine in un blocco 16:9.
 - L'icona del brand è decorativa dentro il link il cui nome accessibile è già `REAL or SLOP, inizio`. Anche la mascotte e la cover hanno `alt=""` quando decorano contenuti esplicativi già presenti.
 - L'attivazione di asset non equivale a inserimento nel catalogo REAL/AI. Le illustrazioni rimangono marcate come branding, e la demo continua a dichiarare le risposte simulate.
 
 La build non obbliga a possedere asset grafici nel checkout, ma con gli asset presenti non tollera sostituzioni silenziose: la loro integrità è verificata.
 
-### 2.3 Derivati e performance
+### 2.4 Derivati e performance
 
 - Pubblicare derivati WebP/AVIF opzionali solo dopo confronto visivo con gli originali; lasciare accessibili i PNG master.
 - Hero responsiva: `srcset` circa 640 / 960 / 1440 / 1672 px, `sizes` esplicito, `decoding="async"`; preload/fetchpriority alto **solo se è davvero LCP**.

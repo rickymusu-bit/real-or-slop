@@ -1,0 +1,73 @@
+Initializing build environment...
+Success: Finished initializing build environment
+Cloning repository...
+Restoring from dependencies cache
+Restoring from build output cache
+Detected the following tools from environment: nodejs@24.22.2, npm@10.9.2
+Installing nodejs 24.22.2
+Success: Dependencies restored from build cache.
+Installing project dependencies: npm clean-install --progress=false
+npm warn deprecated eslint@9.39.1: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+
+added 163 packages in 4s
+
+55 packages are looking for funding
+  run `npm fund` for details
+npm warn install-scripts 3 packages have install scripts not yet covered by allowScripts:
+npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+npm warn install-scripts   esbuild@0.25.12 (postinstall: node install.js)
+npm warn install-scripts   workerd@1.20261019.1 (postinstall: node install.js)
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+Executing user deploy command: npx wrangler preview
+
+ ⛅️ wrangler 4.152.0
+────────────────────
+▲ [WARNING] 🚧 `wrangler preview` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+
+
+[custom build] Running: npm run build
+[custom build] 
+[custom build] > real-or-slop@0.10.0 build
+[custom build] > tsc --noEmit && tsc -p tsconfig.worker.json --noEmit && vite build && node scripts/check-assets.mjs
+[custom build] 
+[custom build] 
+[custom build] vite v8.3.5 building client environment for production...
+[custom build] 
+[custom build] transforming...
+[custom build] 
+[custom build] ✓ 15 modules transformed.
+[custom build] 
+[custom build] rendering chunks...
+[custom build] 
+[custom build] computing gzip size...
+[custom build] 
+[custom build] dist/index.html                  0.52 kB │ gzip:  0.34 kB
+[custom build] dist/assets/index-ByuKq82i.css  16.74 kB │ gzip:  4.77 kB
+[custom build] dist/assets/index-eph1fLox.js   61.20 kB │ gzip: 20.10 kB
+[custom build] 
+[custom build] 
+[custom build] ✓ built in 131ms
+[custom build] 
+[custom build] Asset verificati: ./dist/index.html e 2 risorse locali.
+[custom build] 
+
+✘ [ERROR] A request to the Cloudflare API (/accounts/89bb1f60467dcfd2147871748f0f9645/workers/workers/real-or-slop/previews/design%2Fbotanical-elegance-v1) failed.
+
+  Authentication error [code: 10000]
+
+
+📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
+Please ensure it has the correct permissions for this operation.
+
+Getting User settings...
+
+✘ [ERROR] A request to the Cloudflare API (/accounts) failed.
+
+  Invalid access token [code: 9109]
+  
+  If you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose
+
+
+🪵  Logs were written to "/opt/buildhome/.config/.wrangler/logs/wrangler-2026-11-02_08-00-24_436.log"
+Failed: error occurred while running deploy command

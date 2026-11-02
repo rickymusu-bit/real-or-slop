@@ -1,0 +1,41 @@
+[
+  {
+    "file": "public/brand/hero-real-slop-v1.0.0.png",
+    "sha256": "6beafa77b26979c34551f41a3d2b61b97de4ac87329853ee4bd8c31e612841ca",
+    "format": "PNG",
+    "size": [
+      1672,
+      941
+    ],
+    "mode": "RGB",
+    "alpha_extrema": null
+  },
+  {
+    "file": "public/brand/mascot-real-slop-v1.0.0.png",
+    "sha256": "a19d5bf150f220d1afee2c2802d450c118d0b786d905cd29f22f74d643cf5ba4",
+    "format": "PNG",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ]
+  },
+  {
+    "file": "public/brand/logo-real-slop-v1.0.0.png",
+    "sha256": "8d92cdca9afd251e64f330e7a307025fe0c51e5fa748ad63c41cd261cdef7a8b",
+    "format": "PNG",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ]
+  }
+]

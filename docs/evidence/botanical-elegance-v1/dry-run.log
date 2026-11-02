@@ -1,0 +1,53 @@
+
+> real-or-slop@0.10.0 dry-run
+> wrangler deploy --dry-run --outdir .wrangler/dry-run
+
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+
+ ⛅️ wrangler 4.152.0 (update available 4.156.1)
+───────────────────────────────────────────────
+▲ [WARNING] Multiple environments are defined in the Wrangler configuration file, but no target environment was specified for the deploy command.
+
+  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify the target environment using the `-e|--env` flag or CLOUDFLARE_ENV env variable.
+  If your intention is to use the top-level environment of your configuration simply pass an empty string to the flag to target such environment. For example `--env=""`.
+
+
+[custom build] Running: npm run build
+[custom build] 
+[custom build] > real-or-slop@0.10.0 build
+[custom build] > tsc --noEmit && tsc -p tsconfig.worker.json --noEmit && vite build && node scripts/check-assets.mjs
+[custom build] 
+[custom build] 
+[custom build] vite v8.3.5 building client environment for production...
+[custom build] 
+[custom build] transforming...
+[custom build] 
+[custom build] ✓ 15 modules transformed.
+[custom build] 
+[custom build] rendering chunks...
+[custom build] 
+[custom build] computing gzip size...
+[custom build] 
+[custom build] dist/index.html                  0.52 kB │ gzip:  0.34 kB
+[custom build] dist/assets/index-DVzLnWZs.css  16.55 kB │ gzip:  4.73 kB
+[custom build] dist/assets/index-DbCtiJ7h.js   61.24 kB │ gzip: 20.13 kB
+[custom build] 
+[custom build] 
+[custom build] ✓ built in 110ms
+[custom build] 
+[custom build] Asset verificati: ./dist/index.html e 2 risorse locali.
+[custom build] 
+✨ Read 18 files from the assets directory /workspace/real-or-slop/dist
+Total Upload: 123.64 KiB / gzip: 28.35 KiB
+Your Worker has access to the following bindings:
+Binding                                       Resource                  
+env.ROOMS (GameRoom)                          Durable Object            
+env.DB (real-or-slop-local)                   D1 Database               
+env.QUARANTINE (real-or-slop-quarantine)      R2 Bucket                 
+env.IMAGES (real-or-slop-approved)            R2 Bucket                 
+env.ASSETS                                    Assets                    
+env.DATA_MODE ("demo")                        Environment Variable      
+
+--dry-run: exiting now.

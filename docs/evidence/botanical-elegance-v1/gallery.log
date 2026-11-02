@@ -1,0 +1,5 @@
+
+> real-or-slop@0.10.0 test:gallery
+> node scripts/check-gallery.mjs
+
+Digital Gallery passed: real solo/timed/PvP, 360/390/768/1440 layouts, intact images, symmetric named actions, AX tree, keyboard zoom/answer/focus, reduced motion, local fonts, delayed preparation, corrupt-image retry, active-timer preservation, invalidation and no external requests. Screenshots: artifacts/gallery/.

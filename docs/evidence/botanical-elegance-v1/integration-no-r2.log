@@ -1,0 +1,8 @@
+Sampling integration passed: difficulty/category/environment/approval filters, real D1 assignments, near duplicates, preflight capacity, legacy assignments, opaque warnings, Training/Timed/PvP, shared images and deadlines.
+Game integration passed: no leaks, ownership, independent assignments, refresh, concurrent replay, summary.
+Server expiry passed: late answer rejected, session ends at server deadline.
+Preloading integration passed: private neutral manifests, training window/ready, no early timestamp/answer, full preparation, concurrent idempotent start, unchanged expiry, TTL invalidation, error audit, cancel/answer race and legacy timer.
+PvP passed: two WebSocket clients, common image/deadline, no early reveal, duplicate/stale rejection, reconnect, alarm timeout and D1 scores.
+Runtime no-R2 verified: both storage bindings absent.
+Navigation/assets HTTP checks passed.
+All isolated local integration checks passed.

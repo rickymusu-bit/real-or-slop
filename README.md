@@ -2,7 +2,7 @@
 
 Gioco per distinguere immagini autentiche documentate da immagini create con IA dal proprietario. La demo usa esclusivamente illustrazioni geometriche originali con **etichette simulate**: non è un archivio verificato.
 
-**Identità visiva:** [Botanical Elegance v1.0.0](docs/identita-visiva-botanical-elegance-v1.0.0.md) (verde REAL, gradiente fucsia–rosa SLOP, due raganelle). Le immagini approvate sono inventariate in [`public/brand/README.md`](public/brand/README.md). Header, hero e mascotte sono già predisposti in `src/main.ts`: la build Vite li attiva automaticamente **solo dopo** che tutti e tre i file originali PNG sono presenti in `public/brand/` e superano i checksum SHA-256, altrimenti la homepage conserva le illustrazioni della demo senza asset mancanti. La documentazione precedente del tema Digital Gallery resta storica per la palette.
+**Identità visiva:** [Botanical Elegance v1.0.0](docs/identita-visiva-botanical-elegance-v1.0.0.md) (verde REAL, gradiente fucsia–rosa SLOP, due raganelle). Le immagini approvate sono inventariate in [`public/brand/README.md`](public/brand/README.md). I tre master PNG sono presenti e versionati. Header, hero e mascotte sono integrati in `src/main.ts`: la build Vite li attiva automaticamente quando tutti e tre i file originali PNG sono presenti in `public/brand/` e superano i checksum SHA-256, altrimenti la homepage conserva le illustrazioni della demo senza asset mancanti. La documentazione precedente del tema Digital Gallery resta storica per la palette.
 
 Node 24 (`.nvmrc`), Python 3.12 per pipeline e test schema. TypeScript, Vite, Worker Static Assets/API, D1 locale; adapter R2 pronto, nessuna risorsa remota richiesta.
 

@@ -1,0 +1,1410 @@
+{
+  "brandMeasurements": [
+    {
+      "branded": true,
+      "fallback": false,
+      "images": [
+        {
+          "src": "/brand/logo-real-slop-v1.0.0.png",
+          "naturalWidth": 1254,
+          "naturalHeight": 1254
+        },
+        {
+          "src": "/brand/hero-real-slop-v1.0.0.png",
+          "naturalWidth": 1672,
+          "naturalHeight": 941
+        },
+        {
+          "src": "/brand/mascot-real-slop-v1.0.0.png",
+          "naturalWidth": 1254,
+          "naturalHeight": 1254
+        }
+      ],
+      "copy": {
+        "x": 136,
+        "y": 174.390625,
+        "width": 520,
+        "height": 559.21875,
+        "bottom": 733.609375
+      },
+      "photo": {
+        "x": 72,
+        "y": 88,
+        "width": 1281,
+        "height": 732,
+        "bottom": 820
+      },
+      "fit": "cover",
+      "favicon": "/brand/favicon-16-v1.0.0.png",
+      "viewport": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "branded": true,
+      "fallback": false,
+      "images": [
+        {
+          "src": "/brand/logo-real-slop-v1.0.0.png",
+          "naturalWidth": 1254,
+          "naturalHeight": 1254
+        },
+        {
+          "src": "/brand/hero-real-slop-v1.0.0.png",
+          "naturalWidth": 1672,
+          "naturalHeight": 941
+        },
+        {
+          "src": "/brand/mascot-real-slop-v1.0.0.png",
+          "naturalWidth": 1254,
+          "naturalHeight": 1254
+        }
+      ],
+      "copy": {
+        "x": 38.390625,
+        "y": 124,
+        "width": 676.21875,
+        "height": 428.71875,
+        "bottom": 552.71875
+      },
+      "photo": {
+        "x": 38.390625,
+        "y": 574.71875,
+        "width": 676.21875,
+        "height": 380.359375,
+        "bottom": 955.078125
+      },
+      "fit": "cover",
+      "favicon": "/brand/favicon-16-v1.0.0.png",
+      "viewport": [
+        768,
+        1024
+      ]
+    },
+    {
+      "branded": true,
+      "fallback": false,
+      "images": [
+        {
+          "src": "/brand/logo-real-slop-v1.0.0.png",
+          "naturalWidth": 1254,
+          "naturalHeight": 1254
+        },
+        {
+          "src": "/brand/hero-real-slop-v1.0.0.png",
+          "naturalWidth": 1672,
+          "naturalHeight": 941
+        },
+        {
+          "src": "/brand/mascot-real-slop-v1.0.0.png",
+          "naturalWidth": 1254,
+          "naturalHeight": 1254
+        }
+      ],
+      "copy": {
+        "x": 20,
+        "y": 146,
+        "width": 350,
+        "height": 450.140625,
+        "bottom": 596.140625
+      },
+      "photo": {
+        "x": 20,
+        "y": 618.140625,
+        "width": 350,
+        "height": 196.875,
+        "bottom": 815.015625
+      },
+      "fit": "cover",
+      "favicon": "/brand/favicon-16-v1.0.0.png",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "branded": true,
+      "fallback": false,
+      "images": [
+        {
+          "src": "/brand/logo-real-slop-v1.0.0.png",
+          "naturalWidth": 1254,
+          "naturalHeight": 1254
+        },
+        {
+          "src": "/brand/hero-real-slop-v1.0.0.png",
+          "naturalWidth": 1672,
+          "naturalHeight": 941
+        },
+        {
+          "src": "/brand/mascot-real-slop-v1.0.0.png",
+          "naturalWidth": 1254,
+          "naturalHeight": 1254
+        }
+      ],
+      "copy": {
+        "x": 20,
+        "y": 146,
+        "width": 320,
+        "height": 450.140625,
+        "bottom": 596.140625
+      },
+      "photo": {
+        "x": 20,
+        "y": 618.140625,
+        "width": 320,
+        "height": 180,
+        "bottom": 798.140625
+      },
+      "fit": "cover",
+      "favicon": "/brand/favicon-16-v1.0.0.png",
+      "viewport": [
+        360,
+        640
+      ]
+    }
+  ],
+  "zoomViewport": {
+    "width": 720,
+    "height": 456,
+    "dpr": 2
+  },
+  "favicon": {
+    "links": [
+      {
+        "href": "http://127.0.0.1:8789/brand/favicon-16-v1.0.0.png",
+        "sizes": "16x16"
+      },
+      {
+        "href": "http://127.0.0.1:8789/brand/favicon-32-v1.0.0.png",
+        "sizes": "32x32"
+      }
+    ],
+    "samples": [
+      {
+        "size": 16,
+        "href": "http://127.0.0.1:8789/brand/favicon-16-v1.0.0.png",
+        "status": 200
+      },
+      {
+        "size": 32,
+        "href": "http://127.0.0.1:8789/brand/favicon-32-v1.0.0.png",
+        "status": 200
+      }
+    ]
+  },
+  "responses": [
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 200,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 200,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/hero-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/mascot-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/favicon-32-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/hero-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/mascot-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/hero-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/mascot-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/hero-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/mascot-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 200,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 200,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 200,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 200,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 200,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 200,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 200,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 200,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 304,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 304,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/hero-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/mascot-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 200,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 200,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/hero-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/mascot-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DVzLnWZs.css",
+      "status": 200,
+      "mimeType": "text/css"
+    },
+    {
+      "url": "http://127.0.0.1:8789/assets/index-DbCtiJ7h.js",
+      "status": 200,
+      "mimeType": "text/javascript"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/logo-real-slop-v1.0.0.png",
+      "status": 304,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/hero-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/mascot-real-slop-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-400-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/space-grotesk-latin-700-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/fonts/inter-latin-600-normal.woff2",
+      "status": 200,
+      "mimeType": "font/woff2"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/favicon-16-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/favicon-16-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/favicon-32-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    },
+    {
+      "url": "http://127.0.0.1:8789/brand/favicon-32-v1.0.0.png",
+      "status": 200,
+      "mimeType": "image/png"
+    }
+  ],
+  "consoleErrors": []
+}

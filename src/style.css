@@ -331,13 +331,6 @@ dialog button { margin-bottom: 12px; }
 .modes-aside p { margin: 0; }
 .ros-mode-mascot { display: block; width: clamp(88px, 11vw, 156px); height: auto; object-fit: contain; }
 @media (max-width: 960px) {
-  .hero-branded { min-height: 460px; }
-  .hero-brand-photo img { object-position: 63% center; }
-  .hero-brand-photo::after { background: linear-gradient(90deg, #0F1115F5 0%, #0F1115DA 37%, #0F111550 65%, transparent 100%); }
-}
-@media (max-width: 700px) {
-  .brand { gap: 8px; }
-  .brand-labels { column-gap: 7px; }
   .hero-branded {
     display: flex;
     flex-direction: column;
@@ -351,6 +344,10 @@ dialog button { margin-bottom: 12px; }
   .hero-brand-photo { position: relative; inset: auto; z-index: 0; aspect-ratio: 16 / 9; overflow: hidden; }
   .hero-brand-photo img { height: 100%; object-position: 72% center; }
   .hero-brand-photo::after { display: none; }
+}
+@media (max-width: 700px) {
+  .brand { gap: 8px; }
+  .brand-labels { column-gap: 7px; }
   .modes-aside { flex-direction: column; align-items: flex-start; }
   .ros-mode-mascot { width: 120px; }
 }

@@ -1,0 +1,5 @@
+
+> real-or-slop@0.10.0 deploy:check
+> node scripts/deploy-demo.mjs --check
+
+Demo: real-or-slop; D1 esistente: real-or-slop-local (98a3e712-d9f9-4510-91ab-2b80329be753); QUARANTINE: real-or-slop-quarantine; IMAGES: real-or-slop-approved.

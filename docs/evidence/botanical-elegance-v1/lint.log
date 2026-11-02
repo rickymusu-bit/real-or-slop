@@ -1,0 +1,4 @@
+
+> real-or-slop@0.10.0 lint
+> eslint src worker shared tests scripts/deploy-demo.mjs scripts/deployment-config.mjs scripts/benchmark-sampling.mjs scripts/check-gallery.mjs scripts/benchmark-preloading.mjs
+

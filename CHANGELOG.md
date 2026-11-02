@@ -1,8 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Favicon PNG trasparenti dedicate a 16/32 px, derivate dal logo originale e ispezionate in Chromium; riferimenti con `sizes` esplicito e master preservato.
+- Corretto il crop della hero a 768 px: anche il tablet mostra la copertina 16:9 separata dal testo, preservando occhi e ali. Estesi i controlli browser a caricamento del brand, screenshot completi, favicon e reflow equivalente allo zoom 200%.
 - Adottata palette Botanical Elegance con verde naturale REAL e gradiente fucsia–rosa SLOP; aggiornati token e classi CSS per header, CTA, scelta REAL/SLOP, badge, card, feedback e media del brand.
-- Pubblicate linee guida visive v1.0.0 e convenzioni con SHA-256 per le tre illustrazioni di rane approvate. File PNG binari non ancora importati: nessun riferimento a risorse mancanti nel frontend.
+- Pubblicate linee guida visive v1.0.0 e convenzioni con SHA-256 per le tre illustrazioni di rane approvate. Tre master PNG importati e verificati direttamente con SHA-256, decodifica, dimensioni RGB/RGBA e trasparenza; attivazione effettiva del brand verificata in Chromium.
 - Versionati i binding R2 QUARANTINE/IMAGES confermati dal proprietario e aggiornata la guardia di deploy:demo, mantenendo Worker, D1 e modalità demo esistenti. Nessun provisioning automatico.
 - Flusso diretto file locali → D1/R2 senza Google Drive, con anteprima, originali privati immutabili su R2, import ripetibile e ripresa degli upload. Spiegazioni modificabili nella revisione sia per REAL sia per AI.
 - Aggiunto supporto alle sei famiglie CC BY/BY-SA/BY-NC/BY-ND/BY-NC-SA/BY-NC-ND 2.0, 3.0 e 4.0, incluse le varianti pubblicate, per il sito non commerciale e senza adattamenti. Elenco condiviso pipeline/Worker, versione e giurisdizione conservate; conferme umane obbligatorie.

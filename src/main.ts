@@ -44,12 +44,15 @@ const links = [
 export const content = () => document.querySelector<HTMLElement>("#content")!;
 function shell() {
   if (__ROS_BRAND_READY__ && !document.querySelector('link[data-ros-favicon]')) {
-    const icon = document.createElement("link");
-    icon.rel = "icon";
-    icon.type = "image/png";
-    icon.href = "/brand/logo-real-slop-v1.0.0.png";
-    icon.dataset.rosFavicon = "true";
-    document.head.append(icon);
+    for (const size of [16, 32]) {
+      const icon = document.createElement("link");
+      icon.rel = "icon";
+      icon.type = "image/png";
+      icon.sizes = `${size}x${size}`;
+      icon.href = `/brand/favicon-${size}-v1.0.0.png`;
+      icon.dataset.rosFavicon = "true";
+      document.head.append(icon);
+    }
   }
   root.innerHTML = `<a class="skip-link" href="#content">Salta al contenuto</a><header><a class="brand" href="/" aria-label="REAL or SLOP, inizio">${brandIcon}<span class="brand-labels"><span class="brand-real">REAL</span><span class="brand-or">or</span><span class="brand-slop">SLOP</span></span></a><nav aria-label="Principale">${links.map(([url, label]) => `<a href="${url}" ${location.pathname === url ? 'aria-current="page"' : ""}>${label}</a>`).join("")}<a href="/informazioni" class="nav-info" aria-label="Informazioni">?</a></nav></header><main id="content" tabindex="-1"></main><footer><span>Guarda meglio. Metti tutto in dubbio.</span><div><a href="/informazioni">Come funziona & privacy</a><a href="/crediti">Fonti e crediti</a><span class="demo-dot">Demo sintetica</span></div></footer>`;
 }
