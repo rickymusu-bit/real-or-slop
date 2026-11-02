@@ -1,6 +1,7 @@
 ---
 version: 1.0.0
 created_at: 2026-11-02T18:51:11.607127Z
+updated_at: 2026-11-02T20:27:28.550800+01:00
 status: configured-not-activated
 ---
 
@@ -38,10 +39,18 @@ ricopiarla nei secret. Solo se si crea una nuova chiave, aggiornare il secret
 aggiornare separatamente l'environment Codex. Mai chiavi in chat, repository,
 frontend, log o artifact. Nessun nuovo token amministrativo è richiesto.
 
-Per i futuri caricamenti Batch abilitare inoltre Files Read/Write
-(`api.files.read`, `api.files.write`) e Batch Read/Write (`api.batch.read`,
-`api.batch.write`). Possono essere sulla stessa chiave o su una chiave dedicata
-all'esecutore Batch. Questi quattro permessi non servono alla prova diretta.
+Per i futuri caricamenti, nel selettore Batch basta scegliere **Write**:
+comprende già Batch Read, Files Read/Write, lettura modelli e Model Capabilities
+Request, anche per Responses e Images. Non si selezionano Read e Write come
+caselle indipendenti. Le impostazioni dipendenti possono risultare non modificabili
+perché l'accesso è già incluso. Batch Read, da solo, comprende Files Read e non
+consente di creare job. Questo comportamento è documentato nelle
+[implicazioni dei permessi Batch](https://developers.openai.com/api/docs/guides/rbac#batch-permission-implications).
+
+Una chiave dedicata alle prove dirette può invece limitarsi a lettura modelli,
+Responses e Images, senza Batch Write. Abilitare Batch Write sulla stessa chiave
+non cambia il metodo di esecuzione: la prova resta diretta perché il workflow
+chiama gli endpoint sincroni e non crea job Batch.
 
 ## Esecuzione diretta preparata
 
