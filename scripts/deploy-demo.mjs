@@ -1,9 +1,9 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { parse } from "jsonc-parser";
-import { validateDemoConfig } from "./deployment-config.mjs";
+import { parseAppliedMigrations, releaseDemo, validateDemoConfig } from "./deployment-config.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const errors = [];
@@ -23,7 +23,7 @@ if ([...flags].some((flag) => !["--check", "--dry-run"].includes(flag))) {
 console.log(
   `Demo: ${config.name}; D1 esistente: ${db.database_name} (${db.database_id}); QUARANTINE: ${buckets.QUARANTINE}; IMAGES: ${buckets.IMAGES}.`,
 );
-function wrangler(args) {
+function wrangler(args, capture = false) {
   const result = spawnSync(
     process.execPath,
     [
@@ -37,11 +37,16 @@ function wrangler(args) {
     {
       cwd: root,
       env: process.env,
-      stdio: "inherit",
+      stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit",
+      encoding: "utf8",
     },
   );
   if (result.error) throw result.error;
-  if (result.status !== 0) process.exit(result.status ?? 1);
+  if (result.status !== 0) {
+    if (capture) throw new Error("Verifica delle migrazioni D1 non riuscita: controllare accesso e configurazione; rilascio interrotto.");
+    process.exit(result.status ?? 1);
+  }
+  return result.stdout;
 }
 if (!flags.has("--check")) {
   if (flags.has("--dry-run")) {
@@ -54,13 +59,15 @@ if (!flags.has("--check")) {
       "--no-experimental-provision",
     ]);
   } else {
-    if (process.env.EDITORIAL_SCHEMA_RELEASE_APPROVED !== "true") {
-      throw new Error("La migrazione editoriale 0007/0008 richiede preflight, backup e rilascio coordinato approvato: impostare EDITORIAL_SCHEMA_RELEASE_APPROVED=true soltanto per quel rilascio.");
-    }
-    // Separate from the build: approved coordinated migrations + synthetic demo data.
-    // No billing, bucket creation, or resource provisioning is performed here.
-    wrangler(["d1", "migrations", "apply", "DB", "--remote"]);
-    wrangler(["d1", "execute", "DB", "--remote", "--file", "scripts/seed.sql"]);
-    wrangler(["deploy", "--no-experimental-provision"]);
+    const result = releaseDemo({
+      files: readdirSync(resolve(root, "migrations")).filter((name) => name.endsWith(".sql")),
+      readApplied: () => parseAppliedMigrations(wrangler([
+        "d1", "execute", "DB", "--remote", "--command",
+        "SELECT name FROM d1_migrations ORDER BY id", "--json",
+      ], true)),
+      run: wrangler,
+      approved: process.env.EDITORIAL_SCHEMA_RELEASE_APPROVED === "true",
+    });
+    if (!result.migrationsApplied.length) console.log("Schema già aggiornato: nessuna migrazione o seed remoto eseguito.");
   }
 }

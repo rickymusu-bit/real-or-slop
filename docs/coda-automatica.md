@@ -76,7 +76,11 @@ con colonna rimossa. Sessioni, risposte e audit sono preservati.
 Questa PR non applica migrazioni remote, non modifica permessi/billing e non
 effettua deploy. Il comando di rilascio esistente richiede l'ulteriore flag
 d'ambiente `EDITORIAL_SCHEMA_RELEASE_APPROVED=true` dopo i controlli e l'approvazione
-del rilascio, per evitare un'applicazione implicita della migrazione incompatibile.
+del rilascio, soltanto se il controllo in sola lettura trova nuove migrazioni.
+A schema già aggiornato non occorre il flag: il deploy non modifica D1, non
+esegue seed e conserva variabili e segreti del Worker. Se D1 non è leggibile o
+il database risulta più avanti del checkout, il comando si ferma prima di
+qualsiasi pubblicazione. Il flag non va lasciato permanentemente attivo.
 Un database nuovo richiede il seed demo e la sua pubblicazione esplicita; nessun
 nuovo catalogo viene pubblicato dallo script di deploy per completare una quota.
 
@@ -108,7 +112,7 @@ pagate: sostituirle con stime conservative verificate per modello e parametri.
 | `ENABLE_EDITORIAL_PAID` | Python + Worker / Actions vars | Abilitazione esplicita, default assente/false |
 | `ENABLE_AUTOMATIC_REVIEW_QUEUE` | Actions vars | Abilitazione del workflow, default assente |
 | `ENABLE_EDITORIAL_SCHEDULE` | Actions vars | Abilitazione esplicita del cron dormiente, default assente/false |
-| `EDITORIAL_SCHEMA_RELEASE_APPROVED` | Solo futuro esecutore di rilascio | Conferma del preflight schema e del rilascio autorizzato |
+| `EDITORIAL_SCHEMA_RELEASE_APPROVED` | Solo esecutore di un rilascio con migrazioni nuove | Conferma temporanea del preflight/backup; non necessaria per normali deploy a schema aggiornato |
 
 Il limite D1 della coda è indipendente dal client: leggere/modificare con API
 admin `/api/admin/editorial/controls`, corpo `{"queue_limit":100}`. Vale anche per

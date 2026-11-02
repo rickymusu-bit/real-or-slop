@@ -315,7 +315,9 @@ applicare le migrazioni approvate e rilasciare il backend compatibile in un
 intervento coordinato. Le partite persistite sono preservate. Ripristino dati
 separato dal rollback del codice; non cancellare registri per riutilizzare sorgenti.
 Il comando di deploy esistente richiede ora `EDITORIAL_SCHEMA_RELEASE_APPROVED=true`
-per il futuro rilascio con migrazioni, dopo preflight/backup e autorizzazione.
+solo per un rilascio con migrazioni nuove, dopo preflight/backup e autorizzazione.
+Quando tutte le migrazioni risultano già applicate, il comando pubblica senza
+scrivere nel database o ripetere il seed, conservando le variabili del Worker.
 Questo lavoro non esegue alcuna di queste operazioni remote.
 
 Monitorare run ID, ledger giornaliero, summary, numero di rigetti, errori HTTP,

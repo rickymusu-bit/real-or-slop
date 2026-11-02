@@ -1,3 +1,11 @@
+## 0.11.1 — 2026-11-02T09:43:07+01:00
+
+- Workers Builds può pubblicare quando tutte le migrazioni D1 risultano già
+  applicate, senza ripetere migrazioni/seed né richiedere una deroga permanente.
+- Nuove migrazioni richiedono ancora preflight, backup e approvazione; cronologia
+  D1 non disponibile/incoerente o migrazione incompleta interrompono il rilascio.
+- I deploy conservano le variabili del Worker, inclusi interruttori e budget.
+
 ## 0.11.0 — 2026-11-01T22:00:00Z (non attivata)
 
 - Classifica visiva unica REAL/SLOP, reinterpretazione testuale con generatore libero,

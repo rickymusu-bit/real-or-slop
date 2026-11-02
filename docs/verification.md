@@ -1,5 +1,23 @@
 # Verifiche effettive
 
+## Ripresa Workers Builds — 0.11.1
+
+`updated_at: 2026-11-02T09:43:07+01:00`, rapporto `1.0.0`.
+
+- Individuato il fallimento automatico di main alla guardia globale
+  `EDITORIAL_SCHEMA_RELEASE_APPROVED`: il deploy manuale 0.11.0 è rimasto online.
+- Correzione limitata al comando di rilascio: lettura della cronologia D1 prima
+  di qualsiasi scrittura. Schema corrente: solo deploy, niente seed o migrazioni;
+  nuove migrazioni: approvazione obbligatoria e ricontrollo del completamento.
+- Cronologia sconosciuta, incoerente, checkout meno recente del DB o lettura
+  fallita interrompono il comando. Variabili e segreti del Worker conservati.
+- Aggiunti sei test sui percorsi di rilascio e sul parsing delle risposte D1;
+  lint, test e build locali superati. Sonda sul D1 reale soltanto in lettura:
+  otto migrazioni applicate, zero pendenti, piano simulato con solo deploy.
+- Nessuna modifica al codice del Worker, al frontend, alle immagini, al
+  campionamento o alle migrazioni. Generazione e cron mantengono i propri gate;
+  nessuna inferenza o generazione OpenAI usata per queste verifiche.
+
 ## Pipeline editoriale — 0.11.0
 
 Versione del rapporto **1.0.0**, `updated_at: 2026-11-01T22:15:00Z`.
