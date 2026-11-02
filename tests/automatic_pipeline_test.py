@@ -58,3 +58,16 @@ class AutomaticPipelineTest(unittest.TestCase):
             self.assertEqual(len(rows),20)
             self.assertEqual(sorted(Counter(tuple(row['metadata']['categories']) for row in rows).values()),[4]*5)
             self.assertEqual(queries.call_count,10)
+        with tempfile.TemporaryDirectory() as tmp,patch.object(automatic.PROVIDERS['commons'],'search',side_effect=search),patch('pipeline.run.download',side_effect=download):
+            manifest=automatic.collect(Path(tmp),date(2026,11,2),limit=2)
+            self.assertEqual(len(json.loads(manifest.read_text())),2)
+            self.assertEqual(json.loads((Path(tmp)/'collection.json').read_text())['limit'],2)
+
+    def test_bounded_first_run_enforces_requested_limit_and_rejects_invalid_sizes(self):
+        day=date(2026,11,2)
+        self.assertEqual(automatic.plan(day,2)['limit'],2)
+        for limit in (0,21,True,2.5,'2'):
+            with self.assertRaises(ValueError):automatic.plan(day,limit)
+        with patch('pipeline.automatic.collect') as collect,contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(automatic.main(['--collect','--limit','2']),0)
+            self.assertEqual(collect.call_args.args[2],2)

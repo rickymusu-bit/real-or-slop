@@ -52,6 +52,7 @@ python3 -m pipeline.automatic --collect --out .pipeline/automatic
 ```
 
 Il primo è un piano senza rete; il secondo scarica originali e derivati locali.
+Per una prima raccolta di due fotografie usare `--collect --limit 2`.
 Conservare la cartella, inclusa `collection.sqlite`, fra giornate diverse.
 Ripetere il download può consumare quote delle fonti anche senza costi OpenAI.
 La raccolta non approva né importa nel Worker.
@@ -169,3 +170,32 @@ Le credenziali di Codex Cloud non sono trasferite automaticamente. Nessuna
 variabile, secret, fatturazione o schedule remota è stata attivata da questa PR.
 L'eventuale automazione quotidiana richiede `ENABLE_EDITORIAL_SCHEDULE=true`
 oltre a tutte le altre abilitazioni; nessuna variabile viene impostata qui.
+
+## Avvio dal pannello GitHub e visione delle immagini
+
+Nel workflow **Automatic private review queue**, scegliere **Run workflow**,
+branch `main`, `reference_count=2`. La modalità da due fotografie forza un solo
+tentativo generativo, massimo una generazione e quattro chiamate visive
+(due valutazioni REAL, una descrizione/brief, una valutazione del risultato).
+Può produrre meno candidate o nessuna, secondo qualità e disponibilità.
+La selezione `20` mantiene il normale limite giornaliero. Gli avvii schedulati
+mantengono 20; questo controllo non attiva da solo il cron.
+
+Per la sola ricerca basta `ENABLE_AUTOMATIC_REVIEW_QUEUE=true`, lasciando
+`execute_paid` non selezionato e gli altri due interruttori false. Le fotografie
+restano nell'artifact privato del run; la semplice raccolta non importa nella
+coda del sito. L'artifact comprende originali, derivati e metadati e scade dopo
+sette giorni.
+
+Per valutazione/generazione/importazione occorrono le abilitazioni e i budget
+positivi nei due ambienti, il secret admin valido e la licenza generata dichiarata
+nella tabella precedente. Solo allora selezionare `execute_paid`. La prima prova
+manuale non richiede `ENABLE_EDITORIAL_SCHEDULE=true`.
+
+Le candidate importate sono su https://real-or-slop.rickymusu.workers.dev/admin,
+filtro **In revisione**. In https://real-or-slop.rickymusu.workers.dev/admin/slop
+premere **Carica dossier automatici e diagnostica** per fonte, sorgente privata,
+brief, prompt, modelli, valutazioni e tentativi. I file generati scartati prima
+dell'importazione restano nell'artifact privato del workflow; il dossier conserva
+la motivazione anche quando non esiste una candidata collegata. L'approvazione
+umana e la pubblicazione bilanciata restano due azioni esplicite separate.

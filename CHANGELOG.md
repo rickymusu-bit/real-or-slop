@@ -1,3 +1,11 @@
+## 0.11.2 — 2026-11-02T13:34:37+01:00
+
+- Avvio manuale del workflow con scelta esplicita di 2 o 20 fotografie; default
+  controllato da due riferimenti, massimo una generazione e quattro analisi visive.
+- Raccolta CLI con `--limit` 1–20, mantenendo il lotto quotidiano normale a 20.
+- Indicazioni operative per la prima attivazione e per vedere candidate/dossier
+  nel sito e file scartati negli artifact privati. Nessuna attivazione a pagamento.
+
 ## 0.11.1 — 2026-11-02T09:43:07+01:00
 
 - Workers Builds può pubblicare quando tutte le migrazioni D1 risultano già
