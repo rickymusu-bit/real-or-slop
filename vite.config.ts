@@ -15,11 +15,19 @@ const brandAssets = [
   ["mascot-real-slop-v1.0.0.png", "a19d5bf150f220d1afee2c2802d450c118d0b786d905cd29f22f74d643cf5ba4"],
   ["logo-real-slop-v1.0.0.png", "8d92cdca9afd251e64f330e7a307025fe0c51e5fa748ad63c41cd261cdef7a8b"],
 ] as const;
-const ready = brandAssets.every(([filename, expectedHash]) => {
+const statuses = brandAssets.map(([filename, expectedHash]) => {
   const path = join(brandDirectory, filename);
-  return existsSync(path) &&
-    createHash("sha256").update(readFileSync(path)).digest("hex") === expectedHash;
+  if (!existsSync(path)) return { filename, present: false, valid: false };
+  const actualHash = createHash("sha256").update(readFileSync(path)).digest("hex");
+  return { filename, present: true, valid: actualHash === expectedHash };
 });
+const ready = statuses.every((asset) => asset.valid);
+if (statuses.every((asset) => asset.present) && !ready) {
+  throw new Error("Gli asset del brand non corrispondono agli SHA-256 approvati.");
+}
+if (statuses.some((asset) => asset.present) && !ready) {
+  console.warn("Asset del brand incompleti: mantenuta la home demo fino al caricamento dei tre PNG.");
+}
 
 export default defineConfig({
   define: {
