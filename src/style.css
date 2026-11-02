@@ -81,13 +81,19 @@ header {
   border-bottom: 1px solid var(--hairline);
 }
 .brand {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 10px;
+  text-align: center;
+  font: 700 27px/1 "Space Grotesk", Arial, sans-serif;
+  letter-spacing: -1px;
+}
+.brand-labels {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: baseline;
-  text-align: center;
   column-gap: 9px;
-  font: 700 27px/1 "Space Grotesk", Arial, sans-serif;
-  letter-spacing: -1px;
 }
 .brand-real { color: var(--real); }
 .brand-slop { color: var(--slop-soft); background: var(--slop-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
@@ -284,6 +290,70 @@ dialog button { margin-bottom: 12px; }
 #preload-progress { font-variant-numeric: tabular-nums; }
 .load-actions { padding-bottom: 40px; }
 .media-loading { padding: 28px; margin: 18px 0; background: var(--surface); color: var(--muted); min-height: 120px; }
+
+
+/* Hero fotografica: le due rane restano a destra e il testo rimane HTML.
+   Il markup viene attivato in build solo con i tre PNG approvati. */
+.hero-branded {
+  isolation: isolate;
+  position: relative;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: clamp(470px, 46vw, 620px);
+  padding: clamp(48px, 6vw, 88px) clamp(22px, 5vw, 64px);
+  overflow: hidden;
+}
+.hero-branded .hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 520px;
+}
+.hero-branded .hero-copy .lead { max-width: 390px; color: var(--text); }
+.hero-brand-photo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+.hero-brand-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 55% center;
+}
+.hero-brand-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #0F1115ED 0%, #0F1115DC 29%, #0F111580 47%, transparent 76%);
+  pointer-events: none;
+}
+.modes-aside { display: flex; align-items: center; gap: 20px; }
+.modes-aside p { margin: 0; }
+.ros-mode-mascot { display: block; width: clamp(88px, 11vw, 156px); height: auto; object-fit: contain; }
+@media (max-width: 960px) {
+  .hero-branded { min-height: 460px; }
+  .hero-brand-photo img { object-position: 63% center; }
+  .hero-brand-photo::after { background: linear-gradient(90deg, #0F1115F5 0%, #0F1115DA 37%, #0F111550 65%, transparent 100%); }
+}
+@media (max-width: 700px) {
+  .brand { gap: 8px; }
+  .brand-labels { column-gap: 7px; }
+  .hero-branded {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 22px;
+    min-height: 0;
+    padding: 36px 0 44px;
+    overflow: visible;
+  }
+  .hero-branded .hero-copy { max-width: 100%; }
+  .hero-brand-photo { position: relative; inset: auto; z-index: 0; aspect-ratio: 16 / 9; overflow: hidden; }
+  .hero-brand-photo img { height: 100%; object-position: 72% center; }
+  .hero-brand-photo::after { display: none; }
+  .modes-aside { flex-direction: column; align-items: flex-start; }
+  .ros-mode-mascot { width: 120px; }
+}
 
 /* Botanical Elegance — componenti di brand opzionali; nessun asset non presente è richiesto. */
 :where(.ros-badge, .badge-real, .badge-slop) {
