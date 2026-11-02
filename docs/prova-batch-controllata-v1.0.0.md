@@ -36,3 +36,13 @@ Approvazione, rifiuto e pubblicazione restano decisioni del proprietario.
 Catalogo, sorgenti private, preferenze e protocollo editoriale non cambiano.
 Dopo l'invio controllato spegnere il gate Worker; le riprese successive del pilot
 possono riabilitarlo per la sola fase autorizzata. Nessun cron viene attivato.
+
+## Verifica accessi
+
+operation=permissions controlla gli scope con letture e richieste intenzionalmente
+incomplete (nessun batch valido, prompt o inferenza). Pubblica soltanto codice
+HTTP e nomi degli scope, mai chiavi o messaggi upstream completi. Il controllo
+Files può creare un file di prova di pochi byte soltanto se il permesso esiste;
+non invia tale file a Batch. Il gate di spesa resta disattivato durante il check.
+Non vengono caricati backup o file nascosti negli artifact. Il recupero del lotto
+usa i checkpoint privati in D1/R2.
