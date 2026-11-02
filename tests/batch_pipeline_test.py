@@ -237,3 +237,13 @@ class BatchPipelineTest(unittest.TestCase):
                 self.assertEqual(engine.state['reserved_usd'],before_cost)
                 self.assertEqual(len(engine.api.batches),1 if enabled else 0)
                 self.assertEqual(result['status'],'active' if enabled else 'paused')
+
+    def test_cancellation_preserves_old_error_without_reporting_failed_cancel(self):
+        with tempfile.TemporaryDirectory() as folder:
+            engine=self.setup_run(Path(folder),2)
+            engine.state.update(status='paused',error='Upload HTTP 401')
+            result=engine.cancel()
+            self.assertEqual(result['status'],'cancelled')
+            self.assertIsNone(result['error'])
+            self.assertEqual(engine.state['error_before_cancellation'],'Upload HTTP 401')
+            self.assertEqual(len(engine.api.batches),0)

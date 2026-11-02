@@ -291,6 +291,7 @@ class Engine:
         return self.summary()
 
     def cancel(self):
+        if self.state.get('error'):self.state['error_before_cancellation']=self.state.pop('error')
         self.state['cancel_requested']=True;self.save()
         for job in self.state['jobs']:
             if job['status']=='submitting':self._reconcile(job)
