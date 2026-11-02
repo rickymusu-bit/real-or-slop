@@ -1,23 +1,19 @@
-name: Controlled manual Batch pilot
+name: Controlled direct editorial test
 on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 'Start a new lot, advance saved jobs, inspect status, or request cancellation'
+        description: 'Plan/start the small direct test or check its API permissions'
         type: choice
-        options: ['start', 'resume', 'status', 'cancel', 'permissions']
+        options: ['start', 'permissions']
         default: 'start'
-      batch_run_id:
-        description: 'Existing run ID for resume/status/cancel (no new collection)'
-        type: string
-        default: ''
       reference_count:
         description: 'Controlled pilot: maximum two source photographs and one generation'
         type: choice
         options: ['2']
         default: '2'
       execute_paid:
-        description: 'Authorize submitting the next bounded Batch stages; false only collects existing results'
+        description: 'Authorize direct evaluation/generation; false only collects and plans'
         type: boolean
         default: false
 permissions:
@@ -34,7 +30,6 @@ jobs:
     env:
       ROS_OPERATION: ${{ inputs.operation }}
       ROS_REFERENCE_COUNT: '2'
-      ROS_BATCH_RUN_ID: ${{ inputs.batch_run_id }}
       ROS_QUEUE_ENABLED: 'true'
       ROS_EXECUTE_PAID: ${{ inputs.execute_paid && 'true' || 'false' }}
       ENABLE_EDITORIAL_PAID: ${{ inputs.execute_paid && 'true' || 'false' }}
@@ -46,8 +41,8 @@ jobs:
       EDITORIAL_RUN_USD: '5'
       EDITORIAL_DAILY_USD: '5'
       EDITORIAL_TOTAL_USD: '5'
-      EDITORIAL_BATCH_EVALUATION_USD: '0.50'
-      EDITORIAL_BATCH_GENERATION_USD: '2.00'
+      EDITORIAL_EVALUATION_USD: '0.50'
+      EDITORIAL_GENERATION_USD: '2.00'
       EDITORIAL_THRESHOLD: '65'
       EDITORIAL_ATTEMPTS: '1'
       EDITORIAL_MAX_EVALUATIONS: '4'
@@ -74,10 +69,7 @@ jobs:
           from pipeline.importer import NoRedirect
           key=os.environ.get('OPENAI_API_KEY','')
           if not key:raise SystemExit('OPENAI_API_KEY non configurata')
-          boundary='ros-permission-probe'
-          file_body=(f'--{boundary}\r\nContent-Disposition: form-data; name="purpose"\r\n\r\nbatch\r\n'
-            f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="probe.jsonl"\r\nContent-Type: application/jsonl\r\n\r\n{{}}\n\r\n--{boundary}--\r\n').encode()
-          probes=[('files?limit=1',None,'application/json'),('files',file_body,'multipart/form-data; boundary='+boundary),('batches?limit=1',None,'application/json'),('batches',b'{}','application/json'),('responses',b'{}','application/json'),('images/generations',b'{}','application/json')]
+          probes=[('responses',b'{}','application/json'),('images/generations',b'{}','application/json')]
           for path,data,content_type in probes:
             try:
               req=Request('https://api.openai.com/v1/'+path,data=data,headers={'Authorization':'Bearer '+key,'Content-Type':content_type})
@@ -89,29 +81,39 @@ jobs:
             print(json.dumps(dict(endpoint=path,status=status,missing_scopes=sorted(set(re.findall(r'\b(?:api|model)\.[a-z_]+(?:\.[a-z_]+)*',message))),inference_submitted=False)))
           PYPROBE
       - name: Collect or inspect a new bounded lot
-        if: ${{ (inputs.operation == 'start' || github.event_name == 'schedule') && env.ROS_QUEUE_ENABLED == 'true' }}
+        if: ${{ inputs.operation == 'start' && env.ROS_QUEUE_ENABLED == 'true' }}
         run: |
           python -m pipeline.automatic --collect --limit "$ROS_REFERENCE_COUNT" --preferences
-          python -m pipeline.batch .pipeline/automatic/manifest.json
-      - name: Start or resume a private Batch run
-        if: ${{ (inputs.operation == 'start' || github.event_name == 'schedule') && env.ROS_QUEUE_ENABLED == 'true' && env.ROS_EXECUTE_PAID == 'true' }}
-        run: python -m pipeline.batch .pipeline/automatic/manifest.json --start --execute --run-id "ros-$GITHUB_RUN_ID"
-      - name: Manual status, continuation or cancellation
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation != 'start' && inputs.operation != 'permissions' }}
+          python -m pipeline.editorial .pipeline/automatic/manifest.json
+      - name: Run the bounded direct test into private review
+        if: ${{ inputs.operation == 'start' && env.ROS_EXECUTE_PAID == 'true' }}
         run: |
-          if [ -z "$ROS_BATCH_RUN_ID" ]; then echo 'Existing batch_run_id is required'; exit 1; fi
-          args=()
-          if [ "$ROS_EXECUTE_PAID" = 'true' ]; then args+=(--execute); fi
-          case "$ROS_OPERATION" in
-            resume) python -m pipeline.batch --resume "$ROS_BATCH_RUN_ID" "${args[@]}" ;;
-            status) python -m pipeline.batch --status "$ROS_BATCH_RUN_ID" ;;
-            cancel) python -m pipeline.batch --cancel "$ROS_BATCH_RUN_ID" ;;
-            *) exit 1 ;;
-          esac
-      - name: Preserve private local diagnostics (recovery is durable in D1/R2)
+          python - <<'PYPREFLIGHT'
+          import json
+          from pathlib import Path
+          from pipeline.editorial import candidates,PipelineStop
+          root=Path('.pipeline/automatic').resolve()
+          if len(candidates(json.loads((root/'manifest.json').read_text()),root))!=2:
+            raise PipelineStop('Servono due fotografie nuove per provare REAL e SLOP; nessuna chiamata a pagamento inviata')
+          PYPREFLIGHT
+          python -m pipeline.editorial .pipeline/automatic/manifest.json --execute --base https://real-or-slop.rickymusu.workers.dev --out .pipeline/direct-test
+      - name: Prepare numeric summary artifact
+        if: ${{ always() }}
+        run: |
+          python - <<'PYSUMMARY'
+          import json
+          from pathlib import Path
+          source=Path('.pipeline/direct-test/summary.json')
+          if source.exists():
+            data=json.loads(source.read_text())
+            summary={key:data[key] for key in ('ranked','real','slop','calls','reserved_usd','timestamp') if key in data}
+            Path('artifacts').mkdir(exist_ok=True)
+            Path('artifacts/direct-test-summary.json').write_text(json.dumps(summary))
+          PYSUMMARY
+      - name: Preserve sanitized direct-test summary only
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: private-editorial-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .pipeline/
+          path: artifacts/direct-test-summary.json
           retention-days: 7

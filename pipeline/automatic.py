@@ -72,7 +72,7 @@ def plan(day, limit=MAX_DAILY, preferences=None):
                          for query, categories in topics])
 
 
-def collect(folder, day, limit=MAX_DAILY, preferences=None):
+def collect(folder, day, limit=MAX_DAILY, preferences=None, known=()):
     from itertools import zip_longest
     from PIL import UnidentifiedImageError
     folder = folder.resolve()
@@ -100,6 +100,9 @@ def collect(folder, day, limit=MAX_DAILY, preferences=None):
                 if not license or license['name'] not in LICENSES or 'ND' in license['name']:
                     skipped += 1
                     continue
+                if any(same_photo(source, previous) for previous in known):
+                    skipped += 1
+                    continue
                 metadata = json.loads(source['evidence'])
                 caption = plain(metadata.get('ImageDescription', {}).get('value', '')) or plain(source['title'])
                 author = plain(source['author'])
@@ -118,7 +121,7 @@ def collect(folder, day, limit=MAX_DAILY, preferences=None):
                     record = db.execute('SELECT id,metadata,sha256,phash,file FROM candidates WHERE provider=? AND source_id=?',
                                         (row['provider'], row['source_id'])).fetchone()
                     item = dict(id=record[0], metadata=json.loads(record[1]), sha256=record[2], phash=record[3], file=record[4])
-                    if not item['file'] or item['metadata'].get('possible_duplicate') or any(same_photo(item, p) for p in candidates):
+                    if not item['file'] or item['metadata'].get('possible_duplicate') or any(same_photo(item, p) for p in [*known, *candidates]):
                         skipped += 1
                         continue
                     prepare(item, folder)
@@ -156,11 +159,12 @@ def main(argv=None):
                 from .preferences import model
                 token = os.getenv('REAL_OR_SLOP_ADMIN_TOKEN', '')
                 if len(token) < 32: raise ValueError('Secret amministrativo mancante per le preferenze private')
-                snapshot = model(request(SITE, token, '/api/admin/editorial/preferences'))
+                state = request(SITE, token, '/api/admin/editorial/state')
+                snapshot = model(state.get('preferences'))
                 args.out.mkdir(parents=True, exist_ok=True)
                 from .editorial import write_private
                 write_private(args.out / 'preferences.json', snapshot)
-                collect(args.out, day, args.limit, preferences=snapshot)
+                collect(args.out, day, args.limit, preferences=snapshot, known=[*state['references'], *state['inventory'], *state.get('claims', [])])
             else:
                 collect(args.out, day, args.limit)
             return 0

@@ -1,3 +1,6 @@
+> Aggiornamento 2026-11-02T18:51:11.607127Z: per le prove piccole si usa il metodo diretto;
+> Batch resta per i caricamenti. [Policy e chiavi v1.0.0](prove-dirette-caricamenti-batch-v1.0.0.md).
+
 > Aggiornamento 2026-11-02T16:30:46Z, versione operativa **3.0.0**: il workflow usa
 > [OpenAI Batch v1.0.0](pipeline-batch-openai-v1.0.0.md), con stato D1/R2, quattro
 > fasi e tetto cumulativo `EDITORIAL_TOTAL_USD` (5 USD per la prova). Le istruzioni

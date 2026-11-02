@@ -1,3 +1,8 @@
+## Configurazione operativa — 2026-11-02T18:52:00Z
+
+- Prove piccole con API diretta; Batch conservato per i caricamenti più grandi, senza attivazione automatica. Guida unica alle chiavi e ai permessi.
+- Deduplica dal catalogo/registro/claim prima di completare il lotto raccolto; recupero privato con User-Agent applicativo. Nessuna nuova dipendenza o modifica di credenziali.
+
 ## 0.14.0 — 2026-11-02T16:30:46Z
 
 - Workflow editoriale con quattro fasi OpenAI Batch, prompt esclusivamente testuali, valutazione finale cieca, risultati associati per custom_id e nessuna fallback sincrona. Prova da due fotografie / una generazione.

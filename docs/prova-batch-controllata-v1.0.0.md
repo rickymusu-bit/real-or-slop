@@ -1,3 +1,6 @@
+> Aggiornamento 2026-11-02T18:51:11.607127Z: per le prove piccole si usa il metodo diretto;
+> Batch resta per i caricamenti. [Policy e chiavi v1.0.0](prove-dirette-caricamenti-batch-v1.0.0.md).
+
 ---
 version: 1.0.0
 created_at: 2026-11-02T17:55:00Z

@@ -1,5 +1,9 @@
 # Real or Slop
 
+**Prove piccole: API diretta. Caricamenti più grandi: Batch.**
+[Chiavi, permessi e prova controllata](docs/prove-dirette-caricamenti-batch-v1.0.0.md).
+La prova resta limitata a due foto, una generazione e cinque USD stimati cumulativi.
+
 Pipeline OpenAI Batch (0.14.0): lotti fino a 20 fotografie, quattro fasi riprendibili
 (valutazione → brief → generazione → valutazione cieca). Prima prova da due foto /
 una SLOP, tetto cumulativo configurabile per rispettare i **5 USD complessivi**.

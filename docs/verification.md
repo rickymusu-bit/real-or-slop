@@ -1,5 +1,23 @@
 # Verifiche effettive
 
+## Prove dirette e caricamenti Batch — configurazione operativa
+
+`updated_at: 2026-11-02T18:52:00Z`, rapporto `1.0.0`, PR #29 in bozza.
+
+- Workflow del ramo operativo convertito alla pipeline sincrona esistente: nessuna
+  chiamata Files/Batch nella prova o nel controllo permessi. Budget cumulativo
+  invariato, due foto nuove richieste prima di spendere, quattro analisi e una
+  generazione massime; nessun cron o pubblicazione automatica.
+- Raccolta autenticata: duplicati dell’inventario, riferimenti e claim esclusi
+  prima di raggiungere la dimensione richiesta. Preferenze e diversità preservate.
+- Ripristino privato con User-Agent applicativo e diagnostica HTTP sicura.
+- **91 test Python** superati, inclusi esclusione dei duplicati prima del limite,
+  lettura dello stato privato e ripristino dei file autenticati. Script inline
+  del workflow compilati; artifact limitato al riepilogo numerico.
+- Nessuna nuova inferenza, modifica a chiavi/permessi, deploy o migrazione.
+  La generazione resta bloccata dal permesso Images della chiave OpenAI.
+
+
 ## OpenAI Batch — 0.14.0
 
 `updated_at: 2026-11-02T16:40:00Z`, rapporto `1.0.0`. Branch

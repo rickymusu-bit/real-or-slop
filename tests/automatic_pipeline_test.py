@@ -71,3 +71,26 @@ class AutomaticPipelineTest(unittest.TestCase):
         with patch('pipeline.automatic.collect') as collect,contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(automatic.main(['--collect','--limit','2']),0)
             self.assertEqual(collect.call_args.args[2],2)
+
+    def test_remote_duplicates_are_skipped_before_the_small_lot_is_full(self):
+        import random
+        old=dict(provider='commons',source_id='old',source_url='https://commons.wikimedia.org/wiki/File:old')
+        def search(client,query,limit,offset=0):
+            for uid in ['old',hashlib.sha256((query+str(offset)).encode()).hexdigest()]:
+                yield dict(provider='commons',source_id=uid,title='File:'+uid,source_url='https://commons.wikimedia.org/wiki/File:'+uid,
+                    image_url='https://upload.wikimedia.org/'+uid+'.png',author='Fixture',evidence='{}',rights='https://creativecommons.org/publicdomain/zero/1.0/')
+        def download(row,*args):
+            self.assertNotEqual(row['source_id'],'old')
+            raw=io.BytesIO();Image.frombytes('RGB',(24,20),random.Random(row['source_id']).randbytes(24*20*3)).save(raw,format='PNG')
+            return raw.getvalue(),hashlib.sha256(raw.getvalue()).hexdigest(),hashlib.sha256(row['source_id'].encode()).hexdigest()[:16]
+        with tempfile.TemporaryDirectory() as tmp,patch.object(automatic.PROVIDERS['commons'],'search',side_effect=search),patch('pipeline.run.download',side_effect=download):
+            rows=json.loads(automatic.collect(Path(tmp),date(2026,11,2),limit=2,known=[old]).read_text())
+            self.assertEqual(len(rows),2)
+            self.assertNotIn('old',[row['metadata']['source_id'] for row in rows])
+
+    def test_private_collection_uses_inventory_references_and_pending_claims(self):
+        state=dict(preferences=None,references=[{'id':'ref'}],inventory=[{'id':'image'}],claims=[{'id':'claim'}])
+        with tempfile.TemporaryDirectory() as tmp,patch.dict('os.environ',{'REAL_OR_SLOP_ADMIN_TOKEN':'x'*40}),patch('pipeline.importer.request',return_value=state) as request,patch('pipeline.automatic.collect') as collect:
+            self.assertEqual(automatic.main(['--collect','--limit','2','--preferences','--out',tmp]),0)
+            self.assertEqual(request.call_args.args[2],'/api/admin/editorial/state')
+            self.assertEqual(collect.call_args.kwargs['known'],[{'id':'ref'},{'id':'image'},{'id':'claim'}])
