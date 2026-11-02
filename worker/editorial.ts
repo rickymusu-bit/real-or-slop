@@ -1,3 +1,4 @@
+import { editorialBatch } from "./editorial-batch";
 import { prepareCandidate } from "./review-preparation";
 import { preferences } from "./preferences";
 import { body, hash, HttpError, id, json, type Env } from "./core";
@@ -12,6 +13,7 @@ function hex(data: Record<string, unknown>, key: string, length: number) {
 }
 export async function editorial(request: Request, env: Env, path: string): Promise<Response> {
   const base = "/api/admin/editorial";
+  if (path === base + "/batch-runs" || path.startsWith(base + "/batch-runs/")) return editorialBatch(request, env, path);
   if (path === base + "/preferences" && request.method === "GET") return json(await preferences(env));
   if (path === base + "/prepare" && request.method === "POST") {
     const data = await body(request);
@@ -30,7 +32,8 @@ export async function editorial(request: Request, env: Env, path: string): Promi
     const inventory = (await env.DB.prepare("SELECT i.id,i.type,i.sha256,i.perceptual_hash,s.provider,s.source_id,s.page_url AS source_url FROM images i LEFT JOIN sources s ON s.id=i.source_id").all()).results;
     const queue = await env.DB.prepare("SELECT count(*) AS count FROM images WHERE status IN ('candidate','in-review','approved') AND id NOT IN (SELECT image_id FROM published_images)").first();
     const attempts = (await env.DB.prepare("SELECT id,reference_id,image_id FROM editorial_attempts").all()).results;
-    return json({ references, inventory, queue, attempts, preferences: await preferences(env), diagnostics: await publishedDiagnostics(env) });
+    const claims = (await env.DB.prepare("SELECT * FROM editorial_batch_sources").all()).results;
+    return json({ references, inventory, claims, queue, attempts, preferences: await preferences(env), diagnostics: await publishedDiagnostics(env) });
   }
   if (path === base + "/budget" && request.method === "POST") {
     if (env.ENABLE_EDITORIAL_PAID !== "true") throw new HttpError(503, "Chiamate a pagamento non abilitate sul server");
@@ -46,16 +49,18 @@ export async function editorial(request: Request, env: Env, path: string): Promi
     // selected models/parameters. Reservations are never refunded on errors.
     const cost = number(kind === "evaluation" ? env.EDITORIAL_EVALUATION_USD : env.EDITORIAL_GENERATION_USD, 0);
     const runCap = number(env.EDITORIAL_RUN_USD, 0), dailyCap = number(env.EDITORIAL_DAILY_USD, 0);
+    const totalCap = number(env.EDITORIAL_TOTAL_USD, Number.MAX_SAFE_INTEGER);
     const evaluations = number(env.EDITORIAL_MAX_EVALUATIONS, 60), generations = number(env.EDITORIAL_MAX_GENERATIONS, 20), regenerations = number(env.EDITORIAL_MAX_REGENERATIONS, 10);
     const now = new Date().toISOString(), day = now.slice(0, 10);
     const result = await env.DB.prepare(`INSERT INTO editorial_usage(id,run_id,day,kind,reserved_usd,created_at)
       SELECT ?,?,?,?,?,? WHERE
+      round(COALESCE((SELECT sum(reserved_usd) FROM editorial_usage),0)+?,6)<=? AND
       COALESCE((SELECT sum(reserved_usd) FROM editorial_usage WHERE run_id=?),0)+?<=? AND
       COALESCE((SELECT sum(reserved_usd) FROM editorial_usage WHERE day=?),0)+?<=? AND
       (SELECT count(*) FROM editorial_usage WHERE run_id=? AND kind='evaluation')+(?='evaluation')<=? AND
       (SELECT count(*) FROM editorial_usage WHERE run_id=? AND kind IN ('generation','regeneration'))+(?!='evaluation')<=? AND
       (SELECT count(*) FROM editorial_usage WHERE run_id=? AND kind='regeneration')+(?='regeneration')<=?
-      ON CONFLICT(id) DO NOTHING`).bind(debitId, run, day, kind, cost, now, run, cost, runCap, day, cost, dailyCap, run, kind, evaluations, run, kind, generations, run, kind, regenerations).run();
+      ON CONFLICT(id) DO NOTHING`).bind(debitId, run, day, kind, cost, now, cost, totalCap, run, cost, runCap, day, cost, dailyCap, run, kind, evaluations, run, kind, generations, run, kind, regenerations).run();
     if (!result.meta.changes) throw new HttpError(409, "Budget o limite di chiamate raggiunto; prenotazione già usata");
     return json({ reserved_usd: cost, day });
   }

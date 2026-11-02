@@ -1,5 +1,13 @@
 # Real or Slop
 
+Pipeline OpenAI Batch (0.14.0): lotti fino a 20 fotografie, quattro fasi riprendibili
+(valutazione → brief → generazione → valutazione cieca). Prima prova da due foto /
+una SLOP, tetto cumulativo configurabile per rispettare i **5 USD complessivi**.
+[Architettura, configurazione e avvio controllato](docs/pipeline-batch-openai-v1.0.0.md).
+Migrazione additiva **0011**, non applicata da questa modifica; nessuna attivazione
+pagata, nuovo cron o pubblicazione automatica. Gli invii Batch possono richiedere
+24 ore per fase. La raccolta dalle fonti resta separata da OpenAI.
+
 Revisione editoriale: `/admin` mostra un’immagine e due pulsanti, **Approva / Rifiuta**. Preparazione automatica e preferenze con esplorazione del 25%: [specifica v1.0.0](docs/revisione-visiva-preferenze-v1.0.0.md). La gestione tecnica resta in `/admin?advanced=1`.
 
 > Regole di gioco aggiornate: [tempi per immagine, oscuramento e PvP sospeso](docs/gioco-tempi-protezione-v1.0.0.md).

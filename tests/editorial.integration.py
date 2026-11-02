@@ -24,8 +24,9 @@ def request(path,method='GET',data=None,auth=token):
             return res.status,json.loads(raw) if res.headers.get('Content-Type','').startswith('application/json') else raw
     except urllib.error.HTTPError as error:return error.code,json.loads(error.read())
 
-for route in ['state','dossiers','controls']:
+for route in ['state','dossiers','controls','batch-runs']:
     assert request('/api/admin/editorial/'+route,auth='wrong')[0]==401
+assert request('/api/admin/editorial/batch-runs','POST',{})[0]==503
 assert request('/api/admin/editorial/budget','POST',dict(id='not-paid',run_id='not-paid',kind='evaluation'))[0]==503
 assert request('/api/admin/editorial/publish','POST',dict(confirm=False))[0]==400
 

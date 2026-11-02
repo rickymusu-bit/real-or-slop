@@ -33,11 +33,11 @@ export async function moderation(request: Request, env: Env, path: string) {
   if (path === "/api/admin/review-queue" && request.method === "GET") {
     const [rows, counts, model] = await Promise.all([
       env.DB.prepare("SELECT p.image_id,p.token,p.snapshot_json,p.features_json FROM editorial_preparations p JOIN images i ON i.id=p.image_id WHERE p.ready=1 AND i.status='in-review' ORDER BY i.created_at,i.id LIMIT 100").all<{ image_id: string; token: string; snapshot_json: string; features_json: string }>(),
-      env.DB.prepare("SELECT count(*) AS pending FROM images WHERE status='in-review'").first<{ pending: number }>(),
+      env.DB.prepare("SELECT (SELECT count(*) FROM images WHERE status='in-review') AS pending,(SELECT count(*) FROM editorial_batch_runs WHERE status IN ('active','paused')) AS processing").first<{ pending: number; processing: number }>(),
       preferences(env),
     ]);
     const items = rows.results.map(row => ({ id: row.image_id, token: row.token, features: JSON.parse(row.features_json) as string[], details: JSON.parse(row.snapshot_json) as Record<string, unknown>, image: `/api/admin/assets/${encodeURIComponent(row.image_id)}` }));
-    return json({ images: preferenceOrder(items, model), ready: items.length, preparing: Math.max(0, (counts?.pending || 0) - items.length) });
+    return json({ processing: counts?.processing || 0, images: preferenceOrder(items, model), ready: items.length, preparing: Math.max(0, (counts?.pending || 0) - items.length) });
   }
   const curationPath = path.match(/^\/api\/admin\/images\/([\w-]+)\/curation$/);
   if (curationPath) return curation(request, env, curationPath[1]);
