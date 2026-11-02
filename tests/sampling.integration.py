@@ -19,7 +19,6 @@ state = os.environ.get('ROS_TEST_STATE', '.wrangler/integration')
 jar = http.cookiejar.CookieJar()
 client = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
 sessions = []
-room = None
 players = []
 
 def sql(command):
@@ -90,7 +89,7 @@ try:
     end = request('/api/sessions/'+sid)[1]
     assert end['score'] == 100 * sum(c['answer'] == 'REAL' for c in end['credits'])
 
-    status, timed = request('/api/sessions', 'POST', dict(mode='timed', duration=60, **filters))
+    status, timed = request('/api/sessions', 'POST', dict(mode='timed', count=8, roundSeconds=20, **filters))
     assert status == 201, timed
     sessions.append(timed['id'])
     _, view = request('/api/sessions/'+timed['id'])
@@ -98,7 +97,7 @@ try:
     assert view['phase'] == 'preparing' and view['expiresAt'] is None
     _, manifest = request('/api/sessions/'+timed['id']+'/manifest')
     _, view = request('/api/sessions/'+timed['id']+'/start', 'POST', dict(prepared=True, roundIds=[q['id'] for q in manifest['images']]))
-    assert view['total'] == 2 and 55000 < view['expiresAt'] - view['serverNow'] <= 60000
+    assert view['total'] == 2 and 19000 < view['expiresAt'] - view['serverNow'] <= 20000
     retired_status, retired_game = request('/api/sessions', 'POST', dict(mode='training', count=8, categories=[prefix], difficulty='difficile'))
     assert retired_status == 201
     sessions.append(retired_game['id'])
@@ -128,29 +127,10 @@ try:
     single = prefix + '-single'
     sql(f"INSERT INTO categories VALUES('{single}','Single-class fixture',NULL); INSERT INTO image_categories VALUES('{prefix}_4','{single}');")
     assert request('/api/sessions','POST',dict(mode='training',count=8,categories=[single]))[0] == 409
-    assert request('/api/rooms','POST',dict(count=8,categories=[single]))[0] == 409
+    assert request('/api/rooms','POST',dict(count=8,categories=[single]))[0] == 503
+    print('Sampling integration passed: retired difficulty/category/environment/publication filters, real D1 assignments, near duplicates, preflight capacity, legacy assignments, opaque warnings, Training/Timed and suspended public PvP.')
 
-    status, room = request('/api/rooms', 'POST', dict(count=8, roundSeconds=10, **filters))
-    assert status == 201, room
-    private({key: value for key, value in room.items() if key != 'token'})
-    code, host = room['code'], room['token']
-    assert room['warnings'] == created['warnings']
-    _, guest = request('/api/rooms/'+code+'/join', 'POST', dict(nickname='Fixture guest'))
-    assert request('/api/rooms/'+code+'/action', 'POST', dict(action='start'), host)[0] == 200
-    assert request('/api/rooms/'+code+'/action', 'POST', dict(action='media-ready', round=1), host)[0] == 200
-    assert request('/api/rooms/'+code+'/action', 'POST', dict(action='media-ready', round=1), guest['token'])[0] == 200
-    _, a = request('/api/rooms/'+code+'/state', token=host)
-    _, b = request('/api/rooms/'+code+'/state', token=guest['token'])
-    players = [player['id'] for player in a['players']]
-    private(a); private(b)
-    assert a['total'] == b['total'] == 2
-    assert a['deadline'] == b['deadline'] and a['question'] == b['question']
-    assert a['warnings'] == b['warnings'] == room['warnings']
-    assert request('/api/rooms/'+code+'/action', 'POST', dict(action='leave'), host)[0] == 200
-    print('Sampling integration passed: retired difficulty/category/environment/publication filters, real D1 assignments, near duplicates, preflight capacity, legacy assignments, opaque warnings, Training/Timed/PvP, shared images and deadlines.')
 finally:
-    if room and room.get('code'):
-        request('/api/rooms/'+room['code']+'/action', 'POST', dict(action='leave'), room['token'])
     cleanup = []
     for session in sessions:
         cleanup += [f"DELETE FROM answers WHERE round_id IN (SELECT id FROM game_rounds WHERE session_id='{session}')",

@@ -1,3 +1,5 @@
+> Aggiornamento 2026-11-02T15:25:07+01:00: le regole su countdown complessivo e disponibilità PvP sono superate da [Tempi e protezione v1.0.0](gioco-tempi-protezione-v1.0.0.md). Documento storico conservato.
+
 > Aggiornamento 2026-11-01T22:00:00Z — documento storico. La
 > [pipeline editoriale v1.0.0](pipeline-editoriale-real-slop-v1.0.0.md) supera
 > difficoltà preassegnata, relativi filtri/template e pubblicazione per singola

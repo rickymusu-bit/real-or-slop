@@ -30,7 +30,7 @@ def sql(command):
         return json.loads(out.stdout)[0]['results']
     finally: Path(path).unlink()
 def create(mode='timed', count=4):
-    status, data=req('/api/sessions','POST',dict(mode=mode,count=count,duration=60))
+    status, data=req('/api/sessions','POST',dict(mode=mode,count=count,roundSeconds=20))
     assert status==201,data
     return data['id']
 def view(sid): return req('/api/sessions/'+sid)[1]
@@ -41,47 +41,67 @@ def no_secrets(value):
     for secret in ['ai_prompt','explanation','licenseUrl','source_url','perceptual_hash','curation','image_medium','answer"','type"']:
         assert secret not in text,secret
 
-sid=create(); initial=view(sid); images=manifest(sid)
+sid=create(count=3); initial=view(sid); images=manifest(sid)
 assert initial['phase']=='preparing' and initial['expiresAt'] is None and initial['question'] is None
-assert initial['protocolVersion']==2 and len(images)==initial['total']
+assert initial['protocolVersion']==2 and initial['timingMode']=='per-image' and initial['total']==3 and len(images)==1
 assert req('/api/sessions/'+sid+'/answer','POST',dict(roundId=images[0]['id'],choice='REAL'))[0]==409
 assert req('/api/sessions/'+sid+'/ready','POST',dict(roundId=images[0]['id']))[0]==409
 assert req('/api/sessions/'+sid+'/start','POST',{})[0]==409
-assert begin(sid,images[:-1])[0]==409
-assert begin(sid,[images[0]]*len(images))[0]==409
+assert begin(sid,[])[0]==409
+assert begin(sid,[images[0],images[0]])[0]==409
 no_secrets(initial); no_secrets(images)
-for r in images:
-    with client.open(base+r['image']) as response:
-        assert response.status==200 and response.headers['Vary']=='Cookie'
-        assert response.headers['Cache-Control'].startswith('private,')
-        assert response.headers['Content-Type'].startswith('image/') and response.read()
+with client.open(base+images[0]['image']) as response:
+    assert response.status==200 and response.headers['Vary']=='Cookie'
+    assert response.headers['Cache-Control'].startswith('private,')
+    assert response.headers['Content-Type'].startswith('image/') and response.read()
+rounds=sql(f"SELECT id,presented_at FROM game_rounds WHERE session_id='{sid}' ORDER BY position")
+for future in rounds[1:]:
+    assert req('/api/sessions/'+sid+'/ready','POST',dict(roundId=future['id']))[0]==409
+    try:
+        client.open(base+f"/api/sessions/{sid}/media/{future['id']}"); raise AssertionError('Future timed media readable')
+    except urllib.error.HTTPError as error: assert error.code==404
 outsider=urllib.request.build_opener()
 assert req('/api/sessions/'+sid+'/manifest',opener=outsider)[0]==401
 try:
-    outsider.open(base+images[-1]['image']); raise AssertionError('Unowned media readable')
+    outsider.open(base+images[0]['image']); raise AssertionError('Unowned media readable')
 except urllib.error.HTTPError as error: assert error.code==401
-assert all(r['presented_at'] is None for r in sql(f"SELECT presented_at FROM game_rounds WHERE session_id='{sid}'"))
+assert all(r['presented_at'] is None for r in rounds)
 with concurrent.futures.ThreadPoolExecutor(2) as executor:
     starts=list(executor.map(lambda _:begin(sid,images),range(2)))
 assert all(status==200 for status,_ in starts),starts
 active=starts[0][1]
-assert active['phase']=='active' and active['expiresAt']-active['startedAt']==60000
+assert active['phase']=='active' and active['expiresAt']-active['startedAt']==20000
 assert starts[1][1]['expiresAt']==active['expiresAt'] and starts[1][1]['startedAt']==active['startedAt']
 assert begin(sid,images)[1]['expiresAt']==active['expiresAt']
 assert sql(f"SELECT count(*) AS n FROM media_events WHERE session_id='{sid}' AND kind='started'")[0]['n']==1
-assert req('/api/sessions/'+sid+'/ready','POST',dict(roundId=images[-1]['id']))[0]==409
-assert req('/api/sessions/'+sid+'/answer','POST',dict(roundId=images[-1]['id'],choice='REAL'))[0]==409
+assert req('/api/sessions/'+sid+'/ready','POST',dict(roundId=rounds[-1]['id']))[0]==409
+assert req('/api/sessions/'+sid+'/answer','POST',dict(roundId=rounds[-1]['id'],choice='REAL'))[0]==409
 first=view(sid)['question']; assert first==active['question']
 assert req('/api/sessions/'+sid+'/answer','POST',dict(roundId=first['id'],choice='REAL'))[0]==200
-second=view(sid)['question']
-assert req('/api/sessions/'+sid+'/ready','POST',dict(roundId=second['id']))[0]==200
-presented=sql(f"SELECT presented_at FROM game_rounds WHERE id='{second['id']}'")[0]['presented_at']
-assert req('/api/sessions/'+sid+'/ready','POST',dict(roundId=second['id']))[0]==200
-assert sql(f"SELECT presented_at FROM game_rounds WHERE id='{second['id']}'")[0]['presented_at']==presented
-assert view(sid)['expiresAt']==active['expiresAt']
-sql(f"UPDATE game_sessions SET expires_at=1 WHERE id='{sid}'")
-assert req('/api/sessions/'+sid+'/answer','POST',dict(roundId=second['id'],choice='REAL'))[0]==410
-assert view(sid)['phase']=='completed'
+second=view(sid)['question']; assert view(sid)['expiresAt'] is None
+with concurrent.futures.ThreadPoolExecutor(2) as executor:
+    ready=list(executor.map(lambda _:req('/api/sessions/'+sid+'/ready','POST',dict(roundId=second['id'])),range(2)))
+assert all(status==200 for status,_ in ready),ready
+second_deadline=ready[0][1]['expiresAt']
+assert all(state['expiresAt']==second_deadline for _,state in ready)
+assert 19000 < second_deadline-ready[0][1]['serverNow'] <= 20000
+assert req('/api/sessions/'+sid+'/ready','POST',dict(roundId=second['id']))[1]['expiresAt']==second_deadline
+assert view(sid)['expiresAt']==second_deadline  # Refresh/reconnect/absence never extends it.
+sql(f"UPDATE game_rounds SET expires_at=1 WHERE id='{second['id']}'")
+assert req('/api/sessions/'+sid+'/answer','POST',dict(roundId=second['id'],choice='REAL',elapsedMs=0,serverNow=0))[0]==410
+following=view(sid); assert following['phase']=='active' and following['timedOut']==1 and following['expiresAt'] is None
+assert following['question']['id']==rounds[-1]['id']
+assert req('/api/sessions/'+sid+'/ready','POST',dict(roundId=second['id']))[0]==409
+assert sql(f"SELECT count(*) AS n FROM answers WHERE round_id='{second['id']}'")[0]['n']==0
+third=following['question']; assert req('/api/sessions/'+sid+'/ready','POST',dict(roundId=third['id']))[0]==200
+sql(f"UPDATE game_rounds SET expires_at=1 WHERE id='{third['id']}'")
+with concurrent.futures.ThreadPoolExecutor(2) as executor:
+    final_race=list(executor.map(lambda action:req('/api/sessions/'+sid+action, 'POST' if action else 'GET', dict(roundId=third['id'],choice='AI') if action else None),['','/answer']))
+assert final_race[1][0]==410,final_race
+finished=view(sid); assert finished['phase']=='completed' and finished['timedOut']==2 and finished['answered']==3
+assert len(finished['credits'])==3 and sum(c['timedOut'] for c in finished['credits'])==2
+assert sql(f"SELECT count(*) AS n FROM answers a JOIN game_rounds r ON r.id=a.round_id WHERE r.session_id='{sid}'")[0]['n']==1
+assert finished['elapsedMs']>=40000
 
 expired=create(); sql(f"UPDATE game_sessions SET preparation_expires_at=1 WHERE id='{expired}'")
 invalid=view(expired); assert invalid['phase']=='invalidated' and invalid['done'] and invalid['score']==0
@@ -126,4 +146,12 @@ sql(f"INSERT INTO game_sessions(id,mode,created_at,expires_at,owner_hash) VALUES
 old=view(legacy); assert old['protocolVersion']==1 and old['expiresAt']==end and old['question']['id']==rid
 assert req('/api/sessions/'+legacy+'/start','POST',{})[1]['expiresAt']==end
 assert req('/api/sessions/'+legacy+'/answer','POST',dict(roundId=rid,choice='REAL'))[0]==200
-print('Preloading integration passed: private neutral manifests, training window/ready, no early timestamp/answer, full preparation, concurrent idempotent start, unchanged expiry, TTL invalidation, error audit, cancel/answer race and legacy timer.')
+print('Per-image/preloading integration passed: private neutral manifests, training window/ready, no early timestamp/answer, current-only preparation, hidden future media, concurrent idempotent start/ready, unchanged expiry, independent round deadlines, timeout/answer race without fabricated answers, TTL invalidation, error audit, cancel/answer race and legacy timer.')
+
+legacy_v2=str(uuid.uuid4()); rid_v2=str(uuid.uuid4())
+sql(f"INSERT INTO game_sessions(id,mode,created_at,owner_hash,protocol_version,phase,duration_seconds,preparation_expires_at) VALUES('{legacy_v2}','timed',1,'{owner}',2,'preparing',60,{end}); INSERT INTO game_rounds(id,session_id,image_id,position) VALUES('{rid_v2}','{legacy_v2}','{image}',0);")
+old_manifest=manifest(legacy_v2)
+status, old_v2=begin(legacy_v2,old_manifest)
+assert status==200 and old_v2['timingMode']=='legacy' and old_v2['expiresAt']-old_v2['startedAt']==60000
+assert sql(f"SELECT expires_at FROM game_rounds WHERE id='{rid_v2}'")[0]['expires_at'] is None
+print('Both legacy protocol versions preserve the original total timer.')

@@ -72,7 +72,11 @@ try:
             print('Navigation/assets HTTP checks passed.')
             for script in (['tests/moderation.integration.py','tests/direct-import.integration.py','tests/curation.integration.py','tests/slop.integration.py','tests/editorial.integration.py'] if local_profile=='local' else [])+['tests/sampling.integration.py','tests/game.integration.py','tests/preloading.integration.py']:
                 subprocess.run(['python3',script],env=env,check=True)
-            subprocess.run(['node','tests/pvp.integration.mjs'],env=env,check=True)
+            try:
+                urllib.request.urlopen(base+'/api/rooms/ABCDEFGHJKLM/state')
+                raise AssertionError('Public PvP API still available')
+            except urllib.error.HTTPError as error: assert error.code==503
+            print('Public PvP suspended; archived actor remains covered by unit tests.')
             print('All isolated local integration checks passed.')
         finally:
             import signal

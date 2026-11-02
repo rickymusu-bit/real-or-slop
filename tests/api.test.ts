@@ -43,3 +43,8 @@ test("synthetic objects contain no label or metadata", async () => {
   const r = await new DemoStore().get("opaque");
   assert.doesNotMatch(await r.text(), /REAL|AI|title|metadata/);
 });
+
+test("suspended PvP API cannot create, join, or reconnect public rooms", async () => {
+  for (const path of ["/api/rooms", "/api/rooms/ABCDEFGHJKLM/join", "/api/rooms/ABCDEFGHJKLM/ws", "/api/rooms/ABCDEFGHJKLM/state"])
+    assert.equal((await worker.fetch(new Request("https://test" + path), env)).status, 503);
+});

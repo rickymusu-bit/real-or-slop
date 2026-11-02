@@ -1,4 +1,3 @@
-import { rooms } from "./room";
 export { GameRoom } from "./room";
 import { game, stats } from "./game";
 import { moderation } from "./moderation";
@@ -32,7 +31,7 @@ export default {
         url.pathname === "/api/rooms" ||
         url.pathname.startsWith("/api/rooms/")
       )
-        return await rooms(request, env, url.pathname);
+        throw new HttpError(503, "PvP temporaneamente sospeso");
       if (
         url.pathname === "/api/sessions" ||
         url.pathname.startsWith("/api/sessions/")

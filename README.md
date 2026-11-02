@@ -1,5 +1,8 @@
 # Real or Slop
 
+> Regole di gioco aggiornate: [tempi per immagine, oscuramento e PvP sospeso](docs/gioco-tempi-protezione-v1.0.0.md).
+> Le nuove partite A tempo non usano più un countdown complessivo. La documentazione PvP sottostante è storica: la modalità pubblica è sospesa, codice e dati sono conservati.
+
 Gioco per distinguere immagini autentiche documentate da immagini create con IA dal proprietario. La demo usa esclusivamente illustrazioni geometriche originali con **etichette simulate**: non è un archivio verificato.
 
 Node 24 (`.nvmrc`), Python 3.12 per pipeline e test schema. TypeScript, Vite, Worker Static Assets/API, D1 locale; adapter R2 pronto, nessuna risorsa remota richiesta.
@@ -176,13 +179,15 @@ I bucket `*-local` sono dichiarati soltanto nel profilo env.local e vengono usat
 
 ## Allenamento e A tempo (fase 3)
 
-Categorie multiple e sottocategorie, 1–50 domande in allenamento o 60/120/180 secondi a tempo. Il server campiona senza ripetizioni con etichette REAL/AI indipendenti al 50% per domanda; limita preventivamente la lunghezza o segnala catalogo insufficiente. Le sessioni usano D1 e un cookie tecnico HttpOnly/SameSite, Secure in HTTPS. L’ID nel sessionStorage serve solo a ritrovare la partita: da solo non autorizza letture o risposte. Timestamp, assegnazione domande, scadenza, punteggio (100/corretta, 0/errata) e replay sono validati nel Worker/SQL. A parità conta il minor tempo totale di risposta. Nessuna classifica pubblica o nickname raccolto per il gioco singolo.
+Categorie multiple e sottocategorie, 1–50 immagini in entrambe le modalità. Allenamento misura il tempo soltanto per il riepilogo; A tempo usa 10/20/30 secondi per immagine (default 20). Il server campiona senza ripetizioni con etichette REAL/AI indipendenti al 50% per domanda; limita preventivamente la lunghezza o segnala catalogo insufficiente. Le sessioni usano D1 e un cookie tecnico HttpOnly/SameSite, Secure in HTTPS. L’ID nel sessionStorage serve solo a ritrovare la partita: da solo non autorizza letture o risposte. Timestamp, assegnazione domande, scadenza, punteggio (100/corretta, 0/errata) e replay sono validati nel Worker/SQL. In Allenamento il tempo non cambia punti né spareggi. Nessuna classifica pubblica o nickname raccolto per il gioco singolo.
 
-API: POST `/api/sessions` con mode training/timed, count, duration e categories; GET `/api/sessions/:id`; POST `/api/sessions/:id/answer` con roundId/choice. Solo dopo la risposta vengono inviate soluzione, spiegazione e crediti. Foto servite tramite round opachi assegnati. Doppio click/retry con stessa scelta è idempotente; una scelta diversa è rifiutata. Refresh riprende la domanda corrente; errori di rete offrono ripresa. Il countdown del browser è indicativo: alla scadenza il server rifiuta ulteriori risposte.
+API: POST `/api/sessions` con mode training/timed, count, roundSeconds e categories; GET `/api/sessions/:id`; POST `/api/sessions/:id/answer` con roundId/choice. Solo dopo la risposta vengono inviate soluzione, spiegazione e crediti. Foto servite tramite round opachi assegnati. Doppio click/retry con stessa scelta è idempotente; una scelta diversa è rifiutata. Refresh riprende la domanda corrente; errori di rete offrono ripresa. Il countdown del browser è indicativo: alla scadenza il server rifiuta ulteriori risposte.
 
 Statistiche private `/api/admin/stats`: conteggi descrittivi per categoria e immagine, senza livelli o suggerimenti di difficoltà. Risposte in categorie multiple possono contribuire a più aggregazioni. Test HTTP aggiuntivi: con Wrangler locale attivo, `python3 tests/game.integration.py` (modifica soltanto una sessione D1 locale per verificare la scadenza, mai risorse remote).
 
-## PvP e consegna (fase 4)
+## PvP archiviato temporaneamente (fase 4 storica)
+
+La modalità pubblica è sospesa; le API stanze rispondono 503 e la cronologia è preservata. Le seguenti sono istruzioni storiche per una futura riattivazione, non disponibili nel sito attuale.
 
 Aprire `/pvp` in due schede o browser: creare stanza, copiare il codice di 12 caratteri, entrare dal secondo client e avviare dall’host. Entrambi vedono stessa immagine e scadenza; la soluzione rimane sul server fino a entrambe le risposte o timeout. D1 conserva sfida, giocatori anonimi, risposte e risultati. DO usa backend SQLite e WebSocket hibernation; HTTP consente ripresa durante le disconnessioni. Non rispondere costa il tempo massimo del round, i punti dipendono solo dalla correttezza. Il token stanza è privato della scheda e non compare negli URL.
 
@@ -192,7 +197,7 @@ python3 scripts/local-data.py backup
 python3 scripts/local-data.py restore-test
 ```
 
-L’integrazione avvia un Worker con stato **locale isolato** sulla porta 8788 e prova anche due veri client WebSocket con riconnessione e timeout. Nessun browser aggiuntivo necessario. Dati test in `.wrangler/integration`; log privati in `artifacts/`. I test schema/API e `npm run build` restano separati dalla pipeline Python.
+L’integrazione avvia un Worker con stato **locale isolato** sulla porta 8788 e verifica Allenamento, A tempo per immagine, compatibilità storica e blocco delle API PvP. I test unitari conservano la copertura dell’attore PvP. Nessun browser aggiuntivo necessario. Dati test in `.wrangler/integration`; log privati in `artifacts/`. I test schema/API e `npm run build` restano separati dalla pipeline Python.
 
 Configurazione anteprime, credenziali, guardia sui binding, backup e rilascio in [docs/cloudflare.md](docs/cloudflare.md). `node scripts/check-preview.mjs` blocca volontariamente le preview finché non sono indicati DB/bucket di test verificati. Il modello con segnaposto è separato dalla config attiva. L’accesso Cloudflare e l’isolamento remoto non sono certificati da un test locale o dry-run.
 

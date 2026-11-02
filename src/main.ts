@@ -1,4 +1,3 @@
-import { setupPvp, stopPvp } from "./pvp";
 import { setupGame, stopPlay } from "./play";
 import { showAdmin } from "./admin";
 import { showSlopStudio } from "./slop";
@@ -28,7 +27,6 @@ export async function api<T = Record<string, unknown>>(
 const links = [
   ["/allenamento", "Allenamento"],
   ["/tempo", "A tempo"],
-  ["/pvp", "Sfida un amico"],
 ];
 export const content = () => document.querySelector<HTMLElement>("#content")!;
 function shell() {
@@ -37,7 +35,7 @@ function shell() {
 const arrow = '<svg class="arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 16 16 4M4 4h12v12"/></svg>';
 const mosaic = `<figure class="gallery-preview"><figcaption><span>STUDI SINTETICI</span><span>001 — 002</span></figcaption><div class="diptych" aria-hidden="true"><div class="art art-one"><span class="sun"></span><div class="ridge r1"></div><div class="ridge r2"></div><div class="ridge r3"></div></div><div class="art art-two"><div class="orb"></div></div></div><p>Illustrazioni originali della demo.<br>Nessuna fotografia o immagine verificata.</p></figure>`;
 function home() {
-  content().innerHTML = `<section class="hero"><div class="hero-copy"><div class="eyebrow">ESPERIMENTO VISIVO · DEMO</div><h1>Guarda.<br>Dubita.<br><em>Decidi.</em></h1><p class="lead">Un’immagine. Due possibilità. Osserva i dettagli, scegli REAL o SLOP e scopri la storia dopo la risposta.</p><a class="button primary" href="/allenamento">Esplora la demo <span>${arrow}</span></a><div class="hero-meta"><span>Nessun account</span><span>Tre modi di osservare</span></div></div>${mosaic}</section><section class="modes"><div class="section-line"><div><span class="eyebrow">SCEGLI COME GIOCARE</span><h2>Il tuo sguardo, le tue regole.</h2></div><p>Inizia con calma. Poi alza la posta.</p></div><div class="cards">${[
+  content().innerHTML = `<section class="hero"><div class="hero-copy"><div class="eyebrow">ESPERIMENTO VISIVO · DEMO</div><h1>Guarda.<br>Dubita.<br><em>Decidi.</em></h1><p class="lead">Un’immagine. Due possibilità. Osserva i dettagli, scegli REAL o SLOP e scopri la storia dopo la risposta.</p><a class="button primary" href="/allenamento">Esplora la demo <span>${arrow}</span></a><div class="hero-meta"><span>Nessun account</span><span>Due modi di osservare</span></div></div>${mosaic}</section><section class="modes"><div class="section-line"><div><span class="eyebrow">SCEGLI COME GIOCARE</span><h2>Il tuo sguardo, le tue regole.</h2></div><p>Inizia con calma. Poi alza la posta.</p></div><div class="cards">${[
     [
       "01",
       "◎",
@@ -50,17 +48,9 @@ function home() {
       "02",
       "◷",
       "Contro il tempo",
-      "Il tempo scorre. Quante immagini riesci a riconoscere prima dello zero?",
+      "Un conto alla rovescia per ogni immagine. Scegli prima che il tempo scada.",
       "/tempo",
       "Accetta la sfida",
-    ],
-    [
-      "03",
-      "⚑",
-      "Uno contro uno",
-      "Stesse immagini. Stesso tempo. Sfida un amico e scopri chi ha più intuito.",
-      "/pvp",
-      "Crea una stanza",
     ],
   ]
     .map(
@@ -72,7 +62,7 @@ function home() {
     )}</div></section><aside class="demo-banner">◈ <span><strong>Stai esplorando una demo.</strong> Le illustrazioni sono sintetiche e le risposte simulate. Il catalogo verificato arriverà dopo la revisione editoriale.</span></aside>`;
 }
 function info() {
-  content().innerHTML = `<section class="page narrow"><div class="eyebrow">UNO SGUARDO PIÙ CONSAPEVOLE</div><h1>Come funziona.</h1><p class="lead">Scegli REAL (reale) oppure SLOP (generata con IA). Dopo ogni risposta scopri spiegazione, provenienza e licenza.</p><h2>Una demo dichiarata</h2><p>Le illustrazioni attuali sono create in codice dal progetto. Le etichette sono simulate per provare le funzioni: non sono fotografie documentate né un test del riconoscimento delle immagini IA.</p><h2>Il catalogo futuro</h2><p>Solo immagini approvate dall’amministratore. “Reale” richiede provenienza documentata e diritti verificati; le immagini IA sono create dal proprietario per un gioco di fantasia. La parola Slop nel titolo non valuta automaticamente la qualità.</p><h2>Privacy</h2><p>Nessun account richiesto, nessun analytics o cookie pubblicitario. Un cookie tecnico conserva la sessione anonima; il nickname PvP è facoltativo. Le risposte vengono conservate localmente per il funzionamento e le statistiche. Non inserire dati personali nel nickname. Prima del lancio pubblico saranno definiti titolare, contatti e conservazione. Puoi eliminare il cookie dalle impostazioni del browser.</p><h2>Comandi</h2><p>Durante una domanda: R per REAL, I per SLOP (generata con IA). Tocca l’immagine per ingrandirla, oppure usa Invio o Spazio quando ha il focus. Chiudi con Escape. Ogni funzione è disponibile con tastiera e touch.</p></section>`;
+  content().innerHTML = `<section class="page narrow"><div class="eyebrow">UNO SGUARDO PIÙ CONSAPEVOLE</div><h1>Come funziona.</h1><p class="lead">Scegli REAL (reale) oppure SLOP (generata con IA). Dopo ogni risposta scopri spiegazione, provenienza e licenza.</p><h2>Una demo dichiarata</h2><p>Le illustrazioni attuali sono create in codice dal progetto. Le etichette sono simulate per provare le funzioni: non sono fotografie documentate né un test del riconoscimento delle immagini IA.</p><h2>Il catalogo futuro</h2><p>Solo immagini approvate dall’amministratore. “Reale” richiede provenienza documentata e diritti verificati; le immagini IA sono create dal proprietario per un gioco di fantasia. La parola Slop nel titolo non valuta automaticamente la qualità.</p><h2>Privacy</h2><p>Nessun account richiesto, nessun analytics o cookie pubblicitario. Un cookie tecnico conserva la sessione anonima. Il server registra risposte e tempi per il funzionamento e le statistiche. Il rilevamento della pagina nascosta oscura le immagini soltanto nel browser: non registra la tua navigazione e non applica penalità. Prima del lancio pubblico saranno definiti titolare, contatti e conservazione. Puoi eliminare il cookie dalle impostazioni del browser.</p><h2>Tempo e immagini</h2><p>In Allenamento il tempo di osservazione è misurato e mostrato nel riepilogo, senza modificare i punti. A tempo ogni immagine ha un countdown: cambiare scheda non lo sospende. Quando la pagina diventa nascosta, l’immagine viene coperta; al ritorno puoi mostrarla di nuovo se il round è ancora aperto. I comandi diretti di salvataggio sono limitati sulle immagini di gioco, ma screenshot e copie restano tecnicamente possibili.</p><h2>Comandi</h2><p>Durante una domanda: R per REAL, I per SLOP (generata con IA). Tocca l’immagine per ingrandirla, oppure usa Invio o Spazio quando ha il focus. Chiudi con Escape. Ogni funzione è disponibile con tastiera e touch.</p></section>`;
 }
 function credits() {
   content().innerHTML = `<section class="page narrow"><div class="eyebrow">TRASPARENZA, PRIMA DI TUTTO</div><h1>Fonti e crediti.</h1><p class="lead">La demo contiene soltanto illustrazioni geometriche originali Real or Slop.</p><p>Le illustrazioni del gioco non contengono materiale di terzi. L’interfaccia usa Space Grotesk Bold e Inter distribuiti localmente con licenza SIL Open Font License 1.1: <a href="/fonts/OFL-space-grotesk.txt" target="_blank" rel="noopener noreferrer">licenza Space Grotesk</a> e <a href="/fonts/OFL-inter.txt" target="_blank" rel="noopener noreferrer">licenza Inter</a>. Nel catalogo definitivo, fonte, autore, licenza, obblighi di attribuzione e prove saranno mostrati dopo la risposta. Le immagini in revisione rimangono private.</p><a class="button" href="/allenamento">Esplora la demo</a></section>`;
@@ -80,14 +70,13 @@ function credits() {
 
 export async function render() {
   stopPlay();
-  stopPvp();
   shell();
   if (location.pathname === "/") home();
   else if (location.pathname === "/informazioni") info();
   else if (location.pathname === "/crediti") credits();
   else if (location.pathname === "/allenamento") await setupGame("training");
   else if (location.pathname === "/tempo") await setupGame("timed");
-  else if (location.pathname === "/pvp") await setupPvp();
+  else if (location.pathname === "/pvp") content().innerHTML = '<section class="page narrow"><h1>La sfida tra amici torna più avanti.</h1><p>Il PvP è temporaneamente sospeso.</p><a class="button" href="/tempo">Gioca a tempo</a></section>';
   else if (location.pathname === "/admin") await showAdmin();
   else if (location.pathname === "/admin/slop") await showSlopStudio();
   else

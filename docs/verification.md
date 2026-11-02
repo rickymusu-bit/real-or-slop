@@ -1,5 +1,32 @@
 # Verifiche effettive
 
+## Tempi per immagine e PvP sospeso — 0.12.0
+
+`updated_at: 2026-11-02T15:25:07+01:00`, rapporto `1.0.0`.
+
+- Migrazione additiva 0009: nuove modalità temporali e deadline per round,
+  timeout distinti dalle risposte valide; cronologia, timestamp e assegnazioni
+  delle vecchie sessioni 1/2 e del PvP preservati.
+- Allenamento misura il tempo soltanto nel riepilogo; A tempo usa un countdown
+  server di 10/20/30 secondi per immagine e non anticipa i media dei round futuri.
+  Start/ready concorrenti e retry non prorogano la scadenza; risposte tardive
+  e tentativi di preparare round futuri sono rifiutati dal Worker/SQL.
+- Cambio scheda/focus: immagine coperta e zoom chiuso, riapertura esplicita,
+  risincronizzazione dello stato al ritorno, nessuna pausa del timer e nessuna
+  registrazione della navigazione. Menu contestuale/drag/callout limitati sulle
+  immagini di gioco; nessuna garanzia contro screenshot o client modificati.
+- PvP rimosso da home e navigazione, vecchio URL con avviso di sospensione,
+  API pubbliche 503; attore, namespace/binding e storico conservati.
+- Lint, 13 file Node, 54 test Python, build, deploy:check, packaging dry-run e
+  integrazione locale Worker/D1/R2 superati. Demo senza binding R2 verificata
+  separatamente, incluse le scadenze nuove e quelle storiche.
+- Chromium esistente: viewport 360/390/768/1440, accessibilità e tastiera,
+  cambio scheda reale, chiusura zoom, persistenza della copertura, scadenza in
+  background, riapertura esplicita, timer indipendenti, retry dei file corrotti
+  e assenza di richieste esterne. Screenshot e misure in `artifacts/gallery/`.
+- Nessuna nuova dipendenza, deploy, migrazione remota, modifica di credenziali,
+  attivazione di cron, pubblicazione del catalogo o chiamata OpenAI a pagamento.
+
 ## Ripresa Workers Builds — 0.11.1
 
 `updated_at: 2026-11-02T09:43:07+01:00`, rapporto `1.0.0`.

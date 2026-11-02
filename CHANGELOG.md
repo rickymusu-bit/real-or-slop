@@ -1,3 +1,11 @@
+## 0.12.0 — 2026-11-02T15:25:07+01:00
+
+- A tempo: scadenze server per singola immagine, scelta 10/20/30 secondi e numero di round; manifest limitato al round corrente, timeout senza risposte fittizie e feedback senza consumo del round successivo.
+- Allenamento: tempo misurato nel riepilogo, senza effetti su punti o spareggi.
+- Oscuramento locale al cambio scheda/focus e chiusura dell’ingrandimento, senza pausa del timer; ostacoli al salvataggio diretto limitati alle immagini di gioco.
+- PvP sospeso nella navigazione e nelle API pubbliche; attore, binding e dati storici conservati.
+- Migrazione additiva 0009; vecchie sessioni e deadline preservate. Nessuna migrazione, pubblicazione o generazione remota eseguita.
+
 ## 0.11.2 — 2026-11-02T13:34:37+01:00
 
 - Avvio manuale del workflow con scelta esplicita di 2 o 20 fotografie; default
