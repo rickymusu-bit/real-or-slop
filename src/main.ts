@@ -3,7 +3,18 @@ import { setupGame, stopPlay } from "./play";
 import { showAdmin } from "./admin";
 import { showSlopStudio } from "./slop";
 import "./style.css";
+declare const __ROS_BRAND_READY__: boolean;
 const root = document.querySelector<HTMLDivElement>("#app")!;
+const brandIcon = __ROS_BRAND_READY__
+  ? '<img class="ros-logo-icon" src="/brand/logo-real-slop-v1.0.0.png" width="1254" height="1254" alt="" decoding="async">'
+  : "";
+const brandHero = __ROS_BRAND_READY__
+  ? '<div class="hero-brand-photo" aria-hidden="true"><img src="/brand/hero-real-slop-v1.0.0.png" width="1672" height="941" alt="" decoding="async" fetchpriority="high"></div>'
+  : "";
+const brandMascot = __ROS_BRAND_READY__
+  ? '<img class="ros-mode-mascot" src="/brand/mascot-real-slop-v1.0.0.png" width="1254" height="1254" alt="" loading="lazy" decoding="async">'
+  : "";
+
 export const escape = (s: unknown) =>
   String(s ?? "").replace(
     /[&<>"']/g,
@@ -32,12 +43,20 @@ const links = [
 ];
 export const content = () => document.querySelector<HTMLElement>("#content")!;
 function shell() {
-  root.innerHTML = `<a class="skip-link" href="#content">Salta al contenuto</a><header><a class="brand" href="/" aria-label="REAL or SLOP, inizio"><span class="brand-real">REAL</span><span class="brand-or">or</span><span class="brand-slop">SLOP</span></a><nav aria-label="Principale">${links.map(([url, label]) => `<a href="${url}" ${location.pathname === url ? 'aria-current="page"' : ""}>${label}</a>`).join("")}<a href="/informazioni" class="nav-info" aria-label="Informazioni">?</a></nav></header><main id="content" tabindex="-1"></main><footer><span>Guarda meglio. Metti tutto in dubbio.</span><div><a href="/informazioni">Come funziona & privacy</a><a href="/crediti">Fonti e crediti</a><span class="demo-dot">Demo sintetica</span></div></footer>`;
+  if (__ROS_BRAND_READY__ && !document.querySelector('link[data-ros-favicon]')) {
+    const icon = document.createElement("link");
+    icon.rel = "icon";
+    icon.type = "image/png";
+    icon.href = "/brand/logo-real-slop-v1.0.0.png";
+    icon.dataset.rosFavicon = "true";
+    document.head.append(icon);
+  }
+  root.innerHTML = `<a class="skip-link" href="#content">Salta al contenuto</a><header><a class="brand" href="/" aria-label="REAL or SLOP, inizio">${brandIcon}<span class="brand-labels"><span class="brand-real">REAL</span><span class="brand-or">or</span><span class="brand-slop">SLOP</span></span></a><nav aria-label="Principale">${links.map(([url, label]) => `<a href="${url}" ${location.pathname === url ? 'aria-current="page"' : ""}>${label}</a>`).join("")}<a href="/informazioni" class="nav-info" aria-label="Informazioni">?</a></nav></header><main id="content" tabindex="-1"></main><footer><span>Guarda meglio. Metti tutto in dubbio.</span><div><a href="/informazioni">Come funziona & privacy</a><a href="/crediti">Fonti e crediti</a><span class="demo-dot">Demo sintetica</span></div></footer>`;
 }
 const arrow = '<svg class="arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 16 16 4M4 4h12v12"/></svg>';
 const mosaic = `<figure class="gallery-preview"><figcaption><span>STUDI SINTETICI</span><span>001 — 002</span></figcaption><div class="diptych" aria-hidden="true"><div class="art art-one"><span class="sun"></span><div class="ridge r1"></div><div class="ridge r2"></div><div class="ridge r3"></div></div><div class="art art-two"><div class="orb"></div></div></div><p>Illustrazioni originali della demo.<br>Nessuna fotografia o immagine verificata.</p></figure>`;
 function home() {
-  content().innerHTML = `<section class="hero"><div class="hero-copy"><div class="eyebrow">ESPERIMENTO VISIVO · DEMO</div><h1>Guarda.<br>Dubita.<br><em>Decidi.</em></h1><p class="lead">Un’immagine. Due possibilità. Osserva i dettagli, scegli REAL o SLOP e scopri la storia dopo la risposta.</p><a class="button primary" href="/allenamento">Esplora la demo <span>${arrow}</span></a><div class="hero-meta"><span>Nessun account</span><span>Tre modi di osservare</span></div></div>${mosaic}</section><section class="modes"><div class="section-line"><div><span class="eyebrow">SCEGLI COME GIOCARE</span><h2>Il tuo sguardo, le tue regole.</h2></div><p>Inizia con calma. Poi alza la posta.</p></div><div class="cards">${[
+  content().innerHTML = `<section class="${__ROS_BRAND_READY__ ? "hero hero-branded" : "hero"}"><div class="hero-copy"><div class="eyebrow">ESPERIMENTO VISIVO · DEMO</div><h1>Guarda.<br>Dubita.<br><em>Decidi.</em></h1><p class="lead">Un’immagine. Due possibilità. Osserva i dettagli, scegli REAL o SLOP e scopri la storia dopo la risposta.</p><a class="button primary" href="/allenamento">Esplora la demo <span>${arrow}</span></a><div class="hero-meta"><span>Nessun account</span><span>Tre modi di osservare</span></div></div>${__ROS_BRAND_READY__ ? brandHero : mosaic}</section><section class="modes"><div class="section-line"><div><span class="eyebrow">SCEGLI COME GIOCARE</span><h2>Il tuo sguardo, le tue regole.</h2></div><div class="modes-aside"><p>Inizia con calma. Poi alza la posta.</p>${brandMascot}</div></div><div class="cards">${[
     [
       "01",
       "◎",
