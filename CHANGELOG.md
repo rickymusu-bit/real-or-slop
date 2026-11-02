@@ -1,3 +1,8 @@
+## 0.14.1 — 2026-11-02T21:24:07.507675+01:00
+
+- Archivio privato in R2 anche per generazioni scartate o fallite dopo la produzione del file, con manifest D1 immutabile e preview nello Studio. Nessuna importazione o pubblicazione aggiuntiva.
+- Migrazione additiva 0012, controlli condivisi di integrità, recupero idempotente e verifica delle capacità prima delle chiamate pagate. Nessuna attivazione o modifica remota.
+
 ## 0.14.0 — 2026-11-02T16:30:46Z
 
 - Workflow editoriale con quattro fasi OpenAI Batch, prompt esclusivamente testuali, valutazione finale cieca, risultati associati per custom_id e nessuna fallback sincrona. Prova da due fotografie / una generazione.

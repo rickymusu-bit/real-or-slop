@@ -1,3 +1,7 @@
+> Aggiornamento 2026-11-02T21:24:07.507675+01:00: [archivio delle generazioni v1.0.0](archivio-privato-generazioni-v1.0.0.md),
+> con preview private degli scarti. Richiede migrazione 0012 e backend aggiornato;
+> non ricrea i file non conservati dai vecchi runner.
+
 > Aggiornamento 2026-11-02T16:30:46Z: esecuzione del workflow tramite
 > [Batch OpenAI v1.0.0](pipeline-batch-openai-v1.0.0.md), con recupero D1/R2 e
 > monitoraggio tecnico separato. Rubrica, libertà generativa, preferenze e revisione

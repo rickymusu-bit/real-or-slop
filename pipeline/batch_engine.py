@@ -216,7 +216,7 @@ class Engine:
                     item=slop_import_item(self._photo(record['reference_id']),record)
                     item['metadata'].update(license_name=self.state['license']['name'],license_url=self.state['license']['url'])
                     item=upload(self.remote.base,self.remote.token,prepare(item,self.folder));uid=item['id']
-                self.remote.save_attempt(record,uid)
+                self.remote.save_attempt(record,uid,root=self.folder)
             self.state['exported'][record['id']]=uid or 'archived';self.save()
 
     def _briefs(self):
@@ -306,7 +306,7 @@ class Engine:
             if record['id'] not in self.state['exported']:
                 record.update(status='cancelled',decision_reason='Run annullato: file e provenienza conservati privatamente, nessuna nuova valutazione o importazione')
                 self.save()
-                if self.remote:self.remote.save_attempt(record)
+                if self.remote:self.remote.save_attempt(record,root=self.folder)
                 self.state['exported'][record['id']]='cancelled';self.save()
         self.state['status']='cancelled';self.save();return self.summary()
 

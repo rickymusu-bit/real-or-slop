@@ -1,5 +1,43 @@
 # Verifiche effettive
 
+## Prova diretta e archivio degli scarti — 0.14.1 da revisionare
+
+`updated_at: 2026-11-02T21:26:37.707918+01:00`, rapporto `1.0.0`, branch
+`fix/private-generated-archive`, base main `8a5f9fc`.
+
+La prova pagata è stata eseguita con il percorso diretto nel ramo operativo
+della PR #29, prima della correzione dell'archivio. Actions
+[41513926222](https://github.com/rickymusu-bit/real-or-slop/actions/runs/41513926222),
+20:52:01–20:54:34 del 2026-11-02, Europe/Rome. Due foto nuove, quattro analisi
+e una generazione: candidata REAL 52.83/100 e SLOP 42.67/100, entrambe sotto
+65. Zero nuove candidate pronte, nessuna approvazione o pubblicazione.
+
+Il gate Worker è stato richiuso dal controller in finally, verificato false;
+versione attiva e5d2f637-2a20-4f1c-b672-ed4b25fee08d. Catalogo invariato a
+12 REAL + 12 AI. Prenotazioni conservative cumulative 4.50 USD, incluse 0.50 USD
+del precedente invio Batch non eseguito. Non è il costo effettivo fatturato.
+Nessuna nuova generazione o modifica di budget dopo la prova.
+
+Difetto rilevato: preview della SLOP scartata non archiviata dal vecchio percorso
+diretto; restano dossier e sorgenti, ma il file di quella prova non è recuperato.
+La correzione per le prossime esecuzioni conserva originale e preview in R2
+privato indipendentemente dallo stato e li rende visibili nello Studio.
+
+Verifiche locali della correzione: lint, suite Node su 14 file, **89 test Python**,
+build, deploy:check e packaging dry-run. Migrazione additiva 0012 provata su
+copia SQLite con tutte le righe e colonne precedenti preservate. Mock per upload
+degli scarti, hash/percorso alterati, errore dopo generazione e preflight contro
+backend vecchio prima di qualsiasi chiamata pagata.
+
+L'integrazione Worker/D1/R2 locale verifica file privati degli scarti, autenticazione,
+GET prima dell'archivio, hash errato, upload ripetuto, disponibilità Studio e
+assenza di import/pubblicazione. Fonte e file generati condividono i controlli di
+integrità. Il profilo Batch usa provider fittizio; la demo senza R2 conserva
+le modalità esistenti. Nessuna migrazione 0012, deploy della correzione, attivazione
+pagata, nuovo cron o chiave eseguiti in produzione.
+
+[Contratto API, recupero e rilascio](archivio-privato-generazioni-v1.0.0.md).
+
 ## OpenAI Batch — 0.14.0
 
 `updated_at: 2026-11-02T16:40:00Z`, rapporto `1.0.0`. Branch

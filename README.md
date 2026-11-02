@@ -1,5 +1,9 @@
 # Real or Slop
 
+Archivio privato delle generazioni (0.14.1, da revisionare): conserva anche gli
+scarti e li rende consultabili nello Studio senza importarli nel catalogo.
+[Migrazione 0012 e recupero](docs/archivio-privato-generazioni-v1.0.0.md).
+
 Pipeline OpenAI Batch (0.14.0): lotti fino a 20 fotografie, quattro fasi riprendibili
 (valutazione → brief → generazione → valutazione cieca). Prima prova da due foto /
 una SLOP, tetto cumulativo configurabile per rispettare i **5 USD complessivi**.
