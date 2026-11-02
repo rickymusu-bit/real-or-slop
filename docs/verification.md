@@ -1,5 +1,57 @@
 # Verifiche effettive
 
+## OpenAI Batch — 0.14.0
+
+`updated_at: 2026-11-02T16:40:00Z`, rapporto `1.0.0`. Branch
+`feat/openai-editorial-batch`, base `adb20c4` / 0.13.0.
+
+- Lint, suite Node su 14 file, **85 test Python**, build TypeScript/Vite,
+  `deploy:check` e packaging Wrangler `--dry-run` superati. Il dry-run usa
+  `XDG_CONFIG_HOME=/tmp/real-or-slop-config` per lo stato privato del runner.
+- Nuovi test: quattro fasi per 20/2/1 e lotti dispari, classifica globale anche
+  con shard, output fuori ordine/duplicati/estranei/mancanti/malformati, solo testo
+  al generatore, valutazione cieca, scarti e rigenerazioni limitate, invii incerti
+  adottati senza duplicazioni, ripresa senza nuove spese, scadenza parziale e
+  annullamento asincrono con conservazione dei file, budget e credenziali.
+- Schema SQLite: tutti i dati precedenti preservati dalla 0011, claim immutabili,
+  quasi duplicati, proprietà delle sorgenti e rollback atomico delle prenotazioni.
+- `ROS_TEST_BATCH=1 npm run test:integration`: Worker/D1/R2 reali **locali**, provider
+  fittizio. Quattro job, una REAL e una SLOP preparate senza approvazione o
+  pubblicazione; ripristino su filesystem vuoto, lease, CAS, riuso idempotente,
+  prenotazioni concorrenti e limiti giornaliero/cumulativo verificati.
+- Integrazione standard e profilo senza R2 superati: moderazione, provenienza,
+  audit, preferenze, pubblicazione concorrente 50/50, Bernoulli, sessioni storiche,
+  Allenamento/A tempo, preload e API PvP sospese.
+- Chromium `test:gallery`: due pulsanti senza moduli, preview corrotta, doppio
+  clic, coda esaurita, gioco/timer, oscuramento senza pausa, tastiera/accessibilità
+  e layout 360/390/768/1440 verificati. Screenshot locali in `artifacts/gallery/`.
+- Nessuna chiamata OpenAI a pagamento, deploy, migrazione remota, catalogo
+  pubblicato, nuovo cron, modifica di secret/permessi o attivazione di budget.
+  La 0011 e le nuove variabili sono da applicare/configurare in un rilascio
+  separatamente approvato. Nessun nuovo pacchetto o servizio.
+
+I test non certificano qualità editoriale, costo effettivo o quota live: il primo
+lotto resta da due foto / una generazione dopo abilitazione e verifica delle stime.
+La sequenza Batch può richiedere circa quattro giorni più i controlli periodici.
+[Architettura e procedura](pipeline-batch-openai-v1.0.0.md).
+
+### File interessati
+
+- Orchestrazione: `pipeline/batch.py`, `batch_api.py`, `batch_engine.py`,
+  `batch_store.py`, `batch_fixtures.py`; riuso in `pipeline/editorial.py` e
+  configurazione `pipeline/editorial.env.example`.
+- Backend/schema: `worker/editorial-batch.ts`, `editorial.ts`, `core.ts`,
+  `moderation.ts`; `migrations/0011_editorial_batches.sql`.
+- Interfaccia: `src/editorial.ts`, `src/review.ts`.
+- Automazione: `.github/workflows/review-queue.yml`, `checks.yml`,
+  `scripts/integration.py`; versione `package.json`, `package-lock.json`.
+- Test: `tests/batch_pipeline_test.py`, `batch_api_test.py`, `batch_schema_test.py`,
+  `batch.integration.py`, `editorial.integration.py`, `editorial_schema_test.py`.
+- Documenti: `README.md`, `CHANGELOG.md`, `docs/pipeline-batch-openai-v1.0.0.md`,
+  `coda-automatica.md`, `pipeline-editoriale-real-slop-v1.0.0.md`,
+  `studio-generazione-slop-v2.0.0.md`, `revisione-visiva-preferenze-v1.0.0.md` e
+  questo rapporto.
+
 ## Revisione visiva e preferenze — 0.13.0
 
 `updated_at: 2026-11-02T16:07:51+01:00`, rapporto `1.0.0`. Branch

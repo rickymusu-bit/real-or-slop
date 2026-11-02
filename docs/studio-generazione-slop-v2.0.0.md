@@ -1,3 +1,8 @@
+> Aggiornamento 2026-11-02T16:30:46Z: esecuzione del workflow tramite
+> [Batch OpenAI v1.0.0](pipeline-batch-openai-v1.0.0.md), con recupero D1/R2 e
+> monitoraggio tecnico separato. Rubrica, libertà generativa, preferenze e revisione
+> umana a due pulsanti restano invariate.
+
 > Aggiornamento 2026-11-02T15:58:55+01:00: la revisione quotidiana usa [immagine, Approva/Rifiuta e preferenze apprese v1.0.0](revisione-visiva-preferenze-v1.0.0.md). Le schede vengono preparate prima della presentazione; i moduli precedenti restano soltanto nella gestione avanzata.
 
 ---

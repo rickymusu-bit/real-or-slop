@@ -18,7 +18,7 @@ import uuid
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, build_opener
 
-from .importer import NoRedirect, RequestError, prepare, request, site_url, upload
+from .importer import NoRedirect, RequestError, prepare, request, site_url, upload, local_file
 from .run import optimize
 from .licenses import recognized_license
 from .preferences import TAGS, creative_hint, model as preference_model
@@ -72,16 +72,17 @@ class Config:
 
     @classmethod
     def environment(cls):
-        return cls(analysis_model=os.getenv('OPENAI_ANALYSIS_MODEL', ''), image_model=os.getenv('OPENAI_IMAGE_MODEL', ''),
-                   evaluator_model=os.getenv('OPENAI_EVALUATOR_MODEL', '') or os.getenv('OPENAI_ANALYSIS_MODEL', ''),
-                   threshold=float(os.getenv('EDITORIAL_THRESHOLD', '65')), attempts=int(os.getenv('EDITORIAL_ATTEMPTS', '2')),
-                   max_evaluations=int(os.getenv('EDITORIAL_MAX_EVALUATIONS', '60')),
-                   max_generations=int(os.getenv('EDITORIAL_MAX_GENERATIONS', '20')),
-                   max_regenerations=int(os.getenv('EDITORIAL_MAX_REGENERATIONS', '10')),
-                   run_usd=float(os.getenv('EDITORIAL_RUN_USD', '0')), daily_usd=float(os.getenv('EDITORIAL_DAILY_USD', '0')),
-                   evaluation_usd=float(os.getenv('EDITORIAL_EVALUATION_USD', '0')), generation_usd=float(os.getenv('EDITORIAL_GENERATION_USD', '0')),
-                   queue_limit=int(os.getenv('EDITORIAL_QUEUE_LIMIT', '100')), size=os.getenv('OPENAI_IMAGE_SIZE', '1024x1024'),
-                   quality=os.getenv('OPENAI_IMAGE_QUALITY', 'medium'))
+        def env(name, default=''): return os.getenv(name) or default
+        return cls(analysis_model=env('OPENAI_ANALYSIS_MODEL', ''), image_model=env('OPENAI_IMAGE_MODEL', ''),
+                   evaluator_model=env('OPENAI_EVALUATOR_MODEL', '') or env('OPENAI_ANALYSIS_MODEL', ''),
+                   threshold=float(env('EDITORIAL_THRESHOLD', '65')), attempts=int(env('EDITORIAL_ATTEMPTS', '2')),
+                   max_evaluations=int(env('EDITORIAL_MAX_EVALUATIONS', '60')),
+                   max_generations=int(env('EDITORIAL_MAX_GENERATIONS', '20')),
+                   max_regenerations=int(env('EDITORIAL_MAX_REGENERATIONS', '10')),
+                   run_usd=float(env('EDITORIAL_RUN_USD', '0')), daily_usd=float(env('EDITORIAL_DAILY_USD', '0')),
+                   evaluation_usd=float(env('EDITORIAL_EVALUATION_USD', '0')), generation_usd=float(env('EDITORIAL_GENERATION_USD', '0')),
+                   queue_limit=int(env('EDITORIAL_QUEUE_LIMIT', '100')), size=env('OPENAI_IMAGE_SIZE', '1024x1024'),
+                   quality=env('OPENAI_IMAGE_QUALITY', 'medium'))
 
     def validate(self, paid=False):
         numbers = [self.threshold, self.run_usd, self.daily_usd, self.evaluation_usd, self.generation_usd]
@@ -146,29 +147,45 @@ class OpenAI:
             raise PipelineStop('Uno dei modelli configurati non è elencato da /v1/models per questo progetto')
 
     def vision(self, model, instructions, image, context=''):
-        from PIL import Image
-        with Image.open(io.BytesIO(image)) as photo:
-            mime = Image.MIME[photo.format]
-        data_uri = 'data:' + mime + ';base64,' + base64.b64encode(image).decode()
-        result = self.api('responses', dict(model=model, max_output_tokens=4000,
-            text={'format': {'type': 'json_object'}}, input=[dict(role='user', content=[
-                dict(type='input_text', text=instructions + ('\nDati separati della fonte/feedback:\n' + context if context else '')),
-                dict(type='input_image', image_url=data_uri, detail='high')])]))
-        try:
-            output = ''.join(part['text'] for item in result['output'] for part in item.get('content', []) if part.get('type') == 'output_text')
-            value = json.loads(output)
-            if not isinstance(value, dict): raise ValueError()
-            return value
-        except (KeyError, TypeError, ValueError):
-            raise PipelineStop('JSON visivo OpenAI non valido o incompleto') from None
+        return vision_result(self.api('responses', vision_payload(model, instructions, image, context)))
 
     def generate(self, model, prompt, parameters):
-        # Only text crosses this boundary. No image edits, URL or source bytes.
-        result = self.api('images/generations', dict(model=model, prompt=prompt, **{'n': 1, **parameters}))
-        try:
-            return base64.b64decode(result['data'][0]['b64_json'], validate=True)
-        except (KeyError, IndexError, ValueError, TypeError):
-            raise PipelineStop('Il generatore non ha restituito un file base64 valido') from None
+        return image_result(self.api('images/generations', image_payload(model, prompt, parameters)))
+
+
+def vision_payload(model, instructions, image, context=''):
+    from PIL import Image
+    with Image.open(io.BytesIO(image)) as photo:
+        mime = Image.MIME[photo.format]
+    data_uri = 'data:' + mime + ';base64,' + base64.b64encode(image).decode()
+    return dict(model=model, max_output_tokens=4000, text={'format': {'type': 'json_object'}}, input=[dict(role='user', content=[
+        dict(type='input_text', text=instructions + ('\nDati separati della fonte/feedback:\n' + context if context else '')),
+        dict(type='input_image', image_url=data_uri, detail='high')])])
+
+
+def vision_result(result):
+    try:
+        output = ''.join(part['text'] for item in result['output'] for part in item.get('content', []) if part.get('type') == 'output_text')
+        value = json.loads(output)
+        if not isinstance(value, dict): raise ValueError()
+        return value
+    except (KeyError, TypeError, ValueError):
+        raise PipelineStop('JSON visivo OpenAI non valido o incompleto') from None
+
+
+def image_payload(model, prompt, parameters):
+    if set(parameters) - {'n', 'size', 'quality'} or parameters.get('n', 1) != 1:
+        raise PipelineStop('Generazione soltanto text-to-image, un file per richiesta')
+    return dict(model=model, prompt=prompt, **{'n': 1, **parameters})
+
+
+def image_result(result):
+    try:
+        raw = base64.b64decode(result['data'][0]['b64_json'], validate=True)
+        if not 0 < len(raw) <= 12_000_000: raise ValueError()
+        return raw
+    except (KeyError, IndexError, ValueError, TypeError):
+        raise PipelineStop('Il generatore non ha restituito un file base64 valido entro 12 MB') from None
 
 
 def evaluation(value):
@@ -218,7 +235,11 @@ def rank_photos(photos, api, cfg, budget):
         if not result['photographic']:
             continue
         ranked.append({**photo, 'evaluation': result})
-    ranked.sort(key=lambda photo: (-photo['evaluation']['score'], photo['id']))
+    return assign_roles(ranked)
+
+
+def assign_roles(ranked):
+    ranked = sorted(ranked, key=lambda photo: (-photo['evaluation']['score'], photo['id']))
     cutoff = math.ceil(len(ranked) / 2)
     return [{**photo, 'rank': index + 1, 'role': 'REAL' if index < cutoff else 'SLOP'} for index, photo in enumerate(ranked)]
 
@@ -235,9 +256,16 @@ def reinterpret(photo, api, cfg, budget, previous=None, preference_hint=None):
     budget.debit('evaluation')
     source = photo['metadata']
     # Source score and ranking are not needed by the creative stage either.
-    context = json.dumps(dict(documented_source={k: source[k] for k in ('title','description','evidence','source_url') if k in source},
-                              previous_result=previous, editorial_preferences=preference_hint), ensure_ascii=False)
+    context = creative_context(source, previous, preference_hint)
     result = api.vision(cfg.analysis_model, BRIEF, Path(source.get('derived_file') or photo['file']).read_bytes(), context)
+    return creative_result(result, source['source_url'])
+
+
+def creative_context(source, previous=None, preference_hint=None):
+    return json.dumps(dict(documented_source={k: source[k] for k in ('title','description','evidence','source_url') if k in source}, previous_result=previous, editorial_preferences=preference_hint), ensure_ascii=False)
+
+
+def creative_result(result, source_url):
     description = result.get('description', {})
     required = {'subject','environment','objects_relations','materials','composition','situation','details','direct_observations','documented_information','inferences'}
     if not isinstance(description, dict) or not required <= set(description) or any(not isinstance(description[k], str) or not description[k].strip() for k in required):
@@ -245,7 +273,7 @@ def reinterpret(photo, api, cfg, budget, previous=None, preference_hint=None):
     if any(not isinstance(result.get(k), str) or not result[k].strip() for k in ('weakness','creative_brief','prompt')):
         raise PipelineStop('Brief creativo incompleto')
     prompt = result['prompt'] + FREEDOM
-    if len(prompt) > 8000 or any(marker in prompt.lower() for marker in ('https://', 'http://', 'data:image', source['source_url'].lower())):
+    if len(prompt) > 8000 or any(marker in prompt.lower() for marker in ('https://', 'http://', 'data:image', source_url.lower())):
         raise PipelineStop('Il prompt deve contenere soltanto la reinterpretazione testuale, senza riferimenti immagine')
     return {**result, 'prompt': prompt}
 
@@ -278,15 +306,7 @@ def generate_slop(photo, api, cfg, budget, folder, save_attempt=lambda record: N
             # image/score, role, brief, generation prompt or intended label.
             result = evaluation(api.vision(cfg.evaluator_model, RUBRIC, derivative.read_bytes()))
             record['evaluation'] = result
-            record['status'] = 'accepted' if result['score'] >= cfg.threshold and result['photographic'] and result['concrete_motive'].strip() else 'discarded'
-            reasons = []
-            if result['score'] < cfg.threshold:
-                reasons.append(f"Punteggio {result['score']} inferiore alla soglia editoriale {cfg.threshold}")
-            if not result['photographic']:
-                reasons.append('Immagine non compatibile con la natura fotografica del gioco')
-            if not result['concrete_motive'].strip():
-                reasons.append('Manca un motivo concreto di interesse')
-            record['decision_reason'] = ('; '.join(reasons) if reasons else 'Soglia editoriale superata; revisione umana ancora obbligatoria') + '. ' + result['reason']
+            record.update(generation_decision(result, cfg.threshold))
             previous = dict(reason=result['reason'], concrete_motive=result['concrete_motive'])
         except (PipelineStop, OSError, ValueError) as error:
             # Known safe PipelineStop only. Never serialize upstream bodies or
@@ -304,6 +324,19 @@ def generate_slop(photo, api, cfg, budget, folder, save_attempt=lambda record: N
     return accepted
 
 
+def generation_decision(result, threshold):
+    status = 'accepted' if result['score'] >= threshold and result['photographic'] and result['concrete_motive'].strip() else 'discarded'
+    reasons = []
+    if result['score'] < threshold:
+        reasons.append(f"Punteggio {result['score']} inferiore alla soglia editoriale {threshold}")
+    if not result['photographic']:
+        reasons.append('Immagine non compatibile con la natura fotografica del gioco')
+    if not result['concrete_motive'].strip():
+        reasons.append('Manca un motivo concreto di interesse')
+    decision_reason = ('; '.join(reasons) if reasons else 'Soglia editoriale superata; revisione umana ancora obbligatoria') + '. ' + result['reason']
+    return dict(status=status, decision_reason=decision_reason)
+
+
 class Remote:
     def __init__(self, base, token, run_id):
         self.base, self.token, self.run_id = site_url(base), token, run_id
@@ -315,12 +348,12 @@ class Remote:
     def reserve(self, kind):
         return self.call('budget', dict(id=str(uuid.uuid4()), run_id=self.run_id, kind=kind))['reserved_usd']
 
-    def register(self, ranked, registered=False):
+    def register(self, ranked, registered=False, root=None):
         if not registered:
             self.call('references', dict(batch_id=self.run_id, photos=[{k: p[k] for k in ('id','rank','role','metadata','evaluation','original_sha256','file_sha256','perceptual_hash')} for p in ranked]))
         for photo in ranked:
-            original = Path(photo['file'])
-            data = Path(photo['metadata'].get('derived_file') or photo['file']).read_bytes()
+            original = local_file(photo['file'], root or Path.cwd())
+            data = local_file(photo['metadata'].get('derived_file') or photo['file'], root or Path.cwd()).read_bytes()
             self.call(f'references/{photo["id"]}/original', original.read_bytes(), 'PUT')
             self.call(f'references/{photo["id"]}/preview', data, 'PUT')
 
@@ -348,7 +381,7 @@ def execute(items, root, folder, cfg, api, budget, remote=None, known=(), pendin
             previous = registered[photo['id']]
             if any(photo[key] != previous[key] for key in ('role','rank','original_sha256','file_sha256','perceptual_hash')):
                 raise PipelineStop('Il lotto locale non corrisponde al registro immutabile')
-        remote.register(ranked, registered=bool(overlap))  # Immutable separation BEFORE generation.
+        remote.register(ranked, registered=bool(overlap), root=root)  # Immutable separation BEFORE generation.
     counts = dict(ranked=len(ranked), real=0, slop=0)
     for photo in ranked:
         if pending >= cfg.queue_limit:
@@ -378,15 +411,7 @@ def execute(items, root, folder, cfg, api, budget, remote=None, known=(), pendin
             if not record:
                 continue
             if remote:
-                source = photo['metadata']
-                metadata = dict(type='AI', title='Reinterpretazione generativa', description='Immagine sintetica per Real or Slop',
-                    author='Real or Slop / OpenAI', provider='openai-editorial', source_id=record['id'], source_url='https://openai.com/',
-                    license_name=os.getenv('GENERATED_LICENSE_NAME', ''), license_url=os.getenv('GENERATED_LICENSE_URL', ''),
-                    evidence='Generazione text-to-image. Nessuna provenienza archivistica autentica. Diritti e termini da verificare dal revisore.',
-                    explanation=('Questa immagine è generata con IA: una reinterpretazione autonoma, non una fotografia documentaria. Il dettaglio osservabile: ' + record['evaluation']['concrete_motive'] + '. ' + record['evaluation']['reason'])[:3900],
-                    categories=source['categories'], ai_model=cfg.image_model, ai_prompt=record['prompt'], generation_date=record['timestamp'][:10], owner_declaration=True,
-                    derived_file=record['derived_file'])
-                item = dict(metadata=metadata, file=record['file'], sha256=record['original_sha256'])
+                item = slop_import_item(photo, record)
                 write_private(folder / 'accepted' / (record['id'] + '.json'), item)
                 uploaded = upload(remote.base, remote.token, prepare(item, folder.resolve()))
                 remote.save_attempt(record, uploaded['id'])
@@ -394,6 +419,19 @@ def execute(items, root, folder, cfg, api, budget, remote=None, known=(), pendin
         pending += 1
     write_private(folder / 'summary.json', {**counts, 'calls': budget.counts, 'reserved_usd': budget.spent, 'timestamp': now()})
     return counts
+
+
+def slop_import_item(photo, record):
+    source = photo['metadata']
+    metadata = dict(type='AI', title='Reinterpretazione generativa', description='Immagine sintetica per Real or Slop',
+        author='Real or Slop / OpenAI', provider='openai-editorial', source_id=record['id'], source_url='https://openai.com/',
+        license_name=os.getenv('GENERATED_LICENSE_NAME', ''), license_url=os.getenv('GENERATED_LICENSE_URL', ''),
+        evidence='Generazione text-to-image. Nessuna provenienza archivistica autentica. Diritti e termini da verificare dal revisore.',
+        explanation=('Questa immagine è generata con IA: una reinterpretazione autonoma, non una fotografia documentaria. Il dettaglio osservabile: ' + record['evaluation']['concrete_motive'] + '. ' + record['evaluation']['reason'])[:3900],
+        categories=source['categories'], ai_model=record['model'], ai_prompt=record['prompt'], generation_date=record.get('generation_timestamp', record['timestamp'])[:10], owner_declaration=True,
+        derived_file=record['derived_file'])
+    item = dict(metadata=metadata, file=record['file'], sha256=record['original_sha256'])
+    return item
 
 
 class FixtureOpenAI:
@@ -462,7 +500,7 @@ def main(argv=None):
                 raise PipelineStop('Lotto giornaliero già assegnato: usare il recupero del lotto originale')
             resumed = json.loads((folder / 'ranking.json').read_text()) if args.resume and (folder / 'ranking.json').exists() else None
             summary = execute(selected, root, folder, cfg, api, Budget(cfg, remote.reserve), remote,
-                              [*state['references'], *state['inventory']], state['queue']['count'], resume=resumed, preferences=preference_model(state.get('preferences')))
+                              [*state['references'], *state['inventory'], *state.get('claims', [])], state['queue']['count'], resume=resumed, preferences=preference_model(state.get('preferences')))
         print(json.dumps(summary))
         return 0
     except (ValueError, OSError, KeyError, TypeError) as error:

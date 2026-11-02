@@ -1,3 +1,10 @@
+## 0.14.0 — 2026-11-02T16:30:46Z
+
+- Workflow editoriale con quattro fasi OpenAI Batch, prompt esclusivamente testuali, valutazione finale cieca, risultati associati per custom_id e nessuna fallback sincrona. Prova da due fotografie / una generazione.
+- Checkpoint privati D1/R2, lease e revisione CAS, invii incerti riconciliati senza duplicazioni, prenotazioni atomiche per batch/run/giorno e tetto cumulativo configurabile per i 5 USD della prova.
+- Migrazione additiva 0011: prenotazione e deduplicazione delle sorgenti fra run, conservazione di dati e modalità esistenti. Stato tecnico separato dalla revisione Approva/Rifiuta.
+- Test con provider fittizio, documentazione Batch e recupero; nessun nuovo secret, dipendenza, cron, pagamento, deploy, migrazione remota o pubblicazione del catalogo.
+
 ## 0.13.0 — 2026-11-02T15:58:55+01:00
 
 - Revisione visiva con immagine e Approva/Rifiuta, senza campi o checkbox; preparazione automatica prima della coda, snapshot e conferma umana atomica.

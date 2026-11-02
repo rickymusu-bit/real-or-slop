@@ -1,8 +1,17 @@
+> Aggiornamento 2026-11-02T16:30:46Z, versione operativa **3.0.0**: il workflow usa
+> [OpenAI Batch v1.0.0](pipeline-batch-openai-v1.0.0.md), con stato D1/R2, quattro
+> fasi e tetto cumulativo `EDITORIAL_TOTAL_USD` (5 USD per la prova). Le istruzioni
+> sincrone sotto sono conservate per compatibilità: per nuovi lotti usare
+> `pipeline.batch` / operazioni Actions `start`, `resume`, `status`, `cancel`.
+> Il primo avvio non completa tutte le fasi: riprendere con lo stesso run ID.
+> Prezzi nuovi `EDITORIAL_BATCH_EVALUATION_USD` e `EDITORIAL_BATCH_GENERATION_USD`
+> obbligatori positivi nei due ambienti; nessun valore remoto impostato qui.
+
 > Aggiornamento 2026-11-02T15:58:55+01:00: la revisione quotidiana usa [immagine, Approva/Rifiuta e preferenze apprese v1.0.0](revisione-visiva-preferenze-v1.0.0.md). Le schede vengono preparate prima della presentazione; i moduli precedenti restano soltanto nella gestione avanzata.
 
 ---
-version: 2.0.0
-updated_at: 2026-11-01T22:00:00Z
+version: 3.0.0
+updated_at: 2026-11-02T16:30:46Z
 ---
 
 # Esecuzione privata della pipeline editoriale

@@ -8,18 +8,20 @@ interface Attempt {
   status: string | null; published_at: string | null;
 }
 export function editorialPanel() {
-  return `<section class="curation"><h2>Pipeline editoriale REAL / SLOP</h2><p>Le prime posizioni della classifica diventano candidate REAL. Le altre fotografie forniscono soltanto idee testuali al generatore. Ogni risultato richiede revisione umana.</p><button id="editorial-refresh">Carica dossier automatici e diagnostica</button><div id="editorial-dossiers"></div><details><summary>Comparabilità del catalogo pubblicato</summary><pre id="editorial-diagnostics" class="curation-history"></pre></details><label><input id="publication-confirm" type="checkbox"> Ho verificato le approvazioni e confermo la pubblicazione nell’ambiente corrente</label><button id="editorial-publish">Pubblica gruppi bilanciati approvati</button><p id="editorial-status" role="status"></p></section>`;
+  return `<section class="curation"><h2>Pipeline editoriale REAL / SLOP</h2><p>Le prime posizioni della classifica diventano candidate REAL. Le altre fotografie forniscono soltanto idee testuali al generatore. Ogni risultato richiede revisione umana.</p><button id="editorial-refresh">Carica dossier automatici e diagnostica</button><details><summary>Elaborazioni Batch</summary><pre id="editorial-batches" class="curation-history"></pre></details><div id="editorial-dossiers"></div><details><summary>Comparabilità del catalogo pubblicato</summary><pre id="editorial-diagnostics" class="curation-history"></pre></details><label><input id="publication-confirm" type="checkbox"> Ho verificato le approvazioni e confermo la pubblicazione nell’ambiente corrente</label><button id="editorial-publish">Pubblica gruppi bilanciati approvati</button><p id="editorial-status" role="status"></p></section>`;
 }
 export function setupEditorial(page: HTMLElement) {
   const output = page.querySelector<HTMLElement>("#editorial-dossiers")!;
   const status = page.querySelector<HTMLElement>("#editorial-status")!;
   const load = async () => {
-    const [data, state] = await Promise.all([
+    const [data, state, batches] = await Promise.all([
       api<{ references: Reference[]; attempts: Attempt[] }>("/admin/editorial/dossiers"),
       api<{ diagnostics: unknown }>("/admin/editorial/state"),
+      api<unknown[]>("/admin/editorial/batch-runs"),
     ]);
     if (!page.isConnected) return;
     page.querySelector("#editorial-diagnostics")!.textContent = JSON.stringify(state.diagnostics, null, 2);
+    page.querySelector("#editorial-batches")!.textContent = JSON.stringify(batches, null, 2);
     output.innerHTML = data.references.map(photo => {
       const metadata = JSON.parse(photo.metadata_json) as { title?: string };
       const attempts = data.attempts.filter(attempt => attempt.reference_id === photo.id);

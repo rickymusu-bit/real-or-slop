@@ -138,9 +138,9 @@ class EditorialSchemaTest(unittest.TestCase):
         source=Path('worker/editorial.ts').read_text()
         statement='INSERT INTO editorial_usage'+source.split('INSERT INTO editorial_usage',1)[1].split('`).bind',1)[0]
         db=database()
-        def reserve(uid,run='run',kind='evaluation',run_cap=10,daily_cap=2,eval_cap=2,gen_cap=1,regen_cap=1):
+        def reserve(uid,run='run',kind='evaluation',run_cap=10,daily_cap=2,eval_cap=2,gen_cap=1,regen_cap=1,total_cap=100):
             cost=1;day='2026-11-01'
-            return db.execute(statement,(uid,run,day,kind,cost,day+'T00:00:00Z',run,cost,run_cap,day,cost,daily_cap,run,kind,eval_cap,run,kind,gen_cap,run,kind,regen_cap)).rowcount
+            return db.execute(statement,(uid,run,day,kind,cost,day+'T00:00:00Z',cost,total_cap,run,cost,run_cap,day,cost,daily_cap,run,kind,eval_cap,run,kind,gen_cap,run,kind,regen_cap)).rowcount
         self.assertEqual(reserve('one'),1)
         self.assertEqual(reserve('two'),1)
         self.assertEqual(reserve('three'),0)
@@ -150,6 +150,8 @@ class EditorialSchemaTest(unittest.TestCase):
         self.assertEqual(reserve('run-cap','limited',run_cap=.5,daily_cap=100),0)
         self.assertEqual(reserve('gen','genrun','generation',daily_cap=100),1)
         self.assertEqual(reserve('regen','genrun','regeneration',daily_cap=100),0)
+        self.assertEqual(reserve('total','another-run',daily_cap=100,total_cap=3),0)
+        self.assertEqual(db.execute('SELECT sum(reserved_usd) FROM editorial_usage').fetchone()[0],3)
 
     def test_published_diagnostics_use_final_slop_scores_and_report_missing_data(self):
         db=database();photo(db,'score-source','REAL')
