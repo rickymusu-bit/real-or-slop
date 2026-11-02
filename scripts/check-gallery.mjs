@@ -62,7 +62,7 @@ async function tab() {
     if (result.exceptionDetails) throw Error('Browser evaluation failed: ' + result.exceptionDetails.text);
     return result.result.value;
   };
-  await send('Page.enable'); await send('Runtime.enable'); await send('Network.enable');
+  await send('Page.enable'); await send('Runtime.enable'); await send('Network.enable'); await send('Page.bringToFront');
   return {
     send, evaluate, intercept(handler) { intercept = handler; },
     viewport: (width, height) => send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 700 }),
@@ -115,8 +115,9 @@ try {
     await t.go('/', '.hero');
     assert.equal(await t.evaluate('document.fonts.check(\'700 27px "Space Grotesk"\') && document.fonts.check(\'400 15px Inter\')'), true);
     await layout(t, 'home ' + width);
+    assert.equal(await t.evaluate(`document.querySelectorAll('a[href="/pvp"]').length`), 0);
     await t.screenshot('home-' + width);
-    for (const [path, selector] of [['/allenamento', '#categories input'], ['/tempo', '#duration'], ['/pvp', '#room-categories option'], ['/informazioni', 'h1'], ['/crediti', 'h1']]) {
+    for (const [path, selector] of [['/allenamento', '#categories input'], ['/tempo', '#round-seconds'], ['/pvp', 'h1'], ['/informazioni', 'h1'], ['/crediti', 'h1']]) {
       await t.go(path, selector); await layout(t, path + ' ' + width);
       assert.equal(await t.evaluate('Boolean(document.querySelector("#difficulty,#room-difficulty"))'), false);
     }
@@ -149,8 +150,8 @@ try {
     else await send('Fetch.continueRequest', { requestId: request.requestId });
   });
   await t.send('Fetch.enable', { patterns: [{ urlPattern: base + '/api/sessions/*/media/*', requestStage: 'Request' }] });
-  await t.go('/tempo', '#duration');
-  await t.evaluate('document.querySelector("#settings").requestSubmit()');
+  await t.go('/tempo', '#round-seconds');
+  await t.evaluate('document.querySelector("#count").value="2";document.querySelector("#round-seconds").value="30";document.querySelector("#settings").requestSubmit()');
   await waitFor(() => t.evaluate('Boolean(document.querySelector("#preload-progress"))'), 'preparation screen');
   const beforeStart = await t.evaluate('fetch("/api/sessions/"+sessionStorage.getItem("ros_timed")).then(r=>r.json())');
   assert.equal(beforeStart.phase, 'preparing'); assert.equal(beforeStart.expiresAt, null); assert.equal(beforeStart.answered, 0);
@@ -160,12 +161,22 @@ try {
   await t.evaluate('document.querySelector("#start-prepared").click()');
   await imageReady(t); await waitFor(() => t.evaluate('document.querySelector("#clock").textContent.includes("s")'), 'server clock display');
   await layout(t, 'timed 360', true); await t.screenshot('timed-360');
-  await t.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-  await t.evaluate('document.querySelector("[data-choice=REAL]").click()');
-  await waitFor(() => t.evaluate('Boolean(document.querySelector("#next"))'), 'reduced motion feedback');
-  assert.equal(await t.evaluate('getComputedStyle(document.querySelector(".feedback")).animationName'), 'none');
-  await t.send('Emulation.setEmulatedMedia', { features: [] });
   const deadline = await t.evaluate('fetch("/api/sessions/"+sessionStorage.getItem("ros_timed")).then(r=>r.json()).then(s=>s.expiresAt)');
+  assert.equal(await t.evaluate('document.querySelector(".play-image").draggable'), false);
+  assert.equal(await t.evaluate('document.querySelector(".play-image").dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true}))'), false);
+  await t.evaluate('document.querySelector(".play-image").click()');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("dialog[open]"))'), 'zoom before tab switch');
+  const friend = await tab();
+  await friend.send('Page.bringToFront');
+  await waitFor(() => t.evaluate('document.visibilityState==="hidden" && document.documentElement.classList.contains("media-obscured")'), 'real tab switch covers image');
+  assert.equal(await t.evaluate('Boolean(document.querySelector("dialog[open]"))'), false);
+  assert.equal(await t.evaluate('getComputedStyle(document.querySelector(".play-image")).visibility'), 'hidden');
+  assert.equal(await t.evaluate('fetch("/api/sessions/"+sessionStorage.getItem("ros_timed")).then(r=>r.json()).then(s=>s.expiresAt)'), deadline);
+  await t.send('Page.bringToFront');
+  await waitFor(() => t.evaluate('document.visibilityState==="visible"'), 'return to game tab');
+  assert.equal(await t.evaluate('getComputedStyle(document.querySelector(".play-image")).visibility'), 'hidden');
+  await t.screenshot('covered-after-tab-switch-360');
+  await waitFor(() => t.evaluate('document.querySelector("[data-reveal-media]")?.click(); Boolean(document.querySelector(".play-image")) && getComputedStyle(document.querySelector(".play-image")).visibility === "visible"'), 'explicit reopen after server resynchronization');
   mediaMode = 'corrupt'; await t.send('Network.setCacheDisabled', { cacheDisabled: true });
   await t.go('/tempo', '#resume');
   await t.evaluate('document.querySelector("#resume").click()');
@@ -181,34 +192,39 @@ try {
   await t.evaluate('document.querySelector("#invalidate-session").click()');
   await waitFor(() => t.evaluate('document.querySelector(".eyebrow")?.textContent.includes("ANNULLATA")'), 'invalidated state');
   assert.equal(await t.evaluate('Boolean(document.querySelector(".score"))'), false);
-  await t.go('/tempo', '#duration'); await t.evaluate('document.querySelector("#settings").requestSubmit()');
+  await t.go('/tempo', '#round-seconds'); await t.evaluate('document.querySelector("#count").value="2";document.querySelector("#settings").requestSubmit()');
   await waitFor(() => t.evaluate('Boolean(document.querySelector("#retry-media"))'), 'decode failure before start');
   assert.equal(await t.evaluate('fetch("/api/sessions/"+sessionStorage.getItem("ros_timed")).then(r=>r.json()).then(s=>s.expiresAt)'), null);
   mediaMode = 'pass'; await t.evaluate('document.querySelector("#retry-media").click()');
   await waitFor(() => t.evaluate('Boolean(document.querySelector("#start-prepared"))'), 'preparation retry succeeds');
   await t.send('Fetch.disable'); await t.send('Network.setCacheDisabled', { cacheDisabled: false });
-  const friend = await tab(); await friend.viewport(360, 640);
-  await t.go('/pvp', '#room-categories option');
-  await t.evaluate('document.querySelector("#rounds").value="1";document.querySelector("#round-seconds").value="30";document.querySelector("#nickname").value="Osservatore A";document.querySelector("#create-room").requestSubmit()');
-  await waitFor(() => t.evaluate('Boolean(document.querySelector(".room-code"))'), 'created lobby');
-  const code = await t.evaluate('document.querySelector(".room-code").textContent');
-  await t.screenshot('pvp-lobby-360');
-  await friend.go('/pvp', '#room-categories option');
-  await friend.evaluate(`document.querySelector('#room-code').value=${JSON.stringify(code)};document.querySelector('#nickname').value='Osservatore B';document.querySelector('#join-room').requestSubmit()`);
-  await waitFor(() => t.evaluate('Boolean(document.querySelector("#pvp-start"))'), 'both players');
-  await t.evaluate('document.querySelector("#pvp-start").click()');
-  await imageReady(t); await imageReady(friend);
-  for (const [width, height] of [[1440, 1000], [768, 1024], [390, 844], [360, 640]]) {
-    await t.viewport(width, height);
-    await layout(t, 'PvP ' + width, true); await t.screenshot('pvp-question-' + width);
-  }
-  await t.evaluate('document.querySelector("[data-pvp-choice=REAL]").click()');
-  await waitFor(() => t.evaluate('Boolean(document.querySelector(".answer-wait"))'), 'waiting for friend');
-  assert.equal(await t.evaluate('Boolean(document.querySelector(".feedback"))'), false);
-  await friend.evaluate('document.querySelector("[data-pvp-choice=AI]").click()');
-  await waitFor(() => t.evaluate('Boolean(document.querySelector(".feedback"))'), 'shared PvP reveal');
-  await waitFor(() => friend.evaluate('Boolean(document.querySelector(".feedback"))'), 'friend reveal');
-  await t.screenshot('pvp-results-360');
+  await t.evaluate('document.querySelector("#start-prepared").click()');
+  await imageReady(t);
+  const sid = await t.evaluate('sessionStorage.getItem("ros_timed")');
+  assert.match(sid, /^[a-f0-9-]+$/);
+  await command(['wrangler','d1','execute','DB','--local','--env','local','--persist-to',state,'--command',`UPDATE game_rounds SET expires_at=CAST(unixepoch('subsec')*1000 AS INTEGER)+3000 WHERE session_id='${sid}' AND presented_at IS NOT NULL`]);
+  await t.go('/tempo','#resume'); await t.evaluate('document.querySelector("#resume").click()'); await imageReady(t);
+  await friend.send('Page.bringToFront');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#next-after-timeout"))'), 'hidden tab countdown expires without a pause');
+  const expiredState = await t.evaluate('fetch("/api/sessions/"+sessionStorage.getItem("ros_timed")).then(r=>r.json())');
+  assert.equal(expiredState.timedOut, 1); assert.equal(expiredState.expiresAt, null);
+  assert.equal(await t.evaluate('Boolean(document.querySelector(".play-image"))'), false);
+  await t.send('Page.bringToFront');
+  await t.evaluate('document.querySelector("#next-after-timeout").click()'); await imageReady(t);
+  await t.evaluate('document.querySelector("[data-reveal-media]")?.click()');
+  await t.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+  await t.evaluate('document.querySelector("[data-choice=REAL]").click()');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#next"))'), 'reduced motion feedback');
+  assert.equal(await t.evaluate('getComputedStyle(document.querySelector(".feedback")).animationName'), 'none');
+  assert.equal(await t.evaluate('document.querySelector("#clock").textContent'), '');
+  await t.evaluate('window.dispatchEvent(new Event("blur"))');
+  assert.equal(await t.evaluate('getComputedStyle(document.querySelector(".play-image")).visibility'), 'hidden');
+  await t.evaluate('document.querySelector("[data-reveal-media]").click()');
+  assert.equal(await t.evaluate('getComputedStyle(document.querySelector(".play-image")).visibility'), 'visible');
+  await t.evaluate('document.querySelector("#next").click()');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector(".score"))'), 'timed results include timeout');
+  assert.equal(await t.evaluate('document.querySelector(".page").textContent.includes("1 scadute")'), true);
+  await t.send('Emulation.setEmulatedMedia', { features: [] });
   await t.go('/', '.hero');
   await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
   assert.equal(await t.evaluate('document.activeElement.classList.contains("skip-link")'), true);
@@ -219,7 +235,7 @@ try {
   assert.ok(!requests.some(url => /^https?:/.test(url) && new URL(url).hostname !== '127.0.0.1'), 'unexpected external browser request');
   assert.deepEqual(errors, []);
   writeFileSync(resolve(output, 'measurements.json'), JSON.stringify(measurements, null, 2) + '\n');
-  console.log('Digital Gallery passed: real solo/timed/PvP, 360/390/768/1440 layouts, intact images, symmetric named actions, AX tree, keyboard zoom/answer/focus, reduced motion, local fonts, delayed preparation, corrupt-image retry, active-timer preservation, invalidation and no external requests. Screenshots: artifacts/gallery/.');
+  console.log('Digital Gallery passed: real solo/per-image timed, suspended PvP, tab masking without timer pause, copy deterrents, timeouts, 360/390/768/1440 layouts, intact images, symmetric named actions, AX tree, keyboard zoom/answer/focus, reduced motion, local fonts, delayed preparation, corrupt-image retry, active-timer preservation, invalidation and no external requests. Screenshots: artifacts/gallery/.');
 } finally {
   for (const ws of clients) ws.close();
   for (const child of children) { try { process.kill(-child.pid, 'SIGTERM'); } catch { /* Already stopped. */ } }

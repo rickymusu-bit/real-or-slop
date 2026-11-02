@@ -136,7 +136,7 @@ button:disabled { opacity: .65; cursor: default; text-decoration: none; }
 .modes { padding: 40px 0; border-top: 1px solid var(--hairline); }
 .section-line { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 28px; }
 .section-line p { font-size: 13px; }
-.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .mode-card { display: flex; flex-direction: column; padding: 26px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 4px; transition: border-color .18s ease; }
 .mode-card:hover { border-color: var(--real); }
 .card-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); }
@@ -273,3 +273,11 @@ dialog button { margin-bottom: 12px; }
 #preload-progress { font-variant-numeric: tabular-nums; }
 .load-actions { padding-bottom: 40px; }
 .media-loading { padding: 28px; margin: 18px 0; background: var(--surface); color: var(--muted); min-height: 120px; }
+
+/* These are copy deterrents, not a guarantee against screenshots or extraction. */
+[data-game-media] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-user-drag: none; }
+.game-media-surface { position: relative; background: var(--surface); }
+.media-privacy-cover { display: none; min-height: 160px; padding: 24px; text-align: center; }
+.media-obscured [data-game-media] { visibility: hidden !important; }
+.media-obscured .media-privacy-cover { display: grid; align-content: center; justify-items: center; position: absolute; inset: 0; background: var(--surface); }
+@media print { [data-game-media] { visibility: hidden !important; } }

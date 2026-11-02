@@ -45,10 +45,11 @@ class EditorialSchemaTest(unittest.TestCase):
         db.execute("INSERT INTO answers VALUES('r','REAL',1,5,2)")
         db.execute("INSERT INTO review_events VALUES('e',?,'human','approved','','date')",(uid,))
         before={t:db.execute('SELECT * FROM '+t).fetchall() for t in ('game_sessions','game_rounds','answers','review_events')}
+        columns={t:','.join(r[1] for r in db.execute('PRAGMA table_info('+t+')')) for t in before}
         old=dict(db.execute('SELECT id,difficulty FROM images'))
         for p in sorted(Path('migrations').glob('*.sql')):
             if p.name>='0007':db.executescript(p.read_text())
-        self.assertEqual(before,{t:db.execute('SELECT * FROM '+t).fetchall() for t in before})
+        self.assertEqual(before,{t:db.execute('SELECT '+columns[t]+' FROM '+t).fetchall() for t in before})
         self.assertEqual(old,dict(db.execute('SELECT image_id,assigned_value FROM legacy_image_difficulty')))
         self.assertNotIn('difficulty',[r[1] for r in db.execute('PRAGMA table_info(images)')])
         self.assertEqual(db.execute('SELECT count(*) FROM published_images').fetchone()[0],24)

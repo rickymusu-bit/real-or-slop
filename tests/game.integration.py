@@ -28,7 +28,7 @@ for n in range(4):
 _,end=req('/api/sessions/'+sid);assert end['done'];assert end['answered']==4;assert len(end['credits'])==4;assert end['score']==100*sum(c['answer']=='REAL' for c in end['credits']),end
 print('Game integration passed: no leaks, ownership, independent assignments, refresh, concurrent replay, summary.')
 # Expiry integration uses dedicated local DB command in runner to age a timed session.
-_,created=req('/api/sessions','POST',{'mode':'timed','duration':60})
+_,created=req('/api/sessions','POST',{'mode':'timed','count':1,'roundSeconds':10})
 from pathlib import Path
 Path('/tmp/ros-expiry-session').write_text(created['id'])
 _,initial=req('/api/sessions/'+created['id']);assert initial['phase']=='preparing' and initial['expiresAt'] is None and initial['question'] is None
@@ -40,7 +40,7 @@ expiry=json.loads(Path('/tmp/ros-expiry-state.json').read_text())
 # UUID originated from server, never interpolate external user input.
 import uuid
 uuid.UUID(expiry['id'])
-command="UPDATE game_sessions SET expires_at=1 WHERE id='"+expiry['id']+"'"
+command="UPDATE game_rounds SET expires_at=1 WHERE id='"+expiry['roundId']+"'"
 profile=os.environ.get('ROS_TEST_PROFILE','local')
 profile_args=['--env',profile] if profile else []
 subprocess.run(['npx','wrangler','d1','execute','DB','--local','--persist-to',os.environ.get('ROS_TEST_STATE','.wrangler/state'),'--command',command,*profile_args],check=True,stdout=subprocess.DEVNULL,env={**os.environ,'XDG_CONFIG_HOME':'/tmp/real-or-slop-config'})

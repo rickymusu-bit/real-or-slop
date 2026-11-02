@@ -1,3 +1,5 @@
+> Aggiornamento 2026-11-02T15:25:07+01:00: le regole su countdown complessivo e disponibilità PvP sono superate da [Tempi e protezione v1.0.0](gioco-tempi-protezione-v1.0.0.md). Documento storico conservato.
+
 # Real or Slop — Istruzioni per Codex: Digital Gallery e caricamento immagini
 
 **Versione:** 1.0.0  

@@ -18,18 +18,18 @@ export function settings(data: Record<string, unknown>) {
   if (mode !== "training" && mode !== "timed")
     throw new HttpError(400, "Modalità non valida");
   const count = data.count ?? 10;
-  const duration = data.duration ?? 60;
+  const roundSeconds = data.roundSeconds ?? 20;
   if (!Number.isInteger(count) || Number(count) < 1 || Number(count) > 50)
     throw new HttpError(400, "Numero domande da 1 a 50");
-  if (![60, 120, 180].includes(Number(duration)))
-    throw new HttpError(400, "Durata non valida");
+  if (!Number.isInteger(roundSeconds) || ![10, 20, 30].includes(Number(roundSeconds)))
+    throw new HttpError(400, "Tempo per immagine: 10, 20 o 30 secondi");
   const categories = Array.isArray(data.categories)
     ? data.categories.map(String).slice(0, 30)
     : [];
   return {
     mode,
     count: Number(count),
-    duration: Number(duration),
+    roundSeconds: Number(roundSeconds),
     categories,
   };
 }
@@ -75,6 +75,7 @@ interface Session {
   phase: "preparing" | "active" | "completed" | "invalidated";
   duration_seconds: number | null; started_at: number | null;
   preparation_expires_at: number | null; invalid_reason: string | null;
+  timing_mode: "legacy" | "unlimited" | "per-image"; round_seconds: number | null;
 }
 async function owned(request: Request, env: Env, sid: string) {
   const s = await env.DB.prepare("SELECT * FROM game_sessions WHERE id=?")
@@ -109,6 +110,13 @@ async function invalidate(env: Env, s: Session, reason: string, kind = "invalida
 }
 async function settleSession(env: Env, s: Session) {
   const now = Date.now();
+  if (s.phase === "active" && s.timing_mode === "per-image") {
+    await env.DB.batch([
+      env.DB.prepare("UPDATE game_rounds SET timed_out=1 WHERE session_id=? AND expires_at<=? AND timed_out=0 AND NOT EXISTS(SELECT 1 FROM answers WHERE round_id=game_rounds.id) AND EXISTS(SELECT 1 FROM game_sessions WHERE id=? AND phase='active' AND completed=0)").bind(s.id, now, s.id),
+      env.DB.prepare("UPDATE game_sessions SET phase='completed',completed=1 WHERE id=? AND phase='active' AND NOT EXISTS(SELECT 1 FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0)").bind(s.id, s.id),
+    ]);
+    s = await refresh(env, s);
+  }
   if (s.phase === "preparing" && now >= (s.preparation_expires_at || 0))
     return invalidate(env, s, "preparation_expired", "preparation_expired");
   if (s.phase === "active" && s.expires_at && now >= s.expires_at) {
@@ -123,43 +131,48 @@ const neutralRound = (sid: string, round: { id: string; position: number }) => (
 });
 async function state(env: Env, s: Session) {
   const now = Date.now();
+  s = await settleSession(env, s);
   const results = (await env.DB.prepare("SELECT a.correct,a.choice,a.elapsed_ms,r.position,r.id AS round_id FROM answers a JOIN game_rounds r ON r.id=a.round_id WHERE r.session_id=? ORDER BY r.position")
     .bind(s.id).all<{ correct: number; choice: string; elapsed_ms: number; position: number; round_id: string }>()).results;
   const total = (await env.DB.prepare("SELECT COUNT(*) AS n FROM game_rounds WHERE session_id=?").bind(s.id).first<{ n: number }>())!.n;
-  if (results.length === total && s.phase === "active") {
+  const timeouts = (await env.DB.prepare("SELECT COUNT(*) AS n FROM game_rounds WHERE session_id=? AND timed_out=1").bind(s.id).first<{ n: number }>())!.n;
+  if (results.length + timeouts === total && s.phase === "active") {
     await env.DB.prepare("UPDATE game_sessions SET completed=1,phase='completed' WHERE id=? AND phase='active'").bind(s.id).run();
   }
   s = await settleSession(env, await refresh(env, s));
   const done = s.phase === "completed" || s.phase === "invalidated";
   let question = null;
+  let roundExpiresAt: number | null = null;
   if (s.phase === "active") {
-    const round = await env.DB.prepare("SELECT r.id,r.position,r.presented_at FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL ORDER BY r.position LIMIT 1")
-      .bind(s.id).first<{ id: string; position: number; presented_at: number | null }>();
+    const round = await env.DB.prepare("SELECT r.id,r.position,r.presented_at,r.expires_at FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position LIMIT 1")
+      .bind(s.id).first<{ id: string; position: number; presented_at: number | null; expires_at: number | null }>();
     if (round) {
       // Legacy assignments keep their original presentation/timing semantics.
       if (s.protocol_version === 1) await env.DB.prepare("UPDATE game_rounds SET presented_at=COALESCE(presented_at,?) WHERE id=?").bind(now, round.id).run();
       question = neutralRound(s.id, round);
+      roundExpiresAt = round.expires_at;
     }
   }
-  const credits = s.phase === "completed" ? (await env.DB.prepare("SELECT i.*,s.page_url AS source_url,l.name AS license_name,l.url AS license_url,a.correct FROM game_rounds r JOIN answers a ON a.round_id=r.id JOIN images i ON i.id=r.image_id LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id WHERE r.session_id=? ORDER BY r.position")
-    .bind(s.id).all<ImageRow & { correct: number }>()).results.map(image => ({ ...reveal(image), correct: !!image.correct })) : [];
+  const credits = s.phase === "completed" ? (await env.DB.prepare("SELECT i.*,s.page_url AS source_url,l.name AS license_name,l.url AS license_url,COALESCE(a.correct,0) AS correct,r.timed_out FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id JOIN images i ON i.id=r.image_id LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id WHERE r.session_id=? AND (a.round_id IS NOT NULL OR r.timed_out=1) ORDER BY r.position")
+    .bind(s.id).all<ImageRow & { correct: number; timed_out: number }>()).results.map(image => ({ ...reveal(image), correct: !!image.correct, timedOut: !!image.timed_out })) : [];
   return json({ id: s.id, mode: s.mode, demo: env.DATA_MODE === "demo", protocolVersion: s.protocol_version,
     phase: s.phase, invalidReason: s.invalid_reason, preparationExpiresAt: s.preparation_expires_at,
-    serverNow: Date.now(), expiresAt: s.expires_at, startedAt: s.started_at, done, total,
-    answered: results.length, score: s.phase === "invalidated" ? 0 : results.filter(i => i.correct).length * 100,
-    elapsedMs: results.reduce((n, r) => n + r.elapsed_ms, 0), question, credits });
+    serverNow: Date.now(), expiresAt: s.timing_mode === "per-image" ? roundExpiresAt : s.expires_at, startedAt: s.started_at, done, total,
+    timingMode: s.timing_mode, roundSeconds: s.round_seconds, timedOut: timeouts,
+    answered: results.length + timeouts, score: s.phase === "invalidated" ? 0 : results.filter(i => i.correct).length * 100,
+    elapsedMs: results.reduce((n, r) => n + r.elapsed_ms, 0) + timeouts * (s.round_seconds || 0) * 1000, question, credits });
 }
 export async function game(request: Request, env: Env, path: string) {
   if (path === "/api/sessions" && request.method === "POST") {
     const config = settings(await body(request));
     const token = cookie(request) || id() + id(), key = await hash(token);
     await rateLimit(env, "create:" + (await hash(request.headers.get("CF-Connecting-IP") || "local")), 20);
-    const sample = curatedSample(await filteredCatalog(env, config), config.mode === "timed" ? 50 : config.count);
+    const sample = curatedSample(await filteredCatalog(env, config), config.count);
     if (!sample.images.length) throw new HttpError(409, "Catalogo approvato insufficiente per garantire una partita con questi filtri.");
-    const now = Date.now(), sid = id(), protocol = mediaProtocol(env.PRELOAD_PROTOCOL);
+    const now = Date.now(), sid = id(), protocol = config.mode === "timed" ? 2 : mediaProtocol(env.PRELOAD_PROTOCOL);
     await env.DB.batch([
-      env.DB.prepare("INSERT INTO game_sessions(id,mode,created_at,expires_at,owner_hash,protocol_version,phase,duration_seconds,preparation_expires_at) VALUES(?,?,?,?,?,?,?,?,?)")
-        .bind(sid, config.mode, now, protocol === 1 && config.mode === "timed" ? now + config.duration * 1000 : null, key, protocol, protocol === 2 && config.mode === "timed" ? "preparing" : "active", config.mode === "timed" ? config.duration : null, protocol === 2 && config.mode === "timed" ? now + preparationTtlMs : null),
+      env.DB.prepare("INSERT INTO game_sessions(id,mode,created_at,expires_at,owner_hash,protocol_version,phase,duration_seconds,preparation_expires_at,timing_mode,round_seconds) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
+        .bind(sid, config.mode, now, null, key, protocol, config.mode === "timed" ? "preparing" : "active", null, config.mode === "timed" ? now + preparationTtlMs : null, config.mode === "timed" ? "per-image" : "unlimited", config.mode === "timed" ? config.roundSeconds : null),
       env.DB.prepare("INSERT INTO game_rounds(id,session_id,image_id,position) SELECT json_extract(value,'$.id'),?,json_extract(value,'$.imageId'),json_extract(value,'$.position') FROM json_each(?)")
         .bind(sid, JSON.stringify(sample.images.map((image, position) => ({ id: id(), imageId: image.id, position })))),
     ]);
@@ -172,7 +185,7 @@ export async function game(request: Request, env: Env, path: string) {
   let s = await settleSession(env, await owned(request, env, match[1]));
   if (!match[2] && request.method === "GET") return state(env, s);
   if (match[2] === "manifest" && request.method === "GET") {
-    const rows = s.phase === "preparing" || s.phase === "active" ? (await env.DB.prepare(`SELECT r.id,r.position FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL ORDER BY r.position ${s.mode === "training" || s.protocol_version === 1 ? "LIMIT 3" : "LIMIT 50"}`).bind(s.id).all<{ id: string; position: number }>()).results : [];
+    const rows = s.phase === "preparing" || s.phase === "active" ? (await env.DB.prepare(`SELECT r.id,r.position FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position ${s.timing_mode === "per-image" ? "LIMIT 1" : s.mode === "training" || s.protocol_version === 1 ? "LIMIT 3" : "LIMIT 50"}`).bind(s.id).all<{ id: string; position: number }>()).results : [];
     return json({ id: s.id, phase: s.phase, images: rows.map(r => neutralRound(s.id, r)) });
   }
   if (match[2] === "start" && request.method === "POST") {
@@ -180,14 +193,14 @@ export async function game(request: Request, env: Env, path: string) {
     if (s.phase === "active") return state(env, s); // Retried starts never extend a deadline.
     if (s.phase !== "preparing") throw new HttpError(410, "Preparazione terminata o partita conclusa");
     const data = await body(request);
-    const ids = (await env.DB.prepare("SELECT id FROM game_rounds WHERE session_id=? ORDER BY position").bind(s.id).all<{ id: string }>()).results.map(r => r.id);
+    const ids = (await env.DB.prepare(`SELECT id FROM game_rounds WHERE session_id=? ORDER BY position ${s.timing_mode === "per-image" ? "LIMIT 1" : ""}`).bind(s.id).all<{ id: string }>()).results.map(r => r.id);
     if (data.prepared !== true || !Array.isArray(data.roundIds) || data.roundIds.length !== ids.length || new Set(data.roundIds).size !== ids.length || ids.some(rid => !(data.roundIds as unknown[]).includes(rid)))
       throw new HttpError(409, "Confermare la preparazione di tutte le immagini assegnate");
     const now = Date.now(), eventId = id();
     await env.DB.batch([
       env.DB.prepare("INSERT INTO media_events(id,session_id,kind,reason,created_at) SELECT ?,?,'started','all_media_prepared',? WHERE EXISTS(SELECT 1 FROM game_sessions WHERE id=? AND phase='preparing' AND preparation_expires_at>?)").bind(eventId, s.id, now, s.id, now),
       env.DB.prepare("UPDATE game_sessions SET phase='active',started_at=?,expires_at=?+duration_seconds*1000 WHERE id=? AND EXISTS(SELECT 1 FROM media_events WHERE id=?)").bind(now, now, s.id, eventId),
-      env.DB.prepare("UPDATE game_rounds SET presented_at=COALESCE(presented_at,(SELECT started_at FROM game_sessions WHERE id=?)) WHERE session_id=? AND position=0 AND EXISTS(SELECT 1 FROM media_events WHERE id=?)").bind(s.id, s.id, eventId),
+      env.DB.prepare("UPDATE game_rounds SET presented_at=COALESCE(presented_at,?),expires_at=CASE WHEN expires_at IS NULL AND ?='per-image' THEN ?+?*1000 ELSE expires_at END WHERE session_id=? AND position=0 AND EXISTS(SELECT 1 FROM media_events WHERE id=?)").bind(now, s.timing_mode, now, s.round_seconds, s.id, eventId),
     ]);
     s = await settleSession(env, await refresh(env, s));
     if (s.phase !== "active") throw new HttpError(410, "Preparazione scaduta");
@@ -209,18 +222,23 @@ export async function game(request: Request, env: Env, path: string) {
   if (match[2] === "ready" && request.method === "POST") {
     const data = await body(request), rid = String(data.roundId);
     if (s.phase !== "active") throw new HttpError(s.phase === "preparing" ? 409 : 410, "Partita non attiva");
-    const changed = await env.DB.prepare(`UPDATE game_rounds SET presented_at=COALESCE(presented_at,?) WHERE id=? AND session_id=? AND NOT EXISTS(SELECT 1 FROM answers WHERE round_id=?) AND NOT EXISTS(SELECT 1 FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND r.position<game_rounds.position AND a.round_id IS NULL) AND EXISTS(SELECT 1 FROM game_sessions WHERE id=? AND phase='active' AND completed=0 AND (expires_at IS NULL OR expires_at>?))`)
-      .bind(Date.now(), rid, s.id, rid, s.id, s.id, Date.now()).run();
+    const now = Date.now();
+    const changed = await env.DB.prepare(`UPDATE game_rounds SET expires_at=CASE WHEN presented_at IS NULL AND ?='per-image' THEN ?+?*1000 ELSE expires_at END,presented_at=COALESCE(presented_at,?) WHERE id=? AND session_id=? AND timed_out=0 AND NOT EXISTS(SELECT 1 FROM answers WHERE round_id=?) AND NOT EXISTS(SELECT 1 FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND r.position<game_rounds.position AND a.round_id IS NULL AND r.timed_out=0) AND EXISTS(SELECT 1 FROM game_sessions WHERE id=? AND phase='active' AND completed=0 AND (expires_at IS NULL OR expires_at>?))`)
+      .bind(s.timing_mode, now, s.round_seconds, now, rid, s.id, rid, s.id, s.id, now).run();
     if (!changed.meta.changes) throw new HttpError(409, "Domanda non attiva");
     return state(env, await refresh(env, s));
   }
   if (match[2] === "media" && request.method === "GET") {
     const round = await env.DB.prepare("SELECT r.id,r.position,r.image_id,r.presented_at FROM game_rounds r WHERE r.id=? AND r.session_id=?").bind(match[3], s.id).first<{ id: string; position: number; image_id: string; presented_at: number | null }>();
     if (!round) throw new HttpError(404, "Immagine non assegnata");
+    if (s.timing_mode === "per-image" && !round.presented_at) {
+      const current = await env.DB.prepare("SELECT r.id FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position LIMIT 1").bind(s.id).first<{ id: string }>();
+      if (!current || current.id !== round.id) throw new HttpError(404, "Immagine non ancora disponibile");
+    }
     if (!round.presented_at) {
       if (s.protocol_version === 1 || !["preparing", "active"].includes(s.phase)) throw new HttpError(404, "Immagine non disponibile");
       if (s.mode === "training") {
-        const next = (await env.DB.prepare("SELECT r.id FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL ORDER BY r.position LIMIT 3").bind(s.id).all<{ id: string }>()).results;
+        const next = (await env.DB.prepare("SELECT r.id FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position LIMIT 3").bind(s.id).all<{ id: string }>()).results;
         if (!next.some(r => r.id === round.id)) throw new HttpError(404, "Immagine fuori dalla finestra assegnata");
       }
     }
@@ -232,7 +250,7 @@ export async function game(request: Request, env: Env, path: string) {
     const data = await body(request);
     if (!["REAL", "AI"].includes(String(data.choice))) throw new HttpError(400, "Risposta non valida");
     const rid = String(data.roundId);
-    const round = await env.DB.prepare("SELECT image_id,position,presented_at FROM game_rounds WHERE id=? AND session_id=?").bind(rid, s.id).first<{ image_id: string; position: number; presented_at: number | null }>();
+    const round = await env.DB.prepare("SELECT image_id,position,presented_at,expires_at,timed_out FROM game_rounds WHERE id=? AND session_id=?").bind(rid, s.id).first<{ image_id: string; position: number; presented_at: number | null; expires_at: number | null; timed_out: number }>();
     if (!round?.presented_at) throw new HttpError(409, "Domanda non attiva: preparare prima l'immagine");
     const image = await env.DB.prepare(`${joinedImage} WHERE i.id=?`).bind(round.image_id).first<ImageRow>();
     if (!image) throw new HttpError(404, "Immagine non disponibile");
@@ -242,11 +260,12 @@ export async function game(request: Request, env: Env, path: string) {
       return json({ ...reveal(image), correct: !!previous.correct, replayed: true, serverNow: Date.now(), expiresAt: s.expires_at });
     }
     const now = Date.now();
+    if (round.timed_out || (round.expires_at && now >= round.expires_at)) throw new HttpError(410, "Tempo per questa immagine scaduto");
     if (s.phase !== "active" || s.completed || (s.expires_at && now >= s.expires_at)) throw new HttpError(s.phase === "preparing" ? 409 : 410, "Partita non attiva o tempo scaduto");
     await env.DB.batch([
-      env.DB.prepare(`INSERT INTO answers(round_id,choice,correct,answered_at,elapsed_ms) SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM game_sessions WHERE id=? AND phase='active' AND completed=0 AND (expires_at IS NULL OR expires_at>?)) AND NOT EXISTS(SELECT 1 FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND r.position<? AND a.round_id IS NULL) ON CONFLICT(round_id) DO NOTHING`)
-      .bind(rid, data.choice, image.type === data.choice ? 1 : 0, now, Math.max(0, now - round.presented_at), s.id, now, s.id, round.position),
-      env.DB.prepare("UPDATE game_sessions SET phase='completed',completed=1 WHERE id=? AND phase='active' AND NOT EXISTS(SELECT 1 FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL)").bind(s.id, s.id),
+      env.DB.prepare(`INSERT INTO answers(round_id,choice,correct,answered_at,elapsed_ms) SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM game_sessions WHERE id=? AND phase='active' AND completed=0 AND (expires_at IS NULL OR expires_at>?)) AND NOT EXISTS(SELECT 1 FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND r.position<? AND a.round_id IS NULL AND r.timed_out=0) AND EXISTS(SELECT 1 FROM game_rounds WHERE id=? AND timed_out=0 AND (expires_at IS NULL OR expires_at>?)) ON CONFLICT(round_id) DO NOTHING`)
+      .bind(rid, data.choice, image.type === data.choice ? 1 : 0, now, Math.max(0, now - round.presented_at), s.id, now, s.id, round.position, rid, now),
+      env.DB.prepare("UPDATE game_sessions SET phase='completed',completed=1 WHERE id=? AND phase='active' AND NOT EXISTS(SELECT 1 FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0)").bind(s.id, s.id),
     ]);
     const saved = await env.DB.prepare("SELECT choice,correct FROM answers WHERE round_id=?").bind(rid).first<{ choice: string; correct: number }>();
     if (!saved) {
