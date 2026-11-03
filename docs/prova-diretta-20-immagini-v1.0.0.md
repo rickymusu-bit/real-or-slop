@@ -11,13 +11,21 @@ dirette su 20 fotografie, superando il precedente limite cumulativo di 5 USD.
 La prova verifica la severità del classificatore con la rubrica corrente:
 nessun abbassamento della soglia, nessun incremento artificiale dei punteggi.
 
-Il workflow manuale sul ramo `ops/direct-20-2026-11-03` usa il file già
-registrato `review-queue.yml`. Nessun cron. Raccolta con deduplicazione sullo
-stato remoto prima di raggiungere il limite di 20; classifica unica, prime 10
-assegnate a REAL e ultime 10 a sorgenti SLOP. Per confrontare 20 fotografie, il
-preflight richiede 20 fotografie tecnicamente ammissibili prima di inviare
-chiamate pagate: nessun riempitivo. La pipeline ordinaria mantiene il supporto
-ai lotti incompleti.
+La prova viene eseguita nel workspace privato isolato: API OpenAI dirette,
+file locali, nessuna scrittura D1/R2 remota, nessun deploy o modifica delle
+variabili di produzione. Nessun workflow GitHub viene avviato. La verifica
+automatica ha rifiutato il percorso con migrazione/deploy di produzione perché
+la richiesta iniziale li vietava esplicitamente; il confronto locale permette
+di verificare il classificatore senza quelle operazioni. Il rilascio online
+dell'archivio e la visione nello Studio richiedono una successiva autorizzazione.
+
+La raccolta legge identificativi e impronte dallo stato remoto per deduplicare
+prima di raggiungere 20 fotografie; nessuna valutazione pagata viene inviata
+finché il lotto non contiene 20 fotografie ammissibili. La prima ricerca ne ha
+fornite 12: ulteriori query documentate ampliano i soggetti, con un massimo di
+quattro fotografie per categoria e rimozione delle serie dello stesso soggetto.
+Classifica unica, prime 10 assegnate a REAL e ultime 10 a sorgenti SLOP.
+La pipeline ordinaria mantiene il supporto ai lotti incompleti.
 
 Configurazione fissata per questa esecuzione:
 
@@ -31,27 +39,28 @@ Configurazione fissata per questa esecuzione:
 | Limite generazioni | 10 |
 | Prenotazione per valutazione/brief | 0.50 USD |
 | Prenotazione per generazione | 2.00 USD |
-| Tetto per esecuzione/giornata | 40 USD |
-| Tetto cumulativo temporaneo | 44.50 USD, comprese le precedenti prenotazioni di 4.50 USD |
+| Tetto locale di questa singola prova | 40 USD |
+| Ledger di produzione | Invariato a 4.50 USD, gate pagamenti chiuso |
 | Licenza dichiarata delle generazioni | CC BY 4.0, previa revisione dei diritti |
 
-Le prenotazioni sono stime conservative, non una fattura. Lo storico del ledger
-rimane intatto. La soglia si applica alla media dei sei assi già in uso;
+Le prenotazioni locali sono stime conservative, non una fattura. Lo storico del
+ledger di produzione rimane intatto. La soglia si applica alla media dei sei assi già in uso;
 le singole valutazioni e le motivazioni restano nel registro privato.
 
-Prima dell'esecuzione: esportazione D1, ripristino locale verificato, controllo
-di preservazione di tutte le righe esistenti con 0012, backup dei file R2
-referenziati, applicazione della sola migrazione additiva 0012 e aggiornamento
-del backend. L'esecutore controlla la capacità `attempt_media_archive` prima
-delle chiamate pagate. Il catalogo pubblico resta invariato.
+La preparazione ha completato esportazione D1, ripristino locale verificato,
+controllo di preservazione di tutte le righe esistenti con 0012 e backup di 14
+file R2 referenziati. Nessuna migrazione remota è stata applicata. Il catalogo
+pubblico resta invariato. Per questa prova `execute` della libreria editoriale
+usa il client OpenAI diretto e il budget locale, senza istanziare `Remote`.
 
-Il controller temporaneo abilita il gate server soltanto per l'esecuzione e lo
-chiude in `finally`, ripristinando i limiti precedenti. Le credenziali restano
-nei secret GitHub/Cloudflare esistenti. Nessuna chiave o immagine privata viene
-pubblicata negli artifact: solo riepilogo numerico con conservazione di 7 giorni.
+La chiave OpenAI è letta dall'environment server del workspace e non viene
+scritta nei dossier o nei log. Il gate server rimane chiuso. Originali,
+derivati, prompt, punteggi, motivazioni e metadati di uso restituiti dalle API
+restano nei file privati del workspace; il report visivo è locale. Nessuna
+pubblicazione di artifact GitHub o modifica di secret.
 
-Le immagini generate, anche sotto soglia, restano nell'archivio privato R2 e
-sono visibili nello Studio amministrativo con motivazioni e provenienza.
-Le candidate sopra soglia entrano soltanto nella revisione umana: nessuna
-approvazione o pubblicazione automatica. L'esito va confrontato separatamente
+Le immagini generate, anche sotto soglia, restano nell'archivio locale del
+confronto. Le immagini sopra soglia sono indicate come idonee alla revisione,
+senza inserirle nella coda online. Nessuna approvazione o pubblicazione
+automatica. L'esito va confrontato separatamente
 per REAL e SLOP, mantenendo la classifica delle fotografie e i sei assi originali.
