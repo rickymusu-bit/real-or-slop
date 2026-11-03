@@ -1,5 +1,11 @@
 # Real or Slop
 
+Policy editoriale (0.15.0): soglia corrente **50/100**, condivisa da nuove
+esecuzioni dirette, Batch, Studio e revisione. Il riesame degli archivi riutilizza
+i file esistenti e conserva punteggi, dossier e decisioni umane precedenti.
+Richiede la migrazione additiva **0013** prima del backend aggiornato.
+[Policy, selezione REAL e riesame](docs/policy-editoriale-soglia-v1.0.0.md).
+
 Studio SLOP (0.14.2): apre il lotto più recente con tutte le fotografie e le
 generazioni archiviate, inclusi gli scarti, affiancando ogni SLOP alla fotografia
 sorgente del prompt. La coda Approva/Rifiuta contiene soltanto candidate idonee.

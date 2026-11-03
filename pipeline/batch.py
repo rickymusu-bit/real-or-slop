@@ -58,6 +58,7 @@ def run_one(args,uid,cfg=None):
             if not capabilities.get('quarantine_configured') or not capabilities.get('images_configured'):raise PipelineStop('Storage privato non configurato')
             if not capabilities.get('attempt_media_archive'):raise PipelineStop('Aggiornare backend e migrazione archivio tentativi prima delle chiamate pagate')
             known=remote.call('state');root=args.manifest.resolve().parent;items=json.loads(args.manifest.read_text())
+            cfg=replace(cfg,threshold=float(known['editorial_threshold']));cfg.validate(paid=True)
             state=initialize(items,root,folder,cfg,uid,license_info,[*known['references'],*known['inventory'],*known.get('claims',[])],known.get('preferences'))
             write_private(folder/'state.json',state)
             remote.call('batch-runs',dict(id=uid,config=asdict(cfg),photos=[{**{k:p[k] for k in ('id','original_sha256','file_sha256','perceptual_hash')},**{k:p['metadata'][k] for k in ('provider','source_id','source_url')}} for p in state['photos']]))

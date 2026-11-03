@@ -29,7 +29,7 @@ for n,role in enumerate(['REAL','SLOP']):
     raw=png();raws.append(raw);uid=prefix+'-'+str(n)
     meta=dict(provider='fixture-review',source_id=uid,source_url='https://example.invalid/'+uid,type='REAL',title='Prepared photo',description='Documented scene',author='Fixture',evidence='Documented fixture evidence',explanation='Prepared explanation',categories=['arte'],license_url='https://creativecommons.org/publicdomain/zero/1.0/')
     score=90 if role=='REAL' else 20
-    evaluation=dict(score=score,photographic=True,reason='Visible relationship',concrete_motive='Large sculpture',visual_tags=['large_scale'],editorial_threshold=65)
+    evaluation=dict(scores={key:score for key in ['authenticity_doubt','surprise','plausibility','game_interest','readability','concrete_motive']},score=score,photographic=True,reason='Visible relationship',concrete_motive='Large sculpture',visual_tags=['large_scale'],editorial_threshold=65)
     photos.append(dict(id=uid,role=role,rank=n+1,metadata=meta,original_sha256=hashlib.sha256(raw).hexdigest(),file_sha256=hashlib.sha256(raw).hexdigest(),perceptual_hash=hashlib.sha256(uid.encode()).hexdigest()[:16],evaluation=evaluation))
 assert request('/api/admin/editorial/references','POST',dict(batch_id=prefix,photos=photos))[0]==201
 for photo,raw in zip(photos,raws):
@@ -66,7 +66,7 @@ status,created=request('/api/admin/import','POST',meta);assert status==201,creat
 synthetic=created['id']
 for endpoint in ['originals','assets']:assert request('/api/admin/'+endpoint+'/'+synthetic,'PUT',raw)[0]==200
 keys=['subject','environment','objects_relations','materials','composition','situation','details','direct_observations','documented_information','inferences']
-dossier=dict(timestamp='2026-11-02T00:00:00Z',status='accepted',prompt=meta['ai_prompt'],model=meta['ai_model'],sha256=sha,original_sha256=sha,creative_brief='An open independent scene',description={key:'Fixture '+key for key in keys},editorial_threshold=65,evaluation=dict(score=80,photographic=True,reason='A quiet scene',concrete_motive='Spatial relationship',visual_tags=['quiet_scene']))
+dossier=dict(timestamp='2026-11-02T00:00:00Z',status='accepted',prompt=meta['ai_prompt'],model=meta['ai_model'],sha256=sha,original_sha256=sha,creative_brief='An open independent scene',description={key:'Fixture '+key for key in keys},editorial_threshold=65,evaluation=dict(scores={key:80 for key in ['authenticity_doubt','surprise','plausibility','game_interest','readability','concrete_motive']},score=80,photographic=True,reason='A quiet scene',concrete_motive='Spatial relationship',visual_tags=['quiet_scene']))
 payload=dict(id=attempt_id,reference_id=photos[1]['id'],image_id=synthetic,dossier=dossier)
 assert request('/api/admin/editorial/attempts','POST',payload)[0]==200
 assert request('/api/admin/editorial/attempts','POST',payload)[0]==200  # Lost response/retry keeps preparation.
@@ -84,3 +84,48 @@ assert next(row for row in learned['counts'] if row['feature']=='visual:quiet_sc
 assert next(row for row in learned['counts'] if row['feature']=='visual:large_scale')['approved']==1
 assert not {real,synthetic}&{row['id'] for row in request('/api/admin/review-queue')[1]['images']}
 print('Visual review passed: prepared pixels/provenance, no forms/notes/checkboxes, stale/forged/changed records blocked, manual approval without publication, atomic feedback, no repeated decisions, positive/negative learning and exploration.')
+
+# Reuse a discarded generation under a new policy, without changing its dossier.
+assert request('/api/admin/editorial/controls','PUT',dict(editorial_threshold=65),auth='wrong')[0]==401
+for invalid in [-1,101,'50',None]:
+    assert request('/api/admin/editorial/controls','PUT',dict(editorial_threshold=invalid))[0]==400
+assert request('/api/admin/editorial/controls','PUT',dict(editorial_threshold=65))[0]==200
+raw=png();sha=hashlib.sha256(raw).hexdigest();uid=prefix+'-reconsidered'
+legacy={**dossier,'status':'discarded','original_sha256':sha,'sha256':sha,'editorial_threshold':65,'evaluation':dict(scores={key:55 for key in ['authenticity_doubt','surprise','plausibility','game_interest','readability','concrete_motive']},score=55,photographic=True,reason='Visible relationship',concrete_motive='A specific scene',visual_tags=['quiet_scene'])}
+assert request('/api/admin/editorial/attempts','POST',dict(id=uid,reference_id=photos[1]['id'],dossier=legacy))[0]==200
+for kind in ['original','preview']:assert request('/api/admin/editorial/attempts/'+uid+'/'+kind,'PUT',raw)[0]==200
+status,created=request('/api/admin/import','POST',{**meta,'source_id':uid,'file_sha256':sha});assert status==201,created
+reconsidered=created['id']
+for endpoint in ['originals','assets']:assert request('/api/admin/'+endpoint+'/'+reconsidered,'PUT',raw)[0]==200
+assert request('/api/admin/editorial/prepare','POST',dict(image_id=reconsidered))[1]['ready'] is False
+original=next(a for a in request('/api/admin/editorial/dossiers')[1]['attempts'] if a['id']==uid)['dossier_json']
+assert request('/api/admin/editorial/controls','PUT',dict(editorial_threshold=50))[1]['editorial_threshold']==50
+prepared=request('/api/admin/editorial/prepare','POST',dict(image_id=reconsidered))[1]
+assert prepared['ready'] and prepared['snapshot']['editorial_threshold']==50
+assert next(a for a in request('/api/admin/editorial/dossiers')[1]['attempts'] if a['id']==uid)['dossier_json']==original
+entry=next(a for a in request('/api/admin/editorial/dossiers')[1]['attempts'] if a['id']==uid)
+assert entry['image_id']==reconsidered and entry['original_image_id'] is None
+card=next(row for row in request('/api/admin/review-queue')[1]['images'] if row['id']==reconsidered)
+assert card['reference']['id']==photos[1]['id']
+assert request('/api/admin/editorial/controls','PUT',dict(editorial_threshold=60))[0]==200
+assert reconsidered not in {row['id'] for row in request('/api/admin/review-queue')[1]['images']}
+assert request('/api/admin/visual-review/'+reconsidered,'POST',dict(decision='approved',token=card['token']))[0]==409
+assert request('/api/admin/editorial/controls','PUT',dict(editorial_threshold=50))[0]==200
+assert request('/api/admin/editorial/prepare','POST',dict(image_id=reconsidered))[1]['ready']
+assert request('/api/admin/editorial/state')[1]['editorial_threshold']==50
+assert request('/api/admin/editorial/preferences')[1]['observations']==before+2
+print('Policy reconsideration passed: current threshold, original discarded dossier unchanged, canonical source association, no automatic approval, stale-token invalidation and no paid calls.')
+
+# Full archive-to-import client path, without paid calls or rewriting decisions.
+import tempfile
+from unittest.mock import patch
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from pipeline.editorial import Remote
+from pipeline.reconsider import reconsider
+with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ,dict(GENERATED_LICENSE_NAME='CC BY 4.0',GENERATED_LICENSE_URL='https://creativecommons.org/licenses/by/4.0/')), patch('pipeline.editorial.OpenAI',side_effect=AssertionError('Paid API forbidden during reconsideration')):
+    result=reconsider(Remote(base,token,'fixture-reconsider'),prefix,Path(folder),True)
+    assert result['ready_for_review']==1 and result['human_decisions_preserved']==2,result
+    assert result['new_generations']==0 and result['paid_calls'] is False
+assert next(a for a in request('/api/admin/editorial/dossiers')[1]['attempts'] if a['id']==uid)['dossier_json']==original
+print('Archive reconsideration CLI passed: authenticated downloads, checksums, idempotent import, prepared source association, original dossiers and human decisions preserved, no generation.')

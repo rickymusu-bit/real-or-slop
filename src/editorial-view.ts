@@ -9,7 +9,7 @@ export interface Attempt {
   id: string; reference_id: string; image_id: string | null; dossier_json: string;
   status: string | null; published_at: string | null; media_available?: number;
 }
-export interface Dossiers { references: Reference[]; attempts: Attempt[] }
+export interface Dossiers { editorial_threshold?: number; references: Reference[]; attempts: Attempt[] }
 function object(value: string): Record<string, unknown> {
   try { const parsed = JSON.parse(value); return parsed && typeof parsed === "object" ? parsed : {}; } catch { return {}; }
 }
@@ -36,12 +36,12 @@ export function editorialGallery(data: Dossiers, batchId: string) {
     const source = { id: photo.id, title: String(metadata.title || "Fotografia autentica"), source_url: photo.source_url };
     const attempts = data.attempts.filter(attempt => attempt.reference_id === photo.id);
     const score = typeof evaluation.score === "number" ? `${evaluation.score}/100` : "Valutazione non disponibile";
-    const threshold = typeof evaluation.editorial_threshold === "number" ? evaluation.editorial_threshold : 65;
+    const threshold = data.editorial_threshold ?? (typeof evaluation.editorial_threshold === "number" ? evaluation.editorial_threshold : 50);
     const result = typeof evaluation.score === "number" && evaluation.score >= threshold ? "Sopra soglia · revisione umana richiesta" : "Sotto soglia editoriale";
     const original = photo.role === "SLOP" ? sourcePhotoPreview(source) : `<figure><figcaption>Fotografia REAL · ${escape(score)} · ${escape(result)}</figcaption><img loading="lazy" src="/api/admin/editorial/references/${encodeURIComponent(photo.id)}/preview" alt="${escape(source.title)}">${sourceLink(source.source_url)}</figure>`;
     const generations = attempts.map(attempt => {
       const dossier = object(attempt.dossier_json), assessment = dossier.evaluation as Record<string, unknown> | undefined;
-      const decision = attempt.published_at ? "Pubblicata" : attempt.status === "approved" ? "Approvata, in attesa di pubblicazione" : attempt.status === "rejected" ? "Rifiutata" : dossier.status === "accepted" ? "Sopra soglia · da rivedere" : "Scartata / errore";
+      const decision = attempt.published_at ? "Pubblicata" : attempt.status === "approved" ? "Approvata, in attesa di pubblicazione" : attempt.status === "rejected" ? "Rifiutata" : (dossier.status === "accepted" || attempt.status === "in-review") ? "Sopra soglia · da rivedere" : "Scartata / errore";
       const image = attempt.media_available ? `/api/admin/editorial/attempts/${encodeURIComponent(attempt.id)}/preview` : attempt.image_id ? `/api/admin/assets/${encodeURIComponent(attempt.image_id)}` : null;
       return `<div class="editorial-generation"><figure><figcaption>SLOP generata · ${escape(assessment?.score ?? "—")}/100 · ${escape(decision)}</figcaption>${image ? `<img loading="lazy" src="${image}" alt="SLOP generata dalla fotografia sorgente">` : "<p>File della generazione non archiviato.</p>"}</figure><p>${escape(assessment?.reason || dossier.error || "")}</p><details><summary>Descrizione, brief, prompt e valutazione</summary><pre class="curation-history">${escape(JSON.stringify(dossier, null, 2))}</pre></details>${attempt.image_id && attempt.status === "in-review" ? '<a href="/admin">Apri la revisione Approva / Rifiuta ↗</a>' : ""}</div>`;
     }).join("");

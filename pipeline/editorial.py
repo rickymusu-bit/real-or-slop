@@ -57,7 +57,7 @@ class Config:
     analysis_model: str = ''
     image_model: str = ''
     evaluator_model: str = ''
-    threshold: float = 65
+    threshold: float = 50
     attempts: int = 2
     max_evaluations: int = 60
     max_generations: int = 20
@@ -75,7 +75,7 @@ class Config:
         def env(name, default=''): return os.getenv(name) or default
         return cls(analysis_model=env('OPENAI_ANALYSIS_MODEL', ''), image_model=env('OPENAI_IMAGE_MODEL', ''),
                    evaluator_model=env('OPENAI_EVALUATOR_MODEL', '') or env('OPENAI_ANALYSIS_MODEL', ''),
-                   threshold=float(env('EDITORIAL_THRESHOLD', '65')), attempts=int(env('EDITORIAL_ATTEMPTS', '2')),
+                   threshold=float(env('EDITORIAL_THRESHOLD', '50')), attempts=int(env('EDITORIAL_ATTEMPTS', '2')),
                    max_evaluations=int(env('EDITORIAL_MAX_EVALUATIONS', '60')),
                    max_generations=int(env('EDITORIAL_MAX_GENERATIONS', '20')),
                    max_regenerations=int(env('EDITORIAL_MAX_REGENERATIONS', '10')),
@@ -513,6 +513,16 @@ def main(argv=None):
             if not args.resume and any(row['created_at'][:10] == now()[:10] for row in state['references']):
                 raise PipelineStop('Lotto giornaliero già assegnato: usare il recupero del lotto originale')
             resumed = json.loads((folder / 'ranking.json').read_text()) if args.resume and (folder / 'ranking.json').exists() else None
+            from dataclasses import replace
+            if not args.resume:
+                cfg = replace(cfg, threshold=float(state['editorial_threshold']))
+                write_private(run_file, dict(id=run_id, timestamp=now(), editorial_threshold=cfg.threshold))
+            else:
+                frozen = json.loads(run_file.read_text()).get('editorial_threshold')
+                if frozen is None and resumed:
+                    frozen = resumed[0]['evaluation'].get('editorial_threshold')
+                if frozen is not None: cfg = replace(cfg, threshold=float(frozen))
+            cfg.validate(paid=True)
             summary = execute(selected, root, folder, cfg, api, Budget(cfg, remote.reserve), remote,
                               [*state['references'], *state['inventory'], *state.get('claims', [])], state['queue']['count'], resume=resumed, preferences=preference_model(state.get('preferences')))
         print(json.dumps(summary))

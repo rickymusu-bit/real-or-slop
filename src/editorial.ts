@@ -12,7 +12,7 @@ export function setupEditorial(page: HTMLElement) {
   let loading = false;
   const render = () => {
     const batch = editorialBatches(data).find(batch => batch.id === selector.value);
-    count.textContent = batch ? `${batch.photos} fotografie · ${batch.generated} immagini SLOP · incluse quelle scartate` : "Nessun lotto disponibile.";
+    count.textContent = batch ? `${batch.photos} fotografie · ${batch.generated} immagini SLOP · soglia attuale ${data.editorial_threshold ?? 50}/100 · incluse quelle scartate` : "Nessun lotto disponibile.";
     output.innerHTML = editorialGallery(data, selector.value);
     output.querySelectorAll<HTMLImageElement>("img").forEach(image => image.addEventListener("error", () => {
       image.hidden = true;

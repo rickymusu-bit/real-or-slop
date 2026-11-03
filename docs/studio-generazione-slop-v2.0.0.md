@@ -1,3 +1,8 @@
+> Aggiornamento 2026-11-03T17:44:53.737857+01:00: [policy di soglia e riesame v1.0.0](policy-editoriale-soglia-v1.0.0.md).
+> La soglia corrente è 50/100; i dossier storici conservano quella originaria.
+> Il riesame riutilizza i file archiviati senza nuove generazioni e conserva
+> le decisioni umane precedenti. Richiede backend 0.15.0 e migrazione 0013.
+
 > Aggiornamento 2026-11-03T15:18:33.817420+01:00: dalla versione applicativa 0.14.2 lo Studio apre
 > automaticamente la galleria del lotto più recente, con tutte le fotografie e
 > tutte le generazioni conservate, anche sotto soglia. Le SLOP sono affiancate

@@ -9,7 +9,7 @@ export async function publishedDiagnostics(env: Env) {
   const scores = (await env.DB.prepare(`WITH evaluated AS (
     SELECT i.demo,i.type,COALESCE(r.evaluation_json,json_extract(a.dossier_json,'$.evaluation')) AS evaluation
     FROM images i JOIN published_images p ON p.image_id=i.id
-    LEFT JOIN editorial_image_reviews r ON r.image_id=i.id LEFT JOIN editorial_attempts a ON a.image_id=i.id
+    LEFT JOIN editorial_image_reviews r ON r.image_id=i.id LEFT JOIN editorial_attempt_images a ON a.image_id=i.id
   ) SELECT demo,type,count(*) AS published_count,count(json_extract(evaluation,'$.score')) AS evaluated_count,
     avg(json_extract(evaluation,'$.score')) AS editorial_score,
     avg(json_extract(evaluation,'$.scores.authenticity_doubt')) AS authenticity_doubt,

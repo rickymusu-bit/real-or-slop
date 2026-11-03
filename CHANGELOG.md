@@ -1,3 +1,9 @@
+## 0.15.0 — 2026-11-03T17:44:53.737857+01:00
+
+- Soglia editoriale corrente 50/100 in D1, separata da punteggi e soglie storiche immutabili; audit dei cambiamenti e invalidazione delle schede preparate. Le nuove esecuzioni dirette/Batch leggono la policy server, i run ripresi conservano quella congelata.
+- Riesame delle fotografie e delle generazioni archiviate senza nuove chiamate OpenAI: associazione tramite identificativi canonici e hash, conservazione dei dossier e delle approvazioni/rifiuti precedenti. Le immagini idonee entrano soltanto nella revisione privata.
+- Migrazione additiva 0013 e CLI di riesame con piano in sola lettura; classifiche, assegnazioni REAL/SLOP, limiti, modalità di gioco e catalogo pubblicato invariati.
+
 ## 0.14.2 — 2026-11-03T15:18:33.817420+01:00
 
 - Galleria privata in apertura dello Studio: lotto più recente caricato automaticamente, tutte le REAL e le SLOP archiviate, incluse quelle sotto soglia, con sorgente e generazione affiancate. Editor manuale e pubblicazione in sezioni avanzate.

@@ -35,7 +35,7 @@ export async function moderation(request: Request, env: Env, path: string) {
   if (path === "/api/admin/slop" || path.startsWith("/api/admin/slop/")) return slopStudio(request, env, path);
   if (path === "/api/admin/review-queue" && request.method === "GET") {
     const [rows, counts, model] = await Promise.all([
-      env.DB.prepare("SELECT p.image_id,p.token,p.snapshot_json,p.features_json,r.id AS reference_id,r.source_url AS reference_source_url,json_extract(r.metadata_json,'$.title') AS reference_title FROM editorial_preparations p JOIN images i ON i.id=p.image_id LEFT JOIN editorial_attempts a ON a.image_id=i.id LEFT JOIN reference_photos r ON r.id=a.reference_id AND r.role='SLOP' WHERE p.ready=1 AND i.status='in-review' ORDER BY i.created_at,i.id LIMIT 100").all<{ image_id: string; token: string; snapshot_json: string; features_json: string; reference_id: string | null; reference_title: string | null; reference_source_url: string | null }>(),
+      env.DB.prepare("SELECT p.image_id,p.token,p.snapshot_json,p.features_json,r.id AS reference_id,r.source_url AS reference_source_url,json_extract(r.metadata_json,'$.title') AS reference_title FROM editorial_preparations p JOIN images i ON i.id=p.image_id LEFT JOIN editorial_attempt_images a ON a.image_id=i.id LEFT JOIN reference_photos r ON r.id=a.reference_id AND r.role='SLOP' WHERE p.ready=1 AND i.status='in-review' ORDER BY i.created_at,i.id LIMIT 100").all<{ image_id: string; token: string; snapshot_json: string; features_json: string; reference_id: string | null; reference_title: string | null; reference_source_url: string | null }>(),
       env.DB.prepare("SELECT (SELECT count(*) FROM images WHERE status='in-review') AS pending,(SELECT count(*) FROM editorial_batch_runs WHERE status IN ('active','paused')) AS processing").first<{ pending: number; processing: number }>(),
       preferences(env),
     ]);
@@ -49,7 +49,7 @@ export async function moderation(request: Request, env: Env, path: string) {
       new URL(request.url).searchParams.get("status") || "in-review";
     const items = (
       await env.DB.prepare(
-        "SELECT i.*,s.page_url AS source_url,s.evidence,l.url AS license_url,p.id AS studio_plan_id,pub.published_at,er.evaluation_json AS editorial_evaluation,r.id AS reference_id,r.source_url AS reference_source_url,json_extract(r.metadata_json,'$.title') AS reference_title FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id LEFT JOIN slop_plans p ON p.image_id=i.id LEFT JOIN published_images pub ON pub.image_id=i.id LEFT JOIN editorial_image_reviews er ON er.image_id=i.id LEFT JOIN editorial_attempts a ON a.image_id=i.id LEFT JOIN reference_photos r ON r.id=a.reference_id AND r.role='SLOP' WHERE i.status=? ORDER BY i.created_at DESC LIMIT 100",
+        "SELECT i.*,s.page_url AS source_url,s.evidence,l.url AS license_url,p.id AS studio_plan_id,pub.published_at,er.evaluation_json AS editorial_evaluation,r.id AS reference_id,r.source_url AS reference_source_url,json_extract(r.metadata_json,'$.title') AS reference_title FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id LEFT JOIN slop_plans p ON p.image_id=i.id LEFT JOIN published_images pub ON pub.image_id=i.id LEFT JOIN editorial_image_reviews er ON er.image_id=i.id LEFT JOIN editorial_attempt_images a ON a.image_id=i.id LEFT JOIN reference_photos r ON r.id=a.reference_id AND r.role='SLOP' WHERE i.status=? ORDER BY i.created_at DESC LIMIT 100",
       )
         .bind(filter)
         .all()

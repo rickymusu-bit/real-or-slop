@@ -51,7 +51,7 @@ jobs:
       EDITORIAL_TOTAL_USD: ${{ vars.EDITORIAL_TOTAL_USD }}
       EDITORIAL_BATCH_EVALUATION_USD: ${{ vars.EDITORIAL_BATCH_EVALUATION_USD }}
       EDITORIAL_BATCH_GENERATION_USD: ${{ vars.EDITORIAL_BATCH_GENERATION_USD }}
-      EDITORIAL_THRESHOLD: ${{ vars.EDITORIAL_THRESHOLD || '65' }}
+      EDITORIAL_THRESHOLD: ${{ vars.EDITORIAL_THRESHOLD || '50' }}
       EDITORIAL_ATTEMPTS: ${{ inputs.reference_count == '2' && '1' || vars.EDITORIAL_ATTEMPTS || '2' }}
       EDITORIAL_MAX_EVALUATIONS: ${{ inputs.reference_count == '2' && '4' || vars.EDITORIAL_MAX_EVALUATIONS || '60' }}
       EDITORIAL_MAX_GENERATIONS: ${{ inputs.reference_count == '2' && '1' || vars.EDITORIAL_MAX_GENERATIONS || '20' }}

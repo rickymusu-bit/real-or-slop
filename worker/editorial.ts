@@ -1,3 +1,4 @@
+import { editorialThreshold } from "./editorial-policy";
 import { editorialMedia } from "./editorial-media";
 import { editorialBatch } from "./editorial-batch";
 import { prepareCandidate } from "./review-preparation";
@@ -23,18 +24,21 @@ export async function editorial(request: Request, env: Env, path: string): Promi
   if (path === base + "/controls") {
     if (request.method === "PUT") {
       const data = await body(request);
-      if (!Number.isInteger(data.queue_limit) || Number(data.queue_limit)<1 || Number(data.queue_limit)>1000) throw new HttpError(400,"Limite coda da 1 a 1000");
-      await env.DB.prepare("UPDATE editorial_controls SET queue_limit=? WHERE id=1").bind(data.queue_limit).run();
+      if (data.queue_limit === undefined && data.editorial_threshold === undefined) throw new HttpError(400,"Indicare limite coda o soglia editoriale");
+      if (data.queue_limit !== undefined && (!Number.isInteger(data.queue_limit) || Number(data.queue_limit)<1 || Number(data.queue_limit)>1000)) throw new HttpError(400,"Limite coda da 1 a 1000");
+      if (data.editorial_threshold !== undefined && (typeof data.editorial_threshold !== "number" || !Number.isFinite(data.editorial_threshold) || data.editorial_threshold<0 || data.editorial_threshold>100)) throw new HttpError(400,"Soglia editoriale da 0 a 100");
+      await env.DB.prepare("UPDATE editorial_controls SET queue_limit=COALESCE(?,queue_limit),editorial_threshold=COALESCE(?,editorial_threshold),policy_actor=? WHERE id=1")
+        .bind(data.queue_limit ?? null,data.editorial_threshold ?? null,(await hash(env.ADMIN_TOKEN!)).slice(0,12)).run();
     }
-    return json(await env.DB.prepare("SELECT queue_limit FROM editorial_controls WHERE id=1").first());
+    return json(await env.DB.prepare("SELECT queue_limit,editorial_threshold FROM editorial_controls WHERE id=1").first());
   }
   if (path === base + "/state" && request.method === "GET") {
     const references = (await env.DB.prepare("SELECT * FROM reference_photos ORDER BY created_at,id").all()).results;
-    const inventory = (await env.DB.prepare("SELECT i.id,i.type,i.sha256,i.perceptual_hash,s.provider,s.source_id,s.page_url AS source_url FROM images i LEFT JOIN sources s ON s.id=i.source_id").all()).results;
+    const inventory = (await env.DB.prepare("SELECT i.id,i.type,i.status,i.sha256,i.perceptual_hash,s.provider,s.source_id,s.page_url AS source_url FROM images i LEFT JOIN sources s ON s.id=i.source_id").all()).results;
     const queue = await env.DB.prepare("SELECT count(*) AS count FROM images WHERE status IN ('candidate','in-review','approved') AND id NOT IN (SELECT image_id FROM published_images)").first();
-    const attempts = (await env.DB.prepare("SELECT id,reference_id,image_id FROM editorial_attempts").all()).results;
+    const attempts = (await env.DB.prepare("SELECT id,reference_id,image_id FROM editorial_attempt_images").all()).results;
     const claims = (await env.DB.prepare("SELECT * FROM editorial_batch_sources").all()).results;
-    return json({ references, inventory, claims, queue, attempts, preferences: await preferences(env), diagnostics: await publishedDiagnostics(env) });
+    return json({ references, inventory, claims, queue, attempts, editorial_threshold: await editorialThreshold(env), preferences: await preferences(env), diagnostics: await publishedDiagnostics(env) });
   }
   if (path === base + "/budget" && request.method === "POST") {
     if (env.ENABLE_EDITORIAL_PAID !== "true") throw new HttpError(503, "Chiamate a pagamento non abilitate sul server");
@@ -139,8 +143,8 @@ export async function editorial(request: Request, env: Env, path: string): Promi
   }
   if (path === base + "/dossiers" && request.method === "GET") {
     const references = (await env.DB.prepare("SELECT * FROM reference_photos ORDER BY created_at DESC LIMIT 100").all()).results;
-    const attempts = (await env.DB.prepare("SELECT a.*,i.status,p.published_at,EXISTS(SELECT 1 FROM editorial_attempt_media m WHERE m.attempt_id=a.id AND m.kind='preview') AS media_available FROM editorial_attempts a LEFT JOIN images i ON i.id=a.image_id LEFT JOIN published_images p ON p.image_id=a.image_id ORDER BY a.created_at DESC LIMIT 300").all()).results;
-    return json({ references, attempts });
+    const attempts = (await env.DB.prepare("SELECT a.*,i.status,p.published_at,EXISTS(SELECT 1 FROM editorial_attempt_media m WHERE m.attempt_id=a.id AND m.kind='preview') AS media_available FROM editorial_attempt_images a LEFT JOIN images i ON i.id=a.image_id LEFT JOIN published_images p ON p.image_id=a.image_id ORDER BY a.created_at DESC LIMIT 300").all()).results;
+    return json({ references, attempts, editorial_threshold: await editorialThreshold(env) });
   }
   if (path === base + "/publish" && request.method === "POST") {
     const data = await body(request);
