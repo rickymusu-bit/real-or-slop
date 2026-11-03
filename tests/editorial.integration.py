@@ -83,3 +83,23 @@ metadata={**photos[0]['metadata'],'source_id':prefix+'-reject','source_url':'htt
 status,result=request('/api/admin/import','POST',metadata);assert status==201,result
 assert request('/api/admin/review/'+result['id'],'POST',dict(decision='rejected'))[0]==200
 print('Editorial integration passed: private source archive, concurrent registry exclusion, human gates, optional notes, atomic concurrent 50/50 publication, private diagnostics, paid API disabled.')
+
+# Discarded generated media remains private and visible without importing it.
+attempt=prefix+'-discarded'
+digest=hashlib.sha256(files['SLOP']).hexdigest()
+record=dict(timestamp='2026-11-02T00:00:00Z',status='discarded',prompt='Independent fixture reinterpretation',model='fixture-generator',original_sha256=digest,sha256=digest,evaluation=dict(score=10,reason='Insufficient visible interest'))
+assert request('/api/admin/import')[1]['attempt_media_archive'] is True
+assert request('/api/admin/editorial/attempts','POST',dict(id=attempt,reference_id=photos[1]['id'],dossier=record))[0]==200
+path='/api/admin/editorial/attempts/'+attempt
+assert request(path+'/preview')[0]==404
+for kind in ['original','preview']:
+    assert request(path+'/'+kind,'PUT',files['SLOP'],auth='wrong')[0]==401
+    assert request(path+'/'+kind,'PUT',b'wrong content')[0]==409
+    assert request(path+'/'+kind,'PUT',files['SLOP'])[0]==200
+    assert request(path+'/'+kind,'PUT',files['SLOP'])[0]==200
+    assert request(path+'/'+kind,auth='wrong')[0]==401
+    assert request(path+'/'+kind)[1]==files['SLOP']
+entry=next(row for row in request('/api/admin/editorial/dossiers')[1]['attempts'] if row['id']==attempt)
+assert entry['media_available']==1 and entry['image_id'] is None
+assert request('/api/admin/editorial/state')[1]['diagnostics']['totals']==after
+print('Discarded generation archive passed: private pixels, immutable checksums, idempotent uploads, Studio availability, no catalog import or publication.')

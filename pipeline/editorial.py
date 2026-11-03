@@ -297,10 +297,10 @@ def generate_slop(photo, api, cfg, budget, folder, save_attempt=lambda record: N
             original.parent.mkdir(parents=True, exist_ok=True)
             original.write_bytes(raw)
             original.chmod(0o600)
+            record.update(file=str(original), original_sha256=hashlib.sha256(raw).hexdigest())
             derivative = original.with_suffix('.webp')
             optimize(raw, derivative)
-            record.update(file=str(original), original_sha256=hashlib.sha256(raw).hexdigest(),
-                          derived_file=str(derivative), sha256=hashlib.sha256(derivative.read_bytes()).hexdigest())
+            record.update(derived_file=str(derivative), sha256=hashlib.sha256(derivative.read_bytes()).hexdigest())
             budget.debit('evaluation')
             # Blind assessment: only final pixels and the SAME rubric. No source
             # image/score, role, brief, generation prompt or intended label.
@@ -357,8 +357,16 @@ class Remote:
             self.call(f'references/{photo["id"]}/original', original.read_bytes(), 'PUT')
             self.call(f'references/{photo["id"]}/preview', data, 'PUT')
 
-    def save_attempt(self, record, image_id=None):
+    def save_attempt(self, record, image_id=None, root=None):
         self.call('attempts', dict(id=record['id'], reference_id=record['reference_id'], image_id=image_id, dossier=record))
+        if root is not None:
+            for kind, field, checksum in [('original','file','original_sha256'),('preview','derived_file','sha256')]:
+                if not record.get(field): continue
+                path = local_file(record[field], Path(root).resolve())
+                raw = path.read_bytes()
+                if not 0 < len(raw) <= 12_000_000 or hashlib.sha256(raw).hexdigest() != record.get(checksum):
+                    raise PipelineStop('File del tentativo diverso dal dossier congelato')
+                self.call(f'attempts/{record["id"]}/{kind}', raw, 'PUT')
 
 
 def execute(items, root, folder, cfg, api, budget, remote=None, known=(), pending=0, resume=None, preferences=None):
@@ -399,6 +407,10 @@ def execute(items, root, folder, cfg, api, budget, remote=None, known=(), pendin
             # image; failures/discards are immediately archived independently.
             previous_records = [json.loads(path.read_text()) for path in (folder / 'attempts').glob('*.json')] if resume is not None else []
             previous_records = [row for row in previous_records if row['reference_id'] == photo['id']]
+            if remote:
+                for previous_record in previous_records:
+                    if previous_record['status'] != 'accepted':
+                        remote.save_attempt(previous_record, root=folder)
             # Recover an accepted file after interrupted import without another
             # paid call; import API is idempotent by attempt provider/source ID.
             record = next((row for row in previous_records if row['status'] == 'accepted'), None)
@@ -406,7 +418,7 @@ def execute(items, root, folder, cfg, api, budget, remote=None, known=(), pendin
             if not record and remaining > 0:
                 from dataclasses import replace
                 record = generate_slop(photo, api, replace(cfg, attempts=remaining), budget, folder,
-                    lambda attempt: remote.save_attempt(attempt) if remote and attempt['status'] != 'accepted' else None,
+                    lambda attempt: remote.save_attempt(attempt, root=folder) if remote and attempt['status'] != 'accepted' else None,
                     previous=previous_records[-1].get('evaluation') if previous_records else None, iteration_offset=len(previous_records), preferences=preferences)
             if not record:
                 continue
@@ -414,7 +426,7 @@ def execute(items, root, folder, cfg, api, budget, remote=None, known=(), pendin
                 item = slop_import_item(photo, record)
                 write_private(folder / 'accepted' / (record['id'] + '.json'), item)
                 uploaded = upload(remote.base, remote.token, prepare(item, folder.resolve()))
-                remote.save_attempt(record, uploaded['id'])
+                remote.save_attempt(record, uploaded['id'], root=folder)
             counts['slop'] += 1
         pending += 1
     write_private(folder / 'summary.json', {**counts, 'calls': budget.counts, 'reserved_usd': budget.spent, 'timestamp': now()})
@@ -495,6 +507,8 @@ def main(argv=None):
             capabilities = request(remote.base, remote.token, '/api/admin/import')
             if not capabilities.get('quarantine_configured') or not capabilities.get('images_configured'):
                 raise PipelineStop('Configurare quarantena e storage approvato prima delle chiamate pagate')
+            if not capabilities.get('attempt_media_archive'):
+                raise PipelineStop('Aggiornare backend e migrazione archivio tentativi prima delle chiamate pagate')
             state = remote.call('state')
             if not args.resume and any(row['created_at'][:10] == now()[:10] for row in state['references']):
                 raise PipelineStop('Lotto giornaliero già assegnato: usare il recupero del lotto originale')

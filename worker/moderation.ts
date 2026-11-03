@@ -105,7 +105,7 @@ export async function moderation(request: Request, env: Env, path: string) {
     return json({ id: prepared.id, status: "in-review", upload: `/api/admin/assets/${prepared.id}` }, 201);
   }
   if (path === "/api/admin/import" && request.method === "GET")
-    return json({ direct_import: 1, original_archive: true, quarantine_configured: Boolean(env.QUARANTINE), images_configured: Boolean(env.IMAGES) });
+    return json({ direct_import: 1, attempt_media_archive: Boolean(env.QUARANTINE), original_archive: true, quarantine_configured: Boolean(env.QUARANTINE), images_configured: Boolean(env.IMAGES) });
   const asset = path.match(/^\/api\/admin\/(assets|originals)\/([\w-]+)$/);
   if (asset) {
     const original = asset[1] === "originals";

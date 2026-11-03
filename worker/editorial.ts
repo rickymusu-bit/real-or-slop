@@ -1,3 +1,4 @@
+import { editorialMedia } from "./editorial-media";
 import { editorialBatch } from "./editorial-batch";
 import { prepareCandidate } from "./review-preparation";
 import { preferences } from "./preferences";
@@ -90,25 +91,22 @@ export async function editorial(request: Request, env: Env, path: string): Promi
   if (media) {
     const row = await env.DB.prepare("SELECT * FROM reference_photos WHERE id=?").bind(media[1]).first<{ id: string; original_sha256: string; file_sha256: string }>();
     if (!row) throw new HttpError(404, "Sorgente non trovata");
-    if (!env.QUARANTINE) throw new HttpError(503, "Quarantena mancante");
     const key = media[2] === "original" ? `originals/reference-${row.id}` : `references/${row.id}`;
-    if (request.method === "GET") {
-      const object = await env.QUARANTINE.get(key);
-      if (!object) throw new HttpError(404, "File sorgente mancante");
-      return new Response(object.body, { headers: { "Content-Type": object.httpMetadata?.contentType || "image/webp", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
-    }
-    if (request.method === "PUT") {
-      if (Number(request.headers.get("Content-Length")) > 12000000) throw new HttpError(413, "File troppo grande");
-      const bytes = await request.arrayBuffer();
-      if (!bytes.byteLength || bytes.byteLength > 12000000) throw new HttpError(413, "Dimensione non valida");
-      const digest = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map(x => x.toString(16).padStart(2,"0")).join("");
-      if (digest !== (media[2] === "original" ? row.original_sha256 : row.file_sha256)) throw new HttpError(409, "Impronta sorgente diversa dal registro");
-      const b = new Uint8Array(bytes);
-      const mime = b[0] === 255 && b[1] === 216 ? "image/jpeg" : b[0] === 137 && b[1] === 80 ? "image/png" : String.fromCharCode(...b.slice(0,4)) === "RIFF" && String.fromCharCode(...b.slice(8,12)) === "WEBP" ? "image/webp" : null;
-      if (!mime) throw new HttpError(415, "Formato sorgente non valido");
-      await env.QUARANTINE.put(key, bytes, { httpMetadata: { contentType: mime }, onlyIf: { etagDoesNotMatch: "*" } });
-      return json({ archived: true });
-    }
+    return editorialMedia(request, env, key, media[2] === "original" ? row.original_sha256 : row.file_sha256);
+  }
+  const attemptMedia = path.match(/^\/api\/admin\/editorial\/attempts\/([\w-]+)\/(original|preview)$/);
+  if (attemptMedia) {
+    const attempt = await env.DB.prepare("SELECT dossier_json FROM editorial_attempts WHERE id=?").bind(attemptMedia[1]).first<{ dossier_json: string }>();
+    if (!attempt) throw new HttpError(404, "Tentativo non trovato");
+    const dossier = JSON.parse(attempt.dossier_json) as Record<string, unknown>;
+    const kind = attemptMedia[2], expected = dossier[kind === "original" ? "original_sha256" : "sha256"];
+    if (typeof expected !== "string" || !/^[a-f0-9]{64}$/.test(expected)) throw new HttpError(404, "Nessun file prodotto per questo tentativo");
+    const key = `editorial-attempts/${attemptMedia[1]}/${kind}`;
+    if (request.method === "GET" && !await env.DB.prepare("SELECT attempt_id FROM editorial_attempt_media WHERE attempt_id=? AND kind=?").bind(attemptMedia[1],kind).first()) throw new HttpError(404, "File del tentativo non archiviato");
+    return editorialMedia(request, env, key, expected, async size => {
+      await env.DB.prepare("INSERT INTO editorial_attempt_media VALUES(?,?,?,?,?,?) ON CONFLICT(attempt_id,kind) DO NOTHING")
+        .bind(attemptMedia[1],kind,expected,size,key,new Date().toISOString()).run();
+    });
   }
   if (path === base + "/attempts" && request.method === "POST") {
     const data = await body(request, 100000);
@@ -141,7 +139,7 @@ export async function editorial(request: Request, env: Env, path: string): Promi
   }
   if (path === base + "/dossiers" && request.method === "GET") {
     const references = (await env.DB.prepare("SELECT * FROM reference_photos ORDER BY created_at DESC LIMIT 100").all()).results;
-    const attempts = (await env.DB.prepare("SELECT a.*,i.status,p.published_at FROM editorial_attempts a LEFT JOIN images i ON i.id=a.image_id LEFT JOIN published_images p ON p.image_id=a.image_id ORDER BY a.created_at DESC LIMIT 300").all()).results;
+    const attempts = (await env.DB.prepare("SELECT a.*,i.status,p.published_at,EXISTS(SELECT 1 FROM editorial_attempt_media m WHERE m.attempt_id=a.id AND m.kind='preview') AS media_available FROM editorial_attempts a LEFT JOIN images i ON i.id=a.image_id LEFT JOIN published_images p ON p.image_id=a.image_id ORDER BY a.created_at DESC LIMIT 300").all()).results;
     return json({ references, attempts });
   }
   if (path === base + "/publish" && request.method === "POST") {
