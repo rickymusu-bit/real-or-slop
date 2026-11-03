@@ -16,8 +16,13 @@ SITE = 'https://real-or-slop.rickymusu.workers.dev'
 RUN = 'direct-20-2026-11-03-isolated'
 
 
+def file_hash(path):
+    with path.open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
 def extract_verified(bundle, expected, root):
-    if not re.fullmatch('[a-f0-9]{64}', expected) or hashlib.file_digest(bundle.open('rb'), 'sha256').hexdigest() != expected:
+    if not re.fullmatch('[a-f0-9]{64}', expected) or file_hash(bundle) != expected:
         raise PipelineStop('Archivio diverso dal checksum autorizzato')
     root = root.resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -39,7 +44,7 @@ def extract_verified(bundle, expected, root):
         path = (root / item['file']).resolve()
         if not path.is_relative_to(root) or not path.is_file() or not 0 < path.stat().st_size <= 12_000_000:
             raise PipelineStop('File non consentito nel manifest')
-        if hashlib.file_digest(path.open('rb'), 'sha256').hexdigest() != item['sha256']:
+        if file_hash(path) != item['sha256']:
             raise PipelineStop('Impronta del file diversa dal manifest')
         key = (item['id'], item['kind'])
         if key in files:
