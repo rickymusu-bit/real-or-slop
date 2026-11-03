@@ -1,3 +1,51 @@
+# Protocollo editoriale v2 — 0.15.0, sperimentale non attivato
+
+Verifica locale del 2026-11-03, base `bad071d0a92449a099af4d61663ed7e0794b2bcb`.
+Specifica corrente: [v2.0.0](pipeline-editoriale-real-slop-v2.0.0.md).
+Il vincolo aggiunto dal proprietario esclude ogni fotografia sorgente SLOP.
+La nuova pipeline non usa ranking, soglie, categorie di acquisizione o preferenze
+storiche. Il trasporto Batch è condiviso, la politica editoriale è separata.
+
+Verifiche eseguite con esito positivo:
+
+- `npm test`: 16 file di test TypeScript e 107 test Python, inclusi contratti
+  condivisi, immagini ordinarie ammissibili, ibridi esclusi, valutazione cieca,
+  separazione dei flussi, recupero, costi, deduplica e migrazione additiva.
+- `npm run lint`, `npm run build`, `npm run deploy:check`, `git diff --check`.
+- `npm run test:integration`, `ROS_TEST_BATCH=1 npm run test:integration`,
+  `ROS_TEST_V2=1 npm run test:integration`,
+  `ROS_TEST_PROFILE= npm run test:integration`: emulatori locali separati,
+  autenticazione, D1/R2 privati, lease/CAS, dossier immutabili, revisione umana,
+  budget atomici concorrenti, compatibilità storica e gioco senza spoiler.
+- `npm run test:gallery`: Chromium già installato, layout 360/390/768/1440,
+  navigazione, tastiera, timer, anteprime e revisione privata v2. L'interfaccia
+  v2 usa fixture browser esplicite; autenticazione e revisione reale sono
+  verificate separatamente contro D1/R2 locali. Screenshot in `artifacts/gallery/`.
+- `npm run benchmark:editorial-v2`: 120 fixture dichiarate, 60 per origine,
+  tutte in quarantena, 60 pseudo-REAL bloccate dalla provenienza non verificata,
+  nessuna approvazione utilizzabile, `publication_ready: false`. Test separato
+  di riproducibilità fra workspace e esclusione delle esposizioni ripetute nei
+  dati di trasferimento. Report `artifacts/editorial-v2/report.json`.
+- Esempi CLI di scoperta (24 query su due motori, nessuna chiamata di rete) e
+  piano SLOP (6 idee autonome, nessuna chiamata o scrittura remota).
+
+La migrazione **0013** è provata solo localmente e conserva tutti i dati storici.
+I due gate v2 sono assenti dalla configurazione di produzione; il gate storico
+non abilita la v2. Non esiste un endpoint di pubblicazione sperimentale e le sue
+candidate non sono righe del catalogo. Sessioni, monete indipendenti 50/50,
+preflight, timer e pubblicazione storica mantengono i rispettivi contratti.
+
+Lo studio fotografico con 100–200 candidate vere, query libere effettivamente
+prodotte da LLM, eventuali motori generalisti con condizioni verificate e test
+umani su immagini/fonti/generatori nuovi **non è stato eseguito**. Non si
+presentano le fixture come validazione editoriale o formativa. La preparazione
+LLM delle query è un input esplicito e tracciato, non un'inferenza automatica.
+La pubblicazione v2 richiederà un rilascio dedicato dopo quei risultati.
+Nessuna inferenza pagata, migrazione remota, nuovo cron, deploy, riclassificazione
+o eliminazione di asset è stata eseguita da questa implementazione.
+
+---
+
 # Galleria Studio e fotografia sorgente — 0.14.2
 
 Aggiornamento 2026-11-03T15:18:33.817420+01:00.

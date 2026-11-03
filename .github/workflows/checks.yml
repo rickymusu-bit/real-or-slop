@@ -26,5 +26,7 @@ jobs:
       - run: npm run test:integration
       - name: Batch lifecycle with fake OpenAI and isolated local budgets
         run: ROS_TEST_BATCH=1 npm run test:integration
+      - name: Independent editorial v2 with fake OpenAI and private experimental storage
+        run: ROS_TEST_V2=1 npm run test:integration
       - name: Demo gameplay without any R2 bindings
         run: ROS_TEST_PROFILE= npm run test:integration

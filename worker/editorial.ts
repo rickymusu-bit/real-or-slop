@@ -6,6 +6,7 @@ import { body, hash, HttpError, id, json, type Env } from "./core";
 import { httpsUrl, importText } from "./import";
 import { recognizedLicense } from "../shared/licenses";
 import { publishedDiagnostics } from "./publication";
+import { editorialV2 } from "./editorial-v2";
 
 function hex(data: Record<string, unknown>, key: string, length: number) {
   const value = importText(data, key, length);
@@ -14,6 +15,7 @@ function hex(data: Record<string, unknown>, key: string, length: number) {
 }
 export async function editorial(request: Request, env: Env, path: string): Promise<Response> {
   const base = "/api/admin/editorial";
+  if (path === base + "/v2" || path.startsWith(base + "/v2/")) return editorialV2(request, env, path);
   if (path === base + "/batch-runs" || path.startsWith(base + "/batch-runs/")) return editorialBatch(request, env, path);
   if (path === base + "/preferences" && request.method === "GET") return json(await preferences(env));
   if (path === base + "/prepare" && request.method === "POST") {

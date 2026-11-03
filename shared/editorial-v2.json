@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0",
+  "enums": {
+    "composition": ["isolated_subject", "subject_in_context", "multiple_subjects", "no_dominant_subject"],
+    "framing": ["detail", "close", "medium", "wide"],
+    "density": ["low", "medium", "high"],
+    "occlusion": ["low", "medium", "high"],
+    "color": ["color", "black_and_white", "mixed"],
+    "lighting": ["natural", "artificial", "mixed"],
+    "contrast": ["low", "medium", "high"],
+    "saturation": ["low", "medium", "high"],
+    "sharpness": ["low", "medium", "high"],
+    "noise": ["low", "medium", "high"],
+    "depth_of_field": ["shallow", "medium", "deep"]
+  },
+  "scalars": ["ordinariness", "surprise", "plausibility"],
+  "lists": ["language", "content", "relations", "observations", "uncertainties", "technical_issues"],
+  "transformations": ["global_development", "global_white_balance", "resize", "compression", "format_conversion", "exif_orientation"],
+  "modes": ["original", "open"],
+  "limits": {"candidates": 200, "queries": 40, "text": 8000, "list_items": 20}
+}

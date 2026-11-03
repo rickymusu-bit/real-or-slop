@@ -56,12 +56,12 @@ def download(row, client, allowed_hosts):
         pix=list(tiny.getdata()); bits=sum((pix[y*9+x]>pix[y*9+x+1])<<(y*8+x) for y in range(8) for x in range(8))
         return data,hashlib.sha256(data).hexdigest(),f'{bits:016x}'
 
-def optimize(data, target):
+def optimize(data, target, maximum_edge=1600):
     """Whole-frame derivative; original and editorial credits remain private and intact."""
     from PIL import Image,ImageOps
     with Image.open(io.BytesIO(data)) as image:
         derivative=ImageOps.exif_transpose(image).convert('RGB')
-        derivative.thumbnail((1600,1600))
+        derivative.thumbnail((maximum_edge,maximum_edge))
         derivative.save(target,format='WEBP',quality=85,method=6)
 
 

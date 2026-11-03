@@ -1,5 +1,24 @@
 # Real or Slop
 
+Protocollo editoriale **v2 / 0.15.0**, sperimentale e disabilitato: scoperta REAL
+multidimensionale e generazione SLOP esclusivamente da idee e prompt originali,
+senza fotografie di riferimento. Profili sui soli pixel, verifica documentale
+separata, revisione privata in `/admin/editorial-v2` e benchmark riproducibile.
+Nessun punteggio di sorpresa, graduatoria condivisa o preferenza storica viene
+riusato. Le candidate v2 non possono essere pubblicate dal vecchio flusso.
+
+[Specifica corrente v2](docs/pipeline-editoriale-real-slop-v2.0.0.md) ·
+[Benchmark, esempi e attivazione dello studio](docs/benchmark-editoriale-v2.0.0.md) ·
+[Configurazione disabilitata](pipeline/v2/editorial.env.example).
+Migrazione additiva **0013**, non applicata da questa modifica a risorse remote.
+`npm run benchmark:editorial-v2` usa 120 fixture locali: non certifica qualità
+editoriale o apprendimento. Servono studio reale e revisione prima del rilascio.
+Nessun nuovo cron, inferenza pagata, deploy o cambiamento del catalogo.
+
+I paragrafi seguenti su sorgenti fotografiche SLOP, classifica, soglie e preferenze
+sono documentazione del percorso **storico v1** ancora conservato per recupero e
+compatibilità operativa. Non sono istruzioni per popolare il nuovo catalogo v2.
+
 Studio SLOP (0.14.2): apre il lotto più recente con tutte le fotografie e le
 generazioni archiviate, inclusi gli scarti, affiancando ogni SLOP alla fotografia
 sorgente del prompt. La coda Approva/Rifiuta contiene soltanto candidate idonee.
@@ -101,7 +120,7 @@ progresso e movimento ridotto sono verificati in Chromium già disponibile.
 La 0.9.0 cambia soltanto l'interfaccia; la preparazione dei timer è aggiunta dalla
 0.10.0 descritta sopra.
 
-## Pipeline editoriale REAL / SLOP (0.11.0)
+## Pipeline editoriale storica REAL / SLOP (0.11.0)
 
 Fino a 20 fotografie diversificate al giorno, valutate sui pixel con una sola
 classifica 0–100. Prima metà candidata REAL; seconda metà sorgenti private per

@@ -288,6 +288,7 @@ dialog button { margin-bottom: 12px; }
 .review-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0 24px; }
 .review-actions button { min-height: 56px; font-size: 18px; }
 .review-management { margin-top: 40px; }
+.editorial-v2 pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .editorial-panel { margin: 24px 0 44px; }
 .editorial-toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; }

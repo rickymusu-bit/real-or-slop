@@ -2,7 +2,7 @@
 // and native CDP/WebSocket; installs no browser or automation dependencies.
 import { spawn } from 'node:child_process';
 import { Buffer } from 'node:buffer';
-import { mkdirSync, openSync, closeSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, openSync, closeSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
@@ -228,6 +228,9 @@ try {
   // UI-only fixtures exercise the two-button flow without remote credentials.
   // Real preparation/auth/approval/feedback are tested against local D1/R2 separately.
   const decisions = [];
+  const v2Decisions = [];
+  const v2Contract = JSON.parse(readFileSync(resolve(cwd, 'tests/editorial-v2-contract.json'), 'utf8'));
+  const v2Card = { id: 'v2-browser', origin: 'REAL', revision: 0, review_state: 'quarantine', review: {}, profile: v2Contract.profile, provenance: v2Contract.real_provenance, feedback: { ...v2Contract.feedback, observations: ['<img src=x onerror="window.fixtureV2Injected=true">'] }, image: '/api/admin/editorial/v2/candidates/v2-browser/preview' };
   let brokenPreview = false;
   const reviewCards = ["one", "two"].map((id, n) => ({ id, token: "prepared-" + id, image: "/api/admin/assets/" + id, details: { title: "Synthetic browser fixture", type: n ? "AI" : "REAL", author: "Fixture", source_url: "https://example.invalid/", license_url: "https://creativecommons.org/licenses/by/4.0/", explanation: "Prepared automatically for this browser test." } }));
   t.intercept(async (request, send) => {
@@ -245,6 +248,18 @@ try {
       assert.deepEqual(Object.keys(payload).sort(), ["decision", "token"]);
       decisions.push({ id: url.pathname.split("/").at(-1), ...payload });
       body = JSON.stringify({ status: payload.decision });
+    } else if (url.pathname === "/api/admin/editorial/v2/candidates") {
+      body = JSON.stringify({ candidates: [v2Card] });
+    } else if (url.pathname === "/api/admin/editorial/v2/candidates/v2-browser/preview") {
+      mime = 'image/svg+xml';
+      body = '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#344652"/></svg>';
+    } else if (url.pathname === "/api/admin/editorial/v2/candidates/v2-browser/review") {
+      const payload = JSON.parse(request.request.postData);
+      assert.equal(payload.confirm_reviewed, true); assert.equal(payload.revision, v2Card.revision);
+      assert.deepEqual(payload.provenance, v2Card.provenance);
+      assert.deepEqual(payload.feedback, v2Card.feedback);
+      v2Decisions.push(payload); v2Card.revision++; v2Card.review_state = payload.decision;
+      body = JSON.stringify({ reviewed: true, published: false, revision: v2Card.revision });
     } else { status = 404; body = '{}'; }
     await send('Fetch.fulfillRequest', { requestId: request.requestId, responseCode: status, responseHeaders: [{ name: 'Content-Type', value: mime }], body: Buffer.from(body).toString('base64') });
   });
@@ -266,6 +281,19 @@ try {
   await waitFor(() => t.evaluate('document.querySelector("#review-message").textContent.includes("Anteprima non disponibile")'), 'bad preview does not produce editorial feedback');
   assert.equal(await t.evaluate('Array.from(document.querySelectorAll("[data-visual-decision]")).every(button=>button.disabled)'), true);
   assert.equal(decisions.length, 2);
+  await t.evaluate('history.pushState({},"","/admin/editorial-v2");window.dispatchEvent(new PopStateEvent("popstate"))');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("[data-v2-id] img")?.naturalWidth)'), 'v2 private preview');
+  assert.equal(await t.evaluate('document.querySelector("[data-v2-decision=approved]").disabled'), true);
+  assert.equal(await t.evaluate('document.querySelectorAll(".source-photo").length'), 0);
+  assert.equal(await t.evaluate('typeof window.fixtureV2Injected'), 'undefined');
+  await layout(t, 'v2 studio 360');
+  await t.screenshot('editorial-v2-360');
+  await t.evaluate('document.querySelector(".v2-confirm").click()');
+  await waitFor(() => t.evaluate('document.querySelector("[data-v2-decision=approved]").disabled===false'), 'v2 human verification');
+  await t.evaluate('document.querySelector("[data-v2-decision=approved]").click()');
+  await waitFor(() => t.evaluate('document.querySelector(".editorial-v2 h2")?.textContent.includes("approved")'), 'v2 archived review');
+  assert.equal(v2Decisions.length, 1);
+  assert.equal(v2Decisions[0].decision, 'approved');
   await t.send('Fetch.disable');
   await t.go('/', '.hero');
   await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
