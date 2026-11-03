@@ -288,3 +288,22 @@ dialog button { margin-bottom: 12px; }
 .review-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0 24px; }
 .review-actions button { min-height: 56px; font-size: 18px; }
 .review-management { margin-top: 40px; }
+
+.editorial-panel { margin: 24px 0 44px; }
+.editorial-toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; }
+.editorial-toolbar label { flex: 1; min-width: 220px; }
+.editorial-card { border: 1px solid var(--hairline); padding: 20px; margin: 20px 0; }
+.editorial-card h3 { font-size: 18px; overflow-wrap: anywhere; }
+.editorial-comparison, .review-comparison:has(.source-photo) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.editorial-comparison:has(> figure:only-child) { grid-template-columns: 1fr; }
+.editorial-comparison figure, .source-photo { margin: 0; min-width: 0; }
+.editorial-comparison img, .source-photo img { display: block; width: 100%; height: 340px; object-fit: contain; background: var(--surface); }
+.editorial-comparison figcaption, .source-photo figcaption { font-size: 13px; margin: 0 0 10px; }
+.source-photo a { display: inline-block; margin-top: 10px; font-size: 13px; }
+.review-comparison:has(.source-photo) > .review-image { height: 400px; }
+.manual-studio { margin-top: 32px; border-top: 1px solid var(--hairline); }
+@media (max-width: 700px) {
+  .editorial-comparison, .review-comparison:has(.source-photo) { grid-template-columns: 1fr; }
+  .editorial-card { padding: 12px; }
+  .editorial-comparison img, .source-photo img { height: 280px; }
+}

@@ -1,3 +1,11 @@
+> Aggiornamento 2026-11-03T15:18:33.817420+01:00: dalla versione applicativa 0.14.2 lo Studio apre
+> automaticamente la galleria del lotto più recente, con tutte le fotografie e
+> tutte le generazioni conservate, anche sotto soglia. Le SLOP sono affiancate
+> alle fotografie sorgente del prompt. La stessa sorgente è visibile nella coda
+> di revisione e nelle schede avanzate. L’editor manuale è chiuso in una sezione
+> dedicata; per visionare il lotto non serve compilarlo. Le istruzioni storiche
+> sul caricamento manuale dei dossier sono superate da questo aggiornamento.
+
 > Aggiornamento 2026-11-02T21:24:07.507675+01:00: [archivio delle generazioni v1.0.0](archivio-privato-generazioni-v1.0.0.md),
 > con preview private degli scarti. Richiede migrazione 0012 e backend aggiornato;
 > non ricrea i file non conservati dai vecchi runner.

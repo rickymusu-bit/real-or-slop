@@ -1,3 +1,26 @@
+# Galleria Studio e fotografia sorgente — 0.14.2
+
+Aggiornamento 2026-11-03T15:18:33.817420+01:00.
+
+La prova diretta è archiviata: 20 sorgenti e 10 generazioni, con 9 scarti.
+La coda mostra una sola SLOP perché soltanto quella supera 65/100; le prime
+dieci REAL sono sotto soglia. Questo non deve nascondere le immagini archiviate.
+
+La nuova galleria carica il lotto più recente all’apertura dello Studio e mostra
+30 immagini in 20 schede: 10 REAL e 10 coppie sorgente/generazione. Non dipende
+dal caricamento di diagnostica o job Batch. Il confronto resta disponibile
+anche per scarti e vecchi file non archiviati hanno un avviso esplicito.
+La coda privata e la gestione avanzata includono la fotografia sorgente del
+prompt attraverso il riferimento immutabile. Nessun riferimento aggiunto ai
+payload pubblici. Test di rendering su lotto completo, scarti, file mancanti e
+escaping; integrazione HTTP su riferimenti nella coda e nelle schede avanzate.
+
+I cinque vecchi treni sono stati identificati per ID e titolo e rimossi dalla
+coda mediante rifiuto amministrativo richiesto dal proprietario: file e audit
+conservati, nessuna modifica al catalogo pubblicato.
+
+---
+
 # Verifiche effettive
 
 ## Prova diretta e archivio degli scarti — 0.14.1 da revisionare
