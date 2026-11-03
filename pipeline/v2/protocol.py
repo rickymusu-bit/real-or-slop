@@ -98,12 +98,14 @@ def evidence(value):
 
 def provenance(value, origin):
     """Documentary checks, never inferred from visual characteristics."""
+    require(isinstance(value, dict), 'Provenienza: oggetto richiesto')
     common = ('kind', 'content_kind', 'license_url', 'author', 'evidence', 'transformations')
-    extra = ('provider', 'source_id', 'source_url', 'authenticity', 'semantic_edit') if origin == 'REAL' else ('idea_id', 'mode', 'idea', 'prompt', 'model', 'parameters', 'input_kind', 'fully_synthetic', 'generated_at', 'timestamp_source', 'batch_id', 'custom_id')
+    trace = ('transport', 'request_id') if value.get('transport') == 'synchronous' else ('batch_id', 'custom_id')
+    extra = ('provider', 'source_id', 'source_url', 'authenticity', 'semantic_edit') if origin == 'REAL' else ('idea_id', 'mode', 'idea', 'prompt', 'model', 'parameters', 'input_kind', 'fully_synthetic', 'generated_at', 'timestamp_source', *trace)
     exact(value, (*common, *extra), 'Provenienza')
     require(origin in ('REAL', 'AI') and value['kind'] == origin, 'Origine non valida')
     require(value['content_kind'] in ('photograph', 'synthetic', 'artwork', 'unknown'), 'Natura del contenuto non valida')
-    require(recognized_license(value['license_url']) is not None and text(value['author'], 500), 'Diritti o autore da verificare')
+    require((value['license_url'] is None or recognized_license(value['license_url']) is not None) and text(value['author'], 500), 'Diritti o autore da verificare')
     evidence(value['evidence'])
     require(isinstance(value['transformations'], list) and all(item in SCHEMA['transformations'] for item in value['transformations']), 'Crop, restauro, upscaling o trasformazione non coperta: quarantena')
     if origin == 'REAL':
@@ -112,7 +114,7 @@ def provenance(value, origin):
     else:
         generation_plan({'version': VERSION, 'independent': True, 'ideas': [{'id': value['idea_id'], **{key: value[key] for key in ('mode', 'idea', 'prompt')}}]})
         require(value['input_kind'] == 'text-only' and value['fully_synthetic'] is True and value['content_kind'] == 'synthetic', 'Solo generazioni integralmente sintetiche da testo')
-        require(text(value['model'], 150) and text(value['generated_at'], 100) and text(value['batch_id'], 150) and text(value['custom_id'], 150), 'Tracciamento generazione incompleto')
+        require(text(value['model'], 150) and text(value['generated_at'], 100) and all(text(value[key], 150) for key in trace), 'Tracciamento generazione incompleto')
         require(value['timestamp_source'] in ('provider_created', 'retrieved_at'), 'Origine del timestamp richiesta')
         exact(value['parameters'], ('n', 'size', 'quality'), 'Parametri generazione')
         require(type(value['parameters']['n']) is int and value['parameters']['n'] == 1 and value['parameters']['size'] in ('1024x1024', '1024x1536', '1536x1024') and value['parameters']['quality'] in ('low', 'medium', 'high'), 'Parametri non validi')
@@ -131,6 +133,8 @@ def approval_blockers(origin, profile, proof, explanation):
     provenance(proof, origin)
     feedback(explanation, evidence(proof['evidence']))
     blockers = []
+    if proof['license_url'] is None:
+        blockers.append('license_unresolved')
     if not profile['usable'] or not profile['photographic']:
         blockers.append('visual_eligibility')
     if origin == 'REAL' and (proof['authenticity'] != 'verified' or proof['semantic_edit'] or proof['content_kind'] != 'photograph'):

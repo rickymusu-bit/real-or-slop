@@ -19,7 +19,9 @@ function publicCandidate(row: Candidate) { return { ...parsed(row.dossier_json),
 function validateConfig(value: unknown, origin: string): ObjectValue {
   const cfg = object(value);
   const keys = ["analysis_model", "image_model", "evaluator_model", "max_evaluations", "max_generations", "max_regenerations", "run_usd", "daily_usd", "evaluation_usd", "generation_usd", "size", "quality"];
-  ensure(Object.keys(cfg).length === keys.length && keys.every(key => Object.hasOwn(cfg, key)), "Configurazione v2 incompatibile con il vecchio metodo");
+  ensure(keys.every(key => Object.hasOwn(cfg, key)) && Object.keys(cfg).every(key => [...keys, "max_output_tokens", "reasoning_effort"].includes(key)), "Configurazione v2 incompatibile con il vecchio metodo");
+  if (Object.hasOwn(cfg, "max_output_tokens")) ensure(Number.isSafeInteger(cfg.max_output_tokens) && Number(cfg.max_output_tokens) >= 1000 && Number(cfg.max_output_tokens) <= 4000, "Limite output v2 non valido");
+  if (Object.hasOwn(cfg, "reasoning_effort")) ensure([null, "none", "low", "medium", "high"].includes(cfg.reasoning_effort as string | null), "Reasoning v2 non valido");
   for (const key of ["run_usd", "daily_usd", "evaluation_usd"]) ensure(typeof cfg[key] === "number" && Number.isFinite(cfg[key]) && cfg[key] > 0, "Budget v2 positivo richiesto");
   for (const key of ["max_evaluations", "max_generations"]) ensure(Number.isSafeInteger(cfg[key]) && Number(cfg[key]) >= 1 && Number(cfg[key]) <= 200, "Limiti v2 non validi");
   ensure(cfg.max_regenerations === 1 && v2Text(cfg.evaluator_model, 150), "Nessuna rigenerazione o modello implicito in v2");
@@ -95,7 +97,8 @@ async function route(request: Request, env: Env, path: string): Promise<Response
       ensure(data.confirm_reviewed === true && ["approved", "rejected"].includes(String(data.decision)) && data.revision === row.revision, "Revisione esplicita e revisione corrente richieste");
       const proof = validateV2Provenance(data.provenance, row.origin), explanation = validateV2Feedback(data.feedback, v2Evidence(proof.evidence));
       const original = object(dossier.provenance);
-      const identity = row.origin === "REAL" ? ["provider", "source_id", "source_url"] : ["idea_id", "mode", "idea", "prompt", "model", "parameters", "input_kind", "fully_synthetic", "generated_at", "timestamp_source", "batch_id", "custom_id"];
+      const trace = original.transport === "synchronous" ? ["transport", "request_id"] : ["batch_id", "custom_id"];
+      const identity = row.origin === "REAL" ? ["provider", "source_id", "source_url"] : ["idea_id", "mode", "idea", "prompt", "model", "parameters", "input_kind", "fully_synthetic", "generated_at", "timestamp_source", ...trace];
       ensure(identity.every(key => equal(proof[key], original[key])), "La revisione non può cambiare l'origine della candidata");
       const blockers = v2ApprovalBlockers(row.origin, dossier.profile, proof, explanation);
       if (data.decision === "approved") ensure(!blockers.length, "Approvazione bloccata: " + blockers.join(", "));

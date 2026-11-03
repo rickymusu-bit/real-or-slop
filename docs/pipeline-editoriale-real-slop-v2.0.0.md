@@ -8,6 +8,12 @@ issue: 34
 
 # Protocollo editoriale multidimensionale
 
+Il [pilota rapido del 2026-11-03](benchmark-editoriale-v2-pilota-2026-11-03.md)
+usa chiamate sincrone per esplicita richiesta del proprietario. I relativi dossier
+riportano `transport: synchronous` e il vero `request_id`, senza inventare job
+Batch. Il motore Batch rifiuta di riprendere un checkpoint sincrono. Nessun cambio
+automatico di trasporto o modello; l'esecutore sincrono del pilota è separato.
+
 La v2 costruisce due popolazioni indipendenti e le confronta dopo la raccolta.
 L'istruzione del proprietario successiva alla issue #34 esclude **ogni derivazione
 SLOP da fotografie**, comprese fotografie di un corpus separato. Non esistono
@@ -190,6 +196,12 @@ Il testo iniziale riporta osservazioni del profilo e una dichiarazione esplicita
 d'incertezza; non afferma di aver trovato segni di AI. Il revisore deve controllare
 che osservazioni ed evidenze siano vere: la validazione dello schema non è una
 verifica fattuale automatica. Non si assegnano livelli di difficoltà.
+
+Una licenza non ancora stabilita è registrata come `license_url: null`: permette
+l'archiviazione privata ma blocca l'approvazione con `license_unresolved`. Il
+pilota non attribuisce automaticamente licenze agli output generati. Output e
+reasoning del valutatore hanno limiti espliciti congelati nella configurazione;
+il default storico di 4000 token resta compatibile con i checkpoint esistenti.
 
 La pagina Informazioni spiega REAL, SLOP, esclusione degli ibridi e limiti dei pixel,
 con un link prima del gioco e richiamo persistente nel sito. La demo conserva la

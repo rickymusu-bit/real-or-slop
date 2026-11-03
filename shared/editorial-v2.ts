@@ -61,10 +61,11 @@ export function v2Evidence(value: unknown): Set<string> {
 export function validateV2Provenance(value: unknown, origin: unknown): ObjectValue {
   ensure(origin === "REAL" || origin === "AI", "Origine non valida");
   const common = ["kind", "content_kind", "license_url", "author", "evidence", "transformations"];
-  const extra = origin === "REAL" ? ["provider", "source_id", "source_url", "authenticity", "semantic_edit"] : ["idea_id", "mode", "idea", "prompt", "model", "parameters", "input_kind", "fully_synthetic", "generated_at", "timestamp_source", "batch_id", "custom_id"];
+  const trace = object(value).transport === "synchronous" ? ["transport", "request_id"] : ["batch_id", "custom_id"];
+  const extra = origin === "REAL" ? ["provider", "source_id", "source_url", "authenticity", "semantic_edit"] : ["idea_id", "mode", "idea", "prompt", "model", "parameters", "input_kind", "fully_synthetic", "generated_at", "timestamp_source", ...trace];
   const row = exact(value, [...common, ...extra], "Provenienza");
   ensure(row.kind === origin && ["photograph", "synthetic", "artwork", "unknown"].includes(String(row.content_kind)), "Natura del contenuto non valida");
-  ensure(recognizedLicense(String(row.license_url)) && v2Text(row.author, 500), "Diritti o autore da verificare");
+  ensure((row.license_url === null || recognizedLicense(String(row.license_url))) && v2Text(row.author, 500), "Diritti o autore da verificare");
   v2Evidence(row.evidence);
   ensure(Array.isArray(row.transformations) && row.transformations.every(item => schema.transformations.includes(item)), "Crop, restauro, upscaling o trasformazione non coperta: quarantena");
   if (origin === "REAL") {
@@ -73,7 +74,7 @@ export function validateV2Provenance(value: unknown, origin: unknown): ObjectVal
   } else {
     validateV2Plan({ version: schema.version, independent: true, ideas: [{ id: row.idea_id, mode: row.mode, idea: row.idea, prompt: row.prompt }] });
     ensure(row.input_kind === "text-only" && row.fully_synthetic === true && row.content_kind === "synthetic", "Solo generazioni integralmente sintetiche da testo");
-    ensure(v2Text(row.model, 150) && v2Text(row.generated_at, 100) && v2Text(row.batch_id, 150) && v2Text(row.custom_id, 150), "Tracciamento generazione incompleto");
+    ensure(v2Text(row.model, 150) && v2Text(row.generated_at, 100) && trace.every(key => v2Text(row[key], 150)), "Tracciamento generazione incompleto");
     ensure(["provider_created", "retrieved_at"].includes(String(row.timestamp_source)), "Origine del timestamp richiesta");
     const params = exact(row.parameters, ["n", "size", "quality"], "Parametri generazione");
     ensure(params.n === 1 && ["1024x1024", "1024x1536", "1536x1024"].includes(String(params.size)) && ["low", "medium", "high"].includes(String(params.quality)), "Parametri non validi");
@@ -90,6 +91,7 @@ export function v2ApprovalBlockers(origin: unknown, profile: unknown, proof: unk
   const visual = validateV2Profile(profile), source = validateV2Provenance(proof, origin);
   validateV2Feedback(feedback, v2Evidence(source.evidence));
   const blockers: string[] = [];
+  if (source.license_url === null) blockers.push("license_unresolved");
   if (!visual.usable || !visual.photographic) blockers.push("visual_eligibility");
   if (origin === "REAL" && (source.authenticity !== "verified" || source.semantic_edit || source.content_kind !== "photograph")) blockers.push("authenticity_not_verified");
   return blockers;

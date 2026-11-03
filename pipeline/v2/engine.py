@@ -30,6 +30,8 @@ class Config:
     generation_usd: float = 0
     size: str = '1024x1024'
     quality: str = 'medium'
+    max_output_tokens: int = 4000
+    reasoning_effort: str | None = None
 
     @classmethod
     def environment(cls):
@@ -39,11 +41,14 @@ class Config:
                    max_generations=int(os.getenv('EDITORIAL_V2_MAX_GENERATIONS', '200')),
                    run_usd=float(os.getenv('EDITORIAL_V2_RUN_USD', '0')), daily_usd=float(os.getenv('EDITORIAL_V2_DAILY_USD', '0')),
                    evaluation_usd=float(os.getenv('EDITORIAL_V2_EVALUATION_USD', '0')), generation_usd=float(os.getenv('EDITORIAL_V2_GENERATION_USD', '0')),
-                   size=os.getenv('OPENAI_V2_IMAGE_SIZE', '1024x1024'), quality=os.getenv('OPENAI_V2_IMAGE_QUALITY', 'medium'))
+                   size=os.getenv('OPENAI_V2_IMAGE_SIZE', '1024x1024'), quality=os.getenv('OPENAI_V2_IMAGE_QUALITY', 'medium'),
+                   max_output_tokens=int(os.getenv('OPENAI_V2_MAX_OUTPUT_TOKENS', '4000')),
+                   reasoning_effort=os.getenv('OPENAI_V2_REASONING_EFFORT') or None)
 
     def validate(self, paid=False, origin=None):
         require(all(type(getattr(self, key)) is int and 1 <= getattr(self, key) <= 200 for key in ('max_evaluations', 'max_generations')), 'Limiti v2 non validi')
         require(self.max_regenerations == 1, 'Nessuna rigenerazione automatica nel protocollo v2')
+        require(type(self.max_output_tokens) is int and 1000 <= self.max_output_tokens <= 4000 and self.reasoning_effort in (None, 'none', 'low', 'medium', 'high'), 'Limiti di valutazione v2 non validi')
         amounts = (self.run_usd, self.daily_usd, self.evaluation_usd, self.generation_usd)
         require(all(type(n) in (int, float) and math.isfinite(n) and n >= 0 for n in amounts), 'Budget v2 non valido')
         require(self.size in ('1024x1024', '1024x1536', '1536x1024') and self.quality in ('low', 'medium', 'high'), 'Parametri immagine v2 non validi')
@@ -84,7 +89,7 @@ def initialize(origin, inputs, root, folder, cfg, uid, simulated=False, license_
     attempts = []
     if origin == 'AI':
         generation_plan(inputs)
-        require(license_info and license_info.get('author') and license_info.get('url'), 'Dichiarazione dei diritti SLOP richiesta')
+        require(license_info and license_info.get('author') and 'url' in license_info, 'Autore e stato dei diritti SLOP richiesti')
         for idea in inputs['ideas']:
             attempts.append(dict(id=idea['id'], origin='AI', idea=idea, status='planned'))
     else:
@@ -117,6 +122,7 @@ def initialize(origin, inputs, root, folder, cfg, uid, simulated=False, license_
 class Engine(BatchTransport):
     def __init__(self, state, folder, api, remote=None, max_bytes=MAX_INPUT_BYTES):
         require(state.get('protocol_version') == VERSION and state.get('origin') in ('REAL', 'AI'), 'Checkpoint v2 incompatibile; nessuna conversione automatica dei lotti storici')
+        require(state.get('transport', 'batch') == 'batch', 'Run sincrono: non riprendere attraverso il motore Batch')
         self.state, self.folder, self.api, self.remote = state, folder.resolve(), api, remote
         self.cfg = Config(**state['config'])
         self.cfg.validate()
@@ -125,6 +131,14 @@ class Engine(BatchTransport):
 
     def _attempt(self, uid):
         return next(row for row in self.state['attempts'] if row['id'] == uid)
+
+    def _body(self, item):
+        payload = super()._body(item)
+        if 'image_path' in item['recipe']:
+            payload['max_output_tokens'] = self.cfg.max_output_tokens
+            if self.cfg.reasoning_effort is not None:
+                payload['reasoning'] = {'effort': self.cfg.reasoning_effort}
+        return payload
 
     def _setup(self):
         if self.state['jobs']:

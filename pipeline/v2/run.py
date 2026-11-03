@@ -87,7 +87,7 @@ def main(argv=None):
                 available = {model['id'] for model in api.api('models').get('data', [])}
                 require({cfg.evaluator_model, *([cfg.image_model] if args.origin == 'AI' else [])} <= available, 'Modelli v2 non disponibili; nessun fallback')
                 state = initialize(args.origin, value, args.manifest.resolve().parent, folder, cfg, uid, False,
-                                   dict(url=os.getenv('GENERATED_V2_LICENSE_URL', ''), author=os.getenv('GENERATED_V2_AUTHOR', '')) if args.origin == 'AI' else None)
+                                   dict(url=os.getenv('GENERATED_V2_LICENSE_URL') or None, author=os.getenv('GENERATED_V2_AUTHOR', '')) if args.origin == 'AI' else None)
                 write_private(folder / 'state.json', state)
                 remote.call('v2/runs', dict(id=uid, origin=args.origin, config=asdict(cfg), input=value))
             else:

@@ -13,7 +13,9 @@ riusato. Le candidate v2 non possono essere pubblicate dal vecchio flusso.
 Migrazione additiva **0013**, non applicata da questa modifica a risorse remote.
 `npm run benchmark:editorial-v2` usa 120 fixture locali: non certifica qualità
 editoriale o apprendimento. Servono studio reale e revisione prima del rilascio.
-Nessun nuovo cron, inferenza pagata, deploy o cambiamento del catalogo.
+Nessun nuovo cron, deploy o cambiamento del catalogo. Il pilota pagato e i suoi limiti sono documentati separatamente.
+
+[Pilota rapido eseguito](docs/benchmark-editoriale-v2-pilota-2026-11-03.md): 10 candidate REAL, 10 generazioni SLOP e 20 analisi visive sincrone; tutte in quarantena. Il report segnala una scorciatoia nei formati e limiti della ricerca automatica.
 
 I paragrafi seguenti su sorgenti fotografiche SLOP, classifica, soglie e preferenze
 sono documentazione del percorso **storico v1** ancora conservato per recupero e

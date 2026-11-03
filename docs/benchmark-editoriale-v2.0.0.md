@@ -3,6 +3,10 @@
 Stato: strumenti implementati, studio reale e approvazione dell'attivazione pendenti.
 La specifica è [protocollo editoriale 2.0.0](pipeline-editoriale-real-slop-v2.0.0.md).
 
+Aggiornamento: [pilota rapido del 2026-11-03](benchmark-editoriale-v2-pilota-2026-11-03.md)
+eseguito su 10 candidate REAL e 10 SLOP, con 20 analisi visive sincrone richieste
+dal proprietario. Non sostituisce lo studio completo e non pubblica asset.
+
 ## Esecuzione locale senza rete
 
 ```sh

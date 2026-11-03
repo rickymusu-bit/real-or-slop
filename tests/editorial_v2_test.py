@@ -20,6 +20,20 @@ CONTRACT = json.loads(Path('tests/editorial-v2-contract.json').read_text())
 
 
 class ProtocolV2Test(unittest.TestCase):
+    def test_synchronous_generation_has_a_real_request_trace_without_batch_identifiers(self):
+        proof = CONTRACT['synchronous_provenance']
+        self.assertEqual(provenance(proof, 'AI')['transport'], 'synchronous')
+        feedback = {**CONTRACT['feedback'], 'origin_evidence_ids': ['generation']}
+        self.assertEqual(approval_blockers('AI', CONTRACT['profile'], proof, feedback), ['license_unresolved'])
+        with self.assertRaises(PipelineStop):
+            provenance({**proof, 'reference_id': 'photo'}, 'AI')
+        with self.assertRaises(PipelineStop):
+            provenance({**proof, 'batch_id': 'fake-batch'}, 'AI')
+
+    def test_pending_rights_can_be_archived_but_never_approved(self):
+        proof = {**CONTRACT['real_provenance'], 'license_url': None}
+        self.assertEqual(approval_blockers('REAL', CONTRACT['profile'], proof, CONTRACT['feedback']), ['license_unresolved'])
+
     def test_ordinary_texture_is_eligible_without_surprise_or_concrete_motive(self):
         self.assertEqual(approval_blockers('REAL', CONTRACT['profile'], CONTRACT['real_provenance'], CONTRACT['feedback']), [])
         self.assertNotIn('score', visual_profile(CONTRACT['profile']))
@@ -158,6 +172,15 @@ class BatchV2Test(unittest.TestCase):
             engine.cfg = replace(engine.cfg, run_usd=.001)
             self.assertEqual(engine.tick(execute=True)['status'], 'paused')
             self.assertEqual(engine.api.batches, {})
+
+    def test_visual_token_budget_is_explicit_without_changing_image_generation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            engine = self.engine(Path(temp), 'REAL')
+            engine.cfg = replace(engine.cfg, max_output_tokens=3000, reasoning_effort='none')
+            engine.tick(execute=False)
+            request = engine._body(engine.state['jobs'][0]['items'][0])
+            self.assertEqual(request['max_output_tokens'], 3000)
+            self.assertEqual(request['reasoning'], {'effort': 'none'})
 
     def test_exact_real_duplicates_are_archived_without_repeated_visual_calls(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -29,6 +29,16 @@ test("v2 plan has no channel for references, REAL candidates or previous prefere
 test("v2 feedback must cite existing evidence instead of inventing an origin proof", () => {
   assert.throws(() => v2ApprovalBlockers("REAL", contract.profile, contract.real_provenance, { ...contract.feedback, origin_evidence_ids: ["invented"] }), /evidenze/);
 });
+test("v2 archives unresolved rights without assigning a licence or allowing approval", () => {
+  assert.deepEqual(v2ApprovalBlockers("REAL", contract.profile, { ...contract.real_provenance, license_url: null }, contract.feedback), ["license_unresolved"]);
+});
+test("v2 synchronous output uses request provenance without invented Batch IDs", () => {
+  const proof = contract.synchronous_provenance;
+  assert.equal(validateV2Provenance(proof, "AI").transport, "synchronous");
+  assert.deepEqual(v2ApprovalBlockers("AI", contract.profile, proof, { ...contract.feedback, origin_evidence_ids: ["generation"] }), ["license_unresolved"]);
+  assert.throws(() => validateV2Provenance({ ...proof, batch_id: "fake" }, "AI"), /campi/);
+  assert.throws(() => validateV2Provenance({ ...proof, reference_id: "photo" }, "AI"), /campi/);
+});
 test("v2 routes remain disabled before touching unmigrated production D1", async () => {
   for (const path of ["/api/admin/editorial/v2", "/api/admin/editorial/v2/runs", "/api/admin/editorial/v2/candidates", "/api/admin/editorial/v2/publish"]) {
     const response = await worker.fetch(new Request("https://test" + path, { headers: { Authorization: "Bearer " + "x".repeat(40) } }), { ADMIN_TOKEN: "x".repeat(40) } as Env);

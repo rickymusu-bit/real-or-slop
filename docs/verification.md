@@ -1,3 +1,18 @@
+# Pilota rapido reale — 2026-11-03
+
+[Rapporto del pilota](benchmark-editoriale-v2-pilota-2026-11-03.md): completati
+10 output SLOP e 20 profili in sincrono, insieme a 10 candidate fotografiche.
+Costo stimato dai token 0,530162 USD, senza verifica della fattura. Tutti i dossier
+restano in quarantena. Il gate pagato locale è stato richiuso. Nessuna modifica
+alla produzione, a risorse Cloudflare remote o al catalogo.
+
+Sono state corrette la rappresentazione dei diritti pendenti (licenza nulla,
+approvazione bloccata), la tracciabilità sincrona tramite request ID reali e la
+configurazione esplicita dei limiti di output/reasoning. Le sezioni sottostanti
+conservano i risultati precedenti all'esecuzione del pilota.
+
+---
+
 # Protocollo editoriale v2 — 0.15.0, sperimentale non attivato
 
 Verifica locale del 2026-11-03, base `bad071d0a92449a099af4d61663ed7e0794b2bcb`.

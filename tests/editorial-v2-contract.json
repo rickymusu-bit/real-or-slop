@@ -72,5 +72,35 @@
         "prompt": "Una scena fotografica originale di superfici quotidiane, scegli liberamente composizione e luce."
       }
     ]
+  },
+  "synchronous_provenance": {
+    "kind": "AI",
+    "content_kind": "synthetic",
+    "license_url": null,
+    "author": "Contract fixture",
+    "evidence": [
+      {
+        "id": "generation",
+        "url": "https://platform.openai.com/",
+        "statement": "Fixture for synchronous request provenance."
+      }
+    ],
+    "transformations": [],
+    "idea_id": "original",
+    "mode": "original",
+    "idea": "Un intreccio di superfici quotidiane",
+    "prompt": "Una scena fotografica originale di superfici quotidiane, scegli liberamente composizione e luce.",
+    "model": "fixture-image",
+    "parameters": {
+      "n": 1,
+      "size": "1024x1024",
+      "quality": "medium"
+    },
+    "input_kind": "text-only",
+    "fully_synthetic": true,
+    "generated_at": "2026-11-03T00:00:00Z",
+    "timestamp_source": "provider_created",
+    "transport": "synchronous",
+    "request_id": "req-fixture-synchronous"
   }
 }
