@@ -168,6 +168,13 @@ il profilo sulla variante effettiva. Non si ritagliano crediti o watermark
 obbligatori: l'immagine incompatibile resta fuori dalla pubblicazione. Questa
 esportazione locale non modifica approvazioni, R2 o catalogo e non chiama API.
 
+Il proprietario ha confermato 1024×1024 come unico formato finale v2: il comando
+di presentazione rifiuta altri formati. Per le prossime SLOP usare generazione
+nativa quadrata; i formati di generazione storici restano nei dossier del pilota.
+Il ritaglio attuale è geometrico e centrale: non riconosce soggetti o indizi.
+La revisione confronta il fotogramma completo e può richiedere un'altra posizione
+del quadrato quando taglia elementi essenziali o altera il significato della scena.
+
 ## D1, R2, costi e recupero
 
 Migrazione additiva **0013**: `editorial_v2_runs`, prenotazioni, candidate e

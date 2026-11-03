@@ -6,6 +6,7 @@ import unittest
 
 from PIL import Image
 
+from pipeline.editorial import PipelineStop
 from pipeline.v2.presentation import standard_copy
 
 
@@ -29,6 +30,8 @@ class PresentationTest(unittest.TestCase):
                 self.assertEqual(right - left, bottom - top)
                 self.assertEqual((left, top), ((width - min(width, height)) // 2, (height - min(width, height)) // 2))
                 self.assertEqual(p['upscaled'], min(width, height) < 1024)
+                with self.assertRaises(PipelineStop):
+                    standard_copy(raw, target, (1200, 800))
 
     def test_orientation_is_applied_before_recording_crop_coordinates(self):
         stream = io.BytesIO()
@@ -36,9 +39,9 @@ class PresentationTest(unittest.TestCase):
         exif[274] = 6
         Image.new('RGB', (1800, 1200), 'blue').save(stream, 'JPEG', exif=exif)
         with tempfile.TemporaryDirectory() as folder:
-            p = standard_copy(stream.getvalue(), Path(folder) / 'copy.webp', (1200, 800))
+            p = standard_copy(stream.getvalue(), Path(folder) / 'copy.webp')
             self.assertEqual(p['oriented_source_size'], [1200, 1800])
-            self.assertEqual(p['crop_box'], [0, 500, 1200, 1300])
+            self.assertEqual(p['crop_box'], [0, 300, 1200, 1500])
 
 
 if __name__ == '__main__':

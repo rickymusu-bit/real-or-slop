@@ -17,9 +17,11 @@ from ..batch_store import safe_path
 from ..editorial import write_private
 from .protocol import identifier, require
 
+STANDARD_SIZE = (1024, 1024)
 
-def standard_copy(raw, target, size=(1024, 1024)):
-    require(size in ((1024, 1024), (1200, 800)), 'Formato di revisione non supportato')
+
+def standard_copy(raw, target, size=STANDARD_SIZE):
+    require(size == STANDARD_SIZE, 'Il formato standard v2 è 1024×1024')
     require(0 < len(raw) <= 12_000_000, 'Originale vuoto o oltre 12 MB')
     Image.MAX_IMAGE_PIXELS = 30_000_000
     with Image.open(io.BytesIO(raw)) as source:
@@ -50,7 +52,8 @@ def standard_copy(raw, target, size=(1024, 1024)):
                 review_status='pending', profile=None)
 
 
-def export(states, out, size=(1024, 1024)):
+def export(states, out, size=STANDARD_SIZE):
+    require(size == STANDARD_SIZE, 'Il formato standard v2 è 1024×1024')
     require(not out.exists(), 'La cartella di destinazione esiste già: usare una nuova variante')
     records = []
     seen = set()
@@ -108,7 +111,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--states', nargs='+', type=Path, required=True)
     parser.add_argument('--out', type=Path, required=True)
-    parser.add_argument('--size', choices=('1024x1024', '1200x800'), default='1024x1024')
+    parser.add_argument('--size', choices=('1024x1024',), default='1024x1024')
     args = parser.parse_args(argv)
     print(json.dumps(export(args.states, args.out, tuple(map(int, args.size.split('x'))))))
 
