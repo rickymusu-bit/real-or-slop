@@ -1,7 +1,7 @@
 ---
 version: 1.0.0
 created_at: 2026-11-03T11:56:28.644973+01:00
-status: controlled-manual-test
+status: completed-local-awaiting-production-release
 ---
 
 # Confronto editoriale diretto su 20 fotografie
@@ -64,3 +64,34 @@ confronto. Le immagini sopra soglia sono indicate come idonee alla revisione,
 senza inserirle nella coda online. Nessuna approvazione o pubblicazione
 automatica. L'esito va confrontato separatamente
 per REAL e SLOP, mantenendo la classifica delle fotografie e i sei assi originali.
+
+## Esito della prova
+
+Verificato: 2026-11-03T12:23:21.798706+01:00.
+
+Venti fotografie classificate, dieci generazioni, 40 chiamate visive/brief e
+10 chiamate immagini. Nessun errore o rigenerazione. Soglia invariata 65:
+0/10 REAL idonee (media 50.27, massimo 64.5) e 1/10 SLOP idonea (media 55.92,
+intervallo 47.83–66.5). Le prime due REAL hanno 64.5 e 64.
+
+Le prime dieci REAL hanno plausibilità media 92.8 e leggibilità 87.6, ma dubbio
+11.3 e sorpresa 26.6. Le SLOP hanno plausibilità 82.7, leggibilità 86.1, dubbio
+30.7 e sorpresa 29.4. I brief tendono spesso ad attività ordinarie come visite
+e dimostrazioni. Per calibrare serve quindi guardare immagini, rubriche e brief,
+senza dedurre da questo singolo campione una soglia ottimale.
+
+Prenotazioni locali 40 USD; consumo stimato dai token 0.728503 USD, usando le
+tariffe Standard documentate il 2026-11-02: non una fattura. File privati:
+`.pipeline/direct-20-2026-11-03/isolated/report.html`, `scores.csv`, report ZIP e
+archivio completo con originali, hash e dossier. Nessuna chiave nei file.
+
+Il registro sorgenti del test rimane locale in `local-reference-registry.json`.
+Prima di riabilitare la pipeline online, importare il lotto e le impronte nel
+registro persistente per escludere sempre le dieci sorgenti SLOP dal catalogo
+REAL. L'importazione dei file già prodotti non richiede nuove generazioni.
+
+Il check di main dopo il merge è fermo alla guardia di approvazione di 0012.
+Nessuna modifica remota eseguita: schema 0011, gate false, ledger 4.50 USD,
+catalogo 12 REAL + 12 SLOP e deployment precedente invariati. Le 91 verifiche
+Python del ramo operativo passano; i controlli completi della PR #30 erano verdi
+prima del merge.
