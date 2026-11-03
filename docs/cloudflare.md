@@ -126,3 +126,51 @@ correzione su main e verificare il nuovo tentativo in Workers → real-or-slop �
 Deployments/Builds. Ritentare il vecchio commit riutilizza la vecchia guardia.
 Le Repository variables di GitHub Actions sono distinte dall'ambiente Builds;
 non occorre impostare una deroga permanente in nessuno dei due ambienti.
+
+
+## Token separati per produzione e preview
+
+Versione nota: 1.0.0. Verificato: 2026-11-03T11:31:50.680927+01:00.
+
+Se Workers Builds compila correttamente ma `wrangler preview` termina con
+Authentication error 10000 (eventualmente seguito da Invalid access token 9109),
+controllare il token del build specifico. Il token di produzione può essere
+corretto mentre le preview usano una copia precedente.
+
+Nella diagnosi della PR #30, produzione/main utilizzava già BUILD_API_TOKEN,
+mentre previews_base_config e la preview fix/private-generated-archive erano
+ancora associati a real-or-slop build token. Il nome del token mostrato nel log
+di un tentativo è quello di quel tentativo; non prova la selezione corrente
+della configurazione principale. ADMIN_TOKEN del Worker è invece il segreto
+dell'admin dell'applicazione, distinto dalle credenziali di deploy.
+
+La configurazione Build contiene production_settings e previews_base_config
+separati. Ogni preview riceve una copia del secondo alla sua creazione: modificare
+il token di main non aggiorna il modello delle preview o le copie esistenti.
+Per intervenire tramite API, usare il vero script_tag del Worker (ottenuto da
+workers/scripts), non l'ID della preview al suo posto.
+
+- Leggere `/builds/workers/{script_tag}` per le configurazioni principale e base.
+- Leggere `/builds/workers/{script_tag}/previews/{preview_id}` per quella del ramo.
+- Aggiornare solo previews_base_config.build_token_uuid e/o
+  settings.build_token_uuid della preview interessata, selezionando un token
+  esistente valido. Nessuna necessità di cambiare valori dei token o permessi.
+- L'opzione patch_existing_previews=true propaga la modifica a tutte le preview
+  esistenti; usarla solo se è autorizzato intervenire anche sugli altri rami.
+- Un nuovo build della preview verifica l'autenticazione. Un tentativo avviato
+  manualmente può riuscire senza sostituire il vecchio check GitHub del commit:
+  verificare sempre SHA e URL del check, non soltanto l'esito nel pannello.
+
+La correzione della PR #30 ha allineato solo la base delle nuove preview e la
+preview di quella PR. Produzione e altre preview esistenti sono rimaste invariate;
+nessun token creato, modificato o eliminato, nessuna migrazione o deploy di
+produzione. Un vecchio token non va considerato privo di riferimenti senza
+controllare anche le altre preview.
+
+L'autenticazione corretta non configura automaticamente i dati: l'app richiede
+DB, QUARANTINE e IMAGES collegati a risorse di TEST nella preview. Il build
+segnala i binding mancanti; non collegare quelli di produzione per eliminare
+l'avviso. Configurazione, guardia e procedura di test sono descritte sopra.
+
+Fonti: [Builds API](https://developers.cloudflare.com/workers/ci-cd/builds/api-reference/),
+[configurazione preview](https://developers.cloudflare.com/workers/previews/configuration/).
