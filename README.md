@@ -1,7 +1,9 @@
 # Real or Slop
 
-Archivio privato delle generazioni (0.14.1, da revisionare): conserva anche gli
-scarti e li rende consultabili nello Studio senza importarli nel catalogo.
+Studio SLOP (0.14.2): apre il lotto più recente con tutte le fotografie e le
+generazioni archiviate, inclusi gli scarti, affiancando ogni SLOP alla fotografia
+sorgente del prompt. La coda Approva/Rifiuta contiene soltanto candidate idonee.
+La creazione manuale resta disponibile in una sezione avanzata.
 [Migrazione 0012 e recupero](docs/archivio-privato-generazioni-v1.0.0.md).
 
 Pipeline OpenAI Batch (0.14.0): lotti fino a 20 fotografie, quattro fasi riprendibili

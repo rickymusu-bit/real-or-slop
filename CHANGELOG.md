@@ -1,3 +1,9 @@
+## 0.14.2 — 2026-11-03T15:18:33.817420+01:00
+
+- Galleria privata in apertura dello Studio: lotto più recente caricato automaticamente, tutte le REAL e le SLOP archiviate, incluse quelle sotto soglia, con sorgente e generazione affiancate. Editor manuale e pubblicazione in sezioni avanzate.
+- Fotografia sorgente visibile anche nella coda Approva/Rifiuta e nella gestione avanzata; il link al generatore è distinto dalla provenienza della fotografia. API arricchite soltanto nell’amministrazione autenticata.
+- Nessuna nuova migrazione, dipendenza o chiamata OpenAI. Punteggi, soglie, revisione umana e catalogo pubblicato invariati.
+
 ## 0.14.1 — 2026-11-02T21:24:07.507675+01:00
 
 - Archivio privato in R2 anche per generazioni scartate o fallite dopo la produzione del file, con manifest D1 immutabile e preview nello Studio. Nessuna importazione o pubblicazione aggiuntiva.

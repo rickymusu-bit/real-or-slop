@@ -45,6 +45,7 @@ for endpoint in ['originals','assets']:
 assert request('/api/admin/editorial/reviews','POST',dict(image_id=real,reference_id=photos[0]['id']))[0]==200
 queue=request('/api/admin/review-queue')[1];card=next(row for row in queue['images'] if row['id']==real)
 assert card['details']['explanation']=='Prepared explanation'
+assert card['reference'] is None
 assert request('/api/admin/visual-review/'+real,'POST',dict(decision='approved',token='stale'))[0]==409
 assert request('/api/admin/visual-review/'+real,'POST',dict(decision='approved',token=card['token'],explanation='Not the prepared facts'))[0]==400
 before=request('/api/admin/editorial/preferences')[1]['observations']
@@ -70,6 +71,9 @@ payload=dict(id=attempt_id,reference_id=photos[1]['id'],image_id=synthetic,dossi
 assert request('/api/admin/editorial/attempts','POST',payload)[0]==200
 assert request('/api/admin/editorial/attempts','POST',payload)[0]==200  # Lost response/retry keeps preparation.
 card=next(row for row in request('/api/admin/review-queue')[1]['images'] if row['id']==synthetic)
+assert card['reference']==dict(id=photos[1]['id'],title=photos[1]['metadata']['title'],source_url=photos[1]['metadata']['source_url'])
+advanced=next(row for row in request('/api/admin/images?status=in-review')[1] if row['id']==synthetic)
+assert advanced['reference']==card['reference']
 with concurrent.futures.ThreadPoolExecutor(2) as pool:
     statuses=list(pool.map(lambda _:request('/api/admin/visual-review/'+synthetic,'POST',dict(decision='rejected',token=card['token']))[0],range(2)))
 assert sorted(statuses)==[200,409],statuses

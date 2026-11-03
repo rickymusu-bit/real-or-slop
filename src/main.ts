@@ -3,14 +3,7 @@ import { showAdmin } from "./admin";
 import { showSlopStudio } from "./slop";
 import "./style.css";
 const root = document.querySelector<HTMLDivElement>("#app")!;
-export const escape = (s: unknown) =>
-  String(s ?? "").replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ]!,
-  );
+export { escape } from "../shared/html";
 export async function api<T = Record<string, unknown>>(
   path: string,
   options: RequestInit = {},
