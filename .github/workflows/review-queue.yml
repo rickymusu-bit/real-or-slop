@@ -1,25 +1,9 @@
-name: Automatic private review queue
+name: Archive owner-selected legacy train candidates
 on:
-  schedule:
-    - cron: '17 6 * * *'
   workflow_dispatch:
     inputs:
-      operation:
-        description: 'Start a new lot, advance saved jobs, inspect status, or request cancellation'
-        type: choice
-        options: ['start', 'resume', 'status', 'cancel']
-        default: 'start'
-      batch_run_id:
-        description: 'Existing run ID for resume/status/cancel (no new collection)'
-        type: string
-        default: ''
-      reference_count:
-        description: 'Maximum source photographs: 2 for the controlled test, 20 for a normal lot'
-        type: choice
-        options: ['2', '20']
-        default: '2'
-      execute_paid:
-        description: 'Authorize submitting the next bounded Batch stages; false only collects existing results'
+      confirm_cleanup:
+        description: 'Remove only the five identified old train candidates from review, preserving audit and files'
         type: boolean
         default: false
 permissions:
@@ -28,75 +12,42 @@ concurrency:
   group: real-or-slop-private-review-queue
   cancel-in-progress: false
 jobs:
-  collect-and-import:
-    # No new schedule or permanent paid enablement. Read/cancel/recovery remains
-    # available manually even when starting new lots has been disabled.
-    if: ${{ github.ref == 'refs/heads/main' && github.event.repository.private == true && (github.event_name == 'workflow_dispatch' || vars.ENABLE_EDITORIAL_SCHEDULE == 'true') }}
+  archive-legacy:
+    if: ${{ github.ref == 'refs/heads/ops/archive-legacy-trains-2026-11-03' && github.event.repository.private == true && inputs.confirm_cleanup }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     env:
-      ROS_OPERATION: ${{ inputs.operation || 'daily' }}
-      ROS_REFERENCE_COUNT: ${{ inputs.reference_count || '20' }}
-      ROS_BATCH_RUN_ID: ${{ inputs.batch_run_id }}
-      ROS_QUEUE_ENABLED: ${{ vars.ENABLE_AUTOMATIC_REVIEW_QUEUE }}
-      ROS_EXECUTE_PAID: ${{ vars.ENABLE_EDITORIAL_PAID == 'true' && ((github.event_name == 'workflow_dispatch' && inputs.execute_paid) || (github.event_name == 'schedule' && vars.ENABLE_EDITORIAL_SCHEDULE == 'true')) && 'true' || 'false' }}
-      ENABLE_EDITORIAL_PAID: ${{ vars.ENABLE_EDITORIAL_PAID == 'true' && ((github.event_name == 'workflow_dispatch' && inputs.execute_paid) || (github.event_name == 'schedule' && vars.ENABLE_EDITORIAL_SCHEDULE == 'true')) && 'true' || 'false' }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       REAL_OR_SLOP_ADMIN_TOKEN: ${{ secrets.REAL_OR_SLOP_ADMIN_TOKEN }}
-      OPENAI_ANALYSIS_MODEL: ${{ vars.OPENAI_ANALYSIS_MODEL }}
-      OPENAI_EVALUATOR_MODEL: ${{ vars.OPENAI_EVALUATOR_MODEL }}
-      OPENAI_IMAGE_MODEL: ${{ vars.OPENAI_IMAGE_MODEL }}
-      EDITORIAL_RUN_USD: ${{ vars.EDITORIAL_RUN_USD }}
-      EDITORIAL_DAILY_USD: ${{ vars.EDITORIAL_DAILY_USD }}
-      EDITORIAL_TOTAL_USD: ${{ vars.EDITORIAL_TOTAL_USD }}
-      EDITORIAL_BATCH_EVALUATION_USD: ${{ vars.EDITORIAL_BATCH_EVALUATION_USD }}
-      EDITORIAL_BATCH_GENERATION_USD: ${{ vars.EDITORIAL_BATCH_GENERATION_USD }}
-      EDITORIAL_THRESHOLD: ${{ vars.EDITORIAL_THRESHOLD || '65' }}
-      EDITORIAL_ATTEMPTS: ${{ inputs.reference_count == '2' && '1' || vars.EDITORIAL_ATTEMPTS || '2' }}
-      EDITORIAL_MAX_EVALUATIONS: ${{ inputs.reference_count == '2' && '4' || vars.EDITORIAL_MAX_EVALUATIONS || '60' }}
-      EDITORIAL_MAX_GENERATIONS: ${{ inputs.reference_count == '2' && '1' || vars.EDITORIAL_MAX_GENERATIONS || '20' }}
-      EDITORIAL_MAX_REGENERATIONS: ${{ vars.EDITORIAL_MAX_REGENERATIONS || '10' }}
-      EDITORIAL_QUEUE_LIMIT: ${{ vars.EDITORIAL_QUEUE_LIMIT || '100' }}
-      OPENAI_IMAGE_SIZE: ${{ vars.OPENAI_IMAGE_SIZE || '1024x1024' }}
-      OPENAI_IMAGE_QUALITY: ${{ vars.OPENAI_IMAGE_QUALITY || 'medium' }}
-      GENERATED_LICENSE_NAME: ${{ vars.GENERATED_LICENSE_NAME }}
-      GENERATED_LICENSE_URL: ${{ vars.GENERATED_LICENSE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install -r pipeline/requirements.txt
-      - name: Resume previously submitted jobs (daily only, after explicit scheduling enablement)
-        if: ${{ github.event_name == 'schedule' }}
+      - name: Reject only the identified legacy candidates through the existing audited API
         run: |
-          args=()
-          if [ "$ROS_EXECUTE_PAID" = 'true' ]; then args+=(--execute); fi
-          python -m pipeline.batch --resume-all "${args[@]}"
-      - name: Collect or inspect a new bounded lot
-        if: ${{ (inputs.operation == 'start' || github.event_name == 'schedule') && vars.ENABLE_AUTOMATIC_REVIEW_QUEUE == 'true' }}
-        run: |
-          python -m pipeline.automatic --collect --limit "$ROS_REFERENCE_COUNT" --preferences
-          python -m pipeline.batch .pipeline/automatic/manifest.json
-      - name: Start or resume a private Batch run
-        if: ${{ (inputs.operation == 'start' || github.event_name == 'schedule') && vars.ENABLE_AUTOMATIC_REVIEW_QUEUE == 'true' && env.ROS_EXECUTE_PAID == 'true' }}
-        run: python -m pipeline.batch .pipeline/automatic/manifest.json --start --execute --run-id "ros-$GITHUB_RUN_ID"
-      - name: Manual status, continuation or cancellation
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation != 'start' }}
-        run: |
-          if [ -z "$ROS_BATCH_RUN_ID" ]; then echo 'Existing batch_run_id is required'; exit 1; fi
-          args=()
-          if [ "$ROS_EXECUTE_PAID" = 'true' ]; then args+=(--execute); fi
-          case "$ROS_OPERATION" in
-            resume) python -m pipeline.batch --resume "$ROS_BATCH_RUN_ID" "${args[@]}" ;;
-            status) python -m pipeline.batch --status "$ROS_BATCH_RUN_ID" ;;
-            cancel) python -m pipeline.batch --cancel "$ROS_BATCH_RUN_ID" ;;
-            *) exit 1 ;;
-          esac
-      - name: Preserve private local diagnostics (recovery is durable in D1/R2)
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: private-editorial-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .pipeline/
-          retention-days: 7
+          python - <<'PY'
+          import os,json
+          from pipeline.importer import request
+          base='https://real-or-slop.rickymusu.workers.dev'
+          token=os.environ['REAL_OR_SLOP_ADMIN_TOKEN']
+          expected={
+            '7a2bc0da-d6c3-4abe-8d20-b9934548a1f8':'File:2220 Invicta at Chatham Historic Dockyard.jpg',
+            '52dd6dfd-d5ba-49d2-9f6e-f212167d6905':'File:2503 Thalia at Chatham Historic Dockyard.jpg',
+            '8bb52836-6895-43b5-8299-dace5f6423ad':'File:ÖBB 91-107 museum schwechat 2011-05-07.jpg',
+            '85083924-fcf5-4e21-ad71-ca7aae0e60d5':'File:Паровоз Су 205-80 2005-09 фабрика Сакко и Ванцети.jpg',
+            '96c65707-9371-4fad-a868-b34f93a2decc':'File:Паровоз Су 205-80 2005-09 фабрика Сакко и Ванцети 2.jpg',
+          }
+          pending={row['id']:row for row in request(base,token,'/api/admin/images?status=in-review')}
+          rejected={row['id']:row for row in request(base,token,'/api/admin/images?status=rejected')}
+          before=request(base,token,'/api/admin/editorial/state')['diagnostics']['totals']
+          for uid,title in expected.items():
+              row=pending.get(uid) or rejected.get(uid)
+              assert row and row['title']==title and row['type']=='REAL' and row['published_at'] is None
+          for uid in expected:
+              if uid in pending:
+                  result=request(base,token,'/api/admin/review/'+uid,'POST',dict(decision='rejected',notes='Rimosso dalla coda su richiesta del proprietario: vecchia importazione dei treni. File e cronologia conservati.'))
+                  assert result['status']=='rejected'
+          after=request(base,token,'/api/admin/editorial/state')['diagnostics']['totals']
+          assert before==after
+          print(json.dumps(dict(legacy_trains_removed_from_review=5,catalog_unchanged=True,files_preserved=True,paid_calls=False)))
+          PY
