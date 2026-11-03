@@ -34,9 +34,15 @@ in questi comandi locali.
 1. Congelare il protocollo e le ipotesi prima dei risultati. Confrontare baseline
    tematica storica, query multidimensionali, generiche e query esplorative LLM
    indipendenti; registrare modello, istruzioni e output delle query libere.
-2. Usare stessi motori, budget economico e numero di risultati esaminati per
-   confronto. Valutare Commons/Openverse e altri motori con termini compatibili.
-   Brave/Google richiedono un adattatore e verifica separata, non scraping.
+2. Cercare immagini mediante keyword su motori generalisti, senza restringere
+   preventivamente le query a Commons. Usare gli stessi motori, budget economico
+   e numero di risultati esaminati per confronto. Registrare query, motore,
+   posizione, URL della pagina e URL dell'immagine; verificare poi la fonte
+   originale, l'autenticità e i diritti. Commons/Openverse sono canali aggiuntivi
+   di acquisizione: non sostituiscono questa ricerca. Il collector implementa
+   attualmente questi ultimi; Brave/Google richiedono un adattatore separato.
+   La ricerca immagini connessa è disponibile per il pilota manuale, senza
+   attribuirle un provider sottostante non documentato o simulare un confronto.
 3. Raccogliere 100–200 candidate complessive REAL e SLOP autonome, senza recuperare
    SLOP derivate dal vecchio archivio. Il campione di studio non è una quota da
    pubblicare. Annotare casi ordinari, sorprendenti, texture e scene dense in
@@ -48,6 +54,10 @@ in questi comandi locali.
    ordinarietà, sorpresa, plausibilità, risoluzione, rapporto d'aspetto e formato.
    La distanza di variazione totale è un avviso descrittivo, senza soglia automatica
    di eliminazione. Registrare motivi ed eventuali eccezioni di selezione.
+   Per la presentazione usare copie con identiche dimensioni, rapporto d'aspetto,
+   spazio colore e compressione in entrambe le classi. Il solo lato massimo non
+   basta. I ritagli sono varianti da revisionare; conservare originali, coordinate
+   e hash. Calcolare il profilo sui pixel della variante che sarà mostrata.
 6. Se si usa un classificatore di controllo, escludere fonte, prompt ed etichetta
    dalle feature; separare famiglie di duplicati e gruppi di fonte/generatore fra
    train/test. Accuratezza alta può includere genuini indizi di sintesi: analizzare

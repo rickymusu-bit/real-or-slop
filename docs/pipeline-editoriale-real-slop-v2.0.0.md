@@ -77,6 +77,12 @@ unico da dividere a metà. Possono avere dimensioni e tempi diversi.
 
 ## Scoperta REAL
 
+La scoperta prevista parte da keyword su motori di ricerca per immagini senza
+vincolo a un archivio. La verifica e l'acquisizione avvengono successivamente
+sulla fonte documentata. Il collector attuale usa API di archivi: è un canale
+aggiuntivo e non implementa ancora adattatori generalisti. Nel pilota rapido
+la ricerca connessa consente una verifica manuale di questo passaggio.
+
 Il pianificatore riproducibile combina materiali, processi, relazioni, ambienti
 e tecniche. Riserva un terzo degli slot a query libere fornite da una fase LLM
 indipendente; il resto include query generiche e combinatorie. Questa ripartizione
@@ -147,12 +153,20 @@ dominante è un caso positivo di test. Osservazioni e limiti della lettura devon
 essere espliciti. Provenienza e diritti restano un controllo separato.
 
 Originale intatto e derivato dell'intero fotogramma WebP q85, lato massimo 1024,
-con medesima funzione per entrambe le classi; trattamento registrato nel dossier.
-Dimensioni/aspect ratio residui vengono diagnosticati perché anche trasformazioni
-identiche possono lasciare scorciatoie. Non si ritagliano crediti o watermark
-obbligatori: l'immagine incompatibile resta fuori dalla pubblicazione.
-Il limite comune 1024 evita di presentare sistematicamente REAL più grandi
-dell'output quadrato del generatore; nessun upscaling delle immagini più piccole.
+con medesima funzione per entrambe le classi: è l'anteprima di acquisizione
+conservata con il profilo originale, non uno standard sufficiente per il gioco.
+
+Il pilota aggiunge varianti di revisione **1024×1024, RGB, WebP q85** mediante
+`pipeline.v2.presentation`. Si parte dagli originali, si applica l'orientamento,
+un ritaglio centrale e lo stesso ridimensionamento per entrambe le origini.
+Non si deformano i pixel né si aggiungono bordi. Coordinate sull'immagine orientata,
+area conservata, eventuale ingrandimento e hash sono registrati in `variants.json`.
+Gli originali e i vecchi dossier restano intatti; i vecchi profili non si applicano
+ai nuovi pixel. Tutte le varianti hanno revisione pendente e profilo nullo.
+Prima dell'uso verificare significato del ritaglio, qualità e crediti e ricalcolare
+il profilo sulla variante effettiva. Non si ritagliano crediti o watermark
+obbligatori: l'immagine incompatibile resta fuori dalla pubblicazione. Questa
+esportazione locale non modifica approvazioni, R2 o catalogo e non chiama API.
 
 ## D1, R2, costi e recupero
 

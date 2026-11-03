@@ -1,5 +1,11 @@
 # Pilota rapido reale — 2026-11-03
 
+Aggiornamento presentazione: 20 varianti locali 1024×1024 RGB WebP q85, con
+ritaglio auditabile e confronto dell'inquadratura precedente. Originali intatti,
+profili non trasferiti, revisione pendente, zero nuove API pagate. Test dedicati
+su rapporti diversi e coordinate dopo orientamento EXIF. Due keyword provate
+sulla ricerca immagini connessa senza filtro di dominio; hit ancora non acquisiti.
+
 [Rapporto del pilota](benchmark-editoriale-v2-pilota-2026-11-03.md): completati
 10 output SLOP e 20 profili in sincrono, insieme a 10 candidate fotografiche.
 Costo stimato dai token 0,530162 USD, senza verifica della fattura. Tutti i dossier
