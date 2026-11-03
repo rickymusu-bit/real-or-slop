@@ -32,12 +32,11 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install -r pipeline/requirements.txt
-      - name: Download the frozen bundle from private staging
+      - name: Read the existing private transfer for Studio import
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p .pipeline/import-source
-          gh release download private-import-direct-20-2026-11-03 --repo "$GITHUB_REPOSITORY" --pattern archivio-completo-20.zip --dir .pipeline/import-source
+          python .github/scripts/assemble-private-comparison.py
       - name: Verify and import using existing administrative APIs
         run: |
           python -m pipeline.import_comparison .pipeline/import-source/archivio-completo-20.zip --sha256 "$ROS_BUNDLE_SHA256" --execute

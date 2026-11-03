@@ -1,0 +1,94 @@
+{
+  "repository": "rickymusu-bit/real-or-slop",
+  "private": true,
+  "release_tag": "private-import-direct-20-2026-11-03",
+  "assets": [
+    {
+      "name": "archivio-completo-20.zip",
+      "sha256": "df3f8bfeae9be4ec2c6a2dbfe4c44de2e254d0b7638d7b643b4c1d61d20af36a",
+      "size": 127194927,
+      "parts": [
+        {
+          "sha": "5384d35e96344d91cbc16646340c2c2f34f543ec",
+          "size": 8388608,
+          "sha256": "c4ad41fe3de4844d11cf8788ab79caf409f64a3e8e8ea7e767a85c53dc057a17"
+        },
+        {
+          "sha": "649b0b0e79744e37c9dcb874f20a8c252ed471b6",
+          "size": 8388608,
+          "sha256": "d883ea0a529bca12d85c9e299ed183f1d84ceea6cba23a4f44939b9d11471230"
+        },
+        {
+          "sha": "a3bcd05b2f7ef1f2ef6c565a89d5ded7dd0382b6",
+          "size": 8388608,
+          "sha256": "3f7a4dc8ceb303cadce585b5b8eb0ca00eacab8b8f65c9edd1df44746c2b7d8d"
+        },
+        {
+          "sha": "66b42545c93f6bd6a597d94196c71fea59101ac6",
+          "size": 8388608,
+          "sha256": "a7f4d828e4e0e03bdbcfe3068be3c8d99316386c64ef3f3c379c2341afb5c33d"
+        },
+        {
+          "sha": "10b429aa049c62cab25b90f9a162bee76a3685b7",
+          "size": 8388608,
+          "sha256": "f0a50479b18d735819786f942b890c3c2c05cd0ae1eceea465f13ab82454695e"
+        },
+        {
+          "sha": "a326b3baff14b6d9659058135fc7fa4d359ae7a1",
+          "size": 8388608,
+          "sha256": "585a1dec7418777a88525bbe9689a32a32744ca67f32d713a8cacc34fdbfee3c"
+        },
+        {
+          "sha": "2c6954a247869ff6389c91cf93e35151a9026b87",
+          "size": 8388608,
+          "sha256": "af1e913a4ce1eedacd380d2ab570fe4b997327d9cc12bf818c57b651fd6009fb"
+        },
+        {
+          "sha": "5eb9e39e31b0180b3f013a9d41194827c2f9fd8e",
+          "size": 8388608,
+          "sha256": "a595c5cadb4055eac94c1a4c4f16ae3172846d0590058d8ba1f93665a98e48e1"
+        },
+        {
+          "sha": "6bbfd6b3295916bffdb356bc1d73e8ef7f5c956d",
+          "size": 8388608,
+          "sha256": "2459423041cc661d789c685a8ba639f0f7489086738e234d3ff91f6619d03685"
+        },
+        {
+          "sha": "796e2048540ebeb59acc27f206904911a8306a86",
+          "size": 8388608,
+          "sha256": "ce120964aae588433d99eed3aea21b398564cf95c68c814b1a7601ab6866f7c6"
+        },
+        {
+          "sha": "eb1c5c10b55a1d6e3dc6570502176a6f520003e6",
+          "size": 8388608,
+          "sha256": "1f80c47f1d47531c8f74938c828adbcc0dd3bb583a1956e14b3e39a3984098a5"
+        },
+        {
+          "sha": "3909db511d5adbc5f7ceac7adacf57f092e6c20d",
+          "size": 8388608,
+          "sha256": "713425c965b0fa7c29708f8a28a102cfa9b11f2b640f9b79614fd19f5d80da9d"
+        },
+        {
+          "sha": "a0d33c9f5f7e826cd239a79ec5d5bb71d30da465",
+          "size": 8388608,
+          "sha256": "776c698f74d4acd12ed48475258cf2d5bdf8fe8a5145c6ee8f3af6623940b102"
+        },
+        {
+          "sha": "f97245b50275772485ab84fdcc462d74883326fa",
+          "size": 8388608,
+          "sha256": "09853a9abf2a1e8ff0b4c1846bd447d17978dbfc8743d6ae0c449aa6d1392e2a"
+        },
+        {
+          "sha": "cdb64b6d2304fad538620650bd3d2a4be4bdb310",
+          "size": 8388608,
+          "sha256": "3e0f4ca3fda5368d1e1aa154edc3653a0a68ae5e521a6070c7a48cdcb4b8da84"
+        },
+        {
+          "sha": "cc476fc0bcf59cedfe59450330dd5e580fca94ef",
+          "size": 1365807,
+          "sha256": "02921941f55b0c57351d91d8a2b043fc6817852df35f2e7478c02a32be03e905"
+        }
+      ]
+    }
+  ]
+}
