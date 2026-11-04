@@ -1,5 +1,11 @@
 # Benchmark diretto v2.1.0
 
+Il [pilota successivo con cinque brief condivisi](pilota-brief-condivisi-2026-11-04.md)
+prova il nuovo ciclo richiesto dal proprietario: ricerca REAL e generazione SLOP
+partono dallo stesso brief congelato, senza fornire la REAL al generatore.
+Sono dieci immagini con revisione singola su Drive; lo studio storico da 200
+descritto sotto resta immutato e non diventa la dimensione del ciclo corrente.
+
 Il proprietario ha richiesto il 2026-11-04 un campione di **200 candidate**, 100
 REAL da fonti documentate e 100 SLOP indipendenti, usando sempre API dirette.
 L'esecuzione non usa Files/Batch, risposte background, cambi di modello o retry
