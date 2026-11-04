@@ -5,11 +5,12 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from urllib.error import HTTPError
 
 from PIL import Image
 
 from pipeline.editorial import PipelineStop
-from pipeline.v2.direct import DirectAPI, DirectEngine
+from pipeline.v2.direct import DirectAPI, DirectEngine, DirectHTTPError
 from pipeline.v2.engine import Config, initialize
 from pipeline.v2.fixtures import study_inputs, picture, profile
 
@@ -118,6 +119,30 @@ class DirectV2Test(unittest.TestCase):
                 api.request(endpoint, {})
         with self.assertRaises(PipelineStop):
             api.request('responses', dict(store=False, background=True))
+
+    def test_http_rejection_keeps_private_body_request_id_and_reservation_without_retry(self):
+        def reject(request, timeout):
+            raise HTTPError(request.full_url, 400, 'Bad Request', {'x-request-id': 'req-rejected'},
+                            io.BytesIO(b'{"error":{"code":"invalid_request","message":"Rejected fixture"}}'))
+        api = DirectAPI('fixture-key', opener=reject)
+        with self.assertRaises(DirectHTTPError) as error:
+            api.request('images/generations', {})
+        self.assertEqual(error.exception.request_id, 'req-rejected')
+        self.assertEqual(error.exception.response['error']['code'], 'invalid_request')
+        with tempfile.TemporaryDirectory() as temp, contextlib.redirect_stdout(io.StringIO()):
+            engine = self.engine(Path(temp), 'AI', api)
+            with self.assertRaises(PipelineStop):
+                engine.run(True)
+            paths = list((engine.folder / 'error-receipts').glob('*.json'))
+            self.assertEqual(len(paths), 1)
+            receipt = json.loads(paths[0].read_text())
+            self.assertEqual(receipt['request_id'], 'req-rejected')
+            self.assertNotIn('fixture-key', paths[0].read_text())
+            self.assertEqual(engine.state['jobs'][0]['http_status'], 400)
+            self.assertEqual(engine.state['reserved_usd'], .075)
+            with self.assertRaises(PipelineStop):
+                engine.run(True)
+            self.assertEqual(engine.state['calls']['generation'], 1)
 
 
 if __name__ == '__main__':

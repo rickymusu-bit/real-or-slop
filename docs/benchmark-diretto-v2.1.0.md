@@ -92,5 +92,4 @@ Verifica iniziale: 138 test Python passati, compresi associazione fra hash della
 variante e profilo, nessun endpoint Batch, gate/ledger obbligatori, ripresa senza
 nuove inferenze e congelamento indipendente delle idee. Una prova reale iniziale
 con una candidata ha completato crop, profilo e archiviazione nel Worker locale,
-con due chiamate Responses dirette e zero pubblicazioni. I risultati delle 200
-candidate saranno registrati separatamente dopo l'esecuzione.
+con due chiamate Responses dirette e zero pubblicazioni. Le 200 candidate hanno completato lo studio: vedere [risultati del benchmark](benchmark-200-risultati-2026-11-04.md). La successiva correzione conserva privatamente corpo e request ID degli errori HTTP, senza reinvio; 139 test Python passati.

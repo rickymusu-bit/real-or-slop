@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.request import Request, build_opener
 
 from PIL import Image, ImageOps
@@ -29,6 +30,13 @@ def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
+class DirectHTTPError(OSError):
+    """Private provider rejection receipt, never an instruction to retry."""
+    def __init__(self, code, request_id, response):
+        super().__init__('Direct API returned HTTP ' + str(code))
+        self.code, self.request_id, self.response = code, request_id, response
+
+
 class DirectAPI:
     def __init__(self, key, opener=None):
         require(bool(key), 'OPENAI_API_KEY mancante')
@@ -41,10 +49,20 @@ class DirectAPI:
             require(body.get('store') is False and not body.get('background') and not body.get('tools'), 'Solo Responses dirette senza strumenti')
         request = Request('https://api.openai.com/v1/' + endpoint, data=json.dumps(body).encode(),
                           headers={'Authorization': 'Bearer ' + self.key, 'Content-Type': 'application/json'})
-        with self.opener(request, timeout=180) as response:
-            raw = response.read(40_000_001)
-            require(len(raw) <= 40_000_000, 'Risposta diretta oltre il limite')
-            return json.loads(raw), response.headers.get('x-request-id')
+        try:
+            with self.opener(request, timeout=180) as response:
+                raw = response.read(40_000_001)
+                require(len(raw) <= 40_000_000, 'Risposta diretta oltre il limite')
+                return json.loads(raw), response.headers.get('x-request-id')
+        except HTTPError as error:
+            # Archive only provider response data, never the authorized request.
+            # The original failed request remains paid/reserved and is not retried.
+            raw = error.read(65_537)
+            try:
+                response = json.loads(raw) if len(raw) <= 65_536 else dict(error_body_truncated=True)
+            except (ValueError, UnicodeError):
+                response = dict(error_body=raw[:65_536].decode('utf-8', errors='replace'))
+            raise DirectHTTPError(error.code, error.headers.get('x-request-id'), response) from None
 
 
 def profile_schema():
@@ -216,6 +234,11 @@ class DirectEngine:
                         self.consume(job, response, request_id)
                     except (ValueError, OSError, KeyError, TypeError) as error:
                         job.update(status='error', error_type=type(error).__name__, http_status=getattr(error, 'code', None))
+                        if isinstance(error, DirectHTTPError):
+                            write_private(self.folder / 'error-receipts' / (job['id'] + '.json'),
+                                          dict(payload_sha256=job['payload_sha256'], request_id=error.request_id,
+                                               http_status=error.code, response=error.response))
+                            job['request_id'] = error.request_id
                         halted = True
                     self.save()
                     print(json.dumps(dict(run=self.state['id'], stage=stage, status=job['status'],
