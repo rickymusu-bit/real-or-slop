@@ -1,6 +1,5 @@
 import { sourcePhotoPreview, type SourcePhoto } from "./editorial-view";
 import { showVisualReview } from "./review";
-import { editorialPanel, setupEditorial } from "./editorial";
 import { api, content, escape } from "./main";
 import { curationDirty, curationForm, rememberCuration, setupCuration } from "./curation";
 import type { CurationRecord } from "../shared/curation";
@@ -24,7 +23,7 @@ interface Candidate {
   editorial_evaluation?: string | null;
 }
 function aiProvenance(image: Candidate) {
-  return image.type === "AI" ? `<details><summary>Provenienza della generazione IA</summary><p>Modello: ${escape(image.ai_model)} · Data: ${escape(image.generation_date)} · Dichiarazione proprietario: ${image.owner_declaration ? "presente" : "da verificare"}</p>${image.studio_plan_id ? `<p><a href="/admin/slop?plan=${encodeURIComponent(image.studio_plan_id)}">Apri concept, fatti documentati e cronologia dello studio ↗</a></p>` : ""}<pre class="curation-history">${escape(image.ai_prompt)}</pre></details>` : "";
+  return image.type === "AI" ? `<details><summary>Provenienza della generazione IA</summary><p>Modello: ${escape(image.ai_model)} · Data: ${escape(image.generation_date)} · Dichiarazione proprietario: ${image.owner_declaration ? "presente" : "da verificare"}</p><pre class="curation-history">${escape(image.ai_prompt)}</pre></details>` : "";
 }
 export async function showAdmin() {
   if (new URL(location.href).searchParams.get("advanced") !== "1" && !new URL(location.href).searchParams.has("status")) return showVisualReview();
@@ -32,8 +31,7 @@ export async function showAdmin() {
 }
 async function showAdvancedAdmin() {
   content().innerHTML =
-    `<section class="page narrow"><div class="eyebrow">AMMINISTRAZIONE PRIVATA</div><h1>Gestione avanzata.</h1><p><a href="/admin">Torna alle immagini da valutare</a></p><p><a class="button" href="/admin/slop">Apri lo studio SLOP ↗</a></p><p>Le approvazioni interessano solo l’ambiente corrente. Nessuna promozione automatica in produzione.</p><p>Licenze ammesse: CC0, pubblico dominio verificato, CC BY, BY-SA, BY-NC, BY-ND, BY-NC-SA e BY-NC-ND 2.0, 3.0 e 4.0, incluse le varianti territoriali pubblicate. Conserva la versione e la giurisdizione della fonte e verifica attribuzioni, modifiche e share-alike. NC: solo uso non commerciale. ND: nessun adattamento condiviso; conserva il fotogramma intero e verifica il trattamento tecnico.</p><label>Stato<select id="review-filter"><option value="in-review">In revisione</option><option value="approved">Approvate</option><option value="rejected">Rifiutate</option></select></label><div id="queue">Caricamento…</div><details><summary>Importa metadati</summary><p>Incolla un oggetto JSON conforme all’API documentata; poi carica il file nella scheda.</p><textarea id="import-json" rows="10" style="width:100%" aria-label="Metadati JSON"></textarea><button id="import">Importa nella coda privata</button></details>${editorialPanel()}</section>`;
-  setupEditorial(content());
+    `<section class="page narrow"><div class="eyebrow">AMMINISTRAZIONE PRIVATA</div><h1>Gestione avanzata.</h1><p><a href="/admin">Torna alle immagini da valutare</a></p><p>Le approvazioni interessano solo l’ambiente corrente. Nessuna promozione automatica in produzione.</p><p>Licenze ammesse: CC0, pubblico dominio verificato, CC BY, BY-SA, BY-NC, BY-ND, BY-NC-SA e BY-NC-ND 2.0, 3.0 e 4.0, incluse le varianti territoriali pubblicate. Conserva la versione e la giurisdizione della fonte e verifica attribuzioni, modifiche e share-alike. NC: solo uso non commerciale. ND: nessun adattamento condiviso; conserva il fotogramma intero e verifica il trattamento tecnico.</p><label>Stato<select id="review-filter"><option value="in-review">In revisione</option><option value="approved">Approvate</option><option value="rejected">Rifiutate</option></select></label><div id="queue">Caricamento…</div><details><summary>Importa metadati</summary><p>Incolla un oggetto JSON conforme all’API documentata; poi carica il file nella scheda.</p><textarea id="import-json" rows="10" style="width:100%" aria-label="Metadati JSON"></textarea><button id="import">Importa nella coda privata</button></details></section>`;
   const initialStatus = new URL(location.href).searchParams.get("status");
   if (initialStatus && ["in-review", "approved", "rejected"].includes(initialStatus))
     (document.querySelector("#review-filter") as HTMLSelectElement).value = initialStatus;

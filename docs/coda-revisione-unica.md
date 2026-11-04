@@ -45,3 +45,23 @@ se disponibile, `original_file`. Non permette di assegnare approvazioni.
 inserire record. Le ricevute private consentono la ripresa degli upload; il
 vincolo origine/hash evita duplicati e le importazioni successive non azzerano
 le decisioni. Il manifest e le ricevute restano fuori da Git.
+
+## Eliminare una rifiutata
+
+Nel filtro **Rifiutate**, la singola immagine offre **Elimina definitivamente**.
+La conferma elimina fisicamente il suo record da `editorial_review_inbox`.
+Non è disponibile per immagini approvate o ancora da valutare. Stato, revisione
+ed hash sono verificati dal server nella stessa transazione della cancellazione.
+Una decisione concorrente che approva o rimette in revisione l'immagine blocca
+la cancellazione della vecchia versione.
+
+Dossier, file privati e giudizi precedenti restano conservati come richiesto dal
+proprietario. Non è una cancellazione di tutti i backup o delle prove storiche.
+Un registro minimo di ID, origine, hash e data di eliminazione impedisce che la
+sincronizzazione delle fonti o un'importazione successiva ripropongano quel file.
+La migrazione 0015 conserva tutti i giudizi ed elimina il loro vincolo alla
+presenza permanente della scheda immagine; nessuna immagine viene cancellata
+applicando la migrazione o distribuendo il pulsante.
+
+La vecchia sezione dello Studio è rimossa dall'interfaccia. I vecchi collegamenti
+`/admin/slop` riportano alla coda unica; dossier e giudizi non vengono svuotati.

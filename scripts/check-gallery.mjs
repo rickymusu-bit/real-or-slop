@@ -232,12 +232,13 @@ try {
   const v2Contract = JSON.parse(readFileSync(resolve(cwd, 'tests/editorial-v2-contract.json'), 'utf8'));
   const v2Card = { id: 'v2-browser', origin: 'REAL', revision: 0, review_state: 'quarantine', review: {}, profile: v2Contract.profile, provenance: v2Contract.real_provenance, feedback: { ...v2Contract.feedback, observations: ['<img src=x onerror="window.fixtureV2Injected=true">'] }, image: '/api/admin/editorial/v2/candidates/v2-browser/preview' };
   let brokenPreview = false;
+  const deletedReviewImages = new Set();
   const reviewCards = ["one", "two"].map((id, n) => ({ id, revision: 0, sha256: "a".repeat(64), status: "pending", origin: n ? "AI" : "REAL", partner: null, note: "", image: "/api/admin/assets/" + id, details: { title: "Synthetic browser fixture", type: n ? "AI" : "REAL", author: "Fixture", source_url: "https://example.invalid/", license_url: "https://creativecommons.org/licenses/by/4.0/", explanation: "Prepared automatically for this browser test." } }));
   t.intercept(async (request, send) => {
     const url = new URL(request.request.url);
     let body, mime = "application/json", status = 200;
     if (url.pathname === "/api/admin/review-inbox") {
-      const images = brokenPreview ? [{ ...reviewCards[0], id: "broken", image: "/api/admin/assets/broken" }] : reviewCards.filter(card => !decisions.some(row => row.id === card.id));
+      const images = brokenPreview ? [{ ...reviewCards[0], id: "broken", image: "/api/admin/assets/broken" }] : reviewCards.filter(card => !deletedReviewImages.has(card.id) && card.status === (url.searchParams.get("state") || "pending"));
       body = JSON.stringify({ images, total: images.length, offset: 0, limit: 50 });
     } else if (url.pathname.startsWith("/api/admin/assets/")) {
       await pause(350);
@@ -247,7 +248,16 @@ try {
       const payload = JSON.parse(request.request.postData);
       assert.deepEqual(Object.keys(payload).sort(), ["decision", "note", "revision", "sha256"]);
       decisions.push({ id: url.pathname.split("/").at(-2), ...payload });
+      const row = reviewCards.find(card => card.id === url.pathname.split("/").at(-2));
+      row.status = payload.decision; row.revision++;
       body = JSON.stringify({ status: payload.decision });
+    } else if (url.pathname.startsWith("/api/admin/review-inbox/") && request.request.method === "DELETE") {
+      const payload = JSON.parse(request.request.postData);
+      assert.deepEqual(Object.keys(payload).sort(), ["confirm_delete", "revision", "sha256"]);
+      const row = reviewCards.find(card => card.id === url.pathname.split("/").at(-1));
+      assert.equal(row.status, "rejected"); assert.equal(payload.confirm_delete, true);
+      assert.equal(payload.sha256, row.sha256); assert.equal(payload.revision, row.revision);
+      deletedReviewImages.add(row.id); body = JSON.stringify({ deleted: true, history_preserved: true });
     } else if (url.pathname === "/api/admin/editorial/v2/candidates") {
       body = JSON.stringify({ candidates: [v2Card] });
     } else if (url.pathname === "/api/admin/editorial/v2/candidates/v2-browser/preview") {
@@ -269,6 +279,8 @@ try {
   assert.equal(await t.evaluate('document.querySelectorAll("#visual-queue input,#visual-queue select,#visual-queue textarea").length'), 1);
   await waitFor(() => t.evaluate('document.querySelector("[data-visual-decision=approved]")?.disabled===false'), 'preview ready before approval');
   assert.deepEqual(await t.evaluate('Array.from(document.querySelectorAll("[data-visual-decision]"),b=>b.textContent)'), ['Approva','Rifiuta']);
+  assert.equal(await t.evaluate('Boolean(document.querySelector("#inbox-delete"))'), false);
+  assert.equal(await t.evaluate('Array.from(document.querySelectorAll("a")).some(a=>a.getAttribute("href")==="/admin/slop")'), false);
   await t.screenshot('visual-review-360');
   await t.evaluate('document.querySelector("[data-visual-decision=approved]").click();document.querySelector("[data-visual-decision=rejected]").click()');
   await waitFor(() => t.evaluate('document.querySelector("#review-message").textContent==="Approvata." && document.querySelector("[data-visual-decision=rejected]")?.disabled===false'), 'next prepared candidate');
@@ -276,6 +288,18 @@ try {
   await t.evaluate('document.querySelector("[data-visual-decision=rejected]").click()');
   await waitFor(() => t.evaluate('Boolean(document.querySelector("#refresh-review"))'), 'queue completed without notes');
   assert.deepEqual(decisions.map(row => row.decision), ['approved','rejected']);
+  await t.evaluate('document.querySelector("#inbox-state").value="rejected";document.querySelector("#inbox-state").dispatchEvent(new Event("change"))');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#inbox-delete"))'), 'rejected image deletion option');
+  await t.evaluate('document.querySelector("#inbox-delete").click()');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#inbox-delete-dialog")?.open)'), 'image deletion confirmation');
+  assert.equal(deletedReviewImages.size, 0);
+  await t.evaluate('document.querySelector("#inbox-delete-cancel").click()');
+  assert.equal(deletedReviewImages.size, 0);
+  await t.evaluate('document.querySelector("#inbox-delete").click()');
+  await t.screenshot('rejected-image-delete-confirmation-360');
+  await t.evaluate('document.querySelector("#inbox-delete-confirm").click()');
+  await waitFor(() => t.evaluate('document.querySelector("#review-message").textContent.includes("eliminata definitivamente")'), 'confirmed image deletion');
+  assert.equal(deletedReviewImages.size, 1);
   brokenPreview = true;
   await t.evaluate('document.querySelector("#refresh-review").click()');
   await waitFor(() => t.evaluate('document.querySelector("#review-message").textContent.includes("Anteprima non disponibile")'), 'bad preview does not produce editorial feedback');

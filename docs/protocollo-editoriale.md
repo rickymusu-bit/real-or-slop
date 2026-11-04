@@ -47,6 +47,11 @@ varianti e rifiuti. Si attendono le selezioni esplicite del proprietario: un nuo
 criterio, un brief incompleto o l'adozione del protocollo non autorizzano
 cancellazioni, sostituzioni o nuove ricerche per completare coppie.
 
+La cancellazione è una scelta esplicita del proprietario: dopo un rifiuto può
+usare **Elimina definitivamente** nella coda. Si elimina la singola scheda dal
+database di revisione e se ne impedisce la reimportazione. Dossier e giudizi
+rimangono conservati; non si applica alcuna pulizia automatica alle altre immagini.
+
 ## Catalogo dei brief
 
 Il [catalogo iniziale](../data/editorial/briefs.v1.json) contiene **100 bozze**
