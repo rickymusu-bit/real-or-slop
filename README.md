@@ -10,6 +10,7 @@ Tutte le immagini già trovate o generate restano conservate in attesa delle sue
 selezioni. Quelle approvate entrano individualmente nel database, senza cercare
 o generare un corrispondente; diritti e provenienza si verificano separatamente.
 
+[Coda unica di revisione](docs/coda-revisione-unica.md) ·
 [Protocollo di riferimento](docs/protocollo-editoriale.md) ·
 [Criteri editoriali e contesto obbligatorio](docs/criteri-editoriali.md) ·
 [Catalogo iniziale: 100 brief in bozza](data/editorial/briefs.v1.json) ·

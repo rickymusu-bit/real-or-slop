@@ -1,53 +1,65 @@
 import { api, content, escape } from "./main";
-import { sourcePhotoPreview, type SourcePhoto } from "./editorial-view";
 import { safeUrl } from "./admin";
-interface Card { reference?: SourcePhoto | null; id: string; token: string; image: string; details: { title?: string; type?: string; author?: string; source_url?: string; license_url?: string; explanation?: string } }
-interface Queue { images: Card[]; ready: number; preparing: number; processing?: number }
+interface Partner { id: string; origin: string; image: string }
+interface Card { id: string; sha256: string; revision: number; origin: string; status: string; image: string; partner: Partner | null; note: string; details: { title?: string; author?: string; source_url?: string; license_url?: string; previous_decision?: string; previous_owner_note?: string; previous_assessment?: unknown } }
+interface Queue { images: Card[]; total: number; offset: number; limit: number }
+const endpoint = "/admin/review-inbox";
+const label = (origin: string) => origin === "REAL" ? "REAL" : "SLOP";
+const stateLabel = (state: string) => ({ pending: "Da rivedere", approved: "Approvata", rejected: "Rifiutata" })[state] || state;
 export async function showVisualReview() {
-  content().innerHTML = `<section class="page visual-review"><div class="eyebrow">REVISIONE PRIVATA</div><h1>Il tuo sguardo decide.</h1><p><a href="/admin/editorial-v2">Apri lo studio privato del protocollo 2 ↗</a></p><p><a href="/admin/slop">Vedi l’intero lotto, le fotografie sorgente e gli scarti ↗</a></p><div id="visual-queue" aria-live="polite">Prepariamo le immagini…</div><p id="review-message" role="status"></p><details class="review-management"><summary>Gestione avanzata</summary><p><a href="/admin?advanced=1">Schede, archivio e pubblicazione</a> · <a href="/admin/slop">Studio SLOP</a></p></details></section>`;
-  const page = content().querySelector<HTMLElement>(".visual-review")!;
-  const queue = page.querySelector<HTMLElement>("#visual-queue")!;
-  const message = page.querySelector<HTMLElement>("#review-message")!;
-  let items: Card[] = [], remaining = 0, processing = 0, busy = false;
+  content().innerHTML = `<section class="page visual-review"><div class="eyebrow">REVISIONE PRIVATA</div><h1>Il tuo sguardo decide.</h1><p>Tutte le immagini in un’unica coda, compresi gli scarti precedenti. Ogni scelta riguarda una sola immagine; non serve un corrispondente.</p><div class="editorial-toolbar"><label>Mostra<select id="inbox-state"><option value="pending">Da rivedere</option><option value="approved">Approvate</option><option value="rejected">Rifiutate</option><option value="all">Tutte</option></select></label><label>Origine<select id="inbox-origin"><option value="all">REAL e SLOP</option><option value="REAL">REAL</option><option value="AI">SLOP</option></select></label><button id="refresh-review">Aggiorna</button></div><p id="inbox-count" aria-live="polite"></p><div id="visual-queue" aria-live="polite">Caricamento delle immagini…</div><p id="review-message" role="status"></p><nav class="inbox-pagination" aria-label="Pagine delle immagini"><button id="inbox-prev">Pagina precedente</button><button id="inbox-next">Pagina successiva</button></nav><div id="inbox-thumbnails" class="inbox-thumbnails" aria-label="Immagini della pagina"></div><details class="review-management"><summary>Gestione avanzata</summary><p>Le approvazioni restano nel database privato. Diritti, provenienza e pubblicazione si verificano separatamente.</p><p><a href="/admin?advanced=1">Schede e pubblicazione</a> · <a href="/admin/slop">Archivio storico dello Studio</a></p></details></section>`;
+  const page = content().querySelector<HTMLElement>(".visual-review")!, queue = page.querySelector<HTMLElement>("#visual-queue")!, message = page.querySelector<HTMLElement>("#review-message")!;
+  const state = page.querySelector<HTMLSelectElement>("#inbox-state")!, origin = page.querySelector<HTMLSelectElement>("#inbox-origin")!;
+  let items: Card[] = [], index = 0, offset = 0, total = 0, busy = false;
   const render = () => {
-    const image = items[0];
-    if (!image) { queue.innerHTML = `<p>${processing ? 'Le immagini sono in elaborazione. Puoi tornare più tardi.' : 'Non ci sono altre immagini pronte da valutare.'}</p><button id="refresh-review">Aggiorna</button>`; return; }
-    queue.innerHTML = `<article class="visual-review-card"><p class="status">${remaining} immagini da vedere · ${image.details.type === "REAL" ? "REAL" : "SLOP"}</p><div class="review-comparison"><img class="review-image" src="${escape(image.image)}" alt="Immagine candidata da valutare">${sourcePhotoPreview(image.reference)}</div><div class="review-actions"><button data-visual-decision="approved" class="primary" disabled>Approva</button><button data-visual-decision="rejected" class="secondary" disabled>Rifiuta</button></div><details><summary>Dettagli dell’immagine</summary><h2>${escape(image.details.title)}</h2><p>${escape(image.details.explanation)}</p><p>${escape(image.details.author)} · <a href="${safeUrl(image.details.source_url || '')}" target="_blank" rel="noopener noreferrer">${image.details.type === "AI" ? "Servizio di generazione" : "Fonte"}</a> · <a href="${safeUrl(image.details.license_url || '')}" target="_blank" rel="noopener noreferrer">Licenza</a></p></details></article>`;
-    const preview = queue.querySelector<HTMLImageElement>("img")!;
-    const loaded = () => { if (preview.isConnected && !busy) queue.querySelectorAll<HTMLButtonElement>("[data-visual-decision]").forEach(button => { button.disabled = false; }); };
-    preview.addEventListener("load", loaded);
-    if (preview.complete && preview.naturalWidth) loaded();
-    preview.addEventListener("error", () => {
-      queue.querySelectorAll<HTMLButtonElement>("[data-visual-decision]").forEach(button => { button.disabled = true; });
-      message.textContent = "Anteprima non disponibile. Aggiorna la coda per riprovare.";
-      queue.insertAdjacentHTML("beforeend", '<button id="refresh-review">Aggiorna</button>');
-    });
+    const image = items[index];
+    page.querySelector<HTMLElement>("#inbox-count")!.textContent = `${total} immagini · ${state.options[state.selectedIndex].text}${total ? ` · pagina ${Math.floor(offset / 50) + 1}` : ""}`;
+    page.querySelector<HTMLButtonElement>("#inbox-prev")!.disabled = busy || offset === 0;
+    page.querySelector<HTMLButtonElement>("#inbox-next")!.disabled = busy || offset + items.length >= total;
+    page.querySelector<HTMLElement>("#inbox-thumbnails")!.innerHTML = items.map((item, n) => `<button data-inbox-index="${n}" aria-label="Valuta ${escape(label(item.origin))}: ${escape(item.details.title || 'immagine')}" aria-pressed="${n === index}"><img loading="lazy" src="${escape(item.image)}" alt=""><span>${escape(label(item.origin))}</span></button>`).join("");
+    if (!image) { queue.innerHTML = "<p>Nessuna immagine in questo filtro. Puoi vedere anche quelle già approvate o rifiutate.</p>"; return; }
+    const figure = (row: Partner, selected: boolean) => `<figure><figcaption>${label(row.origin)}${selected ? " · immagine da valutare" : " · stesso brief"}</figcaption><img class="review-image${selected ? ' inbox-selected-image' : ''}" src="${escape(row.image)}" alt="${selected ? 'Immagine candidata da valutare' : 'Corrispondente dello stesso brief'}"></figure>`;
+    const current = { id: image.id, origin: image.origin, image: image.image };
+    const comparison = image.partner ? (image.origin === "REAL" ? figure(current, true) + figure(image.partner, false) : figure(image.partner, false) + figure(current, true)) : figure(current, true);
+    queue.innerHTML = `<article class="visual-review-card"><p class="status">${offset + index + 1} di ${total} · ${label(image.origin)} · ${escape(stateLabel(image.status))}</p><h2>${escape(image.details.title || 'Immagine archiviata')}</h2><div class="inbox-comparison${image.partner ? ' has-partner' : ''}">${comparison}</div><div class="review-actions"><button data-visual-decision="approved" class="primary" disabled>Approva</button><button data-visual-decision="rejected" class="secondary" disabled>Rifiuta</button></div><details><summary>Nota e giudizi precedenti</summary><label>La tua nota (facoltativa)<textarea id="inbox-note" maxlength="2000" rows="2">${escape(image.note)}</textarea></label>${image.details.previous_decision ? `<p>Stato nell’archivio precedente: ${escape(image.details.previous_decision)}. Conservato nello storico.</p>` : ''}${image.details.previous_owner_note ? `<p>${escape(image.details.previous_owner_note)}</p>` : ''}${image.details.previous_assessment ? `<pre class="curation-history">${escape(JSON.stringify(image.details.previous_assessment, null, 2))}</pre>` : ''}<button id="inbox-history">Mostra le tue revisioni</button><div id="inbox-history-list"></div></details><details><summary>Dettagli dell’immagine</summary><p>${escape(image.details.author || '')}</p>${image.details.source_url ? `<a href="${safeUrl(image.details.source_url)}" target="_blank" rel="noopener noreferrer">Fonte ↗</a>` : ''} ${image.details.license_url ? `<a href="${safeUrl(image.details.license_url)}" target="_blank" rel="noopener noreferrer">Licenza ↗</a>` : ''}<p>La selezione editoriale non pubblica l’immagine.</p></details><div class="studio-actions"><button id="inbox-skip">Vedi la prossima</button>${image.status !== "pending" ? '<button data-visual-decision="pending" disabled>Rimetti da rivedere</button>' : ''}</div></article>`;
+    const preview = queue.querySelector<HTMLImageElement>(".inbox-selected-image")!;
+    const loaded = () => { if (preview.isConnected && !busy && preview.naturalWidth) queue.querySelectorAll<HTMLButtonElement>("[data-visual-decision]").forEach(button => { button.disabled = false; }); };
+    preview.addEventListener("load", loaded); if (preview.complete) loaded();
+    preview.addEventListener("error", () => { message.textContent = "Anteprima non disponibile. Riprova con Aggiorna o passa alla prossima immagine."; });
   };
-  const load = async () => {
-    const data = await api<Queue>("/admin/review-queue");
+  const load = async (resetIndex = true) => {
+    const data = await api<Queue>(`${endpoint}?state=${state.value}&origin=${origin.value}&offset=${offset}`);
     if (!page.isConnected) return;
-    items = data.images; remaining = data.ready; processing = data.processing || 0;
+    if (offset && !data.images.length) { offset = Math.max(0, offset - 50); return load(); }
+    items = data.images; total = data.total; if (resetIndex) index = 0; else index = Math.min(index, Math.max(0, items.length - 1));
     render();
   };
+  for (const select of [state, origin]) select.onchange = () => { if (busy) return; offset = 0; void load().catch(error => { message.textContent = String(error); }); };
   page.addEventListener("click", async event => {
-    const target = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-visual-decision],#refresh-review");
+    const target = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
     if (!target || busy) return;
-    busy = true;
-    queue.querySelectorAll<HTMLButtonElement>("button").forEach(button => { button.disabled = true; });
+    busy = true; page.querySelectorAll<HTMLButtonElement>("button").forEach(button => { button.disabled = true; }); state.disabled = origin.disabled = true;
     try {
-      const image = items[0];
+      const image = items[index];
       if (target.dataset.visualDecision && image) {
-        await api(`/admin/visual-review/${encodeURIComponent(image.id)}`, { method: "POST", body: JSON.stringify({ decision: target.dataset.visualDecision, token: image.token }) });
-        message.textContent = target.dataset.visualDecision === "approved" ? "Approvata." : "Rifiutata.";
-        await load();
-      } else await load();
-    } catch (error) {
-      message.textContent = String(error);
-      await load().catch(() => { /* Preserve the original error and allow retry. */ });
-    } finally {
-      busy = false;
-      queue.querySelectorAll<HTMLButtonElement>("button").forEach(button => { button.disabled = !!button.dataset.visualDecision && !queue.querySelector<HTMLImageElement>("img")?.naturalWidth; });
+        await api(`${endpoint}/${encodeURIComponent(image.id)}/decision`, { method: "POST", body: JSON.stringify({ decision: target.dataset.visualDecision, revision: image.revision, sha256: image.sha256, note: queue.querySelector<HTMLTextAreaElement>("#inbox-note")?.value || "" }) });
+        message.textContent = target.dataset.visualDecision === "approved" ? "Approvata." : target.dataset.visualDecision === "rejected" ? "Rifiutata." : "Rimessa da rivedere.";
+        await load(false);
+      } else if (target.id === "inbox-history" && image) {
+        const data = await api<{ events: { decision: string; note: string; created_at: string }[] }>(`${endpoint}/${encodeURIComponent(image.id)}/history`);
+        queue.querySelector<HTMLElement>("#inbox-history-list")!.innerHTML = data.events.length ? data.events.map(e => `<p>${escape(stateLabel(e.decision))} · ${escape(e.created_at)}<br>${escape(e.note)}</p>`).join('') : '<p>Nessuna nuova revisione registrata.</p>';
+      } else if (target.dataset.inboxIndex !== undefined) { index = Number(target.dataset.inboxIndex); render(); }
+      else if (target.id === "inbox-skip") { if (index + 1 < items.length) { index++; render(); } else if (offset + items.length < total) { offset += 50; await load(); } else { index = 0; render(); } }
+      else if (target.id === "inbox-prev" || target.id === "inbox-next") { offset = Math.max(0, offset + (target.id === "inbox-next" ? 50 : -50)); await load(); }
+      else if (target.id === "refresh-review") await load(false);
+    } catch (error) { message.textContent = String(error); }
+    finally {
+      busy = false; state.disabled = origin.disabled = false;
+      page.querySelectorAll<HTMLButtonElement>("button").forEach(button => { button.disabled = false; });
+      page.querySelector<HTMLButtonElement>("#inbox-prev")!.disabled = offset === 0;
+      page.querySelector<HTMLButtonElement>("#inbox-next")!.disabled = offset + items.length >= total;
+      queue.querySelectorAll<HTMLButtonElement>("[data-visual-decision]").forEach(button => { button.disabled = !queue.querySelector<HTMLImageElement>(".inbox-selected-image")?.naturalWidth; });
     }
   });
-  await load().catch(error => { if (page.isConnected) { message.textContent = String(error); queue.innerHTML = '<button id="refresh-review">Riprova</button>'; } });
+  await load().catch(error => { if (page.isConnected) { message.textContent = String(error); queue.innerHTML = '<p>Caricamento non riuscito. Premi Aggiorna per riprovare.</p>'; } });
 }

@@ -232,21 +232,21 @@ try {
   const v2Contract = JSON.parse(readFileSync(resolve(cwd, 'tests/editorial-v2-contract.json'), 'utf8'));
   const v2Card = { id: 'v2-browser', origin: 'REAL', revision: 0, review_state: 'quarantine', review: {}, profile: v2Contract.profile, provenance: v2Contract.real_provenance, feedback: { ...v2Contract.feedback, observations: ['<img src=x onerror="window.fixtureV2Injected=true">'] }, image: '/api/admin/editorial/v2/candidates/v2-browser/preview' };
   let brokenPreview = false;
-  const reviewCards = ["one", "two"].map((id, n) => ({ id, token: "prepared-" + id, image: "/api/admin/assets/" + id, details: { title: "Synthetic browser fixture", type: n ? "AI" : "REAL", author: "Fixture", source_url: "https://example.invalid/", license_url: "https://creativecommons.org/licenses/by/4.0/", explanation: "Prepared automatically for this browser test." } }));
+  const reviewCards = ["one", "two"].map((id, n) => ({ id, revision: 0, sha256: "a".repeat(64), status: "pending", origin: n ? "AI" : "REAL", partner: null, note: "", image: "/api/admin/assets/" + id, details: { title: "Synthetic browser fixture", type: n ? "AI" : "REAL", author: "Fixture", source_url: "https://example.invalid/", license_url: "https://creativecommons.org/licenses/by/4.0/", explanation: "Prepared automatically for this browser test." } }));
   t.intercept(async (request, send) => {
     const url = new URL(request.request.url);
     let body, mime = "application/json", status = 200;
-    if (url.pathname === "/api/admin/review-queue") {
+    if (url.pathname === "/api/admin/review-inbox") {
       const images = brokenPreview ? [{ ...reviewCards[0], id: "broken", image: "/api/admin/assets/broken" }] : reviewCards.filter(card => !decisions.some(row => row.id === card.id));
-      body = JSON.stringify({ images, ready: images.length, preparing: 0 });
+      body = JSON.stringify({ images, total: images.length, offset: 0, limit: 50 });
     } else if (url.pathname.startsWith("/api/admin/assets/")) {
       await pause(350);
       mime = "image/svg+xml";
       body = brokenPreview ? "corrupt preview" : '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#344652"/><circle cx="300" cy="200" r="100" fill="#52d9bf"/></svg>';
-    } else if (url.pathname.startsWith("/api/admin/visual-review/")) {
+    } else if (url.pathname.startsWith("/api/admin/review-inbox/") && url.pathname.endsWith("/decision")) {
       const payload = JSON.parse(request.request.postData);
-      assert.deepEqual(Object.keys(payload).sort(), ["decision", "token"]);
-      decisions.push({ id: url.pathname.split("/").at(-1), ...payload });
+      assert.deepEqual(Object.keys(payload).sort(), ["decision", "note", "revision", "sha256"]);
+      decisions.push({ id: url.pathname.split("/").at(-2), ...payload });
       body = JSON.stringify({ status: payload.decision });
     } else if (url.pathname === "/api/admin/editorial/v2/candidates") {
       body = JSON.stringify({ candidates: [v2Card] });
@@ -266,7 +266,7 @@ try {
   await t.send('Fetch.enable', { patterns: [{ urlPattern: base + '/api/admin/*', requestStage: 'Request' }] });
   await t.evaluate('history.pushState({},"","/admin");window.dispatchEvent(new PopStateEvent("popstate"))');
   await waitFor(() => t.evaluate('Boolean(document.querySelector(".visual-review-card"))'), 'visual review card');
-  assert.equal(await t.evaluate('document.querySelectorAll("#visual-queue input,#visual-queue select,#visual-queue textarea").length'), 0);
+  assert.equal(await t.evaluate('document.querySelectorAll("#visual-queue input,#visual-queue select,#visual-queue textarea").length'), 1);
   await waitFor(() => t.evaluate('document.querySelector("[data-visual-decision=approved]")?.disabled===false'), 'preview ready before approval');
   assert.deepEqual(await t.evaluate('Array.from(document.querySelectorAll("[data-visual-decision]"),b=>b.textContent)'), ['Approva','Rifiuta']);
   await t.screenshot('visual-review-360');

@@ -308,3 +308,15 @@ dialog button { margin-bottom: 12px; }
   .editorial-card { padding: 12px; }
   .editorial-comparison img, .source-photo img { height: 280px; }
 }
+
+.inbox-comparison { display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; }
+.inbox-comparison.has-partner { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.inbox-comparison figure { margin: 0; min-width: 0; }
+.inbox-comparison figcaption { font-size: 13px; margin-bottom: 8px; }
+.inbox-comparison.has-partner .review-image { height: clamp(160px,45vw,520px); }
+.inbox-thumbnails { display: grid; grid-template-columns: repeat(auto-fill,minmax(80px,1fr)); gap: 8px; margin-top: 20px; }
+.inbox-thumbnails button { padding: 4px; min-width: 0; }
+.inbox-thumbnails button[aria-pressed=true] { outline: 3px solid var(--accent); }
+.inbox-thumbnails img { width: 100%; height: 76px; object-fit: contain; display: block; }
+.inbox-thumbnails span { font-size: 11px; }
+.inbox-pagination { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
