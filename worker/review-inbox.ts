@@ -1,4 +1,5 @@
 import { body, hash, HttpError, id, json, type Env } from "./core";
+import { bulkRejectedDeletion } from "./review-bulk-delete";
 
 interface InboxRow {
   id: string; origin: string; sha256: string; source_sha256: string; media_key: string; metadata_json: string;
@@ -51,6 +52,7 @@ export async function syncReviewInbox(env: Env) {
 
 export async function reviewInbox(request: Request, env: Env, path: string): Promise<Response> {
   const url = new URL(request.url);
+  if (path === base + "/delete-rejected") return bulkRejectedDeletion(request, env);
   if (path === base && request.method === "GET") {
     await syncReviewInbox(env);
     const state = url.searchParams.get("state") || "pending", origin = url.searchParams.get("origin") || "all";
