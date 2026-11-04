@@ -77,3 +77,10 @@ Queste modifiche non eseguono nuove inferenze, acquisizioni o pubblicazioni.
 Verifica successiva della vista affiancata: **144 test Python passati**; cinque
 pannelli con pixel invariati, PDF di cinque pagine, confronto a due colonne
 a 1440 e 390 pixel e caricamento del rifiuto effettivo del proprietario.
+
+Il proprietario ha poi precisato che per le opere d'arte serve un contesto
+esterno all'opera: quadro intero, cornice quando presente e ambiente circostante,
+ripresi da una certa distanza. Il contenuto rappresentato nel dipinto non basta.
+La coppia pittorica brief-005 è pertanto da rivedere e riproporre secondo il
+nuovo criterio. Questa annotazione non è un'approvazione né un rifiuto esplicito
+delle due immagini da parte del proprietario; entrambe restano da valutare.

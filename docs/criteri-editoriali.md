@@ -14,8 +14,27 @@ rende editorialmente ammissibile un soggetto privo di contesto.
 
 Un singolo soggetto, un ritratto e uno sfondo sfocato rimangono ammessi quando
 l'ambiente è leggibile. Non sono richiesti caos, molti elementi o attività umane.
-Per dipinti e illustrazioni il contesto può essere rappresentato artisticamente.
 Il ritaglio deve conservare lo sfondo utile all'osservazione del giocatore.
+
+## Opere d'arte nel loro ambiente
+
+La regola del contesto vale anche per tutte le opere d'arte. Per quadri e dipinti
+si preferisce una fotografia scattata da una certa distanza, che mostri insieme
+l'opera intera, la cornice quando presente e una parte leggibile di ciò che la
+circonda: parete, sala, arredi, supporto o elementi vicini. Per altre opere vale
+lo stesso principio, per esempio una scultura nello spazio in cui è esposta.
+
+Il contesto rappresentato **dentro** un dipinto non sostituisce il contesto
+esterno **attorno** all'opera. Una riproduzione del solo dipinto a pieno
+fotogramma non soddisfa il criterio, anche se raffigura una scena ricca.
+
+Nelle REAL si cerca una fotografia ambientata già esistente; non si aggiungono
+cornice o ambiente artificialmente. Nelle SLOP il brief deve descrivere l'intera
+scena — opera, eventuale cornice e ambiente — da generare soltanto da testo.
+Terra deve conservare questo contesto nel ritaglio, senza stringere sul solo
+contenuto pittorico per riempire il quadrato. Il tipo `artwork` nel brief
+identifica il soggetto artistico, non autorizza a rimuoverne la presentazione
+ambientata. I brief già congelati del pilota non vengono riscritti retroattivamente.
 
 Questa è una regola editoriale, non una prova di autenticità. Il controllo dei
 prompt non garantisce che il generatore la rispetti: occorre esaminare la copia
