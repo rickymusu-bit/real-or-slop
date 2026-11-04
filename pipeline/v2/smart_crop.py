@@ -21,7 +21,7 @@ from PIL import Image
 
 from ..editorial import PipelineStop, now, vision_result, write_private
 from ..importer import NoRedirect
-from .presentation import oriented_frame, source_records, standard_copy
+from .presentation import DEFAULT_CROP_MODEL, oriented_frame, source_records, standard_copy
 from .protocol import exact, require, text
 
 VERSION = '1.0.0'
@@ -158,7 +158,7 @@ def run(states, out, model, budget, reservation, max_calls, execute=False, api=N
                   instructions_sha256=digest(INSTRUCTIONS.encode()), transport='synchronous', max_output_tokens=1000)
     fingerprint = digest(json.dumps(dict(config=config, inputs=planned), sort_keys=True).encode())
     if not execute:
-        return dict(images=len(planned), required_calls=required, reservation_usd=round(required * reservation, 6),
+        return dict(images=len(planned), model=model, required_calls=required, reservation_usd=round(required * reservation, 6),
                     paid=False, network=False, fingerprint=fingerprint)
     out.mkdir(parents=True, exist_ok=True, mode=0o700)
     with (out / '.lock').open('a') as lock:
@@ -243,7 +243,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--states', type=Path, nargs='+', required=True)
     parser.add_argument('--out', type=Path, required=True)
-    parser.add_argument('--model', required=True)
+    parser.add_argument('--model', default=DEFAULT_CROP_MODEL)
     parser.add_argument('--budget-usd', type=float, required=True)
     parser.add_argument('--reservation-usd', type=float, required=True)
     parser.add_argument('--max-calls', type=int, required=True)

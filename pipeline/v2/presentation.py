@@ -18,6 +18,7 @@ from ..editorial import write_private
 from .protocol import identifier, require
 
 STANDARD_SIZE = (1024, 1024)
+DEFAULT_CROP_MODEL = 'gpt-6.1-terra'
 
 
 def oriented_frame(raw):
@@ -117,12 +118,27 @@ def export(states, out, size=STANDARD_SIZE):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description='Presentazione v2: Terra predefinito, centro come baseline esplicita. Nessuna chiamata pagata senza --execute.')
     parser.add_argument('--states', nargs='+', type=Path, required=True)
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--size', choices=('1024x1024',), default='1024x1024')
+    parser.add_argument('--method', choices=('terra', 'center'), default='terra')
+    parser.add_argument('--model', default=DEFAULT_CROP_MODEL)
+    parser.add_argument('--budget-usd', type=float)
+    parser.add_argument('--reservation-usd', type=float)
+    parser.add_argument('--max-calls', type=int, default=200)
+    parser.add_argument('--execute', action='store_true')
     args = parser.parse_args(argv)
-    print(json.dumps(export(args.states, args.out, tuple(map(int, args.size.split('x'))))))
+    if args.method == 'terra':
+        if args.budget_usd is None or args.reservation_usd is None:
+            parser.error('Per Terra specificare --budget-usd e --reservation-usd; --execute abilita gli invii sincroni')
+        from .smart_crop import run
+        result = run(args.states, args.out, args.model, args.budget_usd, args.reservation_usd, args.max_calls, args.execute)
+    else:
+        if args.execute:
+            parser.error('La baseline centrale è locale: omettere --execute')
+        result = export(args.states, args.out, tuple(map(int, args.size.split('x'))))
+    print(json.dumps(result))
 
 
 if __name__ == '__main__':

@@ -171,10 +171,11 @@ esportazione locale non modifica approvazioni, R2 o catalogo e non chiama API.
 Il proprietario ha confermato 1024×1024 come unico formato finale v2: il comando
 di presentazione rifiuta altri formati. Per le prossime SLOP usare generazione
 nativa quadrata; i formati di generazione storici restano nei dossier del pilota.
-Il comando `presentation` propone un taglio geometrico centrale, senza riconoscere soggetti o indizi.
+Il comando `presentation --method center` conserva la baseline geometrica centrale.
 La revisione confronta il fotogramma completo e può richiedere un'altra posizione
 del quadrato quando taglia elementi essenziali o altera il significato della scena.
-La modalità [assistita da Terra](cropping-assistito-v2.md), implementata in
+La modalità predefinita, confermata dal proprietario il 2026-11-04, è quella
+[assistita da Terra](cropping-assistito-v2.md), implementata in
 `pipeline.v2.smart_crop`, sceglie fra opzioni predefinite vedendone i pixel e il
 fotogramma completo. È sincrona, con budget e traccia separati, senza generare
 pixel, modificare il catalogo o approvare le varianti.

@@ -1,5 +1,11 @@
 # Ritaglio assistito da Terra
 
+Decisione del proprietario, 2026-11-04: **Terra è il metodo predefinito per i
+ritagli v2**. `pipeline.v2.presentation` usa `--method terra` e il modello
+`gpt-6.1-terra` in assenza di override; `--method center` conserva la baseline
+locale esplicita. Restano obbligatori i limiti di costo e l'abilitazione con
+`--execute` per gli invii. I casi dubbi e le astensioni non diventano approvazioni.
+
 Prova reale del **2026-11-04** completata sul pilota: 20 varianti, **16 chiamate
 sincrone** a `gpt-6.1-terra`, quattro fotogrammi già quadrati saltati. Sette scelte
 diverse dal centro; sei segnalazioni di revisione, inclusa un'astensione con centro
@@ -44,7 +50,7 @@ entro il tetto originario di 2 USD. Il ledger di questo comando è locale, separ
 dal Worker: non è un limite globale per altri esecutori o altri workspace.
 
 ```sh
-python3 -m pipeline.v2.smart_crop \
+python3 -m pipeline.v2.presentation \
   --states .pipeline/v2/pilot-2026-11-03/runs/pilot-20261103-sync-real/state.json .pipeline/v2/pilot-2026-11-03/runs/pilot-20261103-sync-slop/state.json \
   --out artifacts/editorial-v2-pilot/terra-crop-2026-11-04 \
   --model gpt-6.1-terra --budget-usd 0.30 --reservation-usd 0.018 --max-calls 16

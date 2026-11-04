@@ -9,7 +9,7 @@ from PIL import Image
 
 from pipeline.editorial import PipelineStop
 from pipeline.v2.engine import media
-from pipeline.v2.presentation import standard_copy
+from pipeline.v2.presentation import DEFAULT_CROP_MODEL, main as present, standard_copy
 from pipeline.v2.smart_crop import crop_options, payload, run, validate_decision
 
 
@@ -58,6 +58,20 @@ class CropTest(unittest.TestCase):
             if part['type'] == 'input_image':
                 self.assertTrue(part['image_url'].startswith('data:image/webp;base64,'))
         self.assertNotIn('provenance', json.dumps(body))
+
+    def test_presentation_defaults_to_terra_and_plans_without_paid_calls(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            states = self.inputs(root)
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                present(['--states', str(states[0]), '--out', str(root / 'review'),
+                         '--budget-usd', '0.1', '--reservation-usd', '0.018'])
+            plan = json.loads(output.getvalue())
+            self.assertEqual(plan['model'], DEFAULT_CROP_MODEL)
+            self.assertEqual(plan['required_calls'], 1)
+            self.assertFalse(plan['paid'])
+            self.assertFalse((root / 'review').exists())
 
     def test_validate_decision_rejects_unknown_options_and_incoherent_abstention(self):
         base = dict(crop_id='c1', preserves_context=True, needs_review=False, reason='Contesto conservato.')

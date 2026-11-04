@@ -43,7 +43,7 @@ calcolare e ritagli da revisionare; nessuna nuova inferenza pagata.
 Comando riproducibile, con destinazione nuova per evitare sovrascritture:
 
 ```sh
-python3 -m pipeline.v2.presentation --states .pipeline/v2/pilot-2026-11-03/runs/pilot-20261103-sync-real/state.json .pipeline/v2/pilot-2026-11-03/runs/pilot-20261103-sync-slop/state.json --out artifacts/editorial-v2-pilot/standard-1024
+python3 -m pipeline.v2.presentation --method center --states .pipeline/v2/pilot-2026-11-03/runs/pilot-20261103-sync-real/state.json .pipeline/v2/pilot-2026-11-03/runs/pilot-20261103-sync-slop/state.json --out artifacts/editorial-v2-pilot/standard-1024
 ```
 
 10 candidate REAL attendono conferma di autenticità e degli interventi; le licenze della fonte sono registrate. Per la fotografia di persone restano da verificare anche gli ulteriori diritti applicabili. Le 10 SLOP hanno prompt, parametri, modello e request ID originali archiviati; nessuna licenza di pubblicazione è stata attribuita automaticamente.

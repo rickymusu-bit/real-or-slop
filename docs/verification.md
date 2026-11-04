@@ -1,5 +1,11 @@
 # Cropping assistito — 2026-11-04
 
+Scelta del proprietario recepita: Terra è il metodo predefinito del comando di
+presentazione v2, con modello `gpt-6.1-terra`; la baseline centrale richiede
+`--method center`. Pianificazione predefinita senza chiamate, costi e invii ancora
+espliciti. Verificato il comando reale senza override di modello o metodo;
+120 test Python passati dopo questa modifica.
+
 [Implementazione e prova](cropping-assistito-v2.md): 16 chiamate Responses sincrone
 a `gpt-6.1-terra`, quattro immagini già quadrate saltate, 20 varianti 1024×1024 RGB.
 Sette scelte diverse dal centro e sei segnalazioni, inclusa un'astensione; zero
