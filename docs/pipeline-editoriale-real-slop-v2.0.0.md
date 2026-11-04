@@ -1,12 +1,17 @@
 ---
 version: 2.0.0
 created_at: 2026-11-03
-status: experimental-not-activated
+status: historical-superseded-by-v3
 application: 0.15.0
 issue: 34
 ---
 
 # Protocollo editoriale multidimensionale
+
+> Specifica storica. Il protocollo adottato dal proprietario è ora quello dei
+> [brief condivisi v3](protocollo-editoriale.md). Le indicazioni sottostanti su
+> popolazioni separate, assenza di abbinamenti e Batch descrivono la fase v2
+> e non si applicano ai nuovi cicli. Dossier e contratti storici restano intatti.
 
 Il [pilota rapido del 2026-11-03](benchmark-editoriale-v2-pilota-2026-11-03.md)
 usa chiamate sincrone per esplicita richiesta del proprietario. I relativi dossier

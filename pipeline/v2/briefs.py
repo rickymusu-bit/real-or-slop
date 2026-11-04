@@ -8,7 +8,8 @@ from ..editorial import write_private, now
 from .editorial_policy import BACKGROUND_RULE
 
 INSTRUCTIONS = '''Crea brief visivi autonomi per un piccolo portfolio REAL/SLOP.
-Ogni brief servirà a cercare un'immagine umana esistente e a generarne una sintetica solo da testo.
+Ogni brief può guidare la ricerca di un'immagine umana esistente e una generazione sintetica solo da testo.
+Le immagini si approvano singolarmente: non è obbligatorio completare una coppia o trovare un partner per un'immagine approvata.
 Non ricevi immagini, fonti, titoli o descrizioni di foto esistenti. Fissa l'intento, senza inventare dettagli da ricercare alla lettera.
 Esplora soggetti distinti: un ritratto di una sola persona, un'opera di ingegneria civile,
 un soggetto naturale senza persone, un oggetto o architettura, e un dipinto o illustrazione non fotografico.
@@ -79,7 +80,7 @@ def freeze(folder: Path, api, count=5):
 
 
 def pairs(value, candidates):
-    """Leave missing or rejected partners incomplete; never fabricate a REAL."""
+    """Comparison index only; neither completeness nor a pair-level vote gates admission."""
     validate(value)
     ids = {b['id'] for b in value['briefs']}
     require(all(r.get('brief_id') in ids and r.get('origin') in ('REAL', 'AI') for r in candidates), 'Candidata senza brief o origine valida')
@@ -90,5 +91,5 @@ def pairs(value, candidates):
         slop = [r['id'] for r in rows if r['origin'] == 'AI']
         require(len(real) <= 1 and len(slop) <= 1, 'Più partner per un brief')
         result.append(dict(brief_id=brief['id'], real=real[0] if real else None, slop=slop[0] if slop else None,
-                           complete=bool(real and slop), owner_approval='pending'))
+                           complete=bool(real and slop), comparison_only=True))
     return result

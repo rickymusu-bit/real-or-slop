@@ -1,30 +1,49 @@
 # Real or Slop
 
-Protocollo editoriale **v2 / 0.15.0**, sperimentale e disabilitato: scoperta REAL
-multidimensionale e generazione SLOP esclusivamente da idee e prompt originali,
-senza fotografie di riferimento. Profili sui soli pixel, verifica documentale
-separata, revisione privata in `/admin/editorial-v2` e benchmark riproducibile.
-Nessun punteggio di sorpresa, graduatoria condivisa o preferenza storica viene
-riusato. Le candidate v2 non possono essere pubblicate dal vecchio flusso.
+Il protocollo editoriale corrente è **v3.0.0: brief condivisi**. Un brief originale,
+congelato prima della ricerca, guida una candidata REAL e una SLOP generata dal
+solo testo. Nessuna foto REAL, titolo o sua descrizione entra nel generatore.
+Il proprietario valuta ogni immagine; il confronto affiancato si usa quando
+entrambe sono disponibili. Una coppia completa non è richiesta per l'ammissione.
 
-[Specifica corrente v2](docs/pipeline-editoriale-real-slop-v2.0.0.md) ·
-[Benchmark, esempi e attivazione dello studio](docs/benchmark-editoriale-v2.0.0.md) ·
-[Configurazione disabilitata](pipeline/v2/editorial.env.example).
+Tutte le immagini già trovate o generate restano conservate in attesa delle sue
+selezioni. Quelle approvate entrano individualmente nel database, senza cercare
+o generare un corrispondente; diritti e provenienza si verificano separatamente.
 
-[Scoperta multicanale v2.1](docs/scoperta-multicanale-v2.1.0.md): keyword sulle sei
-fonti, Openverse OAuth opzionale, Brave Image Search configurabile, errori isolati
-per provider e registro riprendibile. Gli hit generalisti attendono verifica della
-fonte e non diventano fotografie REAL automaticamente.
-Migrazione additiva **0013**, non applicata da questa modifica a risorse remote.
-`npm run benchmark:editorial-v2` usa 120 fixture locali: non certifica qualità
-editoriale o apprendimento. Servono studio reale e revisione prima del rilascio.
-Nessun nuovo cron, deploy o cambiamento del catalogo. Il pilota pagato e i suoi limiti sono documentati separatamente.
+[Protocollo di riferimento](docs/protocollo-editoriale.md) ·
+[Criteri editoriali e contesto obbligatorio](docs/criteri-editoriali.md) ·
+[Catalogo iniziale: 100 brief in bozza](data/editorial/briefs.v1.json) ·
+[Pilota a cinque brief](docs/pilota-brief-condivisi-2026-11-04.md).
 
-[Pilota rapido eseguito](docs/benchmark-editoriale-v2-pilota-2026-11-03.md): 10 candidate REAL, 10 generazioni SLOP e 20 analisi visive sincrone; tutte in quarantena. Il report segnala una scorciatoia nei formati e limiti della ricerca automatica.
+Il catalogo dei brief cresce separatamente dalle immagini: selezioni riproducibili
+con preferenza per tag nuovi, cinque brief per ciclo predefinito, massimo
+25 brief / 50 immagini complessive. API dirette, formato finale 1024×1024,
+ritaglio assistito da Terra e profilo dei file finali. Sfondo e contesto visibile
+per tutti i soggetti; le opere d'arte si mostrano intere nel proprio ambiente,
+con cornice quando presente. Gallerie e confronti su Drive privato.
 
-I paragrafi seguenti su sorgenti fotografiche SLOP, classifica, soglie e preferenze
-sono documentazione del percorso **storico v1** ancora conservato per recupero e
-compatibilità operativa. Non sono istruzioni per popolare il nuovo catalogo v2.
+```sh
+# Controllo locale del catalogo e preparazione di un piccolo ciclo, senza API:
+python3 -m pipeline.v2.brief_catalog --check
+python3 -m pipeline.v2.brief_catalog --count 5 --seed 34 --out .pipeline/v2/ciclo-001
+```
+
+I brief iniziali sono bozze originali redatte come seed editoriale, non immagini
+approvate. La selezione non avvia generazioni o download. La ricerca REAL è
+ancora assistita; licenze, autenticità e approvazioni restano da verificare per
+ogni immagine. Nessun fine-tuning o apprendimento automatico dai voti è attivo.
+
+Il codice dello studio usa contratti dati e archivio privato v2. Le candidate
+non possono essere pubblicate dal vecchio flusso. I gate pagati e di produzione
+restano disabilitati: il merge del protocollo non avvia cron, addebiti o deploy.
+La [scoperta multicanale](docs/scoperta-multicanale-v2.1.0.md) è un supporto alla
+ricerca; gli hit non certificano automaticamente la provenienza REAL.
+
+Le specifiche v1/v2, il [benchmark da 200](docs/benchmark-200-risultati-2026-11-04.md),
+i paragrafi sottostanti su immagini sorgenti SLOP, Batch, graduatorie, soglie e
+preferenze restano **storici**, per audit e compatibilità. Non definiscono il
+protocollo corrente. `npm run benchmark:editorial-v2` verifica 120 fixture locali,
+non produce un nuovo lotto editoriale o risultati con giocatori.
 
 Studio SLOP (0.14.2): apre il lotto più recente con tutte le fotografie e le
 generazioni archiviate, inclusi gli scarti, affiancando ogni SLOP alla fotografia
