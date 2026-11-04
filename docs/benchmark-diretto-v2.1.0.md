@@ -39,9 +39,24 @@ Le ricevute del pilota sono conservate privatamente negli artifact precedenti.
 query esplorative separate, congelando hash e istruzioni. Il catalogo delle
 fonti viene interrogato con le stesse keyword; la disponibilità non è presunta.
 Gli originali vengono acquisiti dagli host esplicitamente consentiti e deduplicati
-per hash. Per questo studio si escludono file oltre 12 MB/30 megapixel, formati
+per hash. Nel benchmark congelato del 2026-11-04 sono stati esclusi file oltre 12 MB/30 megapixel, formati
 non supportati, licenze senza derivati e originali con lato corto inferiore a
 1024: nessun upscaling. Sono esclusioni tecniche, non soglie di sorpresa.
+
+Aggiornamento successivo richiesto dal proprietario: nei prossimi studi il lato
+corto inferiore a 1024 non causa esclusione automatica. Terra riceve dimensioni
+native e fattore di scala e valuta ritaglio, leggibilità e dubbi. Il codice applica
+il ridimensionamento Lanczos già previsto, anche in ingrandimento; non si usa
+ricostruzione generativa. La variante conserva dimensioni native, coordinate e
+`upscaled`; il profilo descrive sempre la copia finale. Il report confronta per
+origine frequenza e intensità dell'ingrandimento, oltre a nitidezza e rumore:
+il formato comune non garantisce uguale definizione percepita. I vecchi profili
+senza metadati del ritaglio restano non misurati. Questa modifica non cambia
+retroattivamente campione, istruzioni o risultati del benchmark congelato.
+
+Le gallerie di test si consegnano su Drive privato, con cartelle `REAL/` e
+`SLOP/` separate negli ZIP. La separazione deriva dai dossier di provenienza;
+non è una classificazione del modello e non implica approvazione delle REAL.
 NASA viene risolta tramite l'asset API ufficiale, conservando il risultato e
 normalizzando HTTP a HTTPS soltanto per il dominio ufficiale delle immagini.
 Se la prima pagina non basta dopo gli scarti tecnici, è consentita una seconda

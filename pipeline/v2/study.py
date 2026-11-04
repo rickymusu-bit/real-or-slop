@@ -197,7 +197,7 @@ def acquire_sources(folder, target=100, max_api_calls=120, result_page=1):
         raw, sha, phash = download(meta, client, allowed)
         with Image.open(io.BytesIO(raw)) as image:
             require(image.format in ('JPEG', 'PNG', 'WEBP'), 'Formato non fotografico supportato')
-            require(image.width * image.height <= 30_000_000 and min(image.size) >= 1024, 'Risoluzione originale fuori dai limiti, nessun upscaling')
+            require(image.width * image.height <= 30_000_000, 'Originale oltre il limite di 30 megapixel')
             ext = dict(JPEG='jpg', PNG='png', WEBP='webp')[image.format]
             size = list(image.size)
         return raw, sha, phash, ext, size, license_info

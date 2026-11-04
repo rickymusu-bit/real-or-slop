@@ -4,9 +4,12 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
+import hashlib
+from PIL import Image
 
 from pipeline.editorial import PipelineStop
-from pipeline.v2.study import Preparation
+from pipeline.v2.study import Preparation, acquire_sources
 
 
 class PreparationFixture:
@@ -70,6 +73,31 @@ class PreparationTest(unittest.TestCase):
             with self.assertRaises(PipelineStop):
                 Preparation(root, api, cap=.01).freeze(4)
             self.assertEqual(api.calls, [])
+
+    def test_acquisition_keeps_low_resolution_original_for_terra_instead_of_excluding_it(self):
+        with tempfile.TemporaryDirectory() as temp, contextlib.redirect_stdout(io.StringIO()):
+            root = Path(temp)
+            Preparation(root, PreparationFixture()).freeze(4)
+            stream = io.BytesIO()
+            Image.new('RGB', (640, 480), 'blue').save(stream, 'PNG')
+            raw = stream.getvalue(); checksum = hashlib.sha256(raw).hexdigest()
+            meta = dict(provider='commons', source_id='fixture', title='Fixture photograph',
+                        source_url='https://commons.wikimedia.org/wiki/File:fixture.png',
+                        image_url='https://upload.wikimedia.org/fixture.png', author='Fixture author',
+                        rights='https://creativecommons.org/licenses/by/4.0/')
+            def collected(plan, directory, *args, **kwargs):
+                directory.mkdir(parents=True)
+                (directory/'manifest.json').write_text(json.dumps([dict(metadata=meta)]))
+                (directory/'queries.json').write_text(json.dumps(dict(used_api_calls=0)))
+                return dict(status='completed')
+            with patch('pipeline.v2.study.collect', side_effect=collected), \
+                 patch('pipeline.v2.study.download', return_value=(raw, checksum, '0'*16)) as downloaded:
+                result = acquire_sources(root, target=1)
+            self.assertEqual(result['real_candidates'], 1)
+            self.assertEqual(downloaded.call_count, 1)
+            manifest = json.loads((root/'real-manifest.json').read_text())
+            self.assertEqual((root/manifest[0]['file']).read_bytes(), raw)
+            self.assertEqual(manifest[0]['provenance']['authenticity'], 'unverified')
 
 
 if __name__ == '__main__':

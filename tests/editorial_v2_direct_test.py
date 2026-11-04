@@ -12,6 +12,7 @@ from PIL import Image
 from pipeline.editorial import PipelineStop
 from pipeline.v2.direct import DirectAPI, DirectEngine, DirectHTTPError
 from pipeline.v2.engine import Config, initialize
+from pipeline.v2.benchmark import report
 from pipeline.v2.fixtures import study_inputs, picture, profile
 
 
@@ -53,6 +54,10 @@ class DirectV2Test(unittest.TestCase):
                 result = engine.run(True)
                 self.assertEqual(result['status'], 'completed')
                 self.assertEqual(result['candidates'], 2)
+                resize = report(engine.state['candidates'])['technical'][origin]['resize']
+                self.assertEqual(resize['measured'], 2)
+                self.assertEqual(resize['upscaled'], 2 if origin == 'REAL' else 0)
+                self.assertEqual(resize['unmeasured'], 0)
                 self.assertEqual({endpoint for endpoint, _ in engine.api.calls}, {'responses', 'images/generations'} if origin == 'AI' else {'responses'})
                 for row in engine.state['candidates']:
                     self.assertEqual(row['profile_image_sha256'], row['sha256'])
