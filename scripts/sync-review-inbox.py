@@ -85,10 +85,19 @@ def main():
     args.receipts.parent.mkdir(parents=True,exist_ok=True)
     with ThreadPoolExecutor(max_workers=6) as pool:
         futures=[pool.submit(put,f) for f in pending]
+        failures=[]
         for future in as_completed(futures):
-            sha,receipt=future.result();receipts['uploaded'][sha]=receipt
+            try:
+                sha,receipt=future.result()
+            except (OSError,RuntimeError) as error:
+                failures.append(type(error).__name__)
+                print('Private upload failed:',type(error).__name__,getattr(error,'code',''),flush=True)
+                continue
+            receipts['uploaded'][sha]=receipt
             temporary=args.receipts.with_suffix('.tmp');temporary.write_text(json.dumps(receipts));temporary.chmod(0o600);temporary.replace(args.receipts)
             if len(receipts['uploaded'])%25==0:print('Private files copied:',len(receipts['uploaded']),flush=True)
+    if failures:
+        raise RuntimeError(f'{len(failures)} files failed; successful receipts preserved. Resume explicitly. No database import performed.')
     # File uploads finish before any row can expose an unavailable preview.
     if args.files_only:
         print('Private files staged. No database changes.',flush=True)
