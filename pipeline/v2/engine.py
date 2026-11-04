@@ -213,6 +213,8 @@ class Engine(BatchTransport):
     def cancel(self):
         if self.state['status'] in ('completed', 'cancelled', 'stopped'):
             return self.summary()
+        if self.state.get('error'):
+            self.state['error_before_cancellation'] = self.state.pop('error')
         self.state['cancel_requested'] = True
         self.save()
         pending = False

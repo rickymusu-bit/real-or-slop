@@ -48,7 +48,12 @@ class BatchTransport:
         return dict(target=target,kind=kind,recipe=dict(model=model,instructions=instructions,image_path=image_path,context=context))
 
     def _reserve(self,job):
-        if job['reserved']:return
+        if job['reserved']:
+            # A durable reservation does not authorize a later submission after
+            # the operator closes the paid gate or another owner takes the lease.
+            # Server replay is idempotent: no second debit of counts or money.
+            if self.remote:self.remote.reserve_batch(job)
+            return
         counts=self.state['calls'].copy();cost=0
         for item in job['items']:
             counts[item['kind']]+=1
