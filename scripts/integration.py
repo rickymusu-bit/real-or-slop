@@ -13,11 +13,16 @@ base='http://127.0.0.1:8788'
 local_profile=os.environ.get('ROS_TEST_PROFILE','local')
 profile_args=['--env',local_profile] if local_profile else []
 batch_test=os.environ.get('ROS_TEST_BATCH')=='1'
+v2_test=os.environ.get('ROS_TEST_V2')=='1'
 if batch_test and local_profile!='local':raise RuntimeError('Batch fixtures require the isolated local profile')
+if v2_test and (local_profile!='local' or batch_test):raise RuntimeError('V2 fixtures require their own isolated local profile')
 batch_vars=[]
 if batch_test:
     # Monetary fixtures ONLY on wrangler dev --local. No OpenAI key or network inference.
     for key,value in dict(ENABLE_EDITORIAL_PAID='true',EDITORIAL_BATCH_EVALUATION_USD='0.01',EDITORIAL_BATCH_GENERATION_USD='0.10',EDITORIAL_RUN_USD='1',EDITORIAL_DAILY_USD='1',EDITORIAL_TOTAL_USD='0.15').items():batch_vars.extend(['--var',key+':'+value])
+if v2_test:
+    # Local ledger + fake Batch transport. No model API calls or remote writes.
+    for key,value in dict(ENABLE_EDITORIAL_V2_EXPERIMENTS='true',ENABLE_EDITORIAL_V2_PAID='true',EDITORIAL_V2_EVALUATION_USD='0.01',EDITORIAL_V2_GENERATION_USD='0.10',EDITORIAL_V2_RUN_USD='1',EDITORIAL_V2_DAILY_USD='1',EDITORIAL_V2_TOTAL_USD='0.49',EDITORIAL_V2_MAX_EVALUATIONS='200',EDITORIAL_V2_MAX_GENERATIONS='200').items():batch_vars.extend(['--var',key+':'+value])
 env={**os.environ,'XDG_CONFIG_HOME':os.environ.get('XDG_CONFIG_HOME','/tmp/real-or-slop-config'),'ROS_TEST_BASE':base,'ROS_TEST_STATE':str(state),'ROS_TEST_PROFILE':local_profile}
 secret=Path('.dev.vars');created=not secret.exists()
 if created: secret.write_text('ADMIN_TOKEN='+secrets.token_urlsafe(36)+'\n')
@@ -76,7 +81,7 @@ try:
                     asset=re.search(r'src="([^"]+\.js)"',html).group(1)
                     with urllib.request.urlopen(base+asset) as js:assert js.status==200
             print('Navigation/assets HTTP checks passed.')
-            for script in (['tests/batch.integration.py'] if batch_test else ['tests/moderation.integration.py','tests/direct-import.integration.py','tests/curation.integration.py','tests/slop.integration.py','tests/editorial.integration.py','tests/review.integration.py'] if local_profile=='local' else [])+['tests/sampling.integration.py','tests/game.integration.py','tests/preloading.integration.py']:
+            for script in (['tests/editorial_v2.integration.py'] if v2_test else ['tests/batch.integration.py'] if batch_test else ['tests/moderation.integration.py','tests/direct-import.integration.py','tests/curation.integration.py','tests/slop.integration.py','tests/editorial.integration.py','tests/review.integration.py'] if local_profile=='local' else [])+['tests/sampling.integration.py','tests/game.integration.py','tests/preloading.integration.py']:
                 subprocess.run(['python3',script],env=env,check=True)
             try:
                 urllib.request.urlopen(base+'/api/rooms/ABCDEFGHJKLM/state')

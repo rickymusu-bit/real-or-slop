@@ -1,3 +1,100 @@
+# Cropping assistito — 2026-11-04
+
+Scelta del proprietario recepita: Terra è il metodo predefinito del comando di
+presentazione v2, con modello `gpt-6.1-terra`; la baseline centrale richiede
+`--method center`. Pianificazione predefinita senza chiamate, costi e invii ancora
+espliciti. Verificato il comando reale senza override di modello o metodo;
+120 test Python passati dopo questa modifica.
+
+[Implementazione e prova](cropping-assistito-v2.md): 16 chiamate Responses sincrone
+a `gpt-6.1-terra`, quattro immagini già quadrate saltate, 20 varianti 1024×1024 RGB.
+Sette scelte diverse dal centro e sei segnalazioni, inclusa un'astensione; zero
+valutazioni umane registrate e nessuna superiorità misurata. Originali intatti,
+profili nuovi pendenti, nessuna pubblicazione. Stima dai token 0,060506 USD con
+le tariffe archiviate del pilota, prenotazione aggiuntiva 0,288 USD.
+
+119 test Python passati, compresi limiti del ritaglio, scelta strutturata,
+astensione, budget prima delle chiamate, invii incerti senza retry, ripresa
+idempotente e rifiuto di varianti alterate. Ripresa del run reale senza permesso
+di rete completata senza nuove chiamate. Chromium sulla nuova galleria a larghezze
+1440 e 390: 20 confronti, 60 immagini caricate, nessun overflow o errore JavaScript,
+voto salvato ed esportato; il voto di prova è stato rimosso. Screenshot e JSON
+nell'artifact privato. `git diff --check` superato. Le verifiche
+TypeScript, integrazione Worker e gioco nelle sezioni successive si riferiscono
+ai rispettivi interventi precedenti: questo aggiornamento modifica Python e
+documentazione, non Worker o interfaccia di produzione.
+
+---
+
+# Pilota rapido reale — 2026-11-03
+
+Aggiornamento presentazione: 20 varianti locali 1024×1024 RGB WebP q85, con
+ritaglio auditabile e confronto dell'inquadratura precedente. Originali intatti,
+profili non trasferiti, revisione pendente, zero nuove API pagate. Test dedicati
+su rapporti diversi e coordinate dopo orientamento EXIF. Due keyword provate
+sulla ricerca immagini connessa senza filtro di dominio; hit ancora non acquisiti.
+
+[Rapporto del pilota](benchmark-editoriale-v2-pilota-2026-11-03.md): completati
+10 output SLOP e 20 profili in sincrono, insieme a 10 candidate fotografiche.
+Costo stimato dai token 0,530162 USD, senza verifica della fattura. Tutti i dossier
+restano in quarantena. Il gate pagato locale è stato richiuso. Nessuna modifica
+alla produzione, a risorse Cloudflare remote o al catalogo.
+
+Sono state corrette la rappresentazione dei diritti pendenti (licenza nulla,
+approvazione bloccata), la tracciabilità sincrona tramite request ID reali e la
+configurazione esplicita dei limiti di output/reasoning. Le sezioni sottostanti
+conservano i risultati precedenti all'esecuzione del pilota.
+
+---
+
+# Protocollo editoriale v2 — 0.15.0, sperimentale non attivato
+
+Verifica locale del 2026-11-03, base `bad071d0a92449a099af4d61663ed7e0794b2bcb`.
+Specifica corrente: [v2.0.0](pipeline-editoriale-real-slop-v2.0.0.md).
+Il vincolo aggiunto dal proprietario esclude ogni fotografia sorgente SLOP.
+La nuova pipeline non usa ranking, soglie, categorie di acquisizione o preferenze
+storiche. Il trasporto Batch è condiviso, la politica editoriale è separata.
+
+Verifiche eseguite con esito positivo:
+
+- `npm test`: 16 file di test TypeScript e 107 test Python, inclusi contratti
+  condivisi, immagini ordinarie ammissibili, ibridi esclusi, valutazione cieca,
+  separazione dei flussi, recupero, costi, deduplica e migrazione additiva.
+- `npm run lint`, `npm run build`, `npm run deploy:check`, `git diff --check`.
+- `npm run test:integration`, `ROS_TEST_BATCH=1 npm run test:integration`,
+  `ROS_TEST_V2=1 npm run test:integration`,
+  `ROS_TEST_PROFILE= npm run test:integration`: emulatori locali separati,
+  autenticazione, D1/R2 privati, lease/CAS, dossier immutabili, revisione umana,
+  budget atomici concorrenti, compatibilità storica e gioco senza spoiler.
+- `npm run test:gallery`: Chromium già installato, layout 360/390/768/1440,
+  navigazione, tastiera, timer, anteprime e revisione privata v2. L'interfaccia
+  v2 usa fixture browser esplicite; autenticazione e revisione reale sono
+  verificate separatamente contro D1/R2 locali. Screenshot in `artifacts/gallery/`.
+- `npm run benchmark:editorial-v2`: 120 fixture dichiarate, 60 per origine,
+  tutte in quarantena, 60 pseudo-REAL bloccate dalla provenienza non verificata,
+  nessuna approvazione utilizzabile, `publication_ready: false`. Test separato
+  di riproducibilità fra workspace e esclusione delle esposizioni ripetute nei
+  dati di trasferimento. Report `artifacts/editorial-v2/report.json`.
+- Esempi CLI di scoperta (24 query su due motori, nessuna chiamata di rete) e
+  piano SLOP (6 idee autonome, nessuna chiamata o scrittura remota).
+
+La migrazione **0013** è provata solo localmente e conserva tutti i dati storici.
+I due gate v2 sono assenti dalla configurazione di produzione; il gate storico
+non abilita la v2. Non esiste un endpoint di pubblicazione sperimentale e le sue
+candidate non sono righe del catalogo. Sessioni, monete indipendenti 50/50,
+preflight, timer e pubblicazione storica mantengono i rispettivi contratti.
+
+Lo studio fotografico con 100–200 candidate vere, query libere effettivamente
+prodotte da LLM, eventuali motori generalisti con condizioni verificate e test
+umani su immagini/fonti/generatori nuovi **non è stato eseguito**. Non si
+presentano le fixture come validazione editoriale o formativa. La preparazione
+LLM delle query è un input esplicito e tracciato, non un'inferenza automatica.
+La pubblicazione v2 richiederà un rilascio dedicato dopo quei risultati.
+Nessuna inferenza pagata, migrazione remota, nuovo cron, deploy, riclassificazione
+o eliminazione di asset è stata eseguita da questa implementazione.
+
+---
+
 # Galleria Studio e fotografia sorgente — 0.14.2
 
 Aggiornamento 2026-11-03T15:18:33.817420+01:00.

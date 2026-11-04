@@ -1,6 +1,6 @@
 {
   "name": "real-or-slop",
-  "version": "0.14.2",
+  "version": "0.15.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -20,7 +20,8 @@
     "deploy:demo": "node scripts/deploy-demo.mjs",
     "deploy:check": "node scripts/deploy-demo.mjs --check",
     "test:gallery": "node scripts/check-gallery.mjs",
-    "benchmark:preloading": "node --import tsx scripts/benchmark-preloading.mjs"
+    "benchmark:preloading": "node --import tsx scripts/benchmark-preloading.mjs",
+    "benchmark:editorial-v2": "python3 -m pipeline.v2.benchmark --fixture-study 120"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261025.1",

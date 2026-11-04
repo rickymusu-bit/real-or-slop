@@ -1,3 +1,5 @@
+> Protocollo corrente di evoluzione: [v2.0.0](pipeline-editoriale-real-slop-v2.0.0.md), con SLOP autonome senza fotografie. Questa guida conserva il percorso storico v1; i suoi comandi non attivano la v2. Vedere [studio e benchmark v2](benchmark-editoriale-v2.0.0.md).
+
 > Aggiornamento 2026-11-02T16:30:46Z, versione operativa **3.0.0**: il workflow usa
 > [OpenAI Batch v1.0.0](pipeline-batch-openai-v1.0.0.md), con stato D1/R2, quattro
 > fasi e tetto cumulativo `EDITORIAL_TOTAL_USD` (5 USD per la prova). Le istruzioni

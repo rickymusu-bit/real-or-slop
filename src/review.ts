@@ -4,7 +4,7 @@ import { safeUrl } from "./admin";
 interface Card { reference?: SourcePhoto | null; id: string; token: string; image: string; details: { title?: string; type?: string; author?: string; source_url?: string; license_url?: string; explanation?: string } }
 interface Queue { images: Card[]; ready: number; preparing: number; processing?: number }
 export async function showVisualReview() {
-  content().innerHTML = `<section class="page visual-review"><div class="eyebrow">REVISIONE PRIVATA</div><h1>Il tuo sguardo decide.</h1><p><a href="/admin/slop">Vedi l’intero lotto, le fotografie sorgente e gli scarti ↗</a></p><div id="visual-queue" aria-live="polite">Prepariamo le immagini…</div><p id="review-message" role="status"></p><details class="review-management"><summary>Gestione avanzata</summary><p><a href="/admin?advanced=1">Schede, archivio e pubblicazione</a> · <a href="/admin/slop">Studio SLOP</a></p></details></section>`;
+  content().innerHTML = `<section class="page visual-review"><div class="eyebrow">REVISIONE PRIVATA</div><h1>Il tuo sguardo decide.</h1><p><a href="/admin/editorial-v2">Apri lo studio privato del protocollo 2 ↗</a></p><p><a href="/admin/slop">Vedi l’intero lotto, le fotografie sorgente e gli scarti ↗</a></p><div id="visual-queue" aria-live="polite">Prepariamo le immagini…</div><p id="review-message" role="status"></p><details class="review-management"><summary>Gestione avanzata</summary><p><a href="/admin?advanced=1">Schede, archivio e pubblicazione</a> · <a href="/admin/slop">Studio SLOP</a></p></details></section>`;
   const page = content().querySelector<HTMLElement>(".visual-review")!;
   const queue = page.querySelector<HTMLElement>("#visual-queue")!;
   const message = page.querySelector<HTMLElement>("#review-message")!;

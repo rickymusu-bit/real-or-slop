@@ -1,3 +1,11 @@
+## 0.15.0 — 2026-11-03 (sperimentale, non attivata)
+
+- Protocollo editoriale v2 indipendente: scoperta REAL multicanale e generazioni SLOP da idee originali o prompt aperti, senza fotografie di riferimento, classifica condivisa, soglie di sorpresa o preferenze storiche.
+- Contratto multidimensionale Python/TypeScript, verifica documentale separata, esclusione degli ibridi, feedback con incertezza ed evidenze, regole accessibili prima del gioco.
+- Studio privato `/admin/editorial-v2`, migrazione additiva 0013, checkpoint D1/R2, budget atomici, revisione umana con audit e nessun collegamento al catalogo pubblicabile. Gate assenti/disabilitati per default.
+- Trasporto Batch condiviso con la compatibilità v1; simulazione riproducibile di 120 fixture e analisi della resa, copertura, duplicati e trasferimento. Le fixture non sostituiscono il benchmark fotografico o i test umani.
+- Nessuna migrazione remota, chiamata pagata, schedule, pubblicazione, riclassificazione o rimozione di asset.
+
 ## 0.14.2 — 2026-11-03T15:18:33.817420+01:00
 
 - Galleria privata in apertura dello Studio: lotto più recente caricato automaticamente, tutte le REAL e le SLOP archiviate, incluse quelle sotto soglia, con sorgente e generazione affiancate. Editor manuale e pubblicazione in sezioni avanzate.
