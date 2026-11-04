@@ -67,9 +67,9 @@ class ProtocolV2Test(unittest.TestCase):
 
     def test_discovery_uses_independent_exploration_and_reproducible_multiengine_plans(self):
         free = dict(generator='test-independent-llm', queries=['quiet pavement', 'a shared gesture', 'small repairs', 'overhead photograph', 'unoccupied interior'])
-        a = plan(34, free)
-        self.assertEqual(a, plan(34, free))
-        self.assertNotEqual(a, plan(35, free))
+        a = plan(34, free, engines=('commons', 'openverse'))
+        self.assertEqual(a, plan(34, free, engines=('commons', 'openverse')))
+        self.assertNotEqual(a, plan(35, free, engines=('commons', 'openverse')))
         self.assertEqual(len(a['queries']), 24)
         self.assertEqual({row['engine'] for row in a['queries']}, {'commons', 'openverse'})
         self.assertEqual({row['channel'] for row in a['queries']}, {'generic', 'vocabulary', 'exploration'})

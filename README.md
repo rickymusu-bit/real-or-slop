@@ -10,6 +10,11 @@ riusato. Le candidate v2 non possono essere pubblicate dal vecchio flusso.
 [Specifica corrente v2](docs/pipeline-editoriale-real-slop-v2.0.0.md) ·
 [Benchmark, esempi e attivazione dello studio](docs/benchmark-editoriale-v2.0.0.md) ·
 [Configurazione disabilitata](pipeline/v2/editorial.env.example).
+
+[Scoperta multicanale v2.1](docs/scoperta-multicanale-v2.1.0.md): keyword sulle sei
+fonti, Openverse OAuth opzionale, Brave Image Search configurabile, errori isolati
+per provider e registro riprendibile. Gli hit generalisti attendono verifica della
+fonte e non diventano fotografie REAL automaticamente.
 Migrazione additiva **0013**, non applicata da questa modifica a risorse remote.
 `npm run benchmark:editorial-v2` usa 120 fixture locali: non certifica qualità
 editoriale o apprendimento. Servono studio reale e revisione prima del rilascio.
