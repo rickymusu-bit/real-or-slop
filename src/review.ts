@@ -16,7 +16,7 @@ export async function showVisualReview() {
   const render = () => {
     const image = items[index];
     const deleteAll = page.querySelector<HTMLButtonElement>("#inbox-delete-all")!;
-    deleteAll.hidden = state.value !== "rejected"; deleteAll.disabled = busy || total === 0;
+    deleteAll.hidden = state.value !== "rejected"; deleteAll.disabled = busy || state.value !== "rejected" || total === 0;
     page.querySelector<HTMLElement>("#inbox-count")!.textContent = `${total} immagini · ${state.options[state.selectedIndex].text}${total ? ` · pagina ${Math.floor(offset / 50) + 1}` : ""}`;
     page.querySelector<HTMLButtonElement>("#inbox-prev")!.disabled = busy || offset === 0;
     page.querySelector<HTMLButtonElement>("#inbox-next")!.disabled = busy || offset + items.length >= total;

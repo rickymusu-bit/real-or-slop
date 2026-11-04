@@ -301,6 +301,7 @@ try {
   assert.deepEqual(await t.evaluate('Array.from(document.querySelectorAll("[data-visual-decision]"),b=>b.textContent)'), ['Approva','Rifiuta']);
   assert.equal(await t.evaluate('Boolean(document.querySelector("#inbox-delete"))'), false);
   assert.equal(await t.evaluate('document.querySelector("#inbox-delete-all").hidden'), true);
+  assert.equal(await t.evaluate('getComputedStyle(document.querySelector("#inbox-delete-all")).display'), 'none');
   assert.equal(await t.evaluate('Array.from(document.querySelectorAll("a")).some(a=>a.getAttribute("href")==="/admin/slop")'), false);
   await t.screenshot('visual-review-360');
   await t.evaluate('document.querySelector("[data-visual-decision=approved]").click();document.querySelector("[data-visual-decision=rejected]").click()');

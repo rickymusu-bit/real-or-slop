@@ -321,5 +321,6 @@ dialog button { margin-bottom: 12px; }
 .inbox-thumbnails span { font-size: 11px; }
 .inbox-pagination { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
 .delete-image { color: var(--error); border-color: var(--error); }
+#inbox-delete-all[hidden] { display: none; }
 #inbox-delete-dialog, #inbox-delete-all-dialog { max-width: min(520px, calc(100vw - 32px)); border: 1px solid var(--hairline); padding: 24px; background: var(--surface); color: var(--text); }
 #inbox-delete-dialog::backdrop, #inbox-delete-all-dialog::backdrop { background: rgb(0 0 0 / 55%); }
