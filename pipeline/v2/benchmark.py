@@ -39,6 +39,25 @@ def variation(a, b):
     return round(sum(abs(a.get(key, 0)/na-b.get(key, 0)/nb) for key in a.keys() | b.keys())/2, 6)
 
 
+def resize_distribution(rows):
+    """Native crop to final-image scale; old whole-frame profiles stay unknown."""
+    factors = []
+    for row in rows:
+        presentation = row.get('presentation', {})
+        box = presentation.get('crop_box')
+        if presentation.get('version') != '1.1.0' or not isinstance(box, list) or len(box) != 4:
+            continue
+        side = box[2] - box[0]
+        require(side > 0 and box[3]-box[1] == side, 'Dimensioni native del ritaglio non valide')
+        factors.append(row['width']/side)
+    bins = Counter('downscaled' if f < 1 else 'native_size' if f == 1 else
+                   'up_to_2x' if f <= 2 else 'up_to_4x' if f <= 4 else 'over_4x' for f in factors)
+    return dict(measured=len(factors), unmeasured=len(rows)-len(factors),
+                upscaled=sum(f > 1 for f in factors), scale_bins=dict(bins),
+                mean_scale=round(sum(factors)/len(factors), 6) if factors else None,
+                maximum_scale=round(max(factors), 6) if factors else None)
+
+
 def trial_metrics(candidates, trials, heldout_groups):
     """Only first exposures, with a source/model group excluded from training.
 
@@ -121,7 +140,8 @@ def report(candidates, queries=(), trials=(), heldout_groups=()):
     for origin, rows in by_origin.items():
         technical[origin] = dict(formats=dict(Counter(row['format'] for row in rows)),
             sizes=dict(Counter(f"{row['width']}x{row['height']}" for row in rows)),
-            mean_bytes=sum(row['bytes'] for row in rows)/len(rows) if rows else None)
+            mean_bytes=sum(row['bytes'] for row in rows)/len(rows) if rows else None,
+            resize=resize_distribution(rows))
     yields = []
     for query in queries:
         require(query['channel'] in ('baseline', 'generic', 'vocabulary', 'exploration'), 'Canale query non valido')

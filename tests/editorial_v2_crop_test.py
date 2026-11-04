@@ -53,6 +53,8 @@ class CropTest(unittest.TestCase):
         self.assertNotIn('tools', body)
         self.assertEqual(body['text']['format']['type'], 'json_schema')
         parts = body['input'][0]['content']
+        self.assertIn('1600×1000', parts[0]['text'])
+        self.assertIn('1.0240×', parts[0]['text'])
         self.assertEqual(sum(p['type'] == 'input_image' for p in parts), 6)
         for part in parts:
             if part['type'] == 'input_image':
