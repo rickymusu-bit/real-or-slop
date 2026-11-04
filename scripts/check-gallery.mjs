@@ -233,13 +233,33 @@ try {
   const v2Card = { id: 'v2-browser', origin: 'REAL', revision: 0, review_state: 'quarantine', review: {}, profile: v2Contract.profile, provenance: v2Contract.real_provenance, feedback: { ...v2Contract.feedback, observations: ['<img src=x onerror="window.fixtureV2Injected=true">'] }, image: '/api/admin/editorial/v2/candidates/v2-browser/preview' };
   let brokenPreview = false;
   const deletedReviewImages = new Set();
+  let bulkDeletes = 0, staleBulkOnce = true;
   const reviewCards = ["one", "two"].map((id, n) => ({ id, revision: 0, sha256: "a".repeat(64), status: "pending", origin: n ? "AI" : "REAL", partner: null, note: "", image: "/api/admin/assets/" + id, details: { title: "Synthetic browser fixture", type: n ? "AI" : "REAL", author: "Fixture", source_url: "https://example.invalid/", license_url: "https://creativecommons.org/licenses/by/4.0/", explanation: "Prepared automatically for this browser test." } }));
   t.intercept(async (request, send) => {
     const url = new URL(request.request.url);
     let body, mime = "application/json", status = 200;
     if (url.pathname === "/api/admin/review-inbox") {
-      const images = brokenPreview ? [{ ...reviewCards[0], id: "broken", image: "/api/admin/assets/broken" }] : reviewCards.filter(card => !deletedReviewImages.has(card.id) && card.status === (url.searchParams.get("state") || "pending"));
-      body = JSON.stringify({ images, total: images.length, offset: 0, limit: 50 });
+      const filtered = brokenPreview ? [{ ...reviewCards[0], id: "broken", image: "/api/admin/assets/broken" }] : reviewCards.filter(card => !deletedReviewImages.has(card.id) && card.status === (url.searchParams.get("state") || "pending") && (!url.searchParams.get("origin") || url.searchParams.get("origin") === "all" || card.origin === url.searchParams.get("origin")));
+      const offset = Number(url.searchParams.get("offset") || 0);
+      body = JSON.stringify({ images: filtered.slice(offset, offset + 50), total: filtered.length, offset, limit: 50 });
+    } else if (url.pathname === "/api/admin/review-inbox/delete-rejected") {
+      const payload = request.request.postData ? JSON.parse(request.request.postData) : null;
+      const origin = payload?.origin || url.searchParams.get("origin") || "all";
+      const selected = reviewCards.filter(card => !deletedReviewImages.has(card.id) && card.status === "rejected" && (origin === "all" || card.origin === origin));
+      const token = (selected.some(row => row.revision > 1) ? "c" : "b").repeat(64);
+      if (request.request.method === "GET") body = JSON.stringify({ origin, count: selected.length, snapshot_token: token });
+      else {
+        assert.equal(request.request.method, "DELETE");
+        assert.deepEqual(Object.keys(payload).sort(), ["confirm_delete", "origin", "snapshot_token"]);
+        assert.equal(payload.confirm_delete, true); assert.equal(payload.snapshot_token, token);
+        if (staleBulkOnce) {
+          staleBulkOnce = false; selected[0].revision++; status = 409;
+          body = JSON.stringify({ error: "Le rifiutate sono cambiate: aggiorna e conferma nuovamente" });
+        } else {
+          bulkDeletes++; selected.forEach(row => deletedReviewImages.add(row.id));
+          body = JSON.stringify({ deleted: selected.length, history_preserved: true });
+        }
+      }
     } else if (url.pathname.startsWith("/api/admin/assets/")) {
       await pause(350);
       mime = "image/svg+xml";
@@ -280,13 +300,15 @@ try {
   await waitFor(() => t.evaluate('document.querySelector("[data-visual-decision=approved]")?.disabled===false'), 'preview ready before approval');
   assert.deepEqual(await t.evaluate('Array.from(document.querySelectorAll("[data-visual-decision]"),b=>b.textContent)'), ['Approva','Rifiuta']);
   assert.equal(await t.evaluate('Boolean(document.querySelector("#inbox-delete"))'), false);
+  assert.equal(await t.evaluate('document.querySelector("#inbox-delete-all").hidden'), true);
+  assert.equal(await t.evaluate('getComputedStyle(document.querySelector("#inbox-delete-all")).display'), 'none');
   assert.equal(await t.evaluate('Array.from(document.querySelectorAll("a")).some(a=>a.getAttribute("href")==="/admin/slop")'), false);
   await t.screenshot('visual-review-360');
   await t.evaluate('document.querySelector("[data-visual-decision=approved]").click();document.querySelector("[data-visual-decision=rejected]").click()');
   await waitFor(() => t.evaluate('document.querySelector("#review-message").textContent==="Approvata." && document.querySelector("[data-visual-decision=rejected]")?.disabled===false'), 'next prepared candidate');
   assert.equal(decisions.length, 1);
   await t.evaluate('document.querySelector("[data-visual-decision=rejected]").click()');
-  await waitFor(() => t.evaluate('Boolean(document.querySelector("#refresh-review"))'), 'queue completed without notes');
+  await waitFor(() => t.evaluate('document.querySelector("#review-message").textContent==="Rifiutata." && document.querySelector("#inbox-state").disabled===false && !document.querySelector(".visual-review-card")'), 'queue completed without notes');
   assert.deepEqual(decisions.map(row => row.decision), ['approved','rejected']);
   await t.evaluate('document.querySelector("#inbox-state").value="rejected";document.querySelector("#inbox-state").dispatchEvent(new Event("change"))');
   await waitFor(() => t.evaluate('Boolean(document.querySelector("#inbox-delete"))'), 'rejected image deletion option');
@@ -298,8 +320,32 @@ try {
   await t.evaluate('document.querySelector("#inbox-delete").click()');
   await t.screenshot('rejected-image-delete-confirmation-360');
   await t.evaluate('document.querySelector("#inbox-delete-confirm").click()');
-  await waitFor(() => t.evaluate('document.querySelector("#review-message").textContent.includes("eliminata definitivamente")'), 'confirmed image deletion');
+  await waitFor(() => t.evaluate('document.querySelector("#review-message").textContent.includes("eliminata definitivamente") && document.querySelector("#inbox-state").disabled===false'), 'confirmed image deletion');
   assert.equal(deletedReviewImages.size, 1);
+  assert.equal(await t.evaluate('document.querySelector("#inbox-delete-all").disabled'), true);
+  reviewCards.push(...Array.from({ length: 57 }, (_, n) => ({ ...reviewCards[0], id: "bulk-" + n, image: "/api/admin/assets/bulk-" + n, origin: n < 53 ? "REAL" : "AI", status: "rejected", revision: 1 })));
+  await t.evaluate('document.querySelector("#inbox-origin").value="REAL";document.querySelector("#inbox-origin").dispatchEvent(new Event("change"))');
+  await waitFor(() => t.evaluate('document.querySelector("#inbox-count").textContent.startsWith("53 immagini")'), 'bulk origin filter count');
+  await t.evaluate('document.querySelector("#inbox-delete-all").click()');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#inbox-delete-all-dialog")?.open)'), 'bulk preview modal');
+  assert.equal(await t.evaluate('document.querySelector("#inbox-delete-all-dialog").textContent.includes("53 REAL rifiutate")'), true);
+  await t.evaluate('document.querySelector("#inbox-delete-all-cancel").click()');
+  assert.equal(bulkDeletes, 0);
+  await t.evaluate('document.querySelector("#inbox-origin").value="all";document.querySelector("#inbox-origin").dispatchEvent(new Event("change"))');
+  await waitFor(() => t.evaluate('document.querySelector("#inbox-count").textContent.startsWith("57 immagini")'), 'all pages bulk count');
+  await t.evaluate('document.querySelector("#inbox-delete-all").click()');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#inbox-delete-all-dialog")?.open)'), 'all origin bulk preview');
+  assert.equal(await t.evaluate('document.querySelector("#inbox-delete-all-dialog").textContent.includes("57 immagini rifiutate")'), true);
+  await t.screenshot('bulk-delete-confirmation-360');
+  await t.evaluate('document.querySelector("#inbox-delete-all-confirm").click()');
+  await waitFor(() => t.evaluate('document.querySelector("#review-message").textContent.includes("rifiutate sono cambiate") && document.querySelector("#inbox-state").disabled===false'), 'changed snapshot blocks bulk confirmation');
+  assert.equal(bulkDeletes, 0);
+  await t.evaluate('document.querySelector("#inbox-delete-all").click()');
+  await waitFor(() => t.evaluate('Boolean(document.querySelector("#inbox-delete-all-dialog")?.open)'), 'fresh bulk confirmation');
+  await t.evaluate('document.querySelector("#inbox-delete-all-confirm").click();document.querySelector("#inbox-delete-all-confirm")?.click()');
+  await waitFor(() => t.evaluate('document.querySelector("#review-message").textContent.includes("57 immagini rifiutate eliminate") && document.querySelector("#inbox-state").disabled===false'), 'all rejected pages removed once');
+  assert.equal(bulkDeletes, 1); assert.equal(deletedReviewImages.size, 58);
+  assert.equal(deletedReviewImages.has("one"), false);
   brokenPreview = true;
   await t.evaluate('document.querySelector("#refresh-review").click()');
   await waitFor(() => t.evaluate('document.querySelector("#review-message").textContent.includes("Anteprima non disponibile")'), 'bad preview does not produce editorial feedback');

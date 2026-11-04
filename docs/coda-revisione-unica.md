@@ -89,3 +89,21 @@ RGB, hash e profilo. `--apply` copia i file privati e registra le presentazioni
 solo se la sorgente è ancora approvata alla revisione catturata. Serve prima il
 rilascio della migrazione 0016; la preparazione delle copie non aggiorna da sola
 il sito. Le presentazioni già identiche vengono riconosciute senza sovrascriverle.
+
+## Eliminare tutte le rifiutate
+
+Nel filtro **Rifiutate** il pulsante **Elimina tutte** comprende tutte le pagine,
+rispettando il filtro di origine: REAL, SLOP oppure entrambe. Prima di cancellare,
+una finestra mostra il numero effettivo e chiede conferma. Approvate e immagini
+da valutare restano escluse; originali e giudizi storici rimangono conservati.
+
+La conferma è legata alla selezione completa di ID, hash visualizzati e revisioni,
+non al solo conteggio o alle cinquanta immagini della pagina. Se una voce della
+selezione cambia, l'operazione non elimina nulla e richiede una conferma aggiornata.
+Le due scritture eseguono controllo, registrazione ed eliminazione in una sola
+transazione. Ogni richiesta ha un identificativo univoco aggiunto all'impronta
+amministrativa nel registro delle eliminazioni. Le copie eliminate non possono
+ricomparire dalle vecchie fonti o come presentazioni standard.
+
+La distribuzione del pulsante non esegue la cancellazione. Non servono nuove
+migrazioni: si usano i vincoli e il registro già attivi per le eliminazioni singole.

@@ -3,16 +3,20 @@ import { safeUrl } from "./admin";
 interface Partner { id: string; origin: string; image: string }
 interface Card { id: string; sha256: string; revision: number; origin: string; status: string; image: string; partner: Partner | null; note: string; details: { title?: string; author?: string; source_url?: string; license_url?: string; previous_decision?: string; previous_owner_note?: string; previous_assessment?: unknown } }
 interface Queue { images: Card[]; total: number; offset: number; limit: number }
+interface DeletionPreview { origin: string; count: number; snapshot_token: string }
 const endpoint = "/admin/review-inbox";
 const label = (origin: string) => origin === "REAL" ? "REAL" : "SLOP";
 const stateLabel = (state: string) => ({ pending: "Da rivedere", approved: "Approvata", rejected: "Rifiutata" })[state] || state;
 export async function showVisualReview() {
-  content().innerHTML = `<section class="page visual-review"><div class="eyebrow">REVISIONE PRIVATA</div><h1>Il tuo sguardo decide.</h1><p>Tutte le immagini in un’unica coda, compresi gli scarti precedenti. Ogni scelta riguarda una sola immagine; non serve un corrispondente.</p><div class="editorial-toolbar"><label>Mostra<select id="inbox-state"><option value="pending">Da rivedere</option><option value="approved">Approvate</option><option value="rejected">Rifiutate</option><option value="all">Tutte</option></select></label><label>Origine<select id="inbox-origin"><option value="all">REAL e SLOP</option><option value="REAL">REAL</option><option value="AI">SLOP</option></select></label><button id="refresh-review">Aggiorna</button></div><p id="inbox-count" aria-live="polite"></p><div id="visual-queue" aria-live="polite">Caricamento delle immagini…</div><p id="review-message" role="status"></p><nav class="inbox-pagination" aria-label="Pagine delle immagini"><button id="inbox-prev">Pagina precedente</button><button id="inbox-next">Pagina successiva</button></nav><div id="inbox-thumbnails" class="inbox-thumbnails" aria-label="Immagini della pagina"></div><details class="review-management"><summary>Gestione avanzata</summary><p>Le approvazioni restano nel database privato. Diritti, provenienza e pubblicazione si verificano separatamente.</p><p><a href="/admin?advanced=1">Schede e pubblicazione</a></p></details></section>`;
+  content().innerHTML = `<section class="page visual-review"><div class="eyebrow">REVISIONE PRIVATA</div><h1>Il tuo sguardo decide.</h1><p>Tutte le immagini in un’unica coda, compresi gli scarti precedenti. Ogni scelta riguarda una sola immagine; non serve un corrispondente.</p><div class="editorial-toolbar"><label>Mostra<select id="inbox-state"><option value="pending">Da rivedere</option><option value="approved">Approvate</option><option value="rejected">Rifiutate</option><option value="all">Tutte</option></select></label><label>Origine<select id="inbox-origin"><option value="all">REAL e SLOP</option><option value="REAL">REAL</option><option value="AI">SLOP</option></select></label><button id="refresh-review">Aggiorna</button><button id="inbox-delete-all" class="delete-image" hidden>Elimina tutte</button></div><p id="inbox-count" aria-live="polite"></p><div id="visual-queue" aria-live="polite">Caricamento delle immagini…</div><p id="review-message" role="status"></p><nav class="inbox-pagination" aria-label="Pagine delle immagini"><button id="inbox-prev">Pagina precedente</button><button id="inbox-next">Pagina successiva</button></nav><div id="inbox-thumbnails" class="inbox-thumbnails" aria-label="Immagini della pagina"></div><details class="review-management"><summary>Gestione avanzata</summary><p>Le approvazioni restano nel database privato. Diritti, provenienza e pubblicazione si verificano separatamente.</p><p><a href="/admin?advanced=1">Schede e pubblicazione</a></p></details></section>`;
   const page = content().querySelector<HTMLElement>(".visual-review")!, queue = page.querySelector<HTMLElement>("#visual-queue")!, message = page.querySelector<HTMLElement>("#review-message")!;
   const state = page.querySelector<HTMLSelectElement>("#inbox-state")!, origin = page.querySelector<HTMLSelectElement>("#inbox-origin")!;
-  let items: Card[] = [], index = 0, offset = 0, total = 0, busy = false;
+  let items: Card[] = [], index = 0, offset = 0, total = 0, busy = false, loadRequest = 0;
+  let deletionPreview: DeletionPreview | null = null;
   const render = () => {
     const image = items[index];
+    const deleteAll = page.querySelector<HTMLButtonElement>("#inbox-delete-all")!;
+    deleteAll.hidden = state.value !== "rejected"; deleteAll.disabled = busy || state.value !== "rejected" || total === 0;
     page.querySelector<HTMLElement>("#inbox-count")!.textContent = `${total} immagini · ${state.options[state.selectedIndex].text}${total ? ` · pagina ${Math.floor(offset / 50) + 1}` : ""}`;
     page.querySelector<HTMLButtonElement>("#inbox-prev")!.disabled = busy || offset === 0;
     page.querySelector<HTMLButtonElement>("#inbox-next")!.disabled = busy || offset + items.length >= total;
@@ -28,14 +32,16 @@ export async function showVisualReview() {
     preview.addEventListener("error", () => { message.textContent = "Anteprima non disponibile. Riprova con Aggiorna o passa alla prossima immagine."; });
   };
   const load = async (resetIndex = true) => {
-    const data = await api<Queue>(`${endpoint}?state=${state.value}&origin=${origin.value}&offset=${offset}`);
-    if (!page.isConnected) return;
+    deletionPreview = null;
+    const sequence = ++loadRequest, requestedState = state.value, requestedOrigin = origin.value;
+    const data = await api<Queue>(`${endpoint}?state=${requestedState}&origin=${requestedOrigin}&offset=${offset}`);
+    if (!page.isConnected || sequence !== loadRequest || state.value !== requestedState || origin.value !== requestedOrigin) return;
     if (offset && !data.images.length) { offset = Math.max(0, offset - 50); return load(); }
     items = data.images; total = data.total; if (resetIndex) index = 0; else index = Math.min(index, Math.max(0, items.length - 1));
     render();
   };
   for (const select of [state, origin]) select.onchange = () => { if (busy) return; offset = 0; void load().catch(error => { message.textContent = String(error); }); };
-  page.addEventListener("cancel", event => { if ((event.target as HTMLElement).id === "inbox-delete-dialog") (event.target as HTMLDialogElement).addEventListener("close", () => (event.target as HTMLElement).remove(), { once: true }); }, true);
+  page.addEventListener("cancel", event => { if (["inbox-delete-dialog", "inbox-delete-all-dialog"].includes((event.target as HTMLElement).id)) (event.target as HTMLDialogElement).addEventListener("close", () => (event.target as HTMLElement).remove(), { once: true }); }, true);
   page.addEventListener("click", async event => {
     const target = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
     if (!target || busy) return;
@@ -57,6 +63,22 @@ export async function showVisualReview() {
         await api(`${endpoint}/${encodeURIComponent(image.id)}`, { method: "DELETE", body: JSON.stringify({ confirm_delete: true, revision: image.revision, sha256: image.sha256 }) });
         message.textContent = "Immagine eliminata definitivamente dal database di revisione.";
         await load(false);
+      } else if (target.id === "inbox-delete-all" && state.value === "rejected") {
+        deletionPreview = await api<DeletionPreview>(`${endpoint}/delete-rejected?origin=${origin.value}`);
+        if (!deletionPreview.count) { message.textContent = "Non ci sono più immagini rifiutate in questo filtro."; await load(false); }
+        else {
+          const scope = deletionPreview.origin === "all" ? "immagini" : label(deletionPreview.origin);
+          queue.insertAdjacentHTML("beforeend", `<dialog id="inbox-delete-all-dialog" aria-labelledby="delete-all-title"><h2 id="delete-all-title">Eliminare tutte le rifiutate?</h2><p>Confermi l’eliminazione definitiva di <strong>${deletionPreview.count} ${scope} rifiutate</strong>, in tutte le pagine di questo filtro?</p><p>Non ricompariranno nella coda. Dossier e giudizi storici restano conservati.</p><div class="studio-actions"><button id="inbox-delete-all-cancel" autofocus>Annulla</button><button id="inbox-delete-all-confirm" class="delete-image">Sì, elimina tutte (${deletionPreview.count})</button></div></dialog>`);
+          queue.querySelector<HTMLDialogElement>("#inbox-delete-all-dialog")!.showModal();
+        }
+      } else if (target.id === "inbox-delete-all-cancel") {
+        queue.querySelector<HTMLDialogElement>("#inbox-delete-all-dialog")!.close();
+        queue.querySelector("#inbox-delete-all-dialog")!.remove(); deletionPreview = null;
+        page.querySelector<HTMLButtonElement>("#inbox-delete-all")!.focus();
+      } else if (target.id === "inbox-delete-all-confirm" && deletionPreview && state.value === "rejected" && origin.value === deletionPreview.origin) {
+        const result = await api<{ deleted: number }>(`${endpoint}/delete-rejected`, { method: "DELETE", body: JSON.stringify({ origin: deletionPreview.origin, snapshot_token: deletionPreview.snapshot_token, confirm_delete: true }) });
+        message.textContent = `${result.deleted} immagini rifiutate eliminate definitivamente.`;
+        offset = 0; await load();
       } else if (target.id === "inbox-history" && image) {
         const data = await api<{ events: { decision: string; note: string; created_at: string }[] }>(`${endpoint}/${encodeURIComponent(image.id)}/history`);
         queue.querySelector<HTMLElement>("#inbox-history-list")!.innerHTML = data.events.length ? data.events.map(e => `<p>${escape(stateLabel(e.decision))} · ${escape(e.created_at)}<br>${escape(e.note)}</p>`).join('') : '<p>Nessuna nuova revisione registrata.</p>';
@@ -64,12 +86,13 @@ export async function showVisualReview() {
       else if (target.id === "inbox-skip") { if (index + 1 < items.length) { index++; render(); } else if (offset + items.length < total) { offset += 50; await load(); } else { index = 0; render(); } }
       else if (target.id === "inbox-prev" || target.id === "inbox-next") { offset = Math.max(0, offset + (target.id === "inbox-next" ? 50 : -50)); await load(); }
       else if (target.id === "refresh-review") await load(false);
-    } catch (error) { message.textContent = String(error); if (target.id === "inbox-delete-confirm") await load(false).catch(() => {}); }
+    } catch (error) { message.textContent = String(error); if (["inbox-delete-confirm", "inbox-delete-all-confirm"].includes(target.id)) await load(false).catch(() => {}); }
     finally {
       busy = false; state.disabled = origin.disabled = false;
       page.querySelectorAll<HTMLButtonElement>("button").forEach(button => { button.disabled = false; });
       page.querySelector<HTMLButtonElement>("#inbox-prev")!.disabled = offset === 0;
       page.querySelector<HTMLButtonElement>("#inbox-next")!.disabled = offset + items.length >= total;
+      page.querySelector<HTMLButtonElement>("#inbox-delete-all")!.disabled = state.value !== "rejected" || total === 0;
       queue.querySelectorAll<HTMLButtonElement>("[data-visual-decision]").forEach(button => { button.disabled = !queue.querySelector<HTMLImageElement>(".inbox-selected-image")?.naturalWidth; });
     }
   });
