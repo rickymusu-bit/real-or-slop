@@ -71,10 +71,27 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
       partner: row.partner_id ? { id: row.partner_id, origin: row.partner_origin, image: `${base}/${row.partner_id}/image` } : null })),
       total: total?.count || 0, counts: counts.results, offset, limit: 50, publication_available: false });
   }
-  const match = path.match(/^\/api\/admin\/review-inbox\/([\w-]+)\/(image|decision|history)$/);
+  const match = path.match(/^\/api\/admin\/review-inbox\/([\w-]+)(?:\/(image|decision|history))?$/);
   if (!match) throw new HttpError(404, "Coda di revisione inesistente");
   const row = await env.DB.prepare("SELECT * FROM editorial_review_inbox WHERE id=?").bind(match[1]).first<InboxRow>();
   if (!row) throw new HttpError(404, "Immagine non trovata");
+  if (!match[2] && request.method === "DELETE") {
+    const data = await body(request, 1000);
+    if (Object.keys(data).some(key => !["confirm_delete", "revision", "sha256"].includes(key)) ||
+        data.confirm_delete !== true || data.revision !== row.revision || data.sha256 !== row.sha256 || row.status !== "rejected")
+      throw new HttpError(409, "Puoi eliminare soltanto un'immagine rifiutata: verifica lo stato e conferma");
+    const result = await env.DB.batch([
+      env.DB.prepare(`INSERT INTO editorial_review_deleted_images
+        SELECT id,origin,sha256,revision,?,? FROM editorial_review_inbox WHERE id=? AND revision=? AND sha256=? AND status='rejected'`)
+        .bind((await hash(env.ADMIN_TOKEN!)).slice(0, 12), new Date().toISOString(), row.id, row.revision, row.sha256),
+      env.DB.prepare(`DELETE FROM editorial_review_inbox WHERE id=? AND revision=? AND status='rejected'
+        AND EXISTS(SELECT 1 FROM editorial_review_deleted_images d WHERE d.image_id=editorial_review_inbox.id
+          AND d.revision=editorial_review_inbox.revision AND d.sha256=editorial_review_inbox.sha256)`)
+        .bind(row.id, row.revision),
+    ]);
+    if (!result[1].meta.changes) throw new HttpError(409, "Immagine aggiornata: ricaricare prima di eliminarla");
+    return json({ deleted: true, history_preserved: true, published: false });
+  }
   if (match[2] === "image" && request.method === "GET") {
     const file = await env.QUARANTINE?.get(row.media_key);
     if (!file) throw new HttpError(404, "File archiviato non disponibile");

@@ -48,3 +48,11 @@ test("suspended PvP API cannot create, join, or reconnect public rooms", async (
   for (const path of ["/api/rooms", "/api/rooms/ABCDEFGHJKLM/join", "/api/rooms/ABCDEFGHJKLM/ws", "/api/rooms/ABCDEFGHJKLM/state"])
     assert.equal((await worker.fetch(new Request("https://test" + path), env)).status, 503);
 });
+
+
+test("retired studio URL redirects authenticated owners to the unified inbox", async () => {
+  const token = "fixture-owner-admin-token-32-characters";
+  const response = await worker.fetch(new Request("https://game.test/admin/slop?plan=old", { headers: { Authorization: "Bearer " + token } }), { ...env, ADMIN_TOKEN: token });
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.get("Location"), "https://game.test/admin");
+});

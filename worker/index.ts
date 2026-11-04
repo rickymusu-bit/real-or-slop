@@ -22,6 +22,7 @@ export default {
         url.pathname.startsWith("/admin")
       ) {
         await admin(request, env);
+        if (url.pathname === "/admin/slop") return Response.redirect(new URL("/admin", url).href, 302);
         if (url.pathname === "/api/admin/stats") return await stats(env);
         if (url.pathname.startsWith("/api/admin/"))
           return await moderation(request, env, url.pathname);
