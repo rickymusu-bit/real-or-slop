@@ -22,15 +22,16 @@ from .direct import digest
 from .discovery import EXPLORATION_INSTRUCTIONS, plan as search_plan, collect
 from .protocol import VERSION, generation_plan, provenance, require, https
 from .search_sources import SearchClient
+from .editorial_policy import BACKGROUND_RULE
 
 IDEATION = '''Crea idee indipendenti per immagini integralmente sintetiche da testo, per un campione visivo vario.
 Non ricevi fotografie, titoli REAL, fonti o preferenze editoriali storiche. Non usare riferimenti fotografici o URL.
-Esplora scene quotidiane e sorprendenti, più soggetti, relazioni, dettagli, paesaggi, materiali, texture e scene dense.
-Non imporre anomalie, un soggetto isolato, bellezza o un'unica estetica. Mantieni un linguaggio visivo fotografico.
+Esplora ritratti, soggetti singoli, natura, oggetti, arte, monumenti, architettura e ingegneria civile, con composizioni varie.
+Non imporre anomalie, scene dense, molte persone o un'unica estetica. Sono ammesse anche immagini artistiche non fotografiche.
 Alterna liberamente idee originali definite e prompt aperti che lascino libertà al generatore, senza quote tematiche.
 Non usare nomi di persone reali, marchi, testi da riprodurre o immagini esistenti. Ogni prompt deve essere autonomo.
 Scrivi prompt in inglese fino a 65 parole; idea in italiano fino a 20 parole. Usa esattamente gli ID forniti una volta ciascuno.
-Restituisci il piano JSON version 2.0.0, independent true, ideas con id, mode (original oppure open), idea, prompt.'''
+Restituisci il piano JSON version 2.0.0, independent true, ideas con id, mode (original oppure open), idea, prompt.''' + '\n' + BACKGROUND_RULE
 
 
 class Preparation:

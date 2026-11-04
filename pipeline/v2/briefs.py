@@ -5,6 +5,7 @@ from .direct import digest
 from .protocol import exact, require, text, identifier, generation_plan
 from .study import Preparation
 from ..editorial import write_private, now
+from .editorial_policy import BACKGROUND_RULE
 
 INSTRUCTIONS = '''Crea brief visivi autonomi per un piccolo portfolio REAL/SLOP.
 Ogni brief servirà a cercare un'immagine umana esistente e a generarne una sintetica solo da testo.
@@ -18,7 +19,7 @@ Ogni descrizione deve essere breve e abbastanza ampia da trovare fotografie o op
 Scrivi description in italiano fino a 35 parole, slop_prompt autonomo in inglese fino a 75 parole, e due search_queries brevi in inglese.
 Usa medium photograph oppure artwork; il dipinto/illustrazione deve usare artwork anche nel prompt SLOP.
 Nessun URL, nome di persona reale o marchio, nessun artista da imitare, nessun riferimento a una specifica immagine esistente.
-Usa esattamente gli ID forniti. Restituisci version 1.0.0 e briefs con id, medium, description, slop_prompt, search_queries.'''
+Usa esattamente gli ID forniti. Restituisci version 1.0.0 e briefs con id, medium, description, slop_prompt, search_queries.''' + '\n' + BACKGROUND_RULE
 
 
 def validate(value):

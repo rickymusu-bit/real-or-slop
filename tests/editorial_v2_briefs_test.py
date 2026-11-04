@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pipeline.editorial import PipelineStop
 from pipeline.v2.briefs import freeze, validate, slop_plan, pairs
-from pipeline.v2.brief_review import cohort, validate_reviews
+from pipeline.v2.brief_review import cohort, validate_reviews, review_script
 
 
 def plan():
@@ -54,3 +54,14 @@ class BriefPilotTest(unittest.TestCase):
         with self.assertRaises(PipelineStop):validate_reviews(altered, rows)
         altered=copy.deepcopy(review);altered['decisions'].append(altered['decisions'][0])
         with self.assertRaises(PipelineStop):validate_reviews(altered, rows)
+
+    def test_initial_owner_rejection_is_validated_and_notes_cannot_escape_the_gallery_script(self):
+        rows = [dict(id='chair', origin='REAL', sha256='a'*64)]
+        initial = dict(version='1.0.0', kind='owner_editorial_choices', cohort_sha256=cohort(rows), decisions=[dict(
+            candidate_id='chair', image_sha256='a'*64, decision='rejected', note='</script><img src=x onerror=alert(1)>',
+            reviewed_at='2026-11-04T00:00:00Z')])
+        script = review_script(rows, initial, paired_view=True)
+        self.assertEqual(script.count('</script>'), 1)
+        self.assertNotIn('<img src=x', script)
+        initial['decisions'][0]['image_sha256'] = 'b'*64
+        with self.assertRaises(PipelineStop):review_script(rows, initial, paired_view=True)

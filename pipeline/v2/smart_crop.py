@@ -23,6 +23,7 @@ from ..editorial import PipelineStop, now, vision_result, write_private
 from ..importer import NoRedirect
 from .presentation import DEFAULT_CROP_MODEL, oriented_frame, source_records, standard_copy
 from .protocol import exact, require, text
+from .editorial_policy import BACKGROUND_RULE
 
 VERSION = '1.0.0'
 INSTRUCTIONS = '''Scegli il ritaglio quadrato che conserva meglio il contenuto e il significato del fotogramma completo.
@@ -35,7 +36,7 @@ Non privilegiare bellezza, simmetria, stranezza, effetto drammatico o presunta o
 Non eliminare difetti o dettagli che potrebbero aiutare l'osservazione. Non scegliere un taglio che rimuove crediti o watermark necessari.
 Se le alternative conservano contenuto equivalente, scegli quella centrale indicata. Se nessuna funziona, restituisci crop_id null,
 preserves_context false e needs_review true. Segnala in needs_review ogni dubbio o possibile perdita di elementi essenziali.
-Rispondi con crop_id, preserves_context (booleano), needs_review (booleano), reason (breve motivazione in italiano sui dettagli visibili).'''
+Rispondi con crop_id, preserves_context (booleano), needs_review (booleano), reason (breve motivazione in italiano sui dettagli visibili).''' + '\n' + BACKGROUND_RULE
 
 
 def digest(value):

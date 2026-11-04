@@ -59,3 +59,21 @@ Verifica: **143 test Python passati**; galleria verificata in Chromium a 1440 e
 scelte dopo ricaricamento, esportazione JSON valida e nessun errore JavaScript.
 Gli hash dei file immagine e i link locali dello ZIP sono verificati. Le scelte
 simulate per il test del browser sono state rimosse e non sono decisioni umane.
+
+## Regola sul contesto e confronto affiancato
+
+I [criteri editoriali](criteri-editoriali.md) richiedono sfondo e contesto
+visibile per ogni soggetto, per REAL e SLOP. Il proprietario ha rifiutato la
+sedia REAL del brief-004 perché isolata su fondo nero. La decisione viene
+conservata con hash dell'immagine e nota e precaricata nella galleria; il file
+resta soltanto come esempio rifiutato da sostituire, senza inventare uno sfondo.
+
+La revisione presenta le coppie in cinque PNG con pixel finali incollati senza
+ridimensionamento, e in un PDF. La vista HTML conserva REAL a sinistra e SLOP a
+destra anche su mobile, con i comandi di ciascuna immagine sotto la coppia.
+Le cartelle REAL/ e SLOP/ restano nello ZIP; i link Drive esistenti sono preservati.
+Queste modifiche non eseguono nuove inferenze, acquisizioni o pubblicazioni.
+
+Verifica successiva della vista affiancata: **144 test Python passati**; cinque
+pannelli con pixel invariati, PDF di cinque pagine, confronto a due colonne
+a 1440 e 390 pixel e caricamento del rifiuto effettivo del proprietario.

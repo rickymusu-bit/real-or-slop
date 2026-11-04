@@ -16,6 +16,7 @@ from .protocol import VERSION, exact, require, text, identifier, https
 from ..editorial import PipelineStop, write_private
 from ..run import connect, ingest
 from .search_sources import DEFAULT_ENGINES, SearchClient, ConfigurationMissing, CallLimit, registry as source_registry
+from .editorial_policy import BACKGROUND_RULE
 
 VOCABULARY = {
     'materials': ['glass', 'wood', 'fabric', 'stone', 'metal', 'water'],
@@ -28,7 +29,7 @@ GENERIC = ['photograph', 'everyday photograph', 'documentary photograph', 'photo
 EXPLORATION_INSTRUCTIONS = '''Proponi query di ricerca di fotografie indipendenti da categorie o vocabolari prefissati.
 Esplora liberamente scene, relazioni, materiali, composizioni, dettagli, texture, immagini quotidiane e sorprendenti.
 Non privilegiare lo strano, il bello o soggetti isolati. Non usare candidate REAL, prompt SLOP o preferenze editoriali pregresse.
-Restituisci JSON con un solo campo queries: lista di stringhe. Non occorrono riferimenti a immagini specifiche.'''
+Restituisci JSON con un solo campo queries: lista di stringhe. Non occorrono riferimenti a immagini specifiche.''' + '\n' + BACKGROUND_RULE
 
 
 def plan(seed, exploratory, engines=DEFAULT_ENGINES, count=12, vocabulary=None):
