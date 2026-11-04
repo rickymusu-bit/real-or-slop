@@ -79,3 +79,23 @@ nullo e revisione pendente; `report.json` conta chiamate, astensioni, scelte
 diverse dal centro e casi segnalati. I documenti e gli originali precedenti
 restano invariati. Il report non trasforma il giudizio del modello in una misura
 di efficacia: questa richiede le valutazioni umane.
+
+## Normalizzazione tecnica richiesta sulle approvate
+
+Quando il proprietario richiede esplicitamente di uniformare le immagini già
+approvate, la presentazione può essere registrata separatamente dalla sorgente
+approvata. Non si trasferisce il vecchio profilo ai nuovi pixel e non si dichiara
+che il proprietario abbia visto un fotogramma nuovo: il voto originale conserva
+il proprio hash. La normalizzazione autorizzata conserva soggetto e contesto,
+non ha flag di dubbio, ha una traccia distinta e un nuovo profilo. Le successive
+revisioni dell'utente riguardano l'hash della presentazione effettiva.
+
+Verifica del 2026-11-04: 81 approvate nella coda e una nel catalogo privato
+precedente, escluse le fixture demo. Ottanta file sono già 1024×1024; due REAL
+misurano 1024×683 e 1600×1067. Preparate due copie standard con Terra, senza
+rigenerare immagini: una scelta diretta già archiviata è riutilizzata dopo la
+verifica degli hash, una nuova scelta è effettuata via Responses diretta e due
+profili nuovi sono calcolati sui file finali. Entrambi i ritagli conservano il
+contesto senza segnalazioni del modello; questo non prova una superiorità
+misurata rispetto ad altri tagli. L'applicazione online rimane un passaggio
+separato dalla preparazione e richiede il rilascio del supporto alle presentazioni.
