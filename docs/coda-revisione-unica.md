@@ -65,3 +65,27 @@ applicando la migrazione o distribuendo il pulsante.
 
 La vecchia sezione dello Studio è rimossa dall'interfaccia. I vecchi collegamenti
 `/admin/slop` riportano alla coda unica; dossier e giudizi non vengono svuotati.
+
+## Formato delle immagini approvate
+
+Lo standard è 1024×1024 RGB WebP q85. La verifica legge i file effettivi, non solo
+i campi del dossier. Una normalizzazione tecnica esplicitamente richiesta dal
+proprietario si registra separatamente in `editorial_review_presentations`:
+non riscrive scheda, provenienza o voto sull'inquadratura originale e non inventa
+una nuova approvazione umana. La qualità approvata della sorgente rimane tale;
+la trasformazione autorizzata ha coordinate, hash, ricevuta Terra e profilo
+calcolato sui nuovi pixel. I casi in cui il ritaglio perde contesto o richiede
+un giudizio umano non si applicano automaticamente.
+
+La vista `editorial_review_effective_images` fornisce file, hash e profilo della
+presentazione effettiva alla coda. L'API registra le successive revisioni
+sull'hash realmente visualizzato e respinge una pagina rimasta sull'immagine
+precedente. Anche la cancellazione di una presentazione impedisce il ritorno
+sia del vecchio fotogramma sia della copia standard. Originali e giudizi restano
+immutati e disponibili per audit.
+
+`scripts/apply-review-presentations.py MANIFEST` verifica localmente formato,
+RGB, hash e profilo. `--apply` copia i file privati e registra le presentazioni
+solo se la sorgente è ancora approvata alla revisione catturata. Serve prima il
+rilascio della migrazione 0016; la preparazione delle copie non aggiorna da sola
+il sito. Le presentazioni già identiche vengono riconosciute senza sovrascriverle.

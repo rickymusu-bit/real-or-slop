@@ -1,7 +1,7 @@
 import { body, hash, HttpError, id, json, type Env } from "./core";
 
 interface InboxRow {
-  id: string; origin: string; sha256: string; media_key: string; metadata_json: string;
+  id: string; origin: string; sha256: string; source_sha256: string; media_key: string; metadata_json: string;
   status: string; revision: number; pair_key: string | null; created_at: string;
   partner_id?: string | null; partner_origin?: string; note?: string | null;
 }
@@ -60,8 +60,8 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
     const [rows, counts, total] = await Promise.all([
       env.DB.prepare(`SELECT q.*,p.id AS partner_id,p.origin AS partner_origin,
         (SELECT note FROM editorial_review_inbox_events e WHERE e.image_id=q.id ORDER BY revision DESC LIMIT 1) AS note
-        FROM editorial_review_inbox q LEFT JOIN editorial_review_inbox p ON p.id=(
-          SELECT id FROM editorial_review_inbox WHERE pair_key=q.pair_key AND origin<>q.origin ORDER BY created_at,id LIMIT 1)
+        FROM editorial_review_effective_images q LEFT JOIN editorial_review_effective_images p ON p.id=(
+          SELECT id FROM editorial_review_effective_images WHERE pair_key=q.pair_key AND origin<>q.origin ORDER BY created_at,id LIMIT 1)
         WHERE ${where} ORDER BY q.created_at DESC,q.id LIMIT 50 OFFSET ?`).bind(...args, offset).all<InboxRow>(),
       env.DB.prepare("SELECT status,origin,count(*) AS count FROM editorial_review_inbox GROUP BY status,origin").all(),
       env.DB.prepare(`SELECT count(*) AS count FROM editorial_review_inbox q WHERE ${where}`).bind(...args).first<{ count: number }>(),
@@ -73,7 +73,7 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
   }
   const match = path.match(/^\/api\/admin\/review-inbox\/([\w-]+)(?:\/(image|decision|history))?$/);
   if (!match) throw new HttpError(404, "Coda di revisione inesistente");
-  const row = await env.DB.prepare("SELECT * FROM editorial_review_inbox WHERE id=?").bind(match[1]).first<InboxRow>();
+  const row = await env.DB.prepare("SELECT * FROM editorial_review_effective_images WHERE id=?").bind(match[1]).first<InboxRow>();
   if (!row) throw new HttpError(404, "Immagine non trovata");
   if (!match[2] && request.method === "DELETE") {
     const data = await body(request, 1000);
@@ -82,7 +82,7 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
       throw new HttpError(409, "Puoi eliminare soltanto un'immagine rifiutata: verifica lo stato e conferma");
     const result = await env.DB.batch([
       env.DB.prepare(`INSERT INTO editorial_review_deleted_images
-        SELECT id,origin,sha256,revision,?,? FROM editorial_review_inbox WHERE id=? AND revision=? AND sha256=? AND status='rejected'`)
+        SELECT id,origin,source_sha256,revision,?,? FROM editorial_review_effective_images WHERE id=? AND revision=? AND sha256=? AND status='rejected'`)
         .bind((await hash(env.ADMIN_TOKEN!)).slice(0, 12), new Date().toISOString(), row.id, row.revision, row.sha256),
       env.DB.prepare(`DELETE FROM editorial_review_inbox WHERE id=? AND revision=? AND status='rejected'
         AND EXISTS(SELECT 1 FROM editorial_review_deleted_images d WHERE d.image_id=editorial_review_inbox.id
@@ -109,8 +109,8 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
     if ([...new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()))].map(x => x.toString(16).padStart(2, "0")).join("") !== row.sha256) throw new HttpError(409, "Il file è cambiato: revisione bloccata");
     const event = id(), now = new Date().toISOString();
     const result = await env.DB.batch([
-      env.DB.prepare(`INSERT INTO editorial_review_inbox_events SELECT ?,id,revision+1,?,?,?,?,? FROM editorial_review_inbox WHERE id=? AND revision=?`)
-        .bind(event, (await hash(env.ADMIN_TOKEN!)).slice(0, 12), data.decision, row.sha256, data.note, now, row.id, row.revision),
+      env.DB.prepare(`INSERT INTO editorial_review_inbox_events SELECT ?,id,revision+1,?,?,?,?,? FROM editorial_review_effective_images WHERE id=? AND revision=? AND sha256=?`)
+        .bind(event, (await hash(env.ADMIN_TOKEN!)).slice(0, 12), data.decision, row.sha256, data.note, now, row.id, row.revision, row.sha256),
       env.DB.prepare("UPDATE editorial_review_inbox SET status=?,revision=revision+1 WHERE id=? AND revision=? AND EXISTS(SELECT 1 FROM editorial_review_inbox_events WHERE id=?)")
         .bind(data.decision, row.id, row.revision, event),
     ]);
