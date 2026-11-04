@@ -1,3 +1,25 @@
+# Cropping assistito — 2026-11-04
+
+[Implementazione e prova](cropping-assistito-v2.md): 16 chiamate Responses sincrone
+a `gpt-6.1-terra`, quattro immagini già quadrate saltate, 20 varianti 1024×1024 RGB.
+Sette scelte diverse dal centro e sei segnalazioni, inclusa un'astensione; zero
+valutazioni umane registrate e nessuna superiorità misurata. Originali intatti,
+profili nuovi pendenti, nessuna pubblicazione. Stima dai token 0,060506 USD con
+le tariffe archiviate del pilota, prenotazione aggiuntiva 0,288 USD.
+
+119 test Python passati, compresi limiti del ritaglio, scelta strutturata,
+astensione, budget prima delle chiamate, invii incerti senza retry, ripresa
+idempotente e rifiuto di varianti alterate. Ripresa del run reale senza permesso
+di rete completata senza nuove chiamate. Chromium sulla nuova galleria a larghezze
+1440 e 390: 20 confronti, 60 immagini caricate, nessun overflow o errore JavaScript,
+voto salvato ed esportato; il voto di prova è stato rimosso. Screenshot e JSON
+nell'artifact privato. `git diff --check` superato. Le verifiche
+TypeScript, integrazione Worker e gioco nelle sezioni successive si riferiscono
+ai rispettivi interventi precedenti: questo aggiornamento modifica Python e
+documentazione, non Worker o interfaccia di produzione.
+
+---
+
 # Pilota rapido reale — 2026-11-03
 
 Aggiornamento presentazione: 20 varianti locali 1024×1024 RGB WebP q85, con

@@ -20,8 +20,7 @@ from .protocol import identifier, require
 STANDARD_SIZE = (1024, 1024)
 
 
-def standard_copy(raw, target, size=STANDARD_SIZE):
-    require(size == STANDARD_SIZE, 'Il formato standard v2 è 1024×1024')
+def oriented_frame(raw):
     require(0 < len(raw) <= 12_000_000, 'Originale vuoto o oltre 12 MB')
     Image.MAX_IMAGE_PIXELS = 30_000_000
     with Image.open(io.BytesIO(raw)) as source:
@@ -31,30 +30,33 @@ def standard_copy(raw, target, size=STANDARD_SIZE):
         frame = Image.new('RGBA', oriented.size, 'white')
         frame.alpha_composite(oriented)
         frame = frame.convert('RGB')
-        width, height = frame.size
-        from math import gcd
-        divisor = gcd(*size)
-        ratio_w, ratio_h = size[0] // divisor, size[1] // divisor
-        units = min(width // ratio_w, height // ratio_h)
-        require(units > 0, 'Originale troppo piccolo per il formato')
-        crop_w, crop_h = units * ratio_w, units * ratio_h
-        left, top = (width - crop_w) // 2, (height - crop_h) // 2
-        box = (left, top, left + crop_w, top + crop_h)
-        frame.crop(box).resize(size, Image.Resampling.LANCZOS).save(target, 'WEBP', quality=85, method=6)
+    return frame
+
+
+def standard_copy(raw, target, size=STANDARD_SIZE, crop_box=None):
+    require(size == STANDARD_SIZE, 'Il formato standard v2 è 1024×1024')
+    frame = oriented_frame(raw)
+    width, height = frame.size
+    side = min(width, height)
+    left, top = (width - side) // 2, (height - side) // 2
+    center = (left, top, left + side, top + side)
+    box = tuple(crop_box) if crop_box is not None else center
+    require(len(box) == 4 and all(type(n) is int for n in box), 'Coordinate ritaglio non valide')
+    require(0 <= box[0] < box[2] <= width and 0 <= box[1] < box[3] <= height and
+            box[2] - box[0] == box[3] - box[1] == side, 'Richiesto quadrato massimo entro il fotogramma')
+    frame.crop(box).resize(size, Image.Resampling.LANCZOS).save(target, 'WEBP', quality=85, method=6)
     target.chmod(0o600)
     return dict(version='1.1.0', source_sha256=hashlib.sha256(raw).hexdigest(),
                 sha256=hashlib.sha256(target.read_bytes()).hexdigest(),
                 oriented_source_size=[width, height], crop_box=list(box),
-                retained_area=crop_w * crop_h / (width * height),
+                retained_area=side * side / (width * height),
                 width=size[0], height=size[1], format='webp', color_mode='RGB', webp_quality=85,
-                operations=['exif_orientation', 'alpha_on_white', 'center_crop', 'resize', 'compression', 'format_conversion'],
-                upscaled=crop_w < size[0] or crop_h < size[1],
+                operations=['exif_orientation', 'alpha_on_white', 'center_crop' if box == center else 'selected_crop', 'resize', 'compression', 'format_conversion'],
+                upscaled=side < size[0],
                 review_status='pending', profile=None)
 
 
-def export(states, out, size=STANDARD_SIZE):
-    require(size == STANDARD_SIZE, 'Il formato standard v2 è 1024×1024')
-    require(not out.exists(), 'La cartella di destinazione esiste già: usare una nuova variante')
+def source_records(states):
     records = []
     seen = set()
     # Validate inputs before creating any output.
@@ -70,6 +72,13 @@ def export(states, out, size=STANDARD_SIZE):
             require(hashlib.sha256(preview.read_bytes()).hexdigest() == row['sha256'], 'Anteprima precedente modificata')
             records.append((row, raw, preview))
     require(bool(records), 'Nessuna candidata')
+    return records
+
+
+def export(states, out, size=STANDARD_SIZE):
+    require(size == STANDARD_SIZE, 'Il formato standard v2 è 1024×1024')
+    require(not out.exists(), 'La cartella di destinazione esiste già: usare una nuova variante')
+    records = source_records(states)
     (out / 'media').mkdir(parents=True, mode=0o700)
     (out / 'previous-frame').mkdir(mode=0o700)
     variants = []

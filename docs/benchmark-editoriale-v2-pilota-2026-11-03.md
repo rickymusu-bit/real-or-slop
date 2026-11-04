@@ -15,6 +15,13 @@ Costo stimato dai token API sincroni: **0,530162 USD**, comprendendo cache write
 
 ## Stato della revisione
 
+Aggiornamento 2026-11-04: implementata e [provata la scelta dei ritagli con
+Terra](cropping-assistito-v2.md). Sedici chiamate sincrone, quattro immagini già
+quadrate saltate, sette scelte diverse dal centro, sei segnalazioni di revisione
+inclusa un'astensione. Galleria di confronto con voti locali esportabili in
+`terra-crop-2026-11-04/`. Stima aggiuntiva 0,060506 USD con le tariffe archiviate
+del pilota; nessuna fattura verificata, approvazione o pubblicazione.
+
 ### Correzione della ricerca e del formato
 
 La scoperta prevista usa keyword su motori di ricerca per immagini, senza
