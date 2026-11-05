@@ -3,6 +3,7 @@ import { safeUrl } from "./admin";
 import { ImagePreloader } from "./preload";
 import { serverCountdown } from "./clock";
 import { protectGameMedia } from "./media-privacy";
+import { enableAnswerSwipe } from "./swipe-v1.0.0";
 export interface Reveal {
   serverNow?: number;
   expiresAt?: number | null;
@@ -65,7 +66,7 @@ export function zoom() {
   });
 }
 export const choices = (attribute: "data-choice" | "data-pvp-choice", disabled = false) =>
-  `<div class="choices"><button ${attribute}="REAL" class="choice-real" aria-label="REAL, reale. Tasto R" ${disabled ? "disabled" : ""}><span>REAL</span><kbd aria-hidden="true">R</kbd></button><button ${attribute}="AI" class="choice-slop" aria-label="SLOP, generata con IA. Tasto I" ${disabled ? "disabled" : ""}><span>SLOP</span><kbd aria-hidden="true">I</kbd></button></div>`;
+  `<div class="choices"><button ${attribute}="REAL" class="choice-real" aria-label="REAL, reale. Tasto R" ${disabled ? "disabled" : ""}><span>← REAL</span><kbd aria-hidden="true">R</kbd></button><button ${attribute}="AI" class="choice-slop" aria-label="SLOP, generata con IA. Tasto I" ${disabled ? "disabled" : ""}><span>SLOP →</span><kbd aria-hidden="true">I</kbd></button></div>`;
 export const progress = (completed: number, total: number) =>
   `<progress class="round-progress" max="${total}" value="${completed}" aria-label="Immagini completate">${completed} / ${total}</progress>`;
 export const feedback = (r: Reveal) =>
@@ -215,10 +216,11 @@ async function play(sid: string, warning = "") {
       syncClock(state);
     }
     last = state; busy = false; refreshing = false;
-    content().innerHTML = `<section class="play" aria-label="Domanda ${q.number} di ${state.total}"><div class="play-top"><span>${state.mode === "training" ? "ALLENAMENTO" : "A TEMPO"} · DEMO</span><div class="play-metrics"><span>Round <strong>${q.number}/${state.total}</strong></span><span><strong>${state.score}</strong> pt</span><strong id="clock" role="timer" aria-label="Tempo rimasto"></strong></div></div>${progress(state.answered, state.total)}${warning ? `<details class="play-warning"><summary>Nota sul catalogo</summary><p>${escape(warning)}</p></details>` : ""}<div class="game-media-surface"><img data-game-media draggable="false" class="play-image" src="${escape(asset.url)}" alt="${escape(q.alt)}" loading="eager" fetchpriority="high" decoding="async" tabindex="0" role="button" aria-label="Ingrandisci l’immagine"><div class="media-privacy-cover"><p>Immagine oscurata dopo aver lasciato la pagina. Il tempo continua.</p><button type="button" data-reveal-media>Mostra immagine</button></div></div><p class="sr-only">R per REAL, I per SLOP (generata con IA).</p>${choices("data-choice")}<div id="feedback" aria-live="polite"></div><div id="play-error" role="alert"></div></section>`;
+    content().innerHTML = `<section class="play" aria-label="Domanda ${q.number} di ${state.total}"><div class="play-top"><span>${state.mode === "training" ? "ALLENAMENTO" : "A TEMPO"} · DEMO</span><div class="play-metrics"><span>Round <strong>${q.number}/${state.total}</strong></span><span><strong>${state.score}</strong> pt</span><strong id="clock" role="timer" aria-label="Tempo rimasto"></strong></div></div>${progress(state.answered, state.total)}${warning ? `<details class="play-warning"><summary>Nota sul catalogo</summary><p>${escape(warning)}</p></details>` : ""}<div class="game-media-surface"><img data-game-media draggable="false" class="play-image" src="${escape(asset.url)}" alt="${escape(q.alt)}" loading="eager" fetchpriority="high" decoding="async" tabindex="0" role="button" aria-label="Ingrandisci l’immagine; puoi anche trascinarla a sinistra per REAL o a destra per SLOP"><div class="media-privacy-cover"><p>Immagine oscurata dopo aver lasciato la pagina. Il tempo continua.</p><button type="button" data-reveal-media>Mostra immagine</button></div></div><p class="sr-only">Trascina l’immagine a sinistra per REAL, a destra per SLOP. Oppure usa i pulsanti o i tasti R e I. Premi sull’immagine per ingrandirla.</p>${choices("data-choice")}<div id="feedback" aria-live="polite"></div><div id="play-error" role="alert"></div></section>`;
     if (seconds) document.querySelector("#clock")!.textContent = seconds() + " s";
     mediaPrivacy.refresh();
     zoom();
+    enableAnswerSwipe(document.querySelector<HTMLImageElement>(".play-image")!, "data-choice");
     for (const future of manifest.slice(1, 3)) void preloader.prefetch(future.image).catch(() => { /* Retry if this future image is actually needed. */ });
     document.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach(button => {
       button.onclick = async () => {
