@@ -60,7 +60,7 @@ Migrazione additiva **0011**, non applicata da questa modifica; nessuna attivazi
 pagata, nuovo cron o pubblicazione automatica. Gli invii Batch possono richiedere
 24 ore per fase. La raccolta dalle fonti resta separata da OpenAI.
 
-Revisione editoriale: `/admin` mostra un’immagine e due pulsanti, **Approva / Rifiuta**. Preparazione automatica e preferenze con esplorazione del 25%: [specifica v1.0.0](docs/revisione-visiva-preferenze-v1.0.0.md). La gestione tecnica resta in `/admin?advanced=1`.
+Revisione editoriale: `/admin` mostra un’immagine e due pulsanti, **Approva / Rifiuta**. Preparazione automatica e preferenze con esplorazione del 25%: [specifica v1.0.0](docs/revisione-visiva-preferenze-v1.0.0.md). La gestione tecnica resta in `/admin?advanced=1`. La pagina privata `/admin/similarity` verifica duplicati e possibili scene ripetute separatamente fra REAL e fra SLOP, con SHA, dHash e DINOv2, confronti affiancati, storico e scansioni incrementali: [procedura e limiti](docs/controllo-somiglianze-v1.md). Per installare il runtime CPU: `ONNXRUNTIME_NODE_INSTALL_CUDA=skip npm ci`.
 
 > Regole di gioco aggiornate: [tempi per immagine, oscuramento e PvP sospeso](docs/gioco-tempi-protezione-v1.0.0.md).
 > Le nuove partite A tempo non usano più un countdown complessivo. La documentazione PvP sottostante è storica: la modalità pubblica è sospesa, codice e dati sono conservati.
