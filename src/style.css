@@ -180,7 +180,21 @@ textarea { display: block; max-width: 100%; resize: vertical; }
 .round-progress::-webkit-progress-bar { background: var(--hairline); }
 .round-progress::-webkit-progress-value { background: var(--real); }
 .round-progress::-moz-progress-bar { background: var(--real); }
-.play-image { display: block; width: 100%; height: clamp(160px, calc(100svh - 270px), 700px); object-fit: contain; background: var(--surface); cursor: zoom-in; }
+.play-image { display: block; width: 100%; height: clamp(160px, calc(100svh - 270px), 700px); object-fit: contain; background: var(--surface); cursor: grab; touch-action: pan-y; }
+/* v1.0.0: same horizontal gesture with touch, pen and mouse. Vertical scrolling is preserved. */
+.play-image.swipe-dragging { cursor: grabbing; transition: none; }
+.play-image:not(.swipe-dragging) { transition: transform .16s ease-out, opacity .16s ease-out; }
+.game-media-surface, #pvp-media { position: relative; overflow: hidden; }
+.swipe-preview {
+  position: absolute; z-index: 2; left: 50%; top: 22px;
+  transform: translateX(-50%); padding: 8px 18px;
+  border: 2px solid currentColor; border-radius: 4px; font: 700 24px/1 "Space Grotesk", Arial, sans-serif;
+  opacity: 0; pointer-events: none; background: var(--surface);
+}
+.swipe-preview.swipe-visible { opacity: .94; }
+.swipe-preview.swipe-real { color: var(--real); }
+.swipe-preview.swipe-slop { color: var(--slop); }
+
 .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0 0; }
 .choices button { min-height: 60px; gap: 18px; border: 2px solid transparent; color: var(--on-accent); font: 700 23px/1 "Space Grotesk", Arial, sans-serif; letter-spacing: -.03em; }
 .choices .choice-real { background: var(--real); }
