@@ -1,0 +1,170 @@
+{
+  "version": "1.0.0",
+  "annotation_status": "implementation_author_annotations_not_independent_human_validation",
+  "limitations": [
+    "Small purposive development sample, not an independent or blind human benchmark.",
+    "Triplets encode explicit subject/context preferences, not visual variety, quality, approval or difficulty.",
+    "Structured annotations are authored separately, never extracted from REAL photographs.",
+    "Compare both representations on exactly the same sample and triplets."
+  ],
+  "samples": [
+    {
+      "brief_id": "brief-0001",
+      "subject": "an adult portrait",
+      "context": "a room near a window",
+      "composition": "include part of the surrounding room"
+    },
+    {
+      "brief_id": "brief-0002",
+      "subject": "an older adult portrait",
+      "context": "a garden with vegetation",
+      "composition": "include surrounding space"
+    },
+    {
+      "brief_id": "brief-0004",
+      "subject": "an adult portrait",
+      "context": "a workshop",
+      "composition": "include readable elements of the workspace"
+    },
+    {
+      "brief_id": "brief-0012",
+      "subject": "an adult repairing an object at a workbench",
+      "context": "a workshop",
+      "composition": "include the workshop around the person"
+    },
+    {
+      "brief_id": "brief-0015",
+      "subject": "a solitary tree",
+      "context": "a meadow in a landscape",
+      "composition": "include the ground and surrounding landscape"
+    },
+    {
+      "brief_id": "brief-0016",
+      "subject": "an olive tree",
+      "context": "a rural setting with vegetation",
+      "composition": "include the ground and surrounding vegetation"
+    },
+    {
+      "brief_id": "brief-0027",
+      "subject": "a fox",
+      "context": "the edge of a wood",
+      "composition": "include the surrounding habitat"
+    },
+    {
+      "brief_id": "brief-0028",
+      "subject": "a cat",
+      "context": "a room near a window",
+      "composition": "include part of the interior"
+    },
+    {
+      "brief_id": "brief-0037",
+      "subject": "a mountain lake",
+      "context": "mountains and a shore",
+      "composition": "show the lake within the surrounding landscape"
+    },
+    {
+      "brief_id": "brief-0043",
+      "subject": "a river bend",
+      "context": "banks and surrounding terrain",
+      "composition": "an elevated view including both banks and terrain"
+    },
+    {
+      "brief_id": "brief-0051",
+      "subject": "a modern library interior",
+      "context": "shelves and furniture",
+      "composition": "show the architectural space"
+    },
+    {
+      "brief_id": "brief-0061",
+      "subject": "an arch bridge over a watercourse",
+      "context": "banks and a landscape",
+      "composition": "include the surrounding landscape"
+    },
+    {
+      "brief_id": "brief-0062",
+      "subject": "a viaduct crossing a valley",
+      "context": "valley terrain",
+      "composition": "include the surrounding setting"
+    },
+    {
+      "brief_id": "brief-0071",
+      "subject": "an armchair",
+      "context": "a lived-in room with nearby furniture",
+      "composition": "include the floor and wall"
+    },
+    {
+      "brief_id": "brief-0083",
+      "subject": "a landscape painting",
+      "context": "a room and surrounding wall",
+      "composition": "show the whole physical artwork and frame"
+    },
+    {
+      "brief_id": "brief-0084",
+      "subject": "a painted portrait",
+      "context": "a home with nearby furniture",
+      "composition": "show the whole physical artwork and frame"
+    },
+    {
+      "brief_id": "brief-0094",
+      "subject": "the surface of a stone wall near an arch",
+      "context": "a building",
+      "composition": "include part of the surrounding building"
+    },
+    {
+      "brief_id": "brief-0098",
+      "subject": "a metal railing",
+      "context": "a staircase",
+      "composition": "include steps and surrounding space"
+    }
+  ],
+  "triplets": [
+    {
+      "anchor": "brief-0001",
+      "closer": "brief-0002",
+      "further": "brief-0062",
+      "reason": "Both are environmental portraits; the viaduct is an engineering subject."
+    },
+    {
+      "anchor": "brief-0004",
+      "closer": "brief-0012",
+      "further": "brief-0037",
+      "reason": "Human subjects in workshops share context despite different activity; a lake does not."
+    },
+    {
+      "anchor": "brief-0015",
+      "closer": "brief-0016",
+      "further": "brief-0071",
+      "reason": "Trees in a landscape share subject and setting; an indoor chair does not."
+    },
+    {
+      "anchor": "brief-0061",
+      "closer": "brief-0062",
+      "further": "brief-0028",
+      "reason": "Bridges and viaducts cross terrain; an indoor cat is unrelated."
+    },
+    {
+      "anchor": "brief-0083",
+      "closer": "brief-0084",
+      "further": "brief-0037",
+      "reason": "Both show physical framed artworks in rooms; a lake shares the depicted topic only."
+    },
+    {
+      "anchor": "brief-0001",
+      "closer": "brief-0028",
+      "further": "brief-0043",
+      "reason": "Shared window and room context despite different subjects; river view is outdoors."
+    },
+    {
+      "anchor": "brief-0094",
+      "closer": "brief-0098",
+      "further": "brief-0027",
+      "reason": "Built surface details with architectural context; a fox is an animal subject."
+    },
+    {
+      "anchor": "brief-0071",
+      "closer": "brief-0051",
+      "further": "brief-0027",
+      "reason": "Indoor furniture and space versus an outdoor woodland animal."
+    }
+  ]
+}

@@ -1,3 +1,9 @@
+## Non rilasciato — issue #44
+
+- Catalogo canonico inglese v1.1.0: 100 brief alla revisione 2, tassonomia inglese e migrazione ispezionabile, con storico e cicli congelati conservati.
+- Indice testuale privato v1.0.0: MiniLM locale con revisione fissata, baseline TF-IDF, fixture e dry-run; cache composita e snapshot immutabili, recupero e verifica d'integrità.
+- Confronto su campione annotato di rappresentazione neutrale e strutturata, rapporto sui 100 brief e test offline. Nessuna chiamata API pagata, migrazione remota, deploy o modifica al gioco.
+
 ## 0.15.0 — 2026-11-03 (sperimentale, non attivata)
 
 - Protocollo editoriale v2 indipendente: scoperta REAL multicanale e generazioni SLOP da idee originali o prompt aperti, senza fotografie di riferimento, classifica condivisa, soglie di sorpresa o preferenze storiche.

@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-11-05T13:21:51.533575Z",
+  "language": "en",
+  "format": "snake_case",
+  "tags": {
+    "portraits": "Portrait subjects; not restricted to a location.",
+    "environmental_portrait": "A portrait including the surrounding environment.",
+    "activities": "People carrying out an activity.",
+    "subject_in_context": "A subject shown with its surrounding setting.",
+    "botany": "Plants, fungi and cultivated vegetation.",
+    "contextual_detail": "A close subject or surface with readable surroundings.",
+    "landscape_context": "Landscape present as context for another subject; distinct from the landscapes topic.",
+    "animals": "Animal subjects within a habitat or domestic setting.",
+    "landscapes": "Landscape as the primary subject; distinct from landscape_context.",
+    "architecture": "Buildings, interiors and built spaces.",
+    "interior": "An indoor setting; independent of the primary subject.",
+    "engineering": "Civil engineering and infrastructure.",
+    "objects": "Objects within a readable setting.",
+    "art": "Physical artworks shown in their environment.",
+    "artwork_in_context": "The whole physical artwork in its display setting.",
+    "details": "Surfaces, textures and small details as subjects."
+  },
+  "legacy_to_canonical": {
+    "ritratti": "portraits",
+    "ritratto_ambientato": "environmental_portrait",
+    "attivita": "activities",
+    "soggetto_nel_contesto": "subject_in_context",
+    "botanica": "botany",
+    "dettaglio_ambientato": "contextual_detail",
+    "paesaggio": "landscape_context",
+    "animali": "animals",
+    "paesaggi": "landscapes",
+    "architettura": "architecture",
+    "interno": "interior",
+    "ingegneria": "engineering",
+    "oggetti": "objects",
+    "arte": "art",
+    "opera_ambientata": "artwork_in_context",
+    "dettagli": "details"
+  },
+  "aliases": {
+    "portrait": "portraits",
+    "botanical": "botany",
+    "animal": "animals",
+    "object": "objects",
+    "landscape": "landscapes"
+  },
+  "notes": [
+    "Legacy paesaggio is contextual; paesaggi is a topic. These remain distinct.",
+    "Canonical aliases are rejected in records; normalize explicitly before admission.",
+    "Extend this versioned vocabulary explicitly for new tags; do not silently invent synonyms."
+  ]
+}

@@ -2,6 +2,7 @@
 import json
 import math
 import re
+import unicodedata
 from pathlib import Path
 from urllib.parse import urlsplit
 from ..editorial import PipelineStop
@@ -22,6 +23,21 @@ def exact(value, keys, name):
 
 def text(value, limit=8000):
     return isinstance(value, str) and 0 < len(value.strip()) <= limit
+
+
+def english_text(value):
+    """Conservative language guard, not a classifier or proof of translation.
+
+    Search queries are exempt: other languages can help discover REAL sources.
+    Translation fidelity and new vocabulary still require editorial review.
+    """
+    require(text(value, 2000), 'Testo canonico inglese richiesto')
+    words = set(re.findall(r'[a-z]+', unicodedata.normalize('NFKC', value).casefold()))
+    italian = {'un', 'una', 'uno', 'il', 'gli', 'della', 'dello', 'delle', 'degli', 'nel', 'nella',
+               'nelle', 'sul', 'sulla', 'con', 'vicino', 'ritratto', 'visibile', 'visibili', 'circostante'}
+    english = {'a', 'an', 'the', 'of', 'with', 'and', 'on', 'near', 'beside', 'surrounding', 'visible'}
+    require(not words.intersection(italian) and len(words.intersection(english)) >= 2,
+            'Descrizione e prompt devono essere in inglese; testo legacy o lingua incerta')
 
 
 def identifier(value):

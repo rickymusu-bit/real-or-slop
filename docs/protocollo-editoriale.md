@@ -54,10 +54,20 @@ rimangono conservati; non si applica alcuna pulizia automatica alle altre immagi
 
 ## Catalogo dei brief
 
-Il [catalogo iniziale](../data/editorial/briefs.v1.json) contiene **100 bozze**
-originali redatte come seed editoriale: non sono cento immagini approvate né
+Il [catalogo canonico inglese v1.1.0](../data/editorial/briefs.v1.1.0.json) contiene
+**100 bozze** originali redatte come seed editoriale, ora alla revisione 2:
+non sono cento immagini approvate né
 un corpus ottenuto descrivendo foto REAL. Ogni voce ha ID stabile, revisione,
 stato, tag descrittivi, mezzo, descrizione, prompt autonomo e due query.
+
+Descrizioni, tag e prompt nuovi usano solo inglese, senza traduzione italiana
+parallela. Le query principali sono inglesi; una query alternativa può usare
+altre lingue per la scoperta REAL. Tassonomia, traduzioni e mappatura di revisione
+sono tracciate nell'[indice testuale v1.0.0](indice-brief.v1.0.0.md).
+Il [catalogo italiano originale](../data/editorial/briefs.v1.json) rimane
+immutato, così come gli snapshot dei cicli già congelati. Il CLI usa il nuovo
+catalogo per default; per riprodurre una selezione storica specificare quello
+originale con `--catalog` e conservare la cartella già congelata.
 
 Le aree comprendono ritratti, attività, botanica, animali, paesaggi, architettura,
 ingegneria civile, oggetti, arte e dettagli. I tag servono a osservare la copertura

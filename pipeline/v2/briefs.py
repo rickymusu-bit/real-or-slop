@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 from .direct import digest
-from .protocol import exact, require, text, identifier, generation_plan
+from .protocol import exact, require, text, identifier, generation_plan, english_text
 from .study import Preparation
 from ..editorial import write_private, now
 from .editorial_policy import BACKGROUND_RULE
@@ -17,7 +17,8 @@ Questi esempi servono a esplorare la varietà, non sono quote per il catalogo fu
 Lascia libertà di composizione. Scene semplici e soggetti singoli sono validi. Non chiedere caos, molte persone,
 attività umane, difetti fotografici o strategie per sembrare REAL. Non imporre anomalie, bellezza o spettacolarità.
 Ogni descrizione deve essere breve e abbastanza ampia da trovare fotografie o opere ben composte già esistenti.
-Scrivi description in italiano fino a 35 parole, slop_prompt autonomo in inglese fino a 75 parole, e due search_queries brevi in inglese.
+Scrivi description solo in inglese fino a 35 parole, slop_prompt autonomo solo in inglese fino a 75 parole, e due search_queries brevi in inglese.
+Non aggiungere una traduzione italiana o campi paralleli. Le query aggiuntive possono usare altre lingue per la ricerca REAL.
 Usa medium photograph oppure artwork; artwork identifica l'opera come soggetto da mostrare nel suo ambiente,
 non una riproduzione piatta senza contesto. Per un quadro il brief e il prompt SLOP devono includere la vista
 dell'opera da una certa distanza, la cornice quando presente e lo spazio e gli elementi vicini.
@@ -69,6 +70,8 @@ def freeze(folder: Path, api, count=5):
     instructions = INSTRUCTIONS+'\nNumero richiesto: '+str(count)+'\nID: '+json.dumps(ids)
     result = Preparation(folder, api).call('shared-briefs', instructions, schema, 3000)
     validate(result)
+    for row in result['briefs']:
+        english_text(row['description']); english_text(row['slop_prompt'])
     require({b['id'] for b in result['briefs']} == set(ids), 'ID o numero brief errati')
     write_private(plan_path, result)
     write_private(folder/'slop-plan.json', slop_plan(result))

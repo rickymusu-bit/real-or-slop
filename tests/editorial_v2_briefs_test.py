@@ -19,7 +19,8 @@ class BriefPilotTest(unittest.TestCase):
             calls = 0
             def request(self, endpoint, body):
                 self.calls += 1
-                return dict(status='completed', output=[dict(content=[dict(type='output_text', text=json.dumps(plan()))])]), 'req-fixture'
+                value = plan(); value['briefs'][0]['description'] = 'A painting with a boat.'
+                return dict(status='completed', output=[dict(content=[dict(type='output_text', text=json.dumps(value))])]), 'req-fixture'
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp); api = API()
             value = freeze(root, api, count=1)

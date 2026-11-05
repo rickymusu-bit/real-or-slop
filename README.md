@@ -13,7 +13,8 @@ o generare un corrispondente; diritti e provenienza si verificano separatamente.
 [Coda unica di revisione](docs/coda-revisione-unica.md) ·
 [Protocollo di riferimento](docs/protocollo-editoriale.md) ·
 [Criteri editoriali e contesto obbligatorio](docs/criteri-editoriali.md) ·
-[Catalogo iniziale: 100 brief in bozza](data/editorial/briefs.v1.json) ·
+[Catalogo inglese: 100 brief in bozza, revisione 2](data/editorial/briefs.v1.1.0.json) ·
+[Indice testuale e migrazione](docs/indice-brief.v1.0.0.md) ·
 [Pilota a cinque brief](docs/pilota-brief-condivisi-2026-11-04.md).
 
 Il catalogo dei brief cresce separatamente dalle immagini: selezioni riproducibili
@@ -33,6 +34,15 @@ I brief iniziali sono bozze originali redatte come seed editoriale, non immagini
 approvate. La selezione non avvia generazioni o download. La ricerca REAL è
 ancora assistita; licenze, autenticità e approvazioni restano da verificare per
 ogni immagine. Nessun fine-tuning o apprendimento automatico dai voti è attivo.
+
+La issue #44 introduce il catalogo canonico inglese `briefs.v1.1.0.json`, con
+tassonomia e mappatura di migrazione versionate. Il catalogo italiano
+`briefs.v1.json` e i cicli congelati restano conservati. Nuovi brief, tag e prompt
+usano l'inglese; query REAL localizzate restano ammesse. `npm run index:briefs -- --dry-run` verifica l'indice senza inferenze; `--fixture` e `--encoder tfidf`
+funzionano offline. MiniLM testuale locale, confronto delle rappresentazioni,
+download gratuito esplicito e rapporto sui 100 brief:
+[procedura v1.0.0](docs/indice-brief.v1.0.0.md). Nessuna API pagata o
+connessione dell'indice al gioco.
 
 Il codice dello studio usa contratti dati e archivio privato v2. Le candidate
 non possono essere pubblicate dal vecchio flusso. I gate pagati e di produzione

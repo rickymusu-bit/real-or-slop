@@ -1,0 +1,1608 @@
+{
+  "version": "1.1.0",
+  "catalog_id": "real-or-slop-briefs",
+  "protocol_version": "3.0.0",
+  "authorship": "Authored editorial seed of original text briefs. Drafts for image proposals, not approved images. No REAL source images, titles, URLs or captions supplied as generation references.",
+  "briefs": [
+    {
+      "id": "brief-0001",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "portraits",
+        "environmental_portrait"
+      ],
+      "medium": "photograph",
+      "description": "A portrait of an adult near a window, with part of the room visible.",
+      "slop_prompt": "A photographic portrait of an adult near a window, including part of the surrounding room. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "adult portrait window room",
+        "environmental portrait home interior"
+      ]
+    },
+    {
+      "id": "brief-0002",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "portraits",
+        "environmental_portrait"
+      ],
+      "medium": "photograph",
+      "description": "A portrait of an older adult in a garden, with surrounding vegetation and space visible.",
+      "slop_prompt": "A photographic portrait of an older adult in a garden, with surrounding vegetation and space visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "older adult portrait garden",
+        "elderly person environmental portrait outdoors"
+      ]
+    },
+    {
+      "id": "brief-0003",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "portraits",
+        "environmental_portrait"
+      ],
+      "medium": "photograph",
+      "description": "A portrait of an adult on a city sidewalk, with the urban setting recognizable.",
+      "slop_prompt": "A photographic portrait of an adult on a city sidewalk, with a recognizable urban setting around the person. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "adult portrait city sidewalk",
+        "environmental portrait urban street"
+      ]
+    },
+    {
+      "id": "brief-0004",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "portraits",
+        "environmental_portrait"
+      ],
+      "medium": "photograph",
+      "description": "A portrait of an adult in a workshop, leaving elements of the setting visible.",
+      "slop_prompt": "A photographic portrait of an adult in a workshop, including readable elements of the surrounding workspace. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "adult portrait workshop",
+        "environmental portrait craft studio"
+      ]
+    },
+    {
+      "id": "brief-0005",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "portraits",
+        "environmental_portrait"
+      ],
+      "medium": "photograph",
+      "description": "A portrait of an adult in a park, with trees and a path visible in the background.",
+      "slop_prompt": "A photographic portrait of an adult in a park, with trees and a path visible in the background. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "adult portrait park trees",
+        "environmental portrait park path"
+      ]
+    },
+    {
+      "id": "brief-0006",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "portraits",
+        "environmental_portrait"
+      ],
+      "medium": "photograph",
+      "description": "A portrait of an adult in a library, with shelves and part of the room visible.",
+      "slop_prompt": "A photographic portrait of an adult in a library, showing shelves and part of the surrounding room. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "adult portrait library shelves",
+        "environmental portrait reading room"
+      ]
+    },
+    {
+      "id": "brief-0007",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "portraits",
+        "environmental_portrait"
+      ],
+      "medium": "photograph",
+      "description": "A portrait of an adult on a coastal promenade, with the sea and public space recognizable.",
+      "slop_prompt": "A photographic portrait of an adult on a coastal promenade, with the sea and public space visible around the subject. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "adult portrait seaside promenade",
+        "environmental portrait coastal walkway"
+      ]
+    },
+    {
+      "id": "brief-0008",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "portraits",
+        "environmental_portrait"
+      ],
+      "medium": "photograph",
+      "description": "A portrait of an adult by a market stall, with the market setting readable.",
+      "slop_prompt": "A photographic portrait of an adult beside a market stall, including enough surroundings to recognize the market setting. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "adult portrait market stall",
+        "environmental portrait outdoor market"
+      ]
+    },
+    {
+      "id": "brief-0009",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "activities",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "An adult playing a piano in a room, with the space around the instrument visible.",
+      "slop_prompt": "A photograph of an adult playing a piano in a room, with space around the instrument and readable surroundings. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "person piano room photograph",
+        "pianist interior environmental photograph"
+      ]
+    },
+    {
+      "id": "brief-0010",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "activities",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "An adult working on pottery in a workshop, with a workbench and the surrounding setting visible.",
+      "slop_prompt": "A photograph of an adult working with pottery in a ceramics workshop, including the workbench and surrounding studio. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "potter ceramics workshop photograph",
+        "person pottery studio workbench"
+      ]
+    },
+    {
+      "id": "brief-0011",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "activities",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "An adult preparing food in a kitchen that is readable within the frame.",
+      "slop_prompt": "A photograph of an adult preparing food in a kitchen, with counters and the surrounding kitchen visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "adult cooking kitchen photograph",
+        "food preparation person kitchen interior"
+      ]
+    },
+    {
+      "id": "brief-0012",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "activities",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "An adult repairing an object at a workbench, with the workshop visible.",
+      "slop_prompt": "A photograph of an adult repairing an object at a workbench, showing the workshop around the person. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "person repairing workbench workshop",
+        "adult repair workshop photograph"
+      ]
+    },
+    {
+      "id": "brief-0013",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "activities",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "An adult tending plants in a vegetable garden, with beds and the setting visible.",
+      "slop_prompt": "A photograph of an adult tending plants in a vegetable garden, with beds and the garden environment around the subject. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "gardening person vegetable garden",
+        "adult tending garden photograph"
+      ]
+    },
+    {
+      "id": "brief-0014",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "activities",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "An adult reading in a reading room, with furniture and the surrounding space visible.",
+      "slop_prompt": "A photograph of an adult reading in a reading room, showing furniture and the surrounding space. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "person reading reading room",
+        "adult reading library interior photograph"
+      ]
+    },
+    {
+      "id": "brief-0015",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "botany",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A solitary tree in a meadow, with the ground and surrounding landscape clearly visible.",
+      "slop_prompt": "A photograph of a solitary tree in a meadow, including the ground and surrounding landscape. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "solitary tree meadow landscape",
+        "single tree field photograph"
+      ]
+    },
+    {
+      "id": "brief-0016",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "botany",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "An olive tree in a rural setting, with the ground and surrounding vegetation visible.",
+      "slop_prompt": "A photograph of an olive tree in a rural setting, with the ground and surrounding vegetation visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "olive tree rural landscape",
+        "olive tree countryside photograph"
+      ]
+    },
+    {
+      "id": "brief-0017",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "botany",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "A fern in the undergrowth, with other plants and the ground visible around it.",
+      "slop_prompt": "A photograph of a fern in forest undergrowth, including nearby plants and the ground around it. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "fern forest undergrowth photograph",
+        "fern woodland floor plants"
+      ]
+    },
+    {
+      "id": "brief-0018",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "botany",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A cactus in an arid landscape, with the ground and natural setting recognizable.",
+      "slop_prompt": "A photograph of a cactus in an arid landscape, including the ground and recognizable natural surroundings. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "cactus arid landscape photograph",
+        "cactus desert natural environment"
+      ]
+    },
+    {
+      "id": "brief-0019",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "botany",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A blossoming tree in an orchard, with part of the orchard visible.",
+      "slop_prompt": "A photograph of a flowering tree in an orchard, including a readable part of the orchard around the tree. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "flowering tree orchard photograph",
+        "blossoming tree orchard landscape"
+      ]
+    },
+    {
+      "id": "brief-0020",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "botany",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "Reeds along the edge of a pond, with the water and bank visible.",
+      "slop_prompt": "A photograph of reeds along a pond margin, showing water and the surrounding bank. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "reeds pond margin photograph",
+        "pond reeds bank landscape"
+      ]
+    },
+    {
+      "id": "brief-0021",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "botany",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "Moss on a fallen trunk in the woods, with part of the ground and surrounding woodland visible.",
+      "slop_prompt": "A photograph of moss on a fallen forest log, with part of the forest floor and surrounding woodland visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "moss fallen log forest",
+        "mossy log woodland photograph"
+      ]
+    },
+    {
+      "id": "brief-0022",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "botany",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A climbing plant on a courtyard wall, showing the wall and nearby space.",
+      "slop_prompt": "A photograph of a climbing plant on a courtyard wall, including the wall and nearby courtyard space. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "climbing plant courtyard wall",
+        "vine courtyard photograph"
+      ]
+    },
+    {
+      "id": "brief-0023",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "botany",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A pine tree on a slope, with the ground and landscape around the tree visible.",
+      "slop_prompt": "A photograph of a pine tree on a hillside, with the slope and surrounding landscape visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "pine tree hillside landscape",
+        "pine slope natural setting photograph"
+      ]
+    },
+    {
+      "id": "brief-0024",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "botany",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "Water lilies in a pond, with water, leaves and part of the aquatic setting visible.",
+      "slop_prompt": "A photograph of water lilies in a pond, including water, leaves and part of the surrounding aquatic environment. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "water lilies pond photograph",
+        "water lily leaves aquatic environment"
+      ]
+    },
+    {
+      "id": "brief-0025",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "botany",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "Mushrooms on the woodland floor, with leaves and surrounding vegetation visible.",
+      "slop_prompt": "A photograph of mushrooms on a forest floor, showing nearby leaves and surrounding vegetation. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "mushrooms forest floor photograph",
+        "woodland mushrooms leaves environment"
+      ]
+    },
+    {
+      "id": "brief-0026",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "botany",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "A cultivated vegetable garden seen together with its paths and the surrounding setting.",
+      "slop_prompt": "A photograph of a cultivated vegetable garden, including paths and the surrounding environment. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "vegetable garden paths photograph",
+        "allotment garden landscape"
+      ]
+    },
+    {
+      "id": "brief-0027",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "animals",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A fox at the edge of a wood, with the surrounding habitat visible.",
+      "slop_prompt": "A photograph of a fox at a woodland edge, with the surrounding habitat visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "fox woodland edge photograph",
+        "fox forest habitat"
+      ]
+    },
+    {
+      "id": "brief-0028",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "animals",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A cat near a window in a room, with part of the interior visible.",
+      "slop_prompt": "A photograph of a cat near a window in a room, with part of the surrounding interior visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "cat window room photograph",
+        "cat domestic interior window"
+      ]
+    },
+    {
+      "id": "brief-0029",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "animals",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A dog on a park path, with the path and surrounding greenery visible.",
+      "slop_prompt": "A photograph of a dog on a park path, including the path and surrounding greenery. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "dog park path photograph",
+        "dog outdoor park environment"
+      ]
+    },
+    {
+      "id": "brief-0030",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "animals",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A horse in a pasture, with the ground and surrounding landscape visible.",
+      "slop_prompt": "A photograph of a horse in a pasture, with the ground and surrounding landscape visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "horse pasture landscape photograph",
+        "horse field natural setting"
+      ]
+    },
+    {
+      "id": "brief-0031",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "animals",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A heron in a wetland, showing the water and vegetation of its habitat.",
+      "slop_prompt": "A photograph of a heron in a wetland, showing water and the vegetation of its habitat. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "heron wetland habitat photograph",
+        "heron water reeds landscape"
+      ]
+    },
+    {
+      "id": "brief-0032",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "animals",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A seabird on the coast, with rocks or beach and the sea visible.",
+      "slop_prompt": "A photograph of a seabird on the coast, with rocks or beach and the sea visible around it. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "seabird coast rocks photograph",
+        "gull shoreline natural setting"
+      ]
+    },
+    {
+      "id": "brief-0033",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "animals",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "Sheep on a grassy slope, with the surrounding rural landscape visible.",
+      "slop_prompt": "A photograph of sheep on a grassy hillside, including the surrounding rural landscape. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "sheep grassy hillside photograph",
+        "sheep pasture landscape"
+      ]
+    },
+    {
+      "id": "brief-0034",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "animals",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "A butterfly on a flower in a garden, with other plants readable in the background.",
+      "slop_prompt": "A photograph of a butterfly on a garden flower, with other plants readable in the background. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "butterfly garden flower photograph",
+        "butterfly flower environmental closeup"
+      ]
+    },
+    {
+      "id": "brief-0035",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "animals",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "A snail on a stone in a damp garden, with nearby ground and plants visible.",
+      "slop_prompt": "A photograph of a snail on a stone in a damp garden, including nearby ground and plants. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "snail stone garden photograph",
+        "snail damp garden environment"
+      ]
+    },
+    {
+      "id": "brief-0036",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "animals",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "Fish in a pond, with aquatic plants and the water setting visible.",
+      "slop_prompt": "A photograph of fish in a pond, including aquatic plants and their surrounding water environment. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "fish pond aquatic plants photograph",
+        "pond fish natural environment"
+      ]
+    },
+    {
+      "id": "brief-0037",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "landscapes",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "A mountain lake with its shore and surrounding mountains visible.",
+      "slop_prompt": "A photograph of a mountain lake, including its shore and surrounding mountains. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "mountain lake shore landscape",
+        "lake mountains natural setting"
+      ]
+    },
+    {
+      "id": "brief-0038",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "landscapes",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "A coastal cliff seen together with the sea and the nearby stretch of coast.",
+      "slop_prompt": "A photograph of a coastal cliff with the sea and nearby coastline visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "coastal cliff sea landscape",
+        "cliffs coastline photograph"
+      ]
+    },
+    {
+      "id": "brief-0039",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "landscapes",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "A waterfall within a wood, with the water, rocks and surrounding vegetation visible.",
+      "slop_prompt": "A photograph of a waterfall in woodland, showing water, rocks and the surrounding vegetation. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "waterfall woodland landscape",
+        "forest waterfall rocks photograph"
+      ]
+    },
+    {
+      "id": "brief-0040",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "landscapes",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "Dunes in a desert landscape, with the horizon and surrounding space visible.",
+      "slop_prompt": "A photograph of dunes in a desert landscape, with the horizon and surrounding space visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "sand dunes desert landscape",
+        "desert dunes horizon photograph"
+      ]
+    },
+    {
+      "id": "brief-0041",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "landscapes",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "Rice fields in a valley, with paths and the surrounding landscape visible.",
+      "slop_prompt": "A photograph of rice fields in a valley, including paths and the surrounding landscape. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "rice fields valley landscape",
+        "rice paddies rural paths photograph"
+      ]
+    },
+    {
+      "id": "brief-0042",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "landscapes",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "A snowy valley with woodland and the surrounding mountains visible.",
+      "slop_prompt": "A photograph of a snowy valley, with woodland and surrounding hills or mountains visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "snowy valley woodland landscape",
+        "winter valley forest photograph"
+      ]
+    },
+    {
+      "id": "brief-0043",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "landscapes",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "A river bend viewed from above, with the banks and surrounding terrain visible.",
+      "slop_prompt": "A photograph of a river bend viewed from an elevated position, including its banks and surrounding terrain. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "river bend elevated landscape",
+        "river meander banks photograph"
+      ]
+    },
+    {
+      "id": "brief-0044",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "landscapes",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "A volcanic landscape with the ground, landforms and horizon readable.",
+      "slop_prompt": "A photograph of a volcanic landscape, showing the ground, landforms and a readable horizon. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "volcanic landscape terrain photograph",
+        "volcanic plain mountain horizon"
+      ]
+    },
+    {
+      "id": "brief-0045",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "landscapes",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "A flowering meadow with hills and the surrounding vegetation visible.",
+      "slop_prompt": "A photograph of a flowering meadow, with hills and surrounding vegetation visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "flowering meadow hills landscape",
+        "wildflower meadow countryside photograph"
+      ]
+    },
+    {
+      "id": "brief-0046",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "landscapes",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "Pools of water among coastal rocks, with the sea and surrounding coast visible.",
+      "slop_prompt": "A photograph of coastal rock pools, including the sea and the surrounding rocky shore. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "coastal rock pools landscape",
+        "tidal pools rocky shore photograph"
+      ]
+    },
+    {
+      "id": "brief-0047",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "landscapes",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "A foggy valley, leaving the ground and surrounding vegetation readable.",
+      "slop_prompt": "A photograph of a misty valley, keeping the terrain and surrounding vegetation readable. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "misty valley landscape photograph",
+        "fog valley woodland terrain"
+      ]
+    },
+    {
+      "id": "brief-0048",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "landscapes",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "A beach with driftwood, showing the shoreline and coast.",
+      "slop_prompt": "A photograph of driftwood on a beach, including the shoreline and surrounding coast. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "driftwood beach shoreline photograph",
+        "beach wood coastal landscape"
+      ]
+    },
+    {
+      "id": "brief-0049",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "architecture",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "The facade of a historic building seen together with the street or square in front.",
+      "slop_prompt": "A photograph of a historic building facade, including the street or square in front of it. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "historic building facade square photograph",
+        "old architecture street setting"
+      ]
+    },
+    {
+      "id": "brief-0050",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "architecture",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A traditional house within its village, with the street and nearby buildings visible.",
+      "slop_prompt": "A photograph of a traditional house in a village, showing the street and neighboring buildings. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "traditional house village street",
+        "village house architecture photograph"
+      ]
+    },
+    {
+      "id": "brief-0051",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "architecture",
+        "interior"
+      ],
+      "medium": "photograph",
+      "description": "The interior of a modern library, with shelves, furniture and architectural space visible.",
+      "slop_prompt": "A photograph of a modern library interior, showing shelves, furniture and the architectural space. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "modern library interior architecture",
+        "library shelves room photograph"
+      ]
+    },
+    {
+      "id": "brief-0052",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "architecture",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A courtyard with arches, showing the floor and parts of the surrounding architecture.",
+      "slop_prompt": "A photograph of an arched courtyard, including its floor and parts of the surrounding architecture. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "arched courtyard architecture photograph",
+        "courtyard arches floor setting"
+      ]
+    },
+    {
+      "id": "brief-0053",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "architecture",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A railway platform seen together with its roof and the station setting.",
+      "slop_prompt": "A photograph of a railway platform with its canopy and the surrounding station environment visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "railway platform station architecture",
+        "train station canopy photograph"
+      ]
+    },
+    {
+      "id": "brief-0054",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "architecture",
+        "interior"
+      ],
+      "medium": "photograph",
+      "description": "The interior of a greenhouse, with its structure, path and vegetation visible.",
+      "slop_prompt": "A photograph inside a greenhouse, showing its structure, a path and surrounding plants. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "greenhouse interior plants architecture",
+        "glasshouse path interior photograph"
+      ]
+    },
+    {
+      "id": "brief-0055",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "architecture",
+        "interior"
+      ],
+      "medium": "photograph",
+      "description": "An indoor staircase in a building, with landings, walls and the surrounding space visible.",
+      "slop_prompt": "A photograph of an interior staircase, including landings, walls and surrounding architectural space. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "interior staircase landings architecture",
+        "stairwell walls building photograph"
+      ]
+    },
+    {
+      "id": "brief-0056",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "architecture",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A narrow street in a historic center, with facades and the route clearly readable.",
+      "slop_prompt": "A photograph of a narrow historic town street, with readable facades and the route through the scene. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "narrow old town street architecture",
+        "historic street facades photograph"
+      ]
+    },
+    {
+      "id": "brief-0057",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "architecture",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A bell tower seen together with the church and part of the village.",
+      "slop_prompt": "A photograph of a bell tower with its church and part of the surrounding town visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "bell tower church town photograph",
+        "church tower village setting"
+      ]
+    },
+    {
+      "id": "brief-0058",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "architecture",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A monument in a square, with paving and the surrounding urban setting visible.",
+      "slop_prompt": "A photograph of a monument in a public square, including paving and the surrounding urban environment. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "monument public square photograph",
+        "urban monument plaza setting"
+      ]
+    },
+    {
+      "id": "brief-0059",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "architecture",
+        "interior"
+      ],
+      "medium": "photograph",
+      "description": "A portico along a pedestrian route, with columns, the floor and nearby space visible.",
+      "slop_prompt": "A photograph of a portico along a pedestrian route, showing columns, paving and nearby space. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "portico pedestrian walkway architecture",
+        "colonnade paving photograph"
+      ]
+    },
+    {
+      "id": "brief-0060",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "architecture",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A contemporary building seen together with its outdoor public space.",
+      "slop_prompt": "A photograph of a contemporary building with its surrounding outdoor public space visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "contemporary building public space",
+        "modern architecture exterior plaza"
+      ]
+    },
+    {
+      "id": "brief-0061",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "engineering",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "An arch bridge over a watercourse, with the banks and surrounding landscape visible.",
+      "slop_prompt": "A photograph of an arch bridge over water, showing the banks and surrounding landscape. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "arch bridge river landscape photograph",
+        "stone arch bridge banks setting"
+      ]
+    },
+    {
+      "id": "brief-0062",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "engineering",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A viaduct crossing a valley, with the ground and surrounding setting visible.",
+      "slop_prompt": "A photograph of a viaduct crossing a valley, including the terrain and surrounding environment. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "viaduct valley landscape photograph",
+        "bridge viaduct countryside setting"
+      ]
+    },
+    {
+      "id": "brief-0063",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "engineering",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "A dam within the landscape, with the reservoir and surrounding mountains visible.",
+      "slop_prompt": "A photograph of a dam in its landscape, showing the reservoir and surrounding landforms. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "dam reservoir landscape photograph",
+        "dam surrounding mountains environment"
+      ]
+    },
+    {
+      "id": "brief-0064",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "engineering",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A lighthouse on the coast, with the ground, sea and surrounding space visible.",
+      "slop_prompt": "A photograph of a coastal lighthouse, including the ground, sea and surrounding space. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "lighthouse coast landscape photograph",
+        "coastal lighthouse surroundings"
+      ]
+    },
+    {
+      "id": "brief-0065",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "engineering",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A windmill in a rural setting, with fields and the ground visible.",
+      "slop_prompt": "A photograph of a windmill in a rural setting, showing surrounding fields and ground. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "windmill rural landscape photograph",
+        "windmill fields countryside"
+      ]
+    },
+    {
+      "id": "brief-0066",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "engineering",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A historic aqueduct in the landscape, with the ground and surrounding setting visible.",
+      "slop_prompt": "A photograph of a historic aqueduct in the landscape, including the ground and surrounding environment. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "historic aqueduct landscape photograph",
+        "aqueduct countryside setting"
+      ]
+    },
+    {
+      "id": "brief-0067",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "engineering",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A lock on a canal, with banks and the surrounding structures visible.",
+      "slop_prompt": "A photograph of a canal lock, with its banks and surrounding structures visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "canal lock banks photograph",
+        "waterway lock surrounding structures"
+      ]
+    },
+    {
+      "id": "brief-0068",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "engineering",
+        "landscape_context"
+      ],
+      "medium": "photograph",
+      "description": "A pier or breakwater in a harbor, showing the sea and harbor setting.",
+      "slop_prompt": "A photograph of a harbor breakwater or pier, including the sea and surrounding harbor environment. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "harbor breakwater pier landscape",
+        "port pier sea photograph"
+      ]
+    },
+    {
+      "id": "brief-0069",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "engineering",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A small hydroelectric power station along a river, with the water and surrounding landscape visible.",
+      "slop_prompt": "A photograph of a small hydroelectric plant beside a river, showing water and the surrounding landscape. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "small hydroelectric plant river",
+        "hydropower station landscape photograph"
+      ]
+    },
+    {
+      "id": "brief-0070",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "engineering",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A radio telescope within the landscape, with the ground and surrounding setting visible.",
+      "slop_prompt": "A photograph of a radio telescope in the landscape, including the ground and surrounding environment. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "radio telescope landscape photograph",
+        "radio dish observatory surroundings"
+      ]
+    },
+    {
+      "id": "brief-0071",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "objects",
+        "interior"
+      ],
+      "medium": "photograph",
+      "description": "An armchair in a lived-in room, with the floor, wall and nearby furniture visible.",
+      "slop_prompt": "A photograph of an armchair in a lived-in room, with floor, wall and nearby furniture visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "armchair living room photograph",
+        "chair room floor furniture context"
+      ]
+    },
+    {
+      "id": "brief-0072",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "objects",
+        "interior"
+      ],
+      "medium": "photograph",
+      "description": "A table in a dining room, with chairs and part of the surrounding setting visible.",
+      "slop_prompt": "A photograph of a dining table in a dining room, including chairs and part of the surrounding room. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "dining table room photograph",
+        "table chairs dining interior"
+      ]
+    },
+    {
+      "id": "brief-0073",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "objects",
+        "subject_in_context"
+      ],
+      "medium": "photograph",
+      "description": "A bicycle leaning against a wall in a courtyard, with the floor and nearby space visible.",
+      "slop_prompt": "A photograph of a bicycle leaning against a courtyard wall, including the ground and nearby space. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "bicycle courtyard wall photograph",
+        "bicycle outdoor setting pavement"
+      ]
+    },
+    {
+      "id": "brief-0074",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "objects",
+        "interior"
+      ],
+      "medium": "photograph",
+      "description": "An umbrella in an entrance hall, with the door, floor and surrounding furniture visible.",
+      "slop_prompt": "A photograph of an umbrella in an entrance hall, showing the door, floor and surrounding furnishings. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "umbrella entrance hall photograph",
+        "umbrella interior doorway setting"
+      ]
+    },
+    {
+      "id": "brief-0075",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "objects",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "A teapot on a kitchen table, with the tabletop and part of the kitchen visible.",
+      "slop_prompt": "A photograph of a teapot on a kitchen table, including the tabletop and part of the surrounding kitchen. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "teapot kitchen table photograph",
+        "teapot interior kitchen setting"
+      ]
+    },
+    {
+      "id": "brief-0076",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "objects",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "An open book on a desk, with the desktop and part of the room readable.",
+      "slop_prompt": "A photograph of an open book on a desk, with the desktop and part of the surrounding room readable. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "open book desk room photograph",
+        "book reading desk interior"
+      ]
+    },
+    {
+      "id": "brief-0077",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "objects",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "A toolbox on a workbench, with the surrounding workshop visible.",
+      "slop_prompt": "A photograph of a toolbox on a workbench, including the surrounding workshop. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "toolbox workbench workshop photograph",
+        "tools bench workshop environment"
+      ]
+    },
+    {
+      "id": "brief-0078",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "objects",
+        "interior"
+      ],
+      "medium": "photograph",
+      "description": "A vase near a window, with the room and the surface supporting it visible.",
+      "slop_prompt": "A photograph of a vase near a window, showing the room and the surface supporting the vase. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "vase window room photograph",
+        "ceramic vase interior setting"
+      ]
+    },
+    {
+      "id": "brief-0079",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "objects",
+        "interior"
+      ],
+      "medium": "photograph",
+      "description": "A musical instrument in a rehearsal room, with the floor and surrounding furniture visible.",
+      "slop_prompt": "A photograph of a musical instrument in a rehearsal room, with floor and surrounding furnishings visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "musical instrument rehearsal room",
+        "instrument interior music room photograph"
+      ]
+    },
+    {
+      "id": "brief-0080",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "objects",
+        "interior"
+      ],
+      "medium": "photograph",
+      "description": "A woven basket in a rural room, with nearby walls, the floor or furniture visible.",
+      "slop_prompt": "A photograph of a woven basket in a rural interior, showing walls, floor or nearby furniture. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "woven basket rural interior",
+        "basket room furniture photograph"
+      ]
+    },
+    {
+      "id": "brief-0081",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "objects",
+        "interior"
+      ],
+      "medium": "photograph",
+      "description": "A lamp in a bedroom, with its supporting furniture and the setting visible.",
+      "slop_prompt": "A photograph of a lamp in a bedroom, including its supporting furniture and the surrounding room. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "lamp bedroom interior photograph",
+        "bedside lamp room context"
+      ]
+    },
+    {
+      "id": "brief-0082",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "objects",
+        "interior"
+      ],
+      "medium": "photograph",
+      "description": "Shoes near an entrance door, with the floor and surrounding domestic space visible.",
+      "slop_prompt": "A photograph of shoes near an entrance door, including the floor and surrounding domestic space. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "shoes entrance doorway photograph",
+        "shoes hallway domestic interior"
+      ]
+    },
+    {
+      "id": "brief-0083",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "art",
+        "artwork_in_context"
+      ],
+      "medium": "artwork",
+      "description": "A landscape painting displayed in a room, showing the whole artwork, frame and surrounding wall.",
+      "slop_prompt": "A photographic view of a landscape painting displayed in a room, with the complete artwork, its frame when present, and surrounding wall and space visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "framed landscape painting gallery room",
+        "landscape painting displayed wall interior"
+      ]
+    },
+    {
+      "id": "brief-0084",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "art",
+        "artwork_in_context"
+      ],
+      "medium": "artwork",
+      "description": "A painted portrait displayed in a home, with the whole artwork, frame and nearby furniture visible.",
+      "slop_prompt": "A photographic view of a painted portrait displayed in a home, showing the complete artwork, its frame when present, and nearby room furnishings. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "framed portrait painting home interior",
+        "portrait artwork displayed room furniture"
+      ]
+    },
+    {
+      "id": "brief-0085",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "art",
+        "artwork_in_context"
+      ],
+      "medium": "artwork",
+      "description": "A painted still life on an easel, with the whole artwork and surrounding studio space visible.",
+      "slop_prompt": "A photographic view of a still-life painting on an easel, showing the complete work, its frame when present, and the surrounding artist workspace. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "still life painting easel studio",
+        "painting displayed artist studio environment"
+      ]
+    },
+    {
+      "id": "brief-0086",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "art",
+        "artwork_in_context"
+      ],
+      "medium": "artwork",
+      "description": "An abstract painting in a gallery, with the whole artwork, edges, any frame and the surrounding room visible.",
+      "slop_prompt": "A photographic view of an abstract painting in a gallery, showing the entire artwork, its edges, frame when present, and the surrounding room. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "abstract painting gallery room photograph",
+        "abstract artwork displayed wall floor"
+      ]
+    },
+    {
+      "id": "brief-0087",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "art",
+        "artwork_in_context"
+      ],
+      "medium": "artwork",
+      "description": "A framed watercolor in a hallway, with the whole artwork and nearby setting visible.",
+      "slop_prompt": "A photographic view of a framed watercolor in a corridor, showing the complete artwork and the surrounding interior. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "framed watercolor corridor interior",
+        "watercolor painting displayed room photograph"
+      ]
+    },
+    {
+      "id": "brief-0088",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "art",
+        "artwork_in_context"
+      ],
+      "medium": "artwork",
+      "description": "A framed drawing hanging in a study, with the wall and nearby objects visible.",
+      "slop_prompt": "A photographic view of a framed drawing hanging in a studio, including the entire work, surrounding wall and nearby objects. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "framed drawing studio wall photograph",
+        "drawing displayed interior surroundings"
+      ]
+    },
+    {
+      "id": "brief-0089",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "art",
+        "artwork_in_context"
+      ],
+      "medium": "artwork",
+      "description": "A sculpture on a pedestal in a room, with the whole artwork, floor and surrounding space visible.",
+      "slop_prompt": "A photographic view of a sculpture on a pedestal in a room, showing the entire work, the floor and surrounding space. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "sculpture pedestal museum room photograph",
+        "sculpture displayed gallery surroundings"
+      ]
+    },
+    {
+      "id": "brief-0090",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "art",
+        "artwork_in_context"
+      ],
+      "medium": "artwork",
+      "description": "A fresco in a building, with the edges of the artwork and part of the surrounding architecture visible.",
+      "slop_prompt": "A photographic view of a fresco in a building, including the full extent of the work and part of the surrounding architecture. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "fresco building interior architecture",
+        "fresco wall surrounding room photograph"
+      ]
+    },
+    {
+      "id": "brief-0091",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "art",
+        "artwork_in_context"
+      ],
+      "medium": "artwork",
+      "description": "A mosaic in a courtyard, showing the artwork and a readable part of the surrounding space.",
+      "slop_prompt": "A photographic view of a mosaic in a courtyard, showing the artwork and a readable part of the surrounding architectural space. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "mosaic courtyard surroundings photograph",
+        "mosaic artwork architectural setting"
+      ]
+    },
+    {
+      "id": "brief-0092",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "art",
+        "artwork_in_context"
+      ],
+      "medium": "artwork",
+      "description": "A tapestry displayed in a room, with the whole artwork and part of the nearby furniture visible.",
+      "slop_prompt": "A photographic view of a tapestry displayed in a room, showing the complete work and part of the nearby furnishings. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "tapestry room display photograph",
+        "tapestry interior furnishings context"
+      ]
+    },
+    {
+      "id": "brief-0093",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "details",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "A weathered section of wooden fence, with the surrounding garden visible.",
+      "slop_prompt": "A photograph of a weathered wooden fence section, with the surrounding garden visible. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "weathered wooden fence garden photograph",
+        "wood fence detail garden setting"
+      ]
+    },
+    {
+      "id": "brief-0094",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "details",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "The surface of a stone wall near an arch, with part of the building visible.",
+      "slop_prompt": "A photograph of a stone wall surface near an arch, including enough of the building to read the architectural context. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "stone wall arch detail photograph",
+        "masonry texture building context"
+      ]
+    },
+    {
+      "id": "brief-0095",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "details",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "Ripples on the water near a shore, with the bank and vegetation readable.",
+      "slop_prompt": "A photograph of ripples on water near a bank, with the bank and nearby vegetation readable. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "water ripples bank vegetation photograph",
+        "river surface shoreline detail"
+      ]
+    },
+    {
+      "id": "brief-0096",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "details",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "Leaf shadows on a wall near a window, with part of the house visible.",
+      "slop_prompt": "A photograph of leaf shadows on a wall near a window, including part of the surrounding house. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "leaf shadows wall window photograph",
+        "plant shadow house wall context"
+      ]
+    },
+    {
+      "id": "brief-0097",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "details",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "A curtain near a window, showing the fabric, window and part of the interior.",
+      "slop_prompt": "A photograph of a curtain beside a window, showing the fabric, the window and part of the surrounding interior. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "curtain window interior detail photograph",
+        "fabric curtain room window context"
+      ]
+    },
+    {
+      "id": "brief-0098",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "details",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "A metal railing along a staircase, with the steps and surrounding setting visible.",
+      "slop_prompt": "A photograph of a metal railing along a staircase, including steps and the surrounding architectural environment. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "metal railing staircase detail photograph",
+        "stair railing architectural setting"
+      ]
+    },
+    {
+      "id": "brief-0099",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "details",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "Shells on a beach, with sand, the shoreline or other coastal elements visible.",
+      "slop_prompt": "A photograph of shells on a beach, including sand, the waterline or other readable coastal elements. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "shells beach shoreline photograph",
+        "seashells sand coastal environment"
+      ]
+    },
+    {
+      "id": "brief-0100",
+      "revision": 2,
+      "status": "draft",
+      "tags": [
+        "details",
+        "contextual_detail"
+      ],
+      "medium": "photograph",
+      "description": "Fallen leaves on a path, with the route and park vegetation visible.",
+      "slop_prompt": "A photograph of fallen leaves on a path, showing the path and surrounding park vegetation. Keep the surrounding environment readable; allow freedom in composition, lighting and incidental details.",
+      "search_queries": [
+        "fallen leaves park path photograph",
+        "autumn leaves walkway environment"
+      ]
+    }
+  ]
+}

@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "npm run build && wrangler dev --local --env local --ip 0.0.0.0",
     "build": "tsc --noEmit && tsc -p tsconfig.worker.json --noEmit && vite build && node scripts/check-assets.mjs",
-    "lint": "eslint src worker shared tests scripts/deploy-demo.mjs scripts/deployment-config.mjs scripts/benchmark-sampling.mjs scripts/check-gallery.mjs scripts/benchmark-preloading.mjs scripts/scan-similarity.mjs",
-    "test": "node --import tsx --test tests/*.test.ts && python3 -m unittest discover -s tests -p '*_test.py'",
+    "lint": "eslint src worker shared tests scripts/deploy-demo.mjs scripts/deployment-config.mjs scripts/benchmark-sampling.mjs scripts/check-gallery.mjs scripts/benchmark-preloading.mjs scripts/scan-similarity.mjs scripts/index-briefs.v1.0.0.mjs",
+    "test": "node --import tsx --test tests/*.test.ts && python3 -m unittest discover -s tests -p '*_test.py' && PYTHONPATH=. python3 tests/brief_embeddings.v1.0.0_test.py",
     "db:migrate": "wrangler d1 migrations apply DB --local --env local",
     "db:seed": "wrangler d1 execute DB --local --env local --file scripts/seed.sql && wrangler d1 execute DB --local --env local --file scripts/seed-publication.sql",
     "dry-run": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
@@ -22,7 +22,8 @@
     "test:gallery": "node scripts/check-gallery.mjs",
     "benchmark:preloading": "node --import tsx scripts/benchmark-preloading.mjs",
     "benchmark:editorial-v2": "python3 -m pipeline.v2.benchmark --fixture-study 120",
-    "scan:similarity": "node --import tsx scripts/scan-similarity.mjs"
+    "scan:similarity": "node --import tsx scripts/scan-similarity.mjs",
+    "index:briefs": "node scripts/index-briefs.v1.0.0.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261025.1",

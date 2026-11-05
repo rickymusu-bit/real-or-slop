@@ -5,14 +5,18 @@ import hashlib
 import json
 from pathlib import Path
 import random
+import re
 import unicodedata
 
 from ..editorial import write_private, now, PipelineStop
 from .briefs import validate as validate_briefs, slop_plan
 from .editorial_policy import BACKGROUND_RULE
-from .protocol import exact, require, identifier, text
+from .protocol import exact, require, identifier, text, english_text
 
-DEFAULT_CATALOG = Path(__file__).resolve().parents[2] / 'data/editorial/briefs.v1.json'
+LEGACY_CATALOG = Path(__file__).resolve().parents[2] / 'data/editorial/briefs.v1.json'
+ENGLISH_CATALOG = LEGACY_CATALOG.with_name('briefs.v1.1.0.json')
+DEFAULT_CATALOG = ENGLISH_CATALOG
+TAG_VOCABULARY = LEGACY_CATALOG.with_name('brief-tags.v1.0.0.json')
 FIELDS = ('id', 'medium', 'description', 'slop_prompt', 'search_queries')
 
 
@@ -28,9 +32,35 @@ def brief(row):
     return {key: list(row[key]) if isinstance(row[key], list) else row[key] for key in FIELDS}
 
 
+def validate_vocabulary(value):
+    require(isinstance(value, dict) and value.get('version') == '1.0.0' and value.get('language') == 'en',
+            'Vocabolario inglese versionato richiesto')
+    tags, aliases, mapping = value.get('tags'), value.get('aliases'), value.get('legacy_to_canonical')
+    require(isinstance(tags, dict) and tags and isinstance(aliases, dict) and isinstance(mapping, dict),
+            'Tassonomia non valida')
+    require(all(isinstance(tag, str) and re.fullmatch(r'[a-z]+(?:_[a-z]+)*', tag) and text(definition, 500)
+                for tag, definition in tags.items()), 'Tag canonici snake_case con definizione richiesti')
+    require(not set(tags).intersection(mapping) and
+            all(isinstance(alias, str) and re.fullmatch(r'[a-z]+(?:_[a-z]+)*', alias) and
+                alias not in tags and isinstance(target, str) and target in tags for alias, target in aliases.items()) and
+            all(isinstance(target, str) and target in tags for target in mapping.values()),
+            'Sinonimo, tag legacy o mappatura non canonici')
+    return value
+
+
+def validate_english(value, vocabulary=None):
+    """Add canonical-language checks without changing the historical JSON schema."""
+    vocabulary = validate_vocabulary(vocabulary or json.loads(TAG_VOCABULARY.read_text()))
+    for row in value['briefs']:
+        english_text(row['description']); english_text(row['slop_prompt'])
+        require(all(tag in vocabulary['tags'] for tag in row['tags']),
+                'Tag sconosciuto, legacy o sinonimo: aggiornare esplicitamente il vocabolario inglese')
+    return value
+
+
 def validate(value):
     exact(value, ('version', 'catalog_id', 'protocol_version', 'authorship', 'briefs'), 'Catalogo brief')
-    require(value['version'] == '1.0.0' and value['protocol_version'] == '3.0.0' and
+    require(value['version'] in ('1.0.0', '1.1.0') and value['protocol_version'] == '3.0.0' and
             identifier(value['catalog_id']) and text(value['authorship'], 1000), 'Versione o autore catalogo non valido')
     require(isinstance(value['briefs'], list) and 1 <= len(value['briefs']) <= 10000, 'Catalogo vuoto o oltre 10000 brief')
     ids, descriptions, prompts = set(), set(), set()
@@ -45,7 +75,7 @@ def validate(value):
                 all(text(tag, 100) for tag in row['tags']), 'Tag non validi')
         require(len(set(normalized(q) for q in row['search_queries'])) == 2, 'Query duplicate')
         ids.add(row['id']); descriptions.add(normalized(row['description'])); prompts.add(normalized(row['slop_prompt']))
-    return value
+    return validate_english(value) if value['version'] == '1.1.0' else value
 
 
 def select(value, count=5, seed=34, ids=None, exclude=()):
@@ -110,6 +140,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--catalog', type=Path, default=DEFAULT_CATALOG)
     parser.add_argument('--check', action='store_true', help='Validate only; no network')
+    parser.add_argument('--english', action='store_true', help='Require canonical English text/tags, including on legacy schema')
     parser.add_argument('--count', type=int, default=5)
     parser.add_argument('--seed', type=int, default=34)
     parser.add_argument('--ids', nargs='+')
@@ -119,6 +150,8 @@ def main(argv=None):
     try:
         require(not (args.check and args.out), '--check non scrive un ciclo')
         value = validate(json.loads(args.catalog.read_text()))
+        if args.english:
+            validate_english(value)
         result = dict(catalog_id=value['catalog_id'], version=value['version'], briefs=len(value['briefs']),
             statuses=dict(Counter(r['status'] for r in value['briefs'])),
             tags=dict(Counter(tag for r in value['briefs'] for tag in r['tags'])), network=False, paid=False, generated_images=0)

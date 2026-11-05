@@ -1,0 +1,1926 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-11-05T13:21:51.533575Z",
+  "kind": "english_brief_catalog_migration",
+  "source": {
+    "path": "briefs.v1.json",
+    "version": "1.0.0",
+    "sha256": "04a82ffe08b451fe6706f991d24e43b3a2bac994222ef5bdeb189de5e32809bd",
+    "content_sha256": "657d85ce9ff96b0534e74b0302066294e0f7210d0679f6526fc34372186dfa1a"
+  },
+  "target": {
+    "path": "briefs.v1.1.0.json",
+    "version": "1.1.0",
+    "content_sha256": "0b5cc1428907d0387c40437989bf981b1915b190198d030d12730c97814eef27"
+  },
+  "taxonomy": "brief-tags.v1.0.0.json",
+  "translation_method": "Manually authored English translations from each legacy description; existing English prompts and queries preserved. No machine translation API or REAL inputs.",
+  "review_status": "implementation_review_required_not_owner_approved",
+  "notes": [
+    "Compare full source and target rows using the hashes and stable IDs.",
+    "No claims of owner approval; every draft remains draft.",
+    "No frozen cycle or historical catalogue is rewritten."
+  ],
+  "entries": [
+    {
+      "brief_id": "brief-0001",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "e48d3e5fd722ff5a1cbc164b1ca16200417d750549f4dc6e4c485e56abe853e5",
+      "target_sha256": "906948b0d741c6dd3d49b1cd425ca4c692c63d82afd025552103f08ebce639dc",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0002",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "ac0e8624c3a3a336946cabea97af7bd544e12d80360d71ac304920a39727a458",
+      "target_sha256": "07dcbb581fa3a59234c1a30846c57ae339888d71b211e4312a441ea41db0fdab",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0003",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "64b158d1b19e1d64f908c24529f040f3993cc5ae82e9209f8e4625c1070ad719",
+      "target_sha256": "f959f74277aca7da3ae269012dbb4dc75a656e61ac57d8c3faa597175d28b36d",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0004",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "6376285550fde9f8610601b6c4d85ebab2f3407eb71db18dfc362f38b00b5bb7",
+      "target_sha256": "2bc2f44743d3be67c4844ad32ca142e0837d932cd5662f32f5c06bca7cb878de",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0005",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "80e8db612cf25ebc344247aefd7183be62b207ca416d018612429bdbb4e44a9d",
+      "target_sha256": "42d825519151ed1f007c50b33cbfecbf9093e33831d877a0bc12a4047f2fed4d",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0006",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "d1b9217a52ef61db643c584d25f6f3de716de6e093228a5f9eadbf84a4b8c986",
+      "target_sha256": "e8eb0ccdbd9420086e392ad6c4ff4a1e6e9e9927bf173880274c420e2b4e15c7",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0007",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "4f921a00f8e5e8c4c249317e18838476314748fb2e12d13e9c783ccb05abb9d4",
+      "target_sha256": "04bbce12a4d95576e2f01ea30dc890f022e67e2417e6eee5526eb00cce985d3b",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0008",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "7d6220460eeb95eab422ea7934fb5c9cdac8a13b74db0cbbf0ad47dd95001a70",
+      "target_sha256": "328360d0fae099fd2cf11da1f6f82f3a14fab9d64ed511ebce6cd5c0725bc09d",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0009",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "db74d381080c92bcbb68f93366c50e99557fda233d93868bc84af3abe12047f8",
+      "target_sha256": "5663e7d8b20f88f9956fffe1b3aa652b4ec26b96e75849192d580baa399180a0",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0010",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "e0a6e00b4a8a9757dd56f42337c582774f77aa3e68574bd02e0d9e1a6b1e5577",
+      "target_sha256": "4e559b9be3c814bf2bba5666b83bad66428f03661e277550d1d4b63b422038eb",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0011",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "136e6fbd457eee2208a035f92d248ae744252b76a999dabc6209e946b0ddf1ec",
+      "target_sha256": "7863a58dd34c6edc5a5341aa742f8085f190de080e39d8027d971a6393138096",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0012",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "88094084d723fe8ec18e1abdb4bf4c31a7018b9ca10d42a52409dff4caf6b447",
+      "target_sha256": "a27c1255b0d0bad8bddc00ffca36db87fb781234c1c234a550a7f11c13b9949c",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0013",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "c4fa357c611f6eec8d32f2454ae88b841ceeea21a81cccb88473f2a49c568e0c",
+      "target_sha256": "cb110a65bbec9708d838c2f28977d44d8ea8f1d2677859dac22f8af942bd5091",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0014",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "b04c9e4999aef8dfba6e0539460a113d1bd56814dd84a5e400cd5d51908b50f7",
+      "target_sha256": "add9812f454f6b621050932db5507c7b34532a94df7ff5d4131dff0556ebf88b",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0015",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "f47a1b0140fb90dbf3adf0eb6030f30cffae6848f41c961862539b97a15af772",
+      "target_sha256": "42c26d1eb9371aeadf2ac66412f881f0a8c612b9492da14a1e84d1c6391140ca",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0016",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "bac00b1ff324894524fc7cfc26de8479b2251e29522a141c788ba750073a7d4e",
+      "target_sha256": "ccf264fc0b887fbf573ec8707e2a465199d3356a99326a042540ebdbce900520",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0017",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "47e6a563db4b4badf318185a878368aa7bc16f59aba53b97ccf58e741abe4425",
+      "target_sha256": "0989d24582e7b02de4fdbc3f4c8ac06725ad7131dd400fc9a79817e90c56b1e0",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0018",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "83324c2576f8bc8c89265e12bbfc2bab38a2c1781c9c075816bdf0541e7c8222",
+      "target_sha256": "9c40731529456038c9943c48ecc7c71ac09be2951190083daf37896d95d5158a",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0019",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "13360fd136196932996a855897528c1ee065d52285953041ac3d71c3713134a8",
+      "target_sha256": "f42a40bc56850ae7b3ee8aa7d55eb6042bd02b50a9e1ec769976a5d894b6d6c1",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0020",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "47c4cc7372d209d6c6ccbb7712fbccf03a9bbb18c3f83d42b475c71103996911",
+      "target_sha256": "8c59ef8dd61fb2fbd957b0b10c3ed9bf759e2b7bcbaf87b5f85c9f6c63ddc674",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0021",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "3ce3f3bdf73bd227574defb508e8d51131e34e4f1568e54ec8c52567f2148402",
+      "target_sha256": "d005e6fd785c5abfe5faeeb249bf8681b1a7d801d969d5797c134645c8a870a2",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0022",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "10be12bb7183c2f82ee38a41d6c13a52fdf0316945547deb4d70bff87262f755",
+      "target_sha256": "8bd5e706ca80c819871cc6a17bfb54c8e14ffa7ad168e10775b63e55f0845bca",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0023",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "a85db4b0f652020cdbf8118d6def35f1d9e6736e0073c41e76f63b67050fe247",
+      "target_sha256": "c47584209ea9bc921a908e9dc7c0f178bfaad8b708831596b36c40aa5d9835bf",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0024",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "93cd834ef0dfbde4ba0ad8576e8fcfc21bd86031632ec0bd2642095387d7f673",
+      "target_sha256": "41bd1eadc59db057ff0b70a4c4fb5c620acfc5184a1ebb0f1370089993c619f4",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0025",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "482ac8b19993847139dd50851e49b8871faec7629c17938864b7a7c5abe07aec",
+      "target_sha256": "8cba19b33b2f6899616af782bb36b1accebcbba076246157de5d24847f7d031c",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0026",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "d01800c1061f6c856619f3b3d16e3cb66cf7801024aa2823b9098944f1577c9e",
+      "target_sha256": "8d863fd379fa7ff282846aa6ecb92b3e880dfb604ffa6151811212de4912310d",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0027",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "76bab876e4485f3720ba1b6bd44e009d6982a8805c23316dc3a1ba9cbc3e6565",
+      "target_sha256": "266832f7d9e14ca9b8cece57cd428130a2f7c4b53be2753f1e11e64487414c39",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0028",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "bbf94de2b2d5c22b9a0a236e35644c5e682ff7d690dba49b5020a3987a851f37",
+      "target_sha256": "fbc2b748322310b894eb2a63971ae7ea54aa72362e8123a85c89de07ea7b3bd0",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0029",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "6a11b2fdc65d2ba3a9d6a8c2cc1ababa71ef9b50d0e90dbb32f2ac6b65ab5294",
+      "target_sha256": "9aa3c9ea74ad625344f5bf59cacdf3f58171e0635d909ebd656f3cd27789616b",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0030",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "afe4a9faaceef0875636d6f6849434c278eb409ba56ca414e2f6c972c7d60ae8",
+      "target_sha256": "4f26eb7a9384c9fa5dbcf4c75c4e66ed13f7610e47d240883416f98d855dd3f5",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0031",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "e594ed2efb0c63394a7754fff09f1681710ee10e5edf2dea908406c8476db59b",
+      "target_sha256": "b71e90b53e184564196bd0f1780419d00080be3717ae2f63c1cefb26d0b568e0",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0032",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "f4bde41fb7a85c896f10b25e12787d2a2901e0e3cd027ef7f2e61f2482a48b5c",
+      "target_sha256": "fc8533749629abe5d99ee0fb3064efb11e6a6d50168cc77f1edd4de50cd582d1",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0033",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "8c9a51b0912029b477dd293d38d3ce3cc0583f16aeac71d6b52ec6a93211c2d9",
+      "target_sha256": "64ed93863f4dd7a7b5c792123da900d6f30f532877edd25acfa2dadba12aa321",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0034",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "8b34f1f764c957a873d93a586a35bf94bbc2e366cbb5a76569fb7094b461427a",
+      "target_sha256": "1e901cd4d41ae76c0321bfb880f1f9eef22cadd2d8123090577c534a1b4ad48c",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0035",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "b814b01081fda71016740008685290c06c464a4ddae6a1d0b7bc4933283a8c03",
+      "target_sha256": "af3aaa65e880065802bbcffbf0b9e05d05c2462ff1bfaeaab7b959f2c23c2414",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0036",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "a53fc41f03afc532751ebef8be39f4b0214a8505545af726f5bb25a01702d20d",
+      "target_sha256": "f031522ffba71e60ae85a8cd3e2f586b28f0cb65fd779b9fb8f482151a466917",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0037",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "97fd3e9c040de74e1f0e9fa614964ad2d24955019f5ee1c6f109a2d0332e3df8",
+      "target_sha256": "942fa89ecdbb12d3fedb7dd6bf7b67be44524385c0ddeb9c05004f41109ab1c8",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0038",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "14dcd6a50623def4e493d0dc61b1c1daf62cadc6d184fa9b339e8be11d0802ff",
+      "target_sha256": "adb85aa67cd347ac4dc6292ef4ea66cac0194ae35e9993754fd81b19b7bf76c8",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0039",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "bed0e55175fd842be8dbfe49c762c5a0cc0c9f26e3df9e9086465bda37e9abef",
+      "target_sha256": "67cb79957e45b4a2b4768e6ca4f45c5e9b66b83d02220db533aaea0c712d5a66",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0040",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "551d356edce7bbd578e3c8243ab61b16b4929629557cba3908453d27e17c5221",
+      "target_sha256": "a7ee6350e22b50688752d579d079c1e131101e773030357852ac433da06ef269",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0041",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "8205d9de1d5be3fb6486a37265be69c46dc8b2378c7ef0a823e483faaf681e89",
+      "target_sha256": "2b343934fdcdc4d2ccb09c0e329baffbceccec1678e2572d0743f80e4224b99f",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0042",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "b1a85602d903bdff63b69334e835240990b5298d44f84035cf8e10b76b93274b",
+      "target_sha256": "7fd3780b390005a5155ad8fea6726d57a61a8968ddc82374cf9ce6a74e35afcf",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0043",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "099407871b3059f61dca9e4c893cb3d536c14f8d03afdc2c9c65b9ec29b60fd5",
+      "target_sha256": "774c8354f1f128ac01d37e00596320354719f6cdd40c6bc522424a2720d31e92",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0044",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "9a57882934c25a4901cf63e9be9ddd309f039b67d101fffd23fa6f001fe05947",
+      "target_sha256": "01a8073c1b7e871e7b8339dde81ffb47a9370f28aa6ed885e0b94aae58e0081b",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0045",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "6705feefe1a169b4e2dc6881779d39d0beb15a2ff1932ae14a04bde71b646eec",
+      "target_sha256": "2aab4d4719b3015a24c8922ad1396b9a14fefaa682f6687c75f7f1132881b3fa",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0046",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "86cbded9839389a66b28172e220c5f1697cdbcc513dc6b7e01b947a3fb0be5d8",
+      "target_sha256": "a82233d2b1ac4cac0fcd09f8591c3e0d02f873d6199849b761dc113980b1eeca",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0047",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "45ea5ab454505bf1a784ca9ca3cb7fd3d49f26e24f2d5bafb549084cd153b1c6",
+      "target_sha256": "2099bb298cf420fc59e042bb5ebdeeb4f0b27f6fca2b2cfb7db9db2e6363996f",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0048",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "91c53dce3224c078d443d36294ff91c191079b3d798bc5c148bdaf30cbbcc38e",
+      "target_sha256": "8c652c8f9bd37583f792e5e5ba5393975ae9494e9f7f25429bbe6c5d2f55a28c",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0049",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "b895d070bcb0b0e2a58fd4394cdc0d6bb19de6305e54287cad225e6c54284cec",
+      "target_sha256": "397a308f7e44ea6d451575e6e58002ef2f06722aa4536abd7a34e98008355d04",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0050",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "89943dafa2e3a2bc3570a833b99c57d361869bee27c13cdd3339947d7e29634a",
+      "target_sha256": "935cff3034a3ffb1ce462d365d9f7dce6098af8894bc03991aa362216ed01d88",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0051",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "a9db010f91c0f6b98d72ddf6985fdbcc3ac1f948a51b0f5787cb4bb5f0b6ac6a",
+      "target_sha256": "e5a7afe86fef4569cdac578ec3c751bf9ac8c6d48fb22261111f83d272a55d5b",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0052",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "456dd7db2c6215914440dcf8c8d52f303c8a63b0d098fae7e4b014423cd961cd",
+      "target_sha256": "40948a9788893a9dac5c9b038e3cb9a182ac42b8594644bb57e1c208c9c4458b",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0053",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "33ab790678b8b61b2db1ffa6ad4a651f72a9764572af62de9ad44bc5e622bbf9",
+      "target_sha256": "14e8e8ea601ee912a0e2ab72e174c1c2111f88d43aa8802e43c1ed63968d614f",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0054",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "93159873613a361288de49ed3d1b97bb2344d37281b00b1041660ba809b69bf8",
+      "target_sha256": "611cf5059c1745375d1d40fb4bb4a742a4737d1252508fd1c5d5cf65bb8b97f0",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0055",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "edc412ba1e8939fd1915a101ed197ab2ae483545ef0d10e9a6355d5520f359a7",
+      "target_sha256": "4d78272d83750ae69fd25119779d2f3d4a604796a1c8b6a73626246d7dc3ff8b",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0056",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "99eae44a93f4809bd8b978cade6e3e27afb1ffac6eea8dc4dd0bd7dc2530f419",
+      "target_sha256": "1f6909532424a09f410e6cffe3ebbbba440dcf1073b09850d1e472573cd54f50",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0057",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "9d3ca8ee293f6d99fba1de2a203c381a87f12549f650eefbea1bc7b3de11486b",
+      "target_sha256": "c57bd86a463fe7b8a0133296f15ca0f2b31a7b3ab0e341782fcda9a268b38e51",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0058",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "efa06bb40103b1249188331d9d6c57dc5d02c7e44b35bc3d102dda4a4c3d7f40",
+      "target_sha256": "c82e16204201f5465cb1bce0cc27ff4cc20e65cb431217cc2475f920adb87f69",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0059",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "9ad9c9ba3c10c6eb3968ad42ab2381e36bb45894d4e5127024ee5de8b3c0d2c1",
+      "target_sha256": "cf9b014b05fd3e7e3e1b87e07bcbdb2a678a2956b178997babc63f47ebf49928",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0060",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "d1e822cb511daba3b5ec0b109575dcd7798c3d1581787b4fb4645a7a28cd3827",
+      "target_sha256": "57f647a919827fe7a5b4fa7673d3741941a6f1d6ec6fe1f861de07691138b975",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0061",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "d46dbcc6e1c06e18fbeb6620481fb9ca98cb182ddf4c7f5ab291a80524710df7",
+      "target_sha256": "8237c589518390970cd2aa1d5ff2f128cf51ce2147d6f125d75f61c496a3283b",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0062",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "f6d0ade3cb02e034f6363cda60df6b81e4826aeb274a7b1c864e3e5fe41b11bc",
+      "target_sha256": "469356ff1260b4e189db2161fcfbacb20173a470402fe99e6591b4be85a3a163",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0063",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "09135f2e2d3c79dfcd61ed5c8aef5385c8cbe6169c742189134abc1ead73ba0d",
+      "target_sha256": "0f4809a22101e65cb68668c5e112da4f36ab8f2266ad36776bb59438ef1e53a0",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0064",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "3729520bda460bd2490759f593fe77cb16285403e3c0fd9918668e4cd0056c8d",
+      "target_sha256": "a373a026e50996f13d0b9e102198180c3f3b73d73d64595611fd4700193d492b",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0065",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "e1fcd4013e38776d5fbe13ecb2cc91e86053f22fe1681306af50c0fe3c23ba60",
+      "target_sha256": "553b92da2f0cace623785ec043cd45ca883b4f0ccf58ed413b1ad4cbf54171e7",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0066",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "f863581d47995b6de280776141f0f72a551de31acc193fbc3f28f0697b9c0b91",
+      "target_sha256": "8b9d9d432fb42f473dc8ab30f437e729c073265579a3824896aa8b1a713a6d1d",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0067",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "d57d37ef4f4cf3a79f8e3b91011f1efcaa476ffd3470c809b33b2fa32d745ed0",
+      "target_sha256": "4506295caaf773935a6421b32db7370b6c3fa8462fce652e2a41cdd2d45ef555",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0068",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "9850142f415d0c226784b36ba87929a90b8c6e0651d6a2c1f2789c2e922bf33d",
+      "target_sha256": "fe850915cbc512a14a31fdd5c215928b0d3d3f433c7674fddbc4f3fb14e134e4",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0069",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "1e3971f1cca461a1214aa8a64a412f3e220853b075bc1a4126457be24b840218",
+      "target_sha256": "734da9888aeee4fca652c9a367ac72627462b05f9888bdd28bd178f232ea5479",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0070",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "0a3330564f4b4372acd101ade59236a017a0c7b944d0df405b56459a8c2a0a0f",
+      "target_sha256": "d84dc4b61abe752f4b9d1dbd0c7245b1f10653cc6dc2c6ca96b3f0b3e4a414d5",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0071",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "81f66cab0e90169acae923e299d066d0faa44ab6d54c1fccb19401e75a8b3a22",
+      "target_sha256": "3e324e704ce267ef7ce132cc59767ab760c6b3bae3c8823831713d8b2cf4739f",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0072",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "34d11715b34b7be580ec3b94b778d9374e3ac9ced5eedc2113237cb7d4a6a47b",
+      "target_sha256": "ca912adc91d9afb18d4fdd4ac6d12dadc8517fc5b634bdbecefc6aa5b05ed1db",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0073",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "e671806cf55cfe74e0bc43bc72df93019c9a48e1e8afca74b84a361d436603a0",
+      "target_sha256": "d69f94a8e30ff1a99f45febdc68f69e017a06aa1100fb67e8331ed73236a1aaf",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0074",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "a5c0ce8bbdff7b477c98ec1e80284985853d2cf9d1c39974a7ebe29670fa910f",
+      "target_sha256": "95e227844b7285c6c6adf5367d82bcde55767326839c71236e4e79002327b94c",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0075",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "c45f2a6c238a72931bdc7ba7181d62e89cecc54a3c20bbd99d4e9ce1728583b2",
+      "target_sha256": "4a668a340d95ca01459b9166d90a565e56ff9e6791a2f8981e52b8f69a1a686e",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0076",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "39b68d4e153ac16ed5186d8d63f2bcb471a0c944c0e3427b0024df3b145b72d9",
+      "target_sha256": "80570af7a37284551a420f93111758f33321d4a4e2cb4d69913ddb65cbf7ac29",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0077",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "894c6318182a55b884066863ccc71a9969911a8d567a47460549d610300f1e3c",
+      "target_sha256": "dacee230bfa79d2fb893a098a791cce42aef790e3f4b77f59b475c7a73b565c1",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0078",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "41b073c9858098076dacf5a99680d312e94ff7506e124b2689001220c0aef51c",
+      "target_sha256": "18c62cbed803997da806da4bc55af86f38400936bb75a7ba7c39bfa475932c6d",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0079",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "fd3ae43f3a32acef3b4d1c92bced5fbd981fd7dccabe355a274c6cb0563cda29",
+      "target_sha256": "5c2588920ca8fa2127d86bde60e8ef9c11dab79683a7629d4dad782ac9deb953",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0080",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "9c537da37618ec7674125944a4f816853249484134324e684a5f6cb8f646d159",
+      "target_sha256": "47aec1f638d2aa78a37d792922e203eea6c8cbfd35f2ac8901db9e6812d9b623",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0081",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "23b3164b7c73087249784f499c545565699688e55099eebbf297df8c008f7ffd",
+      "target_sha256": "9e0ef8453efbd0ece83187dedd42ec16581d52af97d9208b6a9fc426a668bf1b",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0082",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "dd966a4430028fab8a74fbe2893e1f0e73f17a79b57db474f973ee420d34500d",
+      "target_sha256": "201970e26262a7a60cf114405176f6c65a1f217ffc42f9f80162fbd97671d06d",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0083",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "d81611a0e6fc6cc4ee6567c56883230d83eb44dc2df1907b2f50ca79122fda36",
+      "target_sha256": "83a3d3727beefdc4a74240cfb9f98714983abab7447d017671dc87a0d2a6e548",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0084",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "924b66978679fd718c1b34c3d05e011e33e0dd712c1458975fdf518c52030681",
+      "target_sha256": "30cdff868dc54dcdfbe96559a5cb1468d700e1cf219282f1423e18c5b0737af8",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0085",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "fa7f34327a6725e224e7691b3f5b6c2c6175719033d46978af696053cb2ea5f5",
+      "target_sha256": "b547531c9f0ccba709f80c3d361a9f1c8c5f522c06df1e77e9f764482aec51ba",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0086",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "641362c74121252c5769dd02cdcc2482e1850576cca4285ed3cb26329b6406cf",
+      "target_sha256": "a3b8f961e8d61ef3bd76c37a89b5acf6d465e2f61ff1edc5e03aab13f05354ab",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0087",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "8f3669e3db5c65883d4cb0e7e4758f52d3ac1ae8e8873448eb1c2065cbe05d6a",
+      "target_sha256": "70c201985ef6c9bc11d1930882ba57e8c73081768a2ebd686d0e4e1862cec41a",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0088",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "ef3628d7a3a91fc1fe17671ccd145659bafa047007d1fa650d8039bd9d5e09ce",
+      "target_sha256": "22dffc40eb9e8b4d39bd31747ab4e01d3a6079b2e9bab533991f73df757dfe04",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0089",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "7cea190d498956d39a4786b80362fb8ab339444c17791543790367ae53199b22",
+      "target_sha256": "41731cd4c21fe8f4b2f8db7ac59c25bc567b65b450d53cafb44686c6a589c81a",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0090",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "7a654a143f983ee0d1018488bb4a99c88eb9388945228918abf243bba4da7d0c",
+      "target_sha256": "c1a5a87803e75e51f0e9e4c092170ea436da6c13af531fe9c74b589125a52f8c",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0091",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "551566bfd5e1abe9ae99fdf94b992d82b6602fdbcf9085424c2daa62a3bfe071",
+      "target_sha256": "afa60e2f7c0fd841dff3b1c13b362c972a29ac1973541b9f4dfd636a4c8515d4",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0092",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "2347ba8aa773033bffd7a1e888bf651d6c9c2f8556508fb849840a223457c7ab",
+      "target_sha256": "6587fe0de3ecab09bb1bb8430a692a9c81d4da901ec4317dc7651bc64fdf10c7",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0093",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "7bdc359cf7cc904eda4ff8ba98995242d49befa038594e59dc162fcc72e005cb",
+      "target_sha256": "a75a893edc1cac1b81fdb6f791fd223e876f21f76fa8c508f9884782344cfb26",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0094",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "ac7863e1103d2a5a4704b640604a6d812e0503f8cffe62a0336c8e3fc3c7abe5",
+      "target_sha256": "6debc6453b74c32121b9036c44b317096d706110f6f23d928631b9ed5d8346c9",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0095",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "bef6be36827b1bdc337d647da4b6ff91f2ed857ca2c40541714092ba61711ebf",
+      "target_sha256": "5426b45d07d4c05437abd40889c03b665ae6446496d5e35f9dbf63a379020779",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0096",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "7d6e7ca3049ef8c1369c0240f7f451ea387daec2ee8cdac0647a111d550f7cd7",
+      "target_sha256": "1dcb61e63fe16d3aa848ec0e3052397d87668cc510e75c4334b4aea94be6572d",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0097",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "22c3c2acbe5be37f7aa2fd88be93918f9703e24d4d9ceff9aa998c5c0b5696c1",
+      "target_sha256": "94d6a24c00865ae53bf1118aeabf5d051fca65ab3d377b92acac7ba3f18dcff7",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0098",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "079569c92b7391cd80bb557cd3ec017a6c4cb786987ece5b2f7fdfd663f2f3c5",
+      "target_sha256": "c0db328b1d49894eb32bc1d6b164fd4391d38305b7e28736ad7507dfbf93f9a9",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0099",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "82fad1f5b4d71737d97a8fd28fc9fe6c07bc5289ff5f66aeae9d54103662e308",
+      "target_sha256": "d85b591e468346268a08662fe62bd373e95919b0ac0bce5252f8f7d3615a7d33",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    },
+    {
+      "brief_id": "brief-0100",
+      "source_revision": 1,
+      "target_revision": 2,
+      "source_sha256": "9326011fa6e844c485672e806c71369d8498cb3577e363b02d9000e9bd539bc4",
+      "target_sha256": "c6834a0a62420fa00c17b74ac6cd837acfa74ceb74a12d462e822b72cbb163e0",
+      "changed_fields": [
+        "revision",
+        "description",
+        "tags"
+      ],
+      "preserved_fields": [
+        "id",
+        "status",
+        "medium",
+        "slop_prompt",
+        "search_queries"
+      ]
+    }
+  ]
+}

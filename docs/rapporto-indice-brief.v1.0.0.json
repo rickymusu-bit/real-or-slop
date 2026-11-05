@@ -1,0 +1,571 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-11-05T13:33:19.027622Z",
+  "issue": 44,
+  "base_commit": "67ecf494ba8fe86d551525e1db330d1f31764975",
+  "kind": "brief_text_index_verification",
+  "environment": {
+    "node": "v24.19.0",
+    "python": "3.12.14",
+    "os": "Linux",
+    "architecture": "x86_64",
+    "transformers": "3.8.1",
+    "onnxruntime_node": "1.21.0"
+  },
+  "catalog": {
+    "path": "data/editorial/briefs.v1.1.0.json",
+    "version": "1.1.0",
+    "content_sha256": "0b5cc1428907d0387c40437989bf981b1915b190198d030d12730c97814eef27",
+    "briefs": 100,
+    "revisions": {
+      "2": 100
+    },
+    "statuses": {
+      "draft": 100
+    },
+    "owner_approval": false
+  },
+  "runs": [
+    {
+      "encoder": {
+        "id": "Xenova/all-MiniLM-L6-v2",
+        "revision": "751bff37182d3f1213fa05d7196b954e230abad9",
+        "dimension": 384,
+        "dtype": "q8",
+        "pooling": "mean",
+        "normalization": "l2",
+        "device": "cpu",
+        "runtime": "@huggingface/transformers@3.8.1",
+        "max_tokens": 256
+      },
+      "mode": "first_index",
+      "command": "npm run index:briefs",
+      "snapshot_id": "e4d3912534ce193569ee43a416a42300e8cc4be288164b188ca350f4d2f664fd",
+      "private_artifact": "e4d3912534ce193569ee43a416a42300e8cc4be288164b188ca350f4d2f664fd.v1.0.0.json",
+      "total": 100,
+      "processed": 100,
+      "cache_hits": 0,
+      "indexed": 100,
+      "errors": [],
+      "estimated_api_cost_usd": 0,
+      "all_vectors_finite": true,
+      "all_vectors_l2_normalized": true
+    },
+    {
+      "encoder": {
+        "id": "Xenova/all-MiniLM-L6-v2",
+        "revision": "751bff37182d3f1213fa05d7196b954e230abad9",
+        "dimension": 384,
+        "dtype": "q8",
+        "pooling": "mean",
+        "normalization": "l2",
+        "device": "cpu",
+        "runtime": "@huggingface/transformers@3.8.1",
+        "max_tokens": 256
+      },
+      "mode": "cache_repeat",
+      "command": "npm run index:briefs",
+      "snapshot_id": "e4d3912534ce193569ee43a416a42300e8cc4be288164b188ca350f4d2f664fd",
+      "private_artifact": "e4d3912534ce193569ee43a416a42300e8cc4be288164b188ca350f4d2f664fd.v1.0.0.json",
+      "total": 100,
+      "processed": 0,
+      "cache_hits": 100,
+      "indexed": 100,
+      "errors": [],
+      "estimated_api_cost_usd": 0,
+      "all_vectors_finite": true,
+      "all_vectors_l2_normalized": true
+    },
+    {
+      "encoder": {
+        "id": "real-or-slop/tfidf",
+        "revision": "1.0.0",
+        "dimension": 298,
+        "normalization": "l2",
+        "tokenizer": "ascii-lower-words.v1.0.0",
+        "tf": "raw",
+        "idf_formula": "log((1+n)/(1+df))+1",
+        "fit_sha256": "f0ddd40084b0c63e53d5e64753aab9311e41db38468f2311bc4d57d2b19462aa"
+      },
+      "mode": "first_index",
+      "command": "npm run index:briefs -- --encoder tfidf",
+      "snapshot_id": "2d2f01c513fe05ff1c6ac17e5fa0cd9b3c6052419666bbefe7c52c42f92f8697",
+      "private_artifact": "2d2f01c513fe05ff1c6ac17e5fa0cd9b3c6052419666bbefe7c52c42f92f8697.v1.0.0.json",
+      "total": 100,
+      "processed": 100,
+      "cache_hits": 0,
+      "indexed": 100,
+      "errors": [],
+      "estimated_api_cost_usd": 0,
+      "all_vectors_finite": true,
+      "all_vectors_l2_normalized": true
+    },
+    {
+      "encoder": {
+        "id": "real-or-slop/tfidf",
+        "revision": "1.0.0",
+        "dimension": 298,
+        "normalization": "l2",
+        "tokenizer": "ascii-lower-words.v1.0.0",
+        "tf": "raw",
+        "idf_formula": "log((1+n)/(1+df))+1",
+        "fit_sha256": "f0ddd40084b0c63e53d5e64753aab9311e41db38468f2311bc4d57d2b19462aa"
+      },
+      "mode": "cache_repeat",
+      "command": "npm run index:briefs -- --encoder tfidf",
+      "snapshot_id": "2d2f01c513fe05ff1c6ac17e5fa0cd9b3c6052419666bbefe7c52c42f92f8697",
+      "private_artifact": "2d2f01c513fe05ff1c6ac17e5fa0cd9b3c6052419666bbefe7c52c42f92f8697.v1.0.0.json",
+      "total": 100,
+      "processed": 0,
+      "cache_hits": 100,
+      "indexed": 100,
+      "errors": [],
+      "estimated_api_cost_usd": 0,
+      "all_vectors_finite": true,
+      "all_vectors_l2_normalized": true
+    }
+  ],
+  "comparisons": [
+    {
+      "version": "1.0.0",
+      "kind": "brief_representation_comparison",
+      "catalog_sha256": "0b5cc1428907d0387c40437989bf981b1915b190198d030d12730c97814eef27",
+      "annotations_sha256": "fdde9bf0fc0ee9c063bac14dfc46aebcb070f3acec09aef46de19e1bacef2eca",
+      "annotation_status": "implementation_author_annotations_not_independent_human_validation",
+      "limitations": [
+        "Small purposive development sample, not an independent or blind human benchmark.",
+        "Triplets encode explicit subject/context preferences, not visual variety, quality, approval or difficulty.",
+        "Structured annotations are authored separately, never extracted from REAL photographs.",
+        "Compare both representations on exactly the same sample and triplets."
+      ],
+      "results": [
+        {
+          "representation": "description-medium.v1.0.0",
+          "encoder": {
+            "id": "Xenova/all-MiniLM-L6-v2",
+            "revision": "751bff37182d3f1213fa05d7196b954e230abad9",
+            "dimension": 384,
+            "dtype": "q8",
+            "pooling": "mean",
+            "normalization": "l2",
+            "device": "cpu",
+            "runtime": "@huggingface/transformers@3.8.1",
+            "max_tokens": 256
+          },
+          "annotated_triplets": 8,
+          "agreement": 0.875,
+          "triplets": [
+            {
+              "anchor": "brief-0001",
+              "closer": "brief-0002",
+              "further": "brief-0062",
+              "reason": "Both are environmental portraits; the viaduct is an engineering subject.",
+              "closer_cosine": 0.672586166422387,
+              "further_cosine": 0.2597910670878869,
+              "margin": 0.4127950993345001,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0004",
+              "closer": "brief-0012",
+              "further": "brief-0037",
+              "reason": "Human subjects in workshops share context despite different activity; a lake does not.",
+              "closer_cosine": 0.5852883556406309,
+              "further_cosine": 0.2229828971397916,
+              "margin": 0.3623054585008393,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0015",
+              "closer": "brief-0016",
+              "further": "brief-0071",
+              "reason": "Trees in a landscape share subject and setting; an indoor chair does not.",
+              "closer_cosine": 0.6324950413242674,
+              "further_cosine": 0.43545348475398965,
+              "margin": 0.19704155657027772,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0061",
+              "closer": "brief-0062",
+              "further": "brief-0028",
+              "reason": "Bridges and viaducts cross terrain; an indoor cat is unrelated.",
+              "closer_cosine": 0.5756431448867222,
+              "further_cosine": 0.3065332106417173,
+              "margin": 0.2691099342450049,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0083",
+              "closer": "brief-0084",
+              "further": "brief-0037",
+              "reason": "Both show physical framed artworks in rooms; a lake shares the depicted topic only.",
+              "closer_cosine": 0.8056110135947042,
+              "further_cosine": 0.32034210307556144,
+              "margin": 0.4852689105191428,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0001",
+              "closer": "brief-0028",
+              "further": "brief-0043",
+              "reason": "Shared window and room context despite different subjects; river view is outdoors.",
+              "closer_cosine": 0.6136808868184982,
+              "further_cosine": 0.3068161394885048,
+              "margin": 0.3068647473299934,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0094",
+              "closer": "brief-0098",
+              "further": "brief-0027",
+              "reason": "Built surface details with architectural context; a fox is an animal subject.",
+              "closer_cosine": 0.42367306383418707,
+              "further_cosine": 0.42391662582603173,
+              "margin": -0.0002435619918446652,
+              "agrees": false
+            },
+            {
+              "anchor": "brief-0071",
+              "closer": "brief-0051",
+              "further": "brief-0027",
+              "reason": "Indoor furniture and space versus an outdoor woodland animal.",
+              "closer_cosine": 0.6298949558433827,
+              "further_cosine": 0.4064428170739612,
+              "margin": 0.22345213876942155,
+              "agrees": true
+            }
+          ]
+        },
+        {
+          "representation": "subject-context-composition.v1.0.0",
+          "encoder": {
+            "id": "Xenova/all-MiniLM-L6-v2",
+            "revision": "751bff37182d3f1213fa05d7196b954e230abad9",
+            "dimension": 384,
+            "dtype": "q8",
+            "pooling": "mean",
+            "normalization": "l2",
+            "device": "cpu",
+            "runtime": "@huggingface/transformers@3.8.1",
+            "max_tokens": 256
+          },
+          "annotated_triplets": 8,
+          "agreement": 1,
+          "triplets": [
+            {
+              "anchor": "brief-0001",
+              "closer": "brief-0002",
+              "further": "brief-0062",
+              "reason": "Both are environmental portraits; the viaduct is an engineering subject.",
+              "closer_cosine": 0.669699190690663,
+              "further_cosine": 0.4225984778497612,
+              "margin": 0.2471007128409018,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0004",
+              "closer": "brief-0012",
+              "further": "brief-0037",
+              "reason": "Human subjects in workshops share context despite different activity; a lake does not.",
+              "closer_cosine": 0.7009355893507063,
+              "further_cosine": 0.34674431503218694,
+              "margin": 0.3541912743185194,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0015",
+              "closer": "brief-0016",
+              "further": "brief-0071",
+              "reason": "Trees in a landscape share subject and setting; an indoor chair does not.",
+              "closer_cosine": 0.6980939214990549,
+              "further_cosine": 0.4391211636185717,
+              "margin": 0.25897275788048324,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0061",
+              "closer": "brief-0062",
+              "further": "brief-0028",
+              "reason": "Bridges and viaducts cross terrain; an indoor cat is unrelated.",
+              "closer_cosine": 0.5878885431642461,
+              "further_cosine": 0.35956415513964957,
+              "margin": 0.22832438802459654,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0083",
+              "closer": "brief-0084",
+              "further": "brief-0037",
+              "reason": "Both show physical framed artworks in rooms; a lake shares the depicted topic only.",
+              "closer_cosine": 0.8340937928239957,
+              "further_cosine": 0.4746041700050702,
+              "margin": 0.35948962281892544,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0001",
+              "closer": "brief-0028",
+              "further": "brief-0043",
+              "reason": "Shared window and room context despite different subjects; river view is outdoors.",
+              "closer_cosine": 0.7553852318829036,
+              "further_cosine": 0.30419371391718336,
+              "margin": 0.45119151796572027,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0094",
+              "closer": "brief-0098",
+              "further": "brief-0027",
+              "reason": "Built surface details with architectural context; a fox is an animal subject.",
+              "closer_cosine": 0.4841796204244219,
+              "further_cosine": 0.43299121986865663,
+              "margin": 0.05118840055576529,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0071",
+              "closer": "brief-0051",
+              "further": "brief-0027",
+              "reason": "Indoor furniture and space versus an outdoor woodland animal.",
+              "closer_cosine": 0.7513393727714165,
+              "further_cosine": 0.47764289894639833,
+              "margin": 0.27369647382501816,
+              "agrees": true
+            }
+          ]
+        }
+      ],
+      "private_artifact": "comparison-4defb7a60cbc7e99c641421e367e68445a3d5221ea1b2fbb34037c91469269e2.v1.0.0.json"
+    },
+    {
+      "version": "1.0.0",
+      "kind": "brief_representation_comparison",
+      "catalog_sha256": "0b5cc1428907d0387c40437989bf981b1915b190198d030d12730c97814eef27",
+      "annotations_sha256": "fdde9bf0fc0ee9c063bac14dfc46aebcb070f3acec09aef46de19e1bacef2eca",
+      "annotation_status": "implementation_author_annotations_not_independent_human_validation",
+      "limitations": [
+        "Small purposive development sample, not an independent or blind human benchmark.",
+        "Triplets encode explicit subject/context preferences, not visual variety, quality, approval or difficulty.",
+        "Structured annotations are authored separately, never extracted from REAL photographs.",
+        "Compare both representations on exactly the same sample and triplets."
+      ],
+      "results": [
+        {
+          "representation": "description-medium.v1.0.0",
+          "encoder": {
+            "id": "real-or-slop/tfidf",
+            "revision": "1.0.0",
+            "dimension": 88,
+            "normalization": "l2",
+            "tokenizer": "ascii-lower-words.v1.0.0",
+            "tf": "raw",
+            "idf_formula": "log((1+n)/(1+df))+1",
+            "fit_sha256": "3836ed1a1da606c85c3576afe36ae80ffe37a464b16fe81599d14808bb0db4fc"
+          },
+          "annotated_triplets": 8,
+          "agreement": 0.875,
+          "triplets": [
+            {
+              "anchor": "brief-0001",
+              "closer": "brief-0002",
+              "further": "brief-0062",
+              "reason": "Both are environmental portraits; the viaduct is an engineering subject.",
+              "closer_cosine": 0.4373518723092677,
+              "further_cosine": 0.16094883102404559,
+              "margin": 0.2764030412852221,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0004",
+              "closer": "brief-0012",
+              "further": "brief-0037",
+              "reason": "Human subjects in workshops share context despite different activity; a lake does not.",
+              "closer_cosine": 0.3580056653180552,
+              "further_cosine": 0.0783592939606108,
+              "margin": 0.2796463713574444,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0015",
+              "closer": "brief-0016",
+              "further": "brief-0071",
+              "reason": "Trees in a landscape share subject and setting; an indoor chair does not.",
+              "closer_cosine": 0.4364959408613024,
+              "further_cosine": 0.20834528315893483,
+              "margin": 0.22815065770236756,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0061",
+              "closer": "brief-0062",
+              "further": "brief-0028",
+              "reason": "Bridges and viaducts cross terrain; an indoor cat is unrelated.",
+              "closer_cosine": 0.19226574688709394,
+              "further_cosine": 0.13035087384595787,
+              "margin": 0.061914873041136076,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0083",
+              "closer": "brief-0084",
+              "further": "brief-0037",
+              "reason": "Both show physical framed artworks in rooms; a lake shares the depicted topic only.",
+              "closer_cosine": 0.6131624511166994,
+              "further_cosine": 0.08783472701868066,
+              "margin": 0.5253277240980188,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0001",
+              "closer": "brief-0028",
+              "further": "brief-0043",
+              "reason": "Shared window and room context despite different subjects; river view is outdoors.",
+              "closer_cosine": 0.6935148925939125,
+              "further_cosine": 0.10719844796226449,
+              "margin": 0.586316444631648,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0094",
+              "closer": "brief-0098",
+              "further": "brief-0027",
+              "reason": "Built surface details with architectural context; a fox is an animal subject.",
+              "closer_cosine": 0.11406743183184109,
+              "further_cosine": 0.23724282060232482,
+              "margin": -0.12317538877048373,
+              "agrees": false
+            },
+            {
+              "anchor": "brief-0071",
+              "closer": "brief-0051",
+              "further": "brief-0027",
+              "reason": "Indoor furniture and space versus an outdoor woodland animal.",
+              "closer_cosine": 0.19141185847621403,
+              "further_cosine": 0.11940804434672439,
+              "margin": 0.07200381412948964,
+              "agrees": true
+            }
+          ]
+        },
+        {
+          "representation": "subject-context-composition.v1.0.0",
+          "encoder": {
+            "id": "real-or-slop/tfidf",
+            "revision": "1.0.0",
+            "dimension": 93,
+            "normalization": "l2",
+            "tokenizer": "ascii-lower-words.v1.0.0",
+            "tf": "raw",
+            "idf_formula": "log((1+n)/(1+df))+1",
+            "fit_sha256": "16d55dd51bf5cf04643980925bd7c69c768622b4ea35ee00dfa13b8f17a2f5c5"
+          },
+          "annotated_triplets": 8,
+          "agreement": 0.75,
+          "triplets": [
+            {
+              "anchor": "brief-0001",
+              "closer": "brief-0002",
+              "further": "brief-0062",
+              "reason": "Both are environmental portraits; the viaduct is an engineering subject.",
+              "closer_cosine": 0.3498966212363577,
+              "further_cosine": 0.16894457645284547,
+              "margin": 0.1809520447835122,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0004",
+              "closer": "brief-0012",
+              "further": "brief-0037",
+              "reason": "Human subjects in workshops share context despite different activity; a lake does not.",
+              "closer_cosine": 0.4162780731817036,
+              "further_cosine": 0.11365834794031793,
+              "margin": 0.3026197252413857,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0015",
+              "closer": "brief-0016",
+              "further": "brief-0071",
+              "reason": "Trees in a landscape share subject and setting; an indoor chair does not.",
+              "closer_cosine": 0.33810020433123256,
+              "further_cosine": 0.24897689195989245,
+              "margin": 0.08912331237134011,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0061",
+              "closer": "brief-0062",
+              "further": "brief-0028",
+              "reason": "Bridges and viaducts cross terrain; an indoor cat is unrelated.",
+              "closer_cosine": 0.155529227057603,
+              "further_cosine": 0.18496643636907564,
+              "margin": -0.029437209311472645,
+              "agrees": false
+            },
+            {
+              "anchor": "brief-0083",
+              "closer": "brief-0084",
+              "further": "brief-0037",
+              "reason": "Both show physical framed artworks in rooms; a lake shares the depicted topic only.",
+              "closer_cosine": 0.6594513407362477,
+              "further_cosine": 0.2513601084990217,
+              "margin": 0.408091232237226,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0001",
+              "closer": "brief-0028",
+              "further": "brief-0043",
+              "reason": "Shared window and room context despite different subjects; river view is outdoors.",
+              "closer_cosine": 0.7164929712267005,
+              "further_cosine": 0.11175448836292765,
+              "margin": 0.6047384828637729,
+              "agrees": true
+            },
+            {
+              "anchor": "brief-0094",
+              "closer": "brief-0098",
+              "further": "brief-0027",
+              "reason": "Built surface details with architectural context; a fox is an animal subject.",
+              "closer_cosine": 0.14033083766792653,
+              "further_cosine": 0.2988679380438498,
+              "margin": -0.15853710037592328,
+              "agrees": false
+            },
+            {
+              "anchor": "brief-0071",
+              "closer": "brief-0051",
+              "further": "brief-0027",
+              "reason": "Indoor furniture and space versus an outdoor woodland animal.",
+              "closer_cosine": 0.20045978947429538,
+              "further_cosine": 0.15571506431975332,
+              "margin": 0.04474472515454206,
+              "agrees": true
+            }
+          ]
+        }
+      ],
+      "private_artifact": "comparison-bf02146b73eedcbd894047979aeed878cc1cf31e5b18ec56041a7146eaf0ce49.v1.0.0.json"
+    }
+  ],
+  "checks": {
+    "legacy_catalog_preserved": true,
+    "frozen_cycle_bytes_preserved": true,
+    "english_descriptions_and_tags": 100,
+    "canonical_tag_identities": 16,
+    "paid_api_enabled": false,
+    "estimated_api_cost_usd": 0,
+    "remote_inference_calls": 0,
+    "model_download_explicit": true,
+    "model_cache_bytes": 23685047
+  },
+  "limitations": [
+    "Implementation-authored annotations; independent human validation is pending.",
+    "18 purposive samples, 8 triplets; no claim of statistical superiority or visual variety.",
+    "All catalogue entries remain draft; no owner approval implied.",
+    "Text distances do not establish authenticity, rights, composition, difficulty or educational benefit.",
+    "Numerical reproducibility depends on the pinned runtime and CPU platform; cache preserves exact recorded vectors.",
+    "No game routes, image acquisition, remote migrations, cron or deployment were changed."
+  ]
+}
