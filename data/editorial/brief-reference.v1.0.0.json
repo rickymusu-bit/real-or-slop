@@ -1,0 +1,596 @@
+{
+  "version": "1.0.0",
+  "corpus_id": "real-or-slop-reference-briefs",
+  "language": "en",
+  "created_at": "2026-11-05T14:13:37.485248Z",
+  "editorial_review": {
+    "status": "implementation_reviewed_owner_pending",
+    "reviewer": "implementation_author",
+    "scope": "English text, readable setting, distinct exploratory topics; not owner acceptance or source availability verification."
+  },
+  "independence_statement": "Independent-topic rows were authored as a separate exploration rather than expansions of seed tags or SLOP prompts. The implementation author has seen the seed; this is not a blind independent human corpus.",
+  "limitations": [
+    "A finite purposive corpus, not the universe of visual subjects.",
+    "36 independent-topic probes and 12 seed-derived controls are reported separately.",
+    "No candidate is approved for the operational catalogue; no search or generation is authorized.",
+    "Microscopy and astronomy probe representation boundaries; their editorial admissibility requires owner review."
+  ],
+  "candidates": [
+    {
+      "id": "reference-0001",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A radio astronomy control room with illuminated instrument panels and the surrounding workspace visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "astronomy",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0002",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A wide view of a night sky with a comet above a recognizable rocky horizon.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "astronomy",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0003",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A diver examining a shipwreck underwater, with the hull and surrounding seabed visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "underwater",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0004",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "An underwater view of a coral reef with fish moving among the surrounding coral structures.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "underwater",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0005",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A microscope image of a plant cross section, with surrounding cells and the tissue structure visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "microscopy",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0006",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A microscope view of mineral crystals, showing the relationship between grains across the specimen.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "microscopy",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0007",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A lightning storm above farmland, with the horizon and the surrounding fields visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "weather",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0008",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A waterspout offshore, with the sea surface and the distant coast visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "weather",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0009",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A steel foundry during a metal pour, with protective equipment and the surrounding industrial space visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "industry",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0010",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A textile loom operating in a factory, with the thread paths and surrounding equipment visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "industry",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0011",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A data center aisle with server cabinets, cables and the surrounding technical space visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "technology",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0012",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "An electronics repair bench with an open circuit board and the surrounding diagnostic equipment visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "technology",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0013",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A hospital imaging room with a scanner and the surrounding clinical equipment visible, without an identifiable patient.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "medicine",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0014",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A veterinary examination of a small animal, with the examination table and the surrounding clinic visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "medicine",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0015",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "An adult pole vaulter above the bar, with the landing area and stadium visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "sports",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0016",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "Adult wheelchair athletes playing basketball, with the court and the surrounding sports hall visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "sports",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0017",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A theater rehearsal with stage machinery and the surrounding backstage space visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "performance",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0018",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "An adult shadow puppeteer performing, with the screen, light source and the surrounding stage visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "performance",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0019",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A cheese maturation cellar with shelves of cheese and the surrounding work space visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "food_systems",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0020",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A salt harvesting operation with evaporation ponds, channels and the surrounding flat terrain visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "food_systems",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0021",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A cargo ship passing through an ice-covered sea, with broken ice and the surrounding water visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "transport",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0022",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "An airport baggage handling system with conveyors, luggage and the surrounding service area visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "transport",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0023",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "Folded rock strata in a quarry wall, with the excavation floor and surrounding geological setting visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "earth_science",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0024",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A sinkhole in farmland, with its rim and the surrounding field visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "earth_science",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0025",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "Adults arranging an outdoor community meal, with tables and the surrounding neighborhood visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "social_life",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0026",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "An adult chess player in a public square, with the board, seating and surrounding public space visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "social_life",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0027",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "An archaeological excavation with exposed layers, tools and the surrounding site visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "archaeology",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0028",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A pottery conservation workspace with fragments, supports and the surrounding workbench visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "archaeology",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0029",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A beaver dam across a stream, with the water level and surrounding vegetation visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "ecology",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0030",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A dense seabird nesting colony on a cliff, with nests, rock faces and the surrounding coast visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "ecology",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0031",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A halo around the sun above a snowy field, with the horizon and surrounding landscape visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "optical_phenomena",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0032",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A mirage above a road, with the road surface and surrounding dry landscape visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "optical_phenomena",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0033",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A wastewater treatment facility with settling tanks, walkways and the surrounding site visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "public_services",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0034",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A recycling sorting line with conveyors, materials and the surrounding work area visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "public_services",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0035",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A glassblower shaping molten glass, with the furnace, tools and surrounding workshop visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "craft",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0036",
+      "revision": 1,
+      "status": "draft",
+      "medium": "artwork",
+      "description": "An installation of suspended translucent fabric in a gallery, with the whole work and surrounding room visible.",
+      "provenance": {
+        "kind": "independent_exploration",
+        "topic": "art_installation",
+        "method": "Implementation-authored free topic exploration; no REAL photographs, captions or SLOP prompts used."
+      }
+    },
+    {
+      "id": "reference-0037",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A portrait of an adult beside a window, including the surrounding room.",
+      "provenance": {
+        "kind": "catalog_derived_control",
+        "topic": "portrait",
+        "method": "Implementation-authored paraphrase of a seed topic, used only as an overlap control."
+      }
+    },
+    {
+      "id": "reference-0038",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A portrait of an older person outdoors in a garden, including the vegetation and surrounding space.",
+      "provenance": {
+        "kind": "catalog_derived_control",
+        "topic": "portrait",
+        "method": "Implementation-authored paraphrase of a seed topic, used only as an overlap control."
+      }
+    },
+    {
+      "id": "reference-0039",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "An isolated tree in a meadow with the surrounding ground and landscape visible.",
+      "provenance": {
+        "kind": "catalog_derived_control",
+        "topic": "botany",
+        "method": "Implementation-authored paraphrase of a seed topic, used only as an overlap control."
+      }
+    },
+    {
+      "id": "reference-0040",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A cat beside a window with the surrounding room visible.",
+      "provenance": {
+        "kind": "catalog_derived_control",
+        "topic": "animals",
+        "method": "Implementation-authored paraphrase of a seed topic, used only as an overlap control."
+      }
+    },
+    {
+      "id": "reference-0041",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A mountain lake with the shore and surrounding peaks visible.",
+      "provenance": {
+        "kind": "catalog_derived_control",
+        "topic": "landscape",
+        "method": "Implementation-authored paraphrase of a seed topic, used only as an overlap control."
+      }
+    },
+    {
+      "id": "reference-0042",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "An interior view of a modern library with shelves, furniture and the surrounding architectural space visible.",
+      "provenance": {
+        "kind": "catalog_derived_control",
+        "topic": "architecture",
+        "method": "Implementation-authored paraphrase of a seed topic, used only as an overlap control."
+      }
+    },
+    {
+      "id": "reference-0043",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "An arched bridge over a stream with the banks and surrounding landscape visible.",
+      "provenance": {
+        "kind": "catalog_derived_control",
+        "topic": "engineering",
+        "method": "Implementation-authored paraphrase of a seed topic, used only as an overlap control."
+      }
+    },
+    {
+      "id": "reference-0044",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "An armchair in an inhabited room with the floor, walls and nearby furniture visible.",
+      "provenance": {
+        "kind": "catalog_derived_control",
+        "topic": "objects",
+        "method": "Implementation-authored paraphrase of a seed topic, used only as an overlap control."
+      }
+    },
+    {
+      "id": "reference-0045",
+      "revision": 1,
+      "status": "draft",
+      "medium": "artwork",
+      "description": "A framed landscape painting displayed in a room with the surrounding wall visible.",
+      "provenance": {
+        "kind": "catalog_derived_control",
+        "topic": "art",
+        "method": "Implementation-authored paraphrase of a seed topic, used only as an overlap control."
+      }
+    },
+    {
+      "id": "reference-0046",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A weathered wooden fence with the surrounding garden visible.",
+      "provenance": {
+        "kind": "catalog_derived_control",
+        "topic": "details",
+        "method": "Implementation-authored paraphrase of a seed topic, used only as an overlap control."
+      }
+    },
+    {
+      "id": "reference-0047",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A fox beside a wood with the surrounding habitat visible.",
+      "provenance": {
+        "kind": "catalog_derived_control",
+        "topic": "animals",
+        "method": "Implementation-authored paraphrase of a seed topic, used only as an overlap control."
+      }
+    },
+    {
+      "id": "reference-0048",
+      "revision": 1,
+      "status": "draft",
+      "medium": "photograph",
+      "description": "A bicycle leaning against a courtyard wall with the paving and nearby space visible.",
+      "provenance": {
+        "kind": "catalog_derived_control",
+        "topic": "objects",
+        "method": "Implementation-authored paraphrase of a seed topic, used only as an overlap control."
+      }
+    }
+  ]
+}

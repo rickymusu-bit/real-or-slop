@@ -1,8 +1,10 @@
-## Non rilasciato — issue #44
+## Non rilasciato — issue #44–#45
 
 - Catalogo canonico inglese v1.1.0: 100 brief alla revisione 2, tassonomia inglese e migrazione ispezionabile, con storico e cicli congelati conservati.
 - Indice testuale privato v1.0.0: MiniLM locale con revisione fissata, baseline TF-IDF, fixture e dry-run; cache composita e snapshot immutabili, recupero e verifica d'integrità.
 - Confronto su campione annotato di rappresentazione neutrale e strutturata, rapporto sui 100 brief e test offline. Nessuna chiamata API pagata, migrazione remota, deploy o modifica al gioco.
+- Diagnostica semantica v1.0.0 (#45): distanze/kNN/densità/dispersione, spettro PCA e dimensione effettiva, DBSCAN con rumore e sensibilità ai parametri. Corpus di 48 probe versionati, copertura distinta per provenienza, baseline casuale/per tag con pari budget e confronto TF-IDF.
+- Report sui 100 brief, vicini annotati, JSON/CSV/Markdown immutabili e gruppi per stato/uso/origine con dati sconosciuti espliciti. Nessun nuovo fatto di approvazione, filtro editoriale automatico o modifica a brief e immagini.
 
 ## 0.15.0 — 2026-11-03 (sperimentale, non attivata)
 

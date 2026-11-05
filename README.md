@@ -44,6 +44,13 @@ download gratuito esplicito e rapporto sui 100 brief:
 [procedura v1.0.0](docs/indice-brief.v1.0.0.md). Nessuna API pagata o
 connessione dell'indice al gioco.
 
+La issue #45 aggiunge `npm run analyze:briefs -- --index PERCORSO-SNAPSHOT`:
+distanze, vicini, cluster esplorativi e copertura rispetto a 48 probe di
+riferimento, con baseline casuale/per tag e TF-IDF. JSON, CSV e rapporto
+leggibile restano locali; dati assenti su uso e immagini approvate sono
+sconosciuti. [Procedura e limiti v1.0.0](docs/varieta-brief.v1.0.0.md) ·
+[Rapporto sui 100 brief](docs/rapporto-varieta-brief.v1.0.0.md).
+
 Il codice dello studio usa contratti dati e archivio privato v2. Le candidate
 non possono essere pubblicate dal vecchio flusso. I gate pagati e di produzione
 restano disabilitati: il merge del protocollo non avvia cron, addebiti o deploy.

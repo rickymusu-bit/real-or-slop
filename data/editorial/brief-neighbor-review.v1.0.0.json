@@ -1,0 +1,81 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-11-05T14:22:13.382046Z",
+  "annotation_status": "implementation_author_not_independent_human_validation",
+  "reviewer": "implementation_author",
+  "scope": "Manual text reading of selected MiniLM neighbors after initial exploratory measurement. Correct/false refers to usefulness for subject-redundancy triage, not authentication, image quality or universal semantic truth. No owner decision is implied.",
+  "pairs": [
+    {
+      "a": "brief-0001",
+      "b": "brief-0006",
+      "judgment": "correct_neighbor",
+      "reason": "Both are environmental portraits of adults in readable interiors; the library and window contexts remain distinct."
+    },
+    {
+      "a": "brief-0001",
+      "b": "brief-0004",
+      "judgment": "correct_neighbor",
+      "reason": "Adult portraits with visible settings share the portrait intent while retaining different contexts."
+    },
+    {
+      "a": "brief-0083",
+      "b": "brief-0084",
+      "judgment": "correct_neighbor",
+      "reason": "Whole physical framed paintings shown in rooms; their depicted subjects are different."
+    },
+    {
+      "a": "brief-0083",
+      "b": "brief-0086",
+      "judgment": "correct_neighbor",
+      "reason": "Physical paintings displayed in their environment, with differences in depicted content and venue."
+    },
+    {
+      "a": "brief-0015",
+      "b": "brief-0016",
+      "judgment": "correct_neighbor",
+      "reason": "Trees are primary subjects within readable landscapes; species and setting vary."
+    },
+    {
+      "a": "brief-0071",
+      "b": "brief-0072",
+      "judgment": "correct_neighbor",
+      "reason": "Domestic furniture in readable rooms; related topic without claiming duplicate scenes."
+    },
+    {
+      "a": "brief-0028",
+      "b": "brief-0097",
+      "judgment": "false_neighbor",
+      "reason": "For subject-redundancy triage, a cat is not a curtain. Shared window/interior wording drives a close neighbor and must not justify merging or rejecting either brief."
+    },
+    {
+      "a": "brief-0051",
+      "b": "brief-0092",
+      "judgment": "false_neighbor",
+      "reason": "A library interior and a displayed tapestry have different primary subjects; shared room/furniture context does not establish redundancy."
+    },
+    {
+      "a": "brief-0028",
+      "b": "brief-0078",
+      "judgment": "context_match_subject_mismatch",
+      "reason": "Window and room context match, but the animal and vase are distinct subjects."
+    },
+    {
+      "a": "brief-0012",
+      "b": "brief-0077",
+      "judgment": "context_match_subject_mismatch",
+      "reason": "A person repairing an object and a toolbox share a workbench; an activity and an object remain distinct."
+    },
+    {
+      "a": "brief-0037",
+      "b": "brief-0063",
+      "judgment": "context_match_subject_mismatch",
+      "reason": "Lake and mountain context overlaps with a dam/reservoir scene, but the engineering structure changes the subject."
+    },
+    {
+      "a": "brief-0061",
+      "b": "brief-0043",
+      "judgment": "context_match_subject_mismatch",
+      "reason": "Watercourse and banks match, but a bridge and a river bend are different primary subjects and compositions."
+    }
+  ]
+}

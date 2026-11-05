@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "seed": 45,
+  "ks": [1, 5, 10],
+  "density_radius": 0.3,
+  "cluster_epsilons": [0.1, 0.2, 0.3, 0.4],
+  "cluster_min_samples": [3, 5],
+  "cluster_default_epsilon": 0.3,
+  "cluster_default_min_samples": 3,
+  "coverage_radii": [0.2, 0.3, 0.4, 0.5],
+  "max_samples": 1500,
+  "max_pairs": 5000,
+  "pca_max_samples": 500,
+  "pca_sweeps": 40,
+  "pca_tolerance": 1e-10,
+  "baseline_size": 25,
+  "baseline_repetitions": 100
+}

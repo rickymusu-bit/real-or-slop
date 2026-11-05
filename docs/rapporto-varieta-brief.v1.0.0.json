@@ -1,0 +1,1836 @@
+{
+  "version": "1.0.0",
+  "kind": "brief_variety_verification_summary",
+  "issue": 45,
+  "created_at": "2026-11-05T14:22:20.103Z",
+  "source_snapshot_id": "29c2025c72f9a80589d78cfeb26f0ce3fb815aa39bf992fb65c1bb073363dafc",
+  "private_full_json_sha256": "e7c5bd7f85e9595b9c4b2d2e58fdaf1a86bc530c104abeb0e7997a124195ed6a",
+  "implementation_base_commit": "16e9efd92d055b1e252c5afb29d4a755deb219e5",
+  "inputs": {
+    "catalog_sha256": "0b5cc1428907d0387c40437989bf981b1915b190198d030d12730c97814eef27",
+    "index_snapshot_id": "e4d3912534ce193569ee43a416a42300e8cc4be288164b188ca350f4d2f664fd",
+    "index_content_sha256": "83f372930517c8392d71238fd7bd47e644849b0812f03f6ca29594ff0ed6724e",
+    "reference_sha256": "1d5788455098b69d2e2918a36f2de901ee655f8d5c0e41e56d61f146fdc339a6",
+    "reference_index_sha256": "5cea8d3edb56b6abb40be07baed013cab93f5624aa8f262acf2d18ae6d5287db",
+    "lexical_index_sha256": "fa71fd375285dd9c6660c5bd972604f0042832da587ae29a03ec469f2562a32f",
+    "lexical_reference_index_sha256": "baa69e09f77f25ae5cad047eb5ffeb58c334b26cd350edfa313394d2b0af10ee",
+    "activity_sha256": null,
+    "review_sha256": "07c3e8fbafddab6d987f689aab7c8aee2efe5813576d3dff957c693366ee5811",
+    "annotations_sha256": "fdde9bf0fc0ee9c063bac14dfc46aebcb070f3acec09aef46de19e1bacef2eca"
+  },
+  "config": {
+    "version": "1.0.0",
+    "seed": 45,
+    "ks": [
+      1,
+      5,
+      10
+    ],
+    "density_radius": 0.3,
+    "cluster_epsilons": [
+      0.1,
+      0.2,
+      0.3,
+      0.4
+    ],
+    "cluster_min_samples": [
+      3,
+      5
+    ],
+    "cluster_default_epsilon": 0.3,
+    "cluster_default_min_samples": 3,
+    "coverage_radii": [
+      0.2,
+      0.3,
+      0.4,
+      0.5
+    ],
+    "max_samples": 1500,
+    "max_pairs": 5000,
+    "pca_max_samples": 500,
+    "pca_sweeps": 40,
+    "pca_tolerance": 1e-10,
+    "baseline_size": 25,
+    "baseline_repetitions": 100
+  },
+  "encoder": {
+    "id": "Xenova/all-MiniLM-L6-v2",
+    "revision": "751bff37182d3f1213fa05d7196b954e230abad9",
+    "dimension": 384,
+    "dtype": "q8",
+    "pooling": "mean",
+    "normalization": "l2",
+    "device": "cpu",
+    "runtime": "@huggingface/transformers@3.8.1",
+    "max_tokens": 256
+  },
+  "lexical_encoder": {
+    "id": "real-or-slop/tfidf",
+    "revision": "1.0.0",
+    "dimension": 298,
+    "normalization": "l2",
+    "tokenizer": "ascii-lower-words.v1.0.0",
+    "tf": "raw",
+    "idf_formula": "log((1+n)/(1+df))+1",
+    "fit_sha256": "f0ddd40084b0c63e53d5e64753aab9311e41db38468f2311bc4d57d2b19462aa"
+  },
+  "reference": {
+    "corpus_id": "real-or-slop-reference-briefs",
+    "version": "1.0.0",
+    "candidates": 48,
+    "editorial_review": {
+      "status": "implementation_reviewed_owner_pending",
+      "reviewer": "implementation_author",
+      "scope": "English text, readable setting, distinct exploratory topics; not owner acceptance or source availability verification."
+    },
+    "independence_statement": "Independent-topic rows were authored as a separate exploration rather than expansions of seed tags or SLOP prompts. The implementation author has seen the seed; this is not a blind independent human corpus.",
+    "limitations": [
+      "A finite purposive corpus, not the universe of visual subjects.",
+      "36 independent-topic probes and 12 seed-derived controls are reported separately.",
+      "No candidate is approved for the operational catalogue; no search or generation is authorized.",
+      "Microscopy and astronomy probe representation boundaries; their editorial admissibility requires owner review."
+    ]
+  },
+  "activity": {
+    "state": "not_provided_all_unknown",
+    "observed_at": null,
+    "source": null
+  },
+  "primary": {
+    "n": 100,
+    "distances": {
+      "total_pairs": 4950,
+      "sampled_pairs": 4950,
+      "method": "complete",
+      "summary": {
+        "n": 4950,
+        "mean": 0.6443324847623536,
+        "min": 0.19438898640529578,
+        "p10": 0.49292382194617695,
+        "p25": 0.5753134753972342,
+        "median": 0.6543101764435904,
+        "p75": 0.7231064751602811,
+        "p90": 0.7811083579006353,
+        "max": 1.0150959906011527
+      },
+      "histogram": [
+        {
+          "lower": 0,
+          "upper": 0.1,
+          "count": 0
+        },
+        {
+          "lower": 0.1,
+          "upper": 0.2,
+          "count": 1
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.3,
+          "count": 24
+        },
+        {
+          "lower": 0.3,
+          "upper": 0.4,
+          "count": 120
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.5,
+          "count": 395
+        },
+        {
+          "lower": 0.5,
+          "upper": 0.6,
+          "count": 1030
+        },
+        {
+          "lower": 0.6,
+          "upper": 0.7,
+          "count": 1737
+        },
+        {
+          "lower": 0.7,
+          "upper": 0.8,
+          "count": 1300
+        },
+        {
+          "lower": 0.8,
+          "upper": 0.9,
+          "count": 322
+        },
+        {
+          "lower": 0.9,
+          "upper": 1,
+          "count": 20
+        },
+        {
+          "lower": 1,
+          "upper": 1.1,
+          "count": 1
+        },
+        {
+          "lower": 1.1,
+          "upper": 1.2,
+          "count": 0
+        },
+        {
+          "lower": 1.2,
+          "upper": 1.3,
+          "count": 0
+        },
+        {
+          "lower": 1.3,
+          "upper": 1.4,
+          "count": 0
+        },
+        {
+          "lower": 1.4,
+          "upper": 1.5,
+          "count": 0
+        },
+        {
+          "lower": 1.5,
+          "upper": 1.6,
+          "count": 0
+        },
+        {
+          "lower": 1.6,
+          "upper": 1.7,
+          "count": 0
+        },
+        {
+          "lower": 1.7,
+          "upper": 1.8,
+          "count": 0
+        },
+        {
+          "lower": 1.8,
+          "upper": 1.9,
+          "count": 0
+        },
+        {
+          "lower": 1.9,
+          "upper": 2,
+          "count": 0
+        }
+      ]
+    },
+    "knn_summary": {
+      "1": {
+        "n": 100,
+        "mean": 0.33458866682212757,
+        "min": 0.19438898640529578,
+        "p10": 0.2589439197631923,
+        "p25": 0.28767174088929726,
+        "median": 0.3258846922841353,
+        "p75": 0.39088009332934803,
+        "p90": 0.43488754586943923,
+        "max": 0.4901859200313494
+      },
+      "5": {
+        "n": 100,
+        "mean": 0.39582760156185887,
+        "min": 0.27540856422454707,
+        "p10": 0.32752690185257555,
+        "p25": 0.3566407878092091,
+        "median": 0.3968463646222705,
+        "p75": 0.4368790198948872,
+        "p90": 0.4642459170723756,
+        "max": 0.5243880213156518
+      },
+      "10": {
+        "n": 100,
+        "mean": 0.43499170473740506,
+        "min": 0.31605131476427795,
+        "p10": 0.373489157680862,
+        "p25": 0.4003185912029591,
+        "median": 0.4375926009960309,
+        "p75": 0.47060611169456124,
+        "p90": 0.5036730693425306,
+        "max": 0.5590017620988249
+      }
+    },
+    "dispersion": {
+      "mean_squared_euclidean_to_centroid": 0.6378891599147294,
+      "centroid_norm": 0.6017564624374804
+    },
+    "outliers": {
+      "state": "computed",
+      "method": "median_plus_3_scaled_MAD",
+      "k": 5,
+      "median": 0.3968463646222705,
+      "mad": 0.04037662315668056,
+      "threshold": 0.5764335090985543,
+      "ids": [],
+      "diagnostic_only": true
+    },
+    "pca": {
+      "state": "computed",
+      "n": 100,
+      "total_n": 100,
+      "sampled": false,
+      "solver": "symmetric_gram_cyclic_jacobi.v1.0.0",
+      "sweeps": 9,
+      "residual": 9.997455978453734e-11,
+      "total_variance": 0.6443324847623522,
+      "numerical_rank": 99,
+      "effective_dimension": 28.291773723810003,
+      "entropy_dimension": 48.52935866309524,
+      "caveat": "2D proximity is not original distance; equal eigenvalues allow rotated axes. No map gaps imply objective missing topics."
+    },
+    "pca_first_ten_components": [
+      {
+        "component": 1,
+        "eigenvalue": 0.07681204423097407,
+        "explained_fraction": 0.11921181384996365
+      },
+      {
+        "component": 2,
+        "eigenvalue": 0.04027599499577812,
+        "explained_fraction": 0.06250809317899443
+      },
+      {
+        "component": 3,
+        "eigenvalue": 0.03623018056975496,
+        "explained_fraction": 0.056229014408791855
+      },
+      {
+        "component": 4,
+        "eigenvalue": 0.03059269728376428,
+        "explained_fraction": 0.04747967548935193
+      },
+      {
+        "component": 5,
+        "eigenvalue": 0.025349163560420773,
+        "explained_fraction": 0.039341743835514136
+      },
+      {
+        "component": 6,
+        "eigenvalue": 0.02110553177519403,
+        "explained_fraction": 0.03275565375689283
+      },
+      {
+        "component": 7,
+        "eigenvalue": 0.020722567640845384,
+        "explained_fraction": 0.03216129580753398
+      },
+      {
+        "component": 8,
+        "eigenvalue": 0.019237503242412402,
+        "explained_fraction": 0.029856485118095095
+      },
+      {
+        "component": 9,
+        "eigenvalue": 0.01851606709307009,
+        "explained_fraction": 0.02873682071128128
+      },
+      {
+        "component": 10,
+        "eigenvalue": 0.01609200287104408,
+        "explained_fraction": 0.024974688148742433
+      }
+    ],
+    "clustering": {
+      "algorithm": "DBSCAN_cosine.v1.0.0",
+      "default": {
+        "epsilon": 0.3,
+        "min_samples": 3,
+        "min_samples_includes_self": true,
+        "cluster_count": 4,
+        "noise_count": 84
+      },
+      "sensitivity": [
+        {
+          "epsilon": 0.1,
+          "min_samples": 3,
+          "min_samples_includes_self": true,
+          "cluster_count": 0,
+          "noise_count": 100,
+          "stability_vs_default": {
+            "state": "computed",
+            "pair_jaccard_excluding_noise": 0,
+            "intersection_pairs": 0,
+            "union_pairs": 25,
+            "noise_disagreements": 16
+          }
+        },
+        {
+          "epsilon": 0.1,
+          "min_samples": 5,
+          "min_samples_includes_self": true,
+          "cluster_count": 0,
+          "noise_count": 100,
+          "stability_vs_default": {
+            "state": "computed",
+            "pair_jaccard_excluding_noise": 0,
+            "intersection_pairs": 0,
+            "union_pairs": 25,
+            "noise_disagreements": 16
+          }
+        },
+        {
+          "epsilon": 0.2,
+          "min_samples": 3,
+          "min_samples_includes_self": true,
+          "cluster_count": 0,
+          "noise_count": 100,
+          "stability_vs_default": {
+            "state": "computed",
+            "pair_jaccard_excluding_noise": 0,
+            "intersection_pairs": 0,
+            "union_pairs": 25,
+            "noise_disagreements": 16
+          }
+        },
+        {
+          "epsilon": 0.2,
+          "min_samples": 5,
+          "min_samples_includes_self": true,
+          "cluster_count": 0,
+          "noise_count": 100,
+          "stability_vs_default": {
+            "state": "computed",
+            "pair_jaccard_excluding_noise": 0,
+            "intersection_pairs": 0,
+            "union_pairs": 25,
+            "noise_disagreements": 16
+          }
+        },
+        {
+          "epsilon": 0.3,
+          "min_samples": 3,
+          "min_samples_includes_self": true,
+          "cluster_count": 4,
+          "noise_count": 84,
+          "stability_vs_default": {
+            "state": "computed",
+            "pair_jaccard_excluding_noise": 1,
+            "intersection_pairs": 25,
+            "union_pairs": 25,
+            "noise_disagreements": 0
+          }
+        },
+        {
+          "epsilon": 0.3,
+          "min_samples": 5,
+          "min_samples_includes_self": true,
+          "cluster_count": 0,
+          "noise_count": 100,
+          "stability_vs_default": {
+            "state": "computed",
+            "pair_jaccard_excluding_noise": 0,
+            "intersection_pairs": 0,
+            "union_pairs": 25,
+            "noise_disagreements": 16
+          }
+        },
+        {
+          "epsilon": 0.4,
+          "min_samples": 3,
+          "min_samples_includes_self": true,
+          "cluster_count": 4,
+          "noise_count": 25,
+          "stability_vs_default": {
+            "state": "computed",
+            "pair_jaccard_excluding_noise": 0.012309207287050714,
+            "intersection_pairs": 25,
+            "union_pairs": 2031,
+            "noise_disagreements": 59
+          }
+        },
+        {
+          "epsilon": 0.4,
+          "min_samples": 5,
+          "min_samples_includes_self": true,
+          "cluster_count": 3,
+          "noise_count": 42,
+          "stability_vs_default": {
+            "state": "computed",
+            "pair_jaccard_excluding_noise": 0.025278058645096056,
+            "intersection_pairs": 25,
+            "union_pairs": 989,
+            "noise_disagreements": 42
+          }
+        }
+      ],
+      "caveat": "Exploratory parameter grid; noise is valid and no cluster is mandatory. Pair Jaccard excludes noise and is null when no positive co-cluster pairs exist."
+    },
+    "coverage": {
+      "state": "computed",
+      "catalog_n": 100,
+      "summary": {
+        "n": 48,
+        "mean": 0.34690665470674437,
+        "min": 0.02586780239447617,
+        "p10": 0.04173246930958987,
+        "p25": 0.1874398291264757,
+        "median": 0.4232687449274305,
+        "p75": 0.5054966582098054,
+        "p90": 0.5307724525506119,
+        "max": 0.5975885882754439,
+        "candidates": 48,
+        "within_radius": [
+          {
+            "radius": 0.2,
+            "fraction": 0.25
+          },
+          {
+            "radius": 0.3,
+            "fraction": 0.3333333333333333
+          },
+          {
+            "radius": 0.4,
+            "fraction": 0.4166666666666667
+          },
+          {
+            "radius": 0.5,
+            "fraction": 0.7291666666666666
+          }
+        ]
+      },
+      "by_provenance": {
+        "catalog_derived_control": {
+          "n": 12,
+          "mean": 0.04922687161551644,
+          "min": 0.02586780239447617,
+          "p10": 0.0280287723863179,
+          "p25": 0.03711782488570836,
+          "median": 0.04388777169023028,
+          "p75": 0.0545357892998215,
+          "p90": 0.05601078945789826,
+          "max": 0.12178697280361928,
+          "candidates": 12,
+          "within_radius": [
+            {
+              "radius": 0.2,
+              "fraction": 1
+            },
+            {
+              "radius": 0.3,
+              "fraction": 1
+            },
+            {
+              "radius": 0.4,
+              "fraction": 1
+            },
+            {
+              "radius": 0.5,
+              "fraction": 1
+            }
+          ]
+        },
+        "independent_exploration": {
+          "n": 36,
+          "mean": 0.4461332490704872,
+          "min": 0.20932411456742783,
+          "p10": 0.2942010003987297,
+          "p25": 0.4073004615306675,
+          "median": 0.46657204685008696,
+          "p75": 0.5126733988683952,
+          "p90": 0.5523185788382625,
+          "max": 0.5975885882754439,
+          "candidates": 36,
+          "within_radius": [
+            {
+              "radius": 0.2,
+              "fraction": 0
+            },
+            {
+              "radius": 0.3,
+              "fraction": 0.1111111111111111
+            },
+            {
+              "radius": 0.4,
+              "fraction": 0.2222222222222222
+            },
+            {
+              "radius": 0.5,
+              "fraction": 0.6388888888888888
+            }
+          ]
+        }
+      },
+      "diagnostic_only": true,
+      "caveat": "Distances and radii describe this reference corpus only; they do not authorize or reject image acquisition."
+    },
+    "largest_reference_gaps": [
+      {
+        "id": "reference-0006",
+        "provenance": "independent_exploration",
+        "description": "A microscope view of mineral crystals, showing the relationship between grains across the specimen.",
+        "nearest_id": "brief-0094",
+        "min_distance": 0.5975885882754439
+      },
+      {
+        "id": "reference-0016",
+        "provenance": "independent_exploration",
+        "description": "Adult wheelchair athletes playing basketball, with the court and the surrounding sports hall visible.",
+        "nearest_id": "brief-0071",
+        "min_distance": 0.5713047573708387
+      },
+      {
+        "id": "reference-0022",
+        "provenance": "independent_exploration",
+        "description": "An airport baggage handling system with conveyors, luggage and the surrounding service area visible.",
+        "nearest_id": "brief-0051",
+        "min_distance": 0.5643318205313335
+      },
+      {
+        "id": "reference-0009",
+        "provenance": "independent_exploration",
+        "description": "A steel foundry during a metal pour, with protective equipment and the surrounding industrial space visible.",
+        "nearest_id": "brief-0077",
+        "min_distance": 0.5591070065292212
+      },
+      {
+        "id": "reference-0035",
+        "provenance": "independent_exploration",
+        "description": "A glassblower shaping molten glass, with the furnace, tools and surrounding workshop visible.",
+        "nearest_id": "brief-0010",
+        "min_distance": 0.5455301511473039
+      },
+      {
+        "id": "reference-0020",
+        "provenance": "independent_exploration",
+        "description": "A salt harvesting operation with evaporation ponds, channels and the surrounding flat terrain visible.",
+        "nearest_id": "brief-0036",
+        "min_distance": 0.524447724580601
+      },
+      {
+        "id": "reference-0033",
+        "provenance": "independent_exploration",
+        "description": "A wastewater treatment facility with settling tanks, walkways and the surrounding site visible.",
+        "nearest_id": "brief-0066",
+        "min_distance": 0.5223916895366222
+      },
+      {
+        "id": "reference-0010",
+        "provenance": "independent_exploration",
+        "description": "A textile loom operating in a factory, with the thread paths and surrounding equipment visible.",
+        "nearest_id": "brief-0080",
+        "min_distance": 0.52118148424394
+      }
+    ],
+    "groups": {
+      "draft": {
+        "n": 100,
+        "knn1_median": 0.3258846922841353,
+        "knn5_median": 0.3968463646222705,
+        "knn10_median": 0.4375926009960309,
+        "reference_median": 0.4232687449274305,
+        "reference_p90": 0.5307724525506119
+      },
+      "approved": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "retired": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "used": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "unused": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "usage_unknown": {
+        "n": 100,
+        "knn1_median": 0.3258846922841353,
+        "knn5_median": 0.3968463646222705,
+        "knn10_median": 0.4375926009960309,
+        "reference_median": 0.4232687449274305,
+        "reference_p90": 0.5307724525506119
+      },
+      "REAL_approved": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "SLOP_approved": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "neither_origin_approved": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "REAL_approval_unknown": {
+        "n": 100,
+        "knn1_median": 0.3258846922841353,
+        "knn5_median": 0.3968463646222705,
+        "knn10_median": 0.4375926009960309,
+        "reference_median": 0.4232687449274305,
+        "reference_p90": 0.5307724525506119
+      },
+      "SLOP_approval_unknown": {
+        "n": 100,
+        "knn1_median": 0.3258846922841353,
+        "knn5_median": 0.3968463646222705,
+        "knn10_median": 0.4375926009960309,
+        "reference_median": 0.4232687449274305,
+        "reference_p90": 0.5307724525506119
+      }
+    },
+    "random_baseline": {
+      "state": "computed",
+      "budget": 25,
+      "active_population": 100,
+      "repetitions": 100,
+      "seed": 45,
+      "sampling": "mulberry32_fisher_yates.v1.0.0",
+      "median_distribution": {
+        "n": 100,
+        "mean": 0.5211850134954595,
+        "min": 0.5017777766202165,
+        "p10": 0.5095256671573081,
+        "p25": 0.51492668007089,
+        "median": 0.5199137171334294,
+        "p75": 0.525755873867886,
+        "p90": 0.534044950080649,
+        "max": 0.5507239299335517
+      },
+      "p90_distribution": {
+        "n": 100,
+        "mean": 0.6148813520299892,
+        "min": 0.5771115498012858,
+        "p10": 0.5972505362559266,
+        "p25": 0.6034657302196889,
+        "median": 0.612626575801828,
+        "p75": 0.6243938971497169,
+        "p90": 0.6362807590950572,
+        "max": 0.6690861561569337
+      },
+      "caveat": "Compare tag-only and random at the same budget. Full-catalog distances can only improve as rows are added; that comparison does not establish selection quality."
+    },
+    "tag_only_same_budget": {
+      "selected_ids": [
+        "brief-0082",
+        "brief-0060",
+        "brief-0007",
+        "brief-0026",
+        "brief-0094",
+        "brief-0088",
+        "brief-0064",
+        "brief-0030",
+        "brief-0014",
+        "brief-0038",
+        "brief-0073",
+        "brief-0096",
+        "brief-0069",
+        "brief-0061",
+        "brief-0056",
+        "brief-0065",
+        "brief-0006",
+        "brief-0095",
+        "brief-0079",
+        "brief-0050",
+        "brief-0001",
+        "brief-0059",
+        "brief-0068",
+        "brief-0029",
+        "brief-0058"
+      ],
+      "coverage": {
+        "n": 36,
+        "mean": 0.5109169677651447,
+        "min": 0.321858975333855,
+        "p10": 0.39033202625870506,
+        "p25": 0.45174963199083235,
+        "median": 0.5152051282078158,
+        "p75": 0.5823376327628754,
+        "p90": 0.6241331474483192,
+        "max": 0.6711637623627302,
+        "candidates": 36,
+        "within_radius": [
+          {
+            "radius": 0.2,
+            "fraction": 0
+          },
+          {
+            "radius": 0.3,
+            "fraction": 0
+          },
+          {
+            "radius": 0.4,
+            "fraction": 0.1111111111111111
+          },
+          {
+            "radius": 0.5,
+            "fraction": 0.4444444444444444
+          }
+        ]
+      }
+    },
+    "confounders": {
+      "canonical_language": "en",
+      "description_words": {
+        "n": 100,
+        "mean": 13.54,
+        "min": 9,
+        "p10": 11,
+        "p25": 13,
+        "median": 13,
+        "p75": 15,
+        "p90": 16,
+        "max": 18
+      },
+      "distance_vs_length_difference_spearman": 0.1013397049132094,
+      "same_primary_tag": {
+        "n": 470,
+        "mean": 0.5127284397041512,
+        "min": 0.19438898640529578,
+        "p10": 0.3524735904000099,
+        "p25": 0.42112546894979824,
+        "median": 0.518655773843396,
+        "p75": 0.5990898380163714,
+        "p90": 0.6570411373768202,
+        "max": 0.8276095747710794
+      },
+      "different_primary_tag": {
+        "n": 4480,
+        "mean": 0.6581391591322983,
+        "min": 0.24558291072492944,
+        "p10": 0.5190754011085102,
+        "p25": 0.591237232037966,
+        "median": 0.6653936550698217,
+        "p75": 0.7301409819986266,
+        "p90": 0.7870093720599565,
+        "max": 1.0150959906011527
+      },
+      "same_medium": {
+        "n": 4050,
+        "mean": 0.6432658035922936,
+        "min": 0.19438898640529578,
+        "p10": 0.48715888783777067,
+        "p25": 0.5744756683663865,
+        "median": 0.6535886131970541,
+        "p75": 0.7230775997616352,
+        "p90": 0.7833444386544063,
+        "max": 1.0150959906011527
+      },
+      "different_medium": {
+        "n": 900,
+        "mean": 0.6491325500276232,
+        "min": 0.24558291072492944,
+        "p10": 0.511624697327617,
+        "p25": 0.5788782474400631,
+        "median": 0.6554506021924063,
+        "p75": 0.7231021892698147,
+        "p90": 0.7762680923230999,
+        "max": 0.8847058586278885
+      },
+      "shared_description_trigrams": [],
+      "caveat": "Length, repeated context phrases, medium and seed topics may drive neighbors. Correlation is descriptive; tags are not ground truth or quotas."
+    },
+    "review": {
+      "annotation_status": "implementation_author_not_independent_human_validation",
+      "triplet_agreement": 0.875,
+      "random_choice_expected_agreement": 0.5,
+      "pairs": [
+        {
+          "a": "brief-0001",
+          "b": "brief-0006",
+          "judgment": "correct_neighbor",
+          "distance": 0.2179002667795915,
+          "rank_within_top10": 1
+        },
+        {
+          "a": "brief-0001",
+          "b": "brief-0004",
+          "judgment": "correct_neighbor",
+          "distance": 0.23740825299741752,
+          "rank_within_top10": 2
+        },
+        {
+          "a": "brief-0083",
+          "b": "brief-0084",
+          "judgment": "correct_neighbor",
+          "distance": 0.19438898640529578,
+          "rank_within_top10": 1
+        },
+        {
+          "a": "brief-0083",
+          "b": "brief-0086",
+          "judgment": "correct_neighbor",
+          "distance": 0.23931634880031372,
+          "rank_within_top10": 2
+        },
+        {
+          "a": "brief-0015",
+          "b": "brief-0016",
+          "judgment": "correct_neighbor",
+          "distance": 0.36750495867573263,
+          "rank_within_top10": 3
+        },
+        {
+          "a": "brief-0071",
+          "b": "brief-0072",
+          "judgment": "correct_neighbor",
+          "distance": 0.28565697956292935,
+          "rank_within_top10": 1
+        },
+        {
+          "a": "brief-0028",
+          "b": "brief-0097",
+          "judgment": "false_neighbor",
+          "distance": 0.34564240869377294,
+          "rank_within_top10": 1
+        },
+        {
+          "a": "brief-0051",
+          "b": "brief-0092",
+          "judgment": "false_neighbor",
+          "distance": 0.3796774126738375,
+          "rank_within_top10": 3
+        },
+        {
+          "a": "brief-0028",
+          "b": "brief-0078",
+          "judgment": "context_match_subject_mismatch",
+          "distance": 0.3709681790233429,
+          "rank_within_top10": 2
+        },
+        {
+          "a": "brief-0012",
+          "b": "brief-0077",
+          "judgment": "context_match_subject_mismatch",
+          "distance": 0.2962150251943243,
+          "rank_within_top10": 1
+        },
+        {
+          "a": "brief-0037",
+          "b": "brief-0063",
+          "judgment": "context_match_subject_mismatch",
+          "distance": 0.29518617784385737,
+          "rank_within_top10": 1
+        },
+        {
+          "a": "brief-0061",
+          "b": "brief-0043",
+          "judgment": "context_match_subject_mismatch",
+          "distance": 0.26747820478998074,
+          "rank_within_top10": 1
+        }
+      ],
+      "caveat": "Purposive implementation annotations, not owner validation or a blind benchmark. False neighbors may share context while differing in subject."
+    }
+  },
+  "lexical_baseline": {
+    "n": 100,
+    "distances": {
+      "total_pairs": 4950,
+      "sampled_pairs": 4950,
+      "method": "complete",
+      "summary": {
+        "n": 4950,
+        "mean": 0.8841167208243699,
+        "min": 0.33879541553985915,
+        "p10": 0.8000943627122641,
+        "p25": 0.8607342030812812,
+        "median": 0.9043807349803616,
+        "p75": 0.9301989414443586,
+        "p90": 0.9461305588681386,
+        "max": 0.9806598821418129
+      },
+      "histogram": [
+        {
+          "lower": 0,
+          "upper": 0.1,
+          "count": 0
+        },
+        {
+          "lower": 0.1,
+          "upper": 0.2,
+          "count": 0
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.3,
+          "count": 0
+        },
+        {
+          "lower": 0.3,
+          "upper": 0.4,
+          "count": 4
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.5,
+          "count": 10
+        },
+        {
+          "lower": 0.5,
+          "upper": 0.6,
+          "count": 44
+        },
+        {
+          "lower": 0.6,
+          "upper": 0.7,
+          "count": 91
+        },
+        {
+          "lower": 0.7,
+          "upper": 0.8,
+          "count": 345
+        },
+        {
+          "lower": 0.8,
+          "upper": 0.9,
+          "count": 1805
+        },
+        {
+          "lower": 0.9,
+          "upper": 1,
+          "count": 2651
+        },
+        {
+          "lower": 1,
+          "upper": 1.1,
+          "count": 0
+        },
+        {
+          "lower": 1.1,
+          "upper": 1.2,
+          "count": 0
+        },
+        {
+          "lower": 1.2,
+          "upper": 1.3,
+          "count": 0
+        },
+        {
+          "lower": 1.3,
+          "upper": 1.4,
+          "count": 0
+        },
+        {
+          "lower": 1.4,
+          "upper": 1.5,
+          "count": 0
+        },
+        {
+          "lower": 1.5,
+          "upper": 1.6,
+          "count": 0
+        },
+        {
+          "lower": 1.6,
+          "upper": 1.7,
+          "count": 0
+        },
+        {
+          "lower": 1.7,
+          "upper": 1.8,
+          "count": 0
+        },
+        {
+          "lower": 1.8,
+          "upper": 1.9,
+          "count": 0
+        },
+        {
+          "lower": 1.9,
+          "upper": 2,
+          "count": 0
+        }
+      ]
+    },
+    "knn_summary": {
+      "1": {
+        "n": 100,
+        "mean": 0.6025300176197824,
+        "min": 0.33879541553985915,
+        "p10": 0.4550806459797649,
+        "p25": 0.5467616822397556,
+        "median": 0.6239751551008492,
+        "p75": 0.6838502847984995,
+        "p90": 0.7338736321806414,
+        "max": 0.800170240187824
+      },
+      "5": {
+        "n": 100,
+        "mean": 0.6829633132154312,
+        "min": 0.44506607499431683,
+        "p10": 0.5640182724419772,
+        "p25": 0.6407559862596973,
+        "median": 0.6938409710365311,
+        "p75": 0.7399172558387679,
+        "p90": 0.7752628738245086,
+        "max": 0.8341193319935378
+      },
+      "10": {
+        "n": 100,
+        "mean": 0.7301451696622333,
+        "min": 0.5156054945349666,
+        "p10": 0.6245881752948992,
+        "p25": 0.6992418728772474,
+        "median": 0.7434628017798643,
+        "p75": 0.7773514583205534,
+        "p90": 0.8028988759706932,
+        "max": 0.8662806555757484
+      }
+    },
+    "dispersion": {
+      "mean_squared_euclidean_to_centroid": 0.8752755536161264,
+      "centroid_norm": 0.3531634839332544
+    },
+    "outliers": {
+      "state": "computed",
+      "method": "median_plus_3_scaled_MAD",
+      "k": 5,
+      "median": 0.6938409710365311,
+      "mad": 0.048682075871698705,
+      "threshold": 0.9103691080986726,
+      "ids": [],
+      "diagnostic_only": true
+    },
+    "pca": {
+      "state": "computed",
+      "n": 100,
+      "total_n": 100,
+      "sampled": false,
+      "solver": "symmetric_gram_cyclic_jacobi.v1.0.0",
+      "sweeps": 9,
+      "residual": 9.982303066126305e-11,
+      "total_variance": 0.8841167208243694,
+      "numerical_rank": 99,
+      "effective_dimension": 64.59310931436109,
+      "entropy_dimension": 79.70265031230198,
+      "caveat": "2D proximity is not original distance; equal eigenvalues allow rotated axes. No map gaps imply objective missing topics."
+    },
+    "pca_first_ten_components": [
+      {
+        "component": 1,
+        "eigenvalue": 0.03798092045870706,
+        "explained_fraction": 0.04295916994228187
+      },
+      {
+        "component": 2,
+        "eigenvalue": 0.03426364300758314,
+        "explained_fraction": 0.03875466010374171
+      },
+      {
+        "component": 3,
+        "eigenvalue": 0.027379848607266378,
+        "explained_fraction": 0.03096859041613512
+      },
+      {
+        "component": 4,
+        "eigenvalue": 0.023788979872410826,
+        "explained_fraction": 0.026907057984639708
+      },
+      {
+        "component": 5,
+        "eigenvalue": 0.022359701679614343,
+        "explained_fraction": 0.02529044090328444
+      },
+      {
+        "component": 6,
+        "eigenvalue": 0.02168534924268611,
+        "explained_fraction": 0.02452769949025082
+      },
+      {
+        "component": 7,
+        "eigenvalue": 0.020740400443993175,
+        "explained_fraction": 0.02345889400740479
+      },
+      {
+        "component": 8,
+        "eigenvalue": 0.01935612960458828,
+        "explained_fraction": 0.021893183500183332
+      },
+      {
+        "component": 9,
+        "eigenvalue": 0.018578331890500514,
+        "explained_fraction": 0.021013437991736744
+      },
+      {
+        "component": 10,
+        "eigenvalue": 0.01671547985567316,
+        "explained_fraction": 0.018906417514745436
+      }
+    ],
+    "clustering": {
+      "algorithm": "DBSCAN_cosine.v1.0.0",
+      "default": {
+        "epsilon": 0.3,
+        "min_samples": 3,
+        "min_samples_includes_self": true,
+        "cluster_count": 0,
+        "noise_count": 100
+      },
+      "sensitivity": [
+        {
+          "epsilon": 0.1,
+          "min_samples": 3,
+          "min_samples_includes_self": true,
+          "cluster_count": 0,
+          "noise_count": 100,
+          "stability_vs_default": {
+            "state": "no_coclustered_pairs",
+            "pair_jaccard_excluding_noise": null,
+            "intersection_pairs": 0,
+            "union_pairs": 0,
+            "noise_disagreements": 0
+          }
+        },
+        {
+          "epsilon": 0.1,
+          "min_samples": 5,
+          "min_samples_includes_self": true,
+          "cluster_count": 0,
+          "noise_count": 100,
+          "stability_vs_default": {
+            "state": "no_coclustered_pairs",
+            "pair_jaccard_excluding_noise": null,
+            "intersection_pairs": 0,
+            "union_pairs": 0,
+            "noise_disagreements": 0
+          }
+        },
+        {
+          "epsilon": 0.2,
+          "min_samples": 3,
+          "min_samples_includes_self": true,
+          "cluster_count": 0,
+          "noise_count": 100,
+          "stability_vs_default": {
+            "state": "no_coclustered_pairs",
+            "pair_jaccard_excluding_noise": null,
+            "intersection_pairs": 0,
+            "union_pairs": 0,
+            "noise_disagreements": 0
+          }
+        },
+        {
+          "epsilon": 0.2,
+          "min_samples": 5,
+          "min_samples_includes_self": true,
+          "cluster_count": 0,
+          "noise_count": 100,
+          "stability_vs_default": {
+            "state": "no_coclustered_pairs",
+            "pair_jaccard_excluding_noise": null,
+            "intersection_pairs": 0,
+            "union_pairs": 0,
+            "noise_disagreements": 0
+          }
+        },
+        {
+          "epsilon": 0.3,
+          "min_samples": 3,
+          "min_samples_includes_self": true,
+          "cluster_count": 0,
+          "noise_count": 100,
+          "stability_vs_default": {
+            "state": "no_coclustered_pairs",
+            "pair_jaccard_excluding_noise": null,
+            "intersection_pairs": 0,
+            "union_pairs": 0,
+            "noise_disagreements": 0
+          }
+        },
+        {
+          "epsilon": 0.3,
+          "min_samples": 5,
+          "min_samples_includes_self": true,
+          "cluster_count": 0,
+          "noise_count": 100,
+          "stability_vs_default": {
+            "state": "no_coclustered_pairs",
+            "pair_jaccard_excluding_noise": null,
+            "intersection_pairs": 0,
+            "union_pairs": 0,
+            "noise_disagreements": 0
+          }
+        },
+        {
+          "epsilon": 0.4,
+          "min_samples": 3,
+          "min_samples_includes_self": true,
+          "cluster_count": 1,
+          "noise_count": 97,
+          "stability_vs_default": {
+            "state": "computed",
+            "pair_jaccard_excluding_noise": 0,
+            "intersection_pairs": 0,
+            "union_pairs": 3,
+            "noise_disagreements": 3
+          }
+        },
+        {
+          "epsilon": 0.4,
+          "min_samples": 5,
+          "min_samples_includes_self": true,
+          "cluster_count": 0,
+          "noise_count": 100,
+          "stability_vs_default": {
+            "state": "no_coclustered_pairs",
+            "pair_jaccard_excluding_noise": null,
+            "intersection_pairs": 0,
+            "union_pairs": 0,
+            "noise_disagreements": 0
+          }
+        }
+      ],
+      "caveat": "Exploratory parameter grid; noise is valid and no cluster is mandatory. Pair Jaccard excludes noise and is null when no positive co-cluster pairs exist."
+    },
+    "coverage": {
+      "state": "computed",
+      "catalog_n": 100,
+      "summary": {
+        "n": 48,
+        "mean": 0.4496506490677145,
+        "min": 0.0298397696726328,
+        "p10": 0.16564264979726154,
+        "p25": 0.3193251757363402,
+        "median": 0.5219761316673155,
+        "p75": 0.5687044549221406,
+        "p90": 0.6265050837784949,
+        "max": 0.6859886229692387,
+        "candidates": 48,
+        "within_radius": [
+          {
+            "radius": 0.2,
+            "fraction": 0.14583333333333334
+          },
+          {
+            "radius": 0.3,
+            "fraction": 0.25
+          },
+          {
+            "radius": 0.4,
+            "fraction": 0.2708333333333333
+          },
+          {
+            "radius": 0.5,
+            "fraction": 0.4583333333333333
+          }
+        ]
+      },
+      "by_provenance": {
+        "catalog_derived_control": {
+          "n": 12,
+          "mean": 0.17414279420006307,
+          "min": 0.0298397696726328,
+          "p10": 0.06841576661024959,
+          "p25": 0.12604439148983776,
+          "median": 0.175453320415978,
+          "p75": 0.25226392148408017,
+          "p90": 0.2598759358796929,
+          "max": 0.27528017158301876,
+          "candidates": 12,
+          "within_radius": [
+            {
+              "radius": 0.2,
+              "fraction": 0.5833333333333334
+            },
+            {
+              "radius": 0.3,
+              "fraction": 1
+            },
+            {
+              "radius": 0.4,
+              "fraction": 1
+            },
+            {
+              "radius": 0.5,
+              "fraction": 1
+            }
+          ]
+        },
+        "independent_exploration": {
+          "n": 36,
+          "mean": 0.5414866006902649,
+          "min": 0.3340068437874474,
+          "p10": 0.4368612144244268,
+          "p25": 0.4973355907165529,
+          "median": 0.5479631208194446,
+          "p75": 0.5897107268296296,
+          "p90": 0.633640485721805,
+          "max": 0.6859886229692387,
+          "candidates": 36,
+          "within_radius": [
+            {
+              "radius": 0.2,
+              "fraction": 0
+            },
+            {
+              "radius": 0.3,
+              "fraction": 0
+            },
+            {
+              "radius": 0.4,
+              "fraction": 0.027777777777777776
+            },
+            {
+              "radius": 0.5,
+              "fraction": 0.2777777777777778
+            }
+          ]
+        }
+      },
+      "diagnostic_only": true,
+      "caveat": "Distances and radii describe this reference corpus only; they do not authorize or reject image acquisition."
+    },
+    "largest_reference_gaps": [
+      {
+        "id": "reference-0002",
+        "provenance": "independent_exploration",
+        "description": "A wide view of a night sky with a comet above a recognizable rocky horizon.",
+        "nearest_id": "brief-0003",
+        "min_distance": 0.6859886229692387
+      },
+      {
+        "id": "reference-0004",
+        "provenance": "independent_exploration",
+        "description": "An underwater view of a coral reef with fish moving among the surrounding coral structures.",
+        "nearest_id": "brief-0067",
+        "min_distance": 0.6625000109326595
+      },
+      {
+        "id": "reference-0032",
+        "provenance": "independent_exploration",
+        "description": "A mirage above a road, with the road surface and surrounding dry landscape visible.",
+        "nearest_id": "brief-0078",
+        "min_distance": 0.6515209848311183
+      },
+      {
+        "id": "reference-0015",
+        "provenance": "independent_exploration",
+        "description": "An adult pole vaulter above the bar, with the landing area and stadium visible.",
+        "nearest_id": "brief-0043",
+        "min_distance": 0.6402070558980844
+      },
+      {
+        "id": "reference-0007",
+        "provenance": "independent_exploration",
+        "description": "A lightning storm above farmland, with the horizon and the surrounding fields visible.",
+        "nearest_id": "brief-0040",
+        "min_distance": 0.6270739155455255
+      },
+      {
+        "id": "reference-0011",
+        "provenance": "independent_exploration",
+        "description": "A data center aisle with server cabinets, cables and the surrounding technical space visible.",
+        "nearest_id": "brief-0056",
+        "min_distance": 0.6262612987354819
+      },
+      {
+        "id": "reference-0005",
+        "provenance": "independent_exploration",
+        "description": "A microscope image of a plant cross section, with surrounding cells and the tissue structure visible.",
+        "nearest_id": "brief-0093",
+        "min_distance": 0.6260400295179291
+      },
+      {
+        "id": "reference-0025",
+        "provenance": "independent_exploration",
+        "description": "Adults arranging an outdoor community meal, with tables and the surrounding neighborhood visible.",
+        "nearest_id": "brief-0060",
+        "min_distance": 0.6249246281649212
+      }
+    ],
+    "groups": {
+      "draft": {
+        "n": 100,
+        "knn1_median": 0.6239751551008492,
+        "knn5_median": 0.6938409710365311,
+        "knn10_median": 0.7434628017798643,
+        "reference_median": 0.5219761316673155,
+        "reference_p90": 0.6265050837784949
+      },
+      "approved": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "retired": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "used": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "unused": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "usage_unknown": {
+        "n": 100,
+        "knn1_median": 0.6239751551008492,
+        "knn5_median": 0.6938409710365311,
+        "knn10_median": 0.7434628017798643,
+        "reference_median": 0.5219761316673155,
+        "reference_p90": 0.6265050837784949
+      },
+      "REAL_approved": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "SLOP_approved": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "neither_origin_approved": {
+        "n": 0,
+        "knn1_median": null,
+        "knn5_median": null,
+        "knn10_median": null,
+        "reference_median": null,
+        "reference_p90": null
+      },
+      "REAL_approval_unknown": {
+        "n": 100,
+        "knn1_median": 0.6239751551008492,
+        "knn5_median": 0.6938409710365311,
+        "knn10_median": 0.7434628017798643,
+        "reference_median": 0.5219761316673155,
+        "reference_p90": 0.6265050837784949
+      },
+      "SLOP_approval_unknown": {
+        "n": 100,
+        "knn1_median": 0.6239751551008492,
+        "knn5_median": 0.6938409710365311,
+        "knn10_median": 0.7434628017798643,
+        "reference_median": 0.5219761316673155,
+        "reference_p90": 0.6265050837784949
+      }
+    },
+    "random_baseline": {
+      "state": "computed",
+      "budget": 25,
+      "active_population": 100,
+      "repetitions": 100,
+      "seed": 45,
+      "sampling": "mulberry32_fisher_yates.v1.0.0",
+      "median_distribution": {
+        "n": 100,
+        "mean": 0.638013212550952,
+        "min": 0.5801614415520506,
+        "p10": 0.6217355158983706,
+        "p25": 0.6283187692530671,
+        "median": 0.6370073722979372,
+        "p75": 0.6455235465905733,
+        "p90": 0.6558852946355895,
+        "max": 0.6996410750828193
+      },
+      "p90_distribution": {
+        "n": 100,
+        "mean": 0.7645849625214659,
+        "min": 0.6966961416892538,
+        "p10": 0.7381637557254638,
+        "p25": 0.7547136628727267,
+        "median": 0.7660515217026009,
+        "p75": 0.7767102047046479,
+        "p90": 0.7858181081681822,
+        "max": 0.8189699131373089
+      },
+      "caveat": "Compare tag-only and random at the same budget. Full-catalog distances can only improve as rows are added; that comparison does not establish selection quality."
+    },
+    "tag_only_same_budget": {
+      "selected_ids": [
+        "brief-0082",
+        "brief-0060",
+        "brief-0007",
+        "brief-0026",
+        "brief-0094",
+        "brief-0088",
+        "brief-0064",
+        "brief-0030",
+        "brief-0014",
+        "brief-0038",
+        "brief-0073",
+        "brief-0096",
+        "brief-0069",
+        "brief-0061",
+        "brief-0056",
+        "brief-0065",
+        "brief-0006",
+        "brief-0095",
+        "brief-0079",
+        "brief-0050",
+        "brief-0001",
+        "brief-0059",
+        "brief-0068",
+        "brief-0029",
+        "brief-0058"
+      ],
+      "coverage": {
+        "n": 36,
+        "mean": 0.6355656146207228,
+        "min": 0.4510928659307736,
+        "p10": 0.512417586332802,
+        "p25": 0.5682037195658438,
+        "median": 0.6321627404399859,
+        "p75": 0.6925169546497032,
+        "p90": 0.7688822034326095,
+        "max": 0.8061663878496479,
+        "candidates": 36,
+        "within_radius": [
+          {
+            "radius": 0.2,
+            "fraction": 0
+          },
+          {
+            "radius": 0.3,
+            "fraction": 0
+          },
+          {
+            "radius": 0.4,
+            "fraction": 0
+          },
+          {
+            "radius": 0.5,
+            "fraction": 0.08333333333333333
+          }
+        ]
+      }
+    },
+    "confounders": {
+      "canonical_language": "en",
+      "description_words": {
+        "n": 100,
+        "mean": 13.54,
+        "min": 9,
+        "p10": 11,
+        "p25": 13,
+        "median": 13,
+        "p75": 15,
+        "p90": 16,
+        "max": 18
+      },
+      "distance_vs_length_difference_spearman": 0.06895549116273482,
+      "same_primary_tag": {
+        "n": 470,
+        "mean": 0.8218971129955885,
+        "min": 0.33879541553985915,
+        "p10": 0.6272966149325141,
+        "p25": 0.7623101179992615,
+        "median": 0.8664407956410922,
+        "p75": 0.9131484856481586,
+        "p90": 0.9395102576588938,
+        "max": 0.9661782057767307
+      },
+      "different_primary_tag": {
+        "n": 4480,
+        "mean": 0.8906442243242645,
+        "min": 0.3654467857254433,
+        "p10": 0.8162799705827276,
+        "p25": 0.8673201366832922,
+        "median": 0.9066013558667332,
+        "p75": 0.9310256300556834,
+        "p90": 0.9465554730517761,
+        "max": 0.9806598821418129
+      },
+      "same_medium": {
+        "n": 4050,
+        "mean": 0.8813387945756865,
+        "min": 0.33879541553985915,
+        "p10": 0.7946965935316651,
+        "p25": 0.8576683971526518,
+        "median": 0.9035048904737868,
+        "p75": 0.9295591042191909,
+        "p90": 0.9450033115623052,
+        "max": 0.9790203846991883
+      },
+      "different_medium": {
+        "n": 900,
+        "mean": 0.8966173889434421,
+        "min": 0.6618764960192838,
+        "p10": 0.8321909072699502,
+        "p25": 0.8710066283454106,
+        "median": 0.9090917688525826,
+        "p75": 0.9344688060632736,
+        "p90": 0.9486872501361222,
+        "max": 0.9806598821418129
+      },
+      "shared_description_trigrams": [],
+      "caveat": "Length, repeated context phrases, medium and seed topics may drive neighbors. Correlation is descriptive; tags are not ground truth or quotas."
+    },
+    "review": {
+      "annotation_status": "implementation_author_not_independent_human_validation",
+      "triplet_agreement": 0.875,
+      "random_choice_expected_agreement": 0.5,
+      "pairs": [
+        {
+          "a": "brief-0001",
+          "b": "brief-0006",
+          "judgment": "correct_neighbor",
+          "distance": 0.33879541553985915,
+          "rank_within_top10": 1
+        },
+        {
+          "a": "brief-0001",
+          "b": "brief-0004",
+          "judgment": "correct_neighbor",
+          "distance": 0.5100225611075182,
+          "rank_within_top10": 4
+        },
+        {
+          "a": "brief-0083",
+          "b": "brief-0084",
+          "judgment": "correct_neighbor",
+          "distance": 0.41942820143817494,
+          "rank_within_top10": 2
+        },
+        {
+          "a": "brief-0083",
+          "b": "brief-0086",
+          "judgment": "correct_neighbor",
+          "distance": 0.4030612975472726,
+          "rank_within_top10": 1
+        },
+        {
+          "a": "brief-0015",
+          "b": "brief-0016",
+          "judgment": "correct_neighbor",
+          "distance": 0.629476346573645,
+          "rank_within_top10": 2
+        },
+        {
+          "a": "brief-0071",
+          "b": "brief-0072",
+          "judgment": "correct_neighbor",
+          "distance": 0.7997476260483122,
+          "rank_within_top10": null
+        },
+        {
+          "a": "brief-0028",
+          "b": "brief-0097",
+          "judgment": "false_neighbor",
+          "distance": 0.4046118278643007,
+          "rank_within_top10": 2
+        },
+        {
+          "a": "brief-0051",
+          "b": "brief-0092",
+          "judgment": "false_neighbor",
+          "distance": 0.8269436892061348,
+          "rank_within_top10": 7
+        },
+        {
+          "a": "brief-0028",
+          "b": "brief-0078",
+          "judgment": "context_match_subject_mismatch",
+          "distance": 0.5975357774279291,
+          "rank_within_top10": 4
+        },
+        {
+          "a": "brief-0012",
+          "b": "brief-0077",
+          "judgment": "context_match_subject_mismatch",
+          "distance": 0.5951286309236072,
+          "rank_within_top10": 2
+        },
+        {
+          "a": "brief-0037",
+          "b": "brief-0063",
+          "judgment": "context_match_subject_mismatch",
+          "distance": 0.7313612370057139,
+          "rank_within_top10": 2
+        },
+        {
+          "a": "brief-0061",
+          "b": "brief-0043",
+          "judgment": "context_match_subject_mismatch",
+          "distance": 0.8053136761334171,
+          "rank_within_top10": 5
+        }
+      ],
+      "caveat": "Purposive implementation annotations, not owner validation or a blind benchmark. False neighbors may share context while differing in subject."
+    }
+  },
+  "encoder_comparison": {
+    "top5_neighbor_overlap": {
+      "n": 100,
+      "mean": 0.4399999999999997,
+      "min": 0,
+      "p10": 0.2,
+      "p25": 0.4,
+      "median": 0.4,
+      "p75": 0.6,
+      "p90": 0.6,
+      "max": 1
+    },
+    "caveat": "Encoder-specific cosine scales are not calibrated; compare neighbor identities and annotated judgments, not absolute cross-encoder distance magnitudes."
+  },
+  "reproduction_command": "npm run analyze:briefs -- --index .pipeline/brief-embeddings/snapshots/e4d3912534ce193569ee43a416a42300e8cc4be288164b188ca350f4d2f664fd.v1.0.0.json",
+  "private_full_export": {
+    "path": ".pipeline/brief-variety/29c2025c72f9a80589d78cfeb26f0ce3fb815aa39bf992fb65c1bb073363dafc/report.v1.0.0.json",
+    "contains": [
+      "4950 exact pair distances for each encoder",
+      "all nearest neighbors and reference coverage rows",
+      "complete PCA spectrum and exploratory 2D coordinates",
+      "all cluster assignments for each parameter run",
+      "all seeded baseline selections",
+      "all group diagnostics and lexical reference token support"
+    ]
+  },
+  "checks": {
+    "node_tests": 103,
+    "python_tests": 173,
+    "lint": "passed",
+    "build": "passed",
+    "repeated_report_identical": true,
+    "source_catalogues_unchanged": true,
+    "owner_review_pending": true
+  },
+  "paid_api_enabled": false,
+  "automatic_decisions": false
+}
