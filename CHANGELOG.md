@@ -1,3 +1,10 @@
+## 0.16.0 — 2026-11-05 (proposta in PR, non pubblicata)
+
+- Input opzionale mediante swipe orizzontale sull'immagine: sinistra = REAL, destra = SLOP, utilizzabile con touch, mouse e penna in Allenamento, A tempo e PvP.
+- Pulsanti e tastiera conservati; click/tap e Invio/Spazio sull'immagine mantengono lo zoom. Soglia di trascinamento, protezione contro risposte accidentali e scorrimento verticale preservato.
+- I gesti richiamano i pulsanti già esistenti, senza alterare API, tempi, punteggi, controllo server o contenuti editoriali.
+- Aggiunti test unitari e verifica browser; specifica `docs/swipe-gestures-v1.0.0.md`. Nessun deploy eseguito.
+
 ## 0.15.0 — 2026-11-03 (sperimentale, non attivata)
 
 - Protocollo editoriale v2 indipendente: scoperta REAL multicanale e generazioni SLOP da idee originali o prompt aperti, senza fotografie di riferimento, classifica condivisa, soglie di sorpresa o preferenze storiche.
