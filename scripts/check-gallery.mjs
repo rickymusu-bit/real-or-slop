@@ -136,7 +136,18 @@ try {
     await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
     await t.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
     await waitFor(() => t.evaluate('!document.querySelector("dialog") && document.activeElement.classList.contains("play-image")'), 'zoom focus restoration');
-    await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'i', code: 'KeyI' });
+    if (width === 390 || width === 360) {
+      const box = await t.evaluate('(()=>{const r=document.querySelector(".play-image").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()');
+      const dx = width === 390 ? 130 : -130;
+      await t.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y });
+      await t.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: box.x, y: box.y, button: 'left', clickCount: 1 });
+      await t.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x + dx, y: box.y, button: 'left', buttons: 1 });
+      assert.equal(await t.evaluate('Boolean(document.querySelector(".swipe-preview.swipe-visible"))'), true);
+      await t.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: box.x + dx, y: box.y, button: 'left', clickCount: 1 });
+      assert.equal(await t.evaluate('Boolean(document.querySelector("dialog[open]"))'), false);
+    } else {
+      await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'i', code: 'KeyI' });
+    }
     await waitFor(() => t.evaluate('Boolean(document.querySelector("#next"))'), 'keyboard answer');
     await t.screenshot('feedback-' + width);
     await t.evaluate('document.querySelector("#next").click()');
