@@ -1,3 +1,12 @@
+## 0.17.0 — 2026-11-05 (PR, rollout non attivato)
+
+- Pipeline v4: tassonomia emotiva × tematica 12×12, 288 brief inglesi in bozza, freeze hashato e due rami indipendenti su infrastruttura v2. Nessun input REAL entra in SLOP.
+- Eventi append-only dalla coda unica, classificazione intenzionale/effettiva, posteriori distinti per origine, margini e scheduler con esplorazione positiva; benchmark offline a budget fisso.
+- Matrice privata `/admin/variety`, filtri, conteggi, incertezza, costi, pesi spiegati, drill-down, query e report semantici/visivi in sola lettura.
+- Didascalie neutrali versionate, giudizi autonomi, gate di pubblicazione e testo immutabile nei round; legacy senza caption conservato, tempi e scoring invariati.
+- Migrazione additiva 0018 applicata soltanto agli emulatori isolati. Nessun pagamento, cron, deploy, rimozione di asset o attivazione remota.
+- Riutilizzo dipendente delle PR #51/#52; corretto il trasporto JSON privato verso il validatore Python delle metriche, senza cambiare i controlli.
+
 ## Non rilasciato — issue #44–#45
 
 - Catalogo canonico inglese v1.1.0: 100 brief alla revisione 2, tassonomia inglese e migrazione ispezionabile, con storico e cicli congelati conservati.

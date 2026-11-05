@@ -113,11 +113,14 @@ export interface ImageRow {
   source_url?: string;
   license_name?: string;
   license_url?: string;
+  game_caption?: string | null;
+  caption_revision?: number | null;
+  caption_context_fictional?: number | null;
 }
 export async function catalog(env: Env) {
   return (
     await env.DB.prepare(
-      "SELECT i.* FROM images i JOIN published_images p ON p.image_id=i.id WHERE i.status='approved' AND i.demo=?",
+      "SELECT i.*,c.game_caption,c.revision AS caption_revision,c.fictional AS caption_context_fictional FROM images i JOIN published_images p ON p.image_id=i.id LEFT JOIN editorial_public_captions c ON c.image_id=i.id WHERE i.status='approved' AND i.demo=? AND (NOT EXISTS(SELECT 1 FROM editorial_game_bindings b WHERE b.image_id=i.id) OR EXISTS(SELECT 1 FROM editorial_game_bindings b JOIN editorial_review_inbox q ON q.id=b.candidate_id WHERE b.image_id=i.id AND q.status='approved'))",
     )
       .bind(env.DATA_MODE === "demo" ? 1 : 0)
       .all<ImageRow & { status: string; sha256: string; perceptual_hash: string | null }>()

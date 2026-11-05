@@ -1,6 +1,6 @@
 {
   "name": "real-or-slop",
-  "version": "0.15.0",
+  "version": "0.17.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "npm run build && wrangler dev --local --env local --ip 0.0.0.0",
     "build": "tsc --noEmit && tsc -p tsconfig.worker.json --noEmit && vite build && node scripts/check-assets.mjs",
-    "lint": "eslint src worker shared tests scripts/deploy-demo.mjs scripts/deployment-config.mjs scripts/benchmark-sampling.mjs scripts/check-gallery.mjs scripts/benchmark-preloading.mjs scripts/scan-similarity.mjs scripts/index-briefs.v1.0.0.mjs scripts/brief-metrics.v1.0.0.mjs scripts/analyze-briefs.v1.0.0.mjs",
+    "lint": "eslint src worker shared tests scripts/deploy-demo.mjs scripts/deployment-config.mjs scripts/benchmark-sampling.mjs scripts/check-gallery.mjs scripts/benchmark-preloading.mjs scripts/scan-similarity.mjs scripts/index-briefs.v1.0.0.mjs scripts/brief-metrics.v1.0.0.mjs scripts/analyze-briefs.v1.0.0.mjs scripts/editorial-matrix.v4.0.0.mjs",
     "test": "node --import tsx --test tests/*.test.ts && python3 -m unittest discover -s tests -p '*_test.py' && PYTHONPATH=. python3 tests/brief_embeddings.v1.0.0_test.py",
     "db:migrate": "wrangler d1 migrations apply DB --local --env local",
     "db:seed": "wrangler d1 execute DB --local --env local --file scripts/seed.sql && wrangler d1 execute DB --local --env local --file scripts/seed-publication.sql",
@@ -24,7 +24,9 @@
     "benchmark:editorial-v2": "python3 -m pipeline.v2.benchmark --fixture-study 120",
     "scan:similarity": "node --import tsx scripts/scan-similarity.mjs",
     "index:briefs": "node scripts/index-briefs.v1.0.0.mjs",
-    "analyze:briefs": "node scripts/analyze-briefs.v1.0.0.mjs"
+    "analyze:briefs": "node scripts/analyze-briefs.v1.0.0.mjs",
+    "matrix:editorial": "node --import tsx scripts/editorial-matrix.v4.0.0.mjs",
+    "benchmark:matrix": "node --import tsx scripts/editorial-matrix.v4.0.0.mjs --benchmark"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261025.1",

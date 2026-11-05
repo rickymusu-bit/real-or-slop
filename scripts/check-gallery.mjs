@@ -1,6 +1,6 @@
 // Optional browser acceptance checks. Uses an existing Chromium, local emulators
 // and native CDP/WebSocket; installs no browser or automation dependencies.
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { Buffer } from 'node:buffer';
 import { mkdirSync, openSync, closeSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -225,8 +225,69 @@ try {
   await waitFor(() => t.evaluate('Boolean(document.querySelector(".score"))'), 'timed results include timeout');
   assert.equal(await t.evaluate('document.querySelector(".page").textContent.includes("1 scadute")'), true);
   await t.send('Emulation.setEmulatedMedia', { features: [] });
+  // Caption UI fixtures exercise real game sessions/timers. Only the JSON text
+  // is supplemented here; immutable DB assignment and privacy are HTTP-tested.
+  let captionText = 'Un tavolo di lavoro accanto alla finestra, con scaffali, utensili e materiali distribuiti nello spazio circostante.';
+  let readyWithCaption = 0;
+  t.intercept(async (request, send) => {
+    const path = new URL(request.request.url).pathname;
+    if (!request.responseStatusCode) {
+      if (/\/(start|ready)$/.test(path)) {
+        const prepared = await t.evaluate('(()=>{const img=document.querySelector(".preparing-image");return {ready:!!img?.complete&&!!img?.naturalWidth,caption:document.querySelector(".game-caption")?.textContent}})()');
+        assert.equal(prepared.ready, true, 'pixels painted before server readiness');
+        assert.equal(prepared.caption, captionText, 'caption present before server readiness');
+        readyWithCaption++;
+      }
+      await send('Fetch.continueRequest', { requestId: request.requestId }); return;
+    }
+    if (path.includes('/media/')) { await send('Fetch.continueRequest', { requestId: request.requestId }); return; }
+    const response = await send('Fetch.getResponseBody', { requestId: request.requestId });
+    const value = JSON.parse(response.base64Encoded ? Buffer.from(response.body, 'base64').toString() : response.body);
+    if (!value.question && !Array.isArray(value.images)) { await send('Fetch.continueRequest', { requestId: request.requestId }); return; }
+    if (value.question) value.question.caption = captionText;
+    if (Array.isArray(value.images)) value.images.forEach(image => { image.caption = captionText; });
+    await send('Fetch.fulfillRequest', { requestId: request.requestId, responseCode: request.responseStatusCode,
+      responseHeaders: request.responseHeaders.filter(h => !['content-length','content-encoding'].includes(h.name.toLowerCase())), body: Buffer.from(JSON.stringify(value)).toString('base64') });
+  });
+  await t.send('Fetch.enable', { patterns: [
+    { urlPattern: base + '/api/sessions*', requestStage: 'Response' },
+    { urlPattern: base + '/api/sessions/*/start', requestStage: 'Request' },
+    { urlPattern: base + '/api/sessions/*/ready', requestStage: 'Request' },
+  ] });
+  for (const [width,height] of [[360,640],[390,844]]) {
+    await t.viewport(width,height);
+    for (const duration of [0,10,20,30]) {
+      await t.go(duration ? '/tempo' : '/allenamento', '#categories input');
+      await t.evaluate(`document.querySelector('#count').value='1';${duration ? `document.querySelector('#round-seconds').value='${duration}';` : ''}document.querySelector('#settings').requestSubmit()`);
+      if (duration) {
+        await waitFor(() => t.evaluate('Boolean(document.querySelector("#start-prepared"))'), 'captioned timed preparation');
+        await t.evaluate('document.querySelector("#start-prepared").click()');
+      }
+      await imageReady(t); await layout(t, `caption ${duration||'training'} ${width}`, true);
+      assert.equal(await t.evaluate('document.querySelector(".game-caption")?.textContent'),captionText);
+      assert.equal(await t.evaluate('getComputedStyle(document.querySelector(".game-caption")).textOverflow'), 'clip');
+      const ax = await t.send('Accessibility.getFullAXTree');
+      assert.ok(ax.nodes.some(node => node.name?.value === captionText), 'caption reaches accessibility tree');
+      await t.screenshot(`caption-${duration||'training'}-${width}`);
+      await t.evaluate('document.querySelector(".play-image").click()');
+      await waitFor(() => t.evaluate('Boolean(document.querySelector("dialog[open] .game-caption"))'), 'caption in zoom');
+      assert.equal(await t.evaluate('document.querySelector("dialog .game-caption").textContent'),captionText);
+      await t.evaluate('document.querySelector("dialog button").click();document.querySelector("[data-choice=REAL]").click()');
+      await waitFor(() => t.evaluate('Boolean(document.querySelector("#next"))'), 'captioned answer');
+    }
+  }
+  assert.ok(readyWithCaption >= 8);
+  captionText = '<img src=x onerror="window.fixtureCaptionInjected=true">';
+  await t.go('/allenamento','#categories input');
+  await t.evaluate('document.querySelector("#count").value="1";document.querySelector("#settings").requestSubmit()');
+  await imageReady(t);
+  assert.equal(await t.evaluate('document.querySelector(".game-caption").textContent'),captionText);
+  assert.equal(await t.evaluate('Boolean(document.querySelector(".game-caption img")) || typeof window.fixtureCaptionInjected!=="undefined"'),false);
+  await t.send('Fetch.disable');
   // UI-only fixtures exercise the two-button flow without remote credentials.
   // Real preparation/auth/approval/feedback are tested against local D1/R2 separately.
+  const matrixCLI = JSON.parse(execFileSync(process.execPath,['--import','tsx','scripts/editorial-matrix.v4.0.0.mjs','--dry-run'],{cwd,encoding:'utf8',maxBuffer:2000000}));
+  const matrixFixture = {version:'4.0.0',created_at:matrixCLI.created_at,snapshot_id:matrixCLI.events_sha256,cells:matrixCLI.counts,weights:matrixCLI.weights,marginals:matrixCLI.marginals,reports:[]};
   const decisions = [];
   const v2Decisions = [];
   const v2Contract = JSON.parse(readFileSync(resolve(cwd, 'tests/editorial-v2-contract.json'), 'utf8'));
@@ -238,7 +299,11 @@ try {
   t.intercept(async (request, send) => {
     const url = new URL(request.request.url);
     let body, mime = "application/json", status = 200;
-    if (url.pathname === "/api/admin/review-inbox") {
+    if (url.pathname === "/api/admin/editorial/matrix") {
+      body = JSON.stringify(matrixFixture);
+    } else if (url.pathname === "/api/admin/editorial/matrix/candidates") {
+      body = JSON.stringify({candidates:[],attempts:[]});
+    } else if (url.pathname === "/api/admin/review-inbox") {
       const filtered = brokenPreview ? [{ ...reviewCards[0], id: "broken", image: "/api/admin/assets/broken" }] : reviewCards.filter(card => !deletedReviewImages.has(card.id) && card.status === (url.searchParams.get("state") || "pending") && (!url.searchParams.get("origin") || url.searchParams.get("origin") === "all" || card.origin === url.searchParams.get("origin")));
       const offset = Number(url.searchParams.get("offset") || 0);
       body = JSON.stringify({ images: filtered.slice(offset, offset + 50), total: filtered.length, offset, limit: 50 });
@@ -364,6 +429,17 @@ try {
   await waitFor(() => t.evaluate('document.querySelector(".editorial-v2 h2")?.textContent.includes("approved")'), 'v2 archived review');
   assert.equal(v2Decisions.length, 1);
   assert.equal(v2Decisions[0].decision, 'approved');
+  await t.evaluate('history.pushState({},"","/admin/variety");window.dispatchEvent(new PopStateEvent("popstate"))');
+  await waitFor(() => t.evaluate('document.querySelectorAll("[data-cell]").length===144'), 'private 144-cell matrix');
+  await layout(t,'matrix 390');
+  await t.screenshot('matrix-390');
+  const matrixAX = await t.send('Accessibility.getFullAXTree');
+  assert.ok(matrixAX.nodes.some(n=>n.role?.value==='table'));
+  assert.equal(await t.evaluate('document.querySelector("#matrix-export").disabled'),false);
+  await t.evaluate('document.querySelector("[data-cell]").click()');
+  await waitFor(() => t.evaluate('document.querySelector("#matrix-detail").textContent.includes("dati insufficienti")'), 'matrix uncertainty and drill-down');
+  assert.equal(await t.evaluate('document.querySelector("#matrix-detail").textContent.includes("Nessuna candidata")'),true);
+  await t.screenshot('matrix-cell-390');
   await t.send('Fetch.disable');
   await t.go('/', '.hero');
   await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
@@ -375,7 +451,7 @@ try {
   assert.ok(!requests.some(url => /^https?:/.test(url) && new URL(url).hostname !== '127.0.0.1'), 'unexpected external browser request');
   assert.deepEqual(errors, []);
   writeFileSync(resolve(output, 'measurements.json'), JSON.stringify(measurements, null, 2) + '\n');
-  console.log('Digital Gallery passed: visual editorial approval/rejection without forms, broken-preview protection, real solo/per-image timed, suspended PvP, tab masking without timer pause, copy deterrents, timeouts, 360/390/768/1440 layouts, intact images, symmetric named actions, AX tree, keyboard zoom/answer/focus, reduced motion, local fonts, delayed preparation, corrupt-image retry, active-timer preservation, invalidation and no external requests. Screenshots: artifacts/gallery/.');
+  console.log('Digital Gallery passed: caption readiness before server timers, 10/20/30 seconds, 360/390 caption layout/AX/zoom/injection, private 144-cell matrix and uncertainty drill-down, visual editorial approval/rejection without forms, broken-preview protection, real solo/per-image timed, suspended PvP, tab masking without timer pause, copy deterrents, timeouts, 360/390/768/1440 layouts, intact images, symmetric named actions, AX tree, keyboard zoom/answer/focus, reduced motion, local fonts, delayed preparation, corrupt-image retry, active-timer preservation, invalidation and no external requests. Screenshots: artifacts/gallery/.');
 } finally {
   for (const ws of clients) ws.close();
   for (const child of children) { try { process.kill(-child.pid, 'SIGTERM'); } catch { /* Already stopped. */ } }

@@ -72,6 +72,7 @@ export async function render() {
   else if (location.pathname === "/tempo") await setupGame("timed");
   else if (location.pathname === "/pvp") content().innerHTML = '<section class="page narrow"><h1>La sfida tra amici torna più avanti.</h1><p>Il PvP è temporaneamente sospeso.</p><a class="button" href="/tempo">Gioca a tempo</a></section>';
   else if (location.pathname === "/admin") await showAdmin();
+  else if (location.pathname === "/admin/variety") await (await import("./variety.v4.0.0")).showVariety();
   else if (location.pathname === "/admin/similarity") await showSimilarity();
   else if (location.pathname === "/admin/slop") { history.replaceState({}, "", "/admin"); await showAdmin(); }
   else if (location.pathname === "/admin/editorial-v2") await showEditorialV2();

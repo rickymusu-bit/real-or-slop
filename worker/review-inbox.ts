@@ -44,7 +44,7 @@ export async function syncReviewInbox(env: Env) {
           'source_url',json_extract(c.dossier_json,'$.provenance.source_url'),
           'license_url',json_extract(c.dossier_json,'$.provenance.license_url'),
           'provenance',json(c.dossier_json)),
-        json_extract(c.dossier_json,'$.brief_id'),c.created_at
+        COALESCE(json_extract(c.dossier_json,'$.matrix_brief_ref'),json_extract(c.dossier_json,'$.brief_id')),c.created_at
       FROM editorial_v2_candidates c WHERE c.review_state<>'approved'
       ON CONFLICT DO NOTHING`),
   ]);
@@ -105,14 +105,14 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
     const data = await body(request, 5000);
     if (Object.keys(data).some(key => !["decision", "revision", "sha256", "note"].includes(key)) ||
         !["approved", "rejected", "pending"].includes(String(data.decision)) || data.revision !== row.revision || data.sha256 !== row.sha256 ||
-        typeof data.note !== "string" || data.note.length > 2000) throw new HttpError(409, "Immagine o revisione aggiornata: ricaricare la coda");
+        (data.note !== undefined && (typeof data.note !== "string" || data.note.length > 2000))) throw new HttpError(409, "Immagine o revisione aggiornata: ricaricare la coda");
     const file = await env.QUARANTINE?.get(row.media_key);
     if (!file || file.size > 12_000_000) throw new HttpError(409, "File non disponibile per la revisione");
     if ([...new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()))].map(x => x.toString(16).padStart(2, "0")).join("") !== row.sha256) throw new HttpError(409, "Il file è cambiato: revisione bloccata");
     const event = id(), now = new Date().toISOString();
     const result = await env.DB.batch([
       env.DB.prepare(`INSERT INTO editorial_review_inbox_events SELECT ?,id,revision+1,?,?,?,?,? FROM editorial_review_effective_images WHERE id=? AND revision=? AND sha256=?`)
-        .bind(event, (await hash(env.ADMIN_TOKEN!)).slice(0, 12), data.decision, row.sha256, data.note, now, row.id, row.revision, row.sha256),
+        .bind(event, (await hash(env.ADMIN_TOKEN!)).slice(0, 12), data.decision, row.sha256, String(data.note ?? ""), now, row.id, row.revision, row.sha256),
       env.DB.prepare("UPDATE editorial_review_inbox SET status=?,revision=revision+1 WHERE id=? AND revision=? AND EXISTS(SELECT 1 FROM editorial_review_inbox_events WHERE id=?)")
         .bind(data.decision, row.id, row.revision, event),
     ]);

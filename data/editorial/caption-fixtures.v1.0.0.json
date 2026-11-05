@@ -1,0 +1,969 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-11-05T20:15:00Z",
+  "kind": "caption_style_fixtures",
+  "language": "it",
+  "limitations": "Authored style examples, not captions verified against real images. No owner approval or documentary facts are asserted. Two contexts per emotion and per origin; identical texts across origins intentionally test equal treatment.",
+  "captions": [
+    {
+      "id": "caption-wonder-1-real",
+      "origin": "REAL",
+      "emotion": "wonder",
+      "case_group": "wonder-1",
+      "text": "Un sentiero attraversa una valle aperta, con vegetazione e rilievi sullo sfondo.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un sentiero attraversa una valle aperta, con vegetazione e rilievi sullo sfondo.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-wonder-1-ai",
+      "origin": "AI",
+      "emotion": "wonder",
+      "case_group": "wonder-1",
+      "text": "Un sentiero attraversa una valle aperta, con vegetazione e rilievi sullo sfondo.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un sentiero attraversa una valle aperta, con vegetazione e rilievi sullo sfondo.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-wonder-2-real",
+      "origin": "REAL",
+      "emotion": "wonder",
+      "case_group": "wonder-2",
+      "text": "Una struttura di grandi dimensioni occupa parte di uno spazio di lavoro interno.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Una struttura di grandi dimensioni occupa parte di uno spazio di lavoro interno.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-wonder-2-ai",
+      "origin": "AI",
+      "emotion": "wonder",
+      "case_group": "wonder-2",
+      "text": "Una struttura di grandi dimensioni occupa parte di uno spazio di lavoro interno.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Una struttura di grandi dimensioni occupa parte di uno spazio di lavoro interno.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-tenderness-1-real",
+      "origin": "REAL",
+      "emotion": "tenderness",
+      "case_group": "tenderness-1",
+      "text": "Due animali riposano vicino a un riparo, con il cortile visibile intorno.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Due animali riposano vicino a un riparo, con il cortile visibile intorno.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-tenderness-1-ai",
+      "origin": "AI",
+      "emotion": "tenderness",
+      "case_group": "tenderness-1",
+      "text": "Due animali riposano vicino a un riparo, con il cortile visibile intorno.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Due animali riposano vicino a un riparo, con il cortile visibile intorno.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-tenderness-2-real",
+      "origin": "REAL",
+      "emotion": "tenderness",
+      "case_group": "tenderness-2",
+      "text": "Un piccolo indumento è appoggiato su una sedia accanto a una finestra aperta.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un piccolo indumento è appoggiato su una sedia accanto a una finestra aperta.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-tenderness-2-ai",
+      "origin": "AI",
+      "emotion": "tenderness",
+      "case_group": "tenderness-2",
+      "text": "Un piccolo indumento è appoggiato su una sedia accanto a una finestra aperta.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un piccolo indumento è appoggiato su una sedia accanto a una finestra aperta.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-compassion-1-real",
+      "origin": "REAL",
+      "emotion": "compassion",
+      "case_group": "compassion-1",
+      "text": "Una postazione di assistenza occupa un angolo di una sala ad uso collettivo.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Una postazione di assistenza occupa un angolo di una sala ad uso collettivo.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-compassion-1-ai",
+      "origin": "AI",
+      "emotion": "compassion",
+      "case_group": "compassion-1",
+      "text": "Una postazione di assistenza occupa un angolo di una sala ad uso collettivo.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Una postazione di assistenza occupa un angolo di una sala ad uso collettivo.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-compassion-2-real",
+      "origin": "REAL",
+      "emotion": "compassion",
+      "case_group": "compassion-2",
+      "text": "Un tavolo con materiali di lavoro si trova in uno spazio di attività condivise.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un tavolo con materiali di lavoro si trova in uno spazio di attività condivise.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-compassion-2-ai",
+      "origin": "AI",
+      "emotion": "compassion",
+      "case_group": "compassion-2",
+      "text": "Un tavolo con materiali di lavoro si trova in uno spazio di attività condivise.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un tavolo con materiali di lavoro si trova in uno spazio di attività condivise.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-outrage-1-real",
+      "origin": "REAL",
+      "emotion": "outrage",
+      "case_group": "outrage-1",
+      "text": "Un’area di raccolta dei rifiuti occupa parte del cortile di un edificio residenziale.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un’area di raccolta dei rifiuti occupa parte del cortile di un edificio residenziale.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-outrage-1-ai",
+      "origin": "AI",
+      "emotion": "outrage",
+      "case_group": "outrage-1",
+      "text": "Un’area di raccolta dei rifiuti occupa parte del cortile di un edificio residenziale.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un’area di raccolta dei rifiuti occupa parte del cortile di un edificio residenziale.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-outrage-2-real",
+      "origin": "REAL",
+      "emotion": "outrage",
+      "case_group": "outrage-2",
+      "text": "Una parete danneggiata affianca un passaggio utilizzato per accedere a uno spazio comune.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Una parete danneggiata affianca un passaggio utilizzato per accedere a uno spazio comune.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-outrage-2-ai",
+      "origin": "AI",
+      "emotion": "outrage",
+      "case_group": "outrage-2",
+      "text": "Una parete danneggiata affianca un passaggio utilizzato per accedere a uno spazio comune.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Una parete danneggiata affianca un passaggio utilizzato per accedere a uno spazio comune.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-fear-1-real",
+      "origin": "REAL",
+      "emotion": "fear",
+      "case_group": "fear-1",
+      "text": "Un passaggio pedonale segue una parete rocciosa, con vegetazione visibile sullo sfondo.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un passaggio pedonale segue una parete rocciosa, con vegetazione visibile sullo sfondo.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-fear-1-ai",
+      "origin": "AI",
+      "emotion": "fear",
+      "case_group": "fear-1",
+      "text": "Un passaggio pedonale segue una parete rocciosa, con vegetazione visibile sullo sfondo.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un passaggio pedonale segue una parete rocciosa, con vegetazione visibile sullo sfondo.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-fear-2-real",
+      "origin": "REAL",
+      "emotion": "fear",
+      "case_group": "fear-2",
+      "text": "Un percorso stretto attraversa uno spazio di servizio tra strutture di diversa altezza.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un percorso stretto attraversa uno spazio di servizio tra strutture di diversa altezza.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-fear-2-ai",
+      "origin": "AI",
+      "emotion": "fear",
+      "case_group": "fear-2",
+      "text": "Un percorso stretto attraversa uno spazio di servizio tra strutture di diversa altezza.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un percorso stretto attraversa uno spazio di servizio tra strutture di diversa altezza.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-disgust-1-real",
+      "origin": "REAL",
+      "emotion": "disgust",
+      "case_group": "disgust-1",
+      "text": "Contenitori e materiali di scarto si trovano in un’area di servizio all’aperto.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Contenitori e materiali di scarto si trovano in un’area di servizio all’aperto.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-disgust-1-ai",
+      "origin": "AI",
+      "emotion": "disgust",
+      "case_group": "disgust-1",
+      "text": "Contenitori e materiali di scarto si trovano in un’area di servizio all’aperto.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Contenitori e materiali di scarto si trovano in un’area di servizio all’aperto.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-disgust-2-real",
+      "origin": "REAL",
+      "emotion": "disgust",
+      "case_group": "disgust-2",
+      "text": "Residui di alimenti sono raccolti vicino a un piano di lavoro e ad alcuni utensili.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Residui di alimenti sono raccolti vicino a un piano di lavoro e ad alcuni utensili.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-disgust-2-ai",
+      "origin": "AI",
+      "emotion": "disgust",
+      "case_group": "disgust-2",
+      "text": "Residui di alimenti sono raccolti vicino a un piano di lavoro e ad alcuni utensili.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Residui di alimenti sono raccolti vicino a un piano di lavoro e ad alcuni utensili.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-desire-1-real",
+      "origin": "REAL",
+      "emotion": "desire",
+      "case_group": "desire-1",
+      "text": "Un tavolo è preparato per un pasto su una terrazza riparata, con il paesaggio sullo sfondo.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un tavolo è preparato per un pasto su una terrazza riparata, con il paesaggio sullo sfondo.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-desire-1-ai",
+      "origin": "AI",
+      "emotion": "desire",
+      "case_group": "desire-1",
+      "text": "Un tavolo è preparato per un pasto su una terrazza riparata, con il paesaggio sullo sfondo.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un tavolo è preparato per un pasto su una terrazza riparata, con il paesaggio sullo sfondo.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-desire-2-real",
+      "origin": "REAL",
+      "emotion": "desire",
+      "case_group": "desire-2",
+      "text": "Tessuti e strumenti di lavoro sono disposti sul bancone di una piccola sartoria.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Tessuti e strumenti di lavoro sono disposti sul bancone di una piccola sartoria.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-desire-2-ai",
+      "origin": "AI",
+      "emotion": "desire",
+      "case_group": "desire-2",
+      "text": "Tessuti e strumenti di lavoro sono disposti sul bancone di una piccola sartoria.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Tessuti e strumenti di lavoro sono disposti sul bancone di una piccola sartoria.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-nostalgia-1-real",
+      "origin": "REAL",
+      "emotion": "nostalgia",
+      "case_group": "nostalgia-1",
+      "text": "Una cucina con arredi di epoche diverse conserva oggetti utilizzati nella vita quotidiana.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Una cucina con arredi di epoche diverse conserva oggetti utilizzati nella vita quotidiana.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-nostalgia-1-ai",
+      "origin": "AI",
+      "emotion": "nostalgia",
+      "case_group": "nostalgia-1",
+      "text": "Una cucina con arredi di epoche diverse conserva oggetti utilizzati nella vita quotidiana.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Una cucina con arredi di epoche diverse conserva oggetti utilizzati nella vita quotidiana.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-nostalgia-2-real",
+      "origin": "REAL",
+      "emotion": "nostalgia",
+      "case_group": "nostalgia-2",
+      "text": "Un vecchio strumento di misura è esposto con altri oggetti in una stanza arredata.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un vecchio strumento di misura è esposto con altri oggetti in una stanza arredata.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-nostalgia-2-ai",
+      "origin": "AI",
+      "emotion": "nostalgia",
+      "case_group": "nostalgia-2",
+      "text": "Un vecchio strumento di misura è esposto con altri oggetti in una stanza arredata.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un vecchio strumento di misura è esposto con altri oggetti in una stanza arredata.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-amusement-1-real",
+      "origin": "REAL",
+      "emotion": "amusement",
+      "case_group": "amusement-1",
+      "text": "Oggetti di uso quotidiano formano una disposizione irregolare sopra un tavolo da lavoro.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Oggetti di uso quotidiano formano una disposizione irregolare sopra un tavolo da lavoro.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-amusement-1-ai",
+      "origin": "AI",
+      "emotion": "amusement",
+      "case_group": "amusement-1",
+      "text": "Oggetti di uso quotidiano formano una disposizione irregolare sopra un tavolo da lavoro.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Oggetti di uso quotidiano formano una disposizione irregolare sopra un tavolo da lavoro.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-amusement-2-real",
+      "origin": "REAL",
+      "emotion": "amusement",
+      "case_group": "amusement-2",
+      "text": "Alcuni attrezzi sono appoggiati in posizioni diverse lungo il bordo di un cortile.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Alcuni attrezzi sono appoggiati in posizioni diverse lungo il bordo di un cortile.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-amusement-2-ai",
+      "origin": "AI",
+      "emotion": "amusement",
+      "case_group": "amusement-2",
+      "text": "Alcuni attrezzi sono appoggiati in posizioni diverse lungo il bordo di un cortile.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Alcuni attrezzi sono appoggiati in posizioni diverse lungo il bordo di un cortile.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-curiosity-1-real",
+      "origin": "REAL",
+      "emotion": "curiosity",
+      "case_group": "curiosity-1",
+      "text": "Un piccolo meccanismo aperto si trova sul banco di un laboratorio con strumenti vicini.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un piccolo meccanismo aperto si trova sul banco di un laboratorio con strumenti vicini.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-curiosity-1-ai",
+      "origin": "AI",
+      "emotion": "curiosity",
+      "case_group": "curiosity-1",
+      "text": "Un piccolo meccanismo aperto si trova sul banco di un laboratorio con strumenti vicini.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un piccolo meccanismo aperto si trova sul banco di un laboratorio con strumenti vicini.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-curiosity-2-real",
+      "origin": "REAL",
+      "emotion": "curiosity",
+      "case_group": "curiosity-2",
+      "text": "Un contenitore di archivio aperto è appoggiato sul tavolo di una sala di consultazione.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un contenitore di archivio aperto è appoggiato sul tavolo di una sala di consultazione.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-curiosity-2-ai",
+      "origin": "AI",
+      "emotion": "curiosity",
+      "case_group": "curiosity-2",
+      "text": "Un contenitore di archivio aperto è appoggiato sul tavolo di una sala di consultazione.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un contenitore di archivio aperto è appoggiato sul tavolo di una sala di consultazione.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-admiration-1-real",
+      "origin": "REAL",
+      "emotion": "admiration",
+      "case_group": "admiration-1",
+      "text": "Un giunto in legno è visibile sul banco di un laboratorio con utensili e materiali.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un giunto in legno è visibile sul banco di un laboratorio con utensili e materiali.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-admiration-1-ai",
+      "origin": "AI",
+      "emotion": "admiration",
+      "case_group": "admiration-1",
+      "text": "Un giunto in legno è visibile sul banco di un laboratorio con utensili e materiali.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un giunto in legno è visibile sul banco di un laboratorio con utensili e materiali.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-admiration-2-real",
+      "origin": "REAL",
+      "emotion": "admiration",
+      "case_group": "admiration-2",
+      "text": "Un lavoro tessile è esposto per intero accanto ad altri oggetti in uno spazio interno.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un lavoro tessile è esposto per intero accanto ad altri oggetti in uno spazio interno.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-admiration-2-ai",
+      "origin": "AI",
+      "emotion": "admiration",
+      "case_group": "admiration-2",
+      "text": "Un lavoro tessile è esposto per intero accanto ad altri oggetti in uno spazio interno.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un lavoro tessile è esposto per intero accanto ad altri oggetti in uno spazio interno.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-neutrality-1-real",
+      "origin": "REAL",
+      "emotion": "neutrality",
+      "case_group": "neutrality-1",
+      "text": "Scatole e materiali di uso corrente occupano una parte degli scaffali di un deposito.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Scatole e materiali di uso corrente occupano una parte degli scaffali di un deposito.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-neutrality-1-ai",
+      "origin": "AI",
+      "emotion": "neutrality",
+      "case_group": "neutrality-1",
+      "text": "Scatole e materiali di uso corrente occupano una parte degli scaffali di un deposito.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Scatole e materiali di uso corrente occupano una parte degli scaffali di un deposito.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-neutrality-2-real",
+      "origin": "REAL",
+      "emotion": "neutrality",
+      "case_group": "neutrality-2",
+      "text": "Un tavolo con sedie è disposto accanto alla finestra di una stanza ad uso domestico.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un tavolo con sedie è disposto accanto alla finestra di una stanza ad uso domestico.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-neutrality-2-ai",
+      "origin": "AI",
+      "emotion": "neutrality",
+      "case_group": "neutrality-2",
+      "text": "Un tavolo con sedie è disposto accanto alla finestra di una stanza ad uso domestico.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Un tavolo con sedie è disposto accanto alla finestra di una stanza ad uso domestico.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-style-fixture-v1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    }
+  ]
+}

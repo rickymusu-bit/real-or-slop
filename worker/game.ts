@@ -95,7 +95,8 @@ async function owned(request: Request, env: Env, sid: string) {
     throw new HttpError(404, "Sessione non trovata");
   return s;
 }
-export const reveal = (i: ImageRow) => ({
+export const reveal = (i: ImageRow, captionFictional?: number | null) => ({
+  ...(captionFictional === 1 ? { captionContextFictional: true } : {}),
   answer: i.type,
   explanation: i.explanation,
   title: i.title,
@@ -135,9 +136,10 @@ async function settleSession(env: Env, s: Session) {
   }
   return s;
 }
-const neutralRound = (sid: string, round: { id: string; position: number }) => ({
+const neutralRound = (sid: string, round: { id: string; position: number; game_caption?: string | null }) => ({
   id: round.id, number: round.position + 1, image: `/api/sessions/${sid}/media/${round.id}`,
   alt: "Immagine da osservare per rispondere alla domanda",
+  ...(round.game_caption ? { caption: round.game_caption } : {}),
 });
 async function state(env: Env, s: Session) {
   const now = Date.now();
@@ -154,8 +156,8 @@ async function state(env: Env, s: Session) {
   let question = null;
   let roundExpiresAt: number | null = null;
   if (s.phase === "active") {
-    const round = await env.DB.prepare("SELECT r.id,r.position,r.presented_at,r.expires_at FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position LIMIT 1")
-      .bind(s.id).first<{ id: string; position: number; presented_at: number | null; expires_at: number | null }>();
+    const round = await env.DB.prepare("SELECT r.id,r.position,r.game_caption,r.presented_at,r.expires_at FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position LIMIT 1")
+      .bind(s.id).first<{ id: string; position: number; game_caption: string | null; presented_at: number | null; expires_at: number | null }>();
     if (round) {
       // Legacy assignments keep their original presentation/timing semantics.
       if (s.protocol_version === 1) await env.DB.prepare("UPDATE game_rounds SET presented_at=COALESCE(presented_at,?) WHERE id=?").bind(now, round.id).run();
@@ -163,8 +165,8 @@ async function state(env: Env, s: Session) {
       roundExpiresAt = round.expires_at;
     }
   }
-  const credits = s.phase === "completed" ? (await env.DB.prepare("SELECT i.*,s.page_url AS source_url,l.name AS license_name,l.url AS license_url,COALESCE(a.correct,0) AS correct,r.timed_out FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id JOIN images i ON i.id=r.image_id LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id WHERE r.session_id=? AND (a.round_id IS NOT NULL OR r.timed_out=1) ORDER BY r.position")
-    .bind(s.id).all<ImageRow & { correct: number; timed_out: number }>()).results.map(image => ({ ...reveal(image), correct: !!image.correct, timedOut: !!image.timed_out })) : [];
+  const credits = s.phase === "completed" ? (await env.DB.prepare("SELECT i.*,s.page_url AS source_url,l.name AS license_name,l.url AS license_url,COALESCE(a.correct,0) AS correct,r.timed_out,r.caption_context_fictional FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id JOIN images i ON i.id=r.image_id LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id WHERE r.session_id=? AND (a.round_id IS NOT NULL OR r.timed_out=1) ORDER BY r.position")
+    .bind(s.id).all<ImageRow & { correct: number; timed_out: number }>()).results.map(image => ({ ...reveal(image, image.caption_context_fictional), correct: !!image.correct, timedOut: !!image.timed_out })) : [];
   return json({ id: s.id, mode: s.mode, demo: env.DATA_MODE === "demo", protocolVersion: s.protocol_version,
     phase: s.phase, invalidReason: s.invalid_reason, preparationExpiresAt: s.preparation_expires_at,
     serverNow: Date.now(), expiresAt: s.timing_mode === "per-image" ? roundExpiresAt : s.expires_at, startedAt: s.started_at, done, total,
@@ -183,8 +185,8 @@ export async function game(request: Request, env: Env, path: string) {
     await env.DB.batch([
       env.DB.prepare("INSERT INTO game_sessions(id,mode,created_at,expires_at,owner_hash,protocol_version,phase,duration_seconds,preparation_expires_at,timing_mode,round_seconds) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
         .bind(sid, config.mode, now, null, key, protocol, config.mode === "timed" ? "preparing" : "active", null, config.mode === "timed" ? now + preparationTtlMs : null, config.mode === "timed" ? "per-image" : "unlimited", config.mode === "timed" ? config.roundSeconds : null),
-      env.DB.prepare("INSERT INTO game_rounds(id,session_id,image_id,position) SELECT json_extract(value,'$.id'),?,json_extract(value,'$.imageId'),json_extract(value,'$.position') FROM json_each(?)")
-        .bind(sid, JSON.stringify(sample.images.map((image, position) => ({ id: id(), imageId: image.id, position })))),
+      env.DB.prepare("INSERT INTO game_rounds(id,session_id,image_id,position,game_caption,caption_revision,caption_context_fictional) SELECT json_extract(value,'$.id'),?,json_extract(value,'$.imageId'),json_extract(value,'$.position'),json_extract(value,'$.caption'),json_extract(value,'$.captionRevision'),json_extract(value,'$.captionFictional') FROM json_each(?)")
+        .bind(sid, JSON.stringify(sample.images.map((image, position) => ({ id: id(), imageId: image.id, position, caption: image.game_caption || null, captionRevision: image.caption_revision ?? null, captionFictional: image.caption_context_fictional ?? null })))),
     ]);
     const response = json({ id: sid, warnings: sample.warnings }, 201);
     response.headers.set("Set-Cookie", `ros_owner=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${new URL(request.url).protocol === "https:" ? "; Secure" : ""}`);
@@ -195,7 +197,7 @@ export async function game(request: Request, env: Env, path: string) {
   let s = await settleSession(env, await owned(request, env, match[1]));
   if (!match[2] && request.method === "GET") return state(env, s);
   if (match[2] === "manifest" && request.method === "GET") {
-    const rows = s.phase === "preparing" || s.phase === "active" ? (await env.DB.prepare(`SELECT r.id,r.position FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position ${s.timing_mode === "per-image" ? "LIMIT 1" : s.mode === "training" || s.protocol_version === 1 ? "LIMIT 3" : "LIMIT 50"}`).bind(s.id).all<{ id: string; position: number }>()).results : [];
+    const rows = s.phase === "preparing" || s.phase === "active" ? (await env.DB.prepare(`SELECT r.id,r.position,r.game_caption FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position ${s.timing_mode === "per-image" ? "LIMIT 1" : s.mode === "training" || s.protocol_version === 1 ? "LIMIT 3" : "LIMIT 50"}`).bind(s.id).all<{ id: string; position: number; game_caption: string | null }>()).results : [];
     return json({ id: s.id, phase: s.phase, images: rows.map(r => neutralRound(s.id, r)) });
   }
   if (match[2] === "start" && request.method === "POST") {
@@ -260,14 +262,14 @@ export async function game(request: Request, env: Env, path: string) {
     const data = await body(request);
     if (!["REAL", "AI"].includes(String(data.choice))) throw new HttpError(400, "Risposta non valida");
     const rid = String(data.roundId);
-    const round = await env.DB.prepare("SELECT image_id,position,presented_at,expires_at,timed_out FROM game_rounds WHERE id=? AND session_id=?").bind(rid, s.id).first<{ image_id: string; position: number; presented_at: number | null; expires_at: number | null; timed_out: number }>();
+    const round = await env.DB.prepare("SELECT image_id,position,presented_at,expires_at,timed_out,caption_context_fictional FROM game_rounds WHERE id=? AND session_id=?").bind(rid, s.id).first<{ image_id: string; position: number; game_caption: string | null; presented_at: number | null; expires_at: number | null; timed_out: number; caption_context_fictional: number | null }>();
     if (!round?.presented_at) throw new HttpError(409, "Domanda non attiva: preparare prima l'immagine");
     const image = await env.DB.prepare(`${joinedImage} WHERE i.id=?`).bind(round.image_id).first<ImageRow>();
     if (!image) throw new HttpError(404, "Immagine non disponibile");
     const previous = await env.DB.prepare("SELECT choice,correct FROM answers WHERE round_id=?").bind(rid).first<{ choice: string; correct: number }>();
     if (previous) {
       if (previous.choice !== data.choice) throw new HttpError(409, "Risposta già consegnata");
-      return json({ ...reveal(image), correct: !!previous.correct, replayed: true, serverNow: Date.now(), expiresAt: s.expires_at });
+      return json({ ...reveal(image, round.caption_context_fictional), correct: !!previous.correct, replayed: true, serverNow: Date.now(), expiresAt: s.expires_at });
     }
     const now = Date.now();
     if (round.timed_out || (round.expires_at && now >= round.expires_at)) throw new HttpError(410, "Tempo per questa immagine scaduto");
@@ -283,7 +285,7 @@ export async function game(request: Request, env: Env, path: string) {
       throw new HttpError(s.phase === "active" ? 409 : 410, "Partita non attiva o tempo scaduto");
     }
     if (saved.choice !== data.choice) throw new HttpError(409, "Risposta già consegnata");
-    return json({ ...reveal(image), correct: !!saved.correct, serverNow: Date.now(), expiresAt: s.expires_at });
+    return json({ ...reveal(image, round.caption_context_fictional), correct: !!saved.correct, serverNow: Date.now(), expiresAt: s.expires_at });
   }
   throw new HttpError(405, "Metodo non consentito");
 }

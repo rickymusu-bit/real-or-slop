@@ -644,3 +644,18 @@ Master presente da aggiornare; README e specifiche esistenti sono conservati.
 - `npm run deploy:check` superato: destinazione D1/account/Worker vincolata al rilascio demo approvato, nessuna rete. `npm run deploy:demo -- --dry-run` superato: packaging ASSETS + D1 + ROOMS, nessun binding R2, nessuna migrazione/seed remoto, provisioning automatico disabilitato.
 - Il comando di rilascio demo applica separatamente le migrazioni versionate e il seed sintetico idempotente, quindi deploya con --no-experimental-provision e ambiente principale esplicito. Interrompe il flusso al primo errore; non attiva R2 o billing.
 - Per eseguirlo nell’integrazione Cloudflare già esistente occorre impostare Deploy command `npm run deploy:demo` (Build resta npm run build, main e root / invariati). L’ambiente di questa chat non espone ancora credenziali/accesso API Cloudflare: il nuovo flusso remoto è preparato, non eseguito o certificato qui.
+
+## Pipeline v4.0.0 — implementazione isolata per #53
+
+La specifica [v4.0.0](protocollo-editoriale.v4.0.0.md) conserva la v3 e aggiunge
+matrice 12×12, freeze prima dei rami, eventi dalla coda unica e caption autonome.
+La migrazione 0018 è stata verificata soltanto negli emulatori isolati. Il CLI e
+il benchmark sono offline, con fixture chiaramente distinte dalle evidenze REAL.
+
+Build, lint, suite Node/Python, HTTP locale D1/R2 e Chromium verificano hash,
+resume, diritti, giudizi indipendenti, contatori, sorgenti/costi separati,
+caption immutabile per round, server readiness, privacy, legacy e layout mobile.
+Report [leggibile](benchmark-matrice.v4.0.0.md) e [JSON](benchmark-matrice.v4.0.0.json).
+Nessun pilota REAL, inferenza remota, addebito, cron, migrazione remota o deploy
+è stato eseguito; bozze, esempi e prior richiedono ancora review e calibrazione
+prima dell’attivazione. Il PvP pubblico resta sospeso.

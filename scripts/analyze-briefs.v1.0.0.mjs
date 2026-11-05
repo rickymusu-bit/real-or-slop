@@ -1,5 +1,7 @@
 /** Local-only semantic variety study; no writes to catalogues, images or services. */
 import { readFile, mkdir, writeFile } from "node:fs/promises";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
@@ -8,6 +10,15 @@ import { ROOT, MODEL, hash, stable, readCatalog, canonicalText, recordKey, valid
 import { VERSION, check, analyzeSpace, randomCoverage, cosineDistance, summarize } from "./brief-metrics.v1.0.0.mjs";
 const json = async path => JSON.parse(await readFile(path, "utf8"));
 const id = value => typeof value === "string" && /^[A-Za-z0-9_-]{1,100}$/.test(value);
+
+function pythonJSON(value, code, args = []) {
+  const folder = mkdtempSync(join(tmpdir(), "ros-private-json-"));
+  try {
+    const path = join(folder, "input.json");
+    writeFileSync(path, JSON.stringify(value), { mode: 0o600 });
+    return execFileSync("python3", ["-c", code, path, ...args], { cwd: ROOT, timeout: 15000, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  } finally { rmSync(folder, { recursive: true, force: true }); }
+}
 
 export function validateConfig(c) {
   check(c.version === VERSION && Number.isSafeInteger(c.seed) && c.seed >= 0 && c.seed <= 4294967295, "Invalid config version/seed");
@@ -36,7 +47,8 @@ export function validateReference(value) {
   }
   // Reuse #44's conservative guard rather than introducing another language rule.
   try {
-    execFileSync("python3", ["-c", "import json,sys; from pipeline.v2.protocol import english_text; [english_text(r['description']) for r in json.load(sys.stdin)]"], { cwd: ROOT, input: JSON.stringify(value.candidates), timeout: 15000, stdio: ["pipe", "pipe", "pipe"] });
+    // Bounded private files avoid sync stdin EOF stalls and argv size limits.
+    pythonJSON(value.candidates, "import json,sys; from pipeline.v2.protocol import english_text; [english_text(r['description']) for r in json.load(open(sys.argv[1]))]");
   } catch { throw Error("Reference descriptions must be canonical English"); }
   return value;
 }
@@ -91,8 +103,8 @@ async function cachedIndex(catalog, encoder, root) {
 }
 function tagSelection(catalog, count, seed) {
   const active = catalog.briefs.filter(r => r.status !== "retired"); if (!active.length) return [];
-  const code = "import json,sys; from pipeline.v2.brief_catalog import select; v=json.load(sys.stdin); print(json.dumps([r['id'] for r in select(v,count=int(sys.argv[1]),seed=int(sys.argv[2]))['briefs']]))";
-  return JSON.parse(execFileSync("python3", ["-c", code, String(Math.min(count, active.length)), String(seed)], { cwd: ROOT, input: JSON.stringify(catalog), timeout: 15000, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }));
+  const code = "import json,sys; from pipeline.v2.brief_catalog import select; v=json.load(open(sys.argv[1])); print(json.dumps([r['id'] for r in select(v,count=int(sys.argv[2]),seed=int(sys.argv[3]))['briefs']]))";
+  return JSON.parse(pythonJSON(catalog, code, [String(Math.min(count, active.length)), String(seed)]));
 }
 export function neighborReview(rows, neighbors, review, annotations) {
   check(review.version === VERSION && review.annotation_status === "implementation_author_not_independent_human_validation" && Array.isArray(review.pairs), "Versioned development neighbor review required");

@@ -1,6 +1,24 @@
 # Real or Slop
 
-Il protocollo editoriale corrente è **v3.0.0: brief condivisi**. Un brief originale,
+Pipeline editoriale **v4.0.0** implementata per revisione: matrice privata 12×12,
+selezione uniforme/adattiva seedata, brief inglesi congelati prima dei rami
+REAL/SLOP e didascalie neutrali con giudizi autonomi. Tutto verificabile offline;
+nessuna attivazione, ricerca live, spesa, migrazione remota o pubblicazione.
+[Specifica, limiti e rollout](docs/protocollo-editoriale.v4.0.0.md).
+
+```sh
+python3 -m pipeline.v2.matrix_v4_0_0 --check
+python3 -m pipeline.v2.matrix_v4_0_0 --dry-run --count 5 --seed 53
+npm run benchmark:matrix
+```
+
+La matrice è in `/admin/variety`, protetta dallo stesso accesso della coda.
+Le 288 bozze nuove e i 48 esempi di didascalia richiedono la revisione del
+proprietario. Le vecchie immagini e approvazioni restano conservate.
+
+## Flusso precedente, conservato fino al rollout autorizzato
+
+Il protocollo editoriale precedente è **v3.0.0: brief condivisi**. Un brief originale,
 congelato prima della ricerca, guida una candidata REAL e una SLOP generata dal
 solo testo. Nessuna foto REAL, titolo o sua descrizione entra nel generatore.
 Il proprietario valuta ogni immagine; il confronto affiancato si usa quando

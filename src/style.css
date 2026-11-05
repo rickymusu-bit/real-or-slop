@@ -335,3 +335,24 @@ dialog button { margin-bottom: 12px; }
 #inbox-delete-all[hidden] { display: none; }
 #inbox-delete-dialog, #inbox-delete-all-dialog { max-width: min(520px, calc(100vw - 32px)); border: 1px solid var(--hairline); padding: 24px; background: var(--surface); color: var(--text); }
 #inbox-delete-dialog::backdrop, #inbox-delete-all-dialog::backdrop { background: rgb(0 0 0 / 55%); }
+
+/* A caption is readable context, distinct from visual alt and later credits. */
+.game-caption { margin: 8px 0 0; color: var(--text); font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
+.play:has(.game-caption) .play-image, .preparing-image { display: block; width: 100%; height: clamp(100px, calc(100svh - 340px), 640px); object-fit: contain; background: var(--surface); }
+.play-pvp:has(.game-caption) .play-image { height: clamp(100px, calc(100svh - 440px), 600px); }
+@media (max-width: 600px) {
+  .play:has(.game-caption) .play-image, .preparing-image { height: clamp(100px, calc(100svh - 355px), 620px); }
+  .play-pvp:has(.game-caption) .play-image { height: clamp(80px, calc(100svh - 510px), 580px); }
+}
+.variety { max-width: 1280px; margin: auto; }
+.matrix-filters { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 12px; align-items: end; }
+.matrix-scroll { max-width: 100%; overflow: auto; margin: 24px 0; }
+.matrix-table { min-width: 1100px; border-collapse: collapse; }
+.matrix-table th, .matrix-table td { padding: 6px; border: 1px solid var(--hairline); font-size: 11px; }
+.matrix-table button { min-width: 54px; min-height: 48px; font-size: 12px; padding: 6px; }
+.variety pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 350px; overflow: auto; }
+.matrix-candidate { border: 1px solid var(--hairline); margin: 20px 0; padding: 16px; }
+.matrix-candidate fieldset { margin-top: 16px; }
+.matrix-confirm { display: flex; align-items: center; gap: 12px; }
+.matrix-confirm input { width: 20px; flex: 0 0 auto; }
+dialog:has(.game-caption) img { max-height: calc(77svh - 70px); }

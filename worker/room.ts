@@ -192,18 +192,19 @@ export class GameRoom {
           ? {
               image: "/api/rooms/" + r.code + "/media?key=" + (r.mediaKey || String(r.round + 1)),
               alt: "Immagine del round condiviso",
+              ...(r.images[r.round].game_caption ? { caption: r.images[r.round].game_caption } : {}),
             }
           : null,
       reveal:
         r.phase === "reveal" || r.phase === "finished"
           ? {
-              ...reveal(r.images[r.round]),
+              ...reveal(r.images[r.round], r.images[r.round].caption_context_fictional),
               correct: p.answer?.choice === r.images[r.round].type,
             }
           : null,
       history:
         r.phase === "finished"
-          ? r.history.map((h) => ({ ...reveal(h.image), answers: h.answers }))
+          ? r.history.map((h) => ({ ...reveal(h.image, h.image.caption_context_fictional), answers: h.answers }))
           : [],
     };
   }

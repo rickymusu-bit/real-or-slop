@@ -4,6 +4,7 @@ import { ImagePreloader } from "./preload";
 import { serverCountdown } from "./clock";
 import { protectGameMedia } from "./media-privacy";
 export interface Reveal {
+  captionContextFictional?: boolean;
   serverNow?: number;
   expiresAt?: number | null;
   answer: string;
@@ -18,6 +19,7 @@ export interface Reveal {
   demo: boolean;
 }
 interface Question {
+  caption?: string | null;
   id: string;
   number: number;
   image: string;
@@ -44,13 +46,14 @@ interface State {
   credits: Reveal[];
 }
 export let stopPlay = () => {};
+export const gameCaption = (text?: string | null) => text ? `<p class="game-caption">${escape(text)}</p>` : "";
 export function zoom() {
   document.querySelector(".play-image")?.addEventListener("click", (event) => {
     const img = event.target as HTMLImageElement;
     const d = document.createElement("dialog");
     d.setAttribute("aria-label", "Immagine ingrandita");
     d.dataset.gameZoom = "";
-    d.innerHTML = `<button autofocus>Chiudi ×</button><br><img data-game-media draggable="false" src="${escape(img.src)}" alt="${escape(img.alt)}">`;
+    d.innerHTML = `<button autofocus>Chiudi ×</button><br><img data-game-media draggable="false" src="${escape(img.src)}" alt="${escape(img.alt)}">${gameCaption(img.closest(".play")?.querySelector(".game-caption")?.textContent)}`;
     document.body.append(d);
     d.querySelector("button")!.onclick = () => d.close();
     d.addEventListener("close", () => { d.remove(); img.focus(); });
@@ -69,7 +72,7 @@ export const choices = (attribute: "data-choice" | "data-pvp-choice", disabled =
 export const progress = (completed: number, total: number) =>
   `<progress class="round-progress" max="${total}" value="${completed}" aria-label="Immagini completate">${completed} / ${total}</progress>`;
 export const feedback = (r: Reveal) =>
-  `<h2>${r.timedOut ? "Tempo scaduto" : r.correct ? "✓ Risposta corretta" : "Un dettaglio ti è sfuggito"}</h2><p><strong>${r.answer === "REAL" ? "REAL · Reale" : "SLOP · Generata con IA"}</strong> · ${escape(r.title)}</p><p>${escape(r.explanation)}</p><p>${escape(r.author)} · ${r.licenseUrl ? `<a href="${safeUrl(r.licenseUrl)}" target="_blank" rel="noopener noreferrer">${escape(r.license)}</a>` : escape(r.license)} ${r.source ? `· <a href="${safeUrl(r.source)}" target="_blank" rel="noopener noreferrer">Fonte</a>` : ""}</p>`;
+  `<h2>${r.timedOut ? "Tempo scaduto" : r.correct ? "✓ Risposta corretta" : "Un dettaglio ti è sfuggito"}</h2><p><strong>${r.answer === "REAL" ? "REAL · Reale" : "SLOP · Generata con IA"}</strong> · ${escape(r.title)}</p><p>${escape(r.explanation)}</p>${r.captionContextFictional ? "<p>Il contesto della didascalia era narrativo. La risposta dipende dall’origine dell’immagine.</p>" : ""}<p>${escape(r.author)} · ${r.licenseUrl ? `<a href="${safeUrl(r.licenseUrl)}" target="_blank" rel="noopener noreferrer">${escape(r.license)}</a>` : escape(r.license)} ${r.source ? `· <a href="${safeUrl(r.source)}" target="_blank" rel="noopener noreferrer">Fonte</a>` : ""}</p>`;
 export async function setupGame(mode: string) {
   stopPlay();
   const saved = sessionStorage.getItem("ros_" + mode);
@@ -202,6 +205,11 @@ async function play(sid: string, warning = "") {
     }
     stopPlay();
   };
+  const presentPrepared = async (url: string, q: Question) => {
+    content().innerHTML = `<section class="play preparation"><div class="game-media-surface"><img data-game-media draggable="false" class="preparing-image" src="${escape(url)}" alt="${escape(q.alt)}"><div class="media-privacy-cover"><p>Immagine oscurata dopo aver lasciato la pagina.</p><button type="button" data-reveal-media>Mostra immagine</button></div></div>${gameCaption(q.caption)}<p role="status">Preparazione della domanda…</p></section>`;
+    mediaPrivacy.refresh();
+    await new Promise<void>(resolve => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
+  };
   const showQuestion = async (state: State, manifest: Question[], value: number, started = false) => {
     const q = state.question!;
     loading("Osserva tra un istante.", state.mode === "timed" ? "Prepariamo l’immagine. Il timer del server resta attivo." : "Controlliamo il file prima di abilitare le risposte.");
@@ -209,13 +217,15 @@ async function play(sid: string, warning = "") {
     const asset = await preloader.activate(q.image);
     if (!current(value)) return;
     if (state.protocolVersion === 2 && !started) {
+      await presentPrepared(asset.url, q);
+      if (!current(value)) return;
       state = await api<State>(`/sessions/${sid}/ready`, { method: "POST", body: JSON.stringify({ roundId: q.id }) });
       if (!current(value)) return;
       if (state.done || state.question?.id !== q.id) { await load(); return; }
       syncClock(state);
     }
     last = state; busy = false; refreshing = false;
-    content().innerHTML = `<section class="play" aria-label="Domanda ${q.number} di ${state.total}"><div class="play-top"><span>${state.mode === "training" ? "ALLENAMENTO" : "A TEMPO"} · DEMO</span><div class="play-metrics"><span>Round <strong>${q.number}/${state.total}</strong></span><span><strong>${state.score}</strong> pt</span><strong id="clock" role="timer" aria-label="Tempo rimasto"></strong></div></div>${progress(state.answered, state.total)}${warning ? `<details class="play-warning"><summary>Nota sul catalogo</summary><p>${escape(warning)}</p></details>` : ""}<div class="game-media-surface"><img data-game-media draggable="false" class="play-image" src="${escape(asset.url)}" alt="${escape(q.alt)}" loading="eager" fetchpriority="high" decoding="async" tabindex="0" role="button" aria-label="Ingrandisci l’immagine"><div class="media-privacy-cover"><p>Immagine oscurata dopo aver lasciato la pagina. Il tempo continua.</p><button type="button" data-reveal-media>Mostra immagine</button></div></div><p class="sr-only">R per REAL, I per SLOP (generata con IA).</p>${choices("data-choice")}<div id="feedback" aria-live="polite"></div><div id="play-error" role="alert"></div></section>`;
+    content().innerHTML = `<section class="play" aria-label="Domanda ${q.number} di ${state.total}"><div class="play-top"><span>${state.mode === "training" ? "ALLENAMENTO" : "A TEMPO"} · DEMO</span><div class="play-metrics"><span>Round <strong>${q.number}/${state.total}</strong></span><span><strong>${state.score}</strong> pt</span><strong id="clock" role="timer" aria-label="Tempo rimasto"></strong></div></div>${progress(state.answered, state.total)}${warning ? `<details class="play-warning"><summary>Nota sul catalogo</summary><p>${escape(warning)}</p></details>` : ""}<div class="game-media-surface"><img data-game-media draggable="false" class="play-image" src="${escape(asset.url)}" alt="${escape(q.alt)}" loading="eager" fetchpriority="high" decoding="async" tabindex="0" role="button" aria-label="Ingrandisci l’immagine"><div class="media-privacy-cover"><p>Immagine oscurata dopo aver lasciato la pagina. Il tempo continua.</p><button type="button" data-reveal-media>Mostra immagine</button></div></div>${gameCaption(q.caption)}<p class="sr-only">R per REAL, I per SLOP (generata con IA).</p>${choices("data-choice")}<div id="feedback" aria-live="polite"></div><div id="play-error" role="alert"></div></section>`;
     if (seconds) document.querySelector("#clock")!.textContent = seconds() + " s";
     mediaPrivacy.refresh();
     zoom();
@@ -275,6 +285,11 @@ async function play(sid: string, warning = "") {
         document.querySelector<HTMLButtonElement>("#start-prepared")!.onclick = async event => {
           (event.currentTarget as HTMLButtonElement).disabled = true;
           try {
+            const first = manifest.images[0];
+            const asset = await preloader.activate(first.image);
+            if (!current(value)) return;
+            await presentPrepared(asset.url, first);
+            if (!current(value)) return;
             const started = await api<State>(`/sessions/${sid}/start`, { method: "POST", body: JSON.stringify({ prepared: true, roundIds: manifest.images.map(q => q.id) }) });
             if (!current(value)) return;
             last = started; syncClock(started);
