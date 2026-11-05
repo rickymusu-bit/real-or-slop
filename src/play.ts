@@ -66,7 +66,7 @@ export function zoom() {
   });
 }
 export const choices = (attribute: "data-choice" | "data-pvp-choice", disabled = false) =>
-  `<div class="choices"><button ${attribute}="REAL" class="choice-real" aria-label="REAL, reale. Tasto R" ${disabled ? "disabled" : ""}><span>← REAL</span><kbd aria-hidden="true">R</kbd></button><button ${attribute}="AI" class="choice-slop" aria-label="SLOP, generata con IA. Tasto I" ${disabled ? "disabled" : ""}><span>SLOP →</span><kbd aria-hidden="true">I</kbd></button></div>`;
+  `<div class="choices"><button ${attribute}="REAL" class="choice-real" aria-label="REAL, reale. Trascina l’immagine a sinistra oppure premi R" ${disabled ? "disabled" : ""}><span>← REAL</span><kbd aria-hidden="true">R</kbd></button><button ${attribute}="AI" class="choice-slop" aria-label="SLOP, generata con IA. Trascina l’immagine a destra oppure premi I" ${disabled ? "disabled" : ""}><span>SLOP →</span><kbd aria-hidden="true">I</kbd></button></div>`;
 export const progress = (completed: number, total: number) =>
   `<progress class="round-progress" max="${total}" value="${completed}" aria-label="Immagini completate">${completed} / ${total}</progress>`;
 export const feedback = (r: Reveal) =>
