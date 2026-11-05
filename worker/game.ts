@@ -12,6 +12,7 @@ import {
 import { media, privateMedia } from "./storage";
 import { mediaProtocol, preparationTtlMs } from "../shared/preloading";
 import { curatedSample } from "./sampling";
+import { sceneGroups } from "../shared/similarity";
 export { curatedSample } from "./sampling";
 export function settings(data: Record<string, unknown>) {
   const mode = data.mode;
@@ -54,7 +55,16 @@ export async function filteredCatalog(
   if (filters.categories.length)
     rows = rows.filter((row) => categories.get(row.id)?.some((category) => filters.categories.includes(category)));
   const tags = new Map(metadata.results.map((row) => [row.image_id, row]));
-  return rows.map((row) => ({ ...row, categories: categories.get(row.id) || [], curation: tags.get(row.id) || null }));
+  const edges = (await env.DB.prepare(`SELECT p.a,p.b,p.decision,a.sha256 AS a_sha256,b.sha256 AS b_sha256 FROM similarity_current_pairs p
+    JOIN similarity_assets a ON a.id=p.a JOIN similarity_assets b ON b.id=p.b
+    WHERE a.origin=b.origin AND p.decision IN ('same_scene','prefer_a','prefer_b','different')`).all<{ a: string; b: string; decision: string; a_sha256: string; b_sha256: string }>()).results;
+  // Bind through content hashes, including a private source's published alias.
+  const groups = sceneGroups(edges.map(e => ({ a: e.a_sha256, b: e.b_sha256, decision: e.decision })));
+  const preferred = new Set(edges.filter(e => e.decision.startsWith("prefer_")).map(e => e.decision === "prefer_a" ? e.a_sha256 : e.b_sha256));
+  const distinct = new Map<string, string[]>();
+  for (const e of edges.filter(e => e.decision === "different")) for (const [a, b] of [[e.a_sha256, e.b_sha256], [e.b_sha256, e.a_sha256]]) distinct.set(a, [...distinct.get(a) || [], b]);
+  return rows.map((row) => ({ ...row, categories: categories.get(row.id) || [], curation: tags.get(row.id) || null,
+    scene_group: groups.get(row.sha256) || null, scene_preferred: preferred.has(row.sha256), perceptual_distinct: distinct.get(row.sha256) }));
 }
 function cookie(request: Request) {
   return request.headers

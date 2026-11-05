@@ -35,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
+      ONNXRUNTIME_NODE_INSTALL_CUDA: skip
       ROS_OPERATION: ${{ inputs.operation || 'daily' }}
       ROS_REFERENCE_COUNT: ${{ inputs.reference_count || '20' }}
       ROS_BATCH_RUN_ID: ${{ inputs.batch_run_id }}
@@ -93,6 +94,17 @@ jobs:
             cancel) python -m pipeline.batch --cancel "$ROS_BATCH_RUN_ID" ;;
             *) exit 1 ;;
           esac
+      - uses: actions/setup-node@v4
+        if: ${{ vars.ENABLE_AUTOMATIC_REVIEW_QUEUE == 'true' && inputs.operation != 'status' && inputs.operation != 'cancel' }}
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install CPU similarity scanner
+        if: ${{ vars.ENABLE_AUTOMATIC_REVIEW_QUEUE == 'true' && inputs.operation != 'status' && inputs.operation != 'cancel' }}
+        run: npm ci
+      - name: Check newly acquired images against the private catalog
+        if: ${{ vars.ENABLE_AUTOMATIC_REVIEW_QUEUE == 'true' && inputs.operation != 'status' && inputs.operation != 'cancel' }}
+        run: npm run scan:similarity -- --base https://real-or-slop.rickymusu.workers.dev
       - name: Preserve private local diagnostics (recovery is durable in D1/R2)
         if: ${{ always() }}
         uses: actions/upload-artifact@v4

@@ -314,6 +314,17 @@ dialog button { margin-bottom: 12px; }
 .inbox-comparison figure { margin: 0; min-width: 0; }
 .inbox-comparison figcaption { font-size: 13px; margin-bottom: 8px; }
 .inbox-comparison.has-partner .review-image { height: clamp(160px,45vw,520px); }
+.similarity-card { border-top: 1px solid var(--hairline); padding-top: 24px; margin-top: 32px; }
+.similarity-card .review-image { object-fit: contain; }
+.similarity-card figcaption { overflow-wrap: anywhere; }
+#similarity-progress, #similarity-error { overflow-wrap: anywhere; }
+#similarity-error { color: var(--error); }
+#similarity-manual { margin: 24px 0; }
+@media (max-width: 620px) {
+  .similarity-card .inbox-comparison.has-partner { grid-template-columns: minmax(0, 1fr); }
+  .similarity-card .inbox-comparison.has-partner .review-image { height: auto; max-height: 65vh; }
+  .similarity-card .review-actions { grid-template-columns: minmax(0, 1fr); }
+}
 .inbox-thumbnails { display: grid; grid-template-columns: repeat(auto-fill,minmax(80px,1fr)); gap: 8px; margin-top: 20px; }
 .inbox-thumbnails button { padding: 4px; min-width: 0; }
 .inbox-thumbnails button[aria-pressed=true] { outline: 3px solid var(--accent); }

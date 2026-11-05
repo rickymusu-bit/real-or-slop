@@ -1,3 +1,82 @@
+# Correzione: confronto separato REAL e SLOP — 2026-11-05
+
+L’utente ha chiarito il perimetro: cercare duplicati e foto troppo simili fra le
+REAL e, separatamente, fra le SLOP. Corretti acquisizione delle coppie,
+confronti manuali, elenco/storico, conteggi, checkpoint e raggruppamenti del gioco.
+Le impronte sono riutilizzate; le eventuali vecchie coppie incrociate non vengono
+applicate. La pagina distingue i due gruppi e filtra la seconda immagine manuale
+in base all’origine della prima. Nessuna migrazione aggiuntiva.
+
+Verifiche passate: 17 file TypeScript, 167 test Python, lint, build e integrazione
+D1/R2 completa. I nuovi test usano impronte identiche fra origini diverse per
+provare che non si creino coppie miste né fusioni percettive fra REAL e SLOP;
+entrambi i gruppi continuano a produrre segnalazioni al proprio interno.
+
+Scansione reale corretta: **29 REAL / 406 coppie e 29 SLOP / 406 coppie**, totale
+**812 confronti**, zero coppie oltre le soglie attuali, zero immagini pendenti.
+Gli 841 confronti REAL–SLOP precedentemente inclusi sono esclusi. Nessuna nuova
+inferenza o modifica a file, categorie, approvazioni o decisioni editoriali.
+
+Rilasciato dal commit `e2fd5a3`, versione Cloudflare
+`261c6075-bac0-4642-9209-ca5b2a6a34b0`. Health, asset aggiornati e protezione
+admin verificati sul sito. Il report iniziale con 1.653 coppie riportato sotto
+riguarda il perimetro precedente e non descrive la verifica corrente.
+
+---
+
+# Controllo somiglianze — 2026-11-05
+
+Implementato il [controllo di duplicati e scene simili](controllo-somiglianze-v1.md):
+SHA-256, dHash, DINOv2 small q8 con revisione fissata, estrazione privata nel
+browser o nella CLI, confronti affiancati e manuali, filtri/categorie, scansione
+incrementale, decisioni concorrenti con storico immutabile e rappresentanti delle
+scene nelle nuove partite. Il workflow di acquisizione esistente esegue il
+controllo dopo start/resume, rispettando i gate precedenti.
+
+Verifiche completate:
+
+- `npm test`: 17 file TypeScript e 167 test Python, inclusi validazione vettori,
+  confronto percettivo/visivo, gruppi transitivi e reversibili, preferenze,
+  eccezioni umane alla deduplica percettiva e migrazione additiva 0017.
+- `npm run test:integration`: D1/R2 locali, API somiglianze autenticata, categorie,
+  file vincolati allo SHA, impronte riutilizzate, retry, decisioni concorrenti,
+  storico conservato e confronti manuali. Suite precedenti e gioco passati.
+- `ROS_TEST_PROFILE= npm run test:integration`: passato anche senza binding R2.
+- `npm run lint`, `npm run build`, `npm run deploy:check`, `git diff --check` e
+  packaging Wrangler `npm run dry-run`: passati.
+- Estrazione reale CPU con pesi pubblici DINOv2 su fixture locale: vettore
+  di 384 dimensioni, norma L2 1 e dHash calcolato. Circa 5 secondi per la prima
+  estrazione comprensiva di caricamento/scaricamento del modello.
+
+Rilascio autorizzato completato il 5 novembre 2026:
+
+- Backup D1 ripristinato e controllato prima della migrazione; due bucket R2,
+  539 oggetti / 796.401.824 byte, checksum locali e originali conservati.
+- Migrazione 0017 applicata. Versione Cloudflare
+  `e66acdd3-1b9d-40f6-96ee-890d8fa4c886`, sorgente commit `c7fde30`.
+- Runtime pubblicato come gzip da circa 5,05 MB, ricostruito nei 21,6 MB
+  originali tramite DecompressionStream e wasmBinary. Verificati uguaglianza
+  SHA-256, compilazione WASM e inferenza DINOv2 con backend web. Il test su input
+  fisso ha coseno circa 0,99589 rispetto al backend nativo.
+- Health e asset pubblicati 200; pagina e API admin 401 senza credenziali.
+  Runtime scaricato dal sito e ricostruito con checksum identico all’originale.
+- Catalogo reale: 58 immagini / 1.653 confronti; 58 impronte DINOv2+dHash salvate,
+  nessuna immagine pendente, zero coppie oltre soglia e zero decisioni umane
+  create. Tutti i file confrontati hanno SHA corrispondente al backup.
+- `npm test` ripetuto dopo l’adattamento del runtime: 17 file TypeScript e
+  167 test Python passati. Lint e build passati.
+
+Limiti: soglia coseno 0,88 iniziale e non calibrata su coppie etichettate;
+nessuna prova interattiva browser di questa nuova pagina. Massimo coseno nel
+catalogo circa 0,6433; nessuna garanzia di assenza assoluta di scene ripetute.
+Le immagini attuali non hanno categorie: il confronto globale le comprende tutte.
+Il token admin non è stato cambiato; impronte calcolate sul backup autorizzato e
+registrate attraverso le API Cloudflare dell’account configurato. Il primo
+rifiuto della copia privata è stato risolto soltanto dopo l’autorizzazione
+esplicita dell’utente. Nessun merge su main o cambio alle abilitazioni GitHub.
+
+---
+
 # Cropping assistito — 2026-11-04
 
 Scelta del proprietario recepita: Terra è il metodo predefinito del comando di

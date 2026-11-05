@@ -81,7 +81,7 @@ try:
                     asset=re.search(r'src="([^"]+\.js)"',html).group(1)
                     with urllib.request.urlopen(base+asset) as js:assert js.status==200
             print('Navigation/assets HTTP checks passed.')
-            for script in (['tests/editorial_v2.integration.py'] if v2_test else ['tests/batch.integration.py'] if batch_test else ['tests/moderation.integration.py','tests/direct-import.integration.py','tests/curation.integration.py','tests/slop.integration.py','tests/editorial.integration.py','tests/review.integration.py','tests/review_inbox.integration.py','tests/review_presentations.integration.py','tests/review_bulk_delete.integration.py'] if local_profile=='local' else [])+['tests/sampling.integration.py','tests/game.integration.py','tests/preloading.integration.py']:
+            for script in (['tests/editorial_v2.integration.py'] if v2_test else ['tests/batch.integration.py'] if batch_test else ['tests/moderation.integration.py','tests/direct-import.integration.py','tests/curation.integration.py','tests/slop.integration.py','tests/editorial.integration.py','tests/review.integration.py','tests/review_inbox.integration.py','tests/review_presentations.integration.py','tests/review_bulk_delete.integration.py','tests/similarity.integration.py'] if local_profile=='local' else [])+['tests/sampling.integration.py','tests/game.integration.py','tests/preloading.integration.py']:
                 subprocess.run(['python3',script],env=env,check=True)
             try:
                 urllib.request.urlopen(base+'/api/rooms/ABCDEFGHJKLM/state')

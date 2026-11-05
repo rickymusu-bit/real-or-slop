@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "npm run build && wrangler dev --local --env local --ip 0.0.0.0",
     "build": "tsc --noEmit && tsc -p tsconfig.worker.json --noEmit && vite build && node scripts/check-assets.mjs",
-    "lint": "eslint src worker shared tests scripts/deploy-demo.mjs scripts/deployment-config.mjs scripts/benchmark-sampling.mjs scripts/check-gallery.mjs scripts/benchmark-preloading.mjs",
+    "lint": "eslint src worker shared tests scripts/deploy-demo.mjs scripts/deployment-config.mjs scripts/benchmark-sampling.mjs scripts/check-gallery.mjs scripts/benchmark-preloading.mjs scripts/scan-similarity.mjs",
     "test": "node --import tsx --test tests/*.test.ts && python3 -m unittest discover -s tests -p '*_test.py'",
     "db:migrate": "wrangler d1 migrations apply DB --local --env local",
     "db:seed": "wrangler d1 execute DB --local --env local --file scripts/seed.sql && wrangler d1 execute DB --local --env local --file scripts/seed-publication.sql",
@@ -21,7 +21,8 @@
     "deploy:check": "node scripts/deploy-demo.mjs --check",
     "test:gallery": "node scripts/check-gallery.mjs",
     "benchmark:preloading": "node --import tsx scripts/benchmark-preloading.mjs",
-    "benchmark:editorial-v2": "python3 -m pipeline.v2.benchmark --fixture-study 120"
+    "benchmark:editorial-v2": "python3 -m pipeline.v2.benchmark --fixture-study 120",
+    "scan:similarity": "node --import tsx scripts/scan-similarity.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261025.1",
@@ -33,5 +34,8 @@
     "typescript-eslint": "8.48.1",
     "vite": "8.3.5",
     "wrangler": "4.152.0"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "3.8.1"
   }
 }

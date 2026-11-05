@@ -14,6 +14,9 @@ export interface SamplingImage {
   perceptual_hash?: string | null;
   r2_key?: string;
   categories?: string[];
+  scene_group?: string | null;
+  scene_preferred?: boolean;
+  perceptual_distinct?: string[];
   curation?: Tags | null;
 }
 const weights: Record<Dimension, number> = {
@@ -55,6 +58,8 @@ function near(a: bigint, b: bigint) {
 function unique<T extends SamplingImage>(input: readonly T[]) {
   const rows = input.filter((row) => row.status === "approved" && ["REAL", "AI"].includes(row.type));
   const parent = rows.map((_, i) => i);
+  const memberHashes = rows.map(row => new Set(row.sha256 ? [row.sha256] : []));
+  const forbidden = new Map(rows.map(row => [row.sha256, new Set(row.perceptual_distinct || [])]));
   const root = (index: number): number => {
     while (parent[index] !== index) {
       parent[index] = parent[parent[index]];
@@ -62,7 +67,17 @@ function unique<T extends SamplingImage>(input: readonly T[]) {
     }
     return index;
   };
-  const join = (a: number, b: number) => { parent[root(a)] = root(b); };
+  const join = (a: number, b: number) => {
+    const ra = root(a), rb = root(b);
+    if (ra === rb) return;
+    parent[ra] = rb;
+    for (const sha of memberHashes[ra]) memberHashes[rb].add(sha);
+  };
+  const allowPerceptualJoin = (a: number, b: number) => {
+    for (const sha of memberHashes[root(a)]) for (const other of memberHashes[root(b)])
+      if (forbidden.get(sha)?.has(other) || forbidden.get(other)?.has(sha)) return false;
+    return true;
+  };
   const exact = new Map<string, number>();
   // Six disjoint bit ranges: with <=5 changed bits at least one range is equal.
   // This avoids comparing unrelated perceptual hashes in the usual case.
@@ -70,6 +85,7 @@ function unique<T extends SamplingImage>(input: readonly T[]) {
   const hashes = new Map<number, bigint>();
   rows.forEach((row, i) => {
     const keys = ["id:" + row.id];
+    if (row.scene_group) keys.push("scene:" + row.type + ":" + row.scene_group);
     if (row.r2_key) keys.push("storage:" + row.r2_key);
     if (row.sha256 && row.sha256 !== "pending") keys.push("sha:" + row.sha256.toLowerCase());
     for (const key of keys) {
@@ -81,10 +97,10 @@ function unique<T extends SamplingImage>(input: readonly T[]) {
     const hash = BigInt("0x" + row.perceptual_hash);
     const bits = hash.toString(2).padStart(64, "0");
     const keysForHash = Array.from({ length: 6 }, (_, part) =>
-      part + ":" + bits.slice(Math.floor(part * 64 / 6), Math.floor((part + 1) * 64 / 6)));
+      row.type + ":" + part + ":" + bits.slice(Math.floor(part * 64 / 6), Math.floor((part + 1) * 64 / 6)));
     const possible = new Set(keysForHash.flatMap((key) => chunks.get(key) || []));
     for (const other of possible) {
-      if (root(i) !== root(other) && near(hash, hashes.get(other)!)) join(i, other);
+      if (root(i) !== root(other) && near(hash, hashes.get(other)!) && allowPerceptualJoin(i, other)) join(i, other);
     }
     hashes.set(i, hash);
     for (const key of keysForHash) {
@@ -101,7 +117,8 @@ function unique<T extends SamplingImage>(input: readonly T[]) {
   });
   const eligible = [...groups.values()]
     .filter((group) => group.every((row) => row.type === group[0].type))
-    .map((group) => group.reduce((first, row) => row.id < first.id ? row : first));
+    .map((group) => group.reduce((first, row) =>
+      row.scene_preferred && !first.scene_preferred ? row : first.scene_preferred && !row.scene_preferred ? first : row.id < first.id ? row : first));
   return { eligible, removed: rows.length - eligible.length };
 }
 
