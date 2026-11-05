@@ -127,10 +127,13 @@ async function connect(c: Connection) {
     blobUrl = "",
     imageKey = "",
     pending = false;
+  let stopSwipe = () => {};
+  let roundSeconds: (() => number) | null = null;
   let latest: RoomView | null = null, lastRevision = 0, readyRequest = "", roundExpired = false;
   const headers = { Authorization: "Bearer " + c.token };
   const preloader = new ImagePreloader({ headers });
   stopPvp = () => {
+    stopSwipe();
     active = false;
     socket?.close();
     if (poll) clearInterval(poll);
@@ -191,6 +194,7 @@ async function connect(c: Connection) {
       if (active) await draw(next);
     } catch (e) {
       if (!active) return;
+      stopSwipe();
       content().innerHTML = `<section class="page narrow"><h1>Riconnessione.</h1><p>${escape(e)}</p><p>La partita resta sul server. Un timer già avviato continua a scorrere.</p><strong id="pvp-clock" role="timer" aria-label="Tempo rimasto"></strong><button id="reconnect-room">Riprova</button><a class="button" href="/pvp">Torna alle stanze</a></section>`;
       document
         .querySelector("#reconnect-room")!
@@ -201,6 +205,8 @@ async function connect(c: Connection) {
     if (!active) return;
     if (v.error) { document.querySelector("#pvp-error")?.replaceChildren(document.createTextNode(v.error)); return; }
     if ((v.revision || 0) < lastRevision) return;
+    stopSwipe();
+    roundSeconds = null;
     const version = ++drawVersion;
     lastRevision = v.revision || 0; latest = v; roundExpired = false;
     if (clock) clearInterval(clock);
@@ -225,10 +231,11 @@ async function connect(c: Connection) {
     // The clock is armed before awaiting media: reconnect/loading never pauses it.
     if (v.phase === "playing" || (v.phase === "preparing" && v.preparationDeadline)) {
       const seconds = serverCountdown(v.phase === "playing" ? v.deadline : v.preparationDeadline!, v.serverNow);
+      roundSeconds = seconds;
       const tick = () => {
         const n = seconds(), el = document.querySelector("#pvp-clock");
         if (el) el.textContent = (v.phase === "preparing" ? "Attesa · " : "") + n + " s";
-        if (!n) { roundExpired = true; if (clock) clearInterval(clock); updateChoices(); void load(); }
+        if (!n) { stopSwipe(); roundExpired = true; if (clock) clearInterval(clock); updateChoices(); void load(); }
       };
       clock = setInterval(tick, 200); tick();
     }
@@ -244,7 +251,7 @@ async function connect(c: Connection) {
         blobUrl = asset.url; imageKey = currentUrl;
         if (v.phase === "playing") {
           document.querySelector("#pvp-media")!.innerHTML = image(blobUrl); zoom(); updateChoices();
-          enableAnswerSwipe(document.querySelector<HTMLImageElement>("#pvp-media .play-image")!, "data-pvp-choice");
+          stopSwipe = enableAnswerSwipe(document.querySelector<HTMLImageElement>("#pvp-media .play-image")!, "data-pvp-choice", () => active && !pending && !roundExpired && !!roundSeconds && roundSeconds() > 0);
         } else if (v.phase === "preparing" && !me.mediaReady && readyRequest !== currentUrl) {
           readyRequest = currentUrl;
           try {

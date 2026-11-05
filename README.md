@@ -1,5 +1,9 @@
 # Real or Slop
 
+Comandi di gioco v0.16.0: swipe a sinistra per REAL, a destra per SLOP, con dito,
+mouse o penna. Restano disponibili pulsanti, tasti R/I e tap/click per lo zoom.
+[Gesture e verifiche](docs/swipe-gestures-v1.0.0.md). Il PvP pubblico resta sospeso.
+
 Il protocollo editoriale corrente è **v3.0.0: brief condivisi**. Un brief originale,
 congelato prima della ricerca, guida una candidata REAL e una SLOP generata dal
 solo testo. Nessuna foto REAL, titolo o sua descrizione entra nel generatore.

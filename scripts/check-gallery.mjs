@@ -81,6 +81,23 @@ async function tab() {
 async function imageReady(t) {
   await waitFor(() => t.evaluate('Boolean(document.querySelector(".play-image")?.naturalWidth)'), 'loaded image for visual check');
 }
+async function drag(t, dx, dy = 0, touch = false, release = true) {
+  const box = await t.evaluate('(()=>{const r=document.querySelector(".play-image").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()');
+  if (touch) {
+    await t.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...box, id: 1 }] });
+    if (!dx && !dy) await pause(60);
+    for (let step = 1; (dx || dy) && step <= 8; step++) {
+      await t.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: box.x + dx * step / 8, y: box.y + dy * step / 8, id: 1 }] });
+    }
+    if (release) await t.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  } else {
+    await t.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...box });
+    await t.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...box, button: 'left', clickCount: 1 });
+    await t.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x + dx, y: box.y + dy, button: 'left', buttons: 1 });
+    if (release) await t.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: box.x + dx, y: box.y + dy, button: 'left', clickCount: 1 });
+  }
+  return { x: box.x + dx, y: box.y + dy };
+}
 async function layout(t, name, isPlay = false) {
   const result = await t.evaluate(`(()=>{
     const img=document.querySelector('.play-image');
@@ -136,19 +153,50 @@ try {
     await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
     await t.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
     await waitFor(() => t.evaluate('!document.querySelector("dialog") && document.activeElement.classList.contains("play-image")'), 'zoom focus restoration');
-    if (width === 390 || width === 360) {
-      const box = await t.evaluate('(()=>{const r=document.querySelector(".play-image").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()');
-      const dx = width === 390 ? 130 : -130;
-      await t.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y });
-      await t.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: box.x, y: box.y, button: 'left', clickCount: 1 });
-      await t.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x + dx, y: box.y, button: 'left', buttons: 1 });
-      assert.equal(await t.evaluate('Boolean(document.querySelector(".swipe-preview.swipe-visible"))'), true);
-      await t.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: box.x + dx, y: box.y, button: 'left', clickCount: 1 });
-      assert.equal(await t.evaluate('Boolean(document.querySelector("dialog[open]"))'), false);
-    } else {
-      await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'i', code: 'KeyI' });
+    const touch = width < 700;
+    await t.send('Emulation.setTouchEmulationEnabled', { enabled: touch });
+    assert.equal(await t.evaluate('getComputedStyle(document.querySelector(".play-image")).touchAction'), 'pan-y');
+    await drag(t, 30, 0, touch);
+    assert.equal(await t.evaluate('Boolean(document.querySelector("dialog[open],#next"))'), false, 'short drag neither answers nor zooms');
+    // Let the browser finish its previous touch sequence before the next tap.
+    await pause(400);
+    // A subsequent intentional tap/click must still zoom.
+    await drag(t, 0, 0, touch);
+    await waitFor(() => t.evaluate('Boolean(document.querySelector("dialog[open]"))'), 'pointer tap zoom');
+    await t.evaluate('document.querySelector("dialog button").click()');
+    if (touch) await t.evaluate('document.querySelector("footer").style.cssText="display:block;min-height:1200px"');
+    await drag(t, 2, -75, touch);
+    if (touch) {
+      await waitFor(() => t.evaluate('scrollY > 0'), 'touch scroll stays available');
+      await t.evaluate('document.querySelector("footer").style.cssText="";scrollTo(0,0)');
+      await pause(400);
     }
-    await waitFor(() => t.evaluate('Boolean(document.querySelector("#next"))'), 'keyboard answer');
+    assert.equal(await t.evaluate('Boolean(document.querySelector("dialog[open],#next"))'), false, 'vertical motion neither answers nor zooms');
+    // An interrupted horizontal gesture must restore its preview and image.
+    await drag(t, 130, 0, touch, false);
+    assert.equal(await t.evaluate('Boolean(document.querySelector(".swipe-preview.swipe-visible"))'), true);
+    if (touch) await t.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+    else {
+      await t.evaluate('document.querySelector(".play-image").dispatchEvent(new PointerEvent("pointercancel",{pointerId:1}))');
+      await t.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 1, y: 1, button: 'left', clickCount: 1 });
+    }
+    assert.equal(await t.evaluate('Boolean(document.querySelector(".swipe-preview.swipe-visible,#next,dialog[open]"))'), false);
+    const dx = width === 390 || width === 1440 ? 130 : -130;
+    const end = await drag(t, dx, 0, touch, false);
+    assert.equal(await t.evaluate('Boolean(document.querySelector(".swipe-preview.swipe-visible"))'), true);
+    await t.screenshot('swipe-preview-' + width);
+    if (touch) await t.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    else await t.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...end, button: 'left', clickCount: 1 });
+    await waitFor(() => t.evaluate('Boolean(document.querySelector("#next"))'), 'swipe answer');
+    assert.equal(await t.evaluate('Boolean(document.querySelector("dialog[open]"))'), false);
+    await pause(400);
+    await drag(t, 0, 0, touch);
+    await waitFor(() => t.evaluate('Boolean(document.querySelector("dialog[open]"))'), 'tap zoom after swipe answer');
+    await t.evaluate('document.querySelector("dialog button").click()');
+    const answerCalls = requests.filter(url => /\/api\/sessions\/[^/]+\/answer$/.test(url)).length;
+    await drag(t, -dx, 0, touch);
+    await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'r', code: 'KeyR' });
+    assert.equal(requests.filter(url => /\/api\/sessions\/[^/]+\/answer$/.test(url)).length, answerCalls, 'one answer per round');
     await t.screenshot('feedback-' + width);
     await t.evaluate('document.querySelector("#next").click()');
     await waitFor(() => t.evaluate('Boolean(document.querySelector(".score"))'), 'results');
@@ -215,16 +263,19 @@ try {
   assert.match(sid, /^[a-f0-9-]+$/);
   await command(['wrangler','d1','execute','DB','--local','--env','local','--persist-to',state,'--command',`UPDATE game_rounds SET expires_at=CAST(unixepoch('subsec')*1000 AS INTEGER)+3000 WHERE session_id='${sid}' AND presented_at IS NOT NULL`]);
   await t.go('/tempo','#resume'); await t.evaluate('document.querySelector("#resume").click()'); await imageReady(t);
+  await drag(t, 130, 0, true, false);
   await friend.send('Page.bringToFront');
   await waitFor(() => t.evaluate('Boolean(document.querySelector("#next-after-timeout"))'), 'hidden tab countdown expires without a pause');
   const expiredState = await t.evaluate('fetch("/api/sessions/"+sessionStorage.getItem("ros_timed")).then(r=>r.json())');
+  assert.equal(await t.evaluate('Boolean(document.querySelector("dialog[open]"))'), false);
   assert.equal(expiredState.timedOut, 1); assert.equal(expiredState.expiresAt, null);
   assert.equal(await t.evaluate('Boolean(document.querySelector(".play-image"))'), false);
   await t.send('Page.bringToFront');
+  await t.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await t.evaluate('document.querySelector("#next-after-timeout").click()'); await imageReady(t);
   await t.evaluate('document.querySelector("[data-reveal-media]")?.click()');
   await t.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-  await t.evaluate('document.querySelector("[data-choice=REAL]").click()');
+  await drag(t, -130, 0, true);
   await waitFor(() => t.evaluate('Boolean(document.querySelector("#next"))'), 'reduced motion feedback');
   assert.equal(await t.evaluate('getComputedStyle(document.querySelector(".feedback")).animationName'), 'none');
   assert.equal(await t.evaluate('document.querySelector("#clock").textContent'), '');
@@ -386,7 +437,7 @@ try {
   assert.ok(!requests.some(url => /^https?:/.test(url) && new URL(url).hostname !== '127.0.0.1'), 'unexpected external browser request');
   assert.deepEqual(errors, []);
   writeFileSync(resolve(output, 'measurements.json'), JSON.stringify(measurements, null, 2) + '\n');
-  console.log('Digital Gallery passed: visual editorial approval/rejection without forms, broken-preview protection, real solo/per-image timed, suspended PvP, tab masking without timer pause, copy deterrents, timeouts, 360/390/768/1440 layouts, intact images, symmetric named actions, AX tree, keyboard zoom/answer/focus, reduced motion, local fonts, delayed preparation, corrupt-image retry, active-timer preservation, invalidation and no external requests. Screenshots: artifacts/gallery/.');
+  console.log('Digital Gallery passed: native mouse/touch swipe, short/vertical/cancelled drag, tap and keyboard zoom, duplicate answer guards, visual editorial approval/rejection without forms, broken-preview protection, real solo/per-image timed, suspended PvP, tab masking without timer pause, copy deterrents, timeouts, 360/390/768/1440 layouts, intact images, symmetric named actions, AX tree, keyboard zoom/answer/focus, reduced motion, local fonts, delayed preparation, corrupt-image retry, active-timer preservation, invalidation and no external requests. Screenshots: artifacts/gallery/.');
 } finally {
   for (const ws of clients) ws.close();
   for (const child of children) { try { process.kill(-child.pid, 'SIGTERM'); } catch { /* Already stopped. */ } }

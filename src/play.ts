@@ -138,6 +138,7 @@ async function play(sid: string, warning = "") {
   let timer: ReturnType<typeof setInterval> | undefined;
   let active = true, busy = false, refreshing = false, version = 0;
   let preloader = new ImagePreloader(), last: State | null = null;
+  let stopSwipe = () => {};
   let seconds: (() => number) | null = null, clockExpired = false;
   const mediaPrivacy = protectGameMedia(document, window, () => !refreshing && (!seconds || seconds() > 0));
   const current = (value: number) => active && value === version;
@@ -150,6 +151,7 @@ async function play(sid: string, warning = "") {
     if (choice) document.querySelector<HTMLButtonElement>(`[data-choice=${choice}]`)?.click();
   };
   stopPlay = () => {
+    stopSwipe();
     active = false; version++; preloader.dispose(); mediaPrivacy.dispose();
     document.querySelector<HTMLDialogElement>("[data-game-zoom]")?.close();
     if (timer) clearInterval(timer);
@@ -166,7 +168,7 @@ async function play(sid: string, warning = "") {
       const left = seconds?.() ?? 0;
       const clock = document.querySelector("#clock"); if (clock) clock.textContent = left + " s";
       if (!left && !clockExpired) {
-        clockExpired = true;
+        clockExpired = true; stopSwipe();
         document.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach(button => { button.disabled = true; });
         document.querySelector<HTMLDialogElement>("[data-game-zoom]")?.close();
         void load();
@@ -220,7 +222,7 @@ async function play(sid: string, warning = "") {
     if (seconds) document.querySelector("#clock")!.textContent = seconds() + " s";
     mediaPrivacy.refresh();
     zoom();
-    enableAnswerSwipe(document.querySelector<HTMLImageElement>(".play-image")!, "data-choice");
+    stopSwipe = enableAnswerSwipe(document.querySelector<HTMLImageElement>(".play-image")!, "data-choice", () => active && !busy && !refreshing && (!seconds || seconds() > 0));
     for (const future of manifest.slice(1, 3)) void preloader.prefetch(future.image).catch(() => { /* Retry if this future image is actually needed. */ });
     document.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach(button => {
       button.onclick = async () => {
@@ -244,6 +246,7 @@ async function play(sid: string, warning = "") {
     });
   };
   const load = async () => {
+    stopSwipe();
     const value = ++version; busy = true; refreshing = true;
     try {
       const state = await api<State>("/sessions/" + sid);

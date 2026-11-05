@@ -3,7 +3,8 @@
 - Input opzionale mediante swipe orizzontale sull'immagine: sinistra = REAL, destra = SLOP, utilizzabile con touch, mouse e penna in Allenamento, A tempo e PvP.
 - Pulsanti e tastiera conservati; click/tap e Invio/Spazio sull'immagine mantengono lo zoom. Soglia di trascinamento, protezione contro risposte accidentali e scorrimento verticale preservato.
 - I gesti richiamano i pulsanti già esistenti, senza alterare API, tempi, punteggi, controllo server o contenuti editoriali.
-- Aggiunti test unitari e verifica browser; specifica `docs/swipe-gestures-v1.0.0.md`. Nessun deploy eseguito.
+- Gesture annullate su scroll verticale, multitouch, perdita della cattura, cambio pagina e scadenza; coordinate finali e soglia stabile per tutta la gesture.
+- Aggiunti test delle sequenze di eventi e verifica browser con mouse e touch emulato; specifica `docs/swipe-gestures-v1.0.0.md`. Nessun deploy eseguito.
 
 ## 0.15.0 — 2026-11-03 (sperimentale, non attivata)
 
