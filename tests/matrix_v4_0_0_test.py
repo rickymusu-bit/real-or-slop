@@ -4,18 +4,77 @@ import io
 import json
 from pathlib import Path
 import sqlite3
+import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from pipeline.editorial import PipelineStop
 from pipeline.v2.matrix_v4_0_0 import CATALOG,ROOT,CELLS,checksum,freeze,restore,run_branch,search_real,documentary_gate,export_review
 from pipeline.v2.engine import Config
 from pipeline.v2.fixtures import source,picture
 from pipeline.v2.composition import composition_plan, POLICY_SHA256
+from pipeline.v2.photography import photography_plan, photography_directive, POLICY_SHA256 as PHOTO_SHA256
 from editorial_v2_direct_test import FixtureDirect
 
 
 class MatrixPipelineTest(unittest.TestCase):
+    def test_capture_targets_are_diverse_frozen_and_validated_by_worker_contract(self):
+        plan=photography_plan(6,53)
+        self.assertEqual(plan,photography_plan(6,53))
+        self.assertNotEqual(plan,photography_plan(6,54))
+        self.assertEqual(len({p['id'] for p in plan}),6)
+        self.assertEqual(photography_plan(12,53)[:6],plan)
+        self.assertEqual(len({p['id'] for p in photography_plan(12,53)[6:]}),6)
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp);frozen=freeze(folder,count=25,seed=53)
+            rows=json.loads((folder/'briefs.v4.0.0.json').read_text())['briefs']
+            ideas=json.loads((folder/'slop-plan.v4.0.0.json').read_text())['ideas']
+            audit=json.loads((folder/'photography-plan.v1.0.0.json').read_text())
+            photo_rows=[r['brief'] for r in rows if r['brief']['medium']=='photograph']
+            self.assertGreaterEqual(len(photo_rows),6)
+            self.assertEqual(len(audit['records']),len(photo_rows))
+            self.assertEqual(audit['kind'],'intended_not_observed')
+            for b,profile in zip(photo_rows,photography_plan(len(photo_rows),53)):
+                self.assertEqual(b['photography']['profile'],profile)
+                self.assertEqual(b['photography']['policy_sha256'],PHOTO_SHA256)
+                self.assertTrue(b['slop_prompt'].endswith(photography_directive(profile)))
+                self.assertIn('1/'+str(profile['shutter_denominator'])+' s',b['slop_prompt'])
+                self.assertLessEqual(len(b['slop_prompt']),6000)
+            for row,idea in zip(rows,ideas):self.assertEqual(row['brief']['slop_prompt'],idea['prompt'])
+            requests=json.loads((folder/'real-requests.v4.0.0.json').read_text())
+            self.assertNotIn('Photographic capture',json.dumps(requests))
+            self.assertEqual(freeze(folder,count=25,seed=53),frozen)
+            code='import {validateBrief} from "./shared/editorial-brief.v4.0.0.ts";import {readFileSync} from "node:fs";for(const r of JSON.parse(readFileSync(0,"utf8")))validateBrief(r.brief);'
+            result=subprocess.run(['node','--import','tsx','--input-type=module','-e',code],input=json.dumps(rows),capture_output=True,text=True,cwd=ROOT)
+            self.assertEqual(result.returncode,0,result.stderr)
+            audit['records'][0]['profile']['iso_max']=999999
+            (folder/'photography-plan.v1.0.0.json').write_text(json.dumps(audit))
+            with self.assertRaises(PipelineStop):restore(folder)
+
+    def test_artwork_is_not_turned_into_a_photograph(self):
+        catalog=json.loads(CATALOG.read_text());art=next(b for b in catalog['briefs'] if b['medium']=='artwork')
+        catalog['briefs']=[art]
+        selection=dict(selection=[dict(cell=art['intent_emotion']+':'+art['intent_topic'],weight=1)],config={})
+        with tempfile.TemporaryDirectory() as tmp,patch('pipeline.v2.matrix_v4_0_0.select',return_value=selection):
+            folder=Path(tmp);freeze(folder,catalog=catalog,count=1)
+            b=json.loads((folder/'briefs.v4.0.0.json').read_text())['briefs'][0]['brief']
+            self.assertNotIn('photography',b)
+            self.assertNotIn('Photographic capture',b['slop_prompt'])
+            self.assertEqual(json.loads((folder/'photography-plan.v1.0.0.json').read_text())['records'],[])
+
+    def test_v42_cycle_keeps_its_existing_composition_without_capture_targets(self):
+        catalog=json.loads((ROOT/'data/editorial/briefs.v4.2.0.json').read_text())
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp);first=freeze(folder,catalog=catalog,count=2)
+            self.assertEqual(freeze(folder,catalog=catalog,count=2),first)
+            self.assertNotIn('photography_policy_sha256',first['payload']['identity'])
+            self.assertFalse((folder/'photography-plan.v1.0.0.json').exists())
+            for r in json.loads((folder/'briefs.v4.0.0.json').read_text())['briefs']:
+                self.assertIn('composition',r['brief'])
+                self.assertNotIn('photography',r['brief'])
+                self.assertNotIn('Photographic capture',r['brief']['slop_prompt'])
+
     def test_composition_varies_viewpoint_and_roll_without_real_inputs(self):
         plan=composition_plan(6,53)
         self.assertEqual(plan,composition_plan(6,53))
@@ -52,7 +111,7 @@ class MatrixPipelineTest(unittest.TestCase):
 
     def test_current_catalogue_freezes_free_aspect_and_artwork_without_museum_rule(self):
         catalog=json.loads(CATALOG.read_text())
-        self.assertEqual(catalog['version'],'4.2.0')
+        self.assertEqual(catalog['version'],'4.3.0')
         self.assertTrue(any(b['medium']=='artwork' for b in catalog['briefs']))
         self.assertTrue(all('frame when present' not in b['slop_prompt'] for b in catalog['briefs']))
         with tempfile.TemporaryDirectory() as tmp:
@@ -60,7 +119,7 @@ class MatrixPipelineTest(unittest.TestCase):
             brief=json.loads((folder/'briefs.v4.0.0.json').read_text())['briefs'][0]['brief']
             self.assertEqual(brief['parameters']['size'],'auto')
             self.assertEqual(brief['parameters']['presentation_mode'],'whole_frame')
-            self.assertEqual(brief['instructions_version'],'4.2.0')
+            self.assertEqual(brief['instructions_version'],'4.3.0')
         proof=source('documented-artwork');proof.update(authenticity='verified',content_kind='artwork')
         self.assertEqual(documentary_gate(proof),proof)
 
@@ -89,6 +148,9 @@ class MatrixPipelineTest(unittest.TestCase):
             result=run_branch(folder,'AI',api,cfg,execute=True,simulated=True,license_info=dict(author='Local fixture only',url='https://creativecommons.org/publicdomain/zero/1.0/'))
             self.assertEqual(result['candidates'],1);self.assertTrue(all('POISON'not in json.dumps(b) and 'SECRET'not in json.dumps(b)for _,b in api.calls))
             generation=next(b for e,b in api.calls if e=='images/generations');self.assertEqual(set(generation),{'model','prompt','n','size','quality'})
+            frozen_prompt=json.loads((folder/'slop-plan.v4.0.0.json').read_text())['ideas'][0]['prompt']
+            self.assertEqual(generation['prompt'],frozen_prompt)
+            self.assertIn('Photographic capture brief:',generation['prompt'])
             count=len(api.calls);self.assertEqual(run_branch(folder,'AI',api,cfg,execute=True,simulated=True),result);self.assertEqual(len(api.calls),count)
             with self.assertRaises(PipelineStop):run_branch(folder,'AI',api,cfg,execute=True,simulated=False)
             self.assertFalse((folder/'REAL').exists())

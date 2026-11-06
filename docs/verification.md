@@ -713,3 +713,25 @@ Nessuna acquisizione o generazione live; nessun miglioramento empirico dichiarat
 Il PDF e la galleria del pilota conservano pixel e coorte originali, con nota
 sul brief generico dell’aspirapolvere. Nessuna classificazione o decisione umana
 aggiunta; anteprime aggiornate nella cartella Drive dedicata.
+## 2026-11-06 — ricette fotografiche indipendenti v4.3.0
+
+- Applicazione 0.19.0. `npm run build`, `npm run lint`, suite Node, 184 test
+  Python e sei test versionati del catalogo inglese passati.
+- `ROS_TEST_MATRIX=1 npm run test:integration` passato con Worker, D1 e R2
+  isolati localmente: autenticazione, freeze, prompt oltre 2000 caratteri,
+  rifiuto di ricette alterate, registrazioni, caption, pubblicazione, timer,
+  sampling, gioco e precaricamento.
+- Sei profili coerenti, senza ripetizioni nel singolo mazzo, con seed separato
+  dalla composizione. Verificati rendering identico Python/TypeScript,
+  corrispondenza del prompt nel payload `images/generations`, integrità del
+  piano e ripresa senza invii aggiuntivi. Solo API simulate nei test.
+- Descrizioni, query, tassonomia e 288 intenzioni REAL conservate. Otto opere
+  identiche al catalogo 4.2, senza dispositivo o esposizione fotografica;
+  280 nuovi prompt fotografici alla revisione 4. Compatibilità dei cicli
+  4.1/4.2 verificata, senza aggiungere retroattivamente le nuove istruzioni.
+- Piano offline di cinque brief con seed 53: quattro fotografie con ricette
+  diverse e un'opera. L'esempio completo è in
+  [esempio-prompt-fotografico.v4.3.0.md](esempio-prompt-fotografico.v4.3.0.md).
+  Nessuna nuova immagine, spesa, approvazione o misura di riconoscibilità.
+  Produzione e migrazioni remote invariate; la preview configurata viene
+  attivata automaticamente dal push sulla PR.

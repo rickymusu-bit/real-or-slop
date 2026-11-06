@@ -21,10 +21,11 @@ from .engine import initialize, Config
 from .direct import DirectEngine
 from .search_sources import registry, DEFAULT_ENGINES
 from .composition import POLICY as COMPOSITION_POLICY, POLICY_SHA256 as COMPOSITION_SHA256, composition_plan, freeze_composition
+from .photography import POLICY as PHOTOGRAPHY_POLICY, POLICY_SHA256 as PHOTOGRAPHY_SHA256, photography_plan, photography_directive, freeze_photography
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = '4.0.0'
-CATALOG = ROOT/'data/editorial/briefs.v4.2.0.json'
+CATALOG = ROOT/'data/editorial/briefs.v4.3.0.json'
 TAXONOMY = json.loads((ROOT/'shared/editorial-taxonomy.v4.0.0.json').read_text())
 CELLS = [e['id']+':'+t['id'] for e in TAXONOMY['emotions'] for t in TAXONOMY['topics']]
 FIELDS = {'id','revision','status','taxonomy_version','intent_emotion','intent_topic','medium','description','tags','search_queries','slop_prompt'}
@@ -43,7 +44,7 @@ def immutable(path,value):
 
 def validate_catalog(value):
     exact(value,('version','catalog_id','language','created_at','authorship','briefs'),'Matrix catalogue')
-    require(value['version'] in (VERSION,'4.1.0','4.2.0') and value['language']=='en' and isinstance(value['briefs'],list) and 1<=len(value['briefs'])<=10000,'Versioned English catalogue required')
+    require(value['version'] in (VERSION,'4.1.0','4.2.0','4.3.0') and value['language']=='en' and isinstance(value['briefs'],list) and 1<=len(value['briefs'])<=10000,'Versioned English catalogue required')
     seen=set()
     for b in value['briefs']:
         exact(b,FIELDS,'Matrix brief')
@@ -81,13 +82,15 @@ def freeze(folder,catalog=None,events=(),count=5,seed=53,adaptive=False,cycle_id
     require(re.fullmatch(r'[\w.-]{1,100}',image_model) and re.fullmatch(r'[\w.-]{1,100}',evaluator_model) and quality in ('low','medium','high'),'Frozen model and output parameters required')
     require(size in ('auto','1024x1024','1024x1536','1536x1024') and presentation_mode in ('whole_frame','square_crop') and (presentation_mode=='whole_frame' or size=='1024x1024'),'Frozen aspect and presentation required')
     identity=dict(catalog_sha256=checksum(catalog),events_sha256=checksum(events),count=count,seed=seed,adaptive=bool(adaptive),cycle_id=cycle_id,image_model=image_model,evaluator_model=evaluator_model,quality=quality,exploration=exploration,size=size,presentation_mode=presentation_mode)
-    compositions=composition_plan(count,seed) if catalog['version']=='4.2.0' else None
+    compositions=composition_plan(count,seed) if catalog['version'] in ('4.2.0','4.3.0') else None
     if compositions is not None:identity['composition_policy_sha256']=COMPOSITION_SHA256
+    photographs=photography_plan(count,seed) if catalog['version']=='4.3.0' else None
+    if photographs is not None:identity['photography_policy_sha256']=PHOTOGRAPHY_SHA256
     if (folder/'cycle-frozen.v4.0.0.json').exists():
         value=restore(folder);prior=dict(value['payload']['identity']);prior.setdefault('size','1024x1024');prior.setdefault('presentation_mode','square_crop');require(prior==identity,'Cannot resume with different catalogue, feedback or selection');return value
     stamp=stamp or now();selection=select(events,count,seed,adaptive,stamp,exploration)
     rng=random.Random(seed);frozen=[];real=[];ideas=[];mapping=[]
-    composition_records=[]
+    composition_records=[];photography_records=[]
     for position,chosen in enumerate(selection['selection']):
         options=sorted([b for b in catalog['briefs'] if b['status']!='retired' and b['intent_emotion']+':'+b['intent_topic']==chosen['cell']],key=lambda b:b['id'])
         require(options,'No original draft available for selected cell; prepare a new English brief before acquisition')
@@ -103,12 +106,19 @@ def freeze(folder,catalog=None,events=(),count=5,seed=53,adaptive=False,cycle_id
             if b['medium']=='artwork':brief['slop_prompt']+=' Apply any viewpoint to the depicted scene when spatially meaningful; a flat artwork may remain flat. The camera instruction does not require an external room or frame.'
             brief['slop_prompt']+=' Camera composition: '+profile['directive']
             composition_records.append(dict(brief_id=b['id'],**brief['composition'],directive=profile['directive']))
+        if photographs is not None and b['medium']=='photograph':
+            profile=photographs[len(photography_records)]
+            brief['photography']=freeze_photography(profile)
+            directive=photography_directive(profile)
+            brief['slop_prompt']+=directive
+            photography_records.append(dict(brief_id=b['id'],**brief['photography'],directive=directive))
         envelope=dict(brief=brief,frozen_at=stamp);ref=checksum(envelope);frozen.append(dict(id=ref,**envelope))
         real.append(dict(brief_ref=ref,brief_id=b['id'],intent_cell=chosen['cell'],description=b['description'],initial_queries=b['search_queries'],providers=list(DEFAULT_ENGINES)))
         ideas.append(dict(id=b['id'],mode='original',idea=b['description'],prompt=brief['slop_prompt']))
         mapping.append(dict(input_id=b['id'],brief_ref=ref,intent_cell=chosen['cell']))
     documents={'briefs.v4.0.0.json':dict(version=VERSION,briefs=frozen),'real-requests.v4.0.0.json':dict(version=VERSION,requests=real),'slop-plan.v4.0.0.json':dict(version='2.0.0',independent=True,ideas=ideas),'branch-map.v4.0.0.json':dict(version=VERSION,records=mapping),'selection.v4.0.0.json':selection}
     if compositions is not None:documents['composition-plan.v1.0.0.json']=dict(version=COMPOSITION_POLICY['version'],policy_sha256=COMPOSITION_SHA256,assignment=COMPOSITION_POLICY['assignment'],seed=seed,records=composition_records,kind='intended_not_observed')
+    if photographs is not None:documents['photography-plan.v1.0.0.json']=dict(version=PHOTOGRAPHY_POLICY['version'],policy_sha256=PHOTOGRAPHY_SHA256,assignment=PHOTOGRAPHY_POLICY['assignment'],seed=seed,records=photography_records,kind='intended_not_observed')
     for name,value in documents.items():immutable(folder/name,value)
     payload=dict(version=VERSION,identity=identity,frozen_at=stamp,source_inputs_supplied=False,maximum_final_images=2*count,files={name:checksum(value)for name,value in documents.items()})
     value=dict(payload=payload,sha256=checksum(payload));immutable(folder/'cycle-frozen.v4.0.0.json',value)

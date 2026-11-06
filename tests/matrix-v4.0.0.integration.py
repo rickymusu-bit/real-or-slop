@@ -44,6 +44,11 @@ with tempfile.TemporaryDirectory()as tmp:
     envelope=json.loads((Path(tmp)/'briefs.v4.0.0.json').read_text())['briefs'][0]
 with concurrent.futures.ThreadPoolExecutor(2)as pool:
     assert [r[0]for r in pool.map(lambda _:call(endpoint+'/briefs',envelope),range(2))]==[200,200]
+assert envelope['brief']['catalog']['version']=='4.3.0'
+assert len(envelope['brief']['slop_prompt'])>2000
+assert 'photography' in envelope['brief']
+changed=copy.deepcopy(envelope);changed['brief']['photography']['profile']['iso_max']=999999
+assert call(endpoint+'/briefs',changed)[0]==400
 changed=copy.deepcopy(envelope);changed['brief']['slop_prompt']+=' changed';assert call(endpoint+'/briefs',changed)[0]==400
 brief=envelope['brief'];cell=brief['intent_emotion']+':'+brief['intent_topic'];rows=[]
 contract=json.loads(Path('tests/editorial-v2-contract.json').read_text())

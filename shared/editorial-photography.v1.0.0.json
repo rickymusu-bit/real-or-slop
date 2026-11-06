@@ -1,0 +1,92 @@
+{
+  "version": "1.0.0",
+  "assignment": "seeded_shuffled_deck_for_photographs_before_real_search",
+  "general_directive": "Make a single photograph of the specified scene, with an ordinary documentary capture rather than a promotional treatment. Retain the described activity, objects, weather and time of day, and follow the separate camera-composition instruction. Use available light motivated by the scene: sky, windows or existing practical lamps; preserve plausible falloff, mixed light and local shadows. Do not add studio lights unless the scene explicitly requires them. Treat the exposure below as a starting target: adjust sensitivity within its range for the available light, and only depart from shutter/aperture when necessary for a plausible exposure or subject motion. Keep optical perspective, focus and depth of field consistent with the device, lens and distance. Do not apply a default cinematic grade, beauty retouching, excessive HDR or uniformly blurred backgrounds. Do not add grain, blur, damage or JPEG blocks as a compulsory authenticity effect. Choose portrait, landscape or square proportions to suit the scene. Device and exposure instructions describe the intended appearance; do not put labels, camera branding, settings or watermarks in the picture.",
+  "template": "Capture device: {camera_class}; sensor: {sensor_format}. Lens angle of view: {focal_length_equiv_mm} mm equivalent on 35 mm full frame; this is an equivalent focal length, not a claim about sensor size. Exposure target: f/{aperture_f}, 1/{shutter_denominator} s, Auto ISO {iso_min}-{iso_max}. Preferred working distance: {distance_min_m}-{distance_max_m} m, adjusted to retain the scene and coherent framing rather than moving its objects. Focus and depth: {focus}. File rendering: {processing}.",
+  "profiles": [
+    {
+      "id": "phone_main_available_light",
+      "camera_class": "an ordinary smartphone main rear camera",
+      "sensor_format": "1/1.7-inch type digital",
+      "focal_length_equiv_mm": 26,
+      "aperture_f": 1.8,
+      "shutter_denominator": 100,
+      "iso_min": 50,
+      "iso_max": 1600,
+      "distance_min_m": 1,
+      "distance_max_m": 6,
+      "focus": "autofocus on the main activity or object, with the substantial contextual depth expected of a small sensor; no simulated portrait-mode separation",
+      "processing": "a normal phone JPEG, restrained computational highlight recovery and modest edge sharpening; neutral automatic white balance that can retain local warm or cool light; fine shadow noise only where sensitivity and illumination justify it"
+    },
+    {
+      "id": "phone_ultrawide_context",
+      "camera_class": "a smartphone ultrawide rear camera",
+      "sensor_format": "1/2.5-inch type digital",
+      "focal_length_equiv_mm": 16,
+      "aperture_f": 2.2,
+      "shutter_denominator": 125,
+      "iso_min": 50,
+      "iso_max": 1600,
+      "distance_min_m": 1,
+      "distance_max_m": 4,
+      "focus": "broad depth of field across the nearby setting, plausible wide-angle perspective and mild edge stretching without a fisheye effect",
+      "processing": "a standard corrected phone JPEG with moderate contrast, slightly less edge detail than the image center and restrained sharpening; preserve the actual light rather than imposing a vivid travel-photo grade"
+    },
+    {
+      "id": "compact_ccd_jpeg",
+      "camera_class": "a late-2000s consumer compact digital camera with a zoom lens",
+      "sensor_format": "1/2.3-inch type CCD",
+      "focal_length_equiv_mm": 35,
+      "aperture_f": 3.5,
+      "shutter_denominator": 125,
+      "iso_min": 100,
+      "iso_max": 800,
+      "distance_min_m": 2,
+      "distance_max_m": 8,
+      "focus": "single-point autofocus on the main subject with broad depth across the setting and slightly softer corners; no artificial background cutout",
+      "processing": "an in-camera JPEG with ordinary saturation, modest edge contrast and limited highlight latitude; allow only subtle sensitivity-dependent chroma noise and detail loss in shadows, with no retro filter or added date stamp"
+    },
+    {
+      "id": "apsc_kit_zoom",
+      "camera_class": "an entry-level APS-C DSLR with an 18-55 mm kit zoom near its wide end",
+      "sensor_format": "APS-C digital with approximately 1.5x crop factor",
+      "focal_length_equiv_mm": 28,
+      "aperture_f": 5.6,
+      "shutter_denominator": 125,
+      "iso_min": 100,
+      "iso_max": 3200,
+      "distance_min_m": 2,
+      "distance_max_m": 10,
+      "focus": "focus on the principal activity plane, retaining readable foreground and background with a gradual optical transition rather than extreme bokeh",
+      "processing": "a standard camera JPEG with neutral color, moderate sharpening and ordinary highlight clipping where physically warranted; no local-contrast treatment or polished real-estate rendering"
+    },
+    {
+      "id": "full_frame_normal_lens",
+      "camera_class": "a full-frame digital camera with a normal 50 mm lens",
+      "sensor_format": "36 x 24 mm digital",
+      "focal_length_equiv_mm": 50,
+      "aperture_f": 5.6,
+      "shutter_denominator": 160,
+      "iso_min": 100,
+      "iso_max": 3200,
+      "distance_min_m": 3,
+      "distance_max_m": 12,
+      "focus": "focus on the main subject with moderate optical depth, preserving surrounding context; background softness must follow actual distance and aperture rather than a universal portrait look",
+      "processing": "a restrained neutral conversion with natural texture, moderate tonal range and no conspicuous film emulation, glossy commercial finish or automatic golden-hour lighting"
+    },
+    {
+      "id": "m43_everyday_standard",
+      "camera_class": "a consumer Micro Four Thirds mirrorless camera with a standard zoom",
+      "sensor_format": "17.3 x 13 mm digital with approximately 2x crop factor",
+      "focal_length_equiv_mm": 40,
+      "aperture_f": 4,
+      "shutter_denominator": 125,
+      "iso_min": 200,
+      "iso_max": 3200,
+      "distance_min_m": 2,
+      "distance_max_m": 8,
+      "focus": "a single natural focus plane on the subject and moderate contextual depth; allow a gradual loss of distant detail without masking objects out of focus",
+      "processing": "an ordinary in-camera JPEG with conservative noise reduction, subtle fine texture at high sensitivity, neutral white balance and no selective color or exaggerated microcontrast"
+    }
+  ]
+}

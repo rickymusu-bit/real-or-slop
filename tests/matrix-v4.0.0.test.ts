@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {cells,emotions,topics,taxonomy,replay,marginals,scheduler,selectCells,canonical,type MatrixEvent} from "../shared/editorial-matrix.v4.0.0.ts";
 import {validateBrief} from "../shared/editorial-brief.v4.0.0.ts";
+import {photographyPolicy,photographyDirective} from "../shared/editorial-photography.v1.0.0.ts";
 import {validateCaption,captionDiagnostics} from "../shared/game-caption.v1.0.0.ts";
 import {benchmark} from "../scripts/editorial-matrix.v4.0.0.mjs";
 const stamp="2026-11-05T20:15:00Z";
@@ -59,6 +60,19 @@ test("frozen brief contract excludes any added REAL inputs and records model, ta
  assert.throws(()=>validateBrief({...composed,composition:{...composed.composition,viewpoint:"eye_level_frontal"}}));
  assert.throws(()=>validateBrief({...composed,composition:{...composed.composition,real_image:"source"}}));
  assert.throws(()=>validateBrief({...auto,catalog:{...auto.catalog,version:"4.2.0"}}));
+ const profile=photographyPolicy.profiles[0];
+ const photographic={...composed,catalog:{...composed.catalog,version:"4.3.0"},instructions_version:"4.3.0",photography:{version:"1.0.0",policy_sha256:"e".repeat(64),profile},slop_prompt:composed.slop_prompt+photographyDirective(profile)};
+ assert.equal(validateBrief(photographic),photographic);
+ assert.ok(photographic.slop_prompt.length>2000);
+ assert.throws(()=>validateBrief({...photographic,photography:undefined}));
+ assert.throws(()=>validateBrief({...photographic,photography:{...photographic.photography,profile:{...profile,iso_max:99999}}}));
+ assert.throws(()=>validateBrief({...photographic,photography:{...photographic.photography,profile:{...profile,real_source:"not allowed"}}}));
+ assert.throws(()=>validateBrief({...photographic,slop_prompt:composed.slop_prompt}));
+ assert.throws(()=>validateBrief({...photographic,slop_prompt:photographic.slop_prompt.replace("1/100 s","1/8000 s")}));
+ assert.throws(()=>validateBrief({...photographic,medium:"artwork"}));
+ const {photography: _capture,...withoutCapture}=photographic;void _capture;
+ assert.throws(()=>validateBrief(withoutCapture));
+ assert.equal(validateBrief({...withoutCapture,medium:"artwork",slop_prompt:composed.slop_prompt}).medium,"artwork");
 });
 test("caption validation keeps final neutral text separate from fictional and documentary metadata",()=>{
  const draft={game_caption:"Una cucina domestica con un tavolo accanto alla finestra e oggetti d’uso quotidiano.",caption_version:"1.0.0",caption_generator_version:"manual-v1",caption_provenance_refs:[],caption_context_fictional:false,context_mode:"visible"};

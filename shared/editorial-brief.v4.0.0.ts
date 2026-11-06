@@ -1,5 +1,6 @@
-import { check, isCell } from "./editorial-matrix.v4.0.0";
+import { check, isCell, canonical } from "./editorial-matrix.v4.0.0";
 import compositionPolicy from "./editorial-composition.v1.0.0.json";
+import {photographyPolicy,photographyDirective,type PhotographyProfile} from "./editorial-photography.v1.0.0";
 export interface MatrixBrief {
   brief_id: string; revision: number; taxonomy_version: "4.0.0"; intent_emotion: string; intent_topic: string;
   medium: "photograph" | "artwork"; description: string; tags: string[]; search_queries: string[]; slop_prompt: string;
@@ -8,6 +9,7 @@ export interface MatrixBrief {
   selection: {run_id:string;method:"uniform"|"adaptive";events_sha256:string;config_sha256:string;weight:number};
   parameters: {size:"auto"|"1024x1024"|"1024x1536"|"1536x1024";quality:"low"|"medium"|"high";image_model:string;evaluator_model:string;presentation_mode?:"whole_frame"|"square_crop"};
   composition?: {version:"1.0.0";policy_sha256:string;profile_id:string;viewpoint:string;roll_degrees:number};
+  photography?: {version:"1.0.0";policy_sha256:string;profile:PhotographyProfile};
 }
 const keys=(v:object,list:string[])=>Object.keys(v).sort().join()===list.sort().join();
 export const sha256 = (v:unknown):v is string=>typeof v==="string"&&/^[a-f0-9]{64}$/.test(v);
@@ -18,9 +20,10 @@ export function validateBrief(value:unknown):MatrixBrief {
   check(value&&typeof value==="object"&&!Array.isArray(value),"Frozen brief required");const b=value as MatrixBrief;
   const briefKeys=["brief_id","revision","taxonomy_version","intent_emotion","intent_topic","medium","description","tags","search_queries","slop_prompt","seed","model","instructions_version","catalog","selection","parameters"];
   if(Object.hasOwn(b,"composition"))briefKeys.push("composition");
+  if(Object.hasOwn(b,"photography"))briefKeys.push("photography");
   check(keys(b,briefKeys),"Frozen brief has unexpected/source-derived fields");
   check(identifier(b.brief_id)&&Number.isSafeInteger(b.revision)&&b.revision>0&&b.taxonomy_version==="4.0.0"&&isCell(b.intent_emotion+":"+b.intent_topic),"Invalid brief identity or cell");
-  check(["photograph","artwork"].includes(b.medium)&&english(b.description,1000)&&english(b.slop_prompt,2000)&&!/(https?:\/\/|data:image|base64)/i.test(b.slop_prompt),"Standalone canonical English brief required");
+  check(["photograph","artwork"].includes(b.medium)&&english(b.description,1000)&&english(b.slop_prompt,6000)&&!/(https?:\/\/|data:image|base64)/i.test(b.slop_prompt),"Standalone canonical English brief required");
   check(Array.isArray(b.tags)&&b.tags.length>=1&&b.tags.length<=12&&new Set(b.tags).size===b.tags.length&&b.tags.every(t=>typeof t==="string"&&/^[a-z][a-z0-9_ -]{0,99}$/.test(t)),"Canonical English tags required");
   check(Array.isArray(b.search_queries)&&b.search_queries.length>=2&&b.search_queries.length<=8&&b.search_queries.every(q=>typeof q==="string"&&q.trim()&&q.length<=200),"Invalid initial search queries");
   check(Number.isSafeInteger(b.seed)&&b.seed>=0&&b.seed<=4294967295&&model(b.model)&&/^\d+\.\d+\.\d+$/.test(b.instructions_version),"Frozen generation instructions/seed required");
@@ -31,12 +34,20 @@ export function validateBrief(value:unknown):MatrixBrief {
   check(b.parameters&&keys(b.parameters,parameterKeys)&&["auto","1024x1024","1024x1536","1536x1024"].includes(b.parameters.size)&&["low","medium","high"].includes(b.parameters.quality)&&model(b.parameters.image_model)&&model(b.parameters.evaluator_model),"Frozen output parameters required");
   check(b.parameters.presentation_mode===undefined||["whole_frame","square_crop"].includes(b.parameters.presentation_mode),"Invalid frozen presentation");
   check(b.parameters.presentation_mode!=="square_crop"||b.parameters.size==="1024x1024","Legacy crop requires square generation");
-  check(b.catalog.version!=="4.2.0"||Object.hasOwn(b,"composition"),"v4.2 requires a frozen composition intent");
+  check(!["4.2.0","4.3.0"].includes(b.catalog.version)||Object.hasOwn(b,"composition"),"Current catalogues require a frozen composition intent");
   if(Object.hasOwn(b,"composition")){
     const c=b.composition;
     check(c&&typeof c==="object"&&!Array.isArray(c)&&keys(c,["version","policy_sha256","profile_id","viewpoint","roll_degrees"]),"Frozen composition required");
     const profile=compositionPolicy.profiles.find(p=>p.id===c.profile_id);
     check(c.version===compositionPolicy.version&&sha256(c.policy_sha256)&&profile&&c.viewpoint===profile.viewpoint&&c.roll_degrees===profile.roll_degrees,"Invalid intended viewpoint or camera roll");
+  }
+  check(b.catalog.version!=="4.3.0"||b.medium!=="photograph"||Object.hasOwn(b,"photography"),"v4.3 photographs require frozen capture targets");
+  if(Object.hasOwn(b,"photography")){
+    const p=b.photography;
+    check(b.medium==="photograph"&&p&&typeof p==="object"&&!Array.isArray(p)&&keys(p,["version","policy_sha256","profile"]),"Photographic capture targets required");
+    const profile=photographyPolicy.profiles.find(r=>r.id===p.profile?.id);
+    check(p.version===photographyPolicy.version&&sha256(p.policy_sha256)&&profile&&canonical(p.profile)===canonical(profile),"Unknown or changed photographic capture profile");
+    check(b.slop_prompt.endsWith(photographyDirective(profile)),"Capture instructions differ from the frozen photographic profile");
   }
   return b;
 }

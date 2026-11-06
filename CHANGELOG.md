@@ -1,3 +1,9 @@
+## 0.19.0 — 2026-11-06 (PR, rollout non attivato)
+
+- Prompt fotografici v4.3 più estesi, con sei ricette coerenti: dispositivo e sensore, focale equivalente, diaframma, tempo, ISO, distanza, fuoco, luce e resa del file. Scelte congelate prima della ricerca REAL, senza trasferire metadati dalle fotografie trovate.
+- Catalogo v4.3 con 280 brief fotografici alla revisione 4 e otto opere alla revisione precedente; rimossa la scelta compositiva libera nei nuovi prompt fotografici. Cataloghi e cicli precedenti conservati.
+- Piano di ripresa hashato e verificato contro il prompt effettivo dal Worker. Parametri intesi come target, non metadati misurati o simulazione fisica certificata. Nessuna rigenerazione del pilota o nuova spesa.
+
 ## 0.18.1 — 2026-11-06 (PR, rollout non attivato)
 
 - Corrette le didascalie del pilota: coordinate di luogo, ambiente, funzione o periodo, separate dalle descrizioni alt. Policy di stile condivisa 1.1.0, editor e fixture aggiornati; riferimenti REAL e contesti SLOP separati.
