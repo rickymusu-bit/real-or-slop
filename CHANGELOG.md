@@ -68,6 +68,10 @@
 # Changelog
 
 ## Unreleased
+
+- #57, prima consegna documentale: AGENTS/MASTER canonici con snapshot 1.0.0,
+  audit dei moduli e delle PR aperte, indice delle fonti e piano preparatorio #56.
+  Nessuna modifica applicativa, di schema, workflow o versione dell'applicazione.
 - Versionati i binding R2 QUARANTINE/IMAGES confermati dal proprietario e aggiornata la guardia di deploy:demo, mantenendo Worker, D1 e modalità demo esistenti. Nessun provisioning automatico.
 - Flusso diretto file locali → D1/R2 senza Google Drive, con anteprima, originali privati immutabili su R2, import ripetibile e ripresa degli upload. Spiegazioni modificabili nella revisione sia per REAL sia per AI.
 - Aggiunto supporto alle sei famiglie CC BY/BY-SA/BY-NC/BY-ND/BY-NC-SA/BY-NC-ND 2.0, 3.0 e 4.0, incluse le varianti pubblicate, per il sito non commerciale e senza adattamenti. Elenco condiviso pipeline/Worker, versione e giurisdizione conservate; conferme umane obbligatorie.

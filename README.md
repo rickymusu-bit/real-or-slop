@@ -1,5 +1,11 @@
 # Real or Slop
 
+[Istruzioni Codex](AGENTS.md) · [Mappa canonica e contratti correnti](MASTER.md) ·
+[Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.0.0.md).
+L'[audit #57](docs/audit-architettura.v1.0.0.md) distingue main dalle PR in bozza;
+il [piano di integrazione](docs/piano-integrazione-editoriale.v1.0.0.md) prepara
+la #56 senza implementarla o adottare anticipatamente la v4.
+
 Il protocollo editoriale corrente è **v3.0.0: brief condivisi**. Un brief originale,
 congelato prima della ricerca, guida una candidata REAL e una SLOP generata dal
 solo testo. Nessuna foto REAL, titolo o sua descrizione entra nel generatore.
