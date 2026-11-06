@@ -1,0 +1,370 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-11-06T16:47:02.477135Z",
+  "provider": "commons",
+  "authorship": "Assistant-authored preregistered retrieval control, not a GPT-6.1 API output",
+  "preregistered_sha256": "48e636869031fd22c34f81b72b76980ea2c90136770bda490ae6f170343eae38",
+  "seed": 56,
+  "page_size": 20,
+  "max_pages": 1,
+  "common_query_suffix": "filetype:bitmap",
+  "ordering": [
+    {
+      "cell": 0,
+      "query": 0,
+      "order": [
+        "adapted",
+        "general"
+      ]
+    },
+    {
+      "cell": 0,
+      "query": 1,
+      "order": [
+        "general",
+        "adapted"
+      ]
+    },
+    {
+      "cell": 1,
+      "query": 0,
+      "order": [
+        "general",
+        "adapted"
+      ]
+    },
+    {
+      "cell": 1,
+      "query": 1,
+      "order": [
+        "general",
+        "adapted"
+      ]
+    },
+    {
+      "cell": 2,
+      "query": 0,
+      "order": [
+        "adapted",
+        "general"
+      ]
+    },
+    {
+      "cell": 2,
+      "query": 1,
+      "order": [
+        "adapted",
+        "general"
+      ]
+    },
+    {
+      "cell": 3,
+      "query": 0,
+      "order": [
+        "general",
+        "adapted"
+      ]
+    },
+    {
+      "cell": 3,
+      "query": 1,
+      "order": [
+        "adapted",
+        "general"
+      ]
+    }
+  ],
+  "pairs": [
+    {
+      "cell": 0,
+      "pair": 0,
+      "intent": {
+        "version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "topic": "animals",
+        "emotion": "compassion",
+        "intensity": "medium"
+      },
+      "adapted": {
+        "query": "animal rescue flood",
+        "compiled_query": "animal rescue flood filetype:bitmap",
+        "status": "completed",
+        "api_calls": 1,
+        "returned": 20,
+        "recognized_license_metadata": 3,
+        "unsupported_media": 0,
+        "elapsed_seconds": 1.3939
+      },
+      "general": {
+        "query": "wild animals rescued during natural disasters",
+        "compiled_query": "wild animals rescued during natural disasters filetype:bitmap",
+        "status": "zero_hits",
+        "api_calls": 1,
+        "returned": 0,
+        "recognized_license_metadata": 0,
+        "unsupported_media": 0,
+        "elapsed_seconds": 1.512
+      }
+    },
+    {
+      "cell": 0,
+      "pair": 1,
+      "intent": {
+        "version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "topic": "animals",
+        "emotion": "compassion",
+        "intensity": "medium"
+      },
+      "general": {
+        "query": "people helping injured wildlife recover",
+        "compiled_query": "people helping injured wildlife recover filetype:bitmap",
+        "status": "zero_hits",
+        "api_calls": 1,
+        "returned": 0,
+        "recognized_license_metadata": 0,
+        "unsupported_media": 0,
+        "elapsed_seconds": 1.3556
+      },
+      "adapted": {
+        "query": "wildlife rehabilitation",
+        "compiled_query": "wildlife rehabilitation filetype:bitmap",
+        "status": "completed",
+        "api_calls": 1,
+        "returned": 20,
+        "recognized_license_metadata": 2,
+        "unsupported_media": 0,
+        "elapsed_seconds": 2.1694
+      }
+    },
+    {
+      "cell": 1,
+      "pair": 0,
+      "intent": {
+        "version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "topic": "science_technology",
+        "emotion": "curiosity",
+        "intensity": "medium"
+      },
+      "general": {
+        "query": "small devices that measure invisible natural processes",
+        "compiled_query": "small devices that measure invisible natural processes filetype:bitmap",
+        "status": "zero_hits",
+        "api_calls": 1,
+        "returned": 0,
+        "recognized_license_metadata": 0,
+        "unsupported_media": 0,
+        "elapsed_seconds": 1.4239
+      },
+      "adapted": {
+        "query": "cloud chamber",
+        "compiled_query": "cloud chamber filetype:bitmap",
+        "status": "completed",
+        "api_calls": 1,
+        "returned": 19,
+        "recognized_license_metadata": 16,
+        "unsupported_media": 1,
+        "elapsed_seconds": 1.6443
+      }
+    },
+    {
+      "cell": 1,
+      "pair": 1,
+      "intent": {
+        "version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "topic": "science_technology",
+        "emotion": "curiosity",
+        "intensity": "medium"
+      },
+      "general": {
+        "query": "everyday objects revealing how mechanical systems work",
+        "compiled_query": "everyday objects revealing how mechanical systems work filetype:bitmap",
+        "status": "zero_hits",
+        "api_calls": 1,
+        "returned": 0,
+        "recognized_license_metadata": 0,
+        "unsupported_media": 0,
+        "elapsed_seconds": 1.419
+      },
+      "adapted": {
+        "query": "mechanical clock mechanism",
+        "compiled_query": "mechanical clock mechanism filetype:bitmap",
+        "status": "completed",
+        "api_calls": 1,
+        "returned": 18,
+        "recognized_license_metadata": 8,
+        "unsupported_media": 2,
+        "elapsed_seconds": 1.6615
+      }
+    },
+    {
+      "cell": 2,
+      "pair": 0,
+      "intent": {
+        "version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "topic": "homes_architecture",
+        "emotion": "nostalgia",
+        "intensity": "low"
+      },
+      "adapted": {
+        "query": "historic kitchen interior",
+        "compiled_query": "historic kitchen interior filetype:bitmap",
+        "status": "completed",
+        "api_calls": 1,
+        "returned": 12,
+        "recognized_license_metadata": 10,
+        "unsupported_media": 8,
+        "elapsed_seconds": 1.444
+      },
+      "general": {
+        "query": "familiar domestic rooms retaining details from earlier decades",
+        "compiled_query": "familiar domestic rooms retaining details from earlier decades filetype:bitmap",
+        "status": "zero_hits",
+        "api_calls": 1,
+        "returned": 0,
+        "recognized_license_metadata": 0,
+        "unsupported_media": 0,
+        "elapsed_seconds": 1.4419
+      }
+    },
+    {
+      "cell": 2,
+      "pair": 1,
+      "intent": {
+        "version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "topic": "homes_architecture",
+        "emotion": "nostalgia",
+        "intensity": "low"
+      },
+      "adapted": {
+        "query": "antique sewing machine in use",
+        "compiled_query": "antique sewing machine in use filetype:bitmap",
+        "status": "completed",
+        "api_calls": 1,
+        "returned": 20,
+        "recognized_license_metadata": 20,
+        "unsupported_media": 0,
+        "elapsed_seconds": 1.3959
+      },
+      "general": {
+        "query": "old household objects still used in daily life",
+        "compiled_query": "old household objects still used in daily life filetype:bitmap",
+        "status": "completed",
+        "api_calls": 1,
+        "returned": 2,
+        "recognized_license_metadata": 0,
+        "unsupported_media": 0,
+        "elapsed_seconds": 1.5183
+      }
+    },
+    {
+      "cell": 3,
+      "pair": 0,
+      "intent": {
+        "version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "topic": "travel_landscapes",
+        "emotion": "wonder",
+        "intensity": "high"
+      },
+      "general": {
+        "query": "dramatic light revealing immense mountain landscapes",
+        "compiled_query": "dramatic light revealing immense mountain landscapes filetype:bitmap",
+        "status": "zero_hits",
+        "api_calls": 1,
+        "returned": 0,
+        "recognized_license_metadata": 0,
+        "unsupported_media": 0,
+        "elapsed_seconds": 1.4918
+      },
+      "adapted": {
+        "query": "mountain crepuscular rays",
+        "compiled_query": "mountain crepuscular rays filetype:bitmap",
+        "status": "completed",
+        "api_calls": 1,
+        "returned": 20,
+        "recognized_license_metadata": 18,
+        "unsupported_media": 0,
+        "elapsed_seconds": 1.4017
+      }
+    },
+    {
+      "cell": 3,
+      "pair": 1,
+      "intent": {
+        "version": "1.0.0",
+        "taxonomy_version": "1.0.0",
+        "topic": "travel_landscapes",
+        "emotion": "wonder",
+        "intensity": "high"
+      },
+      "adapted": {
+        "query": "waterfall canyon",
+        "compiled_query": "waterfall canyon filetype:bitmap",
+        "status": "completed",
+        "api_calls": 1,
+        "returned": 20,
+        "recognized_license_metadata": 20,
+        "unsupported_media": 0,
+        "elapsed_seconds": 1.5743
+      },
+      "general": {
+        "query": "powerful water shaping landscapes on a large scale",
+        "compiled_query": "powerful water shaping landscapes on a large scale filetype:bitmap",
+        "status": "zero_hits",
+        "api_calls": 1,
+        "returned": 0,
+        "recognized_license_metadata": 0,
+        "unsupported_media": 0,
+        "elapsed_seconds": 1.46
+      }
+    }
+  ],
+  "summary": {
+    "general": {
+      "queries": 8,
+      "api_calls": 8,
+      "returned_records": 2,
+      "unique_source_ids": 2,
+      "zero_hit_queries": 7,
+      "failed_queries": 0,
+      "recognized_license_records": 0,
+      "unsupported_media": 0,
+      "documentary_verified": null,
+      "visually_evaluated": null,
+      "human_approved": null,
+      "approved_yield": null
+    },
+    "adapted": {
+      "queries": 8,
+      "api_calls": 8,
+      "returned_records": 149,
+      "unique_source_ids": 149,
+      "zero_hit_queries": 0,
+      "failed_queries": 0,
+      "recognized_license_records": 97,
+      "unsupported_media": 11,
+      "documentary_verified": null,
+      "visually_evaluated": null,
+      "human_approved": null,
+      "approved_yield": null
+    }
+  },
+  "common_source_ids": 0,
+  "paid_calls": false,
+  "images_downloaded": 0,
+  "publication": false,
+  "effectiveness_claim": false,
+  "limitations": [
+    "One bounded page per query; returned records are not total indexed hits.",
+    "Recognized license metadata is not verified rights or photographic authenticity.",
+    "No visual or human judgment; approved editorial yield remains unknown.",
+    "This control tests text queries; GPT effectiveness requires model-authored query receipts."
+  ],
+  "source_fields_omitted": true,
+  "private_source_receipts_preserved": true
+}

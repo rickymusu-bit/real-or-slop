@@ -1,7 +1,7 @@
-# Mappa canonica — versione 2.0.0
+# Mappa canonica — versione 2.0.1
 
-Snapshot: `docs/MASTER.v2.0.0.md`. Percorsi relativi alla radice del repository.
-Verificato: 2026-11-06T16:00:00Z, main `67ecf494ba8fe86d551525e1db330d1f31764975`.
+Snapshot: `docs/MASTER.v2.0.1.md`. Percorsi relativi alla radice del repository.
+Verificato: 2026-11-06T17:00:00Z, main `67ecf494ba8fe86d551525e1db330d1f31764975`.
 La PR #58 (`77f6cb8`) contiene l'audit. Il branch #56 aggiunge la nuova discovery;
 entrambi sono da revisionare e non integrati in main. Ricontrollare le ref.
 Non attesta lo stato del database remoto o dei gate in produzione.
@@ -50,7 +50,7 @@ le diagnostiche rimangono opzionali. Non rimuovere pipeline legacy ancora usate.
 | PR #52, `822b315` | Draft sulla #51 | Metriche di varietà; diagnostiche, non gate |
 | #53 / PR #55, `0577284` | Draft sulla #52; protocollo 4.3.0, app 0.19.0 | Matrice 12×12, caption, whole-frame, licenza SLOP e ricette ancora proposte rispetto a main |
 | PR #54, `a80a556` | Draft indipendente su main; app 0.16.0 | Swipe, nessuna dipendenza editoriale |
-| #56 | Nuovo percorso implementato nel branch dedicato, non attivato | Spec 1.0.0; provider source-verified, API live 403; benchmark fotografico e review umana ancora da eseguire |
+| #56 | Nuovo percorso implementato nel branch dedicato, non attivato | Commons live 200 con User-Agent della pipeline; controllo manuale reale completato, benchmark GPT in attesa del budget; Openverse challenge 403, review umana ancora pendente |
 | #57 / PR #58 | Prima consegna documentale draft | Audit e piano base di questa implementazione; nessun merge implicito |
 
 Le versioni 4.0–4.3 nella #55 formano una catena: leggere 4.3 insieme alle versioni
@@ -62,7 +62,7 @@ solo perché sono più recenti. Piano di integrazione e decisioni aperte:
 
 - `docs/audit-architettura.v1.0.0.md`: ref osservate, file → responsabilità →
   interfacce → test, conflitti e rischi verificati.
-- `docs/indice-documentazione.v1.1.0.md`: catalogo vigente/proposta/storica/archivio,
+- `docs/indice-documentazione.v1.2.0.md`: catalogo vigente/proposta/storica/archivio,
   sostituzioni per ambito; gli originali restano intatti.
 - `docs/piano-integrazione-editoriale.v1.0.0.md`: ordine #51/#52/#55/#56,
   contratti candidati, test mancanti e suddivisione delle PR.
@@ -70,6 +70,10 @@ solo perché sono più recenti. Piano di integrazione e decisioni aperte:
 - `docs/ricerca-real.v1.0.0.md`: contratti, CLI, migrazione/dismissione e limiti API.
 - `docs/benchmark-ricerca-real.v1.0.0.json`: confronto fixture riproducibile,
   nessuna efficacia reale misurata; resoconto in `docs/verifica-ricerca-real.v1.0.0.md`.
+- `docs/benchmark-commons.v1.0.0.md`: controllo manuale di retrieval reale, piani
+  e rapporti 1.0.0/1.1.0 conservati; non è un risultato GPT o un'approvazione.
+- `docs/openverse-accesso.v1.0.0.md`: challenge verificata e bozza di segnalazione;
+  il proprietario ha scelto di non pubblicarla.
 
 App in main: `package.json` 0.15.0. Metodo v3, dati v2 e istruzioni 2.0.0 sono
 versioni diverse. Per adottare una modifica strutturale aggiungere una decisione

@@ -1,7 +1,7 @@
 # Real or Slop
 
 [Istruzioni Codex](AGENTS.md) · [Mappa canonica e contratti correnti](MASTER.md) ·
-[Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.1.0.md).
+[Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.2.0.md).
 L'[audit #57](docs/audit-architettura.v1.0.0.md) distingue main dalle PR in bozza;
 il [piano di integrazione](docs/piano-integrazione-editoriale.v1.0.0.md) prepara
 la #56 senza adottare anticipatamente la v4.
@@ -14,6 +14,13 @@ query HTTP validate, dossier separati dai profili ciechi e review individuale.
 un run senza rete. Il nuovo percorso richiede gate espliciti per qualsiasi
 inferenza pagata e non pubblica immagini. Pipeline storiche e dati sono conservati;
 le diagnostiche delle issue #44–#50 non sono prerequisiti della discovery.
+
+[Controllo reale Commons](docs/benchmark-commons.v1.0.0.md): otto coppie di query
+manuali, stesso filtro bitmap e budget HTTP; `npm run benchmark:commons` prepara
+senza rete, `-- --live` esegue e conserva le ricevute. Non è il benchmark GPT né
+una validazione di immagini approvabili. [Diagnosi Openverse](docs/openverse-accesso.v1.0.0.md):
+`npm run check:openverse -- --live` usa il client ufficiale e le credenziali già
+configurate; nessuna credenziale stampata o aggiramento della challenge.
 
 Il protocollo editoriale corrente è **v3.0.0: brief condivisi**. Un brief originale,
 congelato prima della ricerca, guida una candidata REAL e una SLOP generata dal

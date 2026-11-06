@@ -24,7 +24,9 @@
     "benchmark:editorial-v2": "python3 -m pipeline.v2.benchmark --fixture-study 120",
     "scan:similarity": "node --import tsx scripts/scan-similarity.mjs",
     "discovery:real": "python3 -m pipeline.real.run",
-    "benchmark:real": "python3 -m pipeline.real.run fixture"
+    "benchmark:real": "python3 -m pipeline.real.run fixture",
+    "benchmark:commons": "python3 -m pipeline.real.commons_benchmark",
+    "check:openverse": "python3 -m pipeline.real.openverse_check"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261025.1",

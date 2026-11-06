@@ -1,0 +1,53 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-11-06T16:35:00Z",
+  "authorship": "Assistant-authored preregistered retrieval control, not a GPT-6.1 API output",
+  "scope": "Commons text-query retrieval; no claim of editorial approval or GPT effectiveness",
+  "seed": 56,
+  "page_size": 20,
+  "max_pages": 1,
+  "strategy_selection": "Two strategies per intent; all eight pairs retained, no selection by observed yield",
+  "adaptation_selection": "First proposed variant textual fallback, no category traversal, no selection by observed yield",
+  "cells": [
+    {
+      "id": "animals-compassion-medium",
+      "topic": "animals",
+      "emotion": "compassion",
+      "intensity": "medium",
+      "queries": [
+        {"general": "wild animals rescued during natural disasters", "adapted": "animal rescue flood"},
+        {"general": "people helping injured wildlife recover", "adapted": "wildlife rehabilitation"}
+      ]
+    },
+    {
+      "id": "technology-curiosity-medium",
+      "topic": "science_technology",
+      "emotion": "curiosity",
+      "intensity": "medium",
+      "queries": [
+        {"general": "small devices that measure invisible natural processes", "adapted": "cloud chamber"},
+        {"general": "everyday objects revealing how mechanical systems work", "adapted": "mechanical clock mechanism"}
+      ]
+    },
+    {
+      "id": "homes-nostalgia-low",
+      "topic": "homes_architecture",
+      "emotion": "nostalgia",
+      "intensity": "low",
+      "queries": [
+        {"general": "familiar domestic rooms retaining details from earlier decades", "adapted": "historic kitchen interior"},
+        {"general": "old household objects still used in daily life", "adapted": "antique sewing machine in use"}
+      ]
+    },
+    {
+      "id": "landscapes-wonder-high",
+      "topic": "travel_landscapes",
+      "emotion": "wonder",
+      "intensity": "high",
+      "queries": [
+        {"general": "dramatic light revealing immense mountain landscapes", "adapted": "mountain crepuscular rays"},
+        {"general": "powerful water shaping landscapes on a large scale", "adapted": "waterfall canyon"}
+      ]
+    }
+  ]
+}
