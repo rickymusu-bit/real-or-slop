@@ -51,6 +51,9 @@ Quando disponibili, le due immagini associate allo stesso brief si presentano af
 sinistra, SLOP a destra. Anche su schermi piccoli la coppia deve essere visibile
 insieme. Si forniscono inoltre immagini di confronto già unite e un PDF.
 Le immagini originali non vengono modificate per costruire questi confronti.
+Ogni immagine nel PDF e nei pannelli deve riportare tema, emozione e ID della
+casella assegnata dal brief. La classificazione effettiva resta distinta e va
+indicata come da confermare finché il proprietario non l’ha confermata.
 Le cartelle REAL/ e SLOP/ rimangono separate nello ZIP per consultazione.
 
 Le preview vanno caricate nella cartella Google Drive dedicata
