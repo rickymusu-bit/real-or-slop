@@ -53,6 +53,12 @@ test("frozen brief contract excludes any added REAL inputs and records model, ta
  assert.equal(validateBrief(auto),auto);
  assert.throws(()=>validateBrief({...auto,parameters:{...auto.parameters,presentation_mode:"square_crop"}}));
  assert.throws(()=>validateBrief({...auto,parameters:{...auto.parameters,real_image:"source"}}));
+ const composed={...auto,catalog:{...auto.catalog,version:"4.2.0"},composition:{version:"1.0.0",policy_sha256:"d".repeat(64),profile_id:"gentle_right_roll",viewpoint:"elevated_oblique",roll_degrees:6}};
+ assert.equal(validateBrief(composed),composed);
+ assert.throws(()=>validateBrief({...composed,composition:{...composed.composition,roll_degrees:90}}));
+ assert.throws(()=>validateBrief({...composed,composition:{...composed.composition,viewpoint:"eye_level_frontal"}}));
+ assert.throws(()=>validateBrief({...composed,composition:{...composed.composition,real_image:"source"}}));
+ assert.throws(()=>validateBrief({...auto,catalog:{...auto.catalog,version:"4.2.0"}}));
 });
 test("caption validation keeps final neutral text separate from fictional and documentary metadata",()=>{
  const draft={game_caption:"Una cucina domestica con un tavolo accanto alla finestra e oggetti d’uso quotidiano.",caption_version:"1.0.0",caption_generator_version:"manual-v1",caption_provenance_refs:[],caption_context_fictional:false,context_mode:"visible"};

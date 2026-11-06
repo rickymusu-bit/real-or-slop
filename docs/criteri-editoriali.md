@@ -1,6 +1,6 @@
 # Criteri editoriali del proprietario
 
-Revisione **4.1.0**, richiesta dal proprietario il 2026-11-05 dopo il pilota.
+Revisione **4.2.0**, aggiornata dal proprietario il 2026-11-06 dopo il pilota.
 Queste regole valgono per selezione REAL, brief, prompt SLOP, didascalie e copie
 finali. Le decisioni restano individuali e del proprietario.
 
@@ -28,6 +28,16 @@ compatibili, distinguendo quando necessario l’autore dell’opera dall’autor
 della fotografia. La didascalia non certifica autenticità o diritti.
 
 ## Formato e fotogramma intero
+
+Le nuove SLOP variano anche il punto di vista e l’inclinazione della camera,
+secondo il [piano compositivo v4.2](protocollo-editoriale.v4.2.0.md). Le due
+dimensioni restano distinte: una prospettiva obliqua non richiede un orizzonte
+inclinato. Il piano si congela prima della ricerca, indipendentemente dalle
+foto REAL, e viene realizzato dal generatore nel prompt.
+
+Il tema dell’oggetto e l’emozione prevista sono valutazioni distinte. Un
+oggetto vecchio o insolito non dimostra da solo divertimento: il brief deve
+esplicitare un motivo visivo plausibile e il risultato richiede verifica.
 
 Le REAL conservano il fotogramma intero e le proporzioni originali. Non si
 esegue un ritaglio quadrato obbligatorio né una chiamata di selezione del taglio.

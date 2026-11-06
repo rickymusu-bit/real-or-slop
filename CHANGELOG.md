@@ -1,3 +1,9 @@
+## 0.18.0 — 2026-11-06 (PR, rollout non attivato)
+
+- Piano compositivo v1: punti di vista frontali, obliqui, rialzati e ribassati, distinti da roll in piano o lieve inclinazione. Profili scelti con seed prima della ricerca REAL e inclusi nel prompt congelato.
+- Catalogo v4.2 alla revisione 3: riscritti i due brief divertimento/prodotti con un motivo di umorismo osservabile. L’aspirapolvere del pilota rimane un abbinamento intenzionale non confermato; nessun giudizio umano inventato.
+- Hash della policy, piano e target compositivi auditabili; validazione Worker e compatibilità dei freeze precedenti. Nessuna rotazione degli output, nuova API, spesa o pubblicazione.
+
 ## 0.17.1 — 2026-11-06 (PR, rollout non attivato)
 
 - SLOP nuove con CC BY 4.0 e attribuzione Real or Slop; pubblicazione server vincolata a licenza e credito, con diagnostica delle candidate bloccate. REAL e ricevute storiche conservate.

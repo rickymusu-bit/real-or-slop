@@ -1,0 +1,42 @@
+{
+  "version": "1.0.0",
+  "assignment": "seeded_shuffled_deck_before_real_search",
+  "profiles": [
+    {
+      "id": "frontal_level",
+      "viewpoint": "eye_level_frontal",
+      "roll_degrees": 0,
+      "directive": "Use a frontal viewpoint at subject height with the camera level. Let the arrangement follow the scene rather than forcing symmetry."
+    },
+    {
+      "id": "oblique_level",
+      "viewpoint": "eye_level_oblique",
+      "roll_degrees": 0,
+      "directive": "View the subject from one side at approximately eye level, with visible depth and an oblique perspective. Keep the camera level."
+    },
+    {
+      "id": "high_oblique",
+      "viewpoint": "elevated_oblique",
+      "roll_degrees": 0,
+      "directive": "Use an elevated, oblique viewpoint looking downward across the subject. Keep perspective coherent and the camera level."
+    },
+    {
+      "id": "low_oblique",
+      "viewpoint": "low_oblique",
+      "roll_degrees": 0,
+      "directive": "Use a lower viewpoint looking slightly upward and across the subject from one side. Keep perspective coherent and the camera level."
+    },
+    {
+      "id": "gentle_left_roll",
+      "viewpoint": "eye_level_oblique",
+      "roll_degrees": -6,
+      "directive": "Use an oblique viewpoint with a gentle counterclockwise camera roll of about six degrees. Compose the scene with that angle during generation, with coherent perspective throughout."
+    },
+    {
+      "id": "gentle_right_roll",
+      "viewpoint": "elevated_oblique",
+      "roll_degrees": 6,
+      "directive": "Use a slightly elevated, oblique viewpoint with a gentle clockwise camera roll of about six degrees. Compose the scene with that angle during generation, with coherent perspective throughout."
+    }
+  ]
+}

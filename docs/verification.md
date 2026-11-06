@@ -690,3 +690,26 @@ Le cinque SLOP del pilota hanno una dichiarazione di licenza separata dalle
 ricevute originali, nei nuovi dossier privati; i crediti sono anche nel PDF e
 nella galleria. Pixel e coorte non cambiano, nessun giudizio è stato aggiunto.
 ZIP verificato contro gli hash; nessuna nuova generazione, spesa o pubblicazione.
+
+
+## 2026-11-06 — intenzioni compositive indipendenti v4.2.0
+
+Build, lint, suite Node e 181 test Python più sei test versionati passati.
+L’integrazione locale matrice verifica anche il nuovo envelope con target di
+punto di vista e roll, hash, corrispondenza al prompt e compatibilità dei dati
+precedenti; timer, privacy e scoring restano invariati.
+
+Il piano compositivo è deterministico con seed, copre sei profili prima di
+ripeterli e distingue camera in piano da lieve roll nei due sensi. I test
+verificano che le direttive siano nel prompt congelato, che il relativo piano
+sia protetto dall’hash e che i vecchi cataloghi non ricevano nuove direttive.
+La fixture con risultati REAL avvelenati continua a non influenzare SLOP.
+
+Preparato offline un ciclo di cinque brief con seed 53: tre richieste con
+camera in piano e due con roll lieve; i punti di vista includono frontale,
+obliquo ed elevato. Sono target, non angoli misurati in nuove immagini.
+Nessuna acquisizione o generazione live; nessun miglioramento empirico dichiarato.
+
+Il PDF e la galleria del pilota conservano pixel e coorte originali, con nota
+sul brief generico dell’aspirapolvere. Nessuna classificazione o decisione umana
+aggiunta; anteprime aggiornate nella cartella Drive dedicata.

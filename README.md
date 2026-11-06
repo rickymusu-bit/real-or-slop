@@ -1,12 +1,12 @@
 # Real or Slop
 
-Pipeline editoriale **v4.1.0** implementata per revisione: matrice privata 12×12,
+Pipeline editoriale **v4.2.0** implementata per revisione: matrice privata 12×12,
 selezione uniforme/adattiva seedata, brief inglesi congelati prima dei rami
 REAL/SLOP e didascalie neutrali con giudizi autonomi. I comandi predefiniti sono
 offline; attivazione, spesa e pubblicazione richiedono esecuzione esplicita.
 Il [pilota autorizzato](docs/pilota-matrice-v4-2026-11-05.md) e la successiva
 riesportazione a fotogramma intero restano privati.
-[Specifica, limiti e rollout](docs/protocollo-editoriale.v4.1.0.md).
+[Specifica, limiti e rollout](docs/protocollo-editoriale.v4.2.0.md).
 
 ```sh
 python3 -m pipeline.v2.matrix_v4_0_0 --check
@@ -16,7 +16,8 @@ npm run benchmark:matrix
 
 La matrice è in `/admin/variety`, protetta dallo stesso accesso della coda.
 Le 288 bozze nuove e i 48 esempi di didascalia richiedono la revisione del
-proprietario. Le SLOP si pubblicano con CC BY 4.0 e attribuzione; le REAL
+proprietario. I nuovi prompt SLOP includono punti di vista e inclinazioni
+scelti con seed prima della ricerca REAL. Le SLOP si pubblicano con CC BY 4.0 e attribuzione; le REAL
 conservano le licenze delle fonti. Le vecchie immagini e approvazioni restano conservate.
 
 ## Flusso precedente, conservato fino al rollout autorizzato

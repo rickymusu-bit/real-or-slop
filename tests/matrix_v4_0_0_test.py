@@ -11,13 +11,48 @@ from pipeline.editorial import PipelineStop
 from pipeline.v2.matrix_v4_0_0 import CATALOG,ROOT,CELLS,checksum,freeze,restore,run_branch,search_real,documentary_gate,export_review
 from pipeline.v2.engine import Config
 from pipeline.v2.fixtures import source,picture
+from pipeline.v2.composition import composition_plan, POLICY_SHA256
 from editorial_v2_direct_test import FixtureDirect
 
 
 class MatrixPipelineTest(unittest.TestCase):
+    def test_composition_varies_viewpoint_and_roll_without_real_inputs(self):
+        plan=composition_plan(6,53)
+        self.assertEqual(plan,composition_plan(6,53))
+        self.assertNotEqual(plan,composition_plan(6,54))
+        self.assertEqual(len({p['id']for p in plan}),6)
+        self.assertEqual(sum(p['roll_degrees']==0 for p in plan),4)
+        self.assertEqual({p['roll_degrees']for p in plan},{-6,0,6})
+        self.assertGreaterEqual(len({p['viewpoint']for p in plan}),4)
+        with tempfile.TemporaryDirectory()as tmp:
+            folder=Path(tmp);freeze(folder,count=6,seed=53)
+            briefs=json.loads((folder/'briefs.v4.0.0.json').read_text())['briefs']
+            ideas=json.loads((folder/'slop-plan.v4.0.0.json').read_text())['ideas']
+            for row,idea,profile in zip(briefs,ideas,plan):
+                b=row['brief'];self.assertEqual(b['composition']['profile_id'],profile['id'])
+                self.assertEqual(b['composition']['policy_sha256'],POLICY_SHA256)
+                self.assertIn(profile['directive'],b['slop_prompt'])
+                self.assertEqual(idea['prompt'],b['slop_prompt'])
+                self.assertNotIn('Camera composition',b['description'])
+            path=folder/'composition-plan.v1.0.0.json';audit=json.loads(path.read_text())
+            self.assertEqual(audit['kind'],'intended_not_observed')
+            audit['records'][0]['roll_degrees']=90;path.write_text(json.dumps(audit))
+            with self.assertRaises(PipelineStop):restore(folder)
+
+    def test_previous_catalogue_keeps_original_prompts_without_new_composition(self):
+        old=json.loads((ROOT/'data/editorial/briefs.v4.1.0.json').read_text())
+        with tempfile.TemporaryDirectory()as tmp:
+            folder=Path(tmp);frozen=freeze(folder,catalog=old,count=2)
+            self.assertEqual(freeze(folder,catalog=old,count=2),frozen)
+            self.assertFalse((folder/'composition-plan.v1.0.0.json').exists())
+            for r in json.loads((folder/'briefs.v4.0.0.json').read_text())['briefs']:
+                self.assertNotIn('composition',r['brief'])
+                source=next(b for b in old['briefs']if b['id']==r['brief']['brief_id'])
+                self.assertEqual(source['slop_prompt'],r['brief']['slop_prompt'])
+
     def test_current_catalogue_freezes_free_aspect_and_artwork_without_museum_rule(self):
         catalog=json.loads(CATALOG.read_text())
-        self.assertEqual(catalog['version'],'4.1.0')
+        self.assertEqual(catalog['version'],'4.2.0')
         self.assertTrue(any(b['medium']=='artwork' for b in catalog['briefs']))
         self.assertTrue(all('frame when present' not in b['slop_prompt'] for b in catalog['briefs']))
         with tempfile.TemporaryDirectory() as tmp:
@@ -25,7 +60,7 @@ class MatrixPipelineTest(unittest.TestCase):
             brief=json.loads((folder/'briefs.v4.0.0.json').read_text())['briefs'][0]['brief']
             self.assertEqual(brief['parameters']['size'],'auto')
             self.assertEqual(brief['parameters']['presentation_mode'],'whole_frame')
-            self.assertEqual(brief['instructions_version'],'4.1.0')
+            self.assertEqual(brief['instructions_version'],'4.2.0')
         proof=source('documented-artwork');proof.update(authenticity='verified',content_kind='artwork')
         self.assertEqual(documentary_gate(proof),proof)
 
