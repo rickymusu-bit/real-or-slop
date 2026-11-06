@@ -1,7 +1,7 @@
 # Real or Slop
 
 [Istruzioni Codex](AGENTS.md) · [Mappa canonica e contratti correnti](MASTER.md) ·
-[Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.3.2.md).
+[Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.4.0.md).
 L'[audit #57](docs/audit-architettura.v1.0.0.md) distingue main dalle PR in bozza;
 il [piano di integrazione](docs/piano-integrazione-editoriale.v1.0.0.md) prepara
 la #56 senza adottare anticipatamente la v4.
@@ -30,7 +30,9 @@ configurate; nessuna credenziale stampata o aggiramento della challenge.
 
 [Pilota GPT Commons](docs/benchmark-gpt-commons.v1.0.0.md): query generate e
 adattate da GPT-6.1 Terra, 11/19 file distinti a parità di otto ricerche per gruppo;
-origine, licenze e resa editoriale ancora da verificare.
+successivamente completati cinque dossier assistiti e profili sui soli pixel.
+La [verifica documentale](docs/verifica-documentale-real.v1.0.0.md) conserva
+separati gli esiti: conferma umana dei diritti e approvazione ancora pendenti.
 [Registrare il client Openverse](docs/openverse-registrazione.v1.0.0.md);
 [il tentativo di registrazione è bloccato dalla challenge](docs/openverse-registrazione-esito.v1.0.0.md).
 

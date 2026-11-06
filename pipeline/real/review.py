@@ -14,6 +14,8 @@ from .contracts import ROOT, VERSION, digest, validate
 VISUAL_INSTRUCTIONS = '''Describe only the supplied pixels, without guessing origin or facts about people/events.
 Assess possible emotions (multiple allowed), valence and intensity, attention, mobile readability,
 plausibility and potential for an origin-judgment game. Explain visible elements causing interest and uncertainty.
+Rate attention, readability, plausibility and game_potential in points from 0 to 100, with 100 the highest.
+Use null for an unknown rating. Valence alone uses -1 (unpleasant) to 1 (pleasant), or null when mixed/unknown.
 Ordinary scenes are valid. Surprise, plausibility and emotional intensity do not determine authenticity.
 You receive no title, author, URL, source, intended emotion, documentary evidence or generator prompt.
 Do not infer private identities, actual emotions or historical events as established facts.'''

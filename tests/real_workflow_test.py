@@ -155,6 +155,31 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(len(measurements['strategies']['strategies']), 2)
         self.assertEqual(measurements['proposed_queries'], 2)
 
+    def test_smartphone_mpo_preserves_both_frames_and_profiles_the_primary_photograph(self):
+        from PIL import Image
+        self.acquire(); path, rows = self.documents()
+        original = self.store.folder/'primary-with-auxiliary.jpg'
+        Image.new('RGB', (128, 96), 'red').save(original, format='MPO', save_all=True,
+            append_images=[Image.new('RGB', (128, 96), 'blue')])
+        raw = original.read_bytes()
+        rows[0].update(file=original.name, sha256=hashlib.sha256(raw).hexdigest())
+        path.write_text(json.dumps(rows))
+        state = advance(self.store, documents=path, execute=True, model_factory=self.model)
+        self.assertEqual(state['stage'], 'awaiting_review')
+        row = self.store.read(profile_path())[0]
+        self.assertEqual((self.store.folder/row['file']).read_bytes(), raw)
+        with Image.open(self.store.folder/row['file']) as image:
+            self.assertEqual(image.n_frames, 2)
+        with Image.open(self.store.folder/row['derived_file']) as image:
+            red, green, blue = image.convert('RGB').getpixel((64, 48))
+            self.assertGreater(red, blue+150)
+        self.assertTrue(row['presentation']['whole_frame'])
+        self.assertEqual(row['presentation']['selected_frame'], 0)
+        from pipeline.v2.engine import media
+        unsupported = io.BytesIO(); Image.new('RGB', (32, 32)).save(unsupported, format='GIF')
+        with self.assertRaises(PipelineStop):
+            media(unsupported.getvalue(), self.store.folder, 'inputs', 'unsupported-gif')
+
     def test_changed_pixels_have_new_profile_and_do_not_inherit_approval(self):
         self.profiled()
         old = self.store.read(profile_path())
