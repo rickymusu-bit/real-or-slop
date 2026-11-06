@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-11-06T16:48:06.704331Z",
+  "endpoint": "https://api.openverse.org/v1/images/?q=wildlife+rescue&page_size=1&page=1",
+  "auth_mode": "anonymous",
+  "model_calls": 0,
+  "secrets_in_report": false,
+  "status": "provider_challenge",
+  "http_status": 403,
+  "content_type": "text/html; charset=UTF-8",
+  "body_sha256": "4cbdaf45befdbbfb755bc1977f1aa6a9ec1082f2fb552a1139998d1c300955a9",
+  "cloudflare_ray": "a565958119aba1c5-MSP",
+  "api_calls": 1,
+  "error_body_retained": false
+}

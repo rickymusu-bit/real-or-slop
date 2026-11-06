@@ -1,0 +1,409 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-11-06T18:48:07.433395Z",
+  "simulated": false,
+  "model": "gpt-6.1-terra",
+  "model_receipt_statuses": {
+    "invalid": 1,
+    "completed": 12
+  },
+  "successful_planning_requests": 12,
+  "total_model_requests": 13,
+  "prior_invalid_response_retained": true,
+  "planning_reserved_usd": 0.48,
+  "all_attempts_reserved_usd": 0.53,
+  "budget_cap_usd": 0.6,
+  "usage_all_attempts": {
+    "input_tokens": 11461,
+    "output_tokens": 1188,
+    "cached_tokens": 1346,
+    "cache_write_tokens": 5390
+  },
+  "pricing_assumptions": {
+    "input_usd_per_million": 1,
+    "cached_input_usd_per_million": 0.05,
+    "cache_write_usd_per_million": 1.25,
+    "output_usd_per_million": 5
+  },
+  "estimated_token_cost_usd": 0.0174698,
+  "billed_cost_usd": null,
+  "pricing_source": "https://developers.openai.com/api/docs/models/gpt-6.1-terra",
+  "origin_and_license_review": "deferred_by_owner",
+  "visual_profiles": 0,
+  "human_reviews": 0,
+  "published": false,
+  "retrieval": {
+    "version": "1.0.0",
+    "created_at": "2026-11-06T18:46:22.004675Z",
+    "provider": "commons",
+    "authorship": "Two-stage model client; inspect model_receipts and simulated flag",
+    "preregistered_sha256": "03293070fed6d0b4245f90f6eb58976305fee22561b2bf0517f3347b6380a28e",
+    "seed": 56,
+    "page_size": 20,
+    "max_pages": 1,
+    "common_query_suffix": "filetype:bitmap",
+    "ordering": [
+      {
+        "cell": 0,
+        "query": 0,
+        "order": [
+          "adapted",
+          "general"
+        ]
+      },
+      {
+        "cell": 0,
+        "query": 1,
+        "order": [
+          "general",
+          "adapted"
+        ]
+      },
+      {
+        "cell": 1,
+        "query": 0,
+        "order": [
+          "general",
+          "adapted"
+        ]
+      },
+      {
+        "cell": 1,
+        "query": 1,
+        "order": [
+          "general",
+          "adapted"
+        ]
+      },
+      {
+        "cell": 2,
+        "query": 0,
+        "order": [
+          "adapted",
+          "general"
+        ]
+      },
+      {
+        "cell": 2,
+        "query": 1,
+        "order": [
+          "adapted",
+          "general"
+        ]
+      },
+      {
+        "cell": 3,
+        "query": 0,
+        "order": [
+          "general",
+          "adapted"
+        ]
+      },
+      {
+        "cell": 3,
+        "query": 1,
+        "order": [
+          "adapted",
+          "general"
+        ]
+      }
+    ],
+    "pairs": [
+      {
+        "cell": 0,
+        "pair": 0,
+        "intent": {
+          "version": "1.0.0",
+          "taxonomy_version": "1.0.0",
+          "topic": "animals",
+          "emotion": "compassion",
+          "intensity": "medium"
+        },
+        "adapted": {
+          "query": "volunteer feeding dog animal shelter",
+          "compiled_query": "volunteer feeding dog animal shelter filetype:bitmap",
+          "status": "completed",
+          "api_calls": 1,
+          "returned": 2,
+          "recognized_license_metadata": 0,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.6204
+        },
+        "general": {
+          "query": "volunteer feeding dog in animal shelter kennel",
+          "compiled_query": "volunteer feeding dog in animal shelter kennel filetype:bitmap",
+          "status": "zero_hits",
+          "api_calls": 1,
+          "returned": 0,
+          "recognized_license_metadata": 0,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.6075
+        }
+      },
+      {
+        "cell": 0,
+        "pair": 1,
+        "intent": {
+          "version": "1.0.0",
+          "taxonomy_version": "1.0.0",
+          "topic": "animals",
+          "emotion": "compassion",
+          "intensity": "medium"
+        },
+        "general": {
+          "query": "wildlife rehabilitator examining bird in clinic",
+          "compiled_query": "wildlife rehabilitator examining bird in clinic filetype:bitmap",
+          "status": "zero_hits",
+          "api_calls": 1,
+          "returned": 0,
+          "recognized_license_metadata": 0,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.4576
+        },
+        "adapted": {
+          "query": "wildlife rehabilitation bird examination",
+          "compiled_query": "wildlife rehabilitation bird examination filetype:bitmap",
+          "status": "completed",
+          "api_calls": 1,
+          "returned": 3,
+          "recognized_license_metadata": 0,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.4798
+        }
+      },
+      {
+        "cell": 1,
+        "pair": 0,
+        "intent": {
+          "version": "1.0.0",
+          "taxonomy_version": "1.0.0",
+          "topic": "science_technology",
+          "emotion": "curiosity",
+          "intensity": "medium"
+        },
+        "general": {
+          "query": "researcher examining a slide under a microscope",
+          "compiled_query": "researcher examining a slide under a microscope filetype:bitmap",
+          "status": "completed",
+          "api_calls": 1,
+          "returned": 5,
+          "recognized_license_metadata": 4,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.5335
+        },
+        "adapted": {
+          "query": "researcher looking through microscope slide",
+          "compiled_query": "researcher looking through microscope slide filetype:bitmap",
+          "status": "zero_hits",
+          "api_calls": 1,
+          "returned": 0,
+          "recognized_license_metadata": 0,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.4063
+        }
+      },
+      {
+        "cell": 1,
+        "pair": 1,
+        "intent": {
+          "version": "1.0.0",
+          "taxonomy_version": "1.0.0",
+          "topic": "science_technology",
+          "emotion": "curiosity",
+          "intensity": "medium"
+        },
+        "general": {
+          "query": "technician testing an open circuit board",
+          "compiled_query": "technician testing an open circuit board filetype:bitmap",
+          "status": "zero_hits",
+          "api_calls": 1,
+          "returned": 0,
+          "recognized_license_metadata": 0,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.4395
+        },
+        "adapted": {
+          "query": "technician testing circuit board",
+          "compiled_query": "technician testing circuit board filetype:bitmap",
+          "status": "completed",
+          "api_calls": 1,
+          "returned": 8,
+          "recognized_license_metadata": 0,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.6435
+        }
+      },
+      {
+        "cell": 2,
+        "pair": 0,
+        "intent": {
+          "version": "1.0.0",
+          "taxonomy_version": "1.0.0",
+          "topic": "homes_architecture",
+          "emotion": "nostalgia",
+          "intensity": "low"
+        },
+        "adapted": {
+          "query": "old kitchen wooden cabinets curtains",
+          "compiled_query": "old kitchen wooden cabinets curtains filetype:bitmap",
+          "status": "zero_hits",
+          "api_calls": 1,
+          "returned": 0,
+          "recognized_license_metadata": 0,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.3856
+        },
+        "general": {
+          "query": "older home kitchen wooden cabinets curtains",
+          "compiled_query": "older home kitchen wooden cabinets curtains filetype:bitmap",
+          "status": "zero_hits",
+          "api_calls": 1,
+          "returned": 0,
+          "recognized_license_metadata": 0,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.4365
+        }
+      },
+      {
+        "cell": 2,
+        "pair": 1,
+        "intent": {
+          "version": "1.0.0",
+          "taxonomy_version": "1.0.0",
+          "topic": "homes_architecture",
+          "emotion": "nostalgia",
+          "intensity": "low"
+        },
+        "adapted": {
+          "query": "older houses front porches summer",
+          "compiled_query": "older houses front porches summer filetype:bitmap",
+          "status": "completed",
+          "api_calls": 1,
+          "returned": 4,
+          "recognized_license_metadata": 1,
+          "unsupported_media": 16,
+          "elapsed_seconds": 2.1514
+        },
+        "general": {
+          "query": "older neighborhood houses front porches summer",
+          "compiled_query": "older neighborhood houses front porches summer filetype:bitmap",
+          "status": "completed",
+          "api_calls": 1,
+          "returned": 5,
+          "recognized_license_metadata": 3,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.6614
+        }
+      },
+      {
+        "cell": 3,
+        "pair": 0,
+        "intent": {
+          "version": "1.0.0",
+          "taxonomy_version": "1.0.0",
+          "topic": "travel_landscapes",
+          "emotion": "wonder",
+          "intensity": "high"
+        },
+        "general": {
+          "query": "hikers beneath towering mountain cliffs",
+          "compiled_query": "hikers beneath towering mountain cliffs filetype:bitmap",
+          "status": "zero_hits",
+          "api_calls": 1,
+          "returned": 0,
+          "recognized_license_metadata": 0,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.4943
+        },
+        "adapted": {
+          "query": "hikers beneath mountain cliffs",
+          "compiled_query": "hikers beneath mountain cliffs filetype:bitmap",
+          "status": "completed",
+          "api_calls": 1,
+          "returned": 1,
+          "recognized_license_metadata": 1,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.4264
+        }
+      },
+      {
+        "cell": 3,
+        "pair": 1,
+        "intent": {
+          "version": "1.0.0",
+          "taxonomy_version": "1.0.0",
+          "topic": "travel_landscapes",
+          "emotion": "wonder",
+          "intensity": "high"
+        },
+        "adapted": {
+          "query": "footpath across fields wide sky",
+          "compiled_query": "footpath across fields wide sky filetype:bitmap",
+          "status": "completed",
+          "api_calls": 1,
+          "returned": 1,
+          "recognized_license_metadata": 1,
+          "unsupported_media": 0,
+          "elapsed_seconds": 2.6015
+        },
+        "general": {
+          "query": "footpath across open fields under wide sky",
+          "compiled_query": "footpath across open fields under wide sky filetype:bitmap",
+          "status": "completed",
+          "api_calls": 1,
+          "returned": 1,
+          "recognized_license_metadata": 1,
+          "unsupported_media": 0,
+          "elapsed_seconds": 1.4376
+        }
+      }
+    ],
+    "summary": {
+      "general": {
+        "queries": 8,
+        "api_calls": 8,
+        "returned_records": 11,
+        "unique_source_ids": 11,
+        "zero_hit_queries": 5,
+        "failed_queries": 0,
+        "recognized_license_records": 8,
+        "unsupported_media": 0,
+        "documentary_verified": null,
+        "visually_evaluated": null,
+        "human_approved": null,
+        "approved_yield": null
+      },
+      "adapted": {
+        "queries": 8,
+        "api_calls": 8,
+        "returned_records": 19,
+        "unique_source_ids": 19,
+        "zero_hit_queries": 2,
+        "failed_queries": 0,
+        "recognized_license_records": 3,
+        "unsupported_media": 16,
+        "documentary_verified": null,
+        "visually_evaluated": null,
+        "human_approved": null,
+        "approved_yield": null
+      }
+    },
+    "common_source_ids": 1,
+    "paid_calls": false,
+    "images_downloaded": 0,
+    "publication": false,
+    "effectiveness_claim": false,
+    "limitations": [
+      "One bounded page per query; returned records are not total indexed hits.",
+      "Recognized license metadata is not verified rights or photographic authenticity.",
+      "No visual or human judgment; approved editorial yield remains unknown.",
+      "Model-generated text-query comparison; editorial effectiveness still requires verified images and human judgments."
+    ],
+    "model_trace_required": true,
+    "source_fields_omitted": true,
+    "private_source_receipts_preserved": true,
+    "model_usage_scope": "Retrieval only; paid planning calls are counted at the root."
+  },
+  "effectiveness_claim": false,
+  "paid_model_calls": 13
+}

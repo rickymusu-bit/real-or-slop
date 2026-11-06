@@ -1,10 +1,40 @@
 # Real or Slop
 
 [Istruzioni Codex](AGENTS.md) · [Mappa canonica e contratti correnti](MASTER.md) ·
-[Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.0.0.md).
+[Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.4.0.md).
 L'[audit #57](docs/audit-architettura.v1.0.0.md) distingue main dalle PR in bozza;
 il [piano di integrazione](docs/piano-integrazione-editoriale.v1.0.0.md) prepara
-la #56 senza implementarla o adottare anticipatamente la v4.
+la #56 senza adottare anticipatamente la v4.
+
+Nuovo percorso [discovery REAL #56](docs/ricerca-real.v1.0.0.md): intenzioni
+tema/emozione/intensità, strategie GPT e adattamento Commons/Openverse distinti,
+query HTTP validate, dossier separati dai profili ciechi e review individuale.
+`npm run benchmark:real -- --out .pipeline/real/fixture` esegue solo fixture locali;
+`npm run discovery:real -- prepare --seed 56 --out .pipeline/real/run-001` prepara
+un run senza rete. Il nuovo percorso richiede gate espliciti per qualsiasi
+inferenza pagata e non pubblica immagini. Pipeline storiche e dati sono conservati;
+le diagnostiche delle issue #44–#50 non sono prerequisiti della discovery.
+
+[Ciclo riprendibile e pilota A/B](docs/ciclo-discovery-real.v1.0.0.md):
+`npm run discovery:cycle -- start` coordina le fasi e segnala le attese documentali
+e umane; `npm run benchmark:pilot -- --fixture` verifica il pilota senza spesa.
+Galleria privata con decisioni per SHA, feedback dello scheduler e revisioni
+additive dei dossier; nessuna approvazione o pubblicazione implicita.
+
+[Controllo reale Commons](docs/benchmark-commons.v1.0.0.md): otto coppie di query
+manuali, stesso filtro bitmap e budget HTTP; `npm run benchmark:commons` prepara
+senza rete, `-- --live` esegue e conserva le ricevute. Non è il benchmark GPT né
+una validazione di immagini approvabili. [Diagnosi Openverse](docs/openverse-accesso.v1.0.0.md):
+`npm run check:openverse -- --live` usa il client ufficiale e le credenziali già
+configurate; nessuna credenziale stampata o aggiramento della challenge.
+
+[Pilota GPT Commons](docs/benchmark-gpt-commons.v1.0.0.md): query generate e
+adattate da GPT-6.1 Terra, 11/19 file distinti a parità di otto ricerche per gruppo;
+successivamente completati cinque dossier assistiti e profili sui soli pixel.
+La [verifica documentale](docs/verifica-documentale-real.v1.0.0.md) conserva
+separati gli esiti: conferma umana dei diritti e approvazione ancora pendenti.
+[Registrare il client Openverse](docs/openverse-registrazione.v1.0.0.md);
+[il tentativo di registrazione è bloccato dalla challenge](docs/openverse-registrazione-esito.v1.0.0.md).
 
 Il protocollo editoriale corrente è **v3.0.0: brief condivisi**. Un brief originale,
 congelato prima della ricerca, guida una candidata REAL e una SLOP generata dal

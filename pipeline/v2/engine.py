@@ -62,9 +62,10 @@ def media(raw, folder, group, uid):
     require(0 < len(raw) <= 12_000_000, 'File v2 vuoto o oltre 12 MB')
     Image.MAX_IMAGE_PIXELS = 30_000_000
     with Image.open(io.BytesIO(raw)) as picture:
-        require(picture.format in ('JPEG', 'PNG', 'WEBP') and picture.width * picture.height <= 30_000_000, 'File v2 non fotografico o troppo grande')
+        require(picture.format in ('JPEG', 'MPO', 'PNG', 'WEBP') and picture.width * picture.height <= 30_000_000, 'File v2 non fotografico o troppo grande')
+        source_format = picture.format
         picture.load()
-        ext = {'JPEG': 'jpg', 'PNG': 'png', 'WEBP': 'webp'}[picture.format]
+        ext = {'JPEG': 'jpg', 'MPO': 'jpg', 'PNG': 'png', 'WEBP': 'webp'}[picture.format]
     original = f'{group}/{uid}/original.{ext}'
     preview = f'{group}/{uid}/preview.webp'
     write_bytes(safe_path(folder, original), raw)
@@ -75,10 +76,13 @@ def media(raw, folder, group, uid):
         width, height = picture.size
         pixels = list(ImageOps.grayscale(picture).resize((9, 8)).getdata())
     phash = f'{sum((pixels[y*9+x] > pixels[y*9+x+1]) << (y*8+x) for y in range(8) for x in range(8)):016x}'
+    presentation = dict(version='1.0.0', operations=['exif_orientation', 'resize', 'compression', 'format_conversion'],
+                        whole_frame=True, maximum_edge=1024, webp_quality=85)
+    if source_format == 'MPO':
+        presentation.update(source_container='MPO', selected_frame=0, original_frames_preserved=True)
     return dict(file=original, derived_file=preview, original_sha256=digest(raw), sha256=digest(derivative),
                 perceptual_hash=phash, width=width, height=height, bytes=len(derivative), format='webp',
-                presentation=dict(version='1.0.0', operations=['exif_orientation', 'resize', 'compression', 'format_conversion'],
-                                  whole_frame=True, maximum_edge=1024, webp_quality=85))
+                presentation=presentation)
 
 
 def initialize(origin, inputs, root, folder, cfg, uid, simulated=False, license_info=None):
