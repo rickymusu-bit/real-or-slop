@@ -64,7 +64,8 @@ def handoff(store, records, current):
 
 
 def advance(store, *, live=False, execute=False, documents=None, decisions=None, document_revision=None,
-            profile_revision=None, model_factory=None, client_factory=None, downloader=None, base=None):
+            profile_revision=None, model_factory=None, client_factory=None, downloader=None, base=None,
+            sync_inbox=False):
     cfg = store.read('cycle-config.v1.0.0.json')
     require(cfg is not None, 'Inizializzare il ciclo prima di riprenderlo')
     require(cfg['profiles_sha256'] == digest({p: PROFILES[p] for p in cfg['providers']}), 'Profili provider cambiati: nuovo run richiesto')
@@ -81,6 +82,15 @@ def advance(store, *, live=False, execute=False, documents=None, decisions=None,
     def checkpoint(stage, **values):
         state.update(stage=stage, updated_at=now(), **values)
         return store.save('cycle-state.v1.0.0.json', state.copy())
+
+    def queue_candidates(rows):
+        if cfg['simulated']:
+            return None
+        from .inbox import export_pending, synchronize as sync_site, receipt_path
+        exported = export_pending(store, rows)
+        queued = sync_site(store, exported) if sync_inbox else store.read(receipt_path(exported))
+        state['review_inbox'] = queued or exported
+        return queued
 
     def model():
         if model_factory:
@@ -126,10 +136,12 @@ def advance(store, *, live=False, execute=False, documents=None, decisions=None,
         synchronize(store, records)
         state['documentary_eligible'] = sum(not row['blockers'] and not row.get('duplicate_of') for row in records)
         if not state['documentary_eligible']:
+            queue_candidates(records)
             return checkpoint('documentary_attention_required', gallery=render(store, records))
         profiles = store.read(profile_path(visrev, docrev))
         if profiles is None:
             if not execute:
+                queue_candidates(records)
                 return checkpoint('awaiting_visual_profile', gallery=render(store, records))
             checkpoint('profiling')
             profiles = profile(store, model(), visrev, docrev)
@@ -146,7 +158,12 @@ def advance(store, *, live=False, execute=False, documents=None, decisions=None,
             approved=sum(d['decision'] == 'approved' for d in current.values()), feedback_events=len(feedback),
             feedback=str(store.folder/'feedback-export.v1.0.0.json'), gallery=render(store, profiles, selection['shortlisted']))
         if not cfg['simulated']:
-            state['handoff'] = handoff(store, profiles, current)
+            queued = queue_candidates(profiles)
+            if queued is None:
+                return checkpoint('awaiting_inbox_sync')
+            # The site is authoritative for personal review. A local HTML vote
+            # cannot finish a real cycle or admit an image to the game.
+            return checkpoint('awaiting_review' if queued['pending'] else 'site_reviewed')
         pending = any(current.get(uid, {}).get('decision') not in ('approved', 'rejected') for uid in selection['shortlisted'])
         return checkpoint('awaiting_review' if pending else 'completed' if selection['shortlisted'] else 'no_usable_candidates')
     except (OSError, ValueError, KeyError, TypeError) as error:
@@ -168,6 +185,7 @@ def main(argv=None):
     parser.add_argument('--slop-plan', type=Path); parser.add_argument('--documents', type=Path); parser.add_argument('--reviews', type=Path)
     parser.add_argument('--document-revision', type=int); parser.add_argument('--profile-revision', type=int)
     parser.add_argument('--execute', action='store_true'); parser.add_argument('--live', action='store_true')
+    parser.add_argument('--sync-inbox', action='store_true', help='Carica le candidate nella coda privata /admin')
     args = parser.parse_args(argv)
     try:
         store = Store(args.out)
@@ -184,7 +202,8 @@ def main(argv=None):
                     download_hosts=args.download_host or ['upload.wikimedia.org'], maximum=args.maximum, seed=args.seed,
                     slop=json.loads(args.slop_plan.read_text()) if args.slop_plan else None)
             result = advance(store, live=args.live, execute=args.execute, documents=args.documents, decisions=args.reviews,
-                document_revision=args.document_revision, profile_revision=args.profile_revision, base=args.base)
+                document_revision=args.document_revision, profile_revision=args.profile_revision, base=args.base,
+                sync_inbox=args.sync_inbox)
         print(json.dumps(result)); return 0
     except (OSError, ValueError, KeyError, TypeError) as error:
         print(str(error) if isinstance(error, PipelineStop) else 'Ciclo interrotto: controllare configurazione e ricevute private')
