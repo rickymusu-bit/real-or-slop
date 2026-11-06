@@ -1,8 +1,9 @@
-# Mappa canonica — versione 1.0.0
+# Mappa canonica — versione 2.0.0
 
-Snapshot: `docs/MASTER.v1.0.0.md`. Percorsi relativi alla radice del repository.
-Verificato: 2026-11-06T13:42:06Z, main `67ecf494ba8fe86d551525e1db330d1f31764975`.
-Questa mappa descrive quel main; ricontrollare le ref prima di implementare delta.
+Snapshot: `docs/MASTER.v2.0.0.md`. Percorsi relativi alla radice del repository.
+Verificato: 2026-11-06T16:00:00Z, main `67ecf494ba8fe86d551525e1db330d1f31764975`.
+La PR #58 (`77f6cb8`) contiene l'audit. Il branch #56 aggiunge la nuova discovery;
+entrambi sono da revisionare e non integrati in main. Ricontrollare le ref.
 Non attesta lo stato del database remoto o dei gate in produzione.
 
 ## Ingressi e autorità
@@ -14,6 +15,8 @@ secondo AGENTS; non scegliere semplicemente il numero di versione più alto.
 | Ambito | Fonte corrente | Ambito e limite |
 | --- | --- | --- |
 | Metodo editoriale | `docs/protocollo-editoriale.md`, versione interna 3.0.0 | Brief condivisi congelati, SLOP solo testo, revisione individuale, API dirette |
+| Nuova discovery REAL #56 | `docs/ricerca-real.v1.0.0.md`, `pipeline/real/`; `shared/real-discovery*.v1.0.0.json` | Nuovo percorso esplicito in questa PR: 432 intenzioni nominali, A/B GPT, HTTP validato; nessun match obbligatorio a brief o quote di copertura |
+| Ledger nuovo percorso | `worker/real-discovery.ts`, tabella esistente `editorial_usage` | Endpoint autenticato di sola prenotazione; gate chiuso per default, nessun nuovo schema o publish |
 | Criteri del proprietario | `docs/criteri-editoriali.md`; `pipeline/v2/editorial_policy.py` | In main: contesto visibile, opere ambientate; nessuna adozione anticipata di v4 |
 | Brief e freeze | `pipeline/v2/brief_catalog.py`, `pipeline/v2/briefs.py`; `data/editorial/briefs.v1.json` | Seed italiano draft; selezione 5 brief/10 immagini, massimo 25/50 |
 | Dati e verifiche v2 | `shared/editorial-v2.json`, `shared/editorial-v2.ts`, `pipeline/v2/protocol.py`; `tests/editorial-v2-contract.json` | Schema 2.0.0 riusato dal metodo v3; non è la versione del metodo |
@@ -32,6 +35,13 @@ attivazione. L'approvazione di un'immagine in archivio non implica che esista gi
 un percorso automatico per pubblicarla nel gioco. Non correggere questo scarto
 di implementazione con una pubblicazione implicita.
 
+La #56 sostituisce la discovery dei nuovi run scelti esplicitamente dal CLI:
+non sostituisce il metodo per le esecuzioni storiche. Neutralità media/alta non
+significative, intenzione/risultato separati, freeze SLOP opzionale prima di REAL.
+Le decisioni sulle incompatibilità sono nella specifica, comprese le policy
+v4 non importate. #44–#50 e l'intera #55 non sono prerequisiti del nuovo collector;
+le diagnostiche rimangono opzionali. Non rimuovere pipeline legacy ancora usate.
+
 ## Stato delle proposte
 
 | Fonte | Stato verificato | Trattamento |
@@ -40,8 +50,8 @@ di implementazione con una pubblicazione implicita.
 | PR #52, `822b315` | Draft sulla #51 | Metriche di varietà; diagnostiche, non gate |
 | #53 / PR #55, `0577284` | Draft sulla #52; protocollo 4.3.0, app 0.19.0 | Matrice 12×12, caption, whole-frame, licenza SLOP e ricette ancora proposte rispetto a main |
 | PR #54, `a80a556` | Draft indipendente su main; app 0.16.0 | Swipe, nessuna dipendenza editoriale |
-| #56 | Specifica funzionale aperta, subordinata a #57 | 432 intenzioni e due stadi GPT; non implementata né adottata da questa mappa |
-| #57 | Prima consegna documentale | Audit e piano; refactoring e feature in PR successive |
+| #56 | Nuovo percorso implementato nel branch dedicato, non attivato | Spec 1.0.0; provider source-verified, API live 403; benchmark fotografico e review umana ancora da eseguire |
+| #57 / PR #58 | Prima consegna documentale draft | Audit e piano base di questa implementazione; nessun merge implicito |
 
 Le versioni 4.0–4.3 nella #55 formano una catena: leggere 4.3 insieme alle versioni
 che eredita. Non importare le sue regole su crop, opere, caption o licenze in main
@@ -52,12 +62,15 @@ solo perché sono più recenti. Piano di integrazione e decisioni aperte:
 
 - `docs/audit-architettura.v1.0.0.md`: ref osservate, file → responsabilità →
   interfacce → test, conflitti e rischi verificati.
-- `docs/indice-documentazione.v1.0.0.md`: catalogo vigente/proposta/storica/archivio,
+- `docs/indice-documentazione.v1.1.0.md`: catalogo vigente/proposta/storica/archivio,
   sostituzioni per ambito; gli originali restano intatti.
 - `docs/piano-integrazione-editoriale.v1.0.0.md`: ordine #51/#52/#55/#56,
   contratti candidati, test mancanti e suddivisione delle PR.
 - `docs/checklist-issue-codex.v1.0.0.md`: template breve per nuove issue.
+- `docs/ricerca-real.v1.0.0.md`: contratti, CLI, migrazione/dismissione e limiti API.
+- `docs/benchmark-ricerca-real.v1.0.0.json`: confronto fixture riproducibile,
+  nessuna efficacia reale misurata; resoconto in `docs/verifica-ricerca-real.v1.0.0.md`.
 
-App in main: `package.json` 0.15.0. Metodo v3, dati v2 e istruzioni 1.0.0 sono
+App in main: `package.json` 0.15.0. Metodo v3, dati v2 e istruzioni 2.0.0 sono
 versioni diverse. Per adottare una modifica strutturale aggiungere una decisione
 esplicita, aggiornare questa mappa e AGENTS con nuovi snapshot; preservare i vecchi.

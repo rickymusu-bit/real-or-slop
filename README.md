@@ -1,10 +1,19 @@
 # Real or Slop
 
 [Istruzioni Codex](AGENTS.md) · [Mappa canonica e contratti correnti](MASTER.md) ·
-[Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.0.0.md).
+[Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.1.0.md).
 L'[audit #57](docs/audit-architettura.v1.0.0.md) distingue main dalle PR in bozza;
 il [piano di integrazione](docs/piano-integrazione-editoriale.v1.0.0.md) prepara
-la #56 senza implementarla o adottare anticipatamente la v4.
+la #56 senza adottare anticipatamente la v4.
+
+Nuovo percorso [discovery REAL #56](docs/ricerca-real.v1.0.0.md): intenzioni
+tema/emozione/intensità, strategie GPT e adattamento Commons/Openverse distinti,
+query HTTP validate, dossier separati dai profili ciechi e review individuale.
+`npm run benchmark:real -- --out .pipeline/real/fixture` esegue solo fixture locali;
+`npm run discovery:real -- prepare --seed 56 --out .pipeline/real/run-001` prepara
+un run senza rete. Il nuovo percorso richiede gate espliciti per qualsiasi
+inferenza pagata e non pubblica immagini. Pipeline storiche e dati sono conservati;
+le diagnostiche delle issue #44–#50 non sono prerequisiti della discovery.
 
 Il protocollo editoriale corrente è **v3.0.0: brief condivisi**. Un brief originale,
 congelato prima della ricerca, guida una candidata REAL e una SLOP generata dal

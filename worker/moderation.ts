@@ -18,6 +18,7 @@ import type { CurationRecord } from "../shared/curation";
 import { recognizedLicense } from "../shared/licenses";
 import { reviewInbox } from "./review-inbox";
 import { similarity } from "./similarity";
+import { realDiscovery } from "./real-discovery";
 function text(data: Record<string, unknown>, key: string, max = 4000) {
   const v = data[key];
   if (typeof v !== "string" || !v.trim() || v.length > max)
@@ -33,6 +34,7 @@ function referencePhoto(row: Record<string, unknown>) {
   return row.reference_id ? { id: String(row.reference_id), title: String(row.reference_title || "Fotografia sorgente"), source_url: String(row.reference_source_url || "") } : null;
 }
 export async function moderation(request: Request, env: Env, path: string) {
+  if (path === "/api/admin/editorial/real-discovery/reserve") return realDiscovery(request, env);
   if (path === "/api/admin/similarity" || path.startsWith("/api/admin/similarity/")) return similarity(request, env, path);
   if (path === "/api/admin/review-inbox" || path.startsWith("/api/admin/review-inbox/")) return reviewInbox(request, env, path);
   if (path.startsWith("/api/admin/editorial/")) return editorial(request, env, path);

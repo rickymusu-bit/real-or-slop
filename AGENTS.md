@@ -1,8 +1,8 @@
-# Istruzioni Codex — versione canonica 1.0.0
+# Istruzioni Codex — versione canonica 2.0.0
 
-Snapshot: `docs/AGENTS.v1.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-06T13:42:06Z. Questa versione introduce istruzioni operative,
-non una nuova versione del protocollo editoriale o dell'applicazione.
+Snapshot: `docs/AGENTS.v2.0.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-06T16:00:00Z. La 1.0.0 resta conservata. Questa revisione
+aggiunge il percorso REAL #56, senza attivare produzione o cambiare il gioco.
 
 ## Prima di modificare
 
@@ -16,8 +16,8 @@ non una nuova versione del protocollo editoriale o dell'applicazione.
    una issue incompatibile. Proseguire sul lavoro indipendente; chiedere solo
    decisioni davvero mancanti che bloccano il comportamento richiesto.
 4. Limitare il delta alla issue. Riutilizzare moduli, fixture e CI esistenti;
-   nessun nuovo framework o refactoring cosmetico. Per #57 la prima PR contiene
-   solo audit, istruzioni e piano; #56 e refactoring applicativo sono successivi.
+   nessun nuovo framework o refactoring cosmetico. L'audit #57 è nella PR #58;
+   la #56 ha un branch dedicato basato sulla #58, senza importare #51/#52/#55.
 
 ## Precedenza e versioni
 
@@ -37,6 +37,12 @@ non una nuova versione del protocollo editoriale o dell'applicazione.
 
 - Python è una pipeline offline/CLI; frontend Vite/TypeScript e Worker Cloudflare
   restano separati. Usare JSON condivisi e fixture comuni per i contratti Python/TS.
+- Il nuovo percorso `pipeline.real.run` segue `docs/ricerca-real.v1.0.0.md`:
+  intenzione → strategie A → adattamento B → HTTP deterministico → dossier →
+  profilo cieco → review. Non obbligare embedding, cataloghi vecchi o coppie.
+  Per nuovi run usare i contratti `shared/real-discovery*.v1.0.0.json`;
+  non convertire checkpoint/eventi v2/v3/v4. Modelli pagati richiedono i gate
+  client/server e il ledger esistente; nessun reinvio su ricevuta incerta.
 - Per nuovi cicli, congelare il prompt SLOP originale prima di osservare REAL.
   Mai passare al generatore pixel, titoli, metadati, descrizioni o risultati REAL.
   Il codice legacy che deriva prompt da fotografie non è un modello da riusare.
@@ -56,7 +62,8 @@ non una nuova versione del protocollo editoriale o dell'applicazione.
   `pipeline/requirements.txt`, `ONNXRUNTIME_NODE_INSTALL_CUDA=skip npm ci`.
 - Baseline: `npm run lint`, `npm test`, `npm run build`, `npm run deploy:check`;
   per schema/storage/Worker usare migrazioni e seed locali, `npm run dry-run` e
-  `npm run test:integration`, anche profili Batch, v2 e senza R2 come in CI.
+  `npm run test:integration`, anche profili Batch, v2, senza R2 e
+  `ROS_TEST_REAL=1` come in CI. `npm run benchmark:real` è solo fixture offline.
   Non avviare suite Wrangler concorrenti: condividono stato/porta locali.
 - Per sole modifiche documentali verificare anche link, snapshot e
   `git diff --check`. Riutilizzare una baseline appena eseguita se codice e
@@ -67,3 +74,6 @@ non una nuova versione del protocollo editoriale o dell'applicazione.
 - Resoconto finale: file e comportamento cambiati, verifiche/esiti, rischi,
   limitazioni e azioni non eseguite. Template per issue future:
   `docs/checklist-issue-codex.v1.0.0.md`.
+- Dismissione: non cancellare interi alberi legacy. Prima separare le utilità
+  condivise e verificare recupero dei run; conservare lettori, migrazioni, dati,
+  cataloghi, freeze e audit. Non modificare workflow schedulati per questa pulizia.

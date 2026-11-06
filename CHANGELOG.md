@@ -69,6 +69,13 @@
 
 ## Unreleased
 
+- #56: discovery REAL separata con matrice 12×12×3, strategie GPT-6.1 e
+  adattamento per Commons/Openverse, parametri HTTP deterministici, acquisizione
+  privata, gate documentali e profili ciechi, shortlist e review esplicita.
+  Ricevute/cache versionate, ledger atomico riusato e benchmark fixture; nessuna
+  API pagata o modifica di produzione eseguita. AGENTS/MASTER 2.0.0 conservano
+  gli snapshot precedenti; pipeline storiche e contratti del gioco invariati.
+
 - #57, prima consegna documentale: AGENTS/MASTER canonici con snapshot 1.0.0,
   audit dei moduli e delle PR aperte, indice delle fonti e piano preparatorio #56.
   Nessuna modifica applicativa, di schema, workflow o versione dell'applicazione.

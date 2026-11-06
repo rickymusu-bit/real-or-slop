@@ -1,0 +1,166 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-11-06T14:00:00Z",
+  "language": "en",
+  "emotions": [
+    {
+      "id": "wonder",
+      "name": "Wonder",
+      "description": "A sense of scale or discovery, without requiring an extraordinary scene.",
+      "example": "Light across an open valley"
+    },
+    {
+      "id": "tenderness",
+      "name": "Tenderness",
+      "description": "Gentle attention to a subject; do not infer private relationships.",
+      "example": "An animal resting beside another"
+    },
+    {
+      "id": "compassion",
+      "name": "Compassion",
+      "description": "An invitation to care; never invent suffering or personal circumstances.",
+      "example": "A person receiving practical assistance"
+    },
+    {
+      "id": "outrage",
+      "name": "Outrage",
+      "description": "A possible response to a documented situation, never an unverified accusation.",
+      "example": "Visible damage in a shared space"
+    },
+    {
+      "id": "fear",
+      "name": "Fear",
+      "description": "An impression of uncertainty or risk, not a claim that harm occurred.",
+      "example": "A narrow path above a steep slope"
+    },
+    {
+      "id": "disgust",
+      "name": "Disgust",
+      "description": "A possible sensory reaction, without demeaning people or groups.",
+      "example": "Food waste in a collection area"
+    },
+    {
+      "id": "desire",
+      "name": "Desire",
+      "description": "Interest in an experience or object, without persuasive messaging.",
+      "example": "A shaded terrace prepared for a meal"
+    },
+    {
+      "id": "nostalgia",
+      "name": "Nostalgia",
+      "description": "Associations with past experiences; do not invent a historical date.",
+      "example": "An older interior still in use"
+    },
+    {
+      "id": "amusement",
+      "name": "Amusement",
+      "description": "A playful observation, without ridiculing people.",
+      "example": "An unexpected arrangement of everyday objects"
+    },
+    {
+      "id": "curiosity",
+      "name": "Curiosity",
+      "description": "An invitation to inspect how something works.",
+      "example": "A small mechanism on a workbench"
+    },
+    {
+      "id": "admiration",
+      "name": "Admiration",
+      "description": "Attention to skill or care, without claims of superiority.",
+      "example": "A carefully made wooden joint"
+    },
+    {
+      "id": "neutrality",
+      "name": "Neutrality",
+      "description": "Ordinary descriptive observation with no intended emotional emphasis.",
+      "example": "A shelf with household supplies"
+    }
+  ],
+  "topics": [
+    {
+      "id": "people_everyday_life",
+      "name": "People and everyday life",
+      "description": "People in everyday settings, respecting privacy.",
+      "example": "A shared kitchen"
+    },
+    {
+      "id": "animals",
+      "name": "Animals",
+      "description": "Animals with their surroundings visible.",
+      "example": "Birds beside a water trough"
+    },
+    {
+      "id": "food_cooking",
+      "name": "Food and cooking",
+      "description": "Ingredients, preparation and meals in context.",
+      "example": "Vegetables on a kitchen counter"
+    },
+    {
+      "id": "travel_landscapes",
+      "name": "Travel and landscapes",
+      "description": "Places and landscapes, including ordinary local environments.",
+      "example": "A path through open fields"
+    },
+    {
+      "id": "homes_architecture",
+      "name": "Homes and architecture",
+      "description": "Built spaces and their uses, indoors or outdoors.",
+      "example": "A residential courtyard"
+    },
+    {
+      "id": "fashion_beauty_lifestyle",
+      "name": "Fashion, beauty and lifestyle",
+      "description": "Clothing, personal objects and routines without body judgments.",
+      "example": "Clothes drying beside an open window"
+    },
+    {
+      "id": "products_consumption",
+      "name": "Products and consumption",
+      "description": "Objects, retail and consumption in their setting.",
+      "example": "Household goods in a small shop"
+    },
+    {
+      "id": "arts_crafts",
+      "name": "Arts and crafts",
+      "description": "Making and displaying art, whole works in their environment.",
+      "example": "A framed painting on a studio wall"
+    },
+    {
+      "id": "sports_entertainment",
+      "name": "Sports and entertainment",
+      "description": "Practice, leisure, performances and their spaces.",
+      "example": "An empty community sports court"
+    },
+    {
+      "id": "news_current_affairs",
+      "name": "News and current affairs",
+      "description": "Documented public situations; no invented real events.",
+      "example": "Maintenance work on a public street"
+    },
+    {
+      "id": "science_technology",
+      "name": "Science and technology",
+      "description": "Tools, observation, systems and work in context.",
+      "example": "A measuring instrument on a laboratory bench"
+    },
+    {
+      "id": "history_archives",
+      "name": "History and archives",
+      "description": "Historical objects and photographs with documented context.",
+      "example": "A storage room with labelled archive boxes"
+    }
+  ],
+  "policy": {
+    "search_intent_only": true,
+    "uniform_coverage_required": false,
+    "neutrality_meaningful_intensities": [
+      "low"
+    ]
+  },
+  "source": "PR #55 0577284497c985fbbf44463ad7dd48b475edb8a5 taxonomy 4.0.0",
+  "intensities": {
+    "low": "Mild everyday attention. Neutrality uses only this level.",
+    "medium": "Clear but not dominant emotional salience.",
+    "high": "Strong potential salience, without requiring harm or sensationalism."
+  }
+}
