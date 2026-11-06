@@ -1,4 +1,5 @@
 /** Public text is the sole pre-answer field. All other fields stay private. */
+export {default as captionStyle} from "./game-caption-style.v1.1.0.json";
 export class CaptionValidationError extends Error {}
 export interface CaptionDraft {
   game_caption: string; caption_version: "1.0.0"; caption_generator_version: string;

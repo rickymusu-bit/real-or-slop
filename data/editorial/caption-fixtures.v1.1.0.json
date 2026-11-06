@@ -1,0 +1,969 @@
+{
+  "version": "1.1.0",
+  "created_at": "2026-11-06T05:36:57.732432Z",
+  "kind": "caption_style_fixtures",
+  "language": "it",
+  "limitations": "Authored style examples, not captions verified against real images. No owner approval or documentary facts are asserted. Two contexts per emotion and per origin; identical texts across origins intentionally test equal treatment. Revision 1.1 uses contextual coordinates rather than visual alt descriptions; these examples remain unbound style drafts, never verified source claims.",
+  "captions": [
+    {
+      "id": "caption-wonder-1-real",
+      "origin": "REAL",
+      "emotion": "wonder",
+      "case_group": "wonder-1",
+      "text": "Percorso escursionistico in una valle aperta, tra vegetazione e rilievi montuosi.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Percorso escursionistico in una valle aperta, tra vegetazione e rilievi montuosi.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-wonder-1-ai",
+      "origin": "AI",
+      "emotion": "wonder",
+      "case_group": "wonder-1",
+      "text": "Percorso escursionistico in una valle aperta, tra vegetazione e rilievi montuosi.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Percorso escursionistico in una valle aperta, tra vegetazione e rilievi montuosi.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-wonder-2-real",
+      "origin": "REAL",
+      "emotion": "wonder",
+      "case_group": "wonder-2",
+      "text": "Spazio operativo di un laboratorio, riservato al lavoro su strutture di grandi dimensioni.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Spazio operativo di un laboratorio, riservato al lavoro su strutture di grandi dimensioni.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-wonder-2-ai",
+      "origin": "AI",
+      "emotion": "wonder",
+      "case_group": "wonder-2",
+      "text": "Spazio operativo di un laboratorio, riservato al lavoro su strutture di grandi dimensioni.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Spazio operativo di un laboratorio, riservato al lavoro su strutture di grandi dimensioni.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-tenderness-1-real",
+      "origin": "REAL",
+      "emotion": "tenderness",
+      "case_group": "tenderness-1",
+      "text": "Area di riposo in un cortile rurale, accanto a un riparo destinato agli animali.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Area di riposo in un cortile rurale, accanto a un riparo destinato agli animali.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-tenderness-1-ai",
+      "origin": "AI",
+      "emotion": "tenderness",
+      "case_group": "tenderness-1",
+      "text": "Area di riposo in un cortile rurale, accanto a un riparo destinato agli animali.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Area di riposo in un cortile rurale, accanto a un riparo destinato agli animali.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-tenderness-2-real",
+      "origin": "REAL",
+      "emotion": "tenderness",
+      "case_group": "tenderness-2",
+      "text": "Angolo domestico vicino a una finestra, utilizzato per custodire gli indumenti dei bambini.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Angolo domestico vicino a una finestra, utilizzato per custodire gli indumenti dei bambini.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-tenderness-2-ai",
+      "origin": "AI",
+      "emotion": "tenderness",
+      "case_group": "tenderness-2",
+      "text": "Angolo domestico vicino a una finestra, utilizzato per custodire gli indumenti dei bambini.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Angolo domestico vicino a una finestra, utilizzato per custodire gli indumenti dei bambini.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-compassion-1-real",
+      "origin": "REAL",
+      "emotion": "compassion",
+      "case_group": "compassion-1",
+      "text": "Zona di sosta lungo un percorso urbano, con una seduta accanto al passaggio pedonale.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Zona di sosta lungo un percorso urbano, con una seduta accanto al passaggio pedonale.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-compassion-1-ai",
+      "origin": "AI",
+      "emotion": "compassion",
+      "case_group": "compassion-1",
+      "text": "Zona di sosta lungo un percorso urbano, con una seduta accanto al passaggio pedonale.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Zona di sosta lungo un percorso urbano, con una seduta accanto al passaggio pedonale.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-compassion-2-real",
+      "origin": "REAL",
+      "emotion": "compassion",
+      "case_group": "compassion-2",
+      "text": "Locale di servizio di una struttura collettiva, destinato alla distribuzione dei pasti.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Locale di servizio di una struttura collettiva, destinato alla distribuzione dei pasti.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-compassion-2-ai",
+      "origin": "AI",
+      "emotion": "compassion",
+      "case_group": "compassion-2",
+      "text": "Locale di servizio di una struttura collettiva, destinato alla distribuzione dei pasti.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Locale di servizio di una struttura collettiva, destinato alla distribuzione dei pasti.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-outrage-1-real",
+      "origin": "REAL",
+      "emotion": "outrage",
+      "case_group": "outrage-1",
+      "text": "Accesso a uno spazio pubblico delimitato da transenne, lungo un percorso pedonale.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Accesso a uno spazio pubblico delimitato da transenne, lungo un percorso pedonale.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-outrage-1-ai",
+      "origin": "AI",
+      "emotion": "outrage",
+      "case_group": "outrage-1",
+      "text": "Accesso a uno spazio pubblico delimitato da transenne, lungo un percorso pedonale.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Accesso a uno spazio pubblico delimitato da transenne, lungo un percorso pedonale.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-outrage-2-real",
+      "origin": "REAL",
+      "emotion": "outrage",
+      "case_group": "outrage-2",
+      "text": "Area di deposito per oggetti domestici dismessi, al margine di un cortile residenziale.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Area di deposito per oggetti domestici dismessi, al margine di un cortile residenziale.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-outrage-2-ai",
+      "origin": "AI",
+      "emotion": "outrage",
+      "case_group": "outrage-2",
+      "text": "Area di deposito per oggetti domestici dismessi, al margine di un cortile residenziale.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Area di deposito per oggetti domestici dismessi, al margine di un cortile residenziale.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-fear-1-real",
+      "origin": "REAL",
+      "emotion": "fear",
+      "case_group": "fear-1",
+      "text": "Passaggio di servizio in un edificio, con una scala che collega due livelli interni.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Passaggio di servizio in un edificio, con una scala che collega due livelli interni.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-fear-1-ai",
+      "origin": "AI",
+      "emotion": "fear",
+      "case_group": "fear-1",
+      "text": "Passaggio di servizio in un edificio, con una scala che collega due livelli interni.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Passaggio di servizio in un edificio, con una scala che collega due livelli interni.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-fear-2-real",
+      "origin": "REAL",
+      "emotion": "fear",
+      "case_group": "fear-2",
+      "text": "Tratto di sentiero su un pendio, in prossimità di un passaggio stretto fra le rocce.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Tratto di sentiero su un pendio, in prossimità di un passaggio stretto fra le rocce.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-fear-2-ai",
+      "origin": "AI",
+      "emotion": "fear",
+      "case_group": "fear-2",
+      "text": "Tratto di sentiero su un pendio, in prossimità di un passaggio stretto fra le rocce.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Tratto di sentiero su un pendio, in prossimità di un passaggio stretto fra le rocce.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-disgust-1-real",
+      "origin": "REAL",
+      "emotion": "disgust",
+      "case_group": "disgust-1",
+      "text": "Area di raccolta dei rifiuti in un cortile, accanto agli spazi utilizzati dagli abitanti.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Area di raccolta dei rifiuti in un cortile, accanto agli spazi utilizzati dagli abitanti.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-disgust-1-ai",
+      "origin": "AI",
+      "emotion": "disgust",
+      "case_group": "disgust-1",
+      "text": "Area di raccolta dei rifiuti in un cortile, accanto agli spazi utilizzati dagli abitanti.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Area di raccolta dei rifiuti in un cortile, accanto agli spazi utilizzati dagli abitanti.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-disgust-2-real",
+      "origin": "REAL",
+      "emotion": "disgust",
+      "case_group": "disgust-2",
+      "text": "Zona di servizio destinata alla pulizia, con materiali raccolti vicino a una parete.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Zona di servizio destinata alla pulizia, con materiali raccolti vicino a una parete.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-disgust-2-ai",
+      "origin": "AI",
+      "emotion": "disgust",
+      "case_group": "disgust-2",
+      "text": "Zona di servizio destinata alla pulizia, con materiali raccolti vicino a una parete.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Zona di servizio destinata alla pulizia, con materiali raccolti vicino a una parete.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-desire-1-real",
+      "origin": "REAL",
+      "emotion": "desire",
+      "case_group": "desire-1",
+      "text": "Ingresso di uno spazio commerciale dedicato agli accessori, affacciato su una strada.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Ingresso di uno spazio commerciale dedicato agli accessori, affacciato su una strada.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-desire-1-ai",
+      "origin": "AI",
+      "emotion": "desire",
+      "case_group": "desire-1",
+      "text": "Ingresso di uno spazio commerciale dedicato agli accessori, affacciato su una strada.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Ingresso di uno spazio commerciale dedicato agli accessori, affacciato su una strada.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-desire-2-real",
+      "origin": "REAL",
+      "emotion": "desire",
+      "case_group": "desire-2",
+      "text": "Area di sosta su una terrazza, con arredi destinati alla permanenza degli ospiti.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Area di sosta su una terrazza, con arredi destinati alla permanenza degli ospiti.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-desire-2-ai",
+      "origin": "AI",
+      "emotion": "desire",
+      "case_group": "desire-2",
+      "text": "Area di sosta su una terrazza, con arredi destinati alla permanenza degli ospiti.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Area di sosta su una terrazza, con arredi destinati alla permanenza degli ospiti.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-nostalgia-1-real",
+      "origin": "REAL",
+      "emotion": "nostalgia",
+      "case_group": "nostalgia-1",
+      "text": "Interno domestico con arredi conservati nel tempo, in una stanza destinata alla vita comune.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Interno domestico con arredi conservati nel tempo, in una stanza destinata alla vita comune.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-nostalgia-1-ai",
+      "origin": "AI",
+      "emotion": "nostalgia",
+      "case_group": "nostalgia-1",
+      "text": "Interno domestico con arredi conservati nel tempo, in una stanza destinata alla vita comune.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Interno domestico con arredi conservati nel tempo, in una stanza destinata alla vita comune.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-nostalgia-2-real",
+      "origin": "REAL",
+      "emotion": "nostalgia",
+      "case_group": "nostalgia-2",
+      "text": "Spazio di conservazione di attrezzi e oggetti d’uso quotidiano, in un edificio rurale.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Spazio di conservazione di attrezzi e oggetti d’uso quotidiano, in un edificio rurale.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-nostalgia-2-ai",
+      "origin": "AI",
+      "emotion": "nostalgia",
+      "case_group": "nostalgia-2",
+      "text": "Spazio di conservazione di attrezzi e oggetti d’uso quotidiano, in un edificio rurale.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Spazio di conservazione di attrezzi e oggetti d’uso quotidiano, in un edificio rurale.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-amusement-1-real",
+      "origin": "REAL",
+      "emotion": "amusement",
+      "case_group": "amusement-1",
+      "text": "Angolo di una cucina domestica, allestito per un uso giocoso degli oggetti quotidiani.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Angolo di una cucina domestica, allestito per un uso giocoso degli oggetti quotidiani.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-amusement-1-ai",
+      "origin": "AI",
+      "emotion": "amusement",
+      "case_group": "amusement-1",
+      "text": "Angolo di una cucina domestica, allestito per un uso giocoso degli oggetti quotidiani.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Angolo di una cucina domestica, allestito per un uso giocoso degli oggetti quotidiani.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-amusement-2-real",
+      "origin": "REAL",
+      "emotion": "amusement",
+      "case_group": "amusement-2",
+      "text": "Piccolo spazio di lavoro dedicato alla preparazione di accessori per una festa di quartiere.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Piccolo spazio di lavoro dedicato alla preparazione di accessori per una festa di quartiere.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-amusement-2-ai",
+      "origin": "AI",
+      "emotion": "amusement",
+      "case_group": "amusement-2",
+      "text": "Piccolo spazio di lavoro dedicato alla preparazione di accessori per una festa di quartiere.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Piccolo spazio di lavoro dedicato alla preparazione di accessori per una festa di quartiere.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-curiosity-1-real",
+      "origin": "REAL",
+      "emotion": "curiosity",
+      "case_group": "curiosity-1",
+      "text": "Banco di lavoro in un laboratorio, destinato all’esame di un meccanismo aperto.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Banco di lavoro in un laboratorio, destinato all’esame di un meccanismo aperto.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-curiosity-1-ai",
+      "origin": "AI",
+      "emotion": "curiosity",
+      "case_group": "curiosity-1",
+      "text": "Banco di lavoro in un laboratorio, destinato all’esame di un meccanismo aperto.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Banco di lavoro in un laboratorio, destinato all’esame di un meccanismo aperto.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-curiosity-2-real",
+      "origin": "REAL",
+      "emotion": "curiosity",
+      "case_group": "curiosity-2",
+      "text": "Area espositiva dedicata ai materiali e alle tecniche di costruzione di oggetti comuni.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Area espositiva dedicata ai materiali e alle tecniche di costruzione di oggetti comuni.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-curiosity-2-ai",
+      "origin": "AI",
+      "emotion": "curiosity",
+      "case_group": "curiosity-2",
+      "text": "Area espositiva dedicata ai materiali e alle tecniche di costruzione di oggetti comuni.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Area espositiva dedicata ai materiali e alle tecniche di costruzione di oggetti comuni.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-admiration-1-real",
+      "origin": "REAL",
+      "emotion": "admiration",
+      "case_group": "admiration-1",
+      "text": "Spazio di lavoro artigianale dedicato alla lavorazione del legno e agli incastri.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Spazio di lavoro artigianale dedicato alla lavorazione del legno e agli incastri.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-admiration-1-ai",
+      "origin": "AI",
+      "emotion": "admiration",
+      "case_group": "admiration-1",
+      "text": "Spazio di lavoro artigianale dedicato alla lavorazione del legno e agli incastri.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Spazio di lavoro artigianale dedicato alla lavorazione del legno e agli incastri.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-admiration-2-real",
+      "origin": "REAL",
+      "emotion": "admiration",
+      "case_group": "admiration-2",
+      "text": "Tratto di un’opera di ingegneria civile, osservato dal percorso di accesso pedonale.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Tratto di un’opera di ingegneria civile, osservato dal percorso di accesso pedonale.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-admiration-2-ai",
+      "origin": "AI",
+      "emotion": "admiration",
+      "case_group": "admiration-2",
+      "text": "Tratto di un’opera di ingegneria civile, osservato dal percorso di accesso pedonale.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Tratto di un’opera di ingegneria civile, osservato dal percorso di accesso pedonale.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-neutrality-1-real",
+      "origin": "REAL",
+      "emotion": "neutrality",
+      "case_group": "neutrality-1",
+      "text": "Postazioni di lavoro in un ufficio, organizzate per lo svolgimento di attività quotidiane.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Postazioni di lavoro in un ufficio, organizzate per lo svolgimento di attività quotidiane.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-neutrality-1-ai",
+      "origin": "AI",
+      "emotion": "neutrality",
+      "case_group": "neutrality-1",
+      "text": "Postazioni di lavoro in un ufficio, organizzate per lo svolgimento di attività quotidiane.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Postazioni di lavoro in un ufficio, organizzate per lo svolgimento di attività quotidiane.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-neutrality-2-real",
+      "origin": "REAL",
+      "emotion": "neutrality",
+      "case_group": "neutrality-2",
+      "text": "Zona di passaggio in un edificio residenziale, fra l’ingresso e gli ambienti interni.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Zona di passaggio in un edificio residenziale, fra l’ingresso e gli ambienti interni.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": false,
+        "context_mode": "visible"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    },
+    {
+      "id": "caption-neutrality-2-ai",
+      "origin": "AI",
+      "emotion": "neutrality",
+      "case_group": "neutrality-2",
+      "text": "Zona di passaggio in un edificio residenziale, fra l’ingresso e gli ambienti interni.",
+      "geographic": false,
+      "temporal": false,
+      "caption": {
+        "game_caption": "Zona di passaggio in un edificio residenziale, fra l’ingresso e gli ambienti interni.",
+        "caption_version": "1.0.0",
+        "caption_generator_version": "authored-context-style-fixture-v1.1",
+        "caption_provenance_refs": [],
+        "caption_context_fictional": true,
+        "context_mode": "fictional"
+      },
+      "caption_status": "draft",
+      "owner_reviewed": false,
+      "image_binding": null
+    }
+  ]
+}

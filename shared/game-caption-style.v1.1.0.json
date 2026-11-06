@@ -1,0 +1,9 @@
+{
+  "version": "1.1.0",
+  "target_characters": [60, 100],
+  "maximum_characters": 120,
+  "editor_guidance": "Aggiungi coordinate di contesto: luogo o tipo di ambiente, periodo se pertinente, funzione o situazione. Non limitarti a elencare soggetti, colori, oggetti e posizioni visibili. Scrivi una sola frase neutra; non occorre inserire sempre luogo e anno.",
+  "real_guidance": "Luoghi, date, identità, eventi e funzioni specifiche devono essere attestati dalle evidenze. In mancanza usa un contesto generico supportato dall’immagine, senza inventare dettagli.",
+  "slop_guidance": "Assegna un contesto narrativo coerente con i soli pixel SLOP; evita attribuzioni a persone o organizzazioni reali e non usare informazioni del ramo REAL.",
+  "parity_guidance": "Confronta lunghezza, struttura, tono e specificità geografica e temporale fra le due origini. Non imporre un template fisso e non riservare dettagli precisi o formule caute a una sola classe."
+}

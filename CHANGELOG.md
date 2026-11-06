@@ -1,3 +1,9 @@
+## 0.18.1 — 2026-11-06 (PR, rollout non attivato)
+
+- Corrette le didascalie del pilota: coordinate di luogo, ambiente, funzione o periodo, separate dalle descrizioni alt. Policy di stile condivisa 1.1.0, editor e fixture aggiornati; riferimenti REAL e contesti SLOP separati.
+- Le revisioni della galleria invalidano i soli voti delle didascalie cambiate, conservando le decisioni riferite agli stessi pixel.
+- Corretto il test CI di ripresa v2, ancora configurato con CC0 dopo la scelta CC BY 4.0; verifica preservazione della licenza dei dossier storici senza nuovi invii.
+
 ## 0.18.0 — 2026-11-06 (PR, rollout non attivato)
 
 - Piano compositivo v1: punti di vista frontali, obliqui, rialzati e ribassati, distinti da roll in piano o lieve inclinazione. Profili scelti con seed prima della ricerca REAL e inclusi nel prompt congelato.

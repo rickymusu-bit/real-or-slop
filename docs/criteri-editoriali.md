@@ -16,6 +16,24 @@ visibile: non inventano luoghi, epoche, autori o eventi per dare contesto.
 Le didascalie SLOP mantengono separato il contesto sintetico. Ogni didascalia
 richiede un giudizio autonomo riferito ai pixel effettivamente mostrati.
 
+## Forma delle didascalie
+
+Una sola frase italiana neutra, obiettivo 60–100 caratteri e tetto 120. Deve
+aggiungere coordinate contestuali: luogo o tipo di ambiente, periodo quando
+pertinente, funzione o situazione. Non deve essere soltanto l’`alt` che elenca
+oggetti, colori e posizioni visibili. Non si impone sempre luogo più anno.
+La policy condivisa è `shared/game-caption-style.v1.1.0.json`.
+
+Esempio di contesto documentato: «Ripostiglio di Tredegar House, Newport, con
+attrezzature per la pulizia domestica.» Le località e le date REAL richiedono
+riferimenti verificati. Per SLOP il contesto viene assegnato narrativamente dai
+suoi pixel, con lo stesso tono e senza usare fonti o risultati della REAL.
+Lunghezza e specificità devono essere comparabili fra le origini.
+
+Una nuova frase ha hash e revisione propri e richiede una nuova decisione
+sulla didascalia. A parità di pixel si conservano giudizi sull’immagine, note e
+classificazione; un voto sulla vecchia frase non si trasferisce alla nuova.
+
 ## Opere d’arte
 
 Quadri, dipinti, illustrazioni e altre opere possono occupare il fotogramma.

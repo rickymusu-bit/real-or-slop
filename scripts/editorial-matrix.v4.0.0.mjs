@@ -52,7 +52,7 @@ export async function main(args=process.argv.slice(2)){
   check(!values["dry-run"]||!values.out,"Dry-run does not write files");
   const result=values.benchmark?benchmark(Number(values.seed)):snapshot(events,{seed:Number(values.seed),count:Number(values.count),adaptive:!!values.adaptive,now:values.now,exploration:Number(values.exploration)});
   if(values.benchmark){
-    const captions=JSON.parse(await readFile(new URL("../data/editorial/caption-fixtures.v1.0.0.json",import.meta.url),"utf8")).captions;
+    const captions=JSON.parse(await readFile(new URL("../data/editorial/caption-fixtures.v1.1.0.json",import.meta.url),"utf8")).captions;
     result.runtime={node:process.version,measurements:performanceStudy(),limitations:"Three runs on this executor; heap delta is noisy and is not peak memory or a browser/network benchmark."};
     result.caption_diagnostics=captionDiagnostics(captions);
     result.caption_positive_control=captionDiagnostics(captions.map(r=>({...r,text:r.origin==="AI"?"Interno a Palermo nel 2020.":"Una stanza con sedie."}))).caption_only_accuracy;

@@ -100,9 +100,10 @@ with tempfile.TemporaryDirectory() as temp:
             manifest = root / 'slop.json'; manifest.write_text(json.dumps(inputs))
             api = FixtureBatch()
             api.api = lambda endpoint: {'data': [{'id': cfg.evaluator_model}, {'id': cfg.image_model}]}
-            with patch('pipeline.v2.run.Config.environment', return_value=cfg), patch('pipeline.v2.run.BatchAPI', return_value=api), patch.dict(os.environ, {'REAL_OR_SLOP_ADMIN_TOKEN': token, 'GENERATED_V2_LICENSE_URL': 'https://creativecommons.org/publicdomain/zero/1.0/', 'GENERATED_V2_AUTHOR': 'LOCAL fixture'}), contextlib.redirect_stdout(io.StringIO()) as output:
+            with patch('pipeline.v2.run.Config.environment', return_value=cfg), patch('pipeline.v2.run.BatchAPI', return_value=api), patch.dict(os.environ, {'REAL_OR_SLOP_ADMIN_TOKEN': token, 'GENERATED_V2_LICENSE_URL': 'https://creativecommons.org/licenses/by/4.0/', 'GENERATED_V2_AUTHOR': 'LOCAL fixture'}), contextlib.redirect_stdout(io.StringIO()) as output:
                 assert main([str(manifest), '--start', '--execute', '--run-id', uid, '--base', base, '--out', str(root / 'restart')]) == 0, output.getvalue()
             assert not api.batches
+            assert call('runs/' + uid)['state']['license']['url'] == 'https://creativecommons.org/publicdomain/zero/1.0/'
     # Both independent origins share the cumulative ledger, including races.
     assert sql('SELECT round(sum(reserved_usd),6) AS total FROM editorial_usage')[0]['total'] == .48
     race = 'v2-race-' + uuid.uuid4().hex

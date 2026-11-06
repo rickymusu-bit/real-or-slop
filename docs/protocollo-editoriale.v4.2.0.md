@@ -56,3 +56,13 @@ visivo resta indipendente e la revisione del risultato rimane necessaria.
 Nessuna nuova chiamata API serve per scegliere il profilo: è una variazione
 del prompt della normale generazione. Le immagini del pilota precedente
 non sono rigenerate da questa modifica.
+
+
+## Didascalie contestuali — correzione del 2026-11-06
+
+Vale la sezione 9 della issue #53: coordinate contestuali essenziali, una frase
+60–100 caratteri come obiettivo e massimo 120; non una descrizione alt e non
+un template fisso luogo/anno. La policy di stile 1.1.0 è condivisa con l’editor
+privato; le 48 fixture di stile 1.1.0 mantengono testi comparabili tra origini
+senza affermare verifiche su immagini reali. I fatti REAL specifici restano
+collegati alle evidenze, il contesto SLOP è narrativo e indipendente.

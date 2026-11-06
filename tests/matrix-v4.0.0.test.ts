@@ -70,6 +70,13 @@ test("caption validation keeps final neutral text separate from fictional and do
  const report=captionDiagnostics(rows);assert.equal(report.n,24);assert.equal(report.caption_only_accuracy,.5);assert.equal(report.by_origin[0].mean_length,report.by_origin[1].mean_length);
  const leaking=rows.map(r=>({...r,text:r.origin==="AI"?"Interno a Palermo nel 2020.":"Una stanza con sedie."}));assert.ok(captionDiagnostics(leaking).caption_only_accuracy!>.9);
 });
+test("context-caption style fixtures keep origins comparable without asserting verified images",()=>{
+ const fixture=JSON.parse(readFileSync(new URL("../data/editorial/caption-fixtures.v1.1.0.json",import.meta.url),"utf8"));
+ const rows=fixture.captions as {origin:"REAL"|"AI";emotion:string;case_group:string;text:string;geographic:boolean;temporal:boolean;caption:unknown;owner_reviewed:boolean;image_binding:unknown}[];
+ assert.equal(rows.length,48);
+ for(const row of rows){validateCaption(row.caption,row.origin);assert.equal(row.owner_reviewed,false);assert.equal(row.image_binding,null);assert.equal(row.text,rows.find(r=>r.case_group===row.case_group&&r.origin!==row.origin)?.text);}
+ const report=captionDiagnostics(rows);assert.equal(report.caption_only_accuracy,.5);assert.equal(report.by_origin[0].mean_length,report.by_origin[1].mean_length);
+});
 
 test("repeated empty acquisition lowers availability without inventing human refusals",()=>{
  const attempts:MatrixEvent[]=Array.from({length:30},(_,i)=>({...proposal("empty-"+i),id:"a-empty-"+i,kind:"attempt",candidate_id:null,image_sha256:null,data:{source_hits:0,documentary_eligible:0,duplicates:0,cost:0}}));
