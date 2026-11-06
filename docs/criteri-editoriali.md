@@ -53,6 +53,13 @@ insieme. Si forniscono inoltre immagini di confronto già unite e un PDF.
 Le immagini originali non vengono modificate per costruire questi confronti.
 Le cartelle REAL/ e SLOP/ rimangono separate nello ZIP per consultazione.
 
+Le preview vanno caricate nella cartella Google Drive dedicata
+[Real or Slop — test e benchmark protocollo editoriale](https://drive.google.com/drive/folders/1YC4kXqceWn0oDeZm_8MO9MPvtu96A3_o).
+La consegna include i link Drive al PDF e allo ZIP della galleria: i soli link
+ai file del workspace non sono una consegna sufficiente. Conservare i file
+precedenti e i permessi della cartella; verificare il caricamento con lettura
+dei metadati prima di comunicare i nuovi link.
+
 Ogni immagine conserva una decisione propria: approva, rifiuta o da rivedere,
 con nota facoltativa. Il rifiuto di una variante non comporta il rifiuto dell'altra.
 Le scelte editoriali non pubblicano immagini e non certificano diritti o origine.
