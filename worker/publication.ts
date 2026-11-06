@@ -1,4 +1,5 @@
 import type { Env } from "./core";
+import { slopLicense } from "../shared/slop-license";
 export async function publishedDiagnostics(env: Env) {
   const totals = (await env.DB.prepare("SELECT i.demo,i.type,count(*) AS count FROM images i JOIN published_images p ON p.image_id=i.id GROUP BY i.demo,i.type").all()).results;
   const waiting = (await env.DB.prepare("SELECT i.type,count(*) AS count FROM images i WHERE i.status='approved' AND NOT EXISTS(SELECT 1 FROM published_images p WHERE p.image_id=i.id) GROUP BY i.type").all()).results;
@@ -19,5 +20,6 @@ export async function publishedDiagnostics(env: Env) {
     avg(json_extract(evaluation,'$.scores.readability')) AS readability,
     avg(json_extract(evaluation,'$.scores.concrete_motive')) AS concrete_motive
     FROM evaluated GROUP BY demo,type`).all()).results;
-  return { totals, waiting, distributions, categories, surprise, scores, note: "Diagnostica privata descrittiva; i dati mancanti restano non classificati. Non modifica le monete indipendenti del gioco." };
+  const blockedSlop = await env.DB.prepare("SELECT count(*) AS count FROM images i LEFT JOIN licenses l ON l.id=i.license_id WHERE i.type='AI' AND i.status='approved' AND NOT EXISTS(SELECT 1 FROM published_images p WHERE p.image_id=i.id) AND (l.url IS NULL OR l.url!=? OR length(trim(COALESCE(i.author,'')))=0)").bind(slopLicense.url).first<{count:number}>();
+  return { totals, waiting, distributions, categories, surprise, scores, slop_license_policy: {...slopLicense, blocked_waiting:blockedSlop?.count||0}, note: "Diagnostica privata descrittiva; i dati mancanti restano non classificati. Non modifica le monete indipendenti del gioco." };
 }

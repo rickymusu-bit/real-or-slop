@@ -13,6 +13,7 @@ from ..editorial import image_result, vision_result, now
 from ..importer import local_file
 from ..run import optimize
 from .protocol import VERSION, PROFILE_INSTRUCTIONS, visual_profile, generation_plan, provenance, identifier, require, evidence
+from .licensing import slop_license
 
 
 @dataclass(frozen=True)
@@ -93,6 +94,8 @@ def initialize(origin, inputs, root, folder, cfg, uid, simulated=False, license_
     attempts = []
     if origin == 'AI':
         generation_plan(inputs)
+        if not simulated or license_info is None:
+            license_info = slop_license(license_info)
         require(license_info and license_info.get('author') and 'url' in license_info, 'Autore e stato dei diritti SLOP richiesti')
         for idea in inputs['ideas']:
             attempts.append(dict(id=idea['id'], origin='AI', idea=idea, status='planned'))

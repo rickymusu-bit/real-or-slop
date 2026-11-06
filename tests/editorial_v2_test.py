@@ -15,11 +15,23 @@ from pipeline.v2.engine import Config, Engine, initialize, media
 from pipeline.v2.fixtures import FixtureBatch, study_inputs, profile, picture
 from pipeline.v2.benchmark import report, fixture_study, trial_metrics
 from pipeline.v2.run import main
+from pipeline.v2.licensing import slop_license
 
 CONTRACT = json.loads(Path('tests/editorial-v2-contract.json').read_text())
 
 
 class ProtocolV2Test(unittest.TestCase):
+    def test_new_live_slop_defaults_to_attributed_cc_by_without_making_api_calls(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            cfg=Config(image_model='fixture',evaluator_model='fixture',run_usd=1,daily_usd=1,evaluation_usd=.01,generation_usd=.1)
+            state=initialize('AI',CONTRACT['plan'],root,root/'run',cfg,'license-only-test',simulated=False)
+            self.assertEqual(state['license'],dict(url='https://creativecommons.org/licenses/by/4.0/',author='Real or Slop'))
+            self.assertEqual(state['jobs'],[])
+            self.assertEqual(state['reserved_usd'],0)
+        self.assertEqual(slop_license({'author':'A named contributor'})['author'],'A named contributor')
+        with self.assertRaises(PipelineStop):slop_license({'url':'https://creativecommons.org/publicdomain/zero/1.0/'})
+
     def test_synchronous_generation_has_a_real_request_trace_without_batch_identifiers(self):
         proof = CONTRACT['synchronous_provenance']
         self.assertEqual(provenance(proof, 'AI')['transport'], 'synchronous')

@@ -7,6 +7,7 @@ import { httpsUrl, importText } from "./import";
 import { recognizedLicense } from "../shared/licenses";
 import { publishedDiagnostics } from "./publication";
 import { editorialV2 } from "./editorial-v2";
+import { slopLicense } from "../shared/slop-license";
 
 function hex(data: Record<string, unknown>, key: string, length: number) {
   const value = importText(data, key, length);
@@ -152,12 +153,13 @@ export async function editorial(request: Request, env: Env, path: string): Promi
     // validates the full resulting catalog and inserts all members atomically.
     const result = await env.DB.prepare(`WITH waiting AS (
       SELECT i.id,i.type,i.demo,row_number() OVER(PARTITION BY i.demo,i.type ORDER BY i.created_at,i.id) AS n
-      FROM images i WHERE i.status='approved' AND i.sha256!='pending' AND NOT EXISTS(SELECT 1 FROM published_images p WHERE p.image_id=i.id)
+      FROM images i LEFT JOIN licenses l ON l.id=i.license_id WHERE i.status='approved' AND i.sha256!='pending' AND NOT EXISTS(SELECT 1 FROM published_images p WHERE p.image_id=i.id)
+      AND (i.type!='AI' OR (l.url=? AND length(trim(i.author))>0))
       AND (i.demo=1 OR EXISTS(SELECT 1 FROM review_events e WHERE e.image_id=i.id AND e.decision='approved'))
       AND (NOT EXISTS(SELECT 1 FROM editorial_game_bindings b WHERE b.image_id=i.id) OR EXISTS(SELECT 1 FROM editorial_v4_publication_ready v WHERE v.image_id=i.id))
     ), capacities AS (SELECT demo,min(r,a) AS cap FROM (SELECT demo,sum(type='REAL') AS r,sum(type='AI') AS a FROM waiting GROUP BY demo))
     INSERT INTO publication_batches SELECT ?,json_group_array(w.id),?,? FROM waiting w JOIN capacities c ON c.demo=w.demo WHERE w.n<=c.cap HAVING count(*)>0`)
-      .bind(uid, (await hash(env.ADMIN_TOKEN!)).slice(0,12), now).run();
+      .bind(slopLicense.url, uid, (await hash(env.ADMIN_TOKEN!)).slice(0,12), now).run();
     return json({ published: result.meta.changes > 0, batch_id: result.meta.changes ? uid : null, diagnostics: await publishedDiagnostics(env) });
   }
   throw new HttpError(404, "API editoriale inesistente");

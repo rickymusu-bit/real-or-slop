@@ -16,7 +16,8 @@ npm run benchmark:matrix
 
 La matrice è in `/admin/variety`, protetta dallo stesso accesso della coda.
 Le 288 bozze nuove e i 48 esempi di didascalia richiedono la revisione del
-proprietario. Le vecchie immagini e approvazioni restano conservate.
+proprietario. Le SLOP si pubblicano con CC BY 4.0 e attribuzione; le REAL
+conservano le licenze delle fonti. Le vecchie immagini e approvazioni restano conservate.
 
 ## Flusso precedente, conservato fino al rollout autorizzato
 

@@ -57,6 +57,21 @@ Ogni immagine conserva una decisione propria: approva, rifiuta o da rivedere,
 con nota facoltativa. Il rifiuto di una variante non comporta il rifiuto dell'altra.
 Le scelte editoriali non pubblicano immagini e non certificano diritti o origine.
 
+## Licenza delle SLOP
+
+Per scelta del proprietario del 2026-11-06, le SLOP si pubblicano con
+**CC BY 4.0**, con attribuzione predefinita **Real or Slop**, link alla
+[licenza](https://creativecommons.org/licenses/by/4.0/) e indicazione delle
+eventuali modifiche. È consentito il riuso anche commerciale e con adattamenti.
+Un credito specifico può sostituire quello predefinito, ma non essere vuoto.
+Le nuove generazioni registrano questa scelta prima degli invii. La pubblicazione
+server esclude SLOP con licenza diversa o attribuzione mancante; le segnala nella
+diagnostica privata. Le licenze delle REAL restano quelle delle fonti.
+
+La decisione sulla licenza non approva o pubblica immagini e non riscrive
+le ricevute storiche. I crediti del gioco mostrano autore e link alla licenza
+dopo la risposta, senza introdurre indizi prima della scelta.
+
 ## Conservazione e ammissione individuale
 
 Tutte le immagini già trovate o generate, compresi scarti e varianti, restano

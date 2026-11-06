@@ -1,5 +1,6 @@
 ## 0.17.1 — 2026-11-06 (PR, rollout non attivato)
 
+- SLOP nuove con CC BY 4.0 e attribuzione Real or Slop; pubblicazione server vincolata a licenza e credito, con diagnostica delle candidate bloccate. REAL e ricevute storiche conservate.
 - Criteri v4.1.0: contesto anche nella didascalia; opere a pieno fotogramma ammesse, senza obbligo di cornice o ambiente esterno.
 - Nuove esecuzioni dirette a fotogramma intero, proporzioni conservate e nessuna chiamata di ritaglio; prompt SLOP liberi e parametro API `size: auto`.
 - Catalogo 4.1.0 alla revisione 2; freeze e checkpoint legacy conservati, formati e presentazione verificati al resume. Profili e approvazioni restano legati ai pixel effettivi.

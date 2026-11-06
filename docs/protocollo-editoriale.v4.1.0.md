@@ -30,7 +30,8 @@ più piccole. Registra dimensioni effettive, intero fotogramma, area conservata
 100%, operazioni e hash. Il profilo si calcola sui pixel di questa variante.
 
 Il prompt inglese chiede al generatore di scegliere proporzioni adatte al
-soggetto. La richiesta Images usa `size: auto`, con modello e qualità congelati
+soggetto. La [documentazione GPT Image](https://developers.openai.com/api/docs/guides/image-generation)
+specifica che con `auto` il modello sceglie in base al prompt. La richiesta Images usa `size: auto`, con modello e qualità congelati
 prima della ricerca. Nei dossier `parameters.size` descrive la richiesta
 (`auto`); `width` e `height` registrano le dimensioni dei pixel restituiti e
 presentati. Le SLOP non ricevono il formato, i pixel o i metadati della REAL.
@@ -61,3 +62,15 @@ avevano: non sono rigenerate per applicare retroattivamente `auto`.
 
 Questa modifica non avvia acquisizioni, chiamate pagate, deploy, migrazioni
 remote o pubblicazioni.
+
+
+## Licenza delle SLOP (scelta del 2026-11-06)
+
+La policy condivisa `shared/slop-license.v1.0.0.json` fissa CC BY 4.0 con
+attribuzione predefinita Real or Slop. Nuove esecuzioni live SLOP della pipeline
+registrano questi dati prima degli invii; configurazioni di licenza diverse
+sono rifiutate. Fixture e checkpoint storici restano leggibili. La pubblicazione
+server ammette SLOP solo con CC BY 4.0 canonica e attribuzione non vuota. Le
+candidate non conformi restano private, con conteggio esplicito nella diagnostica.
+Le REAL conservano la propria licenza. La scelta della licenza non autorizza
+approvazioni, nuove API o pubblicazioni automatiche.

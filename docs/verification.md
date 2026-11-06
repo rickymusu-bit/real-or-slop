@@ -670,3 +670,23 @@ prima dell’attivazione. Il PvP pubblico resta sospeso.
 - Riesportate le dieci immagini del pilota dagli originali, area conservata 100%, senza altre API o spesa. Le cinque REAL hanno hash nuovi; profili dei vecchi ritagli e giudizi non sono trasferiti. Il quadro ha una didascalia documentata con autore e anno.
 - Chromium a 390/1440 px verifica proporzioni effettive, `object-fit: contain`, immagini, zoom, filtri, note, persistenza, export e giudizi indipendenti. Scelte sintetiche rimosse. PDF di cinque pagine e ZIP verificato contro gli hash delle immagini.
 - Nuova coorte privata: `ecc40ff42b42ad6b6ef9887a3a5ff04d1193efe8e84e7b4880d7ed36ceeda984`. Artifact in `artifacts/pilot-v4-2026-11-05-whole-frame/`; nessuna pubblicazione, migrazione remota o deploy.
+
+
+## 2026-11-06 — SLOP con attribuzione e CC BY 4.0
+
+Policy condivisa tra pipeline e Worker, attribuzione predefinita Real or Slop.
+Le nuove inizializzazioni live registrano CC BY 4.0 prima degli invii e rifiutano
+altre licenze esplicite; i checkpoint e le fixture storiche restano leggibili.
+La selezione atomica di pubblicazione esclude SLOP con licenza diversa o credito
+vuoto, contando le candidate bloccate nella diagnostica privata. Le REAL non
+cambiano licenza. I crediti del gioco già espongono autore e link dopo la risposta.
+
+Build, lint, suite Node e 179 test Python più sei test versionati passati. Il
+percorso HTTP locale verifica anche le pubblicazioni concorrenti: nessuna nuova
+SLOP pubblicata con licenza diversa da CC BY 4.0, mentre le non conformi rimangono
+private. Il bilanciamento globale REAL/SLOP rimane invariato.
+
+Le cinque SLOP del pilota hanno una dichiarazione di licenza separata dalle
+ricevute originali, nei nuovi dossier privati; i crediti sono anche nel PDF e
+nella galleria. Pixel e coorte non cambiano, nessun giudizio è stato aggiunto.
+ZIP verificato contro gli hash; nessuna nuova generazione, spesa o pubblicazione.
