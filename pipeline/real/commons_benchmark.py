@@ -31,10 +31,13 @@ def public_report(report):
     return output
 
 
-def run(workload, folder):
+def run(workload, folder, retriever=None):
     require(workload['version'] in (VERSION, '1.1.0') and workload['max_pages'] == 1 and
             1 <= workload['page_size'] <= 20 and 1 <= len(workload['cells']) <= 48, 'Piano benchmark non valido')
     suffix = workload.get('common_query_suffix', '')
+    simulated = workload.get('simulated', False)
+    require(type(simulated) is bool, 'Modalità benchmark non valida')
+    retriever = retrieve if retriever is None else retriever
     require(suffix in ('', 'filetype:bitmap'), 'Filtro Commons non verificato')
     for cell in workload['cells']:
         validate('intent', dict(version=VERSION, taxonomy_version=VERSION,
@@ -48,6 +51,7 @@ def run(workload, folder):
         study.save('preregistered.v1.0.0.json', workload, immutable=True)
         rng = random.Random(workload['seed'])
         pairs, ordering, identities = [], [], dict(general=set(), adapted=set())
+        counted_receipts = dict(general=set(), adapted=set())
         for cell_index, cell in enumerate(workload['cells']):
             intent = validate('intent', dict(version=VERSION, taxonomy_version=VERSION,
                 **{key: cell[key] for key in ('topic', 'emotion', 'intensity')}))
@@ -55,7 +59,7 @@ def run(workload, folder):
             stores = {}
             for arm in ('general', 'adapted'):
                 stores[arm] = Store(study.folder/f'cell-{cell_index}'/arm)
-                stores[arm].freeze(intent, selection_seed=workload['seed'])
+                stores[arm].freeze(intent, selection_seed=workload['seed'], simulated=simulated)
             for query_index, query in enumerate(cell['queries']):
                 order = ['general', 'adapted']
                 rng.shuffle(order)
@@ -65,7 +69,7 @@ def run(workload, folder):
                     compiled = query[arm]+(' '+suffix if suffix else '')
                     adapted = validate('adaptation', dict(variants=[dict(mode='text', query=compiled, category=None, language='en')]))
                     with stores[arm].lock():
-                        result = retrieve(stores[arm], 'commons', adapted, UA, max_calls=len(cell['queries']),
+                        result = retriever(stores[arm], 'commons', adapted, UA, max_calls=len(cell['queries']),
                                           page_size=workload['page_size'], max_pages=1)
                     require(result['status'] in ('completed', 'zero_hits'),
                             'Commons non pronto: benchmark fermato, ricevuta conservata; nessun retry implicito')
@@ -74,11 +78,16 @@ def run(workload, folder):
                         identities[arm].add(row['source_id'])
                     metadata_licenses = sum(recognized_license(row['rights']) is not None for row in rows)
                     media_skipped = sum(log.get('unsupported_media', 0) for log in result['variant_logs'])
-                    arms[arm] = dict(query=query[arm], compiled_query=compiled, status=result['status'], api_calls=result['api_calls'],
+                    receipt_key = digest(result['identity'])
+                    cached = receipt_key in counted_receipts[arm]
+                    counted_receipts[arm].add(receipt_key)
+                    arms[arm] = dict(query=query[arm], compiled_query=compiled, status=result['status'], api_calls=0 if cached else result['api_calls'],
                         returned=len(rows), recognized_license_metadata=metadata_licenses,
                         unsupported_media=media_skipped, elapsed_seconds=result['elapsed_seconds'],
                         source_ids=[row['source_id'] for row in rows],
                         source_pages=[row['source_url'] for row in rows])
+                    if cached:
+                        arms[arm]['query_cache_reused'] = True
                     print(json.dumps(dict(cell=cell_index, pair=query_index, arm=arm, status=result['status'], returned=len(rows))), flush=True)
                 pairs.append(dict(cell=cell_index, pair=query_index, intent=intent, **arms))
         summary = {}
@@ -101,6 +110,11 @@ def run(workload, folder):
                 'Recognized license metadata is not verified rights or photographic authenticity.',
                 'No visual or human judgment; approved editorial yield remains unknown.',
                 'This control tests text queries; GPT effectiveness requires model-authored query receipts.'])
+        if simulated:
+            report['simulated'] = True
+        if workload.get('query_source') == 'two_stage_model_receipts':
+            report['model_trace_required'] = True
+            report['limitations'][-1] = 'Model-generated text-query comparison; editorial effectiveness still requires verified images and human judgments.'
         return study.save('report.v1.0.0.json', report, immutable=True)
 
 

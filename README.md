@@ -1,7 +1,7 @@
 # Real or Slop
 
 [Istruzioni Codex](AGENTS.md) · [Mappa canonica e contratti correnti](MASTER.md) ·
-[Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.2.0.md).
+[Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.3.0.md).
 L'[audit #57](docs/audit-architettura.v1.0.0.md) distingue main dalle PR in bozza;
 il [piano di integrazione](docs/piano-integrazione-editoriale.v1.0.0.md) prepara
 la #56 senza adottare anticipatamente la v4.
@@ -14,6 +14,12 @@ query HTTP validate, dossier separati dai profili ciechi e review individuale.
 un run senza rete. Il nuovo percorso richiede gate espliciti per qualsiasi
 inferenza pagata e non pubblica immagini. Pipeline storiche e dati sono conservati;
 le diagnostiche delle issue #44–#50 non sono prerequisiti della discovery.
+
+[Ciclo riprendibile e pilota A/B](docs/ciclo-discovery-real.v1.0.0.md):
+`npm run discovery:cycle -- start` coordina le fasi e segnala le attese documentali
+e umane; `npm run benchmark:pilot -- --fixture` verifica il pilota senza spesa.
+Galleria privata con decisioni per SHA, feedback dello scheduler e revisioni
+additive dei dossier; nessuna approvazione o pubblicazione implicita.
 
 [Controllo reale Commons](docs/benchmark-commons.v1.0.0.md): otto coppie di query
 manuali, stesso filtro bitmap e budget HTTP; `npm run benchmark:commons` prepara

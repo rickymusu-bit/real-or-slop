@@ -1,8 +1,8 @@
-# Istruzioni Codex — versione canonica 2.0.0
+# Istruzioni Codex — versione canonica 2.1.0
 
-Snapshot: `docs/AGENTS.v2.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-06T16:00:00Z. La 1.0.0 resta conservata. Questa revisione
-aggiunge il percorso REAL #56, senza attivare produzione o cambiare il gioco.
+Snapshot: `docs/AGENTS.v2.1.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-06T18:27:19Z. La 1.0.0 resta conservata. Questa revisione
+aggiunge il ciclo riprendibile REAL #56, senza attivare produzione o cambiare il gioco.
 
 ## Prima di modificare
 
@@ -43,6 +43,10 @@ aggiunge il percorso REAL #56, senza attivare produzione o cambiare il gioco.
   Per nuovi run usare i contratti `shared/real-discovery*.v1.0.0.json`;
   non convertire checkpoint/eventi v2/v3/v4. Modelli pagati richiedono i gate
   client/server e il ledger esistente; nessun reinvio su ricevuta incerta.
+- Il ciclo `pipeline.real.workflow` segue anche `docs/ciclo-discovery-real.v1.0.0.md`:
+  dossier e profili hanno revisioni distinte; conservare i byte di ogni revisione.
+  Il pilota `pipeline.real.pilot` verifica le query contro ricevute A/B e distingue
+  fixture, controllo manuale e misure reali. Feedback HTTP non sono voti umani.
 - Per nuovi cicli, congelare il prompt SLOP originale prima di osservare REAL.
   Mai passare al generatore pixel, titoli, metadati, descrizioni o risultati REAL.
   Il codice legacy che deriva prompt da fotografie non è un modello da riusare.

@@ -37,7 +37,18 @@ def documentary(record):
     return reasons
 
 
-def prepare(store, records, root):
+def document_path(revision=1):
+    require(type(revision) is int and 1 <= revision <= 10000, 'Revisione documentale non valida')
+    return 'documented.v1.0.0.json' if revision == 1 else f'documented.r{revision}.v1.0.0.json'
+
+
+def profile_path(revision=1, document_revision=1):
+    document_path(document_revision)
+    require(type(revision) is int and 1 <= revision <= 10000, 'Revisione visiva non valida')
+    return f'profiled.r{revision}.v1.0.0.json' if document_revision == 1 else f'profiled.d{document_revision}.r{revision}.v1.0.0.json'
+
+
+def prepare(store, records, root, revision=1):
     """Only source-bound, documented pixels may reach the visual model."""
     store.frozen()
     require(isinstance(records, list) and 1 <= len(records) <= 200, 'Manifest documentale da 1 a 200 candidate')
@@ -45,26 +56,43 @@ def prepare(store, records, root):
     for path in (store.folder/'retrieval').glob('*.json'):
         result = store.read(str(path.relative_to(store.folder)))
         hits.update((r['provider'], r['source_id'], r['source_url']) for r in result['candidates'])
-    result, ids, hashes = [], set(), {}
+    path = document_path(revision)
+    existing = store.read(path)
+    checked = []
     for record in records:
         blockers = documentary(record)
         proof = record['provenance']
         require((proof['provider'], proof['source_id'], proof['source_url']) in hits, 'Dossier non collegato a un risultato del run')
-        require(record['id'] not in ids, 'ID candidata duplicato')
-        ids.add(record['id'])
-        # Never fetch arbitrary URLs from a search response. Acquisition is explicit.
         raw = local_file(record['file'], root).read_bytes()
         checksum = hashlib.sha256(raw).hexdigest()
         require(checksum == record['sha256'], 'Originale modificato prima della verifica')
+        checked.append((record, blockers, raw, checksum))
+    require(len({record['id'] for record in records}) == len(records), 'ID candidata duplicato')
+    if existing is not None:
+        old = {row['id']: row for row in existing}
+        require(set(old) == {row['id'] for row in records}, 'Dossier diverso: nuova revisione documentale richiesta')
+        for record, _, _, checksum in checked:
+            prior = old[record['id']]
+            require(prior['original_sha256'] == checksum and all(prior[key] == record[key] for key in ('provenance', 'attestation', 'features')),
+                    'Dossier immutabile diverso: nuova revisione documentale richiesta')
+            verify_media(store, prior)
+        return existing
+    if revision > 1:
+        require(store.read(document_path(revision-1)) is not None, 'Revisione documentale precedente mancante')
+    result, ids, hashes = [], set(), {}
+    for record, blockers, raw, checksum in checked:
+        proof = record['provenance']
+        ids.add(record['id'])
+        media_id = f"{record['id']}-d{revision}-{checksum[:12]}"
         row = dict(id=record['id'], provenance=proof, attestation=record['attestation'], features=record['features'],
-                   blockers=blockers, review_state='pending', **media(raw, store.folder, 'inputs', record['id']))
+                   blockers=blockers, review_state='pending', **media(raw, store.folder, 'inputs', media_id))
         if checksum in hashes:
             row['duplicate_of'] = hashes[checksum]
         else:
             hashes[checksum] = row['id']
         result.append(row)
     near_duplicates(result)  # Validate any cached feature before paid profiling.
-    return store.save('documented.v1.0.0.json', result, immutable=True)
+    return store.save(path, result, immutable=True)
 
 
 def verify_media(store, row):
@@ -89,8 +117,8 @@ def near_duplicates(records):
     return json.loads(result.stdout)
 
 
-def profile(store, model, revision=1):
-    rows = store.read('documented.v1.0.0.json')
+def profile(store, model, revision=1, document_revision=1):
+    rows = store.read(document_path(document_revision))
     require(rows is not None, 'Verifica documentale necessaria prima dei pixel')
     output = []
     for row in rows:
@@ -104,7 +132,7 @@ def profile(store, model, revision=1):
         body = vision_payload(model.model, VISUAL_INSTRUCTIONS, image)['input']
         visual = model.invoke('visual', body, revision)
         output.append({**row, 'visual': visual, 'profile_image_sha256': row['sha256']})
-    return store.save(f'profiled.r{revision}.v1.0.0.json', output, immutable=True)
+    return store.save(profile_path(revision, document_revision), output, immutable=True)
 
 
 def shortlist(records, maximum=5):

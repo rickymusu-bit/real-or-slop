@@ -24,6 +24,8 @@
     "benchmark:editorial-v2": "python3 -m pipeline.v2.benchmark --fixture-study 120",
     "scan:similarity": "node --import tsx scripts/scan-similarity.mjs",
     "discovery:real": "python3 -m pipeline.real.run",
+    "discovery:cycle": "python3 -m pipeline.real.workflow",
+    "benchmark:pilot": "python3 -m pipeline.real.pilot",
     "benchmark:real": "python3 -m pipeline.real.run fixture",
     "benchmark:commons": "python3 -m pipeline.real.commons_benchmark",
     "check:openverse": "python3 -m pipeline.real.openverse_check"

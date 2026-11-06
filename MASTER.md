@@ -1,7 +1,7 @@
-# Mappa canonica — versione 2.0.1
+# Mappa canonica — versione 2.1.0
 
-Snapshot: `docs/MASTER.v2.0.1.md`. Percorsi relativi alla radice del repository.
-Verificato: 2026-11-06T17:00:00Z, main `67ecf494ba8fe86d551525e1db330d1f31764975`.
+Snapshot: `docs/MASTER.v2.1.0.md`. Percorsi relativi alla radice del repository.
+Verificato: 2026-11-06T18:27:19Z, main `67ecf494ba8fe86d551525e1db330d1f31764975`.
 La PR #58 (`77f6cb8`) contiene l'audit. Il branch #56 aggiunge la nuova discovery;
 entrambi sono da revisionare e non integrati in main. Ricontrollare le ref.
 Non attesta lo stato del database remoto o dei gate in produzione.
@@ -16,6 +16,7 @@ secondo AGENTS; non scegliere semplicemente il numero di versione più alto.
 | --- | --- | --- |
 | Metodo editoriale | `docs/protocollo-editoriale.md`, versione interna 3.0.0 | Brief condivisi congelati, SLOP solo testo, revisione individuale, API dirette |
 | Nuova discovery REAL #56 | `docs/ricerca-real.v1.0.0.md`, `pipeline/real/`; `shared/real-discovery*.v1.0.0.json` | Nuovo percorso esplicito in questa PR: 432 intenzioni nominali, A/B GPT, HTTP validato; nessun match obbligatorio a brief o quote di copertura |
+| Ciclo e pilota REAL | `docs/ciclo-discovery-real.v1.0.0.md`, `pipeline/real/workflow.py`, `pilot.py` | Ripresa, feedback, galleria privata, dossier revisionati ed export approvate; pilota reale ancora da eseguire |
 | Ledger nuovo percorso | `worker/real-discovery.ts`, tabella esistente `editorial_usage` | Endpoint autenticato di sola prenotazione; gate chiuso per default, nessun nuovo schema o publish |
 | Criteri del proprietario | `docs/criteri-editoriali.md`; `pipeline/v2/editorial_policy.py` | In main: contesto visibile, opere ambientate; nessuna adozione anticipata di v4 |
 | Brief e freeze | `pipeline/v2/brief_catalog.py`, `pipeline/v2/briefs.py`; `data/editorial/briefs.v1.json` | Seed italiano draft; selezione 5 brief/10 immagini, massimo 25/50 |
@@ -62,7 +63,7 @@ solo perché sono più recenti. Piano di integrazione e decisioni aperte:
 
 - `docs/audit-architettura.v1.0.0.md`: ref osservate, file → responsabilità →
   interfacce → test, conflitti e rischi verificati.
-- `docs/indice-documentazione.v1.2.0.md`: catalogo vigente/proposta/storica/archivio,
+- `docs/indice-documentazione.v1.3.0.md`: catalogo vigente/proposta/storica/archivio,
   sostituzioni per ambito; gli originali restano intatti.
 - `docs/piano-integrazione-editoriale.v1.0.0.md`: ordine #51/#52/#55/#56,
   contratti candidati, test mancanti e suddivisione delle PR.
@@ -72,9 +73,11 @@ solo perché sono più recenti. Piano di integrazione e decisioni aperte:
   nessuna efficacia reale misurata; resoconto in `docs/verifica-ricerca-real.v1.0.0.md`.
 - `docs/benchmark-commons.v1.0.0.md`: controllo manuale di retrieval reale, piani
   e rapporti 1.0.0/1.1.0 conservati; non è un risultato GPT o un'approvazione.
+- `docs/ciclo-discovery-real.v1.0.0.md`: comandi, attese e dismissione; prove in
+  `docs/verifica-ciclo-real.v1.0.0.md`.
 - `docs/openverse-accesso.v1.0.0.md`: challenge verificata e bozza di segnalazione;
   il proprietario ha scelto di non pubblicarla.
 
-App in main: `package.json` 0.15.0. Metodo v3, dati v2 e istruzioni 2.0.0 sono
+App in main: `package.json` 0.15.0. Metodo v3, dati v2 e istruzioni 2.1.0 sono
 versioni diverse. Per adottare una modifica strutturale aggiungere una decisione
 esplicita, aggiornare questa mappa e AGENTS con nuovi snapshot; preservare i vecchi.

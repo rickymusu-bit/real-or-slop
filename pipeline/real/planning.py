@@ -64,6 +64,7 @@ class Model:
         identity = dict(freeze_sha256=digest(frozen), revision=revision, stage=stage, payload=payload)
         fingerprint = digest(identity)
         path = 'requests/'+fingerprint+'.json'
+        self.last_receipt = path
         saved = self.store.read(path)
         if saved:
             if saved['status'] == 'completed':
@@ -99,10 +100,17 @@ class Model:
         require(len(value['strategies']) == count, 'Numero strategie diverso dalla richiesta')
         return value
 
-    def adapt(self, strategy, profile, revision=1):
+    def adapt(self, strategy, profile, revision=1, modes=None):
         validate('strategies', dict(strategies=[strategy]))
         validate('provider_profile', profile)
+        modes = profile['modes'] if modes is None else list(modes)
+        require(modes and set(modes) <= set(profile['modes']), 'Modalità richieste non supportate')
+        context = dict(strategy=strategy, provider_profile=profile)
+        instructions = ADAPT_INSTRUCTIONS
+        if modes != profile['modes']:
+            context['required_modes'] = modes
+            instructions += '\nUse exclusively the modes listed in required_modes.'
         value = self.invoke('adaptation', [dict(role='user', content=[dict(type='input_text', text=
-            ADAPT_INSTRUCTIONS+'\n'+json.dumps(dict(strategy=strategy, provider_profile=profile)))])], revision)
-        require(all(row['mode'] in profile['modes'] for row in value['variants']), 'Modalità provider non supportata')
+            instructions+'\n'+json.dumps(context))])], revision)
+        require(all(row['mode'] in modes for row in value['variants']), 'Modalità provider non supportata')
         return value
