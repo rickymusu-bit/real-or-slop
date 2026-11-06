@@ -1,7 +1,7 @@
-# Mappa canonica — versione 2.1.1
+# Mappa canonica — versione 2.1.2
 
-Snapshot: `docs/MASTER.v2.1.1.md`. Percorsi relativi alla radice del repository.
-Verificato: 2026-11-06T18:49:50Z, main `67ecf494ba8fe86d551525e1db330d1f31764975`.
+Snapshot: `docs/MASTER.v2.1.2.md`. Percorsi relativi alla radice del repository.
+Verificato: 2026-11-06T18:51:20.887633Z, main `67ecf494ba8fe86d551525e1db330d1f31764975`.
 La PR #58 (`77f6cb8`) contiene l'audit. Il branch #56 aggiunge la nuova discovery;
 entrambi sono da revisionare e non integrati in main. Ricontrollare le ref.
 Non attesta lo stato del database remoto o dei gate in produzione.
@@ -63,7 +63,7 @@ solo perché sono più recenti. Piano di integrazione e decisioni aperte:
 
 - `docs/audit-architettura.v1.0.0.md`: ref osservate, file → responsabilità →
   interfacce → test, conflitti e rischi verificati.
-- `docs/indice-documentazione.v1.3.1.md`: catalogo vigente/proposta/storica/archivio,
+- `docs/indice-documentazione.v1.3.2.md`: catalogo vigente/proposta/storica/archivio,
   sostituzioni per ambito; gli originali restano intatti.
 - `docs/piano-integrazione-editoriale.v1.0.0.md`: ordine #51/#52/#55/#56,
   contratti candidati, test mancanti e suddivisione delle PR.
@@ -77,7 +77,8 @@ solo perché sono più recenti. Piano di integrazione e decisioni aperte:
   `docs/verifica-ciclo-real.v1.0.0.md`.
 - `docs/benchmark-gpt-commons.v1.0.0.md`: pilota GPT live, ricevute e costi;
   review documentale rinviata dal proprietario.
-- `docs/openverse-registrazione.v1.0.0.md`: guida OAuth, email ancora da scegliere.
+- `docs/openverse-registrazione.v1.0.0.md`: guida OAuth; email scelta, registrazione bloccata
+  dalla challenge, esito in `docs/openverse-registrazione-esito.v1.0.0.md`.
 - `docs/openverse-accesso.v1.0.0.md`: challenge verificata e bozza di segnalazione;
   il proprietario ha scelto di non pubblicarla.
 
