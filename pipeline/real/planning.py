@@ -52,6 +52,10 @@ class Model:
         def strict_subset(rule):
             if isinstance(rule, dict):
                 rule.pop('uniqueItems', None)  # Enforced by our deterministic validator.
+                if 'pattern' in rule:
+                    # JSON Schema searches a substring; local validation uses
+                    # fullmatch. Send the same whole-string constraint to GPT.
+                    rule['pattern'] = '^(' + rule['pattern'] + ')$'
                 for value in rule.values():
                     strict_subset(value)
             elif isinstance(rule, list):

@@ -1,7 +1,7 @@
 # Real or Slop
 
 [Istruzioni Codex](AGENTS.md) · [Mappa canonica e contratti correnti](MASTER.md) ·
-[Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.3.0.md).
+[Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.3.1.md).
 L'[audit #57](docs/audit-architettura.v1.0.0.md) distingue main dalle PR in bozza;
 il [piano di integrazione](docs/piano-integrazione-editoriale.v1.0.0.md) prepara
 la #56 senza adottare anticipatamente la v4.
@@ -27,6 +27,11 @@ senza rete, `-- --live` esegue e conserva le ricevute. Non è il benchmark GPT n
 una validazione di immagini approvabili. [Diagnosi Openverse](docs/openverse-accesso.v1.0.0.md):
 `npm run check:openverse -- --live` usa il client ufficiale e le credenziali già
 configurate; nessuna credenziale stampata o aggiramento della challenge.
+
+[Pilota GPT Commons](docs/benchmark-gpt-commons.v1.0.0.md): query generate e
+adattate da GPT-6.1 Terra, 11/19 file distinti a parità di otto ricerche per gruppo;
+origine, licenze e resa editoriale ancora da verificare.
+[Registrare il client Openverse](docs/openverse-registrazione.v1.0.0.md).
 
 Il protocollo editoriale corrente è **v3.0.0: brief condivisi**. Un brief originale,
 congelato prima della ricerca, guida una candidata REAL e una SLOP generata dal

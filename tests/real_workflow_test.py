@@ -70,6 +70,35 @@ class WorkflowTest(unittest.TestCase):
             initialize(self.store, INTENT, model='fixture-gpt', run_id='cycle', providers=['openverse'], simulated=True)
         self.assertEqual(self.api.calls, [])
 
+    def test_wire_schema_requires_complete_slug_and_invalid_response_is_preserved(self):
+        api = FixtureAPI()
+        original = api.request
+        seen = []
+        def request(endpoint, body):
+            seen.append(body)
+            response, request_id = original(endpoint, body)
+            if len(seen) == 1:
+                from pipeline.editorial import vision_result
+                value = vision_result(response)
+                value['strategies'][0]['id'] = '1,2,...44(more)'
+                response['output'][0]['content'][0]['text'] = json.dumps(value)
+            return response, request_id
+        api.request = request
+        model = Model(self.store, 'fixture-gpt', api, fixture=True)
+        with self.assertRaises(PipelineStop):
+            model.strategies(count=2)
+        failed_path = model.last_receipt
+        self.assertEqual(self.store.read(failed_path)['status'], 'invalid')
+        with self.assertRaises(PipelineStop):
+            model.strategies(count=2)
+        self.assertEqual(len(seen), 1)
+        pattern = seen[0]['text']['format']['schema']['properties']['strategies']['items']['properties']['id']['pattern']
+        self.assertIsNone(re.search(pattern, '1,2,...44(more)'))
+        self.assertIsNotNone(re.search(pattern, 'animal_shelter_care'))
+        model.strategies(count=2, revision=2)
+        self.assertEqual(len(seen), 2)
+        self.assertEqual(self.store.read(failed_path)['status'], 'invalid')
+
     def test_complete_cycle_resumes_through_documents_profiles_and_individual_review(self):
         first = self.acquire()
         self.assertEqual(first['stage'], 'awaiting_documents')
@@ -249,6 +278,9 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(result['retrieval']['summary']['general']['api_calls'], 4)
         self.assertEqual(result['retrieval']['summary']['adapted']['api_calls'], 2)
         self.assertIsNone(result['quality'][0]['measurements']['approved'])
+        gallery = render(Store(folder))
+        self.assertEqual(gallery['candidates'], 4)
+        self.assertEqual(gallery['reviewable'], 0)
         changed = copy.deepcopy(workload); changed['cells'][0]['queries'][0]['adapted'] = 'manually edited query'
         with self.assertRaises(PipelineStop):
             verify_workload(changed)

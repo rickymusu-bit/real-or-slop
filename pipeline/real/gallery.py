@@ -39,6 +39,10 @@ def safe_url(value, image=False):
 def retrieved(store):
     found = {}
     for path in sorted(store.folder.rglob('retrieval/*.json')):
+        # A pilot also stores reports/configuration under retrieval/. Only
+        # provider receipts use a SHA filename; those contain candidate lists.
+        if not re.fullmatch(r'[a-f0-9]{64}', path.stem):
+            continue
         source = Store(path.parent.parent)
         result = source.read('retrieval/'+path.name)
         for row in result['candidates']:
