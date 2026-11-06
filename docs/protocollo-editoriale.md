@@ -1,6 +1,6 @@
 # Protocollo editoriale
 
-La nuova specifica di implementazione è [v4.0.0 — matrice e brief condivisi](protocollo-editoriale.v4.0.0.md), richiesta dalla [issue #53](https://github.com/rickymusu-bit/real-or-slop/issues/53).
+La specifica corrente è [v4.1.0 — contesto tramite didascalia e proporzioni libere](protocollo-editoriale.v4.1.0.md), successiva alla [v4.0.0 — matrice e brief condivisi](protocollo-editoriale.v4.0.0.md) della [issue #53](https://github.com/rickymusu-bit/real-or-slop/issues/53).
 
 Il rollout non è attivato: la PR e il benchmark offline non autorizzano spesa, cron, migrazioni remote o pubblicazione. Il flusso precedente [v3.0.0](protocollo-editoriale.v3.0.0.md) resta conservato per audit e per il passaggio controllato. Il catalogo italiano, la revisione inglese v1.1.0, i freeze e le approvazioni storiche non vengono riscritti.
 

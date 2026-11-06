@@ -1,3 +1,10 @@
+## 0.17.1 — 2026-11-06 (PR, rollout non attivato)
+
+- Criteri v4.1.0: contesto anche nella didascalia; opere a pieno fotogramma ammesse, senza obbligo di cornice o ambiente esterno.
+- Nuove esecuzioni dirette a fotogramma intero, proporzioni conservate e nessuna chiamata di ritaglio; prompt SLOP liberi e parametro API `size: auto`.
+- Catalogo 4.1.0 alla revisione 2; freeze e checkpoint legacy conservati, formati e presentazione verificati al resume. Profili e approvazioni restano legati ai pixel effettivi.
+- Riesportazione del pilota dagli originali senza nuove inferenze, con copie e coorte nuove. Nessun deploy o pubblicazione.
+
 ## 0.17.0 — 2026-11-05 (PR, rollout non attivato)
 
 - Pipeline v4: tassonomia emotiva × tematica 12×12, 288 brief inglesi in bozza, freeze hashato e due rami indipendenti su infrastruttura v2. Nessun input REAL entra in SLOP.

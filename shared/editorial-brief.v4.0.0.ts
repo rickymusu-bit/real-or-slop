@@ -5,7 +5,7 @@ export interface MatrixBrief {
   seed: number; model: string; instructions_version: string;
   catalog: { id: string; version: string; sha256: string };
   selection: {run_id:string;method:"uniform"|"adaptive";events_sha256:string;config_sha256:string;weight:number};
-  parameters: {size:"1024x1024";quality:"low"|"medium"|"high";image_model:string;evaluator_model:string};
+  parameters: {size:"auto"|"1024x1024"|"1024x1536"|"1536x1024";quality:"low"|"medium"|"high";image_model:string;evaluator_model:string;presentation_mode?:"whole_frame"|"square_crop"};
 }
 const keys=(v:object,list:string[])=>Object.keys(v).sort().join()===list.sort().join();
 export const sha256 = (v:unknown):v is string=>typeof v==="string"&&/^[a-f0-9]{64}$/.test(v);
@@ -22,6 +22,10 @@ export function validateBrief(value:unknown):MatrixBrief {
   check(Number.isSafeInteger(b.seed)&&b.seed>=0&&b.seed<=4294967295&&model(b.model)&&/^\d+\.\d+\.\d+$/.test(b.instructions_version),"Frozen generation instructions/seed required");
   check(b.catalog&&keys(b.catalog,["id","version","sha256"])&&identifier(b.catalog.id)&&/^\d+\.\d+\.\d+$/.test(b.catalog.version)&&sha256(b.catalog.sha256),"Versioned catalogue reference required");
   check(b.selection&&keys(b.selection,["run_id","method","events_sha256","config_sha256","weight"])&&identifier(b.selection.run_id)&&["uniform","adaptive"].includes(b.selection.method)&&sha256(b.selection.events_sha256)&&sha256(b.selection.config_sha256)&&Number.isFinite(b.selection.weight)&&b.selection.weight>0&&b.selection.weight<=1,"Frozen selection context required");
-  check(b.parameters&&keys(b.parameters,["size","quality","image_model","evaluator_model"])&&b.parameters.size==="1024x1024"&&["low","medium","high"].includes(b.parameters.quality)&&model(b.parameters.image_model)&&model(b.parameters.evaluator_model),"Frozen output parameters required");
+  const parameterKeys=["size","quality","image_model","evaluator_model"];
+  if(b.parameters&&Object.hasOwn(b.parameters,"presentation_mode"))parameterKeys.push("presentation_mode");
+  check(b.parameters&&keys(b.parameters,parameterKeys)&&["auto","1024x1024","1024x1536","1536x1024"].includes(b.parameters.size)&&["low","medium","high"].includes(b.parameters.quality)&&model(b.parameters.image_model)&&model(b.parameters.evaluator_model),"Frozen output parameters required");
+  check(b.parameters.presentation_mode===undefined||["whole_frame","square_crop"].includes(b.parameters.presentation_mode),"Invalid frozen presentation");
+  check(b.parameters.presentation_mode!=="square_crop"||b.parameters.size==="1024x1024","Legacy crop requires square generation");
   return b;
 }

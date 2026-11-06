@@ -34,6 +34,24 @@ def oriented_frame(raw):
     return frame
 
 
+def whole_frame_copy(raw, target, maximum_edge=1536):
+    """New full-frame variant; preserve aspect and never upscale or crop."""
+    require(type(maximum_edge) is int and 1 <= maximum_edge <= 4096, 'Limite dimensioni non valido')
+    frame = oriented_frame(raw)
+    original_size = list(frame.size)
+    frame.thumbnail((maximum_edge, maximum_edge), Image.Resampling.LANCZOS)
+    frame.save(target, 'WEBP', quality=85, method=6)
+    target.chmod(0o600)
+    return dict(version='1.2.0', source_sha256=hashlib.sha256(raw).hexdigest(),
+                sha256=hashlib.sha256(target.read_bytes()).hexdigest(),
+                oriented_source_size=original_size, whole_frame=True,
+                crop_box=[0, 0, *original_size], retained_area=1,
+                width=frame.width, height=frame.height, format='webp', color_mode='RGB',
+                maximum_edge=maximum_edge, webp_quality=85,
+                operations=['exif_orientation', 'alpha_on_white', 'resize', 'compression', 'format_conversion'],
+                upscaled=False, review_status='pending', profile=None)
+
+
 def standard_copy(raw, target, size=STANDARD_SIZE, crop_box=None):
     require(size == STANDARD_SIZE, 'Il formato standard v2 è 1024×1024')
     frame = oriented_frame(raw)

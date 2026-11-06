@@ -49,6 +49,10 @@ test("adaptive fixture benchmark has fixed budget, uncertainty and reevaluable l
 test("frozen brief contract excludes any added REAL inputs and records model, taxonomy and selection",()=>{
  const b={brief_id:"one",revision:1,taxonomy_version:"4.0.0",intent_emotion:emotions[0],intent_topic:topics[0],medium:"photograph",description:"A shared room with a table and nearby chairs.",tags:["shared_room"],search_queries:["shared room","room table"],slop_prompt:"Create a shared room with a table and the surrounding environment.",seed:53,model:"authored-catalog",instructions_version:"4.0.0",catalog:{id:"catalog",version:"4.0.0",sha256:"a".repeat(64)},selection:{run_id:"cycle",method:"uniform",events_sha256:"b".repeat(64),config_sha256:"c".repeat(64),weight:1/144},parameters:{size:"1024x1024",quality:"medium",image_model:"fixture-image",evaluator_model:"fixture-vision"}};
  assert.equal(validateBrief(b),b);assert.throws(()=>validateBrief({...b,real_title:"Source title"}));assert.throws(()=>validateBrief({...b,slop_prompt:"Create an image of https://example.com/source"}));assert.equal(canonical({b:2,a:1}),'{"a":1,"b":2}');
+ const auto={...b,parameters:{...b.parameters,size:"auto",presentation_mode:"whole_frame"}};
+ assert.equal(validateBrief(auto),auto);
+ assert.throws(()=>validateBrief({...auto,parameters:{...auto.parameters,presentation_mode:"square_crop"}}));
+ assert.throws(()=>validateBrief({...auto,parameters:{...auto.parameters,real_image:"source"}}));
 });
 test("caption validation keeps final neutral text separate from fictional and documentary metadata",()=>{
  const draft={game_caption:"Una cucina domestica con un tavolo accanto alla finestra e oggetti d’uso quotidiano.",caption_version:"1.0.0",caption_generator_version:"manual-v1",caption_provenance_refs:[],caption_context_fictional:false,context_mode:"visible"};

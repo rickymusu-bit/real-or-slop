@@ -78,7 +78,7 @@ async function route(request:Request,env:Env,path:string):Promise<Response>{
   const expected=validateBrief(object(JSON.parse(frozen!.body_json)).brief);
   if(current!.origin==="AI")ensure(p.idea_id===expected.brief_id&&p.idea===expected.description&&p.prompt===expected.slop_prompt&&p.model===expected.parameters.image_model&&canonical(p.parameters)===canonical({n:1,size:expected.parameters.size,quality:expected.parameters.quality})&&Date.parse(String(p.generated_at))+1000>=Date.parse(frozen!.frozen_at),"La generazione deve usare prompt, modello e parametri congelati prima dei pixel");
 
-  ensure(recognizedLicense(String(p.license_url))&&(current!.origin!=="REAL"||p.authenticity==="verified"&&!p.semantic_edit&&p.content_kind==="photograph"),"Autenticità e diritti sono gate documentali separati");
+  ensure(recognizedLicense(String(p.license_url))&&(current!.origin!=="REAL"||p.authenticity==="verified"&&!p.semantic_edit&&["photograph","artwork"].includes(String(p.content_kind))),"Autenticità e diritti sono gate documentali separati");
   const prior=await env.DB.prepare("SELECT * FROM editorial_matrix_candidates WHERE candidate_id=?").bind(data.candidate_id).first<Record<string,unknown>>();
   if(prior)ensure(["image_sha256","brief_ref","observed_cell","provider","batch"].every(key=>prior[key]===data[key]),"Associazione immutabile già presente");
   else {await pixels(env,{...current,candidate_id:data.candidate_id,image_sha256:data.image_sha256}as Linked);await env.DB.prepare("INSERT INTO editorial_matrix_candidates VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(candidate_id) DO NOTHING").bind(data.candidate_id,data.image_sha256,current!.origin,data.brief_ref,data.observed_cell,data.provider,data.batch,new Date().toISOString()).run();}

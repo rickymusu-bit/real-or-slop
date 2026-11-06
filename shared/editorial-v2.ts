@@ -77,7 +77,7 @@ export function validateV2Provenance(value: unknown, origin: unknown): ObjectVal
     ensure(v2Text(row.model, 150) && v2Text(row.generated_at, 100) && trace.every(key => v2Text(row[key], 150)), "Tracciamento generazione incompleto");
     ensure(["provider_created", "retrieved_at"].includes(String(row.timestamp_source)), "Origine del timestamp richiesta");
     const params = exact(row.parameters, ["n", "size", "quality"], "Parametri generazione");
-    ensure(params.n === 1 && ["1024x1024", "1024x1536", "1536x1024"].includes(String(params.size)) && ["low", "medium", "high"].includes(String(params.quality)), "Parametri non validi");
+    ensure(params.n === 1 && ["auto", "1024x1024", "1024x1536", "1536x1024"].includes(String(params.size)) && ["low", "medium", "high"].includes(String(params.quality)), "Parametri non validi");
   }
   return row;
 }
@@ -92,7 +92,7 @@ export function v2ApprovalBlockers(origin: unknown, profile: unknown, proof: unk
   validateV2Feedback(feedback, v2Evidence(source.evidence));
   const blockers: string[] = [];
   if (source.license_url === null) blockers.push("license_unresolved");
-  if (!visual.usable || !visual.photographic) blockers.push("visual_eligibility");
-  if (origin === "REAL" && (source.authenticity !== "verified" || source.semantic_edit || source.content_kind !== "photograph")) blockers.push("authenticity_not_verified");
+  if (!visual.usable) blockers.push("visual_eligibility");
+  if (origin === "REAL" && (source.authenticity !== "verified" || source.semantic_edit || !["photograph", "artwork"].includes(String(source.content_kind)))) blockers.push("authenticity_not_verified");
   return blockers;
 }

@@ -32,6 +32,8 @@ class Config:
     quality: str = 'medium'
     max_output_tokens: int = 4000
     reasoning_effort: str | None = None
+    # Missing in historical checkpoints: preserve their explicit square workflow.
+    presentation_mode: str = 'square_crop'
 
     @classmethod
     def environment(cls):
@@ -41,9 +43,10 @@ class Config:
                    max_generations=int(os.getenv('EDITORIAL_V2_MAX_GENERATIONS', '200')),
                    run_usd=float(os.getenv('EDITORIAL_V2_RUN_USD', '0')), daily_usd=float(os.getenv('EDITORIAL_V2_DAILY_USD', '0')),
                    evaluation_usd=float(os.getenv('EDITORIAL_V2_EVALUATION_USD', '0')), generation_usd=float(os.getenv('EDITORIAL_V2_GENERATION_USD', '0')),
-                   size=os.getenv('OPENAI_V2_IMAGE_SIZE', '1024x1024'), quality=os.getenv('OPENAI_V2_IMAGE_QUALITY', 'medium'),
+                   size=os.getenv('OPENAI_V2_IMAGE_SIZE', 'auto'), quality=os.getenv('OPENAI_V2_IMAGE_QUALITY', 'medium'),
                    max_output_tokens=int(os.getenv('OPENAI_V2_MAX_OUTPUT_TOKENS', '4000')),
-                   reasoning_effort=os.getenv('OPENAI_V2_REASONING_EFFORT') or None)
+                   reasoning_effort=os.getenv('OPENAI_V2_REASONING_EFFORT') or None,
+                   presentation_mode=os.getenv('EDITORIAL_V2_PRESENTATION_MODE', 'whole_frame'))
 
     def validate(self, paid=False, origin=None):
         require(all(type(getattr(self, key)) is int and 1 <= getattr(self, key) <= 200 for key in ('max_evaluations', 'max_generations')), 'Limiti v2 non validi')
@@ -51,7 +54,8 @@ class Config:
         require(type(self.max_output_tokens) is int and 1000 <= self.max_output_tokens <= 4000 and self.reasoning_effort in (None, 'none', 'low', 'medium', 'high'), 'Limiti di valutazione v2 non validi')
         amounts = (self.run_usd, self.daily_usd, self.evaluation_usd, self.generation_usd)
         require(all(type(n) in (int, float) and math.isfinite(n) and n >= 0 for n in amounts), 'Budget v2 non valido')
-        require(self.size in ('1024x1024', '1024x1536', '1536x1024') and self.quality in ('low', 'medium', 'high'), 'Parametri immagine v2 non validi')
+        require(self.size in ('auto', '1024x1024', '1024x1536', '1536x1024') and self.quality in ('low', 'medium', 'high'), 'Parametri immagine v2 non validi')
+        require(self.presentation_mode in ('square_crop', 'whole_frame'), 'Presentazione v2 non valida')
         if paid:
             require(bool(self.evaluator_model) and min(self.run_usd, self.daily_usd, self.evaluation_usd) > 0, 'Configurare modello visivo e budget v2 espliciti')
             if origin == 'AI':

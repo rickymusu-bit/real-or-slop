@@ -1,10 +1,12 @@
 # Real or Slop
 
-Pipeline editoriale **v4.0.0** implementata per revisione: matrice privata 12×12,
+Pipeline editoriale **v4.1.0** implementata per revisione: matrice privata 12×12,
 selezione uniforme/adattiva seedata, brief inglesi congelati prima dei rami
-REAL/SLOP e didascalie neutrali con giudizi autonomi. Tutto verificabile offline;
-nessuna attivazione, ricerca live, spesa, migrazione remota o pubblicazione.
-[Specifica, limiti e rollout](docs/protocollo-editoriale.v4.0.0.md).
+REAL/SLOP e didascalie neutrali con giudizi autonomi. I comandi predefiniti sono
+offline; attivazione, spesa e pubblicazione richiedono esecuzione esplicita.
+Il [pilota autorizzato](docs/pilota-matrice-v4-2026-11-05.md) e la successiva
+riesportazione a fotogramma intero restano privati.
+[Specifica, limiti e rollout](docs/protocollo-editoriale.v4.1.0.md).
 
 ```sh
 python3 -m pipeline.v2.matrix_v4_0_0 --check
@@ -37,10 +39,10 @@ o generare un corrispondente; diritti e provenienza si verificano separatamente.
 
 Il catalogo dei brief cresce separatamente dalle immagini: selezioni riproducibili
 con preferenza per tag nuovi, cinque brief per ciclo predefinito, massimo
-25 brief / 50 immagini complessive. API dirette, formato finale 1024×1024,
-ritaglio assistito da Terra e profilo dei file finali. Sfondo e contesto visibile
-per tutti i soggetti; le opere d'arte si mostrano intere nel proprio ambiente,
-con cornice quando presente. Gallerie e confronti su Drive privato.
+25 brief / 50 immagini complessive. API dirette, fotogrammi interi e proporzioni
+conservate; nuove SLOP con formato automatico scelto dal generatore. Il contesto
+può venire anche dalla didascalia; quadri e opere non richiedono cornice o stanza.
+Profili e giudizi si riferiscono ai pixel finali. Gallerie e confronti privati.
 
 ```sh
 # Controllo locale del catalogo e preparazione di un piccolo ciclo, senza API:

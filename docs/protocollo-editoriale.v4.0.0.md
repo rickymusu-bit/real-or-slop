@@ -5,6 +5,11 @@ status: implementation-in-pull-request-not-activated
 source_issue: https://github.com/rickymusu-bit/real-or-slop/issues/53
 ---
 
+> Aggiornamento successivo del proprietario: la [v4.1.0](protocollo-editoriale.v4.1.0.md)
+> consente contesto tramite didascalia e fotogrammi interi, senza obbligo di
+> ambiente esterno per i quadri. I risultati e i freeze descritti qui restano storici.
+
+
 # Protocollo editoriale v4.0.0
 
 La matrice **12 emozioni × 12 temi** seleziona un’intenzione di ricerca prima del

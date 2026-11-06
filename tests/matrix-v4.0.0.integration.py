@@ -67,7 +67,7 @@ for index,origin in enumerate(['REAL','AI']):
     proof=copy.deepcopy(contract['real_provenance'if origin=='REAL'else'synchronous_provenance'])
     proof['license_url']=metadata['license_url']
     if origin=='AI':proof.update(idea_id=brief['brief_id'],idea=brief['description'],prompt=brief['slop_prompt'],model=brief['parameters']['image_model'],parameters=dict(n=1,size=brief['parameters']['size'],quality=brief['parameters']['quality']),generated_at=envelope['frozen_at'])
-    if origin=='REAL':proof.update(provider='matrix-fixture',source_id=candidate,source_url=metadata['source_url'],authenticity='verified')
+    if origin=='REAL':proof.update(provider='matrix-fixture',source_id=candidate,source_url=metadata['source_url'],authenticity='verified',content_kind='artwork')
     dossier=json.dumps(dict(title='Local matrix fixture',provenance=proof))
     key=sql('SELECT r2_key FROM images WHERE id='+q(image_id))[0]['r2_key']
     sql('INSERT INTO editorial_review_inbox(id,origin,sha256,media_key,metadata_json,created_at) VALUES('+','.join(map(q,[candidate,origin,sha,key,dossier,envelope['frozen_at']]))+')')

@@ -15,6 +15,20 @@ from editorial_v2_direct_test import FixtureDirect
 
 
 class MatrixPipelineTest(unittest.TestCase):
+    def test_current_catalogue_freezes_free_aspect_and_artwork_without_museum_rule(self):
+        catalog=json.loads(CATALOG.read_text())
+        self.assertEqual(catalog['version'],'4.1.0')
+        self.assertTrue(any(b['medium']=='artwork' for b in catalog['briefs']))
+        self.assertTrue(all('frame when present' not in b['slop_prompt'] for b in catalog['briefs']))
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp);freeze(folder,count=1)
+            brief=json.loads((folder/'briefs.v4.0.0.json').read_text())['briefs'][0]['brief']
+            self.assertEqual(brief['parameters']['size'],'auto')
+            self.assertEqual(brief['parameters']['presentation_mode'],'whole_frame')
+            self.assertEqual(brief['instructions_version'],'4.1.0')
+        proof=source('documented-artwork');proof.update(authenticity='verified',content_kind='artwork')
+        self.assertEqual(documentary_gate(proof),proof)
+
     def test_freeze_is_cell_first_english_bounded_and_idempotent(self):
         with tempfile.TemporaryDirectory()as tmp:
             folder=Path(tmp);value=freeze(folder,count=5,cycle_id='test',stamp='2026-11-05T20:15:00Z')
@@ -36,7 +50,7 @@ class MatrixPipelineTest(unittest.TestCase):
             folder=Path(tmp);freeze(folder,count=1,image_model='fixture-image',evaluator_model='fixture-vision')
             # Poisoned result titles/URLs/pixels cannot influence the generator.
             (folder/'real-acquisition.v4.0.0.json').write_text(json.dumps(dict(real_title='REAL SOURCE POISON',real_image='data:image/SECRET',inputs=['never read'])))
-            api=FixtureDirect();cfg=Config(image_model='fixture-image',evaluator_model='fixture-vision',run_usd=10,daily_usd=10,evaluation_usd=.01,generation_usd=.1)
+            api=FixtureDirect();cfg=Config(size='auto',presentation_mode='whole_frame',image_model='fixture-image',evaluator_model='fixture-vision',run_usd=10,daily_usd=10,evaluation_usd=.01,generation_usd=.1)
             result=run_branch(folder,'AI',api,cfg,execute=True,simulated=True,license_info=dict(author='Local fixture only',url='https://creativecommons.org/publicdomain/zero/1.0/'))
             self.assertEqual(result['candidates'],1);self.assertTrue(all('POISON'not in json.dumps(b) and 'SECRET'not in json.dumps(b)for _,b in api.calls))
             generation=next(b for e,b in api.calls if e=='images/generations');self.assertEqual(set(generation),{'model','prompt','n','size','quality'})
@@ -66,7 +80,7 @@ class MatrixPipelineTest(unittest.TestCase):
                 def search(self,client,query,limit):return [dict(provider='commons',source_id='different_subject')]
             state=search_real(folder,None,lambda hit:proof,lambda *_:src,{'commons':Provider()},execute=True,simulated=True)
             self.assertEqual(len(state['inputs']),1);self.assertEqual(state['links'][0]['off_target'],None)
-            cfg=Config(image_model='fixture-image',evaluator_model='fixture-vision',run_usd=10,daily_usd=10,evaluation_usd=.01,generation_usd=.1)
+            cfg=Config(size='auto',presentation_mode='whole_frame',image_model='fixture-image',evaluator_model='fixture-vision',run_usd=10,daily_usd=10,evaluation_usd=.01,generation_usd=.1)
             api=FixtureDirect();result=run_branch(folder,'REAL',api,cfg,execute=True,simulated=True);self.assertEqual(result['candidates'],1);self.assertFalse((folder/'AI').exists());self.assertFalse(any(e=='images/generations'for e,_ in api.calls))
             output=export_review(folder);self.assertEqual(output['images'],1);self.assertEqual(output['candidates'][0]['brief_ref'],requests[0]['brief_ref']);self.assertFalse(output['published'])
             archived=json.loads((folder/'REAL/state.json').read_text())['candidates'][0]

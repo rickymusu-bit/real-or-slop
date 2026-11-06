@@ -20,7 +20,7 @@ from ..batch_store import safe_path
 from ..editorial import PipelineStop, image_payload, image_result, now, vision_payload, vision_result, write_private
 from ..importer import NoRedirect
 from .engine import Config, initialize, media
-from .presentation import oriented_frame, standard_copy
+from .presentation import oriented_frame, standard_copy, whole_frame_copy
 from .protocol import VERSION, SCHEMA, PROFILE_INSTRUCTIONS, require, evidence, provenance, visual_profile
 from .run import Remote, inspect
 from .smart_crop import crop_options, payload as crop_payload, validate_decision
@@ -80,7 +80,7 @@ class DirectEngine:
         self.state, self.folder, self.api, self.remote = state, folder.resolve(), api, remote
         self.cfg = Config(**state['config'])
         self.cfg.validate()
-        require(self.cfg.size == '1024x1024', 'Il flusso diretto genera solo 1024×1024')
+        require(self.cfg.presentation_mode == 'whole_frame' or self.cfg.size == '1024x1024', 'I checkpoint con ritaglio quadrato richiedono il formato legacy')
         self.concurrency = concurrency
 
     def save(self):
@@ -106,12 +106,12 @@ class DirectEngine:
         row = self.row(job['target'])
         if job['stage'] == 'generation':
             return 'images/generations', image_payload(self.cfg.image_model, row['idea']['prompt'],
-                                                     dict(n=1, size='1024x1024', quality=self.cfg.quality))
+                                                     dict(n=1, size=self.cfg.size, quality=self.cfg.quality))
         if job['stage'] == 'crop':
             frame = oriented_frame(safe_path(self.folder, row['file']).read_bytes())
             body = crop_payload(frame, row['crop_options'], self.cfg.evaluator_model, row['original_sha256'])
         else:
-            require(row['width'] == row['height'] == 1024 and row.get('presentation', {}).get('version') == '1.1.0', 'Profilo solo sulla variante finale')
+            require(row.get('presentation', {}).get('version') in ('1.1.0', '1.2.0'), 'Profilo solo sulla variante finale')
             image = safe_path(self.folder, row['derived_file']).read_bytes()
             require(digest(image) == row['sha256'], 'Pixel finali modificati prima del profilo')
             body = vision_payload(self.cfg.evaluator_model, PROFILE_INSTRUCTIONS, image)
@@ -148,11 +148,21 @@ class DirectEngine:
         presentation['selection'] = dict(method='terra' if decision else 'already_square', decision=decision,
                                          selected_id=selected['id'], request_id=request_id,
                                          fallback_center=bool(decision and decision['crop_id'] is None))
+        self.record_presentation(row, path, presentation)
+
+    def apply_whole_frame(self, row):
+        raw = safe_path(self.folder, row['file']).read_bytes()
+        require(digest(raw) == row['original_sha256'], 'Originale modificato')
+        path = safe_path(self.folder, row['derived_file'])
+        row.setdefault('acquisition_preview_sha256', row['sha256'])
+        self.record_presentation(row, path, whole_frame_copy(raw, path))
+
+    def record_presentation(self, row, path, presentation):
         preview = path.read_bytes()
         with Image.open(path) as picture:
             pixels = list(ImageOps.grayscale(picture).resize((9, 8)).getdata())
         phash = sum((pixels[y*9+x] > pixels[y*9+x+1]) << (y*8+x) for y in range(8) for x in range(8))
-        row.update(presentation=presentation, sha256=digest(preview), width=1024, height=1024,
+        row.update(presentation=presentation, sha256=digest(preview), width=presentation['width'], height=presentation['height'],
                    bytes=len(preview), format='webp', perceptual_hash=f'{phash:016x}', status='cropped')
 
     def consume(self, job, response, request_id):
@@ -168,7 +178,7 @@ class DirectEngine:
                 statement='Generazione diretta text-to-image tracciata dalla richiesta ' + request_id + '; ricevuta e originale conservati.')],
                 transformations=['exif_orientation', 'resize', 'compression', 'format_conversion'],
                 idea_id=idea['id'], **{key: idea[key] for key in ('mode', 'idea', 'prompt')}, model=self.cfg.image_model,
-                parameters=dict(n=1, size='1024x1024', quality=self.cfg.quality), input_kind='text-only', fully_synthetic=True,
+                parameters=dict(n=1, size=self.cfg.size, quality=self.cfg.quality), input_kind='text-only', fully_synthetic=True,
                 generated_at=stamp, timestamp_source='provider_created' if is_created else 'retrieved_at',
                 transport='synchronous', request_id=request_id)
             provenance(row['provenance'], 'AI')
@@ -277,6 +287,9 @@ class DirectEngine:
             for row in self.state['attempts']:
                 if row['status'] not in ('source', 'generated'):
                     continue
+                if self.cfg.presentation_mode == 'whole_frame':
+                    self.apply_whole_frame(row)
+                    continue
                 frame = oriented_frame(safe_path(self.folder, row['file']).read_bytes())
                 row['crop_options'] = crop_options(*frame.size)
                 if frame.size[0] == frame.size[1]:
@@ -284,7 +297,8 @@ class DirectEngine:
                 else:
                     cropping.append(row)
             self.save()
-            self.phase('crop', cropping)
+            if cropping:
+                self.phase('crop', cropping)
             self.phase('profile', [r for r in self.state['attempts'] if r['status'] == 'cropped'])
             candidates = []
             for row in self.state['attempts']:
@@ -330,7 +344,10 @@ def main(argv=None):
         value = json.loads(args.manifest.read_text()) if args.manifest else None
         if not args.execute:
             result = inspect(args.origin, value)
-            result.update(transport='synchronous', phases=['generation', 'crop', 'profile'] if args.origin == 'AI' else ['crop', 'profile'])
+            phases = (['generation'] if args.origin == 'AI' else [])
+            if Config.environment().presentation_mode == 'square_crop':
+                phases.append('crop')
+            result.update(transport='synchronous', phases=phases + ['profile'])
             print(json.dumps(result))
             return 0
         cfg = Config.environment()

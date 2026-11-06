@@ -11,11 +11,18 @@ test("v2 ordinary, plausible textures need no surprise, ranking or reason for do
   assert.equal(validateV2Profile(contract.profile).surprise, 0);
   assert.equal(validateV2Plan(contract.plan).independent, true);
 });
-test("v2 excludes hybrids, semantic manipulation, unresolved provenance and artwork", () => {
-  for (const change of [{ authenticity: "hybrid" }, { authenticity: "uncertain" }, { authenticity: "unverified" }, { semantic_edit: true }, { content_kind: "artwork" }]) {
+test("v2 excludes hybrids, semantic manipulation, unresolved provenance", () => {
+  for (const change of [{ authenticity: "hybrid" }, { authenticity: "uncertain" }, { authenticity: "unverified" }, { semantic_edit: true }]) {
     assert.deepEqual(v2ApprovalBlockers("REAL", contract.profile, { ...contract.real_provenance, ...change }, contract.feedback), ["authenticity_not_verified"]);
   }
   for (const change of ["generative_fill", "crop", "restoration", "upscaling"]) assert.throws(() => validateV2Provenance({ ...contract.real_provenance, transformations: [change] }, "REAL"), /quarantena/);
+});
+test("documented artworks may have non-photographic style and context supplied by captions", () => {
+  const proof = {...contract.real_provenance, content_kind:"artwork"};
+  const profile = {...contract.profile, photographic:false};
+  assert.deepEqual(v2ApprovalBlockers("REAL", profile, proof, contract.feedback), []);
+  assert.deepEqual(v2ApprovalBlockers("REAL", {...profile,usable:false}, proof, contract.feedback), ["visual_eligibility"]);
+  assert.deepEqual(v2ApprovalBlockers("REAL", profile, {...proof,authenticity:"uncertain"}, contract.feedback), ["authenticity_not_verified"]);
 });
 test("v2 plan has no channel for references, REAL candidates or previous preferences", () => {
   for (const key of ["reference_id", "source_url", "reference_image", "real_candidates", "preferences", "ranking"]) {

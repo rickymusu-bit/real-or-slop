@@ -39,13 +39,19 @@ class ProtocolV2Test(unittest.TestCase):
         self.assertNotIn('score', visual_profile(CONTRACT['profile']))
         self.assertEqual(CONTRACT['profile']['surprise'], 0)
 
-    def test_hybrids_unknown_origins_semantic_edits_and_artwork_cannot_be_real(self):
-        for changes in ({'authenticity': 'hybrid'}, {'authenticity': 'uncertain'}, {'authenticity': 'unverified'}, {'semantic_edit': True}, {'content_kind': 'artwork'}, {'content_kind': 'unknown'}):
+    def test_hybrids_unknown_origins_and_semantic_edits_cannot_be_real(self):
+        for changes in ({'authenticity': 'hybrid'}, {'authenticity': 'uncertain'}, {'authenticity': 'unverified'}, {'semantic_edit': True}, {'content_kind': 'unknown'}):
             proof = {**CONTRACT['real_provenance'], **changes}
             self.assertIn('authenticity_not_verified', approval_blockers('REAL', CONTRACT['profile'], proof, CONTRACT['feedback']))
         for transformation in ('generative_fill', 'crop', 'restoration', 'upscaling'):
             with self.assertRaises(PipelineStop):
                 provenance({**CONTRACT['real_provenance'], 'transformations': [transformation]}, 'REAL')
+
+    def test_documented_artwork_does_not_need_photographic_style_or_external_context(self):
+        proof = {**CONTRACT['real_provenance'], 'content_kind': 'artwork'}
+        profile = {**CONTRACT['profile'], 'photographic': False}
+        self.assertEqual(approval_blockers('REAL', profile, proof, CONTRACT['feedback']), [])
+        self.assertEqual(approval_blockers('REAL', {**profile, 'usable': False}, proof, CONTRACT['feedback']), ['visual_eligibility'])
 
     def test_reference_images_and_legacy_priors_are_not_part_of_the_new_contract(self):
         for key in ('reference_id', 'reference_image', 'source_url', 'description', 'real_candidates', 'preferences', 'ranking'):

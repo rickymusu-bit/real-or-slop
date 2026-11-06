@@ -19,13 +19,14 @@ function publicCandidate(row: Candidate) { return { ...parsed(row.dossier_json),
 function validateConfig(value: unknown, origin: string): ObjectValue {
   const cfg = object(value);
   const keys = ["analysis_model", "image_model", "evaluator_model", "max_evaluations", "max_generations", "max_regenerations", "run_usd", "daily_usd", "evaluation_usd", "generation_usd", "size", "quality"];
-  ensure(keys.every(key => Object.hasOwn(cfg, key)) && Object.keys(cfg).every(key => [...keys, "max_output_tokens", "reasoning_effort"].includes(key)), "Configurazione v2 incompatibile con il vecchio metodo");
+  ensure(keys.every(key => Object.hasOwn(cfg, key)) && Object.keys(cfg).every(key => [...keys, "max_output_tokens", "reasoning_effort", "presentation_mode"].includes(key)), "Configurazione v2 incompatibile con il vecchio metodo");
   if (Object.hasOwn(cfg, "max_output_tokens")) ensure(Number.isSafeInteger(cfg.max_output_tokens) && Number(cfg.max_output_tokens) >= 1000 && Number(cfg.max_output_tokens) <= 4000, "Limite output v2 non valido");
   if (Object.hasOwn(cfg, "reasoning_effort")) ensure([null, "none", "low", "medium", "high"].includes(cfg.reasoning_effort as string | null), "Reasoning v2 non valido");
+  if (Object.hasOwn(cfg, "presentation_mode")) ensure(["whole_frame", "square_crop"].includes(String(cfg.presentation_mode)), "Presentazione v2 non valida");
   for (const key of ["run_usd", "daily_usd", "evaluation_usd"]) ensure(typeof cfg[key] === "number" && Number.isFinite(cfg[key]) && cfg[key] > 0, "Budget v2 positivo richiesto");
   for (const key of ["max_evaluations", "max_generations"]) ensure(Number.isSafeInteger(cfg[key]) && Number(cfg[key]) >= 1 && Number(cfg[key]) <= 200, "Limiti v2 non validi");
   ensure(cfg.max_regenerations === 1 && v2Text(cfg.evaluator_model, 150), "Nessuna rigenerazione o modello implicito in v2");
-  ensure(["1024x1024", "1024x1536", "1536x1024"].includes(String(cfg.size)) && ["low", "medium", "high"].includes(String(cfg.quality)), "Parametri v2 non validi");
+  ensure(["auto", "1024x1024", "1024x1536", "1536x1024"].includes(String(cfg.size)) && ["low", "medium", "high"].includes(String(cfg.quality)), "Parametri v2 non validi");
   if (origin === "AI") ensure(v2Text(cfg.image_model, 150) && typeof cfg.generation_usd === "number" && Number.isFinite(cfg.generation_usd) && cfg.generation_usd > 0, "Generatore v2 non configurato");
   return cfg;
 }

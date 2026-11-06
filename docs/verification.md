@@ -659,3 +659,14 @@ Report [leggibile](benchmark-matrice.v4.0.0.md) e [JSON](benchmark-matrice.v4.0.
 Nessun pilota REAL, inferenza remota, addebito, cron, migrazione remota o deploy
 è stato eseguito; bozze, esempi e prior richiedono ancora review e calibrazione
 prima dell’attivazione. Il PvP pubblico resta sospeso.
+
+
+## 2026-11-06 — contesto tramite didascalia e fotogrammi interi (v4.1.0)
+
+- Build, lint, suite Node, 178 test Python e sei test versionati del catalogo inglese passati.
+- Integrazioni locali dedicate matrice e v2 passate, con configurazione `auto`/`whole_frame`, opere documentate, autenticazione, freeze, privacy, timer e compatibilità legacy.
+- Fixture dirette verificano zero chiamate crop nel nuovo percorso, mantenimento di panorama/ritratto, hash dei pixel profilati, ripresa senza nuove chiamate e parametri `auto` nelle ricevute. Il percorso legacy quadrato rimane verificato.
+- Il catalogo 4.0.0 e il freeze del pilota del 5 novembre restano invariati. Il catalogo corrente 4.1.0 registra revisioni e istruzioni nuove.
+- Riesportate le dieci immagini del pilota dagli originali, area conservata 100%, senza altre API o spesa. Le cinque REAL hanno hash nuovi; profili dei vecchi ritagli e giudizi non sono trasferiti. Il quadro ha una didascalia documentata con autore e anno.
+- Chromium a 390/1440 px verifica proporzioni effettive, `object-fit: contain`, immagini, zoom, filtri, note, persistenza, export e giudizi indipendenti. Scelte sintetiche rimosse. PDF di cinque pagine e ZIP verificato contro gli hash delle immagini.
+- Nuova coorte privata: `ecc40ff42b42ad6b6ef9887a3a5ff04d1193efe8e84e7b4880d7ed36ceeda984`. Artifact in `artifacts/pilot-v4-2026-11-05-whole-frame/`; nessuna pubblicazione, migrazione remota o deploy.

@@ -37,10 +37,45 @@ class FixtureDirect:
 
 
 class DirectV2Test(unittest.TestCase):
-    def engine(self, root, origin, api=None):
+    def test_full_frame_real_never_calls_crop_and_profile_binds_uncropped_pixels(self):
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()):
+            engine = self.engine(Path(tmp), 'REAL', presentation_mode='whole_frame', size='auto')
+            engine.run(True)
+            self.assertEqual([j['stage'] for j in engine.state['jobs']], ['profile', 'profile'])
+            for r in engine.state['candidates']:
+                self.assertEqual((r['width'], r['height']), (64, 48))
+                self.assertTrue(r['presentation']['whole_frame'])
+                self.assertEqual(r['presentation']['retained_area'], 1)
+                self.assertEqual(r['profile_image_sha256'], r['sha256'])
+            calls = len(engine.api.calls)
+            engine.run(True)
+            self.assertEqual(len(engine.api.calls), calls)
+
+    def test_auto_generation_preserves_model_selected_portrait_and_receipt_parameters(self):
+        class PortraitAPI(FixtureDirect):
+            def request(self, endpoint, body):
+                if endpoint == 'images/generations':
+                    self.calls.append((endpoint, body))
+                    return dict(created=1793750400, data=[dict(b64_json=base64.b64encode(picture(7, (80, 120))).decode())]), 'req-portrait'
+                return super().request(endpoint, body)
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()):
+            engine = self.engine(Path(tmp), 'AI', PortraitAPI(), presentation_mode='whole_frame', size='auto')
+            engine.run(True)
+            self.assertFalse(any(j['stage'] == 'crop' for j in engine.state['jobs']))
+            for endpoint, body in engine.api.calls:
+                if endpoint == 'images/generations':
+                    self.assertEqual(body['size'], 'auto')
+                    self.assertEqual(set(body), {'model', 'prompt', 'n', 'size', 'quality'})
+            for r in engine.state['candidates']:
+                self.assertEqual((r['width'], r['height']), (80, 120))
+                self.assertEqual(r['provenance']['parameters']['size'], 'auto')
+                self.assertEqual(r['profile_image_sha256'], r['sha256'])
+
+    def engine(self, root, origin, api=None, presentation_mode='square_crop', size='1024x1024'):
         real, slop = study_inputs(root / 'inputs', 4)
         cfg = Config(evaluator_model='fixture', image_model='fixture', run_usd=10, daily_usd=10,
-                     evaluation_usd=.02, generation_usd=.075, max_output_tokens=3000, reasoning_effort='none')
+                     evaluation_usd=.02, generation_usd=.075, max_output_tokens=3000, reasoning_effort='none',
+                     presentation_mode=presentation_mode, size=size)
         folder = root / 'run'
         state = initialize(origin, real if origin == 'REAL' else slop, root / 'inputs', folder, cfg,
                            'direct-' + origin, True, dict(author='Fixture', url=None))

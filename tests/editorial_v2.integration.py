@@ -21,7 +21,7 @@ assert os.environ.get('ROS_TEST_V2') == '1'
 base = os.environ['ROS_TEST_BASE']; assert base.startswith('http://127.0.0.1:')
 token = Path('.dev.vars').read_text().strip().split('=', 1)[1]
 os.environ['ENABLE_EDITORIAL_V2_PAID'] = 'true'  # Explicit local fixture execution only.
-cfg = Config(evaluator_model='fixture-vision', image_model='fixture-image', run_usd=1, daily_usd=1, evaluation_usd=.01, generation_usd=.1)
+cfg = Config(evaluator_model='fixture-vision', image_model='fixture-image', run_usd=1, daily_usd=1, evaluation_usd=.01, generation_usd=.1, size='auto', presentation_mode='whole_frame')
 
 
 def call(path, data=None, method=None):

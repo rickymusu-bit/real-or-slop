@@ -19,9 +19,9 @@ attività umane, difetti fotografici o strategie per sembrare REAL. Non imporre 
 Ogni descrizione deve essere breve e abbastanza ampia da trovare fotografie o opere ben composte già esistenti.
 Scrivi description solo in inglese fino a 35 parole, slop_prompt autonomo solo in inglese fino a 75 parole, e due search_queries brevi in inglese.
 Non aggiungere una traduzione italiana o campi paralleli. Le query aggiuntive possono usare altre lingue per la ricerca REAL.
-Usa medium photograph oppure artwork; artwork identifica l'opera come soggetto da mostrare nel suo ambiente,
-non una riproduzione piatta senza contesto. Per un quadro il brief e il prompt SLOP devono includere la vista
-dell'opera da una certa distanza, la cornice quando presente e lo spazio e gli elementi vicini.
+Usa medium photograph oppure artwork; sono ammesse anche opere a pieno fotogramma.
+Cornice e ambiente esterno non sono obbligatori: il contesto può essere dato dalla didascalia.
+Nel prompt lascia al generatore la scelta delle proporzioni più adatte al soggetto.
 Nessun URL, nome di persona reale o marchio, nessun artista da imitare, nessun riferimento a una specifica immagine esistente.
 Usa esattamente gli ID forniti. Restituisci version 1.0.0 e briefs con id, medium, description, slop_prompt, search_queries.''' + '\n' + BACKGROUND_RULE
 

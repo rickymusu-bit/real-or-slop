@@ -1,50 +1,49 @@
 # Criteri editoriali del proprietario
 
-Queste regole valgono per la selezione REAL, i brief, i prompt SLOP e le copie
-finali dopo il ritaglio. Le decisioni restano individuali e del proprietario.
+Revisione **4.1.0**, richiesta dal proprietario il 2026-11-05 dopo il pilota.
+Queste regole valgono per selezione REAL, brief, prompt SLOP, didascalie e copie
+finali. Le decisioni restano individuali e del proprietario.
 
-## Sfondo e contesto obbligatori
+## Contesto nell’immagine o nella didascalia
 
-Ogni immagine deve avere uno sfondo e ogni soggetto deve essere immerso in un
-contesto visibile. Sono esclusi scontorni, trasparenze, fondi uniformi bianchi,
-neri o grigi e fondali da catalogo che isolano il soggetto dall'ambiente.
-Una sedia deve trovarsi per esempio in una stanza, su una terrazza o in un altro
-ambiente leggibile. Il fatto che il file derivi da una fotografia autentica non
-rende editorialmente ammissibile un soggetto privo di contesto.
+Il contesto può essere fornito dall’immagine, dalla didascalia o da entrambe.
+Non è obbligatorio mostrare l’ambiente circostante. Un soggetto isolato o una
+riproduzione di un’opera non si escludono automaticamente per questa ragione.
+Restano validi singoli soggetti, ritratti, dettagli e scene ordinarie.
 
-Un singolo soggetto, un ritratto e uno sfondo sfocato rimangono ammessi quando
-l'ambiente è leggibile. Non sono richiesti caos, molti elementi o attività umane.
-Il ritaglio deve conservare lo sfondo utile all'osservazione del giocatore.
+Le didascalie REAL riportano soltanto informazioni documentate o contenuto
+visibile: non inventano luoghi, epoche, autori o eventi per dare contesto.
+Le didascalie SLOP mantengono separato il contesto sintetico. Ogni didascalia
+richiede un giudizio autonomo riferito ai pixel effettivamente mostrati.
 
-## Opere d'arte nel loro ambiente
+## Opere d’arte
 
-La regola del contesto vale anche per tutte le opere d'arte. Per quadri e dipinti
-si preferisce una fotografia scattata da una certa distanza, che mostri insieme
-l'opera intera, la cornice quando presente e una parte leggibile di ciò che la
-circonda: parete, sala, arredi, supporto o elementi vicini. Per altre opere vale
-lo stesso principio, per esempio una scultura nello spazio in cui è esposta.
+Quadri, dipinti, illustrazioni e altre opere possono occupare il fotogramma.
+Cornice, parete, stanza, distanza di ripresa e ambiente esterno non sono
+requisiti di ammissione. Il tipo `artwork` e lo stile non fotografico non
+costituiscono da soli un motivo di rifiuto.
 
-Il contesto rappresentato **dentro** un dipinto non sostituisce il contesto
-esterno **attorno** all'opera. Una riproduzione del solo dipinto a pieno
-fotogramma non soddisfa il criterio, anche se raffigura una scena ricca.
+Per REAL occorrono comunque origine umana documentata, attribuzione e diritti
+compatibili, distinguendo quando necessario l’autore dell’opera dall’autore
+della fotografia. La didascalia non certifica autenticità o diritti.
 
-Nelle REAL si cerca una fotografia ambientata già esistente; non si aggiungono
-cornice o ambiente artificialmente. Nelle SLOP il brief deve descrivere l'intera
-scena — opera, eventuale cornice e ambiente — da generare soltanto da testo.
-Terra deve conservare questo contesto nel ritaglio, senza stringere sul solo
-contenuto pittorico per riempire il quadrato. Il tipo `artwork` nel brief
-identifica il soggetto artistico, non autorizza a rimuoverne la presentazione
-ambientata. I brief già congelati del pilota non vengono riscritti retroattivamente.
+## Formato e fotogramma intero
 
-Questa è una regola editoriale, non una prova di autenticità. Il controllo dei
-prompt non garantisce che il generatore la rispetti: occorre esaminare la copia
-finale e registrare gli eventuali rifiuti senza inventare uno sfondo.
+Le REAL conservano il fotogramma intero e le proporzioni originali. Non si
+esegue un ritaglio quadrato obbligatorio né una chiamata di selezione del taglio.
+Sono consentiti orientamento EXIF, riduzione proporzionale senza ingrandimento,
+compressione e conversione di formato, con originale conservato.
 
-Il proprietario ha rifiutato esplicitamente la sedia REAL del pilota a cinque
-brief (`brief-004`): soggetto isolato su fondo nero, senza contesto ambientale.
-L'immagine resta soltanto come esempio rifiutato del test e non è una candidata
-approvata. Si conserva insieme allo storico del rifiuto e all'identità del file
-esaminato. Non si avvia una sostituzione automatica.
+Il prompt SLOP lascia al generatore la scelta delle proporzioni più adatte.
+La richiesta API usa `size: auto`; il formato effettivamente restituito viene
+conservato, con le stesse operazioni proporzionali usate per le REAL. Il prompt
+da solo non può annullare un formato fisso imposto dal parametro API.
+
+I vecchi freeze, ritagli, profili e giudizi restano conservati. Le nuove copie
+intere hanno hash e revisioni propri: profili o approvazioni di un ritaglio non
+si trasferiscono automaticamente. Il rifiuto storico della sedia `brief-004`
+resta una decisione del proprietario, senza nuove approvazioni dedotte dalla
+modifica generale della regola.
 
 ## Confronto per la revisione
 

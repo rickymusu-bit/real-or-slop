@@ -133,7 +133,7 @@ def provenance(value, origin):
         require(text(value['model'], 150) and text(value['generated_at'], 100) and all(text(value[key], 150) for key in trace), 'Tracciamento generazione incompleto')
         require(value['timestamp_source'] in ('provider_created', 'retrieved_at'), 'Origine del timestamp richiesta')
         exact(value['parameters'], ('n', 'size', 'quality'), 'Parametri generazione')
-        require(type(value['parameters']['n']) is int and value['parameters']['n'] == 1 and value['parameters']['size'] in ('1024x1024', '1024x1536', '1536x1024') and value['parameters']['quality'] in ('low', 'medium', 'high'), 'Parametri non validi')
+        require(type(value['parameters']['n']) is int and value['parameters']['n'] == 1 and value['parameters']['size'] in ('auto', '1024x1024', '1024x1536', '1536x1024') and value['parameters']['quality'] in ('low', 'medium', 'high'), 'Parametri non validi')
     return value
 
 
@@ -151,8 +151,8 @@ def approval_blockers(origin, profile, proof, explanation):
     blockers = []
     if proof['license_url'] is None:
         blockers.append('license_unresolved')
-    if not profile['usable'] or not profile['photographic']:
+    if not profile['usable']:
         blockers.append('visual_eligibility')
-    if origin == 'REAL' and (proof['authenticity'] != 'verified' or proof['semantic_edit'] or proof['content_kind'] != 'photograph'):
+    if origin == 'REAL' and (proof['authenticity'] != 'verified' or proof['semantic_edit'] or proof['content_kind'] not in ('photograph', 'artwork')):
         blockers.append('authenticity_not_verified')
     return blockers

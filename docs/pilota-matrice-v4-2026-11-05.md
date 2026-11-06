@@ -1,3 +1,7 @@
+> Aggiornamento successivo del proprietario: la [v4.1.0](protocollo-editoriale.v4.1.0.md)
+> consente contesto tramite didascalia e fotogrammi interi, senza obbligo di
+> ambiente esterno per i quadri. I risultati e i freeze descritti qui restano storici.
+
 # Pilota della matrice v4 — 2026-11-05
 
 Il proprietario ha autorizzato cinque REAL e cinque SLOP, con tetto complessivo

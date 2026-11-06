@@ -7,10 +7,32 @@ import unittest
 from PIL import Image
 
 from pipeline.editorial import PipelineStop
-from pipeline.v2.presentation import standard_copy
+from pipeline.v2.presentation import standard_copy, whole_frame_copy
 
 
 class PresentationTest(unittest.TestCase):
+    def test_full_frame_preserves_borders_aspect_and_small_image_size(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for width, height in ((1600, 900), (900, 1600), (80, 120)):
+                image = Image.new('RGB', (width, height), 'green')
+                image.paste('red', (0, 0, 8, height))
+                image.paste('blue', (width - 8, 0, width, height))
+                raw = io.BytesIO(); image.save(raw, 'PNG')
+                path = Path(folder) / f'{width}-{height}.webp'
+                p = whole_frame_copy(raw.getvalue(), path)
+                self.assertTrue(p['whole_frame'])
+                self.assertEqual(p['crop_box'], [0, 0, width, height])
+                self.assertEqual(p['retained_area'], 1)
+                self.assertFalse(p['upscaled'])
+                self.assertNotIn('center_crop', p['operations'])
+                self.assertAlmostEqual(p['width'] / p['height'], width / height, delta=.002)
+                with Image.open(path) as result:
+                    self.assertLessEqual(max(result.size), 1536)
+                    self.assertGreater(result.getpixel((0, result.height // 2))[0], 180)
+                    self.assertGreater(result.getpixel((result.width - 1, result.height // 2))[2], 180)
+                if width == 80:
+                    self.assertEqual((p['width'], p['height']), (80, 120))
+
     def test_different_aspects_share_canvas_and_keep_auditable_pending_crops(self):
         with tempfile.TemporaryDirectory() as folder:
             for width, height in ((1600, 900), (900, 1600), (1024, 1024)):

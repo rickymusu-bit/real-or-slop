@@ -23,7 +23,7 @@ from .search_sources import registry, DEFAULT_ENGINES
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = '4.0.0'
-CATALOG = ROOT/'data/editorial/briefs.v4.0.0.json'
+CATALOG = ROOT/'data/editorial/briefs.v4.1.0.json'
 TAXONOMY = json.loads((ROOT/'shared/editorial-taxonomy.v4.0.0.json').read_text())
 CELLS = [e['id']+':'+t['id'] for e in TAXONOMY['emotions'] for t in TAXONOMY['topics']]
 FIELDS = {'id','revision','status','taxonomy_version','intent_emotion','intent_topic','medium','description','tags','search_queries','slop_prompt'}
@@ -42,7 +42,7 @@ def immutable(path,value):
 
 def validate_catalog(value):
     exact(value,('version','catalog_id','language','created_at','authorship','briefs'),'Matrix catalogue')
-    require(value['version']==VERSION and value['language']=='en' and isinstance(value['briefs'],list) and 1<=len(value['briefs'])<=10000,'Versioned English catalogue required')
+    require(value['version'] in (VERSION,'4.1.0') and value['language']=='en' and isinstance(value['briefs'],list) and 1<=len(value['briefs'])<=10000,'Versioned English catalogue required')
     seen=set()
     for b in value['briefs']:
         exact(b,FIELDS,'Matrix brief')
@@ -73,14 +73,15 @@ def restore(folder):
     return value
 
 
-def freeze(folder,catalog=None,events=(),count=5,seed=53,adaptive=False,cycle_id='cycle-v4',stamp=None,image_model='unconfigured',evaluator_model='unconfigured',quality='medium',exploration=.25):
+def freeze(folder,catalog=None,events=(),count=5,seed=53,adaptive=False,cycle_id='cycle-v4',stamp=None,image_model='unconfigured',evaluator_model='unconfigured',quality='medium',exploration=.25,size='auto',presentation_mode='whole_frame'):
     require(type(count) is int and 1<=count<=25 and type(seed) is int and 0<=seed<=4294967295 and re.fullmatch(r'[\w-]{1,100}',cycle_id),'Cycle limit is 5 briefs by default, at most 25 / 50 final images')
     require(type(exploration) in (float,int) and .05<=exploration<=1,'Exploration must remain between 5% and 100%')
     folder=Path(folder);catalog=validate_catalog(catalog or json.loads(CATALOG.read_text()));events=list(events)
     require(re.fullmatch(r'[\w.-]{1,100}',image_model) and re.fullmatch(r'[\w.-]{1,100}',evaluator_model) and quality in ('low','medium','high'),'Frozen model and output parameters required')
-    identity=dict(catalog_sha256=checksum(catalog),events_sha256=checksum(events),count=count,seed=seed,adaptive=bool(adaptive),cycle_id=cycle_id,image_model=image_model,evaluator_model=evaluator_model,quality=quality,exploration=exploration)
+    require(size in ('auto','1024x1024','1024x1536','1536x1024') and presentation_mode in ('whole_frame','square_crop') and (presentation_mode=='whole_frame' or size=='1024x1024'),'Frozen aspect and presentation required')
+    identity=dict(catalog_sha256=checksum(catalog),events_sha256=checksum(events),count=count,seed=seed,adaptive=bool(adaptive),cycle_id=cycle_id,image_model=image_model,evaluator_model=evaluator_model,quality=quality,exploration=exploration,size=size,presentation_mode=presentation_mode)
     if (folder/'cycle-frozen.v4.0.0.json').exists():
-        value=restore(folder);require(value['payload']['identity']==identity,'Cannot resume with different catalogue, feedback or selection');return value
+        value=restore(folder);prior=dict(value['payload']['identity']);prior.setdefault('size','1024x1024');prior.setdefault('presentation_mode','square_crop');require(prior==identity,'Cannot resume with different catalogue, feedback or selection');return value
     stamp=stamp or now();selection=select(events,count,seed,adaptive,stamp,exploration)
     rng=random.Random(seed);frozen=[];real=[];ideas=[];mapping=[]
     for chosen in selection['selection']:
@@ -91,7 +92,7 @@ def freeze(folder,catalog=None,events=(),count=5,seed=53,adaptive=False,cycle_id
             if event['kind']=='proposal':usage[event['brief_id']]=usage.get(event['brief_id'],0)+1
         minimum=min(usage.get(b['id'],0) for b in options)
         b=rng.choice([b for b in options if usage.get(b['id'],0)==minimum])
-        brief=dict(brief_id=b['id'],revision=b['revision'],taxonomy_version=VERSION,intent_emotion=b['intent_emotion'],intent_topic=b['intent_topic'],medium=b['medium'],description=b['description'],tags=b['tags'],search_queries=b['search_queries'],slop_prompt=b['slop_prompt'],seed=seed,model='authored-catalog',instructions_version=VERSION,catalog=dict(id=catalog['catalog_id'],version=catalog['version'],sha256=checksum(catalog)),selection=dict(run_id=cycle_id,method='adaptive' if adaptive else 'uniform',events_sha256=checksum(events),config_sha256=checksum(selection['config']),weight=chosen['weight']),parameters=dict(size='1024x1024',quality=quality,image_model=image_model,evaluator_model=evaluator_model))
+        brief=dict(brief_id=b['id'],revision=b['revision'],taxonomy_version=VERSION,intent_emotion=b['intent_emotion'],intent_topic=b['intent_topic'],medium=b['medium'],description=b['description'],tags=b['tags'],search_queries=b['search_queries'],slop_prompt=b['slop_prompt'],seed=seed,model='authored-catalog',instructions_version=catalog['version'],catalog=dict(id=catalog['catalog_id'],version=catalog['version'],sha256=checksum(catalog)),selection=dict(run_id=cycle_id,method='adaptive' if adaptive else 'uniform',events_sha256=checksum(events),config_sha256=checksum(selection['config']),weight=chosen['weight']),parameters=dict(size=size,quality=quality,image_model=image_model,evaluator_model=evaluator_model,presentation_mode=presentation_mode))
         envelope=dict(brief=brief,frozen_at=stamp);ref=checksum(envelope);frozen.append(dict(id=ref,**envelope))
         real.append(dict(brief_ref=ref,brief_id=b['id'],intent_cell=chosen['cell'],description=b['description'],initial_queries=b['search_queries'],providers=list(DEFAULT_ENGINES)))
         ideas.append(dict(id=b['id'],mode='original',idea=b['description'],prompt=b['slop_prompt']))
@@ -105,7 +106,7 @@ def freeze(folder,catalog=None,events=(),count=5,seed=53,adaptive=False,cycle_id
 
 def documentary_gate(proof):
     provenance(proof,'REAL')
-    require(proof['authenticity']=='verified' and not proof['semantic_edit'] and proof['content_kind']=='photograph' and recognized_license(proof['license_url']),'REAL needs verified original source, authorship, compatible rights and no semantic edits; index licence alone is insufficient')
+    require(proof['authenticity']=='verified' and not proof['semantic_edit'] and proof['content_kind'] in ('photograph','artwork') and recognized_license(proof['license_url']),'REAL needs verified original source, authorship, compatible rights and no semantic edits; index licence alone is insufficient')
     return proof
 
 
@@ -193,10 +194,10 @@ def run_branch(folder,origin,api,cfg=None,remote=None,execute=False,simulated=Fa
     cfg=cfg or Config.environment();cfg.validate(paid=not simulated,origin=origin)
     identity=frozen['payload']['identity']
     require(identity['evaluator_model']!='unconfigured' and (origin!='AI' or identity['image_model']!='unconfigured'),'Select models before freezing an executable cycle')
-    require(cfg.size=='1024x1024' and cfg.quality==identity['quality'] and cfg.evaluator_model==identity['evaluator_model'] and (origin!='AI' or cfg.image_model==identity['image_model']),'Models or parameters differ from the freeze')
+    require(cfg.size==identity.get('size','1024x1024') and cfg.presentation_mode==identity.get('presentation_mode','square_crop') and cfg.quality==identity['quality'] and cfg.evaluator_model==identity['evaluator_model'] and (origin!='AI' or cfg.image_model==identity['image_model']),'Models or parameters differ from the freeze')
     state_path=branch/'state.json';input_sha=checksum(inputs)
     if state_path.exists():
-        state=json.loads(state_path.read_text());require(state.get('matrix_freeze_sha256')==frozen['sha256'] and state.get('matrix_input_sha256')==input_sha and state['config']==asdict(cfg),'Resume input/configuration changed')
+        state=json.loads(state_path.read_text());require(state.get('matrix_freeze_sha256')==frozen['sha256'] and state.get('matrix_input_sha256')==input_sha and Config(**state['config'])==cfg,'Resume input/configuration changed')
     else:
         state=initialize(origin,inputs,ROOT,branch,cfg,frozen['payload']['identity']['cycle_id']+'-'+origin.lower(),simulated,license_info)
         state.update(transport='synchronous',matrix_freeze_sha256=frozen['sha256'],matrix_input_sha256=input_sha);write_private(state_path,state)
@@ -263,12 +264,12 @@ def embedding_projection(catalog):
 
 
 def main(argv=None):
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--catalog',type=Path,default=CATALOG);parser.add_argument('--events',type=Path);parser.add_argument('--count',type=int,default=5);parser.add_argument('--seed',type=int,default=53);parser.add_argument('--cycle-id',default='cycle-v4');parser.add_argument('--adaptive',action='store_true');parser.add_argument('--dry-run',action='store_true');parser.add_argument('--out',type=Path);parser.add_argument('--check',action='store_true');parser.add_argument('--image-model',default='unconfigured');parser.add_argument('--evaluator-model',default='unconfigured');parser.add_argument('--quality',choices=('low','medium','high'),default='medium');parser.add_argument('--exploration',type=float,default=.25);args=parser.parse_args(argv)
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--catalog',type=Path,default=CATALOG);parser.add_argument('--events',type=Path);parser.add_argument('--count',type=int,default=5);parser.add_argument('--seed',type=int,default=53);parser.add_argument('--cycle-id',default='cycle-v4');parser.add_argument('--adaptive',action='store_true');parser.add_argument('--dry-run',action='store_true');parser.add_argument('--out',type=Path);parser.add_argument('--check',action='store_true');parser.add_argument('--image-model',default='unconfigured');parser.add_argument('--evaluator-model',default='unconfigured');parser.add_argument('--quality',choices=('low','medium','high'),default='medium');parser.add_argument('--exploration',type=float,default=.25);parser.add_argument('--size',choices=('auto','1024x1024','1024x1536','1536x1024'),default='auto');parser.add_argument('--presentation-mode',choices=('whole_frame','square_crop'),default='whole_frame');args=parser.parse_args(argv)
     try:
         catalog=validate_catalog(json.loads(args.catalog.read_text()));events=json.loads(args.events.read_text())if args.events else []
         if isinstance(events,dict):events=events['events']
         require(not(args.dry_run and args.out),'Dry-run does not write a cycle')
-        if args.out:result=freeze(args.out,catalog,events,args.count,args.seed,args.adaptive,args.cycle_id,image_model=args.image_model,evaluator_model=args.evaluator_model,quality=args.quality,exploration=args.exploration)
+        if args.out:result=freeze(args.out,catalog,events,args.count,args.seed,args.adaptive,args.cycle_id,image_model=args.image_model,evaluator_model=args.evaluator_model,quality=args.quality,exploration=args.exploration,size=args.size,presentation_mode=args.presentation_mode)
         else:
             result=dict(version=VERSION,catalogue_briefs=len(catalog['briefs']),cells=len(CELLS),network=False,paid=False,publication=False)
             if not args.check:result['selection']=select(events,args.count,args.seed,args.adaptive,now(),args.exploration)['selection']
