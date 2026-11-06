@@ -32,3 +32,15 @@ class ReviewInboxImportTest(unittest.TestCase):
             with self.assertRaises(ValueError):sync.prepare(plan,root)
             plan=self.fixture(root)
             with self.assertRaises(ValueError):sync.prepare(plan,root/'other')
+    def test_original_smartphone_mpo_is_preserved_and_not_used_as_the_preview(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);plan=self.fixture(root);source=root/'original.jpg'
+            Image.new('RGB',(20,10),'red').save(source,format='MPO',save_all=True,append_images=[Image.new('RGB',(20,10),'blue')])
+            raw=source.read_bytes();plan['images'][0]['original_file']=str(source)
+            rows,files=sync.prepare(plan,root)
+            sha=hashlib.sha256(raw).hexdigest()
+            self.assertEqual(files[sha]['mime'],'image/jpeg')
+            self.assertEqual(source.read_bytes(),raw)
+            self.assertIn(sha,rows[0][4])
+            plan['images'][0].update(file=str(source),sha256=sha)
+            with self.assertRaises(ValueError):sync.prepare(plan,root)

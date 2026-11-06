@@ -93,7 +93,7 @@ def fixture(folder):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['matrix', 'prepare', 'plan', 'retrieve', 'acquire', 'document', 'profile', 'review', 'gallery', 'feedback', 'export', 'benchmark', 'fixture'])
+    parser.add_argument('action', choices=['matrix', 'prepare', 'plan', 'retrieve', 'acquire', 'document', 'profile', 'review', 'gallery', 'inbox', 'feedback', 'export', 'benchmark', 'fixture'])
     parser.add_argument('--out', type=Path, default=Path('.pipeline/real-discovery'))
     parser.add_argument('--topic'); parser.add_argument('--emotion'); parser.add_argument('--intensity', choices=['low', 'medium', 'high'])
     parser.add_argument('--seed', type=int, default=56)
@@ -110,6 +110,7 @@ def main(argv=None):
     parser.add_argument('--commons-bitmap', action='store_true')
     parser.add_argument('--live', action='store_true')
     parser.add_argument('--execute', action='store_true')
+    parser.add_argument('--apply', action='store_true', help='Sincronizza le candidate nella coda privata del sito')
     parser.add_argument('--model'); parser.add_argument('--base'); parser.add_argument('--run-id')
     parser.add_argument('--max-calls', type=int, default=30)
     parser.add_argument('--page-size', type=int, default=20)
@@ -176,6 +177,11 @@ def main(argv=None):
                 rows = store.read(profile_path(args.revision, args.document_revision)) or store.read(document_path(args.document_revision))
                 selection = store.read(profile_path(args.revision, args.document_revision).replace('profiled.', 'shortlist.')) or {}
                 result = render(store, rows, selection.get('shortlisted', []), read(args.thumbnails) if args.thumbnails else None)
+            elif args.action == 'inbox':
+                from .inbox import export_pending, synchronize
+                result = export_pending(store, revision=args.revision, document_revision=args.document_revision)
+                if args.apply:
+                    result = synchronize(store, result)
             elif args.action == 'feedback':
                 from .feedback import synchronize
                 result = synchronize(store, store.read(document_path(args.document_revision)) or [])

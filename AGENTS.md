@@ -1,8 +1,8 @@
-# Istruzioni Codex — versione canonica 2.1.0
+# Istruzioni Codex — versione canonica 2.2.0
 
-Snapshot: `docs/AGENTS.v2.1.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-06T18:27:19Z. La 1.0.0 resta conservata. Questa revisione
-aggiunge il ciclo riprendibile REAL #56, senza attivare produzione o cambiare il gioco.
+Snapshot: `docs/AGENTS.v2.2.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-06T20:00:04Z. La 1.0.0 resta conservata. Questa revisione
+collega la discovery REAL #56 alla coda privata del sito, prima della review umana.
 
 ## Prima di modificare
 
@@ -16,8 +16,9 @@ aggiunge il ciclo riprendibile REAL #56, senza attivare produzione o cambiare il
    una issue incompatibile. Proseguire sul lavoro indipendente; chiedere solo
    decisioni davvero mancanti che bloccano il comportamento richiesto.
 4. Limitare il delta alla issue. Riutilizzare moduli, fixture e CI esistenti;
-   nessun nuovo framework o refactoring cosmetico. L'audit #57 è nella PR #58;
-   la #56 ha un branch dedicato basato sulla #58, senza importare #51/#52/#55.
+   nessun nuovo framework o refactoring cosmetico. Audit #57/PR #58 e discovery
+   #56/PR #59 sono integrati; le correzioni partono da main aggiornato, senza
+   importare automaticamente #51/#52/#55.
 
 ## Precedenza e versioni
 
@@ -47,6 +48,12 @@ aggiunge il ciclo riprendibile REAL #56, senza attivare produzione o cambiare il
   dossier e profili hanno revisioni distinte; conservare i byte di ogni revisione.
   Il pilota `pipeline.real.pilot` verifica le query contro ricevute A/B e distingue
   fixture, controllo manuale e misure reali. Feedback HTTP non sono voti umani.
+- La review personale avviene nella coda unica `/admin`, come richiesto in
+  `docs/coda-revisione-unica.md` e `docs/discovery-coda-sito.v1.0.0.md`. Le
+  candidate vanno importate pending prima dell'approvazione; gli HTML locali
+  sono diagnostiche. Riutilizzare `scripts/sync-review-inbox.py` con le credenziali
+  Cloudflare configurate: questo percorso non richiede l'admin token dell'app.
+  Non dichiarare la consegna completa senza verificare righe e pixel nel sito.
 - Per nuovi cicli, congelare il prompt SLOP originale prima di osservare REAL.
   Mai passare al generatore pixel, titoli, metadati, descrizioni o risultati REAL.
   Il codice legacy che deriva prompt da fotografie non è un modello da riusare.

@@ -18,14 +18,15 @@ import urllib.request
 from PIL import Image
 
 
-def file_info(path, root):
+def file_info(path, root, original=False):
     path=Path(path).resolve()
     if not path.is_relative_to(root.resolve()):raise ValueError('Image outside the workspace')
     size=path.stat().st_size
     if not 0<size<=12_000_000:raise ValueError('Image size outside private archive limits')
     with Image.open(path) as image:
-        mime=Image.MIME.get(image.format)
-        if image.format not in ('JPEG','PNG','WEBP'):raise ValueError('Only JPEG, PNG and WebP allowed')
+        mime='image/jpeg' if image.format=='MPO' else Image.MIME.get(image.format)
+        allowed=('JPEG','PNG','WEBP','MPO') if original else ('JPEG','PNG','WEBP')
+        if image.format not in allowed:raise ValueError('Only photographic preview formats and original JPEG/MPO allowed')
         image.verify()
     sha=hashlib.sha256(path.read_bytes()).hexdigest()
     return dict(path=str(path),sha256=sha,mime=mime,size=size,key='review-inbox/files/'+sha)
@@ -45,8 +46,8 @@ def prepare(plan, root):
         seen.add(identity);files[preview['sha256']]=preview
         metadata=dict(row['metadata'])
         if row.get('original_file'):
-            original=file_info(row['original_file'],root);files[original['sha256']]=original
-            metadata.update(original_key=original['key'],original_sha256=original['sha256'])
+            source=file_info(row['original_file'],root,original=True);files[source['sha256']]=source
+            metadata.update(original_key=source['key'],original_sha256=source['sha256'])
         rows.append((row['id'],row['origin'],row['sha256'],preview['key'],json.dumps(metadata,ensure_ascii=False),row.get('pair_key'),row['created_at']))
     return rows,files
 
