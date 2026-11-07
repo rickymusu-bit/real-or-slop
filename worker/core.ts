@@ -6,6 +6,8 @@ export interface Env {
   IMAGES?: R2Bucket;
   QUARANTINE?: R2Bucket;
   ADMIN_TOKEN?: string;
+  OPENAI_API_KEY?: string;
+  WORKSPACE_AI_ENABLED?: string;
   ENABLE_EDITORIAL_PAID?: string;
   ENABLE_EDITORIAL_V2_EXPERIMENTS?: string;
   ENABLE_EDITORIAL_V2_PAID?: string;
