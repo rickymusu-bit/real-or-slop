@@ -15,7 +15,8 @@ from pipeline.v2.preserve_v1_0_0 import proportional_copy, export_preserved
 
 def photo(width, height, exif=None):
     raw = io.BytesIO()
-    Image.new("RGB", (width, height), "royalblue").save(raw, "JPEG", exif=exif)
+    options = {"exif": exif} if exif is not None else {}
+    Image.new("RGB", (width, height), "royalblue").save(raw, "JPEG", **options)
     return raw.getvalue()
 
 
