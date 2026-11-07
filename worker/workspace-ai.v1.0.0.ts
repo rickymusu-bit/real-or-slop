@@ -3,6 +3,7 @@
  */
 import { hash, HttpError, id, type Env } from "./core";
 import { realDiscovery } from "./real-discovery";
+import { allowedTopics, allowedEmotions, allowedIntensities } from "../shared/editorial-taxonomy-classification.v1.0.0";
 
 export type WorkspaceStage = "suggest" | "search" | "profile" | "slop_plan" | "slop_generate";
 const stages:Record<WorkspaceStage,"brief"|"strategies"|"adaptation"|"visual"|"generation"> = {
@@ -78,7 +79,9 @@ export const fields={
   search:schema("commons_queries",{queries:{type:"array",items:{type:"string"}}}),
   profile:schema("visual_profile",{subject:{type:"string"},action:{type:"string"},setting:{type:"string"},
     composition:{type:"string"},visibility:{type:"string"},interest:{type:"string"},
-    tags:{type:"array",items:{type:"string"}}}),
+    tags:{type:"array",items:{type:"string"}},
+    taxonomy_topic:{type:"string",enum:allowedTopics},taxonomy_emotion:{type:"string",enum:allowedEmotions},
+    taxonomy_intensity:{type:"string",enum:[...allowedIntensities]},taxonomy_uncertain:{type:"boolean"}}),
   slop:schema("slop_prompts",{prompts:{type:"array",items:{type:"string"}}}),
 };
 export async function modelJSON(
