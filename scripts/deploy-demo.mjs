@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { parse } from "jsonc-parser";
 import { parseAppliedMigrations, releaseDemo, validateDemoConfig } from "./deployment-config.mjs";
+import { checkLiveAssets } from "./check-live-assets.mjs";
+import { setTimeout as delay } from "node:timers/promises";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const errors = [];
@@ -69,5 +71,15 @@ if (!flags.has("--check")) {
       approved: process.env.EDITORIAL_SCHEMA_RELEASE_APPROVED === "true",
     });
     if (!result.migrationsApplied.length) console.log("Schema già aggiornato: nessuna migrazione o seed remoto eseguito.");
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const assets = await checkLiveAssets("https://real-or-slop.rickymusu.workers.dev");
+        console.log(`Asset online verificati: ${assets.scripts} JavaScript e ${assets.stylesheets} CSS con MIME corretto.`);
+        break;
+      } catch (error) {
+        if (attempt === 2) throw error;
+        await delay(2000);
+      }
+    }
   }
 }
