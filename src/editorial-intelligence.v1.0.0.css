@@ -34,3 +34,8 @@
 
 /* Show whole frames when recommending ranked REAL candidates. */
 .editorial-intelligence .intel-ranked-preview { display:block; width:100%; height:auto; max-height:240px; object-fit:contain; background:var(--surface); margin-bottom:10px; }
+
+.editorial-intelligence .intel-discovery-control { display:flex; align-items:center; flex-wrap:wrap; justify-content:space-between; gap:10px; margin:14px 0; padding:12px; border:1px solid var(--hairline); }
+.editorial-intelligence .intel-discovery-control strong { font-size:13px; font-weight:600; }
+.editorial-intelligence .intel-discovery-control button { font-size:13px; }
+@media(max-width:650px) { .editorial-intelligence .intel-discovery-control button { width:100%; } }
