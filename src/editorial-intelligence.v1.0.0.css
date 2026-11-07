@@ -31,3 +31,6 @@
   .editorial-intelligence .intel-overview { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .editorial-intelligence .intel-columns>section { padding:16px; }
 }
+
+/* Show whole frames when recommending ranked REAL candidates. */
+.editorial-intelligence .intel-ranked-preview { display:block; width:100%; height:auto; max-height:240px; object-fit:contain; background:var(--surface); margin-bottom:10px; }
