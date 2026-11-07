@@ -1,4 +1,5 @@
 import { api, content, escape } from "./main";
+import { visualProfilePreview } from "./editorial-profile-preview.v1.0.0";
 import "./editorial-intelligence.v1.0.0.css";
 
 interface Suggestion {id:string;title:string;rationale:string;status:string}
@@ -125,7 +126,9 @@ export async function mountEditorialIntelligence() {
       else if(action==="suggest"){path=base+"/suggest";payload={operation_id:crypto.randomUUID()};}
       else if(action==="search"){path=base+"/search";payload={topic_id:topicId,limit:Number(section.querySelector<HTMLSelectElement>("#intel-limit")!.value),
         operation_id:crypto.randomUUID()};}
-      else if(action==="profile"){path=base+"/profile";payload={inbox_id:button.dataset.id,sha256:button.dataset.sha};}
+      else if(action==="profile"){path=base+"/profile";status.textContent="Preparo una miniatura proporzionale dalla fotografia originale...";
+        payload={inbox_id:button.dataset.id,sha256:button.dataset.sha,
+          preview_base64:await visualProfilePreview(button.dataset.id || "")};}
       else if(action==="plan"){path=base+"/slop/plan";payload={topic_id:topicId};}
       else if(action==="generate"){path=base+"/slop/generate";payload={topic_id:topicId,slot:Number(button.dataset.slot)};}
       if(!path)throw Error("Comando sconosciuto");
