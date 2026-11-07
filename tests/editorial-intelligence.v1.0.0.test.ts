@@ -27,6 +27,7 @@ test("rights, generation and technical rejections do not train taste",()=>{
   assert.equal(reliableFeedback("editorial","rejected"),true);
   assert.equal(reliableFeedback("technical","rejected"),false);
   assert.equal(reliableFeedback("rights","rejected"),false);
+  assert.equal(reliableFeedback("provenance","rejected"),false);
   assert.equal(reliableFeedback("generation","rejected"),false);
   assert.equal(reliableFeedback("editorial","pending"),false);
 });
