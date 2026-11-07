@@ -1,11 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { parse } from "jsonc-parser";
 import { parseAppliedMigrations, pendingDemoMigrations, releaseDemo, validateDemoConfig } from "../scripts/deployment-config.mjs";
 
 const migrationFiles = ["0001_initial.sql", "0002_unique_image_hash.sql"];
 const config = parse(readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
+test("release accepts the actual versioned migration history without weakening filename guards", () => {
+  const files = readdirSync(new URL("../migrations", import.meta.url)).filter(name => name.endsWith(".sql")).sort();
+  assert.deepEqual(pendingDemoMigrations(files, files), []);
+  assert.deepEqual(pendingDemoMigrations(files, files.slice(0, -1)), files.slice(-1));
+  for (const invalid of ["0024_../../escape.sql", "0024_bad.v1.0.sql", "0024_bad.v1.0.0.extra.sql", "0024_bad;DROP.sql"])
+    assert.throws(() => pendingDemoMigrations([...files, invalid], files), /non valido/);
+});
 test("release keeps the existing Worker/D1 and exactly the owner-confirmed R2 bindings", () => {
   assert.deepEqual(validateDemoConfig(config).buckets, {
     QUARANTINE: "real-or-slop-quarantine", IMAGES: "real-or-slop-approved",

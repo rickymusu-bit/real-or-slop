@@ -40,16 +40,20 @@ export async function learnedPreferences(env:Env,origin:Origin):Promise<Learned>
 }
 export async function rankPending(env:Env,origin:Origin,topicId?:string|null) {
   const preference=await learnedPreferences(env,origin);
-  const rows=(await env.DB.prepare("SELECT q.id,q.sha256,q.origin,p.profile_json " +
+  const rows=(await env.DB.prepare("SELECT q.id,q.sha256,q.origin,p.profile_json,r.assessment_json " +
     "FROM editorial_review_effective_images q LEFT JOIN editorial_image_profiles p " +
-    "ON p.inbox_id=q.id AND p.sha256=q.sha256 WHERE q.origin=? AND q.status='pending' " +
+    "ON p.inbox_id=q.id AND p.sha256=q.sha256 LEFT JOIN editorial_topic_semantics s ON s.topic_id=json_extract(q.metadata_json,'$.topic_id') " +
+    "LEFT JOIN editorial_image_relevance r ON r.inbox_id=q.id AND r.sha256=q.sha256 AND r.topic_id=s.topic_id AND r.topic_sha256=s.input_sha256 " +
+    "WHERE q.origin=? AND q.status='pending' " +
     (topicId ? "AND json_extract(q.metadata_json,'$.topic_id')=? " : "") +
     "ORDER BY q.created_at DESC LIMIT 200").bind(...(topicId ? [origin,topicId] : [origin])).all<{
-      id:string;sha256:string;origin:Origin;profile_json:string|null
+      id:string;sha256:string;origin:Origin;profile_json:string|null;assessment_json:string|null
     }>()).results.map(row=>{
       let tags:string[]=[];
       try {tags=profileTags(row.profile_json ? JSON.parse(row.profile_json) : null);} catch { /* malformed profile ignored */}
-      return {id:row.id,tags,sha256:row.sha256};
+      let relevance:unknown=null;
+      try{relevance=row.assessment_json?JSON.parse(row.assessment_json):null;}catch{ /* malformed assessment is never evidence */ }
+      return {id:row.id,tags,sha256:row.sha256,has_profile:!!row.profile_json,relevance};
     });
   const ranked=rankEditorial(rows,preference.counts);
   return {preference,ranked};

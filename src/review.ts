@@ -60,6 +60,7 @@ export async function showVisualReview() {
         await cyclePublication(page,target.id === "cycle-publish"); await load(false);
       } else if (target.dataset.visualDecision && image) {
         await api(`${endpoint}/${encodeURIComponent(image.id)}/decision`, { method: "POST", body: JSON.stringify({ decision: target.dataset.visualDecision, revision: image.revision, sha256: image.sha256, note: queue.querySelector<HTMLTextAreaElement>("#inbox-note")?.value || "", ...(target.dataset.visualDecision === "rejected" ? {reason:queue.querySelector<HTMLSelectElement>("#inbox-reason")!.value} : {}) }) });
+        document.querySelector("#editorial-workspace")?.dispatchEvent(new CustomEvent("workspace-updated"));
         message.textContent = target.dataset.visualDecision === "approved" ? "Approvata." : target.dataset.visualDecision === "rejected" ? "Rifiutata." : "Rimessa da rivedere.";
         await load(false);
       } else if (target.id === "inbox-delete" && image?.status === "rejected") {

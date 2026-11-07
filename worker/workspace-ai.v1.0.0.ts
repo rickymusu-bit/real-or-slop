@@ -74,7 +74,10 @@ function schema(name:string,properties:Record<string,unknown>) {
 }
 export const fields={
   suggestion:schema("topic_suggestions",{suggestions:{type:"array",items:{type:"object",additionalProperties:false,
-    required:["title","rationale"],properties:{title:{type:"string"},rationale:{type:"string"}}}}}),
+    required:["title","description","rationale"],properties:{title:{type:"string"},description:{type:"string",maxLength:500},rationale:{type:"string"}}}}}),
+  duplicates:schema("topic_duplicate_checks",{decisions:{type:"array",items:{type:"object",additionalProperties:false,
+    required:["id","duplicate","reason"],properties:{id:{type:"string"},duplicate:{type:"boolean"},reason:{type:"string"}}}}}),
+  relevance:schema("topic_relevance",{match:{type:"string",enum:["visible_match","mismatch","uncertain"]},reason:{type:"string"}}),
   search:schema("commons_queries",{queries:{type:"array",items:{type:"string"}}}),
   profile:schema("visual_profile",{subject:{type:"string"},action:{type:"string"},setting:{type:"string"},
     composition:{type:"string"},visibility:{type:"string"},interest:{type:"string"},
@@ -103,7 +106,7 @@ export async function modelJSON(
     input:[{role:"system",content:system},{role:"user",content:userContent}],
     text:{format}};
   try{
-    const response=await fetch(endpoint+"responses",{method:"POST",redirect:"manual",
+    const response=await fetch(endpoint+"responses",{method:"POST",redirect:"manual",signal:AbortSignal.timeout(45_000),
       headers:{"Authorization":"Bearer "+env.OPENAI_API_KEY,"Content-Type":"application/json"},
       body:JSON.stringify(payload)});
     if(response.status!==200)throw new Error("Risposta API "+response.status);

@@ -76,6 +76,8 @@ external=call("/api/admin/editorial/workspace/links",{
     "topic_id":uid,"source_url":"https://example.org/unsafe.jpg"})[1]
 assert call(prefix+"/acquire",{"proposal_id":external["id"]})[0]==400
 assert call(prefix+"/suggest",{"operation_id":str(uuid.uuid4())})[0]==409
+assert call(prefix+"/search",{"topic_id":uid,"limit":3,"operation_id":str(uuid.uuid4())})[0]==409
+assert call("/api/admin/editorial/workspace/manual-stage",{"topic_id":uid,"decision":"skip"})[0]==200
 assert call(prefix+"/search",{"topic_id":uid,"limit":3,"operation_id":str(uuid.uuid4())})[0]==503
 assert call(prefix+"/slop/plan",{"topic_id":uid})[0]==503
 assert call(prefix+"/slop/generate",{"topic_id":uid,"slot":0})[0]==409

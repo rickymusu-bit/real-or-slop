@@ -1,11 +1,12 @@
 import { body, hash, HttpError, id, json, type Env } from "./core";
 import { topicKey, topicTitle, imageMime } from "../shared/editorial-workspace.v1.0.0";
-import { imageFormatChoice, profileTags, similarTopic, suggestedTopicTitle, type Profile } from "../shared/editorial-intelligence.v1.0.0";
+import { imageFormatChoice, topicImageFormatChoice, profileTags, type Profile } from "../shared/editorial-intelligence.v1.0.0";
 import { commonsFile, searchCommons, type CommonsFile, MAX_IMAGE_BYTES } from "./commons-editorial.v1.0.0";
 import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
 import { ensureSlopSeed, headlineStats, rankPending } from "./editorial-learning.v1.0.0";
 import { fields, modelImage, modelJSON } from "./workspace-ai.v1.0.0";
 import { topicDiscoveryEnabled, setTopicDiscoveryEnabled } from "./topic-discovery-opt-in.v1.0.0";
+import { suggestTopics } from "./topic-recommender.v1.0.0";
 import { createTopicSemantics, semanticTopicDescription } from "./topic-semantic-memory.v1.0.0";
 
 const base="/api/admin/editorial/intelligence";
@@ -41,7 +42,7 @@ async function saveCommons(env:Env,t:Topic,photo:CommonsFile,kind:"gpt-commons"|
   const inbox="commons-"+id(),mediaKey="editorial-intelligence/"+inbox;
   const metadata=JSON.stringify({source_kind:kind,topic_id:t.id,title:photo.title,
     author:photo.author,source_url:photo.source_url,license_url:photo.license_url,
-    original_key:mediaKey,original_sha256:sha,provenance_status:"unverified",
+    original_key:mediaKey,original_sha256:sha,provenance_status:"unverified",image_geometry:imageDimensions(new Uint8Array(photo.bytes)),
     provenance:{provider:"commons",original_url:photo.download_url,original_is_preview:photo.original_is_preview,
       source_evidence:photo.description,width:photo.width,height:photo.height}});
   await env.QUARANTINE.put(mediaKey,photo.bytes,{httpMetadata:{contentType:photo.mime},customMetadata:{sha256:sha}});
@@ -63,21 +64,36 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
   if(path===base && request.method==="GET"){
     const requestedTopic = new URL(request.url).searchParams.get("topic_id");
     const selectedTopic = requestedTopic ? uid(requestedTopic) : null;
-    const [discoveryOn,stats,reals,slops,suggestions,searches,jobs,prompts,topicCounts,reviewedUnprofiled]=await Promise.all([
+    const manualStage=await env.DB.prepare("SELECT decision FROM editorial_workspace_manual_stage WHERE topic_id=?").bind(selectedTopic || "").first();
+    const [discoveryOn,stats,reals,slops,suggestions,searches,jobs,prompts,topicCounts,reviewedUnprofiled,formats]=await Promise.all([
       topicDiscoveryEnabled(env),
       headlineStats(env),rankPending(env,"REAL",selectedTopic),rankPending(env,"AI",selectedTopic),
-      env.DB.prepare("SELECT * FROM editorial_topic_suggestions ORDER BY created_at DESC LIMIT 100").all(),
+      env.DB.prepare("SELECT t.*,s.description,s.embedding_status,c.status AS screening_status,c.novelty,c.neighbors_json,c.reason AS screening_reason FROM editorial_topic_suggestions t LEFT JOIN editorial_topic_suggestion_semantics s ON s.topic_id=t.id LEFT JOIN editorial_topic_suggestion_screening c ON c.suggestion_id=t.id ORDER BY t.created_at DESC LIMIT 100").all(),
       env.DB.prepare("SELECT * FROM editorial_topic_explorations ORDER BY created_at DESC LIMIT 50").all(),
       env.DB.prepare("SELECT kind,status,topic_id,created_at,updated_at FROM editorial_workspace_jobs ORDER BY created_at DESC LIMIT 30").all(),
       env.DB.prepare("SELECT slot,prompt,variant,frozen_sha256 FROM editorial_slop_prompt_bank WHERE topic_id=? ORDER BY slot").bind(selectedTopic || "").all(),
       env.DB.prepare("SELECT origin,status,count(*) AS n FROM editorial_review_effective_images WHERE json_extract(metadata_json,'$.topic_id')=? GROUP BY origin,status").bind(selectedTopic || "").all(),
       env.DB.prepare("SELECT q.id,q.sha256,q.origin,q.status FROM editorial_review_effective_images q " +
         "LEFT JOIN editorial_image_profiles p ON p.inbox_id=q.id AND p.sha256=q.sha256 " +
-        "WHERE p.inbox_id IS NULL AND q.status IN ('approved','rejected') ORDER BY q.created_at DESC LIMIT 40").all()
+        "WHERE p.inbox_id IS NULL AND q.status IN ('approved','rejected') ORDER BY q.created_at DESC LIMIT 40").all(),
+      env.DB.prepare(`WITH geometry AS (
+        SELECT q.id,q.origin,q.metadata_json,
+          json_extract(q.metadata_json,'$.image_geometry.width') AS w,
+          json_extract(q.metadata_json,'$.image_geometry.height') AS h,
+          EXISTS(SELECT 1 FROM editorial_cycle_admissions a JOIN published_images p ON p.image_id=a.image_id WHERE a.inbox_id=q.id) AS published
+        FROM editorial_review_effective_images q
+      ) SELECT origin,published,CASE
+        WHEN w IS NULL OR h IS NULL OR h<=0 OR json_extract(metadata_json,'$.image_geometry.mime')='image/jpeg' THEN 'unknown'
+        WHEN max(w*1.0/h,h*1.0/w)>2.5 THEN 'panorama'
+        WHEN abs(w*1.0/h-1)<0.02 THEN 'square'
+        WHEN w>h THEN 'landscape' ELSE 'portrait' END AS format,count(*) AS n
+        FROM geometry GROUP BY origin,published,format`).all()
     ]);
     return json({version:"1.0.0",topic_discovery_enabled:discoveryOn,preferences:stats,ranked_real:reals.ranked.slice(0,30),ranked_slop:slops.ranked.slice(0,30),
       suggestions:suggestions.results,searches:searches.results,jobs:jobs.results,prompts:prompts.results,topic_counts:topicCounts.results,
       reviewed_unprofiled:reviewedUnprofiled.results,
+      formats:formats.results,
+      manual_stage_complete:!!manualStage,
       enabled:env.WORKSPACE_AI_ENABLED==="true" && env.ENABLE_REAL_DISCOVERY_PAID==="true" && !!env.OPENAI_API_KEY,
       generation_enabled:env.WORKSPACE_AI_ENABLED==="true" && env.ENABLE_EDITORIAL_CYCLE_GENERATION==="true" && !!env.OPENAI_API_KEY,
       cost_per_text_call:env.REAL_DISCOVERY_CALL_USD || null,
@@ -96,9 +112,10 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
   if(match){
     const data=await body(request,1200);
     if(!["accepted","rejected","deferred"].includes(String(data.decision)))throw new HttpError(400,"Decisione non valida");
-    const row=await env.DB.prepare("SELECT title,normalized_key,status,rationale FROM editorial_topic_suggestions WHERE id=?")
-      .bind(match[1]).first<{title:string;normalized_key:string;status:string;rationale:string}>();
+    const row=await env.DB.prepare("SELECT t.title,t.normalized_key,t.status,t.rationale,s.description,c.status AS screening_status FROM editorial_topic_suggestions t LEFT JOIN editorial_topic_suggestion_semantics s ON s.topic_id=t.id LEFT JOIN editorial_topic_suggestion_screening c ON c.suggestion_id=t.id WHERE t.id=?")
+      .bind(match[1]).first<{title:string;normalized_key:string;status:string;rationale:string;description:string|null;screening_status:string|null}>();
     if(!row)throw new HttpError(404,"Suggerimento non trovato");
+    if(data.decision==="accepted" && row.screening_status && row.screening_status!=="ready")throw new HttpError(409,"La verifica della proposta non è completa o rileva un duplicato");
     if(row.status!== "suggested" && row.status!=="deferred")throw new HttpError(409,"Suggerimento già deciso");
     await env.DB.prepare("UPDATE editorial_topic_suggestions SET status=?,updated_at=? WHERE id=? AND status IN ('suggested','deferred')")
       .bind(data.decision,now(),match[1]).run();
@@ -112,7 +129,7 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
         if(inserted.meta.changes===1){
           await ensureSlopSeed(env,item);
           // Accepted suggestions become semantic memory even when discovery is later switched OFF.
-          await createTopicSemantics(env,item.id,item.title,semanticTopicDescription(row.rationale.slice(0,500)));
+          await createTopicSemantics(env,item.id,item.title,semanticTopicDescription(row.description || ""));
         }
       }
     }
@@ -135,37 +152,34 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     if(!await topicDiscoveryEnabled(env))throw new HttpError(409,"Topic Discovery è disattivato: attivalo dalla dashboard");
     const data=await body(request,1800);
     const operationKey=uid(data.operation_id);
-    const [topics,old,stats,catalog]=await Promise.all([
-      env.DB.prepare("SELECT title FROM editorial_workspace_topics ORDER BY created_at DESC LIMIT 200").all<{title:string}>(),
-      env.DB.prepare("SELECT title,status FROM editorial_topic_suggestions ORDER BY created_at DESC LIMIT 200").all<{title:string;status:string}>(),
-      headlineStats(env),
-      env.DB.prepare("SELECT title FROM images WHERE demo=0 ORDER BY created_at DESC LIMIT 150").all<{title:string}>()
-    ]);
-    const seen=[...topics.results,...old.results,...catalog.results].map(x=>x.title);
-    const topicFeedback=old.results.map(x=>({title:x.title,owner_decision:x.status}));
-    const response=await modelJSON(env,"suggest",null,"suggest:"+operationKey,
-      {known_titles:seen,topic_feedback:topicFeedback,preferences:{real:stats.real.counts,slop:stats.slop.counts}},
-      "You are a photo-editorial topic recommender. Return 5 concrete, diverse, verifiable photographic subjects, with place/time/event/action if applicable. Do not invent real historical incidents; do not repeat semantic equivalents of prior subjects. Never generate, retrieve or describe specific REAL photos.",
-      "Previously attempted topics, including failed searches and rejected suggestions: "+JSON.stringify(seen)+
-      ". Owner suggestion history: "+JSON.stringify(topicFeedback)+
-      ". Human REAL preference tags: "+JSON.stringify(stats.real.counts)+". Suggest specific NEW topics and rationale.",
-      fields.suggestion);
-    const values=Array.isArray(response.suggestions)?response.suggestions:[],selected:Array<{title:string;rationale:string}>=[];
-    for(const v of values.slice(0,10)){
-      if(!v || typeof v!=="object")continue;
-      const pair=v as {title?:unknown;rationale?:unknown};
-      let title:string;
-      try{title=suggestedTopicTitle(pair.title);}catch{continue;}
-      const rationale=typeof pair.rationale==="string" ? pair.rationale.trim().slice(0,400) : "";
-      if(!rationale || [...seen,...selected.map(x=>x.title)].some(x=>similarTopic(x,title)))continue;
-      selected.push({title,rationale});
-      if(selected.length>=5)break;
-    }
-    for(const row of selected){
-      await env.DB.prepare("INSERT OR IGNORE INTO editorial_topic_suggestions(id,title,normalized_key,rationale,status,created_at,updated_at) VALUES(?,?,?,?,'suggested',?,?)")
-        .bind(id(),row.title,topicKey(row.title),row.rationale,now(),now()).run();
-    }
-    return json({suggested:selected.length,rejected_as_duplicate:values.length-selected.length});
+    return json(await suggestTopics(env,operationKey));
+  }
+
+  if(path===base+"/relevance"){
+    const data=await body(request,1200),inboxId=text(data.inbox_id,160),sha=text(data.sha256,64);
+    const row=await env.DB.prepare("SELECT sha256,metadata_json FROM editorial_review_effective_images WHERE id=? AND origin='REAL'")
+      .bind(inboxId).first<{sha256:string;metadata_json:string}>();
+    if(!row || row.sha256!==sha)throw new HttpError(409,"Pixel aggiornati o fotografia assente");
+    const metadata=JSON.parse(row.metadata_json) as {topic_id?:string};
+    const t=await topic(env,metadata.topic_id);
+    const semantic=await env.DB.prepare("SELECT input_text,input_sha256 FROM editorial_topic_semantics WHERE topic_id=?")
+      .bind(t.id).first<{input_text:string;input_sha256:string}>();
+    const topicText=semantic?.input_text || t.title,topicSha=semantic?.input_sha256 || await hash(topicText);
+    const profile=await env.DB.prepare("SELECT profile_json FROM editorial_image_profiles WHERE inbox_id=? AND sha256=?")
+      .bind(inboxId,sha).first<{profile_json:string}>();
+    if(!profile)throw new HttpError(409,"Analizza prima i pixel, senza titolo o metadati");
+    const previous=await env.DB.prepare("SELECT assessment_json FROM editorial_image_relevance WHERE inbox_id=? AND sha256=? AND topic_id=? AND topic_sha256=?")
+      .bind(inboxId,sha,t.id,topicSha).first<{assessment_json:string}>();
+    if(previous)return json({assessment:JSON.parse(previous.assessment_json),already_assessed:true});
+    const assessment=await modelJSON(env,"profile",t.id,"relevance:"+inboxId+":"+sha+":"+topicSha,
+      {visual_profile:JSON.parse(profile.profile_json),topic:topicText},
+      "Compare the independently produced pixel-only profile with the editorial topic. Distinguish visible subject/action match, mismatch (e.g. invisible claimed subject), and uncertain. A visible match NEVER verifies date, event, identity, authenticity or license. Unknown historical claims must remain uncertain. Do not judge aesthetic taste.",
+      JSON.stringify({topic:topicText,pixel_profile:JSON.parse(profile.profile_json)}),fields.relevance);
+    if(!["visible_match","mismatch","uncertain"].includes(String(assessment.match)) || typeof assessment.reason!=="string" || !assessment.reason.trim())
+      throw new HttpError(502,"Confronto visivo non valido");
+    await env.DB.prepare("INSERT OR IGNORE INTO editorial_image_relevance VALUES(?,?,?,?,?,?,?)")
+      .bind(inboxId,sha,t.id,topicSha,JSON.stringify(assessment),env.REAL_DISCOVERY_MODEL,now()).run();
+    return json({assessment,already_assessed:false});
   }
   if(path===base+"/profile"){
     const data=await body(request,2_100_000),inboxId=text(data.inbox_id,160),sha=text(data.sha256,64);
@@ -231,9 +245,14 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
   }
   if(path===base+"/search"){
     const data=await body(request,1800),t=await topic(env,data.topic_id);
+    if(!await env.DB.prepare("SELECT 1 FROM editorial_workspace_manual_stage WHERE topic_id=?").bind(t.id).first())
+      throw new HttpError(409,"Prima proponi le tue fotografie oppure scegli esplicitamente di continuare senza foto manuali");
     const limit=Number(data.limit);
     if(!Number.isSafeInteger(limit) || limit<1 || limit>10)throw new HttpError(400,"Limite 1–10");
     const operationId=uid(data.operation_id);
+    const prior=await env.DB.prepare("SELECT status,candidates,diagnostics_json FROM editorial_topic_explorations WHERE id=? AND topic_id=?")
+      .bind(operationId,t.id).first<{status:string;candidates:number;diagnostics_json:string}>();
+    if(prior)return json({already_searched:true,status:prior.status,found:prior.candidates,diagnostics:JSON.parse(prior.diagnostics_json)});
     await ensureSlopSeed(env,t);
     const stats=await headlineStats(env);
     const resp=await modelJSON(env,"search",t.id,"search:"+operationId,
@@ -244,13 +263,15 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     const queries=(Array.isArray(resp.queries)?resp.queries:[]).filter((q):q is string=>
       typeof q==="string" && q.trim().length>=3 && q.length<=200).slice(0,3);
     if(!queries.length)throw new HttpError(502,"Nessuna query Commons valida");
-    const runId=id(),stamp=now();
+    const runId=operationId,stamp=now();
     await env.DB.prepare("INSERT INTO editorial_topic_explorations(id,topic_id,query,source,status,created_at,updated_at) VALUES(?,?,?,'commons','planned',?,?)")
       .bind(runId,t.id,JSON.stringify(queries),stamp,stamp).run();
     const discovered:string[]=[];
+    const errors:Array<{stage:string;code:number}> = [];
+    let successfulQueries=0,skipped=0;
     for(const query of queries){
-      try {const found=await searchCommons(query,10);for(const item of found)if(!discovered.includes(item))discovered.push(item);}
-      catch { /* provider errors are visible in final count; no arbitrary fallback host */ }
+      try {const found=await searchCommons(query,10);successfulQueries++;for(const item of found)if(!discovered.includes(item))discovered.push(item);}
+      catch(error) {errors.push({stage:"query",code:error instanceof HttpError?error.status:502});}
       if(discovered.length>35)break;
     }
     const candidates:Array<{inbox_id:string;sha256:string;title:string;source_url:string}>=[];
@@ -258,11 +279,13 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
       if(candidates.length>=limit)break;
       try {const file=await commonsFile(title);
         candidates.push(await saveCommons(env,t,file,"gpt-commons"));
-      } catch { /* unsuitable license or duplicate can remain in discovery logs */ }
+      } catch(error) {skipped++;errors.push({stage:"acquisition",code:error instanceof HttpError?error.status:502});}
     }
-    await env.DB.prepare("UPDATE editorial_topic_explorations SET status='completed',candidates=?,updated_at=? WHERE id=?")
-      .bind(candidates.length,now(),runId).run();
-    return json({topic:t.title,queries,candidates,found:candidates.length,source:"commons",unverified:true});
+    const status=successfulQueries===0?"failed":"completed";
+    const diagnostics={successful_queries:successfulQueries,errors,skipped,partial:errors.length>0};
+    await env.DB.prepare("UPDATE editorial_topic_explorations SET status=?,candidates=?,diagnostics_json=?,updated_at=? WHERE id=?")
+      .bind(status,candidates.length,JSON.stringify(diagnostics),now(),runId).run();
+    return json({topic:t.title,queries,candidates,found:candidates.length,status,diagnostics,source:"commons",unverified:true});
   }
   if(path===base+"/slop/plan"){
     const data=await body(request,1000),t=await topic(env,data.topic_id);
@@ -278,7 +301,7 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
       typeof p==="string" && p.trim().length>=30 && p.length<=4000).slice(0,8);
     if(prompts.length<3)throw new HttpError(502,"Banca di prompt SLOP troppo piccola");
     for(let slot=0;slot<prompts.length;slot++){
-      const variant=imageFormatChoice(slot);
+      const variant=topicImageFormatChoice(t.id,slot);
       const instruction=prompts[slot].trim();
       const frozenHash=await hash(JSON.stringify({seed:sha256,slot,prompt:instruction,variant:variant.variant}));
       await env.DB.prepare("INSERT OR IGNORE INTO editorial_slop_prompt_bank(id,topic_id,slot,prompt,variant,model,frozen_sha256,created_at) VALUES(?,?,?,?,?,?,?,?)")
@@ -303,9 +326,27 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     const sum=(origin:string,status:string)=>counts.results.filter(x=>x.origin===origin&&x.status===status).reduce((s,x)=>s+x.n,0);
     const needed=sum("REAL","approved")-sum("AI","approved")-sum("AI","pending");
     if(needed<=0)throw new HttpError(409,"Non servono SLOP: approvare prima altre REAL o revisionare le SLOP pendenti");
-    const size=imageFormatChoice(slot);
-    const result=await modelImage(env,t.id,"slop-generate:"+t.id+":"+slot,
-      prompt.prompt+"\nFictional composite scene; no reference image. Photorealistic candid camera appearance.",size.size);
+    // Honor old frozen banks as well as new independent per-topic format rotations.
+    const size=[0,1,2].map(imageFormatChoice).find(choice=>choice.variant===prompt.variant);
+    if(!size)throw new HttpError(409,"Formato congelato non valido");
+    const claim=await env.DB.prepare(`INSERT OR IGNORE INTO editorial_workspace_generation_claims
+      SELECT ?,?,'reserved',? WHERE
+      (SELECT count(*) FROM editorial_review_effective_images WHERE origin='REAL' AND status='approved' AND json_extract(metadata_json,'$.topic_id')=?) >
+      (SELECT count(*) FROM editorial_review_effective_images WHERE origin='AI' AND status IN ('approved','pending') AND json_extract(metadata_json,'$.topic_id')=?) +
+      (SELECT count(*) FROM editorial_workspace_generation_claims WHERE topic_id=? AND status IN ('reserved','uncertain'))`)
+      .bind(t.id,slot,now(),t.id,t.id,t.id).run();
+    if(claim.meta.changes!==1)throw new HttpError(409,"Capacità già prenotata o slot già avviato: controllare le operazioni");
+    let result:Awaited<ReturnType<typeof modelImage>>;
+    try{
+      result=await modelImage(env,t.id,"slop-generate:"+t.id+":"+slot,
+        prompt.prompt+"\nFictional composite scene; no reference image. Photorealistic candid camera appearance.",size.size);
+    }catch(error){
+      const job=await env.DB.prepare("SELECT status FROM editorial_workspace_jobs WHERE operation_key=?")
+        .bind("slop-generate:"+t.id+":"+slot).first<{status:string}>();
+      await env.DB.prepare("UPDATE editorial_workspace_generation_claims SET status=? WHERE topic_id=? AND slot=?")
+        .bind(job && ["submitting","uncertain","completed"].includes(job.status)?"uncertain":"failed",t.id,slot).run();
+      throw error;
+    }
     try {
       const bytes=result.bytes;
       if(bytes.byteLength>MAX_IMAGE_BYTES || imageMime(new Uint8Array(bytes))!=="image/webp")
@@ -317,7 +358,7 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
         .map(x=>x.toString(16).padStart(2,"0")).join("");
       const inbox="generated-"+id(),key="workspace-slop/"+inbox,stamp=now();
       const metadata=JSON.stringify({source_kind:"workspace-slop",topic_id:t.id,slot,
-        title:"Studio sintetico "+t.title,author:"OpenAI",original_key:key,original_sha256:sha,
+        title:"Studio sintetico "+t.title,author:"OpenAI",original_key:key,original_sha256:sha,image_geometry:dimensions,
         provenance:{input_kind:"text-only",fully_synthetic:true,freeze_sha256:prompt.frozen_sha256,
           request_id:result.job.jobId,prompt:prompt.prompt,model:env.EDITORIAL_CYCLE_IMAGE_MODEL,
           generated_at:stamp,aspect_ratio:size.variant}});
@@ -327,9 +368,11 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
           .bind(inbox,sha,key,metadata,stamp).run();
       } catch(error) {await env.QUARANTINE.delete(key);throw error;}
       await result.finish({inbox_id:inbox,sha256:sha,topic_id:t.id,slot,size:size.size});
+      await env.DB.prepare("UPDATE editorial_workspace_generation_claims SET status='completed' WHERE topic_id=? AND slot=?").bind(t.id,slot).run();
       return json({inbox_id:inbox,sha256:sha,size:size.size,pending:true},201);
     } catch {
       await result.uncertain();
+      await env.DB.prepare("UPDATE editorial_workspace_generation_claims SET status='uncertain' WHERE topic_id=? AND slot=?").bind(t.id,slot).run();
       throw new HttpError(502,"Generazione non archiviata con certezza: ispezionare lo storico prima di proseguire");
     }
   }
