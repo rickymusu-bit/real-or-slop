@@ -102,10 +102,12 @@ with tempfile.TemporaryDirectory() as folder:
     assert call(route+'/publish',dict(cycle_id=cycle,confirm=True))[1]['published'] is False
     assert sql("SELECT count(*) AS n FROM editorial_cycle_ready_images r WHERE r.cycle_id="+literal(cycle)+" AND NOT EXISTS(SELECT 1 FROM published_images p WHERE p.image_id=r.image_id)")[0]['n']==1
     # Published review/identity cannot change silently. Original and displayed bytes persist.
-    published_inbox=sql("SELECT DISTINCT a.inbox_id FROM editorial_cycle_admissions a JOIN published_images p ON p.image_id=a.image_id WHERE a.cycle_id="+literal(cycle))[0]['inbox_id']
-    published_index=next(i for i,image in enumerate(images) if image['id']==published_inbox)
-    assert vote(published_index,'rejected',revision=1)[0]==409
-    admitted=call(route+'/admit',admission(published_index))[1]['image_id']
+    published=sql("SELECT r.inbox_id,q.revision,r.image_id FROM editorial_cycle_ready_images r JOIN published_images p ON p.image_id=r.image_id JOIN editorial_review_effective_images q ON q.id=r.inbox_id WHERE r.cycle_id="+literal(cycle))[0]
+    published_index=next(i for i,image in enumerate(images) if image['id']==published['inbox_id'])
+    assert vote(published_index,'rejected',revision=published['revision'])[0]==409
+    status,replayed=call(route+'/admit',admission(published_index,published['revision']))
+    assert status==200 and replayed['already_admitted'] and replayed['published'],(status,replayed)
+    admitted=replayed['image_id'];assert admitted==published['image_id']
     assert call('/api/admin/originals/'+admitted)[1]==Path(images[published_index]['file']).read_bytes()
     assert call('/api/admin/assets/'+admitted)[1]==Path(images[published_index]['file']).read_bytes()
     totals=sql("SELECT i.type,count(*) AS n FROM images i JOIN published_images p ON p.image_id=i.id WHERE i.demo=0 GROUP BY i.type")
