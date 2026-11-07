@@ -4,7 +4,9 @@ export type Origin = "REAL" | "AI";
 export type Profile = { subject: string; action: string; setting: string; composition: string; visibility: string; interest: string; tags: string[] };
 export type PreferenceRow = { feature: string; approved: number; rejected: number };
 const forbidden = new Set(["", "a", "di", "del", "della", "dei", "delle", "in", "il", "le", "la", "per", "da", "con", "nel", "sul", "the", "and", "of", "at", "on", "for"]);
-const synonym = new Map([["manifestazioni","proteste"],["manifestazione","proteste"],["protesta","proteste"],["riot","rivolte"],["riots","rivolte"]]);
+const synonym = new Map([["manifestazioni","proteste"],["manifestazione","proteste"],["protesta","proteste"],["riot","rivolte"],["riots","rivolte"],["protests","proteste"],["protest","proteste"],["demonstration","proteste"],
+  ["demonstrations","proteste"],["paris","parigi"],["france","francia"],["october","ottobre"],["september","settembre"],
+  ["november","novembre"],["farmers","agricoltori"],["farmer","agricoltori"]]);
 export function topicTerms(value: string): string[] {
   return [...new Set((value.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase().match(/[\p{L}\p{N}]+/gu) || [])
     .filter(token => token.length > 2 && !forbidden.has(token)).map(token => synonym.get(token) || token))];
