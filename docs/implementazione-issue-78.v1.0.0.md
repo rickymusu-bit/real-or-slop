@@ -28,6 +28,8 @@ budget insufficiente non fanno perdere l'input e consentono una descrizione manu
   input canonico, unico embedding, doppio clic/concorrenza, duplicati normalizzati,
   hash/titolo stale, rigenerazione idempotente, recupero da ricevuta completata,
   annullamento e conflitto con una registrazione manuale concorrente.
+  Copre anche i suggerimenti storici senza descrizione: nessuna accettazione,
+  mutazione di stato o chiamata a modelli può aggirare il nuovo flusso.
 - Il test HTTP verifica budget esaurito, risposte invalide/incerte e mancato retry.
   Il profilo standard verifica anche gate disabilitati senza provider né tema.
 - Browser Chromium a 1440×1000 e 390×844: proposta, modifica/approvazione,

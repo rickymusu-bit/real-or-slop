@@ -115,6 +115,8 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     const row=await env.DB.prepare("SELECT t.title,t.normalized_key,t.status,t.rationale,s.description,c.status AS screening_status FROM editorial_topic_suggestions t LEFT JOIN editorial_topic_suggestion_semantics s ON s.topic_id=t.id LEFT JOIN editorial_topic_suggestion_screening c ON c.suggestion_id=t.id WHERE t.id=?")
       .bind(match[1]).first<{title:string;normalized_key:string;status:string;rationale:string;description:string|null;screening_status:string|null}>();
     if(!row)throw new HttpError(404,"Suggerimento non trovato");
+    if(data.decision==="accepted" && !semanticTopicDescription(row.description))
+      throw new HttpError(409,"Suggerimento senza descrizione: usa Nuovo argomento con questo titolo, rivedi la descrizione e approva prima di registrare");
     if(data.decision==="accepted" && row.screening_status && row.screening_status!=="ready")throw new HttpError(409,"La verifica della proposta non è completa o rileva un duplicato");
     if(row.status!== "suggested" && row.status!=="deferred")throw new HttpError(409,"Suggerimento già deciso");
     await env.DB.prepare("UPDATE editorial_topic_suggestions SET status=?,updated_at=? WHERE id=? AND status IN ('suggested','deferred')")

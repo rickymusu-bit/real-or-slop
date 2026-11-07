@@ -153,6 +153,13 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  const topicCount=await count('editorial_workspace_topics'),seedCount=await count('editorial_topic_slop_seed');
  const semanticCount=await count('editorial_topic_semantics'),descriptionCalls=()=>calls.filter(c=>c.body?.text?.format?.name==='topic_description').length;
  const embeddingCalls=()=>calls.filter(c=>c.url.endsWith('/embeddings')).length;
+ // Historical suggestions with no description cannot bypass the new-topic confirmation flow.
+ const oldSuggestion=globalThis.crypto.randomUUID(),oldSuggestionCalls=calls.length;
+ await db.prepare("INSERT INTO editorial_topic_suggestions VALUES(?,?,?,?,'suggested',?,?)")
+  .bind(oldSuggestion,'Historical title-only suggestion','historical title-only suggestion','Legacy rationale is not a semantic description.','fixture','fixture').run();
+ await api(intel+'/suggestions/'+oldSuggestion+'/decision',{decision:'accepted'},409);
+ assert.equal((await db.prepare('SELECT status FROM editorial_topic_suggestions WHERE id=?').bind(oldSuggestion).first()).status,'suggested');
+ assert.equal(calls.length,oldSuggestionCalls);assert.equal(await count('editorial_workspace_topics'),topicCount);
  const descriptionTitle='Ambiguous owner topic',descriptionOp=globalThis.crypto.randomUUID();
  await api(ws+'/topics',{title:descriptionTitle},400);
  const draft=(await api(ws+'/topics',{title:descriptionTitle,operation_id:descriptionOp},202)).proposal;

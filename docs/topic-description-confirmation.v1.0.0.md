@@ -19,6 +19,11 @@ un eventuale `operation_id` UUID. Con una descrizione manuale non vuota registra
 come prima e tenta un solo embedding entro i limiti. Con titolo normalizzato già
 esistente seleziona il tema, senza chiamare modelli.
 
+I suggerimenti nuovi hanno già una descrizione mostrata all'owner. Per i vecchi
+suggerimenti che ne sono privi, l'accettazione diretta è bloccata prima di ogni
+mutazione: riprendere il titolo nel modulo Nuovo argomento e confermare lì il
+testo. Non usare il vecchio rationale come descrizione né indicizzare il solo titolo.
+
 Con descrizione vuota richiede `operation_id` e restituisce **202** con una bozza
 privata: `id`, titolo, stato, descrizione inglese ≤500 caratteri, ambiguità e
 `proposal_sha256`. Non registra temi, seed SLOP o semantica. Il modello vede
