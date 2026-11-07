@@ -1,6 +1,6 @@
 {
   "name": "real-or-slop",
-  "version": "0.16.0",
+  "version": "0.16.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "npm run build && wrangler dev --local --env local --ip 0.0.0.0",
     "build": "tsc --noEmit && tsc -p tsconfig.worker.json --noEmit && vite build && node scripts/check-assets.mjs",
-    "lint": "eslint src worker shared tests scripts/deploy-demo.mjs scripts/deployment-config.mjs scripts/benchmark-sampling.mjs scripts/check-gallery.mjs scripts/benchmark-preloading.mjs scripts/scan-similarity.mjs scripts/real-similarity.v1.0.0.mjs",
+    "lint": "eslint src worker shared tests scripts/deploy-demo.mjs scripts/deployment-config.mjs scripts/benchmark-sampling.mjs scripts/check-gallery.mjs scripts/benchmark-preloading.mjs scripts/scan-similarity.mjs scripts/real-similarity.v1.0.0.mjs scripts/check-live-assets.mjs",
     "test": "node --import tsx --test tests/*.test.ts && python3 -m unittest discover -s tests -p '*_test.py'",
     "db:migrate": "wrangler d1 migrations apply DB --local --env local",
     "db:seed": "wrangler d1 execute DB --local --env local --file scripts/seed.sql && wrangler d1 execute DB --local --env local --file scripts/seed-publication.sql",
@@ -18,6 +18,7 @@
     "test:integration": "python3 scripts/integration.py",
     "benchmark:sampling": "node --import tsx scripts/benchmark-sampling.mjs",
     "deploy:demo": "node scripts/deploy-demo.mjs",
+    "check:live-assets": "node scripts/check-live-assets.mjs",
     "deploy:check": "node scripts/deploy-demo.mjs --check",
     "test:gallery": "node scripts/check-gallery.mjs",
     "benchmark:preloading": "node --import tsx scripts/benchmark-preloading.mjs",

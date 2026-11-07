@@ -89,6 +89,12 @@ try:
                     assert '<title>Real or Slop' in html
                     asset=re.search(r'src="([^"]+\.js)"',html).group(1)
                     with urllib.request.urlopen(base+asset) as js:assert js.status==200
+                    styles=re.findall(r'<link\b[^>]*\bhref="([^"]+\.css)"',html)
+                    assert styles,'Missing built stylesheet'
+                    for style in styles:
+                        with urllib.request.urlopen(base+style) as css:
+                            assert css.status==200 and css.headers.get_content_type()=='text/css',(style,css.headers.get('Content-Type'))
+                            assert b'<html' not in css.read(128).lower(),'HTML returned instead of CSS'
             print('Navigation/assets HTTP checks passed.')
             for script in (['tests/cycle_budget.integration.py'] if cycle_test else ['tests/real_discovery.integration.py'] if real_test else ['tests/editorial_v2.integration.py'] if v2_test else ['tests/batch.integration.py'] if batch_test else ['tests/moderation.integration.py','tests/direct-import.integration.py','tests/curation.integration.py','tests/slop.integration.py','tests/editorial.integration.py','tests/review.integration.py','tests/review_inbox.integration.py','tests/review_presentations.integration.py','tests/review_bulk_delete.integration.py','tests/similarity.integration.py','tests/editorial_cycle.integration.py'] if local_profile=='local' else [])+['tests/sampling.integration.py','tests/game.integration.py','tests/preloading.integration.py']:
                 subprocess.run(['python3',script],env=env,check=True)

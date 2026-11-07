@@ -19,6 +19,9 @@ const references = Array.from(
   (match) => match[1],
 ).filter((reference) => !/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(reference));
 if (!references.length) throw new Error("Nessuna risorsa compilata in dist/index.html");
+if (!references.some(reference => new URL(reference, "https://build.invalid/").pathname.endsWith(".css"))) {
+  throw new Error("Foglio di stile compilato assente da dist/index.html");
+}
 for (const reference of references) {
   const pathname = decodeURIComponent(new URL(reference, "https://build.invalid/").pathname);
   if (pathname.startsWith("/src/") || /\.tsx?$/.test(pathname)) {
