@@ -80,12 +80,13 @@ export async function mountEditorialIntelligence() {
     }
     if(discoveryStatus) discoveryStatus.textContent=state.topic_discovery_enabled?"Attivo (solo su richiesta)":"Disattivato";
     const buttonLabel=state.enabled?"":" — IA non configurata";
-    suggestions.innerHTML=state.suggestions.filter(s=>s.status==="suggested"||s.status==="deferred").slice(0,8)
+    suggestions.innerHTML=state.topic_discovery_enabled ? state.suggestions.filter(s=>s.status==="suggested"||s.status==="deferred").slice(0,8)
       .map(s=>'<article><strong>'+escape(s.title)+'</strong><p>'+escape(s.rationale)+'</p><div class="intel-buttons">'+
         '<button data-intel="accept" data-id="'+escape(s.id)+'">Esplora</button>'+
         '<button data-intel="defer" data-id="'+escape(s.id)+'">Rimanda</button>'+
         '<button data-intel="reject" data-id="'+escape(s.id)+'">Scarta</button></div></article>').join("") ||
-      '<p>Nessun suggerimento nuovo. Generarli richiede un comando esplicito.</p>';
+      '<p>Nessun suggerimento nuovo. Generarli richiede un comando esplicito.</p>' :
+      '<p>Topic Discovery è spento. Continua a popolare l’archivio scegliendo i tuoi argomenti: nulla viene generato automaticamente.</p>';
     const submitted=workspaceData.proposals.filter(p=>p.topic_id===topic && p.kind==="link");
     links.innerHTML=submitted.length ? '<h4>Link da acquisire</h4>'+
       submitted.map(p=>'<div class="intel-proposal"><span>'+escape(p.source_url || "")+'</span><button data-intel="acquire" data-id="'+escape(p.id)+'">Acquisisci da Commons</button></div>').join("")
