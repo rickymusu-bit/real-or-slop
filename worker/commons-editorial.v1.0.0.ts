@@ -14,7 +14,8 @@ function decodeName(value: string) {
   let name: string;
   try { name = decodeURIComponent(value).replace(/_/g, " "); }
   catch { throw new HttpError(400, "Nome Commons non decodificabile"); }
-  if (!name || name.length > 255 || !imageExt.test(name) || /[/\\\u0000-\u001f]/.test(name) || name === "." || name === "..")
+  if (!name || name.length > 255 || !imageExt.test(name) || /[/\\]/.test(name) ||
+    [...name].some(ch => ch.charCodeAt(0)<32) || name === "." || name === "..")
     throw new HttpError(400, "Usare una fotografia JPEG/PNG/WebP di Commons");
   return name;
 }
