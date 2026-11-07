@@ -8,6 +8,10 @@ export interface Env {
   ADMIN_TOKEN?: string;
   OPENAI_API_KEY?: string;
   WORKSPACE_AI_ENABLED?: string;
+  TOPIC_EMBEDDING_MODEL?: string;
+  TOPIC_EMBEDDING_CALL_USD?: string;
+  TOPIC_EMBEDDING_DAILY_USD?: string;
+  TOPIC_EMBEDDING_TOTAL_USD?: string;
   ENABLE_EDITORIAL_PAID?: string;
   ENABLE_EDITORIAL_V2_EXPERIMENTS?: string;
   ENABLE_EDITORIAL_V2_PAID?: string;
