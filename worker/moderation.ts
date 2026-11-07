@@ -20,6 +20,7 @@ import { reviewInbox } from "./review-inbox";
 import { similarity } from "./similarity";
 import { realDiscovery } from "./real-discovery";
 import { editorialCycle } from "./editorial-cycle";
+import { editorialWorkspace } from "./editorial-workspace";
 function text(data: Record<string, unknown>, key: string, max = 4000) {
   const v = data[key];
   if (typeof v !== "string" || !v.trim() || v.length > max)
@@ -35,6 +36,7 @@ function referencePhoto(row: Record<string, unknown>) {
   return row.reference_id ? { id: String(row.reference_id), title: String(row.reference_title || "Fotografia sorgente"), source_url: String(row.reference_source_url || "") } : null;
 }
 export async function moderation(request: Request, env: Env, path: string) {
+  if (path === "/api/admin/editorial/workspace" || path.startsWith("/api/admin/editorial/workspace/")) return editorialWorkspace(request, env, path);
   if (path === "/api/admin/editorial/cycle" || path.startsWith("/api/admin/editorial/cycle/")) return editorialCycle(request, env, path);
   if (path === "/api/admin/editorial/real-discovery/reserve") return realDiscovery(request, env);
   if (path === "/api/admin/similarity" || path.startsWith("/api/admin/similarity/")) return similarity(request, env, path);
