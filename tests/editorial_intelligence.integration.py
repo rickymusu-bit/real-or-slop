@@ -63,6 +63,14 @@ card=next((x for x in state["images"] if x["id"]==inbox),None)
 assert card and card["sha256"]==saved["sha256"],card
 assert card["details"]["original_sha256"]==saved["sha256"]
 assert card["details"]["topic_id"]==uid
+# Candidates from another topic must not pollute a selected topic's REAL ranking.
+code,other=call("/api/admin/editorial/workspace/topics",{
+    "title":"Street photography in Tokyo, November 2026 "+uuid.uuid4().hex[:8]})
+assert code==201,(code,other)
+current=call(prefix+"?topic_id="+uid)[1]
+unrelated=call(prefix+"?topic_id="+other["id"])[1]
+assert any(item["id"]==inbox for item in current["ranked_real"])
+assert all(item["id"]!=inbox for item in unrelated["ranked_real"])
 code,vote=call("/api/admin/review-inbox/"+inbox+"/decision",{
     "decision":"approved","revision":card["revision"],"sha256":saved["sha256"],
     "note":"Owner-selected photograph, rights and origin still unverified","reason":"editorial"
