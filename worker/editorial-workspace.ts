@@ -2,9 +2,10 @@ import { body, HttpError, id, json, type Env } from "./core";
 import { imageMime, sourcePageUrl, topicKey, topicTitle } from "../shared/editorial-workspace.v1.0.0";
 import { ensureSlopSeed } from "./editorial-learning.v1.0.0";
 import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
+import { createTopicSemantics, semanticTopicDescription } from "./topic-semantic-memory.v1.0.0";
 
 const base = "/api/admin/editorial/workspace";
-type TopicRow = { id: string; title: string; normalized_key: string; created_at: string };
+type TopicRow = { id: string; title: string; normalized_key: string; created_at: string; description: string | null; embedding_status: string | null };
 type ProposalRow = {
   id: string; topic_id: string; kind: "link" | "upload"; source_url: string | null;
   inbox_id: string | null; note: string; created_at: string; review_status: string | null;
@@ -30,7 +31,7 @@ async function existingTopic(env: Env, topicId: string) {
 export async function editorialWorkspace(request: Request, env: Env, path: string): Promise<Response> {
   if (path === base && request.method === "GET") {
     const [topics, proposals] = await Promise.all([
-      env.DB.prepare("SELECT id,title,normalized_key,created_at FROM editorial_workspace_topics ORDER BY created_at DESC,id DESC LIMIT 200").all<TopicRow>(),
+      env.DB.prepare("SELECT t.id,t.title,t.normalized_key,t.created_at,s.description,s.embedding_status FROM editorial_workspace_topics t LEFT JOIN editorial_topic_semantics s ON s.topic_id=t.id ORDER BY t.created_at DESC,t.id DESC LIMIT 200").all<TopicRow>(),
       env.DB.prepare("SELECT p.id,p.topic_id,p.kind,p.source_url,p.inbox_id,p.note,p.created_at,i.status AS review_status FROM editorial_workspace_proposals p LEFT JOIN editorial_review_inbox i ON i.id=p.inbox_id ORDER BY p.created_at DESC,p.id DESC LIMIT 1000").all<ProposalRow>(),
     ]);
     return json({ topics: topics.results, proposals: proposals.results, paid_search_enabled: false,
@@ -38,18 +39,26 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
   }
   if (path === base + "/topics" && request.method === "POST") {
     const data = await body(request, 3000);
-    if (Object.keys(data).some(key => key !== "title")) throw new HttpError(400, "Campi argomento non previsti");
-    let title: string, key: string;
-    try { title = topicTitle(data.title); key = topicKey(title); } catch (error) { return invalid(error); }
+    if (Object.keys(data).some(key => !["title","description"].includes(key))) throw new HttpError(400, "Campi argomento non previsti");
+    let title: string, key: string, description: string;
+    try { title = topicTitle(data.title); key = topicKey(title); description = semanticTopicDescription(data.description); }
+    catch (error) { return invalid(error); }
     const existing = await env.DB.prepare("SELECT id,title FROM editorial_workspace_topics WHERE normalized_key=?").bind(key).first<{ id: string; title: string }>();
-    if (existing) return json({ ...existing, already_exists: true });
+    if (existing) {
+      const semantic=await env.DB.prepare("SELECT embedding_status FROM editorial_topic_semantics WHERE topic_id=?")
+        .bind(existing.id).first<{embedding_status:string}>();
+      return json({ ...existing, already_exists: true,embedding_status:semantic?.embedding_status||"not_indexed" });
+    }
     const topic = { id: id(), title, normalized_key: key, created_at: new Date().toISOString() };
     try {
       await env.DB.prepare("INSERT INTO editorial_workspace_topics(id,title,normalized_key,created_at) VALUES(?,?,?,?)")
         .bind(topic.id, topic.title, topic.normalized_key, topic.created_at).run();
     } catch { throw new HttpError(409, "Argomento già registrato; aggiorna la pagina"); }
     await ensureSlopSeed(env,topic);
-    return json(topic, 201);
+    let embeddingStatus="pending";
+    try { embeddingStatus=await createTopicSemantics(env,topic.id,title,description); }
+    catch { /* Topic remains saved: never pretend a vector was created on failure. */ }
+    return json({...topic,description,embedding_status:embeddingStatus},201);
   }
   if (path === base + "/links" && request.method === "POST") {
     const data = await body(request, 5000);

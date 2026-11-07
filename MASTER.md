@@ -1,6 +1,6 @@
-# Mappa canonica — versione 6.1.0
+# Mappa canonica — versione 7.0.0
 
-Snapshot: `docs/MASTER.v6.1.0.md`. Percorsi relativi alla radice del repository.
+Snapshot: `docs/MASTER.v7.0.0.md`. Percorsi relativi alla radice del repository.
 Verificato: 2026-11-06T21:45:55Z, base main `05c6bfc9035debb6c078160a1fe79b7997dfc77a`.
 Le PR #58, #59 e #60 sono integrate. Il delta `feat/editorial-cycle` implementa
 il ciclo completo richiesto dal proprietario; non attesta un deploy remoto.
@@ -25,6 +25,14 @@ Aggiornato: 2026-11-07T14:58:05.001Z. La procedura ordinaria per le nuove copie 
 ## Miglioramento della profilazione visiva #64
 
 Aggiornato: 2026-11-07T15:06:47.075Z. Per immagini REAL e SLOP in coda, la dashboard admin crea in browser una **copia proporzionale senza crop** di massimo 1152 px e 1,5 MB, da inviare al modello esclusivamente con autorizzazione esplicita. Il Worker verifica SHA dell'originale archiviato, geometria e hash della miniatura prima della chiamata API. I profili si riferiscono ai pixel della derivata e sono legati all'hash originale per le preferenze. Vedi `docs/profilazione-visiva.v1.0.0.md`. Nessun file sorgente viene sostituito e nessuna funzione viene attivata in produzione dalla PR.
+
+## Decisione #64 — Memoria semantica incrementale, Discovery facoltativo
+
+Aggiornato: 2026-11-07T17:50:01.887Z. Vedere `docs/topic-discovery-semantic-learning.v2.0.0.md`. Il motore **Topic Discovery resta OFF per default**, con switch owner-only `/admin` in migrazione 0021; nessun suggerimento automatico.
+
+Il popolamento manuale ora registra titolo e descrizione semantica e invoca **l'API reale degli embedding per ogni nuovo argomento**, se `OPENAI_API_KEY` e i budget dedicati sono configurati. Questa indicizzazione è **indipendente dal toggle Discovery**. I vettori risultanti (o lo stato `pending/uncertain`) sono registrati nella nuova migrazione 0022 con testo, hash, modello, versione e dimensioni; un argomento accettato dai suggerimenti viene trattato allo stesso modo. Se non si configura il servizio, non viene fabbricato un vettore: il testo resta memorizzato e la UI segnala `pending`.
+
+La raccolta dei feedback REAL e SLOP resta nei rispettivi registri e influenza gli ordinamenti/prompt successivi, senza addestramento di pesi a ogni voto. Il futuro suggeritore potrà usare il corpus di embedding; **la ricerca vettoriale non è ancora implementata**. Non attivare automaticamente secrets, migrazioni remote, spese o deploy. La CI e l'approvazione visiva precedono il merge.
 
 ## Ingressi e autorità
 

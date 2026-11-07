@@ -34,10 +34,39 @@ prefix="/api/admin/editorial/intelligence"
 assert call(prefix,auth="not-a-token")[0]==401
 state=call(prefix)[1]
 assert state["enabled"] is False and state["generation_enabled"] is False,state
+assert state["topic_discovery_enabled"] is False,state
+assert call(prefix+"/suggest",{"operation_id":str(uuid.uuid4())})[0]==409
+assert call(prefix+"/topic-discovery/settings",{"enabled":True},auth="not-a-token")[0]==401
+assert call(prefix+"/topic-discovery/settings",{"enabled":"true"})[0]==400
+assert call(prefix+"/topic-discovery/settings",{"enabled":True,"extra":1})[0]==400
+code,switched=call(prefix+"/topic-discovery/settings",{"enabled":True})
+assert code==200 and switched["topic_discovery_enabled"] is True and switched["paid_calls_started"] is False
+assert call(prefix)[1]["topic_discovery_enabled"] is True
+# Enabling suggestions alone does not enable paid API access.
+assert call(prefix+"/suggest",{"operation_id":str(uuid.uuid4())})[0]==503
+code,switched=call(prefix+"/topic-discovery/settings",{"enabled":False})
+assert code==200 and switched["topic_discovery_enabled"] is False and switched["paid_calls_started"] is False
+assert call(prefix)[1]["topic_discovery_enabled"] is False
+assert call(prefix+"/suggest",{"operation_id":str(uuid.uuid4())})[0]==409
+assert not [job for job in call(prefix)[1]["jobs"] if job["kind"]=="suggest"]
 title="Proteste a Parigi, ottobre 2026 "+uuid.uuid4().hex[:8]
 code,created=call("/api/admin/editorial/workspace/topics",{"title":title})
 assert code==201,(code,created)
 uid=created["id"]
+assert created["embedding_status"]=="pending",created
+topics=call("/api/admin/editorial/workspace")[1]["topics"]
+semantic=next(t for t in topics if t["id"]==uid)
+assert semantic["embedding_status"]=="pending",semantic
+# The human-supplied semantic description must be retained even while
+# Topic Discovery and paid services are disabled.
+detail="Protests by agricultural workers across France and neighboring countries."
+code,described=call("/api/admin/editorial/workspace/topics",{
+    "title":"Farmers mobilizations across Europe "+uuid.uuid4().hex[:8],
+    "description":detail})
+assert code==201 and described["embedding_status"]=="pending",(code,described)
+described_row=next(t for t in call("/api/admin/editorial/workspace")[1]["topics"] if t["id"]==described["id"])
+assert described_row["description"]==detail,described_row
+assert call(prefix)[1]["topic_discovery_enabled"] is False
 url="https://commons.wikimedia.org/wiki/File:Owner_Test_2026.jpg"
 code,link=call("/api/admin/editorial/workspace/links",{"topic_id":uid,"source_url":url})
 assert code==201,(code,link)
@@ -46,7 +75,7 @@ assert code==409,(code,dupe)
 external=call("/api/admin/editorial/workspace/links",{
     "topic_id":uid,"source_url":"https://example.org/unsafe.jpg"})[1]
 assert call(prefix+"/acquire",{"proposal_id":external["id"]})[0]==400
-assert call(prefix+"/suggest",{"operation_id":str(uuid.uuid4())})[0]==503
+assert call(prefix+"/suggest",{"operation_id":str(uuid.uuid4())})[0]==409
 assert call(prefix+"/search",{"topic_id":uid,"limit":3,"operation_id":str(uuid.uuid4())})[0]==503
 assert call(prefix+"/slop/plan",{"topic_id":uid})[0]==503
 assert call(prefix+"/slop/generate",{"topic_id":uid,"slot":0})[0]==409
@@ -95,4 +124,4 @@ assert call(prefix+"/profile",{"inbox_id":inbox,"sha256":saved["sha256"],
                                "preview_base64":base64.b64encode(wide.getvalue()).decode()})[0]==400
 assert not updated["prompts"]
 assert not updated["suggestions"]
-print("Editorial intelligence integration passed: private owner topics, links, upload, pixel-bound vote and closed paid gates")
+print("Editorial intelligence integration passed: Topic Discovery OFF by default, persistent owner toggle without paid calls, manual topic intake, private owner photos and closed paid gates")

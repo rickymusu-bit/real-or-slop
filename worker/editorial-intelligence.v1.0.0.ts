@@ -5,6 +5,8 @@ import { commonsFile, searchCommons, type CommonsFile, MAX_IMAGE_BYTES } from ".
 import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
 import { ensureSlopSeed, headlineStats, rankPending } from "./editorial-learning.v1.0.0";
 import { fields, modelImage, modelJSON } from "./workspace-ai.v1.0.0";
+import { topicDiscoveryEnabled, setTopicDiscoveryEnabled } from "./topic-discovery-opt-in.v1.0.0";
+import { createTopicSemantics, semanticTopicDescription } from "./topic-semantic-memory.v1.0.0";
 
 const base="/api/admin/editorial/intelligence";
 interface Topic { id:string;title:string }
@@ -61,7 +63,8 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
   if(path===base && request.method==="GET"){
     const requestedTopic = new URL(request.url).searchParams.get("topic_id");
     const selectedTopic = requestedTopic ? uid(requestedTopic) : null;
-    const [stats,reals,slops,suggestions,searches,jobs,prompts,topicCounts,reviewedUnprofiled]=await Promise.all([
+    const [discoveryOn,stats,reals,slops,suggestions,searches,jobs,prompts,topicCounts,reviewedUnprofiled]=await Promise.all([
+      topicDiscoveryEnabled(env),
       headlineStats(env),rankPending(env,"REAL",selectedTopic),rankPending(env,"AI",selectedTopic),
       env.DB.prepare("SELECT * FROM editorial_topic_suggestions ORDER BY created_at DESC LIMIT 100").all(),
       env.DB.prepare("SELECT * FROM editorial_topic_explorations ORDER BY created_at DESC LIMIT 50").all(),
@@ -72,7 +75,7 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
         "LEFT JOIN editorial_image_profiles p ON p.inbox_id=q.id AND p.sha256=q.sha256 " +
         "WHERE p.inbox_id IS NULL AND q.status IN ('approved','rejected') ORDER BY q.created_at DESC LIMIT 40").all()
     ]);
-    return json({version:"1.0.0",preferences:stats,ranked_real:reals.ranked.slice(0,30),ranked_slop:slops.ranked.slice(0,30),
+    return json({version:"1.0.0",topic_discovery_enabled:discoveryOn,preferences:stats,ranked_real:reals.ranked.slice(0,30),ranked_slop:slops.ranked.slice(0,30),
       suggestions:suggestions.results,searches:searches.results,jobs:jobs.results,prompts:prompts.results,topic_counts:topicCounts.results,
       reviewed_unprofiled:reviewedUnprofiled.results,
       enabled:env.WORKSPACE_AI_ENABLED==="true" && env.ENABLE_REAL_DISCOVERY_PAID==="true" && !!env.OPENAI_API_KEY,
@@ -80,13 +83,21 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
       cost_per_text_call:env.REAL_DISCOVERY_CALL_USD || null,
       cost_per_image_call:env.EDITORIAL_CYCLE_GENERATION_USD || null});
   }
+  if(path===base+"/topic-discovery/settings"){
+    if(request.method!=="POST")throw new HttpError(405,"Metodo non consentito");
+    const data=await body(request,300);
+    if(Object.keys(data).length!==1 || typeof data.enabled!=="boolean")
+      throw new HttpError(400,"Specificare enabled come valore booleano");
+    await setTopicDiscoveryEnabled(env,data.enabled);
+    return json({topic_discovery_enabled:data.enabled,paid_calls_started:false});
+  }
   if(request.method!=="POST")throw new HttpError(405,"Metodo non consentito");
   const match=path.match(/^\/api\/admin\/editorial\/intelligence\/suggestions\/([a-f0-9-]{36})\/decision$/);
   if(match){
     const data=await body(request,1200);
     if(!["accepted","rejected","deferred"].includes(String(data.decision)))throw new HttpError(400,"Decisione non valida");
-    const row=await env.DB.prepare("SELECT title,normalized_key,status FROM editorial_topic_suggestions WHERE id=?")
-      .bind(match[1]).first<{title:string;normalized_key:string;status:string}>();
+    const row=await env.DB.prepare("SELECT title,normalized_key,status,rationale FROM editorial_topic_suggestions WHERE id=?")
+      .bind(match[1]).first<{title:string;normalized_key:string;status:string;rationale:string}>();
     if(!row)throw new HttpError(404,"Suggerimento non trovato");
     if(row.status!== "suggested" && row.status!=="deferred")throw new HttpError(409,"Suggerimento già deciso");
     await env.DB.prepare("UPDATE editorial_topic_suggestions SET status=?,updated_at=? WHERE id=? AND status IN ('suggested','deferred')")
@@ -96,9 +107,13 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
         .bind(topicKey(row.title)).first<{id:string}>();
       if(!existing){
         const item={id:id(),title:topicTitle(row.title)};
-        await env.DB.prepare("INSERT OR IGNORE INTO editorial_workspace_topics(id,title,normalized_key,created_at) VALUES(?,?,?,?)")
+        const inserted=await env.DB.prepare("INSERT OR IGNORE INTO editorial_workspace_topics(id,title,normalized_key,created_at) VALUES(?,?,?,?)")
           .bind(item.id,item.title,topicKey(item.title),now()).run();
-        await ensureSlopSeed(env,item);
+        if(inserted.meta.changes===1){
+          await ensureSlopSeed(env,item);
+          // Accepted suggestions become semantic memory even when discovery is later switched OFF.
+          await createTopicSemantics(env,item.id,item.title,semanticTopicDescription(row.rationale.slice(0,500)));
+        }
       }
     }
     return json({saved:true,decision:data.decision});
@@ -117,6 +132,7 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     return json({acquired:true,...row},201);
   }
   if(path===base+"/suggest"){
+    if(!await topicDiscoveryEnabled(env))throw new HttpError(409,"Topic Discovery è disattivato: attivalo dalla dashboard");
     const data=await body(request,1800);
     const operationKey=uid(data.operation_id);
     const [topics,old,stats,catalog]=await Promise.all([
