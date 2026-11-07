@@ -1,6 +1,8 @@
 """Local-only HTTP integration for owner-first dashboard. No external calls or paid secrets."""
 import base64
 import json
+import io
+from PIL import Image
 import os
 import uuid
 import urllib.error
@@ -70,6 +72,19 @@ updated=call(prefix+"?topic_id="+uid)[1]
 assert any(x["id"]==inbox for x in updated["reviewed_unprofiled"])
 assert updated["preferences"]["real"]["observations"]==0
 assert call(prefix+"/profile",{"inbox_id":inbox,"sha256":saved["sha256"]})[0]==503
+# The source pixel hash is checked before any paid call. A faithful WebP full-frame
+# preview can be presented by the owner's browser without changing the original.
+webp=io.BytesIO()
+Image.new("RGB",(1,1),"white").save(webp,"WEBP")
+visual=base64.b64encode(webp.getvalue()).decode()
+assert call(prefix+"/profile",{"inbox_id":inbox,"sha256":saved["sha256"],
+                               "preview_base64":visual})[0]==503
+assert call(prefix+"/profile",{"inbox_id":inbox,"sha256":saved["sha256"],
+                               "preview_base64":"<svg/>"})[0]==400
+wide=io.BytesIO()
+Image.new("RGB",(100,20),"white").save(wide,"WEBP")
+assert call(prefix+"/profile",{"inbox_id":inbox,"sha256":saved["sha256"],
+                               "preview_base64":base64.b64encode(wide.getvalue()).decode()})[0]==400
 assert not updated["prompts"]
 assert not updated["suggestions"]
 print("Editorial intelligence integration passed: private owner topics, links, upload, pixel-bound vote and closed paid gates")

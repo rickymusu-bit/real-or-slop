@@ -1,6 +1,6 @@
-# Istruzioni Codex — versione canonica 6.0.0
+# Istruzioni Codex — versione canonica 6.1.0
 
-Snapshot: `docs/AGENTS.v6.0.0.md`. Percorsi relativi alla radice del repository.
+Snapshot: `docs/AGENTS.v6.1.0.md`. Percorsi relativi alla radice del repository.
 Aggiornato: 2026-11-06T21:45:55Z. Le versioni precedenti restano conservate. Questa revisione
 recepisce il ciclo completo richiesto dal proprietario nella sessione corrente.
 
@@ -22,6 +22,10 @@ Il nuovo upload e retrieval preservano il rapporto d'aspetto, le SLOP nuove ruot
 Aggiornato: 2026-11-07T14:58:05.001Z. Per ogni **nuova** fotografia preservare il rapporto originale; non usare la trasformazione di quadratura `standard_copy`/smart_crop nel flusso ordinario, e non alterare esperimenti storici. Usare `--method preserve` o il percorso owner-first della dashboard; conservare originali, orientamento EXIF, hash, dimensioni e verifica umana. La vecchia pipeline Terra/center resta invocabile soltanto esplicitamente per gli studi legacy. `docs/presentazione-proporzionale.v1.0.0.md` formalizza il nuovo comportamento.
 
 Motivi distinti di rifiuto: editoriale, generazione, tecnico, diritti/licenza, provenienza/autenticità incerta. Non usare rifiuti per provenienza come segnali di gusti negativi. Eseguire CI e test E2E su desktop e mobile; nessun merge/deploy senza anteprima e conferma editoriale.
+
+## Admin: copie di profilazione proporzionali #64
+
+Aggiornato: 2026-11-07T15:06:47.075Z. I file fotografici originali fino a 12 MB non vanno ridimensionati/sovrascritti per permettere il profiling. L'admin prepara una miniatura WebP fedele e senza ritaglio (lato massimo 1152, ≤1,5 MB) con conferma esplicita. Il Worker verifica hash originale, MIME, geometria, rapporto d'aspetto e hash preview prima di prenotare una chiamata GPT. Non usare titolo, URL, autore o metadati per produrre il profilo visivo. Il profilo è valutazione dei pixel, non prova di provenienza né licenza. Test e specifica in `docs/profilazione-visiva.v1.0.0.md`. Nessun deploy o merge è implicito.
 
 ## Prima di modificare
 

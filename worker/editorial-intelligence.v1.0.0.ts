@@ -152,8 +152,10 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     return json({suggested:selected.length,rejected_as_duplicate:values.length-selected.length});
   }
   if(path===base+"/profile"){
-    const data=await body(request,1300),inboxId=text(data.inbox_id,160),sha=text(data.sha256,64);
+    const data=await body(request,2_100_000),inboxId=text(data.inbox_id,160),sha=text(data.sha256,64);
     if(!/^[a-f0-9]{64}$/.test(sha))throw new HttpError(400,"SHA non valido");
+    if(Object.keys(data).some(key=>!["inbox_id","sha256","preview_base64"].includes(key)))
+      throw new HttpError(400,"Dati della profilazione non previsti");
     const row=await env.DB.prepare("SELECT * FROM editorial_review_effective_images WHERE id=?")
       .bind(inboxId).first<{sha256:string;origin:"REAL"|"AI";media_key:string}>();
     if(!row || row.sha256!==sha)throw new HttpError(409,"Fotografia o pixel aggiornati");
@@ -162,20 +164,54 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
       .bind(inboxId,sha).first<{profile_json:string}>();
     if(existing)return json({profile:JSON.parse(existing.profile_json),already_profiled:true});
     const file=await env.QUARANTINE.get(row.media_key);
-    if(!file)throw new HttpError(404,"File originale non disponibile");
-    const image=await file.arrayBuffer();
-    if(image.byteLength>2_000_000)throw new HttpError(413,"Profilo visivo: servono immagini entro 2 MB; originali intatti");
-    const mime=imageMime(new Uint8Array(image));
-    if(!mime)throw new HttpError(415,"Immagine non supportata");
-    const reply=await modelJSON(env,"profile",null,"profile:"+inboxId+":"+sha,{origin:row.origin,sha256:sha},
+    if(!file || file.size>12_000_000)throw new HttpError(404,"File originale non disponibile");
+    const original=await file.arrayBuffer();
+    const digest=[...new Uint8Array(await crypto.subtle.digest("SHA-256",original))]
+      .map(x=>x.toString(16).padStart(2,"0")).join("");
+    if(digest!==sha)throw new HttpError(409,"Hash dell'originale diverso dai pixel approvati");
+    const sourceMime=imageMime(new Uint8Array(original));
+    if(!sourceMime)throw new HttpError(415,"Originale non supportato");
+    const originalGeometry=imageDimensions(new Uint8Array(original));
+    let visualBytes=original, visualMime=sourceMime,previewHash:string|null=null;
+    if(data.preview_base64!==undefined){
+      if(typeof data.preview_base64!=="string" || data.preview_base64.length>2_000_000 ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(data.preview_base64))
+        throw new HttpError(400,"Anteprima base64 non valida");
+      let binary:string;
+      try{binary=atob(data.preview_base64);}catch{throw new HttpError(400,"Anteprima base64 non decodificabile");}
+      if(binary.length>1_500_000)throw new HttpError(413,"Anteprima oltre 1,5 MB");
+      const array=new Uint8Array(binary.length);
+      for(let i=0;i<binary.length;i++)array[i]=binary.charCodeAt(i);
+      const mime=imageMime(array);
+      if(!mime || mime!=="image/webp")throw new HttpError(415,"Anteprima WebP richiesta");
+      const previewGeometry=imageDimensions(array);
+      if(Math.max(previewGeometry.width,previewGeometry.height)>1152)
+        throw new HttpError(413,"Lato massimo anteprima 1152 pixel");
+      const sourceRatio=originalGeometry.width/originalGeometry.height;
+      const previewRatio=previewGeometry.width/previewGeometry.height;
+      const unrotated=Math.abs(previewRatio/sourceRatio-1);
+      const rotated=Math.abs(previewRatio*sourceRatio-1);
+      if(Math.min(unrotated,rotated)>0.035)
+        throw new HttpError(400,"L'anteprima non conserva il rapporto d'aspetto");
+      visualBytes=array.buffer;visualMime=mime;
+      previewHash=[...new Uint8Array(await crypto.subtle.digest("SHA-256",visualBytes))]
+        .map(x=>x.toString(16).padStart(2,"0")).join("");
+    } else if(original.byteLength>2_000_000){
+      throw new HttpError(413,"Per immagini oltre 2 MB usare l'anteprima integrale proporzionale generata dall'admin");
+    }
+    const reply=await modelJSON(env,"profile",null,"profile:"+inboxId+":"+sha,
+      {origin:row.origin,sha256:sha,preview_sha256:previewHash},
       "Examine ONLY the visible pixels, not filenames, EXIF, titles, source, metadata or their claims. Describe visible subject, visible action, scene, photographic composition, subject visibility, editorial interest. Never infer if image is real or AI-generated, never certify an event, license or identity. Return 3 to 12 concrete lowercase English snake_case visual tags.",
-      "Profile the image strictly from pixels. Do not read or infer provenance.",fields.profile,{mime,bytes:image});
+      "Profile the image strictly from pixels. Do not read or infer provenance.",fields.profile,{mime:visualMime,bytes:visualBytes});
     const profile=reply as unknown as Profile;
     if(["subject","action","setting","composition","visibility","interest"].some(k=>typeof profile[k as keyof Profile]!=="string") ||
        profileTags(profile).length<2)throw new HttpError(502,"Profilo visivo non utilizzabile");
+    const stored={...profile,tags:profileTags(profile),
+      visual_source:previewHash?"proportional_browser_preview":"original_file",
+      original_sha256:sha,preview_sha256:previewHash};
     await env.DB.prepare("INSERT OR IGNORE INTO editorial_image_profiles(inbox_id,sha256,origin,profile_json,model,created_at) VALUES(?,?,?,?,?,?)")
-      .bind(inboxId,sha,row.origin,JSON.stringify({...profile,tags:profileTags(profile)}),env.REAL_DISCOVERY_MODEL,now()).run();
-    return json({profile,already_profiled:false});
+      .bind(inboxId,sha,row.origin,JSON.stringify(stored),env.REAL_DISCOVERY_MODEL,now()).run();
+    return json({profile:stored,already_profiled:false});
   }
   if(path===base+"/search"){
     const data=await body(request,1800),t=await topic(env,data.topic_id);
