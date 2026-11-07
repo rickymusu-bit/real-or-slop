@@ -1,4 +1,4 @@
-import { body, HttpError, id, json, type Env } from "./core";
+import { body, hash, HttpError, id, json, type Env } from "./core";
 import { topicKey, topicTitle, imageMime } from "../shared/editorial-workspace.v1.0.0";
 import { imageFormatChoice, profileTags, similarTopic, suggestedTopicTitle, type Profile } from "../shared/editorial-intelligence.v1.0.0";
 import { commonsFile, searchCommons, type CommonsFile, MAX_IMAGE_BYTES } from "./commons-editorial.v1.0.0";
