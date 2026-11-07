@@ -93,8 +93,8 @@ export async function embedTopicOnSubmission(env:Env,topicId:string):Promise<Emb
   }
 }
 export async function createTopicSemantics(env:Env,topicId:string,title:string,description:string):Promise<EmbeddingStatus> {
-  const config=embeddingConfig(env);
-  const model=config?.model || env.TOPIC_EMBEDDING_MODEL || DEFAULT_TOPIC_EMBEDDING_MODEL;
+  // Always persist semantic text before inspecting provider config or budgets.
+  const model=env.TOPIC_EMBEDDING_MODEL || DEFAULT_TOPIC_EMBEDDING_MODEL;
   const inputText=semanticTopicText(title,description);
   const digest=await hash(inputText);
   const now=new Date().toISOString();
