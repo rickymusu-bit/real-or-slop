@@ -1,5 +1,6 @@
 /** Only Wikimedia Commons URLs. Never fetch an arbitrary submitted host. */
 import { imageMime } from "../shared/editorial-workspace.v1.0.0";
+import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
 import { HttpError } from "./core";
 export const MAX_IMAGE_BYTES = 12_000_000;
 export const MAX_IMAGE_PIXELS = 32_000_000;
@@ -75,6 +76,7 @@ async function bounded(url: string, max = MAX_IMAGE_BYTES): Promise<{bytes:Array
   for (const chunk of chunks) { all.set(chunk,offset); offset += chunk.length; }
   const mime = imageMime(all);
   if (!mime) throw new HttpError(415,"Il file Commons non è una fotografia JPEG/PNG/WebP");
+  try { imageDimensions(all); } catch { throw new HttpError(415,"Intestazione o dimensioni del file Commons non valide"); }
   return {bytes:all.buffer,mime};
 }
 export async function commonsFile(value: string): Promise<CommonsFile> {
