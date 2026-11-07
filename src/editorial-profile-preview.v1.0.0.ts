@@ -1,4 +1,11 @@
 /** v1.0.0. Browser-only full-frame profile preview; source file is never changed. */
+export function previewDimensions(width:number,height:number,maximum=1152) {
+  if(!Number.isSafeInteger(width)||!Number.isSafeInteger(height)||!Number.isSafeInteger(maximum) ||
+    width<1||height<1||maximum<128||maximum>2048)throw Error("Dimensioni non valide");
+  const scale=Math.min(1,maximum/Math.max(width,height));
+  return {width:Math.max(1,Math.round(width*scale)),
+    height:Math.max(1,Math.round(height*scale))};
+}
 export async function visualProfilePreview(inboxId: string): Promise<string> {
   if (!/^[\w-]{1,160}$/.test(inboxId)) throw Error("Identità fotografica non valida");
   const response = await fetch("/api/admin/review-inbox/" + encodeURIComponent(inboxId) + "/image",
@@ -10,9 +17,7 @@ export async function visualProfilePreview(inboxId: string): Promise<string> {
   try {
     if (source.width*source.height>32_000_000) throw Error("Fotografia troppo grande");
     for(const maximum of [1152,896,640]) {
-      const scale=Math.min(1,maximum/Math.max(source.width,source.height));
-      const width=Math.max(1,Math.round(source.width*scale));
-      const height=Math.max(1,Math.round(source.height*scale));
+      const {width,height}=previewDimensions(source.width,source.height,maximum);
       const canvas=document.createElement("canvas");
       canvas.width=width;canvas.height=height;
       const context=canvas.getContext("2d",{alpha:false});
