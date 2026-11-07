@@ -1,6 +1,6 @@
-# Istruzioni Codex — versione canonica 6.1.0
+# Istruzioni Codex — versione canonica 7.0.0
 
-Snapshot: `docs/AGENTS.v6.1.0.md`. Percorsi relativi alla radice del repository.
+Snapshot: `docs/AGENTS.v7.0.0.md`. Percorsi relativi alla radice del repository.
 Aggiornato: 2026-11-06T21:45:55Z. Le versioni precedenti restano conservate. Questa revisione
 recepisce il ciclo completo richiesto dal proprietario nella sessione corrente.
 
@@ -26,6 +26,12 @@ Motivi distinti di rifiuto: editoriale, generazione, tecnico, diritti/licenza, p
 ## Admin: copie di profilazione proporzionali #64
 
 Aggiornato: 2026-11-07T15:06:47.075Z. I file fotografici originali fino a 12 MB non vanno ridimensionati/sovrascritti per permettere il profiling. L'admin prepara una miniatura WebP fedele e senza ritaglio (lato massimo 1152, ≤1,5 MB) con conferma esplicita. Il Worker verifica hash originale, MIME, geometria, rapporto d'aspetto e hash preview prima di prenotare una chiamata GPT. Non usare titolo, URL, autore o metadati per produrre il profilo visivo. Il profilo è valutazione dei pixel, non prova di provenienza né licenza. Test e specifica in `docs/profilazione-visiva.v1.0.0.md`. Nessun deploy o merge è implicito.
+
+## Contratto architetturale #64 — input = memoria incrementale
+
+Aggiornato: 2026-11-07T17:50:01.887Z. Leggere `docs/topic-discovery-semantic-learning.v2.0.0.md`. **Non confondere l'interruttore Topic Discovery con l'indicizzazione degli argomenti.** Il primo controlla soltanto i suggerimenti autonomi e rimane OFF al primo avvio; la seconda avviene al salvataggio di ciascun nuovo argomento owner-first anche con Discovery OFF. Conservare testo originale, descrizione fino a 500 caratteri, template/versione/hash, modello, vettore numerico, token e stato. Mai sostituire un embedding non disponibile con un vettore inventato, mai ritentare automaticamente invii potenzialmente fatturati.
+
+Le richieste automatiche embedding sugli input richiedono credenziali di server e tetti di spesa dedicati, da configurare esplicitamente. Nessun modello deve essere chiamato quando non è configurato: il testo resta `pending` e la UI lo comunica. Non introdurre campi obbligatori di luogo/data/evento o tassonomie per Topic Discovery. Modifiche a questa architettura richiedono prove reali di provider simulato, persistenza locale e verifica del frontend. Aggiornare MASTER/AGENTS ai cambiamenti maggiori e conservare gli snapshot.
 
 ## Prima di modificare
 
