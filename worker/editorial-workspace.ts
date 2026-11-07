@@ -1,5 +1,7 @@
 import { body, HttpError, id, json, type Env } from "./core";
 import { imageMime, sourcePageUrl, topicKey, topicTitle } from "../shared/editorial-workspace.v1.0.0";
+import { ensureSlopSeed } from "./editorial-learning.v1.0.0";
+import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
 
 const base = "/api/admin/editorial/workspace";
 type TopicRow = { id: string; title: string; normalized_key: string; created_at: string };
@@ -46,6 +48,7 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
       await env.DB.prepare("INSERT INTO editorial_workspace_topics(id,title,normalized_key,created_at) VALUES(?,?,?,?)")
         .bind(topic.id, topic.title, topic.normalized_key, topic.created_at).run();
     } catch { throw new HttpError(409, "Argomento già registrato; aggiorna la pagina"); }
+    await ensureSlopSeed(env,topic);
     return json(topic, 201);
   }
   if (path === base + "/links" && request.method === "POST") {
@@ -77,6 +80,7 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
     if (bytes.byteLength > 12_000_000) throw new HttpError(413, "File oltre 12 MB");
     const mime = imageMime(new Uint8Array(bytes));
     if (!mime) throw new HttpError(415, "Usare JPEG, PNG o WebP");
+    try { imageDimensions(new Uint8Array(bytes)); } catch { throw new HttpError(415, "Immagine non valida o oltre 32 megapixel"); }
     const sha256 = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
       .map(x => x.toString(16).padStart(2, "0")).join("");
     const [existing, rejected, published] = await Promise.all([
@@ -88,7 +92,7 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
     const inboxId = "owner-" + id(), proposalId = id(), key = "owner-proposals/" + inboxId;
     const created = new Date().toISOString();
     const metadata = JSON.stringify({ source_kind: "owner-upload", title, topic_id: topicId, author: "",
-      source_url: "", license_url: "", provenance_status: "unverified" });
+      source_url: "", license_url: "", provenance_status: "unverified", original_key:key, original_sha256:sha256 });
     await env.QUARANTINE.put(key, bytes, { httpMetadata: { contentType: mime }, customMetadata: { sha256 } });
     try {
       await env.DB.batch([

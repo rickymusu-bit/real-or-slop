@@ -1,6 +1,6 @@
-# Mappa canonica — versione 4.0.0
+# Mappa canonica — versione 5.0.0
 
-Snapshot: `docs/MASTER.v4.0.0.md`. Percorsi relativi alla radice del repository.
+Snapshot: `docs/MASTER.v5.0.0.md`. Percorsi relativi alla radice del repository.
 Verificato: 2026-11-06T21:45:55Z, base main `05c6bfc9035debb6c078160a1fe79b7997dfc77a`.
 Le PR #58, #59 e #60 sono integrate. Il delta `feat/editorial-cycle` implementa
 il ciclo completo richiesto dal proprietario; non attesta un deploy remoto.
@@ -13,6 +13,10 @@ Questa PR aggiunge il workspace privato `/admin`, la tabella di argomenti e prop
 I link dell'owner sono proposte da acquisire, mentre gli upload entrano come file REAL *pending* e senza attestazione di origine o diritti. Per ora **nessuno dei tre learner è attivato**: Topic Discovery, REAL Preference e SLOP Prompt Preference sono separati nel contratto, con ordine di implementazione e isolamento specificati nel documento. Nessun costo, cron, deploy, ricerca GPT o pubblicazione vengono attivati. La migrazione 0019 non va applicata automaticamente in produzione.
 
 Le indicazioni legacy sotto rimangono descrizioni dei percorsi precedenti: il nuovo workflow owner-first della #64 ha precedenza per i futuri cicli una volta approvato e rilasciato; nessun run precedente è riscritto.
+
+## Nuovo percorso owner-first #64 (PR in bozza)
+
+Aggiornato: 2026-11-07T13:53:33.858Z. Il nuovo sistema in `docs/editorial-intelligence.v1.0.0.md` aggiunge la migrazione 0020, `worker/editorial-intelligence.v1.0.0.ts`, `worker/editorial-learning.v1.0.0.ts`, `worker/commons-editorial.v1.0.0.ts`, `worker/workspace-ai.v1.0.0.ts`, i validatori e la UI `src/editorial-intelligence.v1.0.0.ts` all'admin owner-first della PR #65. Topic Discovery, REAL Preference e SLOP Prompt Preference sono separati, con input e feedback distinti e gate API espliciti. Non è attivo in produzione: ancora da verificare CI, migrazioni, preview e test E2E. I vecchi quadrati delle pipeline legacy restano storici. L'issue non è chiusa.
 
 ## Ingressi e autorità
 
