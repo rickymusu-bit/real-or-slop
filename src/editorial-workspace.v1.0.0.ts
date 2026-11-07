@@ -2,7 +2,7 @@ import "./editorial-workspace.v1.0.0.css";
 import { api, content as mainContent, escape } from "./main";
 import { imageMime, sourcePageUrl } from "../shared/editorial-workspace.v1.0.0";
 
-interface Topic { id: string; title: string; created_at: string }
+interface Topic { id: string; title: string; created_at: string; description?:string|null; embedding_status?: string|null }
 interface Proposal { id: string; topic_id: string; kind: "link" | "upload"; source_url: string | null; inbox_id: string | null; note: string; review_status: string | null }
 interface Workspace { topics: Topic[]; proposals: Proposal[] }
 
@@ -15,7 +15,10 @@ export async function mountEditorialWorkspace() {
     '<div class="eyebrow">AMMINISTRAZIONE PRIVATA</div>' +
     '<h1>Studio editoriale.</h1>' +
     '<p>Decidi tu gli argomenti e proponi le fotografie prima della ricerca GPT. I file vengono conservati in quarantena: non sono automaticamente autentici, autorizzati o pubblicati.</p>' +
-    '<form id="workspace-topic-form"><label>Nuovo argomento specifico<input name="title" maxlength="200" minlength="6" required placeholder="Proteste a Parigi, ottobre 2026"></label><button type="submit">Registra argomento</button></form>' +
+    '<form id="workspace-topic-form"><label>Nuovo argomento specifico<input name="title" maxlength="200" minlength="6" required placeholder="Proteste a Parigi, ottobre 2026"></label>'+
+    '<label>Descrizione semantica (facoltativa, massimo 500 caratteri)<textarea name="description" maxlength="500" rows="3" placeholder="Describe the subject, context, visible actions, scope and relevant details in English."></textarea></label>'+
+    '<p class="workspace-hint">Ogni nuovo argomento aggiorna la memoria semantica, anche con Topic Discovery spento. Se il servizio embedding non è configurato, resta in attesa senza perdere il testo.</p>'+
+    '<button type="submit">Registra argomento e aggiorna lo spazio</button></form>' +
     '<label>Argomento corrente<select id="workspace-topic-select" aria-label="Argomento corrente"></select></label>' +
     '<div class="workspace-columns"><form id="workspace-link-form"><h2>Proponi una fotografia tramite link</h2><label>Pagina o immagine originale HTTPS<input name="source_url" type="url" required placeholder="https://commons.wikimedia.org/wiki/File:..."></label><label>Nota facoltativa<textarea name="note" maxlength="1000" rows="2"></textarea></label><button type="submit">Salva proposta</button><p class="workspace-hint">Il link viene registrato, ma non entra nella coda di valutazione finché non viene acquisito e verificato il file originale.</p></form>' +
     '<form id="workspace-upload-form"><h2>Proponi fotografie dal dispositivo</h2><label>Fotografie originali<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required></label><label>Nota facoltativa<textarea name="note" maxlength="1000" rows="2"></textarea></label><button type="submit">Carica nella coda privata</button><p class="workspace-hint">Solo per l’amministratore. Nessun ritaglio: ogni file conserva proporzioni e pixel originali. Limite di 12 MB per file.</p></form></div>' +
@@ -50,7 +53,7 @@ export async function mountEditorialWorkspace() {
     workspace = await api<Workspace>("/admin/editorial/workspace");
     const selected = prefer || select.value;
     select.innerHTML = workspace.topics.length
-      ? workspace.topics.map(t => '<option value="' + escape(t.id) + '">' + escape(t.title) + '</option>').join("")
+      ? workspace.topics.map(t => '<option value="' + escape(t.id) + '">' + escape(t.title) + (t.embedding_status==="ready"?" ✓":t.embedding_status==="uncertain"?" (embedding incerto)":" (non indicizzato)") + '</option>').join("")
       : '<option value="">Registra prima un argomento</option>';
     if (workspace.topics.some(t => t.id === selected)) select.value = selected;
     select.disabled = busy || !workspace.topics.length;
@@ -60,12 +63,18 @@ export async function mountEditorialWorkspace() {
   topicForm.addEventListener("submit", async event => {
     event.preventDefault(); if (busy) return; setBusy(true);
     try {
-      const title = String(new FormData(topicForm).get("title") || "");
-      const result = await api<{ id: string; already_exists?: boolean }>("/admin/editorial/workspace/topics",
-        { method: "POST", body: JSON.stringify({ title }) });
+      const formData=new FormData(topicForm);
+      const title=String(formData.get("title")||"");
+      const description=String(formData.get("description")||"");
+      const result = await api<{ id: string; already_exists?: boolean; embedding_status?: string }>("/admin/editorial/workspace/topics",
+        { method: "POST", body: JSON.stringify({ title,description }) });
       await refresh(result.id);
       topicForm.reset();
-      status.textContent = result.already_exists ? "Argomento già registrato: selezionato." : "Argomento registrato. Puoi proporre le fotografie.";
+      const indexing=result.embedding_status==="ready"?"Embedding calcolato e archiviato." :
+        result.embedding_status==="uncertain"?"Embedding non confermato; operazione segnata come incerta, nessun nuovo tentativo automatico." :
+        "Embedding in attesa di configurazione o budget: testo conservato.";
+      status.textContent = result.already_exists ? "Argomento già registrato: selezionato. "+indexing :
+        "Argomento registrato. "+indexing+" Puoi proporre le fotografie.";
     } catch (error) { status.textContent = String(error); } finally { setBusy(false); }
   });
   linkForm.addEventListener("submit", async event => {
