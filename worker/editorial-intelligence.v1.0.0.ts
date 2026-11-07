@@ -166,8 +166,6 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     const file=await env.QUARANTINE.get(row.media_key);
     if(!file || file.size>12_000_000)throw new HttpError(404,"File originale non disponibile");
     const original=await file.arrayBuffer();
-    const sourceDigest=await hash(String.fromCharCode(...new Uint8Array([])));
-    void sourceDigest; // unchanged source bytes are checked using SubtleCrypto below.
     const digest=[...new Uint8Array(await crypto.subtle.digest("SHA-256",original))]
       .map(x=>x.toString(16).padStart(2,"0")).join("");
     if(digest!==sha)throw new HttpError(409,"Hash dell'originale diverso dai pixel approvati");
