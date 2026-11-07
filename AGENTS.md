@@ -1,6 +1,6 @@
-# Istruzioni Codex — versione canonica 5.0.0
+# Istruzioni Codex — versione canonica 6.0.0
 
-Snapshot: `docs/AGENTS.v5.0.0.md`. Percorsi relativi alla radice del repository.
+Snapshot: `docs/AGENTS.v6.0.0.md`. Percorsi relativi alla radice del repository.
 Aggiornato: 2026-11-06T21:45:55Z. Le versioni precedenti restano conservate. Questa revisione
 recepisce il ciclo completo richiesto dal proprietario nella sessione corrente.
 
@@ -16,6 +16,12 @@ La nuova migrazione 0019 è additiva, non va applicata in produzione dalla PR. I
 Aggiornato: 2026-11-07T13:53:33.858Z. Prima di modificare la discovery o lo studio editoriale leggere `docs/editorial-intelligence.v1.0.0.md` e l'issue #64. I tre sistemi Topic, REAL e SLOP sono indipendenti. La ricerca GPT è facoltativa dopo le proposte manuali; mai avviarla alla scelta del topic o al voto. Gli input SLOP sono limitati allo snapshot frozen dell'argomento e ai feedback storici SLOP; non far entrare nel modello fotografie, titoli, profili, descrizioni o giudizi REAL del ciclo. Non chiamare modelli esterni senza ricevuta, prenotazione contabile e consenso esplicito nell'admin. Se un invio è incerto, non ritentare. Nessun account, fotografia o credenziale richiesta ai giocatori.
 
 Il nuovo upload e retrieval preservano il rapporto d'aspetto, le SLOP nuove ruotano formati verticali/orizzontali/quadrati. Le vecchie pipeline 1024×1024 non si riscrivono senza migrazione testata. Nessuna autorizzazione a deploy/migrazioni remote/merge è implicita nell'issue o nella PR. Prima del merge controllare test di compilazione, DB/R2, limiti file/SSRF, anteprima e consenso dell'owner.
+
+## Nuovo criterio formati #64 (PR di completamento)
+
+Aggiornato: 2026-11-07T14:58:05.001Z. Per ogni **nuova** fotografia preservare il rapporto originale; non usare la trasformazione di quadratura `standard_copy`/smart_crop nel flusso ordinario, e non alterare esperimenti storici. Usare `--method preserve` o il percorso owner-first della dashboard; conservare originali, orientamento EXIF, hash, dimensioni e verifica umana. La vecchia pipeline Terra/center resta invocabile soltanto esplicitamente per gli studi legacy. `docs/presentazione-proporzionale.v1.0.0.md` formalizza il nuovo comportamento.
+
+Motivi distinti di rifiuto: editoriale, generazione, tecnico, diritti/licenza, provenienza/autenticità incerta. Non usare rifiuti per provenienza come segnali di gusti negativi. Eseguire CI e test E2E su desktop e mobile; nessun merge/deploy senza anteprima e conferma editoriale.
 
 ## Prima di modificare
 

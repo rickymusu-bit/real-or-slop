@@ -118,18 +118,24 @@ def export(states, out, size=STANDARD_SIZE):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description='Presentazione v2: Terra predefinito, centro come baseline esplicita. Nessuna chiamata pagata senza --execute.')
+    parser = argparse.ArgumentParser(description='Presentazione v2: formato proporzionale senza ritagli. I vecchi studi quadrati sono espliciti; nessuna API senza --execute.')
     parser.add_argument('--states', nargs='+', type=Path, required=True)
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--size', choices=('1024x1024',), default='1024x1024')
-    parser.add_argument('--method', choices=('terra', 'center'), default='terra')
+    parser.add_argument('--method', choices=('preserve', 'terra', 'center'), default='preserve')
+    parser.add_argument('--max-side', type=int, default=2048)
     parser.add_argument('--model', default=DEFAULT_CROP_MODEL)
     parser.add_argument('--budget-usd', type=float)
     parser.add_argument('--reservation-usd', type=float)
     parser.add_argument('--max-calls', type=int, default=200)
     parser.add_argument('--execute', action='store_true')
     args = parser.parse_args(argv)
-    if args.method == 'terra':
+    if args.method == 'preserve':
+        if args.execute:
+            parser.error('La conservazione proporzionale è locale: omettere --execute')
+        from .preserve_v1_0_0 import export_preserved
+        result = export_preserved(args.states, args.out, args.max_side)
+    elif args.method == 'terra':
         if args.budget_usd is None or args.reservation_usd is None:
             parser.error('Per Terra specificare --budget-usd e --reservation-usd; --execute abilita gli invii sincroni')
         from .smart_crop import run

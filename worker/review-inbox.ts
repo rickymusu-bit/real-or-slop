@@ -117,7 +117,7 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
     const data = await body(request, 5000);
     if (Object.keys(data).some(key => !["decision", "revision", "sha256", "note", "reason"].includes(key)) ||
         !["approved", "rejected", "pending"].includes(String(data.decision)) || data.revision !== row.revision || data.sha256 !== row.sha256 ||
-        (data.reason !== undefined && !["editorial","generation","technical","rights"].includes(String(data.reason))) ||
+        (data.reason !== undefined && !["editorial","generation","technical","rights","provenance"].includes(String(data.reason))) ||
         typeof data.note !== "string" || data.note.length > 2000) throw new HttpError(409, "Immagine o revisione aggiornata: ricaricare la coda");
     const file = await env.QUARANTINE?.get(row.media_key);
     if (!file || file.size > 12_000_000) throw new HttpError(409, "File non disponibile per la revisione");
