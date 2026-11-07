@@ -37,12 +37,13 @@ export async function learnedPreferences(env:Env,origin:Origin):Promise<Learned>
   return {observations:approved+rejected,approved,rejected,counts:[...counts.values()].sort((a,b)=>a.feature.localeCompare(b.feature)),
     updated_at:new Date().toISOString(),version:"1.0.0"};
 }
-export async function rankPending(env:Env,origin:Origin) {
+export async function rankPending(env:Env,origin:Origin,topicId?:string|null) {
   const preference=await learnedPreferences(env,origin);
   const rows=(await env.DB.prepare("SELECT q.id,q.sha256,q.origin,p.profile_json " +
     "FROM editorial_review_effective_images q LEFT JOIN editorial_image_profiles p " +
     "ON p.inbox_id=q.id AND p.sha256=q.sha256 WHERE q.origin=? AND q.status='pending' " +
-    "ORDER BY q.created_at DESC LIMIT 200").bind(origin).all<{
+    (topicId ? "AND json_extract(q.metadata_json,'$.topic_id')=? " : "") +
+    "ORDER BY q.created_at DESC LIMIT 200").bind(...(topicId ? [origin,topicId] : [origin])).all<{
       id:string;sha256:string;origin:Origin;profile_json:string|null
     }>()).results.map(row=>{
       let tags:string[]=[];
