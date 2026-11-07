@@ -47,7 +47,7 @@ export async function mountEditorialIntelligence() {
   const ranking=section.querySelector<HTMLElement>("#intel-ranking")!;
   const prompts=section.querySelector<HTMLElement>("#intel-prompts")!;
   const history=section.querySelector<HTMLElement>("#intel-history")!;
-  let panel:Panel|null=null, busy=false;
+  let panel:Panel|null=null, busy=false, refreshSequence=0;
   const busyState=(next:boolean)=>{
     busy=next;
     section.querySelectorAll<HTMLButtonElement>("[data-intel]").forEach(button=>{
@@ -60,11 +60,14 @@ export async function mountEditorialIntelligence() {
     });
   };
   async function refresh() {
-    const topic=activeTopic();
+    const sequence=++refreshSequence,topic=activeTopic();
     const [state,workspaceData]=await Promise.all([
       api<Panel>(base+(topic?"?topic_id="+encodeURIComponent(topic):"")),
       api<{proposals:Proposal[]}>("/admin/editorial/workspace")
     ]);
+    if(sequence!==refreshSequence || topic!==activeTopic() || !section.isConnected)return;
+    const expanded=new Set([...section.querySelectorAll<HTMLDetailsElement>('details[open]')]
+      .map(details=>details.querySelector('summary')?.textContent));
     panel=state;
     const approvedReal=state.topic_counts.filter(x=>x.origin==="REAL"&&x.status==="approved")
       .reduce((n,x)=>n+x.n,0);
@@ -123,7 +126,10 @@ export async function mountEditorialIntelligence() {
       escape(j.status)+' — '+escape(j.created_at)+'</p>').join("") : '<p>Nessuna chiamata registrata.</p>');
     const hint=section.querySelector<HTMLButtonElement>('[data-intel="suggest"]');
     if(hint)hint.title="Costo prenotato per chiamata testo: "+String(state.cost_per_text_call || "da configurare")+buttonLabel;
-    busyState(false);
+    section.querySelectorAll<HTMLDetailsElement>('details').forEach(details=>{
+      if(expanded.has(details.querySelector('summary')?.textContent))details.open=true;
+    });
+    busyState(busy);
   }
   section.addEventListener("click",async event=>{
     const button=(event.target as HTMLElement).closest<HTMLButtonElement>("button[data-intel]");

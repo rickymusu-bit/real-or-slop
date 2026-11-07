@@ -50,9 +50,10 @@ with sync_playwright() as p:
             expect(ranking.locator('article')).to_have_count(2)
             ranking.locator('[data-intel=profile]').first.click()
             expect(page.locator('#intel-status')).to_contain_text('Operazione registrata')
-            ranking.locator('summary').click() # refresh replaces details with a closed element
+            expect(ranking).to_have_attribute('open','')
             ranking.locator('[data-intel=relevance]').first.click()
             expect(page.locator('#intel-status')).to_contain_text('mismatch')
+            expect(ranking).to_have_attribute('open','')
             # Review only the selected topic's uploaded photo through the existing single queue.
             page.locator('#inbox-origin').select_option('REAL')
             page.locator('#refresh-review').click()
