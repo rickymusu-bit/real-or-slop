@@ -61,7 +61,12 @@ usa prior separati: 85% resa editoriale REAL e 15% resa editoriale SLOP, con flo
 di esplorazione positivo e prior regolarizzati. Lo storico precedente senza SLOP
 mantiene il peso originale. I motivi espliciti `generation`, `technical`, `rights`
 non contano come rifiuti editoriali; rimangono negli eventi e nei dossier.
-I voti superati da pixel nuovi tornano pending. Anche i rifiuti poi eliminati
+I voti superati da pixel nuovi tornano pending. Ogni osservazione reale aggiorna
+automaticamente il registro privato `.pipeline/editorial-feedback`: il successivo
+`start` lo legge per scegliere la casella, anche senza `--history`. Eventi
+immutabili e lock impediscono duplicati o sovrascritture; il riepilogo si ricostruisce
+dopo un’interruzione. Le fixture non possono popolare questo registro; `--history`
+aggiunge eventualmente uno storico reale esterno. Anche i rifiuti poi eliminati
 esplicitamente dal sito restano leggibili attraverso registro ed eventi storici.
 
 ## Esecuzione

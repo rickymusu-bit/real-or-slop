@@ -9,7 +9,7 @@ from pathlib import Path
 from .editorial import PipelineStop, image_payload, image_result, now
 from .importer import request, site_url
 from .real.contracts import ROOT, TAXONOMY, digest, select, validate
-from .real.feedback import load_history, synchronize as feedback
+from .real.feedback import load_history, synchronize as feedback, publish_history, registry_history
 from .real.inbox import CloudflareInbox, export_images, synchronize as sync_inbox
 from .real.planning import Model, Reservation
 from .real.review import document_path, profile_path, verify_media
@@ -245,6 +245,7 @@ def advance(store, *, execute=False, live=False, sync=False, base=None, document
                      reserved_generation_usd=round(len(generation_receipts(store))*cfg['generation_usd'],6))
         store.save('site-review-current.v1.0.0.json', real+slop)
         feedback(store)
+        state['feedback_history'] = publish_history(store)
     def model():
         return model_factory(store) if model_factory else Model(store, rcfg['model'], reservation=reservation or
             Reservation(base, os.getenv('REAL_OR_SLOP_ADMIN_TOKEN',''), rcfg['run_id']))
@@ -366,7 +367,7 @@ def main(argv=None):
             if args.action == 'status':
                 print(json.dumps(store.read(STATE) or dict(stage='not_started'))); return 0
             if args.action == 'start':
-                intent = dict(version='1.0.0',taxonomy_version='1.0.0',topic=args.topic,emotion=args.emotion,intensity=args.intensity) if any((args.topic,args.emotion,args.intensity)) else select(args.seed,load_history(args.history) if args.history else [])[0]
+                intent = dict(version='1.0.0',taxonomy_version='1.0.0',topic=args.topic,emotion=args.emotion,intensity=args.intensity) if any((args.topic,args.emotion,args.intensity)) else select(args.seed,registry_history()+(load_history(args.history) if args.history else []))[0]
                 initialize(store,intent,model=args.model,run_id=args.run_id,providers=args.provider or ['commons'],
                     count=args.count,maximum=args.maximum,image_model=args.image_model,max_attempts=args.max_attempts,
                     generation_usd=args.generation_usd,generation_budget_usd=args.generation_budget_usd,

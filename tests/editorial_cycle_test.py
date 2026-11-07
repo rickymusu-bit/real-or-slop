@@ -326,3 +326,45 @@ class CycleTest(unittest.TestCase):
         with self.assertRaises(PipelineStop):freeze_brief(self.store,None)
         with self.assertRaises(PipelineStop):generate(self.store,1,api=self.api)
         self.assertEqual(len(self.image_calls()),1)
+
+
+class SharedHistoryTest(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
+        self.root=Path(self.temp.name);self.registry=self.root/'shared-history'
+    def source(self,name,events,simulated=False):
+        store=Store(self.root/name);store.freeze(INTENT,simulated=simulated)
+        store.save('feedback-export.v1.0.0.json',dict(version='1.0.0',simulated=simulated,events=events))
+        return store
+    def event(self,uid,revision=1,outcome='human_rejected'):
+        return dict(id=uid,intent=INTENT,candidate_id='synthetic-shared-history-candidate',revision=revision,outcome=outcome)
+    def test_shared_history_merges_idempotently_and_recovers_without_aggregate_file(self):
+        from pipeline.real.feedback import publish_history,registry_history
+        first=self.source('first',[self.event('first')])
+        path=publish_history(first,self.registry);publish_history(first,self.registry)
+        second=self.source('second',[self.event('second',2,'human_approved')])
+        publish_history(second,self.registry)
+        history=registry_history(self.registry)
+        self.assertEqual(len(history),2);self.assertEqual(load_history(path),history)
+        Path(path).unlink()
+        self.assertEqual(registry_history(self.registry),history)
+        conflicting=self.source('conflicting',[self.event('first',1,'human_approved')])
+        with self.assertRaises(PipelineStop):publish_history(conflicting,self.registry)
+        self.assertEqual(registry_history(self.registry),history)
+    def test_fixture_cannot_create_or_pollute_shared_history(self):
+        from pipeline.real.feedback import publish_history,registry_history
+        fake=self.source('synthetic',[self.event('fixture')],simulated=True)
+        self.assertIsNone(publish_history(fake,self.registry))
+        self.assertEqual(registry_history(self.registry),[])
+        self.assertFalse(self.registry.exists())
+    def test_new_cycle_automatically_selects_using_previous_site_feedback(self):
+        from pipeline.cycle import main
+        from pipeline.real.feedback import publish_history,registry_history
+        publish_history(self.source('previous',[self.event('previous-owner-vote')]),self.registry)
+        history=registry_history(self.registry)
+        with patch('pipeline.cycle.registry_history',side_effect=lambda:registry_history(self.registry)), \
+                patch('pipeline.cycle.select',wraps=select) as scheduler,contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(main(['start','--out',str(self.root/'next'),'--run-id','next','--model','gpt-6.1-terra']),0)
+        scheduler.assert_called_once_with(56,history)
+        self.assertEqual(Store(self.root/'next').frozen()['intent'],select(56,history)[0])
+        self.assertFalse((self.root/'next'/'requests').exists())

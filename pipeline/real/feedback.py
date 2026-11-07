@@ -5,6 +5,45 @@ from ..editorial import now, write_private
 from ..v2.protocol import require
 from .contracts import digest, validate
 
+DEFAULT_HISTORY = Path(__file__).resolve().parents[2]/'.pipeline/editorial-feedback'
+
+
+def registry_history(folder=DEFAULT_HISTORY):
+    """Read the shared real-cycle history, recovering an interrupted export."""
+    from .store import Store
+    if not Path(folder).exists():
+        return []
+    registry = Store(folder)
+    with registry.lock():
+        events = [registry.read('events/'+path.name) for path in sorted((registry.folder/'events').glob('*.json'))]
+        for event in events:
+            validate('feedback', event)
+        registry.save('history.v1.0.0.json', dict(version='1.0.0', simulated=False, events=events))
+    return events
+
+
+def publish_history(store, folder=DEFAULT_HISTORY):
+    """Automatically feed the next cell selection; fixtures never enter this registry."""
+    from .store import Store
+    if store.frozen()['simulated']:
+        return None
+    exported = store.read('feedback-export.v1.0.0.json')
+    require(exported is not None and exported.get('simulated') is False and exported.get('version') == '1.0.0',
+            'Esportazione feedback reale richiesta')
+    events = exported['events']
+    for event in events:
+        validate('feedback', event)
+    registry = Store(folder)
+    with registry.lock():
+        for event in events:
+            prior = registry.read('events/'+digest(event['id'])+'.json')
+            require(prior is None or prior == event, 'Evento di feedback condiviso incompatibile')
+        for event in events:
+            registry.save('events/'+digest(event['id'])+'.json', event, immutable=True)
+        merged = [registry.read('events/'+path.name) for path in sorted((registry.folder/'events').glob('*.json'))]
+        registry.save('history.v1.0.0.json', dict(version='1.0.0', simulated=False, events=merged))
+    return str(registry.folder/'history.v1.0.0.json')
+
 
 def synchronize(store, records=()):
     frozen = store.frozen()
