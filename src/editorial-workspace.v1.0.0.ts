@@ -1,3 +1,4 @@
+import "./editorial-workspace.v1.0.0.css";
 import { api, content as mainContent, escape } from "./main";
 import { imageMime, sourcePageUrl } from "../shared/editorial-workspace.v1.0.0";
 
