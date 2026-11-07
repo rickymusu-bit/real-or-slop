@@ -48,7 +48,7 @@ export async function mountEditorialIntelligence() {
     section.querySelectorAll<HTMLButtonElement>("[data-intel]").forEach(button=>{
       button.disabled=next || (!panel?.enabled && button.dataset.intel!=="acquire" && button.dataset.intel!=="accept" &&
         button.dataset.intel!=="reject" && button.dataset.intel!=="defer") ||
-        (button.dataset.intel==="generate" && !panel?.generation_enabled);
+        (button.dataset.intel==="generate" && (!panel?.generation_enabled || button.dataset.capacity==="0"));
     });
   };
   async function refresh() {
@@ -92,7 +92,7 @@ export async function mountEditorialIntelligence() {
     prompts.innerHTML=(state.prompts.length?
       '<p>'+state.prompts.length+' prompt congelati. Ogni generazione richiede un comando separato.</p>'+
       state.prompts.map(p=>'<article><strong>Variante '+Number(p.slot+1)+' — '+escape(p.variant)+'</strong>'+
-        '<p>'+escape(p.prompt)+'</p><button data-intel="generate" data-slot="'+Number(p.slot)+'"'+(deficit===0?' disabled':'')+
+        '<p>'+escape(p.prompt)+'</p><button data-intel="generate" data-slot="'+Number(p.slot)+'" data-capacity="'+(deficit>0?'1':'0')+'"'+(deficit===0?' disabled':'')+
         '>Genera questa SLOP</button></article>').join("")
       : '<p>Nessun prompt congelato per questo argomento.</p>');
     history.innerHTML=state.jobs.length ? state.jobs.slice(0,20).map(j=>'<p>'+escape(j.kind)+' — '+
