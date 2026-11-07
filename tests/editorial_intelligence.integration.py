@@ -53,6 +53,20 @@ title="Proteste a Parigi, ottobre 2026 "+uuid.uuid4().hex[:8]
 code,created=call("/api/admin/editorial/workspace/topics",{"title":title})
 assert code==201,(code,created)
 uid=created["id"]
+assert created["embedding_status"]=="pending",created
+topics=call("/api/admin/editorial/workspace")[1]["topics"]
+semantic=next(t for t in topics if t["id"]==uid)
+assert semantic["embedding_status"]=="pending",semantic
+# The human-supplied semantic description must be retained even while
+# Topic Discovery and paid services are disabled.
+detail="Protests by agricultural workers across France and neighboring countries."
+code,described=call("/api/admin/editorial/workspace/topics",{
+    "title":"Farmers mobilizations across Europe "+uuid.uuid4().hex[:8],
+    "description":detail})
+assert code==201 and described["embedding_status"]=="pending",(code,described)
+described_row=next(t for t in call("/api/admin/editorial/workspace")[1]["topics"] if t["id"]==described["id"])
+assert described_row["description"]==detail,described_row
+assert call(prefix)[1]["topic_discovery_enabled"] is False
 url="https://commons.wikimedia.org/wiki/File:Owner_Test_2026.jpg"
 code,link=call("/api/admin/editorial/workspace/links",{"topic_id":uid,"source_url":url})
 assert code==201,(code,link)
