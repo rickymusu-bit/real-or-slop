@@ -82,7 +82,8 @@ export async function mountEditorialIntelligence() {
       : '<p>Nessun link proposto per questo argomento.</p>';
     ranking.innerHTML='<details><summary>REAL in coda: ordine suggerito</summary>'+
       (state.ranked_real.length?state.ranked_real.slice(0,15).map((r,i)=>
-        '<article><span>'+Number(i+1)+'. '+escape(r.id)+' — '+Math.round(r.score*100)+'% stima editoriale</span>'+
+        '<article><img class="intel-ranked-preview" loading="lazy" alt="Fotografia REAL candidata" src="/api/admin/review-inbox/'+encodeURIComponent(r.id)+'/image">'+
+        '<span>'+Number(i+1)+'. '+escape(r.id)+' — '+Math.round(r.score*100)+'% stima editoriale</span>'+
         '<p>'+escape(r.reason)+'</p><button data-intel="profile" data-id="'+escape(r.id)+'" data-sha="'+escape(r.sha256)+'">Analizza i pixel</button></article>'
       ).join(""):'<p>La coda REAL è vuota.</p>')+'</details>'+ 
       '<details><summary>Foto già votate senza profilo (apprendimento)</summary>'+ 
