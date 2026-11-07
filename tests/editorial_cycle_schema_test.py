@@ -3,6 +3,7 @@ import json
 import hashlib
 import sqlite3
 import unittest
+import tempfile
 
 
 class CycleSchemaTest(unittest.TestCase):
@@ -53,3 +54,23 @@ class CycleSchemaTest(unittest.TestCase):
         with self.assertRaises(sqlite3.IntegrityError):self.db.execute("UPDATE editorial_review_inbox SET status='rejected',revision=2 WHERE id='real'")
         self.assertEqual(self.db.execute("SELECT count(*) FROM published_images WHERE batch_id='okay'").fetchone()[0],2)
         self.assertEqual(self.db.execute('PRAGMA foreign_key_check').fetchall(),[])
+
+    def test_python_site_reader_uses_actual_sql_for_admission_and_allocation(self):
+        from pipeline.cycle import observe
+        from pipeline.real.store import Store
+        sha=self.candidate('real');self.admit('real',sha)
+        db=self.db
+        class D1:
+            def query(self,sql,params):
+                cursor=db.execute(sql,params)
+                return [dict(zip([column[0] for column in cursor.description],row)) for row in cursor.fetchall()]
+        report=dict(images=[dict(id='real',origin='REAL',sha256=sha,source_sha256=sha,status='approved',revision=1)])
+        with tempfile.TemporaryDirectory() as folder:
+            store=Store(folder)
+            store.freeze(dict(version='1.0.0',taxonomy_version='1.0.0',topic='animals',emotion='compassion',intensity='medium'),simulated=True)
+            store.save('cycle-config.v1.0.0.json',dict(run_id='test-cycle'))
+            current=observe(store,report,D1())[0]
+            self.assertTrue(current['admitted']);self.assertFalse(current['published']);self.assertFalse(current['allocated_elsewhere'])
+            store.save('cycle-config.v1.0.0.json',dict(run_id='another-cycle'))
+            other=observe(store,report,D1())[0]
+            self.assertTrue(other['allocated_elsewhere']);self.assertEqual(other['decision'],'pending')

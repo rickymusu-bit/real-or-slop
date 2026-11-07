@@ -104,12 +104,15 @@ def observe(store, report, api):
             current['sha256'] = events[-1]['image_sha256']
         current['decision'] = row['status'] if events and events[-1]['image_sha256'] == current['sha256'] else 'pending'
         current['note'] = events[-1]['note'] if events else ''
-        admissions = api.query('SELECT a.cycle_id,a.review_revision,a.image_sha256,EXISTS(SELECT 1 FROM published_images p WHERE p.image_id=a.image_id) AS published FROM editorial_cycle_admissions a WHERE a.inbox_id=? ORDER BY a.review_revision DESC LIMIT 1', [row['id']])
+        admissions = api.query("SELECT a.cycle_id,a.review_revision,a.image_sha256,EXISTS(SELECT 1 FROM published_images p WHERE p.image_id=a.image_id) AS published,(SELECT json_extract(metadata_json,'$.cycle_id') FROM editorial_review_effective_images WHERE id=?) AS assigned_cycle_id FROM (SELECT 1) LEFT JOIN editorial_cycle_admissions a ON a.inbox_id=? ORDER BY a.review_revision DESC LIMIT 1", [row['id'],row['id']])
         current['published'] = bool(admissions and admissions[0]['published'])
         current['admitted'] = bool(admissions and admissions[0]['review_revision'] == row['revision'] and
                                    admissions[0]['image_sha256'] == current['sha256'] and current['decision'] == 'approved')
         run = store.read('cycle-config.v1.0.0.json')
-        current['allocated_elsewhere'] = bool(admissions and run and admissions[0]['cycle_id'] != run['run_id'])
+        current['allocated_elsewhere'] = bool(admissions and run and any(
+            admissions[0].get(key) and admissions[0][key] != run['run_id'] for key in ('cycle_id','assigned_cycle_id')))
+        if current['allocated_elsewhere']:
+            current['decision'] = 'pending'  # Preserve the old vote without reusing its allocation.
         observed.append(current)
     return observed
 
@@ -208,6 +211,8 @@ def slop_manifest(store, records):
 
 
 def balance(real, slop):
+    skipped = dict(REAL=sum(bool(r.get('allocated_elsewhere')) for r in real),
+                   AI=sum(bool(r.get('allocated_elsewhere')) for r in slop))
     real = [r for r in real if not r.get('allocated_elsewhere')]
     slop = [r for r in slop if not r.get('allocated_elsewhere')]
     def counts(rows):
@@ -217,7 +222,7 @@ def balance(real, slop):
     ap = sum(bool(row.get('published')) for row in slop)
     ready_real = sum(row['decision'] == 'approved' and bool(row.get('admitted')) and not row.get('published',False) for row in real)
     ready_ai = sum(row['decision'] == 'approved' and bool(row.get('admitted')) and not row.get('published',False) for row in slop)
-    return dict(real=r, slop=a, target=r['approved'],
+    return dict(real=r, slop=a, target=r['approved'], allocated_elsewhere=skipped,
         deficit=max(0, r['approved']-a['approved']-a['pending']),
         approved_per_origin=min(r['approved']-rp, a['approved']-ap),
         publishable_per_origin=min(ready_real,ready_ai),

@@ -176,6 +176,20 @@ class CycleTest(unittest.TestCase):
         frozen=self.store.read(FREEZE)
         for index,call in enumerate(self.image_calls()):self.assertEqual(call[1]['prompt'],frozen['output']['slop_prompts'][index])
 
+    def test_existing_cycle_assignment_prevents_generation_even_before_documentary_admission(self):
+        self.prepare(1);uid=self.site.real_ids[0];self.site.vote(uid,'approved')
+        original=self.site.query
+        def assigned(sql,params):
+            if 'editorial_cycle_admissions' in sql:
+                return [dict(cycle_id=None,review_revision=None,image_sha256=None,published=0,assigned_cycle_id='another-cycle')]
+            return original(sql,params)
+        with patch.object(self.site,'query',side_effect=assigned):state=self.run_cycle(sync=True,execute=True)
+        self.assertEqual(state['target'],0);self.assertFalse(self.image_calls())
+        self.assertEqual(state['allocated_elsewhere']['REAL'],1)
+        events=synchronize(self.store)
+        latest=max(events,key=lambda row:row['revision'])
+        self.assertEqual(latest['outcome'],'pending')
+
     def test_ten_real_seven_slop_three_rejections_generate_only_deficit(self):
         self.prepare()
         for uid in self.site.real_ids:self.site.vote(uid,'approved')

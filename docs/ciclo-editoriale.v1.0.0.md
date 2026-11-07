@@ -31,6 +31,9 @@ run storici. Il nuovo percorso riusa i suoi moduli, senza migrare checkpoint.
    I file non fotografici o troppo grandi restano registrati come errori tecnici.
 4. Ogni ripresa legge voti e revisioni effettivi dal sito, verifica i byte esposti,
    conserva gli eventi immutabili e conta solo giudizi sui pixel correnti.
+   Le immagini già assegnate a un altro ciclo sono escluse dal nuovo target anche
+   prima dell’ammissione documentale; i loro voti restano conservati senza
+   riutilizzarne la capacità o alterare la resa della nuova casella.
 5. Approvazioni REAL stabiliscono il target. SLOP approvate e pending occupano
    capacità; una SLOP rifiutata apre un deficit. Ogni richiesta usa il successivo
    prompt congelato inutilizzato e produce un solo file. Nessun dato REAL entra
