@@ -29,7 +29,7 @@ export function validateDemoConfig(config, runtimeAccount) {
 // Read-only discovery must complete before any migration/seed/deployment. Never
 // deploy older code over a database whose migration history is ahead of it.
 export function pendingDemoMigrations(files, applied) {
-  const valid = (value) => typeof value === "string" && /^\d{4}_[a-z0-9_-]+\.sql$/.test(value);
+  const valid = (value) => typeof value === "string" && /^\d{4}_[a-z0-9_-]+(?:\.v\d+\.\d+\.\d+)?\.sql$/.test(value);
   if (!Array.isArray(files) || !files.length || files.some((name) => !valid(name)) ||
       !Array.isArray(applied) || applied.some((name) => !valid(name))) {
     throw new Error("Elenco delle migrazioni non valido: rilascio interrotto.");

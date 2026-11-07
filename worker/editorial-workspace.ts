@@ -2,7 +2,8 @@ import { body, HttpError, id, json, type Env } from "./core";
 import { imageMime, sourcePageUrl, topicKey, topicTitle } from "../shared/editorial-workspace.v1.0.0";
 import { ensureSlopSeed } from "./editorial-learning.v1.0.0";
 import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
-import { createTopicSemantics, semanticTopicDescription } from "./topic-semantic-memory.v1.0.0";
+import { createTopicSemantics, embedTopicOnSubmission, embeddingConfig, DEFAULT_TOPIC_EMBEDDING_MODEL, semanticTopicDescription, semanticTopicText } from "./topic-semantic-memory.v1.0.0";
+import { hash } from "./core";
 
 const base = "/api/admin/editorial/workspace";
 type TopicRow = { id: string; title: string; normalized_key: string; created_at: string; description: string | null; embedding_status: string | null };
@@ -31,11 +32,48 @@ async function existingTopic(env: Env, topicId: string) {
 export async function editorialWorkspace(request: Request, env: Env, path: string): Promise<Response> {
   if (path === base && request.method === "GET") {
     const [topics, proposals] = await Promise.all([
-      env.DB.prepare("SELECT t.id,t.title,t.normalized_key,t.created_at,s.description,s.embedding_status FROM editorial_workspace_topics t LEFT JOIN editorial_topic_semantics s ON s.topic_id=t.id ORDER BY t.created_at DESC,t.id DESC LIMIT 200").all<TopicRow>(),
-      env.DB.prepare("SELECT p.id,p.topic_id,p.kind,p.source_url,p.inbox_id,p.note,p.created_at,i.status AS review_status FROM editorial_workspace_proposals p LEFT JOIN editorial_review_inbox i ON i.id=p.inbox_id ORDER BY p.created_at DESC,p.id DESC LIMIT 1000").all<ProposalRow>(),
+      env.DB.prepare("SELECT t.id,t.title,t.normalized_key,t.created_at,s.description,s.embedding_status,s.input_sha256,s.error_code FROM editorial_workspace_topics t LEFT JOIN editorial_topic_semantics s ON s.topic_id=t.id ORDER BY t.created_at DESC,t.id DESC").all<TopicRow>(),
+      env.DB.prepare("SELECT p.id,p.topic_id,p.kind,p.source_url,COALESCE(p.inbox_id,a.inbox_id) AS inbox_id,p.note,p.created_at,i.status AS review_status FROM editorial_workspace_proposals p LEFT JOIN editorial_workspace_acquisitions a ON a.proposal_id=p.id LEFT JOIN editorial_review_inbox i ON i.id=COALESCE(p.inbox_id,a.inbox_id) ORDER BY p.created_at DESC,p.id DESC LIMIT 1000").all<ProposalRow>(),
     ]);
-    return json({ topics: topics.results, proposals: proposals.results, paid_search_enabled: false,
+    let embeddingReady=false;
+    try{embeddingReady=!!embeddingConfig(env);}catch{ /* expose unconfigured state without losing topics */ }
+    return json({ topics: topics.results, proposals: proposals.results, embedding_enabled:embeddingReady,
+      embedding_cost:env.TOPIC_EMBEDDING_CALL_USD || null, paid_search_enabled: false,
       slop_generation_enabled: false, autonomous_suggestions_enabled: false });
+  }
+  if(path===base+"/manual-stage" && request.method==="POST"){
+    const data=await body(request,500);
+    if(Object.keys(data).some(k=>!["topic_id","decision"].includes(k)) || !["finished","skip"].includes(String(data.decision)))
+      throw new HttpError(400,"Confermare la fase delle fotografie manuali");
+    const t=await existingTopic(env,valueText(data.topic_id,36,true));
+    await env.DB.prepare("INSERT OR IGNORE INTO editorial_workspace_manual_stage VALUES(?,?,?)").bind(t.id,data.decision,new Date().toISOString()).run();
+    return json({manual_stage_complete:true,paid_calls_started:false});
+  }
+  const semanticPath=path.match(/^\/api\/admin\/editorial\/workspace\/topics\/([a-f0-9-]{36})\/semantics$/i);
+  if(semanticPath && request.method==="POST"){
+    const data=await body(request,3000),current=await existingTopic(env,semanticPath[1]);
+    if(Object.keys(data).some(key=>!["description","expected_sha256"].includes(key)))
+      throw new HttpError(400,"Campi semantici non previsti");
+    const previous=await env.DB.prepare("SELECT input_sha256,description,embedding_status,model FROM editorial_topic_semantics WHERE topic_id=?")
+      .bind(current.id).first<{input_sha256:string;description:string;embedding_status:string;model:string}>();
+    if((previous?.input_sha256 || null)!==data.expected_sha256)throw new HttpError(409,"Argomento aggiornato: ricaricare prima di salvare");
+    if(previous && ["submitting","uncertain"].includes(previous.embedding_status))
+      throw new HttpError(409,"Indicizzazione avviata o incerta: nessun reinvio consentito");
+    let description:string;
+    try{description=semanticTopicDescription(data.description);}catch(error){return invalid(error);}
+    const inputText=semanticTopicText(current.title,description),digest=await hash(inputText);
+    const model=env.TOPIC_EMBEDDING_MODEL || DEFAULT_TOPIC_EMBEDDING_MODEL;
+    if(previous && (digest!==previous.input_sha256 || model!==previous.model)){
+      const archived=await env.DB.prepare("SELECT vector_json,dimensions,input_tokens FROM editorial_topic_semantic_history WHERE topic_id=? AND input_sha256=? AND model=? AND embedding_status='ready' ORDER BY updated_at DESC LIMIT 1")
+        .bind(current.id,digest,model).first<{vector_json:string;dimensions:number;input_tokens:number}>();
+      const changed=await env.DB.prepare("UPDATE editorial_topic_semantics SET description=?,input_text=?,input_sha256=?,model=?,embedding_status=?,vector_json=?,dimensions=?,input_tokens=?,error_code=NULL,updated_at=? WHERE topic_id=? AND input_sha256=? AND model=? AND embedding_status NOT IN ('submitting','uncertain')")
+        .bind(description,inputText,digest,model,archived?"ready":"pending",archived?.vector_json || null,archived?.dimensions || null,archived?.input_tokens || null,
+          new Date().toISOString(),current.id,previous.input_sha256,previous.model).run();
+      if(changed.meta.changes<1)throw new HttpError(409,"Modifica concorrente: ricaricare l'argomento");
+    }
+    const status=previous ? await embedTopicOnSubmission(env,current.id) :
+      await createTopicSemantics(env,current.id,current.title,description);
+    return json({id:current.id,embedding_status:status,input_sha256:digest});
   }
   if (path === base + "/topics" && request.method === "POST") {
     const data = await body(request, 3000);
@@ -89,7 +127,8 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
     if (bytes.byteLength > 12_000_000) throw new HttpError(413, "File oltre 12 MB");
     const mime = imageMime(new Uint8Array(bytes));
     if (!mime) throw new HttpError(415, "Usare JPEG, PNG o WebP");
-    try { imageDimensions(new Uint8Array(bytes)); } catch { throw new HttpError(415, "Immagine non valida o oltre 32 megapixel"); }
+    let geometry;
+    try { geometry=imageDimensions(new Uint8Array(bytes)); } catch { throw new HttpError(415, "Immagine non valida o oltre 32 megapixel"); }
     const sha256 = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
       .map(x => x.toString(16).padStart(2, "0")).join("");
     const [existing, rejected, published] = await Promise.all([
@@ -101,7 +140,8 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
     const inboxId = "owner-" + id(), proposalId = id(), key = "owner-proposals/" + inboxId;
     const created = new Date().toISOString();
     const metadata = JSON.stringify({ source_kind: "owner-upload", title, topic_id: topicId, author: "",
-      source_url: "", license_url: "", provenance_status: "unverified", original_key:key, original_sha256:sha256 });
+      source_url: "", license_url: "", provenance_status: "unverified", original_key:key, original_sha256:sha256,
+      image_geometry:geometry });
     await env.QUARANTINE.put(key, bytes, { httpMetadata: { contentType: mime }, customMetadata: { sha256 } });
     try {
       await env.DB.batch([

@@ -6,6 +6,15 @@ L'[audit #57](docs/audit-architettura.v1.0.0.md) distingue main dalle PR in bozz
 il [piano di integrazione](docs/piano-integrazione-editoriale.v1.0.0.md) prepara
 la #56 senza adottare anticipatamente la v4.
 
+Dashboard owner-first #64: [contratto corrente 2.0.0](docs/editorial-intelligence.v2.0.0.md).
+L'admin gestisce descrizioni e indicizzazione dei temi storici, proposte manuali,
+suggerimenti con vicini semantici, pertinenza visiva e generazioni SLOP limitate
+atomicamente al deficit. Topic Discovery resta facoltativo e OFF per default;
+gli embedding sui nuovi input sono indipendenti dal toggle. Migrazione additiva
+0023, senza modifiche remote. `npm run test:editorial` verifica Worker/D1/R2 con
+API simulate; `ROS_TEST_BROWSER=1 npm run test:editorial` aggiunge desktop/mobile
+fino alla pubblicazione bilanciata locale. [Esiti e limiti](docs/completamento-issue-64.v1.0.0.md).
+
 Ciclo completo corrente: [specifica 1.0.0](docs/ciclo-editoriale.v1.0.0.md).
 `npm run editorial:cycle -- start` prepara casella e limiti; brief e banca prompt
 SLOP vengono congelati prima della ricerca. Le candidate arrivano pending in

@@ -65,3 +65,10 @@ export function imageFormatChoice(slot: number): { size: "1536x1024" | "1024x153
   ] as const;
   return variants[slot % variants.length];
 }
+/** Independent topic seed avoids always starting each small batch with a landscape. */
+export function topicImageFormatChoice(topicId:string,slot:number){
+  const offset=parseInt(topicId.replace(/-/g,"").slice(0,8),16)%3;
+  if(!Number.isFinite(offset))throw Error("Argomento non valido");
+  imageFormatChoice(slot);
+  return imageFormatChoice((slot%3+offset)%3);
+}

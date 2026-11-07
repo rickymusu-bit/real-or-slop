@@ -1,0 +1,2 @@
+# Browser automation only; the project keeps its existing Node/Python test runners.
+playwright==1.64.1

@@ -1,8 +1,37 @@
-# Istruzioni Codex — versione canonica 7.0.0
+# Istruzioni Codex — versione canonica 8.0.0
 
-Snapshot: `docs/AGENTS.v7.0.0.md`. Percorsi relativi alla radice del repository.
+Snapshot: `docs/AGENTS.v8.0.0.md`. Percorsi relativi alla radice del repository.
 Aggiornato: 2026-11-06T21:45:55Z. Le versioni precedenti restano conservate. Questa revisione
 recepisce il ciclo completo richiesto dal proprietario nella sessione corrente.
+
+## Completamento #64 — contratto corrente 8.0.0
+
+Aggiornato: 2026-11-07T19:21:24Z. `docs/editorial-intelligence.v2.0.0.md` è il riferimento corrente
+per la dashboard owner-first e sostituisce, in questo ambito, le indicazioni
+precedenti che descrivono ancora il suggeritore vettoriale come futuro.
+
+La migrazione additiva 0023 conserva revisioni semantiche immutabili, embedding
+per proposte, controlli di novità, pertinenza fotografica separata, diagnostica
+retrieval, scelta manuale prima della ricerca e prenotazioni atomiche del deficit
+SLOP. L'owner può modificare descrizioni e indicizzare singoli temi storici/pending
+anche con Topic Discovery OFF. Esiti incerti non vengono ritentati. Il ripristino
+di una revisione riusa vettori compatibili già archiviati.
+
+Il suggeritore usa lo storico dei temi e i vettori compatibili, mostra i vicini e
+fa distinguere a GPT parafrasi da eventi/prospettive differenti. Non usa gusti REAL
+o SLOP. Il profilo resta pixel-only; il confronto con il tema è successivo e non
+attesta provenienza, licenza o fatti storici. SLOP legge soltanto il seed congelato
+prima delle REAL; i nuovi formati dipendono dall'ID del tema, mai dalle REAL.
+
+Verifica aggiuntiva: `npm run test:editorial` e
+`ROS_TEST_BROWSER=1 npm run test:editorial`, con D1/R2 veri locali e tutte le API
+simulate. La CI esegue anche il browser desktop/mobile fino alla pubblicazione
+bilanciata di fixture. Nessuna inferenza a pagamento, migrazione remota, deploy o
+merge è autorizzata implicitamente. Documentare i limiti di corpus non indicizzati
+e formati sconosciuti; non certificare la neutralità del catalogo reale con fixture.
+
+Le sezioni storiche seguenti rimangono contesto per i contratti precedenti;
+per le estensioni appena elencate prevale questa sezione e la specifica 2.0.0.
 
 ## Delta owner-first #64 (PR in bozza, non attivo in produzione)
 
