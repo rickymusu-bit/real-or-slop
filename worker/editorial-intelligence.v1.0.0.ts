@@ -62,7 +62,7 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     const requestedTopic = new URL(request.url).searchParams.get("topic_id");
     const selectedTopic = requestedTopic ? uid(requestedTopic) : null;
     const [stats,reals,slops,suggestions,searches,jobs,prompts,topicCounts,reviewedUnprofiled]=await Promise.all([
-      headlineStats(env),rankPending(env,"REAL"),rankPending(env,"AI"),
+      headlineStats(env),rankPending(env,"REAL",selectedTopic),rankPending(env,"AI",selectedTopic),
       env.DB.prepare("SELECT * FROM editorial_topic_suggestions ORDER BY created_at DESC LIMIT 100").all(),
       env.DB.prepare("SELECT * FROM editorial_topic_explorations ORDER BY created_at DESC LIMIT 50").all(),
       env.DB.prepare("SELECT kind,status,topic_id,created_at,updated_at FROM editorial_workspace_jobs ORDER BY created_at DESC LIMIT 30").all(),
