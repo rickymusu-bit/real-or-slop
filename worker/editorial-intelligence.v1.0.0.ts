@@ -3,6 +3,8 @@ import { topicKey, topicTitle, imageMime } from "../shared/editorial-workspace.v
 import { imageFormatChoice, profileTags, similarTopic, suggestedTopicTitle, type Profile } from "../shared/editorial-intelligence.v1.0.0";
 import { commonsFile, searchCommons, type CommonsFile, MAX_IMAGE_BYTES } from "./commons-editorial.v1.0.0";
 import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
+import taxonomy from "../shared/real-discovery-taxonomy.v1.0.0.json";
+import { proposedTaxonomy } from "../shared/editorial-taxonomy-classification.v1.0.0";
 import { ensureSlopSeed, headlineStats, rankPending } from "./editorial-learning.v1.0.0";
 import { fields, modelImage, modelJSON } from "./workspace-ai.v1.0.0";
 
@@ -199,14 +201,22 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     } else if(original.byteLength>2_000_000){
       throw new HttpError(413,"Per immagini oltre 2 MB usare l'anteprima integrale proporzionale generata dall'admin");
     }
+    const taxonomyGuidance=JSON.stringify({topics:taxonomy.topics.map(x=>({id:x.id,description:x.description})),
+      emotions:taxonomy.emotions.map(x=>({id:x.id,description:x.description})),intensities:taxonomy.intensities});
     const reply=await modelJSON(env,"profile",null,"profile:"+inboxId+":"+sha,
       {origin:row.origin,sha256:sha,preview_sha256:previewHash},
-      "Examine ONLY the visible pixels, not filenames, EXIF, titles, source, metadata or their claims. Describe visible subject, visible action, scene, photographic composition, subject visibility, editorial interest. Never infer if image is real or AI-generated, never certify an event, license or identity. Return 3 to 12 concrete lowercase English snake_case visual tags.",
+      "Examine ONLY the visible pixels, not filenames, EXIF, titles, source, metadata or their claims. Describe visible subject, visible action, scene, photographic composition, subject visibility, editorial interest. Never infer if image is real or AI-generated, never certify an event, license or identity. Return 3 to 12 lowercase English snake_case visual tags. Suggest one broad TOPIC, one viewer-response EMOTION and one salience INTENSITY from this provided taxonomy, flag uncertainty, and use low intensity for neutrality. These are not claims about actual people\'s emotions or the truth of an event. Taxonomy: "+taxonomyGuidance,
       "Profile the image strictly from pixels. Do not read or infer provenance.",fields.profile,{mime:visualMime,bytes:visualBytes});
-    const profile=reply as unknown as Profile;
+    let classification;
+    try {classification=proposedTaxonomy(reply);} catch {throw new HttpError(502,"Classificazione tassonomica non valida");}
+    const {taxonomy_topic:omitTopic,taxonomy_emotion:omitEmotion,taxonomy_intensity:omitIntensity,
+      taxonomy_uncertain:omitUncertain,...visual}=reply;
+    void omitTopic;void omitEmotion;void omitIntensity;void omitUncertain;
+    const profile=visual as unknown as Profile;
     if(["subject","action","setting","composition","visibility","interest"].some(k=>typeof profile[k as keyof Profile]!=="string") ||
        profileTags(profile).length<2)throw new HttpError(502,"Profilo visivo non utilizzabile");
     const stored={...profile,tags:profileTags(profile),
+      taxonomy_classification:classification,
       visual_source:previewHash?"proportional_browser_preview":"original_file",
       original_sha256:sha,preview_sha256:previewHash};
     await env.DB.prepare("INSERT OR IGNORE INTO editorial_image_profiles(inbox_id,sha256,origin,profile_json,model,created_at) VALUES(?,?,?,?,?,?)")
