@@ -36,8 +36,8 @@ class PreserveAspectTest(unittest.TestCase):
                     self.assertEqual(result["crop_box"], None)
                     self.assertEqual(result["retained_area"], 1)
                     self.assertFalse(result["upscaled"])
-                    self.assertLessEqual(abs(actual[0] / actual[1] - dims[0] / dims[1]),
-                                         max(1 / min(actual), 1 / min(dims)))
+                    self.assertLessEqual(abs(actual[0]*dims[1] - actual[1]*dims[0]),
+                                         max(dims))
                     self.assertEqual(result["source_sha256"], hashlib.sha256(raw).hexdigest())
                     self.assertEqual(result["sha256"], hashlib.sha256(target.read_bytes()).hexdigest())
                     self.assertEqual(result["operations"][-2:], ["compression", "format_conversion"])
