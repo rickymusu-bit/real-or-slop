@@ -120,15 +120,17 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     const operationKey=uid(data.operation_id);
     const [topics,old,stats,catalog]=await Promise.all([
       env.DB.prepare("SELECT title FROM editorial_workspace_topics ORDER BY created_at DESC LIMIT 200").all<{title:string}>(),
-      env.DB.prepare("SELECT title FROM editorial_topic_suggestions ORDER BY created_at DESC LIMIT 200").all<{title:string}>(),
+      env.DB.prepare("SELECT title,status FROM editorial_topic_suggestions ORDER BY created_at DESC LIMIT 200").all<{title:string;status:string}>(),
       headlineStats(env),
       env.DB.prepare("SELECT title FROM images WHERE demo=0 ORDER BY created_at DESC LIMIT 150").all<{title:string}>()
     ]);
     const seen=[...topics.results,...old.results,...catalog.results].map(x=>x.title);
+    const topicFeedback=old.results.map(x=>({title:x.title,owner_decision:x.status}));
     const response=await modelJSON(env,"suggest",null,"suggest:"+operationKey,
-      {known_titles:seen,preferences:{real:stats.real.counts,slop:stats.slop.counts}},
+      {known_titles:seen,topic_feedback:topicFeedback,preferences:{real:stats.real.counts,slop:stats.slop.counts}},
       "You are a photo-editorial topic recommender. Return 5 concrete, diverse, verifiable photographic subjects, with place/time/event/action if applicable. Do not invent real historical incidents; do not repeat semantic equivalents of prior subjects. Never generate, retrieve or describe specific REAL photos.",
       "Previously attempted topics, including failed searches and rejected suggestions: "+JSON.stringify(seen)+
+      ". Owner suggestion history: "+JSON.stringify(topicFeedback)+
       ". Human REAL preference tags: "+JSON.stringify(stats.real.counts)+". Suggest specific NEW topics and rationale.",
       fields.suggestion);
     const values=Array.isArray(response.suggestions)?response.suggestions:[],selected:Array<{title:string;rationale:string}>=[];
