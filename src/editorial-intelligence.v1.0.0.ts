@@ -5,7 +5,9 @@ import "./editorial-intelligence.v1.0.0.css";
 interface Suggestion {id:string;title:string;rationale:string;status:string}
 interface Proposal {id:string;topic_id:string;kind:string;source_url:string|null;inbox_id:string|null}
 interface TopicCount {origin:string;status:string;n:number}
-interface Ranked {id:string;sha256:string;tags:string[];score:number;reason:string}
+interface Ranked {id:string;sha256:string;tags:string[];score:number;reason:string;
+  taxonomy_classification?: {topic:string;emotion:string;intensity:string;uncertain:boolean;status:string}|null
+}
 interface Bank {slot:number;prompt:string;variant:string}
 interface Panel {
   enabled:boolean;generation_enabled:boolean; cost_per_text_call:string|null;cost_per_image_call:string|null;
@@ -84,7 +86,13 @@ export async function mountEditorialIntelligence() {
       (state.ranked_real.length?state.ranked_real.slice(0,15).map((r,i)=>
         '<article><img class="intel-ranked-preview" loading="lazy" alt="Fotografia REAL candidata" src="/api/admin/review-inbox/'+encodeURIComponent(r.id)+'/image">'+
         '<span>'+Number(i+1)+'. '+escape(r.id)+' — '+Math.round(r.score*100)+'% stima editoriale</span>'+
-        '<p>'+escape(r.reason)+'</p><button data-intel="profile" data-id="'+escape(r.id)+'" data-sha="'+escape(r.sha256)+'">Analizza i pixel</button></article>'
+        '<p>'+escape(r.reason)+'</p>'+
+        (r.taxonomy_classification ? '<p>Classificazione suggerita: '+
+          escape(r.taxonomy_classification.topic.replaceAll("_"," "))+" / "+
+          escape(r.taxonomy_classification.emotion)+" / "+
+          escape(r.taxonomy_classification.intensity)+
+          (r.taxonomy_classification.uncertain?" (da verificare)":"")+'</p>' : "")+
+        '<button data-intel="profile" data-id="'+escape(r.id)+'" data-sha="'+escape(r.sha256)+'">Analizza i pixel</button></article>'
       ).join(""):'<p>La coda REAL è vuota.</p>')+'</details>'+ 
       '<details><summary>Foto già votate senza profilo (apprendimento)</summary>'+ 
       (state.reviewed_unprofiled.length ? state.reviewed_unprofiled.slice(0,25).map(photo => 
