@@ -2,6 +2,7 @@ import { hash, HttpError, type Env } from "./core";
 import { profileTags, preferenceScore, rankEditorial, reliableFeedback,
   type PreferenceRow, type Origin, type Profile } from "../shared/editorial-intelligence.v1.0.0";
 import { isolatedSlopPlanningInput } from "../shared/editorial-workspace.v1.0.0";
+import { slopPromptFeedbackSignal } from "../shared/slop-feedback-policy.v1.0.0";
 
 interface Feedback {
   inbox_id: string; sha256:string; origin: Origin; profile_json:string;
@@ -59,14 +60,16 @@ export async function historicalSlopFeedback(env:Env):Promise<string[]> {
     "ORDER BY e.created_at DESC LIMIT 60").all<{decision:string;note:string;metadata_json:string}>()).results;
   const feedback:string[]=[];
   for (const row of rows) {
-    if (!reliableFeedback(editorialReason(row.note),row.decision)) continue;
+    const reason=editorialReason(row.note);
+    const signal=slopPromptFeedbackSignal(row.decision as "approved"|"rejected",reason as "editorial"|"generation"|"technical"|"rights"|"provenance");
+    if (!signal) continue;
     let prompt="";
     try {
       const meta=JSON.parse(row.metadata_json) as Record<string,unknown>;
       prompt=String((meta.provenance as Record<string,unknown>|undefined)?.prompt || meta.prompt || "").slice(0,240);
     } catch { /* legacy metadata */ }
     const note=(()=>{try{const parsed=JSON.parse(row.note) as {note?:string};return parsed.note || "";}catch{return row.note;}})();
-    feedback.push((row.decision+" — "+(prompt?"prompt: "+prompt+"; ":"")+note.slice(0,240)).slice(0,580));
+    feedback.push((signal+" — "+(prompt?"prompt: "+prompt+"; ":"")+note.slice(0,240)).slice(0,580));
     if(feedback.length>=30)break;
   }
   return feedback;
