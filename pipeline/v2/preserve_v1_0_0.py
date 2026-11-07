@@ -33,9 +33,9 @@ def proportional_copy(raw: bytes, target: Path, max_side: int = MAX_SIDE) -> dic
     width, height = frame.size
     require(width > 0 and height > 0 and max(width, height) <= max_side,
             "Anteprima proporzionale fuori limite")
-    require(abs(width / height - source_width / source_height) <=
-            max(1 / min(width, height), 1 / min(source_width, source_height)),
-            "Rapporto d'aspetto alterato")
+    # Integer cross-product tolerance allows Pillow's unavoidable one-pixel rounding.
+    require(abs(width * source_height - height * source_width) <=
+            max(source_width, source_height), "Rapporto d'aspetto alterato")
     target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     require(not target.exists(), "Anteprima esistente: non sovrascrivere")
     frame.save(target, "WEBP", quality=85, method=6)
