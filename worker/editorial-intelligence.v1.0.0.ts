@@ -1,4 +1,4 @@
-import { body, hash, HttpError, id, json, type Env } from "./core";
+import { body, HttpError, id, json, type Env } from "./core";
 import { topicKey, topicTitle, imageMime } from "../shared/editorial-workspace.v1.0.0";
 import { imageFormatChoice, profileTags, similarTopic, suggestedTopicTitle, type Profile } from "../shared/editorial-intelligence.v1.0.0";
 import { commonsFile, searchCommons, type CommonsFile, MAX_IMAGE_BYTES } from "./commons-editorial.v1.0.0";
@@ -58,14 +58,18 @@ async function saveCommons(env:Env,t:Topic,photo:CommonsFile,kind:"gpt-commons"|
 }
 export async function editorialIntelligence(request:Request,env:Env,path:string):Promise<Response>{
   if(path===base && request.method==="GET"){
-    const [stats,reals,slops,suggestions,searches,jobs]=await Promise.all([
+    const requestedTopic = new URL(request.url).searchParams.get("topic_id");
+    const selectedTopic = requestedTopic ? uid(requestedTopic) : null;
+    const [stats,reals,slops,suggestions,searches,jobs,prompts,topicCounts]=await Promise.all([
       headlineStats(env),rankPending(env,"REAL"),rankPending(env,"AI"),
       env.DB.prepare("SELECT * FROM editorial_topic_suggestions ORDER BY created_at DESC LIMIT 100").all(),
       env.DB.prepare("SELECT * FROM editorial_topic_explorations ORDER BY created_at DESC LIMIT 50").all(),
-      env.DB.prepare("SELECT kind,status,topic_id,created_at,updated_at FROM editorial_workspace_jobs ORDER BY created_at DESC LIMIT 30").all()
+      env.DB.prepare("SELECT kind,status,topic_id,created_at,updated_at FROM editorial_workspace_jobs ORDER BY created_at DESC LIMIT 30").all(),
+      env.DB.prepare("SELECT slot,prompt,variant,frozen_sha256 FROM editorial_slop_prompt_bank WHERE topic_id=? ORDER BY slot").bind(selectedTopic || "").all(),
+      env.DB.prepare("SELECT origin,status,count(*) AS n FROM editorial_review_effective_images WHERE json_extract(metadata_json,'$.topic_id')=? GROUP BY origin,status").bind(selectedTopic || "").all()
     ]);
     return json({version:"1.0.0",preferences:stats,ranked_real:reals.ranked.slice(0,30),ranked_slop:slops.ranked.slice(0,30),
-      suggestions:suggestions.results,searches:searches.results,jobs:jobs.results,
+      suggestions:suggestions.results,searches:searches.results,jobs:jobs.results,prompts:prompts.results,topic_counts:topicCounts.results,
       enabled:env.WORKSPACE_AI_ENABLED==="true" && env.ENABLE_REAL_DISCOVERY_PAID==="true" && !!env.OPENAI_API_KEY,
       generation_enabled:env.WORKSPACE_AI_ENABLED==="true" && env.ENABLE_EDITORIAL_CYCLE_GENERATION==="true" && !!env.OPENAI_API_KEY,
       cost_per_text_call:env.REAL_DISCOVERY_CALL_USD || null,
