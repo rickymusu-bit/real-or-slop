@@ -68,7 +68,7 @@ class CropTest(unittest.TestCase):
             output = io.StringIO()
             with contextlib.redirect_stdout(output):
                 present(['--states', str(states[0]), '--out', str(root / 'review'),
-                         '--budget-usd', '0.1', '--reservation-usd', '0.018'])
+                         '--method', 'terra', '--budget-usd', '0.1', '--reservation-usd', '0.018'])
             plan = json.loads(output.getvalue())
             self.assertEqual(plan['model'], DEFAULT_CROP_MODEL)
             self.assertEqual(plan['required_calls'], 1)
