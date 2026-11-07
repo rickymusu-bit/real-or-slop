@@ -60,16 +60,20 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
   if(path===base && request.method==="GET"){
     const requestedTopic = new URL(request.url).searchParams.get("topic_id");
     const selectedTopic = requestedTopic ? uid(requestedTopic) : null;
-    const [stats,reals,slops,suggestions,searches,jobs,prompts,topicCounts]=await Promise.all([
+    const [stats,reals,slops,suggestions,searches,jobs,prompts,topicCounts,reviewedUnprofiled]=await Promise.all([
       headlineStats(env),rankPending(env,"REAL"),rankPending(env,"AI"),
       env.DB.prepare("SELECT * FROM editorial_topic_suggestions ORDER BY created_at DESC LIMIT 100").all(),
       env.DB.prepare("SELECT * FROM editorial_topic_explorations ORDER BY created_at DESC LIMIT 50").all(),
       env.DB.prepare("SELECT kind,status,topic_id,created_at,updated_at FROM editorial_workspace_jobs ORDER BY created_at DESC LIMIT 30").all(),
       env.DB.prepare("SELECT slot,prompt,variant,frozen_sha256 FROM editorial_slop_prompt_bank WHERE topic_id=? ORDER BY slot").bind(selectedTopic || "").all(),
-      env.DB.prepare("SELECT origin,status,count(*) AS n FROM editorial_review_effective_images WHERE json_extract(metadata_json,'$.topic_id')=? GROUP BY origin,status").bind(selectedTopic || "").all()
+      env.DB.prepare("SELECT origin,status,count(*) AS n FROM editorial_review_effective_images WHERE json_extract(metadata_json,'$.topic_id')=? GROUP BY origin,status").bind(selectedTopic || "").all(),
+      env.DB.prepare("SELECT q.id,q.sha256,q.origin,q.status FROM editorial_review_effective_images q " +
+        "LEFT JOIN editorial_image_profiles p ON p.inbox_id=q.id AND p.sha256=q.sha256 " +
+        "WHERE p.inbox_id IS NULL AND q.status IN ('approved','rejected') ORDER BY q.created_at DESC LIMIT 40").all()
     ]);
     return json({version:"1.0.0",preferences:stats,ranked_real:reals.ranked.slice(0,30),ranked_slop:slops.ranked.slice(0,30),
       suggestions:suggestions.results,searches:searches.results,jobs:jobs.results,prompts:prompts.results,topic_counts:topicCounts.results,
+      reviewed_unprofiled:reviewedUnprofiled.results,
       enabled:env.WORKSPACE_AI_ENABLED==="true" && env.ENABLE_REAL_DISCOVERY_PAID==="true" && !!env.OPENAI_API_KEY,
       generation_enabled:env.WORKSPACE_AI_ENABLED==="true" && env.ENABLE_EDITORIAL_CYCLE_GENERATION==="true" && !!env.OPENAI_API_KEY,
       cost_per_text_call:env.REAL_DISCOVERY_CALL_USD || null,
@@ -114,12 +118,13 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
   if(path===base+"/suggest"){
     const data=await body(request,1800);
     const operationKey=uid(data.operation_id);
-    const [topics,old,stats]=await Promise.all([
+    const [topics,old,stats,catalog]=await Promise.all([
       env.DB.prepare("SELECT title FROM editorial_workspace_topics ORDER BY created_at DESC LIMIT 200").all<{title:string}>(),
       env.DB.prepare("SELECT title FROM editorial_topic_suggestions ORDER BY created_at DESC LIMIT 200").all<{title:string}>(),
-      headlineStats(env)
+      headlineStats(env),
+      env.DB.prepare("SELECT title FROM images WHERE demo=0 ORDER BY created_at DESC LIMIT 150").all<{title:string}>()
     ]);
-    const seen=[...topics.results,...old.results].map(x=>x.title);
+    const seen=[...topics.results,...old.results,...catalog.results].map(x=>x.title);
     const response=await modelJSON(env,"suggest",null,"suggest:"+operationKey,
       {known_titles:seen,preferences:{real:stats.real.counts,slop:stats.slop.counts}},
       "You are a photo-editorial topic recommender. Return 5 concrete, diverse, verifiable photographic subjects, with place/time/event/action if applicable. Do not invent real historical incidents; do not repeat semantic equivalents of prior subjects. Never generate, retrieve or describe specific REAL photos.",
