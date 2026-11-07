@@ -1,4 +1,5 @@
 import { api, content, escape } from "./main";
+import { visualProfilePreview } from "./editorial-profile-preview.v1.0.0";
 import "./editorial-intelligence.v1.0.0.css";
 
 interface Suggestion {id:string;title:string;rationale:string;status:string}
@@ -81,7 +82,8 @@ export async function mountEditorialIntelligence() {
       : '<p>Nessun link proposto per questo argomento.</p>';
     ranking.innerHTML='<details><summary>REAL in coda: ordine suggerito</summary>'+
       (state.ranked_real.length?state.ranked_real.slice(0,15).map((r,i)=>
-        '<article><span>'+Number(i+1)+'. '+escape(r.id)+' — '+Math.round(r.score*100)+'% stima editoriale</span>'+
+        '<article><img class="intel-ranked-preview" loading="lazy" alt="Fotografia REAL candidata" src="/api/admin/review-inbox/'+encodeURIComponent(r.id)+'/image">'+
+        '<span>'+Number(i+1)+'. '+escape(r.id)+' — '+Math.round(r.score*100)+'% stima editoriale</span>'+
         '<p>'+escape(r.reason)+'</p><button data-intel="profile" data-id="'+escape(r.id)+'" data-sha="'+escape(r.sha256)+'">Analizza i pixel</button></article>'
       ).join(""):'<p>La coda REAL è vuota.</p>')+'</details>'+ 
       '<details><summary>Foto già votate senza profilo (apprendimento)</summary>'+ 
@@ -125,7 +127,9 @@ export async function mountEditorialIntelligence() {
       else if(action==="suggest"){path=base+"/suggest";payload={operation_id:crypto.randomUUID()};}
       else if(action==="search"){path=base+"/search";payload={topic_id:topicId,limit:Number(section.querySelector<HTMLSelectElement>("#intel-limit")!.value),
         operation_id:crypto.randomUUID()};}
-      else if(action==="profile"){path=base+"/profile";payload={inbox_id:button.dataset.id,sha256:button.dataset.sha};}
+      else if(action==="profile"){path=base+"/profile";status.textContent="Preparo una miniatura proporzionale dalla fotografia originale...";
+        payload={inbox_id:button.dataset.id,sha256:button.dataset.sha,
+          preview_base64:await visualProfilePreview(button.dataset.id || "")};}
       else if(action==="plan"){path=base+"/slop/plan";payload={topic_id:topicId};}
       else if(action==="generate"){path=base+"/slop/generate";payload={topic_id:topicId,slot:Number(button.dataset.slot)};}
       if(!path)throw Error("Comando sconosciuto");
