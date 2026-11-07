@@ -1,5 +1,6 @@
 import { sourcePhotoPreview, type SourcePhoto } from "./editorial-view";
 import { showVisualReview } from "./review";
+import { mountEditorialWorkspace } from "./editorial-workspace.v1.0.0";
 import { api, content, escape } from "./main";
 import { curationDirty, curationForm, rememberCuration, setupCuration } from "./curation";
 import type { CurationRecord } from "../shared/curation";
@@ -26,7 +27,11 @@ function aiProvenance(image: Candidate) {
   return image.type === "AI" ? `<details><summary>Provenienza della generazione IA</summary><p>Modello: ${escape(image.ai_model)} · Data: ${escape(image.generation_date)} · Dichiarazione proprietario: ${image.owner_declaration ? "presente" : "da verificare"}</p><pre class="curation-history">${escape(image.ai_prompt)}</pre></details>` : "";
 }
 export async function showAdmin() {
-  if (new URL(location.href).searchParams.get("advanced") !== "1" && !new URL(location.href).searchParams.has("status")) return showVisualReview();
+  if (new URL(location.href).searchParams.get("advanced") !== "1" && !new URL(location.href).searchParams.has("status")) {
+    await showVisualReview();
+    await mountEditorialWorkspace();
+    return;
+  }
   return showAdvancedAdmin();
 }
 async function showAdvancedAdmin() {

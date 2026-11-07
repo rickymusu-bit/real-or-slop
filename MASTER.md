@@ -1,10 +1,18 @@
-# Mappa canonica — versione 3.0.0
+# Mappa canonica — versione 4.0.0
 
-Snapshot: `docs/MASTER.v3.0.0.md`. Percorsi relativi alla radice del repository.
+Snapshot: `docs/MASTER.v4.0.0.md`. Percorsi relativi alla radice del repository.
 Verificato: 2026-11-06T21:45:55Z, base main `05c6bfc9035debb6c078160a1fe79b7997dfc77a`.
 Le PR #58, #59 e #60 sono integrate. Il delta `feat/editorial-cycle` implementa
 il ciclo completo richiesto dal proprietario; non attesta un deploy remoto.
 La migrazione 0018, i nuovi gate e nuove inferenze non sono attivati in produzione.
+
+## Delta proposto in PR #64 — studio editoriale owner
+
+Aggiornato: 2026-11-07T13:15:33.448Z. Specifica e stato: `docs/admin-workspace.v1.0.0.md`.
+Questa PR aggiunge il workspace privato `/admin`, la tabella di argomenti e proposte in `migrations/0019_editorial_workspace.v1.0.0.sql`, il Worker `worker/editorial-workspace.ts` e i validatori `shared/editorial-workspace.v1.0.0.ts`.
+I link dell'owner sono proposte da acquisire, mentre gli upload entrano come file REAL *pending* e senza attestazione di origine o diritti. Per ora **nessuno dei tre learner è attivato**: Topic Discovery, REAL Preference e SLOP Prompt Preference sono separati nel contratto, con ordine di implementazione e isolamento specificati nel documento. Nessun costo, cron, deploy, ricerca GPT o pubblicazione vengono attivati. La migrazione 0019 non va applicata automaticamente in produzione.
+
+Le indicazioni legacy sotto rimangono descrizioni dei percorsi precedenti: il nuovo workflow owner-first della #64 ha precedenza per i futuri cicli una volta approvato e rilasciato; nessun run precedente è riscritto.
 
 ## Ingressi e autorità
 

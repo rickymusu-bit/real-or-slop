@@ -1,0 +1,20 @@
+.editorial-workspace { max-width: 1100px; margin: 0 auto; padding: 36px 0 22px; border-bottom: 1px solid var(--hairline); }
+.editorial-workspace h1 { font-size: clamp(30px,4vw,44px); }
+.editorial-workspace h2 { font-size: 19px; margin: 0 0 14px; }
+.editorial-workspace form { display: grid; gap: 12px; margin: 22px 0; }
+.editorial-workspace label { display: grid; gap: 7px; font-size: 14px; }
+.editorial-workspace input, .editorial-workspace select, .editorial-workspace textarea { width: 100%; max-width: 100%; }
+.editorial-workspace form > button { justify-self: start; }
+.editorial-workspace .workspace-columns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; margin: 22px 0; }
+.editorial-workspace .workspace-columns form { margin: 0; padding: 22px; border: 1px solid var(--hairline); min-width: 0; }
+.editorial-workspace .workspace-hint { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.editorial-workspace #workspace-proposals { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 12px; margin: 12px 0 28px; }
+.editorial-workspace .workspace-proposal { padding: 14px; border: 1px solid var(--hairline); min-width: 0; overflow-wrap: anywhere; }
+.editorial-workspace .workspace-proposal p { margin: 8px 0 0; font-size: 13px; }
+.editorial-workspace #workspace-status { min-height: 24px; overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .editorial-workspace { padding: 24px 0; }
+  .editorial-workspace .workspace-columns { grid-template-columns: 1fr; gap: 14px; }
+  .editorial-workspace .workspace-columns form { padding: 16px; }
+  .editorial-workspace form > button { justify-self: stretch; }
+}
