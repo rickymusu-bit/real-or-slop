@@ -6,6 +6,7 @@ import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
 import { ensureSlopSeed, headlineStats, rankPending } from "./editorial-learning.v1.0.0";
 import { fields, modelImage, modelJSON } from "./workspace-ai.v1.0.0";
 import { topicDiscoveryEnabled, setTopicDiscoveryEnabled } from "./topic-discovery-opt-in.v1.0.0";
+import { createTopicSemantics, semanticTopicDescription } from "./topic-semantic-memory.v1.0.0";
 
 const base="/api/admin/editorial/intelligence";
 interface Topic { id:string;title:string }
@@ -95,8 +96,8 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
   if(match){
     const data=await body(request,1200);
     if(!["accepted","rejected","deferred"].includes(String(data.decision)))throw new HttpError(400,"Decisione non valida");
-    const row=await env.DB.prepare("SELECT title,normalized_key,status FROM editorial_topic_suggestions WHERE id=?")
-      .bind(match[1]).first<{title:string;normalized_key:string;status:string}>();
+    const row=await env.DB.prepare("SELECT title,normalized_key,status,rationale FROM editorial_topic_suggestions WHERE id=?")
+      .bind(match[1]).first<{title:string;normalized_key:string;status:string;rationale:string}>();
     if(!row)throw new HttpError(404,"Suggerimento non trovato");
     if(row.status!== "suggested" && row.status!=="deferred")throw new HttpError(409,"Suggerimento già deciso");
     await env.DB.prepare("UPDATE editorial_topic_suggestions SET status=?,updated_at=? WHERE id=? AND status IN ('suggested','deferred')")
@@ -106,9 +107,13 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
         .bind(topicKey(row.title)).first<{id:string}>();
       if(!existing){
         const item={id:id(),title:topicTitle(row.title)};
-        await env.DB.prepare("INSERT OR IGNORE INTO editorial_workspace_topics(id,title,normalized_key,created_at) VALUES(?,?,?,?)")
+        const inserted=await env.DB.prepare("INSERT OR IGNORE INTO editorial_workspace_topics(id,title,normalized_key,created_at) VALUES(?,?,?,?)")
           .bind(item.id,item.title,topicKey(item.title),now()).run();
-        await ensureSlopSeed(env,item);
+        if(inserted.meta.changes===1){
+          await ensureSlopSeed(env,item);
+          // Accepted suggestions become semantic memory even when discovery is later switched OFF.
+          await createTopicSemantics(env,item.id,item.title,semanticTopicDescription(row.rationale.slice(0,500)));
+        }
       }
     }
     return json({saved:true,decision:data.decision});
