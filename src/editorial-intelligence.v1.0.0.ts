@@ -10,6 +10,7 @@ interface Panel {
   enabled:boolean;generation_enabled:boolean; cost_per_text_call:string|null;cost_per_image_call:string|null;
   suggestions:Suggestion[];prompts:Bank[];topic_counts:TopicCount[];ranked_real:Ranked[];
   preferences:{real:{observations:number;approved:number;rejected:number};slop:{observations:number;approved:number;rejected:number}};
+  reviewed_unprofiled:Array<{id:string;sha256:string;origin:string;status:string}>;
   searches:Array<{topic_id:string;status:string;candidates:number;created_at:string}>;
   jobs:Array<{kind:string;status:string;topic_id:string|null;created_at:string}>;
 }
@@ -67,7 +68,7 @@ export async function mountEditorialIntelligence() {
       '<div><strong>Preferenze REAL</strong><span>'+state.preferences.real.observations+' giudizi con profilo</span></div>' +
       '<div><strong>Preferenze SLOP</strong><span>'+state.preferences.slop.observations+' giudizi con profilo</span></div>' +
       '<div><strong>SLOP mancanti</strong><span>'+deficit+' sulla base dei voti correnti</span></div>';
-    const enabled=state.enabled,buttonLabel=enabled?"":" — IA non configurata";
+    const buttonLabel=state.enabled?"":" — IA non configurata";
     suggestions.innerHTML=state.suggestions.filter(s=>s.status==="suggested"||s.status==="deferred").slice(0,8)
       .map(s=>'<article><strong>'+escape(s.title)+'</strong><p>'+escape(s.rationale)+'</p><div class="intel-buttons">'+
         '<button data-intel="accept" data-id="'+escape(s.id)+'">Esplora</button>'+
@@ -82,7 +83,12 @@ export async function mountEditorialIntelligence() {
       (state.ranked_real.length?state.ranked_real.slice(0,15).map((r,i)=>
         '<article><span>'+Number(i+1)+'. '+escape(r.id)+' — '+Math.round(r.score*100)+'% stima editoriale</span>'+
         '<p>'+escape(r.reason)+'</p><button data-intel="profile" data-id="'+escape(r.id)+'" data-sha="'+escape(r.sha256)+'">Analizza i pixel</button></article>'
-      ).join(""):'<p>La coda REAL è vuota.</p>')+'</details>';
+      ).join(""):'<p>La coda REAL è vuota.</p>')+'</details>'+ 
+      '<details><summary>Foto già votate senza profilo (apprendimento)</summary>'+ 
+      (state.reviewed_unprofiled.length ? state.reviewed_unprofiled.slice(0,25).map(photo => 
+        '<article>'+escape(photo.origin)+' — '+escape(photo.status)+' — '+escape(photo.id)+ 
+        '<button data-intel="profile" data-id="'+escape(photo.id)+'" data-sha="'+escape(photo.sha256)+'">Analizza questi pixel</button></article>').join('') 
+        :'<p>Tutti i voti recenti disponibili hanno un profilo.</p>')+'</details>';
     prompts.innerHTML=(state.prompts.length?
       '<p>'+state.prompts.length+' prompt congelati. Ogni generazione richiede un comando separato.</p>'+
       state.prompts.map(p=>'<article><strong>Variante '+Number(p.slot+1)+' — '+escape(p.variant)+'</strong>'+
