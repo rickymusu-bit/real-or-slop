@@ -6,6 +6,12 @@ L'[audit #57](docs/audit-architettura.v1.0.0.md) distingue main dalle PR in bozz
 il [piano di integrazione](docs/piano-integrazione-editoriale.v1.0.0.md) prepara
 la #56 senza adottare anticipatamente la v4.
 
+Aggiornamento #64/#78: [descrizione GPT con conferma](docs/topic-description-confirmation.v1.0.0.md).
+Con il solo titolo l'admin prepara una bozza modificabile; registra e indicizza solo
+su **Approva e registra**. Rigenerazione e annullamento non creano argomenti.
+Descrizioni già scritte seguono il percorso diretto. Migrazione additiva 0024,
+nessuna modifica remota o attivazione di costi. [Verifiche e anteprime](docs/implementazione-issue-78.v1.0.0.md).
+
 Dashboard owner-first #64: [contratto corrente 2.0.0](docs/editorial-intelligence.v2.0.0.md).
 L'admin gestisce descrizioni e indicizzazione dei temi storici, proposte manuali,
 suggerimenti con vicini semantici, pertinenza visiva e generazioni SLOP limitate

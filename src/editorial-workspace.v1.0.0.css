@@ -12,6 +12,11 @@
 .editorial-workspace .workspace-proposal { padding: 14px; border: 1px solid var(--hairline); min-width: 0; overflow-wrap: anywhere; }
 .editorial-workspace .workspace-proposal p { margin: 8px 0 0; font-size: 13px; }
 .editorial-workspace #workspace-status { min-height: 24px; overflow-wrap: anywhere; }
+.editorial-workspace [hidden] { display: none; }
+.editorial-workspace #workspace-topic-status { overflow-wrap: anywhere; }
+.editorial-workspace #workspace-description-preview { padding: 18px; border: 1px solid var(--hairline); }
+.editorial-workspace .workspace-draft-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.editorial-workspace #workspace-description-drafts p { overflow-wrap: anywhere; }
 @media (max-width: 700px) {
   .editorial-workspace { padding: 24px 0; }
   .editorial-workspace .workspace-columns { grid-template-columns: 1fr; gap: 14px; }

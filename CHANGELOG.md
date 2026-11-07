@@ -1,3 +1,9 @@
+## 0.17.0 — 2026-11-07T23:12:00Z (proposta, non rilasciata)
+
+- #64/#78: un titolo senza descrizione prepara una proposta GPT inglese modificabile, con ambiguità e conferma obbligatoria prima del tema definitivo e dell'embedding. Descrizioni manuali conservano il percorso diretto.
+- Bozze private riprendibili dopo refresh, rigenerazione con conferma dei costi, annullamento, ricevute dedicate e ledger esistente; deduplicazione e approvazione atomica vincolata al titolo/hash impediscono invii duplicati e conferme stale.
+- Migrazione additiva 0024, provider simulati e browser desktop/mobile. Discovery resta indipendente; nessuna modifica a gate, budget, dati remoti o brand.
+
 ## 0.15.0 — 2026-11-03 (sperimentale, non attivata)
 
 - Protocollo editoriale v2 indipendente: scoperta REAL multicanale e generazioni SLOP da idee originali o prompt aperti, senza fotografie di riferimento, classifica condivisa, soglie di sorpresa o preferenze storiche.

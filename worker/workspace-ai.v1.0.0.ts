@@ -3,11 +3,14 @@
  */
 import { hash, HttpError, id, type Env } from "./core";
 import { realDiscovery } from "./real-discovery";
+import { descriptionProposal } from "../shared/topic-description.v1.0.0";
 
-export type WorkspaceStage = "suggest" | "search" | "profile" | "slop_plan" | "slop_generate";
+export type WorkspaceStage = "describe" | "suggest" | "search" | "profile" | "slop_plan" | "slop_generate";
 const stages:Record<WorkspaceStage,"brief"|"strategies"|"adaptation"|"visual"|"generation"> = {
-  suggest:"strategies",search:"adaptation",profile:"visual",slop_plan:"brief",slop_generate:"generation"
+  describe:"brief",suggest:"strategies",search:"adaptation",profile:"visual",slop_plan:"brief",slop_generate:"generation"
 };
+// Closed allowlist, never interpolated from a request.
+const jobTable=(kind:WorkspaceStage)=>kind==="describe"?"editorial_topic_description_jobs":"editorial_workspace_jobs";
 const endpoint="https://api.openai.com/v1/";
 function configured(env:Env,kind:WorkspaceStage):string {
   if (env.WORKSPACE_AI_ENABLED!=="true" || env.ENABLE_REAL_DISCOVERY_PAID!=="true" || !env.OPENAI_API_KEY)
@@ -26,7 +29,7 @@ interface Envelope {
 }
 async function start(env:Env,kind:WorkspaceStage,topicId:string|null,operationKey:string,input:Record<string,unknown>) {
   const model=configured(env,kind);
-  const current=await env.DB.prepare("SELECT status,result_json FROM editorial_workspace_jobs WHERE operation_key=?")
+  const current=await env.DB.prepare(`SELECT status,result_json FROM ${jobTable(kind)} WHERE operation_key=?`)
     .bind(operationKey).first<{status:string;result_json:string|null}>();
   if(current){
     if(current.status==="completed" && current.result_json) return {cached:JSON.parse(current.result_json) as unknown};
@@ -35,7 +38,7 @@ async function start(env:Env,kind:WorkspaceStage,topicId:string|null,operationKe
   const now=new Date().toISOString(),jobId=id();
   const incoming:Envelope={jobId,topicId,operationKey,kind,model,input,now};
   try {
-    await env.DB.prepare("INSERT INTO editorial_workspace_jobs(id,kind,topic_id,operation_key,status,input_json,created_at,updated_at) VALUES(?,?,?,?,'prepared',?,?,?)")
+    await env.DB.prepare(`INSERT INTO ${jobTable(kind)}(id,kind,topic_id,operation_key,status,input_json,created_at,updated_at) VALUES(?,?,?,?,'prepared',?,?,?)`)
       .bind(jobId,kind,topicId,operationKey,JSON.stringify({model,...input}),now,now).run();
   } catch {throw new HttpError(409,"Operazione concorrente già registrata");}
   const fingerprint=await hash(JSON.stringify({operationKey,model,kind,input}));
@@ -46,21 +49,21 @@ async function start(env:Env,kind:WorkspaceStage,topicId:string|null,operationKe
     });
     await realDiscovery(req,env);
   } catch(error) {
-    await env.DB.prepare("UPDATE editorial_workspace_jobs SET status='failed',updated_at=? WHERE id=?")
+    await env.DB.prepare(`UPDATE ${jobTable(kind)} SET status='failed',updated_at=? WHERE id=?`)
       .bind(new Date().toISOString(),jobId).run();
     throw error;
   }
-  await env.DB.prepare("UPDATE editorial_workspace_jobs SET status='submitting',updated_at=? WHERE id=? AND status='prepared'")
+  await env.DB.prepare(`UPDATE ${jobTable(kind)} SET status='submitting',updated_at=? WHERE id=? AND status='prepared'`)
     .bind(new Date().toISOString(),jobId).run();
   return {job:incoming};
 }
 async function finish(env:Env,job:Envelope,result:unknown) {
   const now=new Date().toISOString();
-  await env.DB.prepare("UPDATE editorial_workspace_jobs SET status='completed',result_json=?,updated_at=? WHERE id=? AND status='submitting'")
+  await env.DB.prepare(`UPDATE ${jobTable(job.kind)} SET status='completed',result_json=?,updated_at=? WHERE id=? AND status='submitting'`)
     .bind(JSON.stringify(result),now,job.jobId).run();
 }
 async function unknown(env:Env,job:Envelope) {
-  await env.DB.prepare("UPDATE editorial_workspace_jobs SET status='uncertain',updated_at=? WHERE id=? AND status='submitting'")
+  await env.DB.prepare(`UPDATE ${jobTable(job.kind)} SET status='uncertain',updated_at=? WHERE id=? AND status='submitting'`)
     .bind(new Date().toISOString(),job.jobId).run();
 }
 function outputText(value:Record<string,unknown>):string {
@@ -73,6 +76,7 @@ function schema(name:string,properties:Record<string,unknown>) {
   }};
 }
 export const fields={
+  description:schema("topic_description",{description:{type:"string",minLength:1,maxLength:500},ambiguity:{type:"string",maxLength:500}}),
   suggestion:schema("topic_suggestions",{suggestions:{type:"array",items:{type:"object",additionalProperties:false,
     required:["title","description","rationale"],properties:{title:{type:"string"},description:{type:"string",maxLength:500},rationale:{type:"string"}}}}}),
   duplicates:schema("topic_duplicate_checks",{decisions:{type:"array",items:{type:"object",additionalProperties:false,
@@ -113,6 +117,7 @@ export async function modelJSON(
     const reply=await response.json() as Record<string,unknown>,text=outputText(reply);
     if(!text)throw Error("Risposta AI priva di JSON verificabile");
     const parsed=JSON.parse(text) as Record<string,unknown>;
+    if(kind==="describe")descriptionProposal(parsed);
     await finish(env,job,parsed);
     return parsed;
   } catch {

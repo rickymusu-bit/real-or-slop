@@ -1,8 +1,37 @@
-# Istruzioni Codex — versione canonica 8.0.0
+# Istruzioni Codex — versione canonica 9.0.0
 
-Snapshot: `docs/AGENTS.v8.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-06T21:45:55Z. Le versioni precedenti restano conservate. Questa revisione
-recepisce il ciclo completo richiesto dal proprietario nella sessione corrente.
+Snapshot: `docs/AGENTS.v9.0.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-07T23:12:00Z. Base main `a10401a6c87586ef4d7517ad4f5e5e53dddad784`.
+Le sezioni precedenti alla revisione 9 restano contesto storico; il delta corrente
+riguarda soltanto la conferma delle descrizioni richiesta nella #64 / #78.
+
+## Aggiornamento #64 / #78 — conferma delle descrizioni 9.0.0
+
+Aggiornato: 2026-11-07T23:12:00Z. La specifica corrente è
+`docs/topic-description-confirmation.v1.0.0.md`; in questo ambito sostituisce il
+ramo title-only della versione 8.0.0 e della memoria semantica 2.0.0.
+
+Per nuovi argomenti senza descrizione, la richiesta esplicita dell'owner prepara
+una proposta GPT inglese di massimo 500 caratteri, modificabile e con ambiguità
+visibili. Non creare il tema definitivo, il seed SLOP o un embedding prima di
+**Approva e registra**. Rigenera e Annulla sono azioni separate; la rigenerazione
+richiede una nuova conferma di costo. Una descrizione già scritta dall'owner
+segue direttamente la registrazione/indicizzazione senza riscrittura GPT.
+
+La migrazione additiva 0024 introduce bozze private e ricevute dedicate `describe`;
+non ricostruisce tabelle storiche. Approvazione vincolata a ID, titolo e hash della
+proposta; testo confermato, tema e memoria pending sono salvati atomicamente.
+Una bozza superata o annullata non può essere approvata. Deduplicazione normalizzata
+prima dei costi, prenotazione sul ledger esistente, nessun retry di esiti incerti.
+I gate sono `WORKSPACE_AI_ENABLED`, `ENABLE_REAL_DISCOVERY_PAID` e i limiti REAL
+Discovery esistenti; l'embedding usa i propri tetti. Discovery OFF non blocca
+questo flusso. Errori o budget assente consentono una descrizione manuale senza
+perdere il titolo. Non attivare credenziali, gate, budget, merge o deploy.
+
+Testare HTTP con il vero Worker/D1/R2 e API simulate, doppio clic/concorrenza,
+proposte stale, testo modificato, annullamento, budget/gate assenti ed esiti
+incerti; verificare editor e ripresa dopo refresh su desktop/mobile.
+La #76 non rientra in questa consegna, su istruzione esplicita dell'owner.
 
 ## Completamento #64 — contratto corrente 8.0.0
 

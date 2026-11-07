@@ -70,7 +70,7 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
       headlineStats(env),rankPending(env,"REAL",selectedTopic),rankPending(env,"AI",selectedTopic),
       env.DB.prepare("SELECT t.*,s.description,s.embedding_status,c.status AS screening_status,c.novelty,c.neighbors_json,c.reason AS screening_reason FROM editorial_topic_suggestions t LEFT JOIN editorial_topic_suggestion_semantics s ON s.topic_id=t.id LEFT JOIN editorial_topic_suggestion_screening c ON c.suggestion_id=t.id ORDER BY t.created_at DESC LIMIT 100").all(),
       env.DB.prepare("SELECT * FROM editorial_topic_explorations ORDER BY created_at DESC LIMIT 50").all(),
-      env.DB.prepare("SELECT kind,status,topic_id,created_at,updated_at FROM editorial_workspace_jobs ORDER BY created_at DESC LIMIT 30").all(),
+      env.DB.prepare("SELECT kind,status,topic_id,created_at,updated_at FROM editorial_workspace_jobs UNION ALL SELECT kind,status,topic_id,created_at,updated_at FROM editorial_topic_description_jobs ORDER BY created_at DESC LIMIT 30").all(),
       env.DB.prepare("SELECT slot,prompt,variant,frozen_sha256 FROM editorial_slop_prompt_bank WHERE topic_id=? ORDER BY slot").bind(selectedTopic || "").all(),
       env.DB.prepare("SELECT origin,status,count(*) AS n FROM editorial_review_effective_images WHERE json_extract(metadata_json,'$.topic_id')=? GROUP BY origin,status").bind(selectedTopic || "").all(),
       env.DB.prepare("SELECT q.id,q.sha256,q.origin,q.status FROM editorial_review_effective_images q " +

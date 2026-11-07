@@ -1,10 +1,39 @@
-# Mappa canonica — versione 8.0.0
+# Mappa canonica — versione 9.0.0
 
-Snapshot: `docs/MASTER.v8.0.0.md`. Percorsi relativi alla radice del repository.
-Verificato: 2026-11-06T21:45:55Z, base main `05c6bfc9035debb6c078160a1fe79b7997dfc77a`.
-Le PR #58, #59 e #60 sono integrate. Il delta `feat/editorial-cycle` implementa
-il ciclo completo richiesto dal proprietario; non attesta un deploy remoto.
-La migrazione 0018, i nuovi gate e nuove inferenze non sono attivati in produzione.
+Snapshot: `docs/MASTER.v9.0.0.md`. Percorsi relativi alla radice del repository.
+Verificato: 2026-11-07T23:12:00Z, base main `a10401a6c87586ef4d7517ad4f5e5e53dddad784`.
+La PR #77 è integrata e il rilascio precedente comprende lo schema 0023.
+Questa proposta aggiunge lo schema 0024 esclusivamente in locale; nessuna nuova
+migrazione remota o attivazione di provider. Le sezioni precedenti alla revisione
+9 rimangono contesto storico e non descrivono lo stato attuale del rilascio.
+
+## Aggiornamento #64 / #78 — conferma delle descrizioni 9.0.0
+
+Aggiornato: 2026-11-07T23:12:00Z. La specifica corrente è
+`docs/topic-description-confirmation.v1.0.0.md`; in questo ambito sostituisce il
+ramo title-only della versione 8.0.0 e della memoria semantica 2.0.0.
+
+Per nuovi argomenti senza descrizione, la richiesta esplicita dell'owner prepara
+una proposta GPT inglese di massimo 500 caratteri, modificabile e con ambiguità
+visibili. Non creare il tema definitivo, il seed SLOP o un embedding prima di
+**Approva e registra**. Rigenera e Annulla sono azioni separate; la rigenerazione
+richiede una nuova conferma di costo. Una descrizione già scritta dall'owner
+segue direttamente la registrazione/indicizzazione senza riscrittura GPT.
+
+La migrazione additiva 0024 introduce bozze private e ricevute dedicate `describe`;
+non ricostruisce tabelle storiche. Approvazione vincolata a ID, titolo e hash della
+proposta; testo confermato, tema e memoria pending sono salvati atomicamente.
+Una bozza superata o annullata non può essere approvata. Deduplicazione normalizzata
+prima dei costi, prenotazione sul ledger esistente, nessun retry di esiti incerti.
+I gate sono `WORKSPACE_AI_ENABLED`, `ENABLE_REAL_DISCOVERY_PAID` e i limiti REAL
+Discovery esistenti; l'embedding usa i propri tetti. Discovery OFF non blocca
+questo flusso. Errori o budget assente consentono una descrizione manuale senza
+perdere il titolo. Non attivare credenziali, gate, budget, merge o deploy.
+
+Testare HTTP con il vero Worker/D1/R2 e API simulate, doppio clic/concorrenza,
+proposte stale, testo modificato, annullamento, budget/gate assenti ed esiti
+incerti; verificare editor e ripresa dopo refresh su desktop/mobile.
+La #76 non rientra in questa consegna, su istruzione esplicita dell'owner.
 
 ## Completamento #64 — contratto corrente 8.0.0
 
