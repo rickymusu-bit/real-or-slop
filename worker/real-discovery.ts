@@ -5,29 +5,37 @@ export async function realDiscovery(request: Request, env: Env): Promise<Respons
   if (env.ENABLE_REAL_DISCOVERY_PAID !== "true") throw new HttpError(503, "Discovery REAL pagata non abilitata");
   if (request.method !== "POST") throw new HttpError(405, "Metodo non ammesso");
   const data = await body(request);
+  const generation = data.stage === "generation";
   if (Object.keys(data).sort().join(",") !== "fingerprint,model,run_id,stage" ||
       typeof data.run_id !== "string" || !/^[\w-]{1,100}$/.test(data.run_id) ||
       typeof data.fingerprint !== "string" || !/^[a-f0-9]{64}$/.test(data.fingerprint) ||
-      !["strategies", "adaptation", "visual"].includes(String(data.stage)) ||
-      typeof data.model !== "string" || !data.model.startsWith("gpt-6.1") || data.model !== env.REAL_DISCOVERY_MODEL)
+      !["brief", "strategies", "adaptation", "visual", "generation"].includes(String(data.stage)) ||
+      typeof data.model !== "string" || !data.model || (generation ? data.model !== env.EDITORIAL_CYCLE_IMAGE_MODEL :
+        !data.model.startsWith("gpt-6.1") || data.model !== env.REAL_DISCOVERY_MODEL))
     throw new HttpError(400, "Prenotazione discovery non valida");
-  const [cost, runCap, dayCap, totalCap, maxCalls] = [env.REAL_DISCOVERY_CALL_USD, env.REAL_DISCOVERY_RUN_USD,
+  if (generation && env.ENABLE_EDITORIAL_CYCLE_GENERATION !== "true") throw new HttpError(503, "Generazione ciclo non abilitata");
+  const [cost, runCap, dayCap, totalCap, maxCalls] = [generation ? env.EDITORIAL_CYCLE_GENERATION_USD : env.REAL_DISCOVERY_CALL_USD, env.REAL_DISCOVERY_RUN_USD,
     env.REAL_DISCOVERY_DAILY_USD, env.REAL_DISCOVERY_TOTAL_USD, env.REAL_DISCOVERY_MAX_CALLS].map(Number);
   if (![cost, runCap, dayCap, totalCap, maxCalls].every(x => Number.isFinite(x) && x > 0) ||
       cost < .000001 || !Number.isInteger(maxCalls) || maxCalls > 2000)
     throw new HttpError(503, "Configurare modello, stima per chiamata e limiti discovery");
+  const maxGenerations = generation ? Number(env.EDITORIAL_CYCLE_MAX_GENERATIONS) : 0;
+  if (generation && (!Number.isInteger(maxGenerations) || maxGenerations < 1 || maxGenerations > 32))
+    throw new HttpError(503, "Configurare limite generazioni ciclo da 1 a 32");
   const run = "real-" + data.run_id;
   const uid = "real-" + await hash([data.run_id, data.stage, data.model, data.fingerprint].join("\0"));
   const prior = await env.DB.prepare("SELECT reserved_usd FROM editorial_usage WHERE id=?").bind(uid).first<{ reserved_usd: number }>();
   if (prior) return json({ reserved_usd: prior.reserved_usd, already_reserved: true });
   const now = new Date().toISOString(), day = now.slice(0, 10);
   const result = await env.DB.prepare(`INSERT OR IGNORE INTO editorial_usage
-    SELECT ?,?,?,'evaluation',?,? WHERE
+    SELECT ?,?,?,?,?,? WHERE
     round(COALESCE((SELECT sum(reserved_usd) FROM editorial_usage),0)+?,6)<=? AND
     round(COALESCE((SELECT sum(reserved_usd) FROM editorial_usage WHERE run_id=?),0)+?,6)<=? AND
     round(COALESCE((SELECT sum(reserved_usd) FROM editorial_usage WHERE day=?),0)+?,6)<=? AND
-    (SELECT count(*) FROM editorial_usage WHERE run_id=?)<?`)
-    .bind(uid, run, day, cost, now, cost, totalCap, run, cost, runCap, day, cost, dayCap, run, maxCalls).run();
+    (SELECT count(*) FROM editorial_usage WHERE run_id=?)<? AND
+    (?=0 OR (SELECT count(*) FROM editorial_usage WHERE run_id=? AND kind='generation')<?)`)
+    .bind(uid, run, day, generation ? "generation" : "evaluation", cost, now, cost, totalCap, run, cost, runCap, day, cost, dayCap, run, maxCalls,
+      generation ? 1 : 0, run, maxGenerations).run();
   if (!result.meta.changes) {
     const raced = await env.DB.prepare("SELECT reserved_usd FROM editorial_usage WHERE id=?").bind(uid).first<{ reserved_usd: number }>();
     if (raced) return json({ reserved_usd: raced.reserved_usd, already_reserved: true });

@@ -1,11 +1,10 @@
-# Mappa canonica — versione 2.2.0
+# Mappa canonica — versione 3.0.0
 
-Snapshot: `docs/MASTER.v2.2.0.md`. Percorsi relativi alla radice del repository.
-Verificato: 2026-11-06T20:00:04Z, main `eccbe362b425ff09e7316bcc00fbeb78f4b3a1be`.
-Le PR #58 e #59 sono integrate; Workers Builds è riuscito su `eccbe36`.
-La correzione `fix/56-site-review-queue` collega il ciclo alla coda già online.
-Cinque candidate sono state caricate pending e verificate nel DB/bucket privato.
-Non attesta lo stato del database remoto o dei gate in produzione.
+Snapshot: `docs/MASTER.v3.0.0.md`. Percorsi relativi alla radice del repository.
+Verificato: 2026-11-06T21:45:55Z, base main `05c6bfc9035debb6c078160a1fe79b7997dfc77a`.
+Le PR #58, #59 e #60 sono integrate. Il delta `feat/editorial-cycle` implementa
+il ciclo completo richiesto dal proprietario; non attesta un deploy remoto.
+La migrazione 0018, i nuovi gate e nuove inferenze non sono attivati in produzione.
 
 ## Ingressi e autorità
 
@@ -15,10 +14,12 @@ secondo AGENTS; non scegliere semplicemente il numero di versione più alto.
 
 | Ambito | Fonte corrente | Ambito e limite |
 | --- | --- | --- |
-| Metodo editoriale | `docs/protocollo-editoriale.md`, versione interna 3.0.0 | Brief condivisi congelati, SLOP solo testo, revisione individuale, API dirette |
+| Ciclo completo corrente | `docs/ciclo-editoriale.v1.0.0.md`, `pipeline/cycle.py`, `shared/editorial-cycle.v1.0.0.json` | Brief e prompt congelati prima del retrieval; voto REAL → SLOP sul deficit → voto SLOP → ammissione separata → pubblicazione bilanciata; `watch` esplicito |
+| Ammissione del ciclo | `worker/editorial-cycle.ts`, migrazione `0018_editorial_cycle_admission.sql` | Conferme documentali dopo voto personale corrente, audit immutabile, eccedenze in attesa; nuovo schema ancora da rilasciare |
+| Metodo editoriale storico | `docs/protocollo-editoriale.md`, versione interna 3.0.0 | Brief condivisi congelati, SLOP solo testo, revisione individuale, API dirette |
 | Nuova discovery REAL #56 | `docs/ricerca-real.v1.0.0.md`, `pipeline/real/`; `shared/real-discovery*.v1.0.0.json` | Nuovo percorso esplicito in questa PR: 432 intenzioni nominali, A/B GPT, HTTP validato; nessun match obbligatorio a brief o quote di copertura |
 | Ciclo e pilota REAL | `docs/ciclo-discovery-real.v1.0.0.md`, `pipeline/real/workflow.py`, `pilot.py` | Ripresa, feedback, galleria privata, dossier revisionati e consegna pending alla coda del sito; pilota GPT Commons eseguito; cinque dossier assistiti e profili completati; candidate nella coda del sito; review del proprietario pendente |
-| Ledger nuovo percorso | `worker/real-discovery.ts`, tabella esistente `editorial_usage` | Endpoint autenticato di sola prenotazione; gate chiuso per default, nessun nuovo schema o publish |
+| Ledger nuovo percorso | `worker/real-discovery.ts`, tabella esistente `editorial_usage` | Endpoint autenticato di sola prenotazione, esteso a brief/generazione del ciclo; gate chiusi per default, ledger comune |
 | Criteri del proprietario | `docs/criteri-editoriali.md`; `pipeline/v2/editorial_policy.py` | In main: contesto visibile, opere ambientate; nessuna adozione anticipata di v4 |
 | Brief e freeze | `pipeline/v2/brief_catalog.py`, `pipeline/v2/briefs.py`; `data/editorial/briefs.v1.json` | Seed italiano draft; selezione 5 brief/10 immagini, massimo 25/50 |
 | Dati e verifiche v2 | `shared/editorial-v2.json`, `shared/editorial-v2.ts`, `pipeline/v2/protocol.py`; `tests/editorial-v2-contract.json` | Schema 2.0.0 riusato dal metodo v3; non è la versione del metodo |
@@ -32,11 +33,18 @@ secondo AGENTS; non scegliere semplicemente il numero di versione più alto.
 | Runtime, storage e rilascio | `wrangler.jsonc`, `docs/cloudflare.md`, `docs/importazione-diretta-r2.md` | D1/R2 esistenti; procedure remote richiedono autorizzazione |
 | Verifiche | `.github/workflows/checks.yml`, `package.json`, `docs/verification.md` | CI riusata; verification contiene evidenze storiche, non certificazioni attuali |
 
-Il protocollo v3 è adottato come metodo, ma il repository conserva esecutori
+Il ciclo completo 1.0.0 recepisce la richiesta corrente e supera, per nuovi run
+avviati da `pipeline.cycle`, il brief opzionale e la separazione operativa dei
+flussi. Rifiuti e pending determinano soltanto la capacità da sostituire; non si
+cancellano REAL, SLOP o voti. I processi di discovery isolata e i relativi run
+storici restano leggibili. Origine/licenza possono essere completate dopo la
+review personale, ma restano obbligatorie prima del catalogo pubblico.
+
+Il protocollo v3 resta il riferimento storico e il repository conserva esecutori
 v1/Batch, studio v2 sperimentale e gate distinti. Presenza del codice non significa
-attivazione. L'approvazione di un'immagine in archivio non implica che esista già
-un percorso automatico per pubblicarla nel gioco. Non correggere questo scarto
-di implementazione con una pubblicazione implicita.
+attivazione. L'approvazione di un'immagine in archivio non conferma i diritti né pubblica.
+Il nuovo ponte del ciclo richiede ammissione documentale e pubblicazione esplicite;
+non converte automaticamente i voti storici.
 
 La #56 sostituisce la discovery dei nuovi run scelti esplicitamente dal CLI:
 non sostituisce il metodo per le esecuzioni storiche. Neutralità media/alta non
@@ -65,7 +73,7 @@ solo perché sono più recenti. Piano di integrazione e decisioni aperte:
 
 - `docs/audit-architettura.v1.0.0.md`: ref osservate, file → responsabilità →
   interfacce → test, conflitti e rischi verificati.
-- `docs/indice-documentazione.v1.5.0.md`: catalogo vigente/proposta/storica/archivio,
+- `docs/indice-documentazione.v1.6.0.md`: catalogo vigente/proposta/storica/archivio,
   sostituzioni per ambito; gli originali restano intatti.
 - `docs/piano-integrazione-editoriale.v1.0.0.md`: ordine #51/#52/#55/#56,
   contratti candidati, test mancanti e suddivisione delle PR.
@@ -82,6 +90,7 @@ solo perché sono più recenti. Piano di integrazione e decisioni aperte:
 - `docs/verifica-documentale-real.v1.0.0.md`: esiti sulle 29 candidate, cinque
   dossier/profili, supporto JPEG/MPO e conferma umana ancora pendente; metriche
   in `docs/benchmark-gpt-commons.v1.1.0.json`.
+- `docs/ciclo-editoriale.v1.0.0.md`: nuovo ciclo, CLI, stati, rifiuti, limiti, ammissione e rilascio.
 - `docs/discovery-coda-sito.v1.0.0.md`: destinazione obbligatoria `/admin`,
   import pending e verifiche delle cinque candidate sul sito.
 - `docs/openverse-registrazione.v1.0.0.md`: guida OAuth; email scelta, registrazione bloccata
@@ -89,6 +98,6 @@ solo perché sono più recenti. Piano di integrazione e decisioni aperte:
 - `docs/openverse-accesso.v1.0.0.md`: challenge verificata e bozza di segnalazione;
   il proprietario ha scelto di non pubblicarla.
 
-App in main: `package.json` 0.15.0. Metodo v3, dati v2 e istruzioni 2.2.0 sono
+App nella base main: 0.15.0; questo delta porta `package.json` a 0.16.0. Metodo v3, dati v2 e istruzioni 3.0.0 sono
 versioni diverse. Per adottare una modifica strutturale aggiungere una decisione
 esplicita, aggiornare questa mappa e AGENTS con nuovi snapshot; preservare i vecchi.

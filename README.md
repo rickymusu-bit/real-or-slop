@@ -6,6 +6,17 @@ L'[audit #57](docs/audit-architettura.v1.0.0.md) distingue main dalle PR in bozz
 il [piano di integrazione](docs/piano-integrazione-editoriale.v1.0.0.md) prepara
 la #56 senza adottare anticipatamente la v4.
 
+Ciclo completo corrente: [specifica 1.0.0](docs/ciclo-editoriale.v1.0.0.md).
+`npm run editorial:cycle -- start` prepara casella e limiti; brief e banca prompt
+SLOP vengono congelati prima della ricerca. Le candidate arrivano pending in
+`/admin` anche con verifiche documentali ancora incomplete. Dopo i tuoi voti REAL,
+`resume` o il processo limitato `watch` genera soltanto il deficit SLOP, poi attende
+i tuoi voti sulle nuove immagini. Origine/licenza si verificano separatamente;
+la pubblicazione del ciclo mantiene quantità uguali e conserva le eccedenze.
+API pagate e nuovi gate restano chiusi per default. La migrazione additiva 0018
+va applicata prima del deploy di questa versione; non è stata eseguita da questi
+comandi. I run e gli esecutori precedenti restano conservati.
+
 Nuovo percorso [discovery REAL #56](docs/ricerca-real.v1.0.0.md): intenzioni
 tema/emozione/intensità, strategie GPT e adattamento Commons/Openverse distinti,
 query HTTP validate, dossier separati dai profili ciechi e review individuale.
@@ -38,7 +49,7 @@ separati gli esiti: conferma umana dei diritti e approvazione ancora pendenti.
 [Registrare il client Openverse](docs/openverse-registrazione.v1.0.0.md);
 [il tentativo di registrazione è bloccato dalla challenge](docs/openverse-registrazione-esito.v1.0.0.md).
 
-Il protocollo editoriale corrente è **v3.0.0: brief condivisi**. Un brief originale,
+Gli esecutori precedenti seguono **v3.0.0: brief condivisi**; per i nuovi cicli completi vale la specifica 1.0.0 sopra indicata. Un brief originale,
 congelato prima della ricerca, guida una candidata REAL e una SLOP generata dal
 solo testo. Nessuna foto REAL, titolo o sua descrizione entra nel generatore.
 Il proprietario valuta ogni immagine; il confronto affiancato si usa quando

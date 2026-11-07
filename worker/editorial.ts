@@ -154,6 +154,7 @@ export async function editorial(request: Request, env: Env, path: string): Promi
       SELECT i.id,i.type,i.demo,row_number() OVER(PARTITION BY i.demo,i.type ORDER BY i.created_at,i.id) AS n
       FROM images i WHERE i.status='approved' AND i.sha256!='pending' AND NOT EXISTS(SELECT 1 FROM published_images p WHERE p.image_id=i.id)
       AND (i.demo=1 OR EXISTS(SELECT 1 FROM review_events e WHERE e.image_id=i.id AND e.decision='approved'))
+      AND NOT EXISTS(SELECT 1 FROM editorial_cycle_admissions a WHERE a.image_id=i.id)
     ), capacities AS (SELECT demo,min(r,a) AS cap FROM (SELECT demo,sum(type='REAL') AS r,sum(type='AI') AS a FROM waiting GROUP BY demo))
     INSERT INTO publication_batches SELECT ?,json_group_array(w.id),?,? FROM waiting w JOIN capacities c ON c.demo=w.demo WHERE w.n<=c.cap HAVING count(*)>0`)
       .bind(uid, (await hash(env.ADMIN_TOKEN!)).slice(0,12), now).run();

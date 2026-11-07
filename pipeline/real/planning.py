@@ -44,9 +44,13 @@ class Model:
         self.api = api or DirectAPI(os.getenv('OPENAI_API_KEY', ''))
 
     def invoke(self, stage, body, revision=1):
-        require(stage in ('strategies', 'adaptation', 'visual') and type(revision) is int and revision > 0, 'Revisione/stadio non validi')
+        require(stage in ('brief', 'strategies', 'adaptation', 'visual') and type(revision) is int and revision > 0, 'Revisione/stadio non validi')
         frozen = self.store.frozen()
-        schema = copy.deepcopy(SCHEMA['$defs'][stage])
+        contract = SCHEMA
+        if stage == 'brief':
+            from ..cycle import BRIEF_SCHEMA
+            contract = BRIEF_SCHEMA
+        schema = copy.deepcopy(contract['$defs'][stage])
         # Output shapes are self-contained. Do not send unrelated receipt/profile
         # definitions, or keywords outside the Responses strict schema subset.
         def strict_subset(rule):
@@ -62,7 +66,7 @@ class Model:
                 for value in rule:
                     strict_subset(value)
         strict_subset(schema)
-        payload = dict(model=self.model, store=False, max_output_tokens=4000,
+        payload = dict(model=self.model, store=False, max_output_tokens=12000 if stage == 'brief' else 4000,
                        text=dict(format=dict(type='json_schema', name='real_'+stage, strict=True, schema=schema)),
                        input=body)
         identity = dict(freeze_sha256=digest(frozen), revision=revision, stage=stage, payload=payload)
@@ -72,7 +76,7 @@ class Model:
         saved = self.store.read(path)
         if saved:
             if saved['status'] == 'completed':
-                return validate(stage, saved['output'])
+                return validate(stage, saved['output'], contract)
             require(saved['status'] == 'prepared', 'Invio precedente incerto/non valido: verificare ricevuta; nuova revisione esplicita richiesta')
         else:
             saved = dict(identity=identity, status='prepared', created_at=now(), fixture=self.fixture)
@@ -90,7 +94,7 @@ class Model:
         saved.update(response=response, request_id=request_id, completed_at=now(), status='invalid')
         self.store.save(path, saved)
         require(response.get('status') == 'completed', 'Risposta GPT incompleta: nessun retry implicito')
-        output = validate(stage, vision_result(response))
+        output = validate(stage, vision_result(response), contract)
         saved.update(status='completed', output=output)
         self.store.save(path, saved)
         return output
