@@ -1,6 +1,6 @@
-# Istruzioni Codex — versione canonica 4.0.0
+# Istruzioni Codex — versione canonica 5.0.0
 
-Snapshot: `docs/AGENTS.v4.0.0.md`. Percorsi relativi alla radice del repository.
+Snapshot: `docs/AGENTS.v5.0.0.md`. Percorsi relativi alla radice del repository.
 Aggiornato: 2026-11-06T21:45:55Z. Le versioni precedenti restano conservate. Questa revisione
 recepisce il ciclo completo richiesto dal proprietario nella sessione corrente.
 
@@ -10,6 +10,12 @@ Aggiornato: 2026-11-07T13:15:33.448Z. Leggere `docs/admin-workspace.v1.0.0.md` e
 Per i nuovi percorsi, l'owner sceglie un argomento e può prima proporre fotografie tramite link o file; solo dopo può autorizzare un'eventuale ricerca GPT. I link non sono fotografie acquisite. Gli upload sono REAL solo come **categoria candidata**, non come attestazione: preservare file, hash e rapporto d'aspetto. Verifica documentale, voto e pubblicazione rimangono distinti.
 Tre sistemi di apprendimento **indipendenti**: Topic Discovery (novità/varietà e storico temi), REAL Preference (profilo pixel-only + giudizi editoriali, non licenze), SLOP Prompt Preference (solo feedback su SLOP e prompt). Il preparatore SLOP non può accedere a fotografie REAL, titoli, metadati, descrizioni o voti del ciclo corrente; isolare fisicamente il payload, non soltanto filtrare nomi campo; congelare la banca prompt prima del retrieval/manual REAL. Nessuna nuova chiamata a pagamento, cron o pubblicazione senza autorizzazione esplicita dell'owner nell'admin.
 La nuova migrazione 0019 è additiva, non va applicata in produzione dalla PR. Il legacy 1024×1024 rimane fuori dall'incremento iniziale e va sostituito con una strategia a rapporti d'aspetto preservati, senza cancellare originali o run storici. Prima del merge fornire anteprima visuale, test, CI e approvazione esplicita.
+
+## Nuovo ambito owner-first #64 (PR in bozza)
+
+Aggiornato: 2026-11-07T13:53:33.858Z. Prima di modificare la discovery o lo studio editoriale leggere `docs/editorial-intelligence.v1.0.0.md` e l'issue #64. I tre sistemi Topic, REAL e SLOP sono indipendenti. La ricerca GPT è facoltativa dopo le proposte manuali; mai avviarla alla scelta del topic o al voto. Gli input SLOP sono limitati allo snapshot frozen dell'argomento e ai feedback storici SLOP; non far entrare nel modello fotografie, titoli, profili, descrizioni o giudizi REAL del ciclo. Non chiamare modelli esterni senza ricevuta, prenotazione contabile e consenso esplicito nell'admin. Se un invio è incerto, non ritentare. Nessun account, fotografia o credenziale richiesta ai giocatori.
+
+Il nuovo upload e retrieval preservano il rapporto d'aspetto, le SLOP nuove ruotano formati verticali/orizzontali/quadrati. Le vecchie pipeline 1024×1024 non si riscrivono senza migrazione testata. Nessuna autorizzazione a deploy/migrazioni remote/merge è implicita nell'issue o nella PR. Prima del merge controllare test di compilazione, DB/R2, limiti file/SSRF, anteprima e consenso dell'owner.
 
 ## Prima di modificare
 
