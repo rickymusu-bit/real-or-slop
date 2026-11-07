@@ -34,3 +34,5 @@ jobs:
         run: ROS_TEST_PROFILE= npm run test:integration
       - name: REAL discovery atomic reservations with fake model transport
         run: ROS_TEST_REAL=1 npm run test:integration
+      - name: Editorial cycle atomic generation budgets with fake model transport
+        run: ROS_TEST_CYCLE=1 npm run test:integration

@@ -1,8 +1,8 @@
-# Istruzioni Codex — versione canonica 2.2.0
+# Istruzioni Codex — versione canonica 3.0.0
 
-Snapshot: `docs/AGENTS.v2.2.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-06T20:00:04Z. La 1.0.0 resta conservata. Questa revisione
-collega la discovery REAL #56 alla coda privata del sito, prima della review umana.
+Snapshot: `docs/AGENTS.v3.0.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-06T21:45:55Z. Le versioni precedenti restano conservate. Questa revisione
+recepisce il ciclo completo richiesto dal proprietario nella sessione corrente.
 
 ## Prima di modificare
 
@@ -38,7 +38,25 @@ collega la discovery REAL #56 alla coda privata del sito, prima della review uma
 
 - Python è una pipeline offline/CLI; frontend Vite/TypeScript e Worker Cloudflare
   restano separati. Usare JSON condivisi e fixture comuni per i contratti Python/TS.
-- Il nuovo percorso `pipeline.real.run` segue `docs/ricerca-real.v1.0.0.md`:
+- Il ciclo completo dei nuovi run è `pipeline.cycle`, regolato da
+  `docs/ciclo-editoriale.v1.0.0.md`: casella → brief/banca prompt congelati →
+  ricerca → coda sito → voto REAL → generazione sul deficit → coda SLOP →
+  voto → verifica documentale separata → pubblicazione bilanciata del ciclo.
+  La richiesta corrente supera l'opzionalità del brief nel solo ciclo completo.
+  Le copie tecniche possono essere riviste prima di origine/licenza: nessuna
+  attestazione viene inventata e nessun voto le conferma implicitamente.
+  `watch` è un processo CLI esplicito e limitato; non installare cron.
+- I voti del sito, legati ai pixel e alla revisione corrente, sono l'autorità.
+  SLOP pending conta come capacità: rigenerare solo il deficit, usando varianti
+  congelate inutilizzate entro limiti immutabili e ledger testo/immagini comune.
+  I rifiuti editoriali REAL/SLOP informano prior distinti; guasti tecnici, difetti
+  del generatore e problemi di diritti restano diagnostica esplicita.
+- Le nuove ammissioni e pubblicazioni passano da `worker/editorial-cycle.ts`
+  e dalla migrazione additiva 0018. L'ammissione richiede voto personale sui
+  pixel correnti e attestazioni documentali separate; pubblicazione atomica
+  con quantità uguali, eccedenze in attesa e audit conservato. Non ripetere
+  il voto visivo e non importare automaticamente le approvazioni storiche.
+- La discovery isolata `pipeline.real.run` segue `docs/ricerca-real.v1.0.0.md`:
   intenzione → strategie A → adattamento B → HTTP deterministico → dossier →
   profilo cieco → review. Non obbligare embedding, cataloghi vecchi o coppie.
   Per nuovi run usare i contratti `shared/real-discovery*.v1.0.0.json`;
@@ -53,7 +71,7 @@ collega la discovery REAL #56 alla coda privata del sito, prima della review uma
   candidate vanno importate pending prima dell'approvazione; gli HTML locali
   sono diagnostiche. Riutilizzare `scripts/sync-review-inbox.py` con le credenziali
   Cloudflare configurate: questo percorso non richiede l'admin token dell'app.
-  Non dichiarare la consegna completa senza verificare righe e pixel nel sito.
+  Non dichiarare una consegna remota completa senza verificare righe e pixel nel sito.
 - Per nuovi cicli, congelare il prompt SLOP originale prima di osservare REAL.
   Mai passare al generatore pixel, titoli, metadati, descrizioni o risultati REAL.
   Il codice legacy che deriva prompt da fotografie non è un modello da riusare.
@@ -73,8 +91,8 @@ collega la discovery REAL #56 alla coda privata del sito, prima della review uma
   `pipeline/requirements.txt`, `ONNXRUNTIME_NODE_INSTALL_CUDA=skip npm ci`.
 - Baseline: `npm run lint`, `npm test`, `npm run build`, `npm run deploy:check`;
   per schema/storage/Worker usare migrazioni e seed locali, `npm run dry-run` e
-  `npm run test:integration`, anche profili Batch, v2, senza R2 e
-  `ROS_TEST_REAL=1` come in CI. `npm run benchmark:real` è solo fixture offline.
+  `npm run test:integration`, anche profili Batch, v2, senza R2,
+  `ROS_TEST_REAL=1` e `ROS_TEST_CYCLE=1` come in CI. `npm run benchmark:real` è solo fixture offline.
   Non avviare suite Wrangler concorrenti: condividono stato/porta locali.
 - Per sole modifiche documentali verificare anche link, snapshot e
   `git diff --check`. Riutilizzare una baseline appena eseguita se codice e

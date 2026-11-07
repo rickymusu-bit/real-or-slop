@@ -65,7 +65,7 @@ def handoff(store, records, current):
 
 def advance(store, *, live=False, execute=False, documents=None, decisions=None, document_revision=None,
             profile_revision=None, model_factory=None, client_factory=None, downloader=None, base=None,
-            sync_inbox=False):
+            sync_inbox=False, queue_unverified=False, queue_adapter=None):
     cfg = store.read('cycle-config.v1.0.0.json')
     require(cfg is not None, 'Inizializzare il ciclo prima di riprenderlo')
     require(cfg['profiles_sha256'] == digest({p: PROFILES[p] for p in cfg['providers']}), 'Profili provider cambiati: nuovo run richiesto')
@@ -84,10 +84,15 @@ def advance(store, *, live=False, execute=False, documents=None, decisions=None,
         return store.save('cycle-state.v1.0.0.json', state.copy())
 
     def queue_candidates(rows):
+        if queue_adapter is not None:
+            exported, queued = queue_adapter(store, rows)
+            state.update(review_inbox_export=exported, review_inbox=queued)
+            return queued
         if cfg['simulated']:
             return None
         from .inbox import export_pending, synchronize as sync_site, receipt_path
         exported = export_pending(store, rows)
+        state['review_inbox_export'] = exported
         queued = sync_site(store, exported) if sync_inbox else store.read(receipt_path(exported))
         state['review_inbox'] = queued or exported
         return queued
@@ -127,10 +132,21 @@ def advance(store, *, live=False, execute=False, documents=None, decisions=None,
                     return checkpoint('awaiting_acquisition', gallery=render(store))
                 checkpoint('acquiring')
                 kwargs = dict(downloader=downloader) if downloader else {}
+                if queue_unverified:
+                    kwargs['include_unlicensed'] = True
                 acquired = acquire(store, cfg['download_hosts'], 'RealOrSlop/1.0 (https://github.com/rickymusu-bit/real-or-slop)',
                                    maximum=cfg['maximum'], **kwargs)
                 state['acquired'] = len(acquired['records'])
             state['acquired'] = len(store.read('documentary-template.r1.v1.0.0.json') or [])
+            if queue_unverified:
+                from .inbox import acquired_candidates
+                candidates = acquired_candidates(store)
+                if not candidates:
+                    return checkpoint('acquisition_attention_required')
+                queued = queue_candidates(candidates)
+                return checkpoint('awaiting_review' if queued is not None else 'awaiting_inbox_sync',
+                    documentary_input=str(store.folder/'documentary-input.r1.v1.0.0.json'),
+                    documentary_verified=False)
             return checkpoint('awaiting_documents', documentary_input=str(store.folder/'documentary-input.r1.v1.0.0.json'),
                               gallery=render(store))
         synchronize(store, records)

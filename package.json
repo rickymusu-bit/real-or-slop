@@ -1,6 +1,6 @@
 {
   "name": "real-or-slop",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -24,6 +24,7 @@
     "benchmark:editorial-v2": "python3 -m pipeline.v2.benchmark --fixture-study 120",
     "scan:similarity": "node --import tsx scripts/scan-similarity.mjs",
     "discovery:real": "python3 -m pipeline.real.run",
+    "editorial:cycle": "python3 -m pipeline.cycle",
     "discovery:cycle": "python3 -m pipeline.real.workflow",
     "benchmark:pilot": "python3 -m pipeline.real.pilot",
     "benchmark:real": "python3 -m pipeline.real.run fixture",

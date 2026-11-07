@@ -15,6 +15,8 @@ profile_args=['--env',local_profile] if local_profile else []
 batch_test=os.environ.get('ROS_TEST_BATCH')=='1'
 v2_test=os.environ.get('ROS_TEST_V2')=='1'
 real_test=os.environ.get('ROS_TEST_REAL')=='1'
+cycle_test=os.environ.get('ROS_TEST_CYCLE')=='1'
+if cycle_test and (local_profile!='local' or batch_test or v2_test or real_test):raise RuntimeError('Cycle ledger fixtures require their own isolated local profile')
 if batch_test and local_profile!='local':raise RuntimeError('Batch fixtures require the isolated local profile')
 if v2_test and (local_profile!='local' or batch_test):raise RuntimeError('V2 fixtures require their own isolated local profile')
 if real_test and (local_profile!='local' or batch_test or v2_test):raise RuntimeError('REAL discovery fixtures require their own isolated local profile')
@@ -22,6 +24,8 @@ batch_vars=[]
 if real_test:
     # Reservation endpoint only; no model API calls or new production configuration.
     for key,value in dict(ENABLE_REAL_DISCOVERY_PAID='true',REAL_DISCOVERY_MODEL='gpt-6.1-terra',REAL_DISCOVERY_CALL_USD='0.01',REAL_DISCOVERY_RUN_USD='0.03',REAL_DISCOVERY_DAILY_USD='0.06',REAL_DISCOVERY_TOTAL_USD='0.08',REAL_DISCOVERY_MAX_CALLS='3').items():batch_vars.extend(['--var',key+':'+value])
+if cycle_test:
+    for key,value in dict(ENABLE_REAL_DISCOVERY_PAID='true',ENABLE_EDITORIAL_CYCLE_GENERATION='true',REAL_DISCOVERY_MODEL='gpt-6.1-terra',REAL_DISCOVERY_CALL_USD='0.01',REAL_DISCOVERY_RUN_USD='0.50',REAL_DISCOVERY_DAILY_USD='0.55',REAL_DISCOVERY_TOTAL_USD='0.65',REAL_DISCOVERY_MAX_CALLS='32',EDITORIAL_CYCLE_IMAGE_MODEL='fixture-image',EDITORIAL_CYCLE_GENERATION_USD='0.10',EDITORIAL_CYCLE_MAX_GENERATIONS='2').items():batch_vars.extend(['--var',key+':'+value])
 if batch_test:
     # Monetary fixtures ONLY on wrangler dev --local. No OpenAI key or network inference.
     for key,value in dict(ENABLE_EDITORIAL_PAID='true',EDITORIAL_BATCH_EVALUATION_USD='0.01',EDITORIAL_BATCH_GENERATION_USD='0.10',EDITORIAL_RUN_USD='1',EDITORIAL_DAILY_USD='1',EDITORIAL_TOTAL_USD='0.15').items():batch_vars.extend(['--var',key+':'+value])
@@ -86,7 +90,7 @@ try:
                     asset=re.search(r'src="([^"]+\.js)"',html).group(1)
                     with urllib.request.urlopen(base+asset) as js:assert js.status==200
             print('Navigation/assets HTTP checks passed.')
-            for script in (['tests/real_discovery.integration.py'] if real_test else ['tests/editorial_v2.integration.py'] if v2_test else ['tests/batch.integration.py'] if batch_test else ['tests/moderation.integration.py','tests/direct-import.integration.py','tests/curation.integration.py','tests/slop.integration.py','tests/editorial.integration.py','tests/review.integration.py','tests/review_inbox.integration.py','tests/review_presentations.integration.py','tests/review_bulk_delete.integration.py','tests/similarity.integration.py'] if local_profile=='local' else [])+['tests/sampling.integration.py','tests/game.integration.py','tests/preloading.integration.py']:
+            for script in (['tests/cycle_budget.integration.py'] if cycle_test else ['tests/real_discovery.integration.py'] if real_test else ['tests/editorial_v2.integration.py'] if v2_test else ['tests/batch.integration.py'] if batch_test else ['tests/moderation.integration.py','tests/direct-import.integration.py','tests/curation.integration.py','tests/slop.integration.py','tests/editorial.integration.py','tests/review.integration.py','tests/review_inbox.integration.py','tests/review_presentations.integration.py','tests/review_bulk_delete.integration.py','tests/similarity.integration.py','tests/editorial_cycle.integration.py'] if local_profile=='local' else [])+['tests/sampling.integration.py','tests/game.integration.py','tests/preloading.integration.py']:
                 subprocess.run(['python3',script],env=env,check=True)
             try:
                 urllib.request.urlopen(base+'/api/rooms/ABCDEFGHJKLM/state')

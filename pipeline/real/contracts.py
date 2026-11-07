@@ -19,10 +19,11 @@ def digest(value):
                                      separators=(',', ':'), allow_nan=False).encode()).hexdigest()
 
 
-def validate(name, value):
+def validate(name, value, schema=None):
+    schema = SCHEMA if schema is None else schema
     def check(rule, item):
         if '$ref' in rule:
-            rule = SCHEMA['$defs'][rule['$ref'].split('/')[-1]]
+            rule = schema['$defs'][rule['$ref'].split('/')[-1]]
         types = rule.get('type', [])
         types = [types] if isinstance(types, str) else types
         matches = dict(object=isinstance(item, dict), array=isinstance(item, list),
@@ -53,7 +54,7 @@ def validate(name, value):
                 require(re.fullmatch(rule['pattern'], item) is not None, 'Formato non valido: '+name)
         elif type(item) in (float, int):
             require(math.isfinite(item) and rule.get('minimum', -math.inf) <= item <= rule.get('maximum', math.inf), 'Numero non valido: '+name)
-    check(SCHEMA['$defs'][name], value)
+    check(schema['$defs'][name], value)
     if name == 'intent':
         require(value['emotion'] != 'neutrality' or value['intensity'] == 'low', 'Intensità neutra non significativa')
     if name == 'feedback':
@@ -98,9 +99,16 @@ def select(seed, history=(), count=1):
     weights = []
     for row in available:
         events = list(stats.get(digest(row), {}).values())
-        yes = sum(e['outcome'] == 'human_approved' for e in events)
-        no = sum(e['outcome'] == 'human_rejected' for e in events)
-        weights.append(.25 + .75 * (yes + 2) / (yes + no + 4))
+        real = [e for e in events if ':AI:' not in e['candidate_id']]
+        ai = [e for e in events if ':AI:' in e['candidate_id'] and e['outcome'] != 'pending']
+        def prior(rows):
+            yes = sum(e['outcome'] == 'human_approved' for e in rows)
+            no = sum(e['outcome'] == 'human_rejected' for e in rows)
+            return (yes + 2) / (yes + no + 4)
+        # Separate editorial SLOP yield from REAL retrieval yield. Explicit
+        # generator faults never arrive as human refusals in this stream.
+        yield_prior = .85*prior(real)+.15*prior(ai) if ai else prior(real)
+        weights.append(.25 + .75 * yield_prior)
     rng = random.Random(seed)
     chosen = []
     for _ in range(count):

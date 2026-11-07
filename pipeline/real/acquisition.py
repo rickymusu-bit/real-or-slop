@@ -8,11 +8,14 @@ from ..v2.protocol import require
 from .contracts import digest
 
 
-def acquire(store, hosts, user_agent, maximum=20, revision=1, downloader=download):
+def acquire(store, hosts, user_agent, maximum=20, revision=1, downloader=download, include_unlicensed=False):
     store.frozen()
     require(isinstance(hosts, list) and hosts and all(isinstance(h, str) and h and '/' not in h and ':' not in h for h in hosts), 'Host download espliciti richiesti')
     require(type(maximum) is int and 1 <= maximum <= 20 and type(revision) is int and revision > 0, 'Limiti acquisizione non validi')
-    store.save(f'acquisition-policy.r{revision}.v1.0.0.json', dict(hosts=hosts, maximum=maximum), immutable=True)
+    policy = dict(hosts=hosts, maximum=maximum)
+    if include_unlicensed:
+        policy['include_unlicensed'] = True
+    store.save(f'acquisition-policy.r{revision}.v1.0.0.json', policy, immutable=True)
     hits = {}
     for path in (store.folder/'retrieval').glob('*.json'):
         for row in store.read(str(path.relative_to(store.folder)))['candidates']:
@@ -20,14 +23,17 @@ def acquire(store, hosts, user_agent, maximum=20, revision=1, downloader=downloa
     client = Client(user_agent)
     records, logs = [], []
     for row in list(hits.values())[:maximum]:
-        key = digest(dict(source=row, hosts=hosts, revision=revision))
+        identity = dict(source=row, hosts=hosts, revision=revision)
+        if include_unlicensed:
+            identity['include_unlicensed'] = True
+        key = digest(identity)
         receipt = 'acquisition/'+key+'.json'
         saved = store.read(receipt)
         if saved is None:
             saved = dict(status='started', source=row, created_at=now(), record=None)
             store.save(receipt, saved)
             license_info = recognized_license(row['rights'])
-            if license_info is None:
+            if license_info is None and not include_unlicensed:
                 saved.update(status='license_unresolved')
             else:
                 try:
@@ -40,7 +46,7 @@ def acquire(store, hosts, user_agent, maximum=20, revision=1, downloader=downloa
                     saved.update(status='acquired', record=dict(id='real-'+key[:24],
                         file=str(file.relative_to(store.folder)), sha256=sha, features=None,
                         provenance=dict(kind='REAL', content_kind='photograph', provider=row['provider'], source_id=row['source_id'],
-                            source_url=row['source_url'], license_url=license_info['url'], author=row['author'],
+                            source_url=row['source_url'], license_url=license_info['url'] if license_info else None, author=row['author'],
                             authenticity='unverified', semantic_edit=False, transformations=[], evidence=[dict(id='source',
                             url=row['source_url'], statement='Provider metadata only; verify original source and rights before attesting.')]),
                         attestation=dict(reviewer='', source_verified=False, rights_verified=False, verified_at='',
