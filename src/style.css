@@ -20,6 +20,7 @@
   src: url("/fonts/inter-latin-600-normal.woff2") format("woff2");
 }
 :root {
+  --stylesheet-release: "0.16.2";
   color-scheme: dark;
   --bg: #0D0F14;
   --surface: #1B2030;
