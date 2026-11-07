@@ -1,6 +1,7 @@
 import { sourcePhotoPreview, type SourcePhoto } from "./editorial-view";
 import { showVisualReview } from "./review";
 import { mountEditorialWorkspace } from "./editorial-workspace.v1.0.0";
+import { mountEditorialIntelligence } from "./editorial-intelligence.v1.0.0";
 import { api, content, escape } from "./main";
 import { curationDirty, curationForm, rememberCuration, setupCuration } from "./curation";
 import type { CurationRecord } from "../shared/curation";
@@ -30,6 +31,7 @@ export async function showAdmin() {
   if (new URL(location.href).searchParams.get("advanced") !== "1" && !new URL(location.href).searchParams.has("status")) {
     await showVisualReview();
     await mountEditorialWorkspace();
+    await mountEditorialIntelligence();
     return;
   }
   return showAdvancedAdmin();
