@@ -2,6 +2,7 @@ import { body, hash, HttpError, id, json, type Env } from "./core";
 import { topicKey, topicTitle, imageMime } from "../shared/editorial-workspace.v1.0.0";
 import { imageFormatChoice, profileTags, similarTopic, suggestedTopicTitle, type Profile } from "../shared/editorial-intelligence.v1.0.0";
 import { commonsFile, searchCommons, type CommonsFile, MAX_IMAGE_BYTES } from "./commons-editorial.v1.0.0";
+import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
 import { ensureSlopSeed, headlineStats, rankPending } from "./editorial-learning.v1.0.0";
 import { fields, modelImage, modelJSON } from "./workspace-ai.v1.0.0";
 
@@ -257,6 +258,9 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
       const bytes=result.bytes;
       if(bytes.byteLength>MAX_IMAGE_BYTES || imageMime(new Uint8Array(bytes))!=="image/webp")
         throw new HttpError(415,"Generazione SLOP non in formato WebP previsto");
+      const dimensions=imageDimensions(new Uint8Array(bytes));
+      if(dimensions.width+"x"+dimensions.height!==size.size)
+        throw new HttpError(415,"La SLOP non rispetta le dimensioni richieste");
       const sha=[...new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))]
         .map(x=>x.toString(16).padStart(2,"0")).join("");
       const inbox="generated-"+id(),key="workspace-slop/"+inbox,stamp=now();
