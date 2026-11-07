@@ -1,6 +1,6 @@
-# Mappa canonica — versione 6.0.0
+# Mappa canonica — versione 6.1.0
 
-Snapshot: `docs/MASTER.v6.0.0.md`. Percorsi relativi alla radice del repository.
+Snapshot: `docs/MASTER.v6.1.0.md`. Percorsi relativi alla radice del repository.
 Verificato: 2026-11-06T21:45:55Z, base main `05c6bfc9035debb6c078160a1fe79b7997dfc77a`.
 Le PR #58, #59 e #60 sono integrate. Il delta `feat/editorial-cycle` implementa
 il ciclo completo richiesto dal proprietario; non attesta un deploy remoto.
@@ -21,6 +21,10 @@ Aggiornato: 2026-11-07T13:53:33.858Z. Il nuovo sistema in `docs/editorial-intell
 ## Addendum #64: revisione proporzionale senza crop (PR di completamento)
 
 Aggiornato: 2026-11-07T14:58:05.001Z. La procedura ordinaria per le nuove copie di revisione in `pipeline/v2/presentation.py` utilizza **`--method preserve`** e `pipeline/v2/preserve_v1_0_0.py`, come descritto in `docs/presentazione-proporzionale.v1.0.0.md`. Mantiene il rapporto d'aspetto, non ingrandisce e registra hash/EXIF/operazioni senza cambiare gli originali. I metodi `terra` e `center` con crop quadrato restano solo per riprodurre studi legacy. Il pannello admin ha un motivo distinto per provenienza/autenticità incerta, da escludere dall'apprendimento delle preferenze. Questa PR non autorizza deploy, migrazioni o chiamate API.
+
+## Miglioramento della profilazione visiva #64
+
+Aggiornato: 2026-11-07T15:06:47.075Z. Per immagini REAL e SLOP in coda, la dashboard admin crea in browser una **copia proporzionale senza crop** di massimo 1152 px e 1,5 MB, da inviare al modello esclusivamente con autorizzazione esplicita. Il Worker verifica SHA dell'originale archiviato, geometria e hash della miniatura prima della chiamata API. I profili si riferiscono ai pixel della derivata e sono legati all'hash originale per le preferenze. Vedi `docs/profilazione-visiva.v1.0.0.md`. Nessun file sorgente viene sostituito e nessuna funzione viene attivata in produzione dalla PR.
 
 ## Ingressi e autorità
 
