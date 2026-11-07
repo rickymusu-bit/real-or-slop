@@ -2,6 +2,7 @@ import { hash, HttpError, type Env } from "./core";
 import { profileTags, preferenceScore, rankEditorial, reliableFeedback,
   type PreferenceRow, type Origin, type Profile } from "../shared/editorial-intelligence.v1.0.0";
 import { isolatedSlopPlanningInput } from "../shared/editorial-workspace.v1.0.0";
+import { validTaxonomyProposal } from "../shared/editorial-taxonomy-classification.v1.0.0";
 import { slopPromptFeedbackSignal } from "../shared/slop-feedback-policy.v1.0.0";
 
 interface Feedback {
@@ -46,9 +47,13 @@ export async function rankPending(env:Env,origin:Origin) {
     "ORDER BY q.created_at DESC LIMIT 200").bind(origin).all<{
       id:string;sha256:string;origin:Origin;profile_json:string|null
     }>()).results.map(row=>{
-      let tags:string[]=[];
-      try {tags=profileTags(row.profile_json ? JSON.parse(row.profile_json) : null);} catch { /* malformed profile ignored */}
-      return {id:row.id,tags,sha256:row.sha256};
+      let tags:string[]=[],classification:unknown=null;
+      try {
+        const profile=row.profile_json ? JSON.parse(row.profile_json) as {taxonomy_classification?:unknown} : null;
+        tags=profileTags(profile);
+        if(validTaxonomyProposal(profile?.taxonomy_classification))classification=profile?.taxonomy_classification;
+      } catch { /* malformed profile ignored */ }
+      return {id:row.id,tags,sha256:row.sha256,taxonomy_classification:classification};
     });
   const ranked=rankEditorial(rows,preference.counts);
   return {preference,ranked};
