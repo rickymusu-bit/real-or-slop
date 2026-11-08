@@ -1,8 +1,24 @@
-# Mappa canonica — versione canonica 13.0.0
+# Mappa canonica — versione canonica 14.0.0
 
-Snapshot: `docs/MASTER.v13.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-08T11:06:49.710Z. Base main `c9f25e624841e763652ef7e31751821d55e10d5c`.
+Snapshot: `docs/MASTER.v14.0.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-08T20:00:26Z. Base main `ca07046`.
 Le sezioni precedenti rimangono vigenti per gli ambiti non modificati.
+
+## Lotti editoriali (14.0.0)
+
+Aggiornato: 2026-11-08T20:00:26Z. Specifica: `docs/lotti-editoriali.v1.3.1.md`.
+Base main `ca07046` (app 0.23.2, schema 0028). Il lotto riusa
+`editorial_workspace_topics` come identità; la migrazione additiva 0029 aggiunge stato e
+note del lotto e gli scarti delle proposte. Fasi: (1) lotti, Esplora Commons, scarto e
+conversione dei link Commons verso pagine `File:`; (2) vocabolario e tag per foto con
+`untagged`; (3) piano e generazione SLOP con margine; (4) pubblicazione per lotto e
+avvisi di composizione. Ogni fase aggiorna questa sezione con lo stato effettivo.
+
+Moduli: `worker/editorial-workspace.ts` (lotti, proposte, scarti),
+`worker/commons-editorial.v1.0.0.ts` (API Commons, ricerca, categorie),
+`shared/editorial-link-batch.v1.0.0.ts` (normalizzazione dei link),
+`src/editorial-workspace.v1.0.0.ts` (dashboard). Topic Discovery, memoria semantica e
+banche prompt congelate restano leggibili come storico e non servono ai nuovi lotti.
 
 ## Dashboard amministrativa a sezioni (13.0.0)
 

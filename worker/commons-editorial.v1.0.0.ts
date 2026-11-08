@@ -8,6 +8,8 @@ export interface CommonsFile {
   title: string; source_url: string; download_url: string; author: string;
   license_url: string; description: string; width: number; height: number;
   bytes: ArrayBuffer; mime: string; original_is_preview: boolean;
+  /** Selected context for the future lot planner (spec lotti 1.3.1, section 5.2); unverified claims. */
+  categories: string[]; date: string;
 }
 const allowedHosts = new Set(["commons.wikimedia.org","upload.wikimedia.org","thumb.wikimedia.org"]);
 const imageExt = /\.(?:jpe?g|png|webp)$/i;
@@ -100,9 +102,12 @@ export async function commonsFile(value: string): Promise<CommonsFile> {
   const ext = image.extmetadata || {};
   const meta = (key:string) => simpleHtml(ext[key]?.value);
   const license = meta("LicenseUrl");
+  const categories = typeof ext.Categories?.value === "string" ? ext.Categories.value.split("|")
+    .map(c => c.trim()).filter(c => c && c.length <= 200).slice(0, 40) : [];
   return {title:page?.title || title,source_url:"https://commons.wikimedia.org/wiki/"+encodeURIComponent(page?.title || title).replace(/%3A/ig,":"),
     download_url:download,author:meta("Artist"),license_url:license,description:meta("ImageDescription"),
-    width:image.width!,height:image.height!,bytes:file.bytes,mime:file.mime,original_is_preview:chooseThumb};
+    width:image.width!,height:image.height!,bytes:file.bytes,mime:file.mime,original_is_preview:chooseThumb,
+    categories,date:meta("DateTimeOriginal").slice(0,100) || meta("DateTime").slice(0,100)};
 }
 export async function searchCommons(query:string,limit=12): Promise<string[]> {
   if (query.length<3 || query.length>250 || limit<1 || limit>25) throw new HttpError(400,"Ricerca Commons non valida");
@@ -113,4 +118,61 @@ export async function searchCommons(query:string,limit=12): Promise<string[]> {
   if (response.status!==200) throw new HttpError(502,"Ricerca Commons non disponibile");
   const data = await response.json() as {query?:{search?:Array<{title?:string}>}};
   return (data.query?.search || []).map(x=>x.title || "").filter(x=>/^File:.+\.(jpe?g|png|webp)$/i.test(x)).slice(0,limit);
+}
+
+// v1.1.0 (2026-11-08T20:00:26Z): owner browsing for lots (spec lotti 1.3.1, section 3). Read-only, no paid calls.
+export interface CommonsBrowseFile { title: string; page_url: string; thumb_url: string; width: number; height: number;
+  author: string; license: string; categories: string[]; }
+export interface CommonsBrowseResult { files: CommonsBrowseFile[]; categories: string[]; next: string | null; }
+const BROWSE_IMAGE = /^File:.+\.(?:jpe?g|png|webp)$/i;
+function pageUrl(title: string) {
+  return "https://commons.wikimedia.org/wiki/" + encodeURIComponent(title.replace(/ /g, "_")).replace(/%3A/ig, ":");
+}
+function thumbAllowed(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    const u = new URL(value);
+    return u.protocol === "https:" && u.hostname === "upload.wikimedia.org" && u.pathname.startsWith("/wikipedia/commons/");
+  } catch { return false; }
+}
+type BrowsePage = { title?: string; index?: number; categories?: Array<{ title?: string }>; imageinfo?: Array<{ thumburl?: string; width?: number; height?: number;
+  extmetadata?: Record<string, { value?: string }> }> };
+async function browse(params: Record<string, string>, continueKey: string): Promise<CommonsBrowseResult> {
+  const url = new URL("https://commons.wikimedia.org/w/api.php");
+  for (const [k, v] of Object.entries({ action: "query", format: "json", formatversion: "2", prop: "imageinfo|categories", clshow: "!hidden", cllimit: "max",
+    iiprop: "url|size|extmetadata", iiurlwidth: "320", iiextmetadatafilter: "Artist|LicenseShortName",
+    iiextmetadatalanguage: "en", ...params })) url.searchParams.set(k, v);
+  const response = await fetch(url.href, { redirect: "manual", headers: { "Accept": "application/json" } });
+  if (response.status !== 200) throw new HttpError(502, "Commons non disponibile: riprova più tardi");
+  const data = await response.json() as { query?: { pages?: BrowsePage[]; search?: Array<{ title?: string }>;
+    categorymembers?: Array<{ title?: string }> }; continue?: Record<string, string> };
+  const pages = [...(data.query?.pages || [])].sort((a, b) => (a.index || 0) - (b.index || 0));
+  const files: CommonsBrowseFile[] = [];
+  for (const page of pages) {
+    const info = page.imageinfo?.[0], title = page.title || "";
+    if (!BROWSE_IMAGE.test(title) || !info || !thumbAllowed(info.thumburl)) continue;
+    files.push({ title, page_url: pageUrl(title), thumb_url: info.thumburl, width: info.width || 0, height: info.height || 0,
+      author: simpleHtml(info.extmetadata?.Artist?.value).slice(0, 200),
+      license: simpleHtml(info.extmetadata?.LicenseShortName?.value).slice(0, 100),
+      categories: (page.categories || []).map(c => (c.title || "").replace(/^Category:/, "")).filter(c => c && c.length <= 200).slice(0, 12) });
+  }
+  const listed = data.query?.search || data.query?.categorymembers || [];
+  const categories = listed.map(x => x.title || "").filter(t => /^Category:.+/.test(t)).slice(0, 50);
+  const next = data.continue?.[continueKey];
+  return { files, categories, next: typeof next === "string" && next.length <= 300 ? next : null };
+}
+export async function browseCommonsSearch(query: string, offset = ""): Promise<CommonsBrowseResult> {
+  const text = query.normalize("NFKC").trim();
+  if (text.length < 2 || text.length > 200) throw new HttpError(400, "Ricerca Commons da 2 a 200 caratteri");
+  if (offset && !/^\d{1,5}$/.test(offset)) throw new HttpError(400, "Pagina dei risultati non valida");
+  return browse({ generator: "search", gsrsearch: text, gsrnamespace: "6", gsrlimit: "30", ...(offset ? { gsroffset: offset } : {}),
+    list: "search", srsearch: text, srnamespace: "14", srlimit: "12" }, "gsroffset");
+}
+export async function browseCommonsCategory(name: string, cont = ""): Promise<CommonsBrowseResult> {
+  const raw = name.normalize("NFKC").trim().replace(/^Category:/i, "").replace(/_/g, " ");
+  if (!raw || raw.length > 200 || /[#<>[\]{}|]/.test(raw)) throw new HttpError(400, "Categoria Commons non valida");
+  if (cont.length > 300 || /[\s<>]/.test(cont)) throw new HttpError(400, "Pagina della categoria non valida");
+  const title = "Category:" + raw;
+  return browse({ generator: "categorymembers", gcmtitle: title, gcmtype: "file", gcmlimit: "30", ...(cont ? { gcmcontinue: cont } : {}),
+    list: "categorymembers", cmtitle: title, cmtype: "subcat", cmlimit: "50" }, "gcmcontinue");
 }

@@ -1,3 +1,15 @@
+## 0.24.0 — 2026-11-08T20:00:26Z (proposta, non pubblicata)
+
+Fase 1 dei lotti editoriali (`docs/lotti-editoriali.v1.3.1.md`, AGENTS/MASTER 14.0.0).
+
+- Lotti: titolo breve obbligatorio e note facoltative per la generazione (≤500 caratteri), senza proposta GPT né embedding. Storico append-only delle note con revisione ottimistica.
+- Esplora Commons nella sezione Produzione: ricerca di foto e categorie, navigazione per sottocategorie, selezione multipla, aggiunta al lotto corrente o creazione di un lotto con titolo proposto dalle categorie; acquisizione immediata facoltativa.
+- Link Commons verso miniature, originali, visualizzatore (`#/media/File:`) e `index.php` ricondotti alla pagina `File:`; deduplica sulla forma canonica.
+- «Scarta link» per proposte mai acquisite: evento immutabile, la proposta resta nello storico.
+- Acquisizioni Commons nuove: categorie e data salvate come contesto non verificato per il futuro pianificatore SLOP.
+- Sezione «Argomenti» rinominata «Lotti»; rimozione dei lotti inutilizzati invariata.
+- Migrazione additiva 0029. Nessuna chiamata a pagamento; API storiche (topics, descrizioni, semantica) invariate.
+
 ## 0.23.2 — 2026-11-08T16:20:00Z (proposta, non pubblicata)
 
 - Il pulsante «Rimuovi argomento inutilizzato» è ora visibile nella sezione Argomenti: la navigazione a sezioni lo assegnava a Produzione immagini, nascondendolo.

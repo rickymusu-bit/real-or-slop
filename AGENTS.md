@@ -1,8 +1,36 @@
-# Istruzioni Codex — versione canonica 13.0.0
+# Istruzioni Codex — versione canonica 14.0.0
 
-Snapshot: `docs/AGENTS.v13.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-08T11:06:49.710Z. Base main `c9f25e624841e763652ef7e31751821d55e10d5c`.
+Snapshot: `docs/AGENTS.v14.0.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-08T20:00:26Z. Base main `ca07046`.
 Le sezioni precedenti rimangono contesto per ambiti non sostituiti.
+
+## Lotti editoriali, tag e SLOP dal lotto (14.0.0)
+
+Aggiornato: 2026-11-08T20:00:26Z. Specifica approvata: `docs/lotti-editoriali.v1.3.1.md`.
+Decisione esplicita dell'owner nella sessione corrente; per i nuovi lotti prevale sulle
+sezioni 13.0.0 e precedenti indicate nella sezione 9 della specifica.
+
+Un lotto è una galleria monotematica di REAL scelte dall'owner (per ora Commons; upload
+dal dispositivo ammesso), con titolo breve obbligatorio e note facoltative (≤500
+caratteri). Gli argomenti esistenti sono lotti: stessi id, titoli e proposte. Creare un
+lotto non richiede proposte GPT né embedding; Topic Discovery resta spento e rinviato.
+I link di proposta restano immutabili: lo scarto è un evento append-only, non una
+cancellazione. Esplora Commons passa dal Worker con l'allowlist esistente, senza costi.
+
+Tag per singola foto, REAL e SLOP: minuscoli, senza spazi, trattino come separatore,
+inglese per i termini comuni e nomi propri in qualunque lingua; nessun tag che riveli
+l'origine. Segnaposto di sistema `untagged`: le foto con il solo segnaposto non si
+approvano né si pubblicano; le pubblicate restano pubblicate e vengono segnalate.
+
+SLOP: il pianificatore con visione riceve pixel REAL del lotto, metadati Commons
+selezionati (mai autore, licenza, URL), titolo e note; il generatore riceve solo testo.
+Quantità = REAL valide × (1 + margine), margine predefinito 50% regolabile; generazioni
+aggiuntive senza toccare le SLOP esistenti. Pubblicazione per lotto, senza quantità
+uguali: avviso non bloccante fuori da 40–60% e sulla capacità delle partite.
+Restano: verifica documentale separata, voto sui pixel correnti, quarantena, budget e
+gate, nessuna chiamata a pagamento nei test, nessun reinvio di esiti incerti, migrazioni
+additive. Ogni fase in una PR con anteprima, CI e approvazione; deploy e migrazioni
+remote solo su autorizzazione esplicita.
 
 ## Interfaccia amministrativa 13.0.0
 

@@ -1,6 +1,7 @@
 import { body, HttpError, id, json, type Env } from "./core";
-import { imageMime, sourcePageUrl, topicKey, topicTitle } from "../shared/editorial-workspace.v1.0.0";
-import { normalizeLinkBatch } from "../shared/editorial-link-batch.v1.0.0";
+import { imageMime, topicKey, topicTitle } from "../shared/editorial-workspace.v1.0.0";
+import { normalizeLinkBatch, proposalLinkUrl } from "../shared/editorial-link-batch.v1.0.0";
+import { browseCommonsCategory, browseCommonsSearch } from "./commons-editorial.v1.0.0";
 import { ensureSlopSeed } from "./editorial-learning.v1.0.0";
 import { imageGeometry } from "../shared/image-geometry.v1.0.0";
 import { createTopicSemantics, embedTopicOnSubmission, embeddingConfig, DEFAULT_TOPIC_EMBEDDING_MODEL, semanticTopicDescription, semanticTopicText } from "./topic-semantic-memory.v1.0.0";
@@ -8,7 +9,8 @@ import { hash } from "./core";
 import { approveDescription, cancelDescription, descriptionDraft, proposeDescription, publicDraft } from "./topic-description.v1.0.0";
 
 const base = "/api/admin/editorial/workspace";
-type TopicRow = { id: string; title: string; normalized_key: string; created_at: string; description: string | null; embedding_status: string | null };
+type TopicRow = { id: string; title: string; normalized_key: string; created_at: string; description: string | null; embedding_status: string | null;
+  notes: string; lot_status: string; lot_revision: number };
 type ProposalRow = {
   id: string; topic_id: string; kind: "link" | "upload"; source_url: string | null;
   inbox_id: string | null; note: string; created_at: string; review_status: string | null;
@@ -34,8 +36,8 @@ async function existingTopic(env: Env, topicId: string) {
 export async function editorialWorkspace(request: Request, env: Env, path: string): Promise<Response> {
   if (path === base && request.method === "GET") {
     const [topics, proposals,drafts] = await Promise.all([
-      env.DB.prepare("SELECT t.id,t.title,t.normalized_key,t.created_at,s.description,s.embedding_status,s.input_sha256,s.error_code FROM editorial_workspace_topics t LEFT JOIN editorial_topic_semantics s ON s.topic_id=t.id ORDER BY t.created_at DESC,t.id DESC").all<TopicRow>(),
-      env.DB.prepare("SELECT p.id,p.topic_id,p.kind,p.source_url,COALESCE(p.inbox_id,a.inbox_id) AS inbox_id,p.note,p.created_at,i.status AS review_status FROM editorial_workspace_proposals p LEFT JOIN editorial_workspace_acquisitions a ON a.proposal_id=p.id LEFT JOIN editorial_review_inbox i ON i.id=COALESCE(p.inbox_id,a.inbox_id) ORDER BY p.created_at DESC,p.id DESC LIMIT 1000").all<ProposalRow>(),
+      env.DB.prepare("SELECT t.id,t.title,t.normalized_key,t.created_at,s.description,s.embedding_status,s.input_sha256,s.error_code,COALESCE(l.notes,s.description,'') AS notes,COALESCE(l.status,'open') AS lot_status,COALESCE(l.revision,0) AS lot_revision FROM editorial_workspace_topics t LEFT JOIN editorial_topic_semantics s ON s.topic_id=t.id LEFT JOIN editorial_lots l ON l.topic_id=t.id ORDER BY t.created_at DESC,t.id DESC").all<TopicRow>(),
+      env.DB.prepare("SELECT p.id,p.topic_id,p.kind,p.source_url,COALESCE(p.inbox_id,a.inbox_id) AS inbox_id,p.note,p.created_at,i.status AS review_status FROM editorial_workspace_proposals p LEFT JOIN editorial_workspace_acquisitions a ON a.proposal_id=p.id LEFT JOIN editorial_review_inbox i ON i.id=COALESCE(p.inbox_id,a.inbox_id) WHERE NOT EXISTS(SELECT 1 FROM editorial_workspace_proposal_dismissals d WHERE d.proposal_id=p.id) ORDER BY p.created_at DESC,p.id DESC LIMIT 1000").all<ProposalRow>(),
       env.DB.prepare("SELECT id,title,status,description,ambiguity,proposal_sha256 FROM editorial_topic_description_drafts WHERE status IN ('ready','preparing','uncertain','failed') ORDER BY created_at DESC LIMIT 30").all(),
     ]);
     let embeddingReady=false;
@@ -102,6 +104,8 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
       await createTopicSemantics(env,current.id,current.title,description);
     return json({id:current.id,embedding_status:status,input_sha256:digest});
   }
+  const lotRoute=await editorialLots(request,env,path);
+  if(lotRoute)return lotRoute;
   const removePath=path.match(/^\/api\/admin\/editorial\/workspace\/topics\/([a-f0-9-]{36})\/remove$/i);
   if(removePath && request.method==="POST")return json(await removeUnusedTopic(env,removePath[1],await body(request,500)));
   if (path === base + "/topics" && request.method === "POST") {
@@ -152,7 +156,7 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
       throw new HttpError(400, "Campi della proposta non previsti");
     await existingTopic(env, valueText(data.topic_id, 36, true));
     let sourceUrl: string;
-    try { sourceUrl = sourcePageUrl(data.source_url); } catch (error) { return invalid(error); }
+    try { sourceUrl = proposalLinkUrl(data.source_url); } catch (error) { return invalid(error); }
     const note = valueText(data.note, 1000);
     const proposal = { id: id(), topic_id: data.topic_id, source_url: sourceUrl, note, created_at: new Date().toISOString() };
     try {
@@ -238,8 +242,104 @@ export async function removeUnusedTopic(env:Env,topicId:string,data:Record<strin
     guarded("DELETE FROM editorial_topic_semantics WHERE topic_id=?1"),
     guarded("DELETE FROM editorial_topic_slop_seed WHERE topic_id=?1"),
     guarded("DELETE FROM editorial_workspace_manual_stage WHERE topic_id=?1"),
+    guarded("DELETE FROM editorial_lot_events WHERE topic_id=?1"),
+    guarded("DELETE FROM editorial_lots WHERE topic_id=?1"),
     guarded("DELETE FROM editorial_workspace_topics WHERE id=?1")
   ]);
   if(!result[result.length-1].meta.changes)throw new HttpError(409,"Argomento modificato durante la rimozione: ricaricare");
   return {removed:true,id:topic.id,title:topic.title,paid_calls_started:false};
+}
+
+// v1.0.0 (2026-11-08T20:00:26Z): editorial lots, phase 1 of docs/lotti-editoriali.v1.3.1.md.
+// A lot reuses the topic identity. Creating it needs only a title: no GPT proposal, embedding or SLOP seed.
+const LOT_NOTES_MAX=500;
+function lotNotes(value:unknown):string {
+  if(value===undefined || value===null)return "";
+  if(typeof value!=="string")throw new HttpError(400,"Note del lotto non valide");
+  const notes=value.normalize("NFKC").trim();
+  if(notes.length>LOT_NOTES_MAX)throw new HttpError(400,"Note del lotto oltre 500 caratteri");
+  return notes;
+}
+async function recordNotes(env:Env,topicId:string,notes:string,expected:number,stamp:string) {
+  const revision=expected+1;
+  const result=await env.DB.batch([
+    env.DB.prepare("INSERT INTO editorial_lots(topic_id,notes,status,revision,created_at,updated_at) SELECT ?,?,'open',?,?,? WHERE ?=0 AND NOT EXISTS(SELECT 1 FROM editorial_lots WHERE topic_id=?)")
+      .bind(topicId,notes,revision,stamp,stamp,expected,topicId),
+    env.DB.prepare("UPDATE editorial_lots SET notes=?,revision=?,updated_at=? WHERE topic_id=? AND revision=?")
+      .bind(notes,revision,stamp,topicId,expected),
+    env.DB.prepare("INSERT INTO editorial_lot_events(id,topic_id,kind,value,revision,created_at) SELECT ?,?,'notes',?,?,? WHERE EXISTS(SELECT 1 FROM editorial_lots WHERE topic_id=? AND revision=? AND notes=?)")
+      .bind(id(),topicId,notes,revision,stamp,topicId,revision,notes)
+  ]);
+  if(!result[0].meta.changes && !result[1].meta.changes)throw new HttpError(409,"Note modificate altrove: ricaricare il lotto");
+  return revision;
+}
+async function editorialLots(request:Request,env:Env,path:string):Promise<Response|null> {
+  if(path===base+"/lots" && request.method==="POST"){
+    const data=await body(request,3000);
+    if(Object.keys(data).some(key=>!["title","notes"].includes(key)))throw new HttpError(400,"Campi del lotto non previsti");
+    let title:string,key:string;
+    try{title=topicTitle(data.title);key=topicKey(title);}catch(error){return invalid(error);}
+    const notes=lotNotes(data.notes);
+    const existing=await env.DB.prepare("SELECT id,title FROM editorial_workspace_topics WHERE normalized_key=?").bind(key).first<{id:string;title:string}>();
+    if(existing)return json({...existing,already_exists:true,paid_calls_started:false});
+    const lot={id:id(),title,created_at:new Date().toISOString()};
+    try{
+      await env.DB.batch([
+        env.DB.prepare("INSERT INTO editorial_workspace_topics(id,title,normalized_key,created_at) VALUES(?,?,?,?)").bind(lot.id,title,key,lot.created_at),
+        env.DB.prepare("INSERT INTO editorial_lots(topic_id,notes,status,revision,created_at,updated_at) VALUES(?,?,'open',?,?,?)")
+          .bind(lot.id,notes,notes?1:0,lot.created_at,lot.created_at),
+        ...(notes?[env.DB.prepare("INSERT INTO editorial_lot_events(id,topic_id,kind,value,revision,created_at) VALUES(?,?,'notes',?,1,?)")
+          .bind(id(),lot.id,notes,lot.created_at)]:[])
+      ]);
+    }catch{
+      const raced=await env.DB.prepare("SELECT id,title FROM editorial_workspace_topics WHERE normalized_key=?").bind(key).first<{id:string;title:string}>();
+      if(raced)return json({...raced,already_exists:true,paid_calls_started:false});
+      throw new HttpError(409,"Lotto non registrato: ricaricare la pagina");
+    }
+    return json({...lot,notes,lot_status:"open",lot_revision:notes?1:0,already_exists:false,paid_calls_started:false},201);
+  }
+  const notesPath=path.match(/^\/api\/admin\/editorial\/workspace\/lots\/([a-f0-9-]{36})\/notes$/i);
+  if(notesPath && request.method==="POST"){
+    const data=await body(request,3000);
+    if(Object.keys(data).some(key=>!["notes","expected_revision"].includes(key)))throw new HttpError(400,"Campi delle note non previsti");
+    const expected=data.expected_revision;
+    if(!Number.isSafeInteger(expected) || (expected as number)<0)throw new HttpError(400,"Revisione delle note richiesta");
+    const lot=await existingTopic(env,notesPath[1]);
+    const notes=lotNotes(data.notes);
+    const current=await env.DB.prepare("SELECT notes,revision FROM editorial_lots WHERE topic_id=?").bind(lot.id).first<{notes:string;revision:number}>();
+    if(current && current.revision===expected && current.notes===notes)return json({id:lot.id,notes,lot_revision:current.revision,changed:false});
+    const revision=await recordNotes(env,lot.id,notes,expected as number,new Date().toISOString());
+    return json({id:lot.id,notes,lot_revision:revision,changed:true});
+  }
+  const dismissPath=path.match(/^\/api\/admin\/editorial\/workspace\/proposals\/([a-f0-9-]{36})\/dismiss$/i);
+  if(dismissPath && request.method==="POST"){
+    const data=await body(request,1000);
+    if(Object.keys(data).some(key=>key!=="reason"))throw new HttpError(400,"Campi dello scarto non previsti");
+    const reason=data.reason===undefined?"":String(data.reason).normalize("NFKC").trim();
+    if(typeof data.reason!=="undefined" && typeof data.reason!=="string" || reason.length>300)throw new HttpError(400,"Motivo dello scarto non valido");
+    const proposal=await env.DB.prepare("SELECT p.id,p.kind,p.inbox_id,a.inbox_id AS acquired,d.proposal_id AS dismissed FROM editorial_workspace_proposals p LEFT JOIN editorial_workspace_acquisitions a ON a.proposal_id=p.id LEFT JOIN editorial_workspace_proposal_dismissals d ON d.proposal_id=p.id WHERE p.id=?")
+      .bind(dismissPath[1]).first<{id:string;kind:string;inbox_id:string|null;acquired:string|null;dismissed:string|null}>();
+    if(!proposal)throw new HttpError(404,"Proposta non trovata");
+    if(proposal.dismissed)return json({id:proposal.id,dismissed:true,already_dismissed:true});
+    if(proposal.kind!=="link" || proposal.inbox_id || proposal.acquired)
+      throw new HttpError(409,"Si possono scartare solo link mai acquisiti: le fotografie seguono la revisione");
+    try{
+      await env.DB.prepare("INSERT INTO editorial_workspace_proposal_dismissals(proposal_id,reason,created_at) VALUES(?,?,?)")
+        .bind(proposal.id,reason,new Date().toISOString()).run();
+    }catch{
+      const again=await env.DB.prepare("SELECT 1 FROM editorial_workspace_proposal_dismissals WHERE proposal_id=?").bind(proposal.id).first();
+      if(again)return json({id:proposal.id,dismissed:true,already_dismissed:true});
+      throw new HttpError(409,"Proposta acquisita nel frattempo: non scartata");
+    }
+    return json({id:proposal.id,dismissed:true,already_dismissed:false});
+  }
+  if(path===base+"/commons/search" && request.method==="GET"){
+    const params=new URL(request.url).searchParams;
+    return json(await browseCommonsSearch(params.get("q") || "",params.get("offset") || ""));
+  }
+  if(path===base+"/commons/category" && request.method==="GET"){
+    const params=new URL(request.url).searchParams;
+    return json(await browseCommonsCategory(params.get("name") || "",params.get("continue") || ""));
+  }
+  return null;
 }

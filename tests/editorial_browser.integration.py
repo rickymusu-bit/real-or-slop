@@ -20,12 +20,18 @@ with sync_playwright() as p:
             page=context.new_page()
             errors=[]
             page.on('pageerror',lambda error:errors.append(str(error)))
-            dialog_answers={'cancel':False}
-            page.on('dialog',lambda dialog:dialog.dismiss() if dialog_answers['cancel'] else dialog.accept())
+            dialog_answers={'cancel':False,'prompt':None,'prompt_default':None}
+            def on_dialog(dialog):
+                if dialog_answers['cancel']:dialog.dismiss();return
+                if dialog.type=='prompt':
+                    dialog_answers['prompt_default']=dialog.default_value
+                    dialog.accept(dialog_answers['prompt'] or dialog.default_value);return
+                dialog.accept()
+            page.on('dialog',on_dialog)
             page.goto(base+'admin')
             expect(page.locator('.admin-dashboard')).to_be_visible()
             assert not page.locator('main').evaluate("el=>el.classList.contains('admin-bootstrapping')")
-            expect(page.locator('#workspace-topic-form input[name=title]')).to_have_attribute('placeholder','Es. Vita quotidiana nei mercati di quartiere')
+            expect(page.locator('#workspace-topic-form input[name=title]')).to_have_attribute('placeholder','Es. Canali di Venezia')
             expect(page.locator('#admin-overview')).to_be_visible()
             expect(page.locator('#editorial-workspace')).to_be_hidden()
             expect(page.locator('#admin-stat-mode')).to_contain_text('Demo')
@@ -51,7 +57,7 @@ with sync_playwright() as p:
             budget.locator('summary').click()
             budget.screenshot(path=str(folder/(name+'-budget-reset.png')))
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'),name+' budget has horizontal overflow'
-            page.get_by_role('button',name='Argomenti',exact=True).click()
+            page.get_by_role('button',name='Lotti',exact=True).click()
             expect(page.locator('#workspace-topic-form button[type=submit]')).to_be_enabled()
             discovery=page.locator('#intel-topic-discovery')
             expect(page.locator('#intel-topic-memory')).to_contain_text('Memoria in popolamento')
@@ -76,61 +82,57 @@ with sync_playwright() as p:
             expect(page.locator('#intel-status')).to_contain_text('"orientation_status":"explicit"')
             expect(unknown).to_have_count(0)
             formats.screenshot(path=str(folder/(name+'-exif-audit.png')))
-            page.get_by_role('button',name='Argomenti',exact=True).click()
+            page.get_by_role('button',name='Lotti',exact=True).click()
             form=page.locator('#workspace-topic-form')
-            # #78: title-only first shows an editable private proposal. Reload can resume it.
-            draft_title='Browser ambiguous topic '+name
-            form.locator('input[name=title]').fill(draft_title)
+            # Lots (spec lotti 1.3.1): a title is enough, no GPT proposal or embedding.
+            calls_before=page.request.get(base+'api/admin/editorial/intelligence').json()['jobs']
+            form.locator('input[name=title]').fill('Browser removable lot '+name)
             form.locator('button[type=submit]').click()
-            expect(page.locator('#workspace-description-preview')).to_be_visible()
-            expect(form.locator('button[type=submit]')).not_to_be_visible()
-            expect(page.locator('#workspace-description-ambiguity')).to_contain_text('does not establish')
-            assert draft_title not in page.locator('#workspace-topic-select').inner_text()
-            page.screenshot(path=str(folder/(name+'-description-proposal.png')),full_page=True)
-            form.screenshot(path=str(folder/(name+'-description-editor.png')))
-            page.reload()
-            page.locator('#workspace-description-drafts p').filter(has_text=draft_title).get_by_role('button').click()
-            expect(form.locator('textarea')).not_to_be_empty()
-            form.locator('textarea').fill('The owner has edited and explicitly confirmed this description.')
-            form.locator('[data-description=approve]').click()
-            expect(page.locator('#workspace-status')).to_contain_text('Embedding calcolato')
-            expect(page.locator('#workspace-semantic-form textarea')).to_have_value('The owner has edited and explicitly confirmed this description.')
-            cancel_title='Browser cancelled draft '+name
-            form.locator('input[name=title]').fill(cancel_title)
-            form.locator('button[type=submit]').click()
-            expect(page.locator('#workspace-description-preview')).to_be_visible()
-            form.locator('[data-description=regenerate]').click()
-            expect(page.locator('#workspace-status')).to_contain_text('Nuova proposta pronta')
-            form.locator('[data-description=cancel]').click()
-            expect(page.locator('#workspace-status')).to_contain_text('Bozza annullata')
-            assert cancel_title not in page.locator('#workspace-topic-select').inner_text()
-            # Disabled GPT never loses the typed title; a manual description remains usable.
-            unavailable='Browser unavailable GPT '+name
-            form.locator('input[name=title]').fill(unavailable)
-            page.route('**/api/admin/editorial/workspace/topics',lambda route:route.fulfill(status=503,content_type='application/json',body='{"error":"IA admin disabilitata"}'))
-            form.locator('button[type=submit]').click()
-            expect(page.locator('#workspace-status')).to_contain_text('IA admin disabilitata')
-            expect(form.locator('input[name=title]')).to_have_value(unavailable)
-            page.unroute('**/api/admin/editorial/workspace/topics')
-            form.locator('textarea').fill('A description written entirely by the owner after the unavailable service.')
-            form.locator('button[type=submit]').click()
-            expect(page.locator('#workspace-status')).to_contain_text('Embedding calcolato')
-            # The removal control lives in the Topics view and frees the title of an unused topic.
+            expect(page.locator('#workspace-status')).to_contain_text('Lotto creato')
+            assert page.request.get(base+'api/admin/editorial/intelligence').json()['jobs']==calls_before
+            # The removal control lives in the Lots view and frees the title of an unused lot.
             removable=page.locator('#workspace-topic-select').input_value()
-            remove=page.get_by_role('button',name='Rimuovi argomento inutilizzato')
+            remove=page.get_by_role('button',name='Rimuovi lotto inutilizzato')
             expect(remove).to_be_visible()
             remove.click()
             expect(page.locator('#workspace-status')).to_contain_text('rimosso')
             assert page.locator('#workspace-topic-select option[value="'+removable+'"]').count()==0
             form.locator('input[name=title]').fill('Browser photographic topic '+name)
-            form.locator('textarea').fill('Photographs of everyday work in a coastal town, with visible human activity.')
+            form.locator('textarea[name=notes]').fill('Photographs of everyday work in a coastal town, with visible human activity.')
             form.locator('button[type=submit]').click()
-            expect(page.locator('#workspace-status')).to_contain_text('Embedding calcolato')
+            expect(page.locator('#workspace-status')).to_contain_text('Lotto creato')
             topic=page.locator('#workspace-topic-select').input_value()
-            semantic=page.locator('#workspace-semantic-form')
-            semantic.locator('textarea').fill('Visible everyday work in a coastal town, including early morning market activity.')
-            semantic.locator('button').click()
-            expect(page.locator('#workspace-status')).to_contain_text('Stato embedding: ready')
+            notes=page.locator('#workspace-lot-notes-form')
+            expect(notes.locator('textarea')).to_have_value('Photographs of everyday work in a coastal town, with visible human activity.')
+            notes.locator('textarea').fill('Visible everyday work in a coastal town, including early morning market activity.')
+            notes.locator('button').click()
+            expect(page.locator('#workspace-status')).to_contain_text('Note salvate')
+            expect(page.locator('#workspace-lot-state')).to_contain_text('Lotto aperto')
+            page.screenshot(path=str(folder/(name+'-lots.png')),full_page=True)
+            # Commons explorer: search, select, create a lot from the selection, dismiss a link.
+            page.get_by_role('button',name='Produzione immagini',exact=True).click()
+            explorer=page.locator('#workspace-commons-explorer')
+            explorer.locator('input[name=q]').fill('venice canals')
+            explorer.get_by_role('button',name='Cerca',exact=True).click()
+            expect(explorer.locator('.workspace-commons-file')).to_have_count(2)
+            expect(explorer.locator('#workspace-commons-categories')).to_contain_text('Canals of Venice')
+            for box in explorer.locator('[data-commons-select]').all():box.check()
+            expect(explorer.locator('#workspace-commons-status')).to_contain_text('2 fotografie selezionate')
+            explorer.locator('#workspace-commons-acquire').uncheck()
+            explorer.screenshot(path=str(folder/(name+'-commons-explorer.png')))
+            dialog_answers['prompt']='Canals of Venice '+name
+            explorer.locator('#workspace-commons-new-lot').click()
+            expect(explorer.locator('#workspace-commons-status')).to_contain_text('2 link aggiunti')
+            assert dialog_answers['prompt_default']=='Canals of Venice',dialog_answers
+            dialog_answers['prompt']=None
+            expect(page.locator('#workspace-topic-select option:checked')).to_have_text('Canals of Venice '+name)
+            expect(page.locator('#workspace-proposals .workspace-proposal')).to_have_count(2)
+            page.locator('#workspace-proposals [data-workspace-dismiss]').first.click()
+            expect(page.locator('#workspace-acquire-status')).to_contain_text('Link scartato')
+            expect(page.locator('#workspace-proposals .workspace-proposal')).to_have_count(1)
+            explorer.locator('#workspace-commons-categories button').first.click()
+            expect(explorer.locator('#workspace-commons-context')).to_contain_text('Categoria: Canals of Venice')
+            page.locator('#workspace-topic-select').select_option(topic)
             page.get_by_role('button',name='Produzione immagini',exact=True).click()
             link=page.locator('#workspace-link-form')
             link.locator('textarea[name=source_urls]').fill('https://example.org/'+name+'/photo.jpg\nhttps://example.org/'+name+'/photo2.jpg')
@@ -163,8 +165,9 @@ with sync_playwright() as p:
             page.locator('#inbox-origin').select_option('REAL')
             page.locator('#refresh-review').click()
             expect(page.locator('.inbox-selected-image')).to_be_visible()
-            page.wait_for_function("document.querySelector('.inbox-selected-image')?.naturalWidth > 0")
-            geometry=page.locator('.inbox-selected-image').evaluate("img=>({natural:img.naturalWidth/img.naturalHeight,fit:getComputedStyle(img).objectFit})")
+            # Read size and fit in one step: a late queue refresh may replace the element between two reads.
+            geometry=page.wait_for_function("(()=>{const img=document.querySelector('.inbox-selected-image');"
+                "return img && img.isConnected && img.naturalWidth>0 ? {natural:img.naturalWidth/img.naturalHeight,fit:getComputedStyle(img).objectFit} : false})()").json_value()
             assert geometry['fit']=='contain',geometry
             assert geometry['natural'] in [180/320,900/180],geometry
             voted_title=page.locator('#visual-queue h2').inner_text()
@@ -192,9 +195,9 @@ with sync_playwright() as p:
             expect(page.locator('#intel-status')).to_contain_text('Operazione registrata')
             # Persisted topic text and Discovery setting survive navigation/refresh.
             page.reload()
-            page.get_by_role('button',name='Argomenti',exact=True).click()
+            page.get_by_role('button',name='Lotti',exact=True).click()
             page.locator('#workspace-topic-select').select_option(topic)
-            expect(page.locator('#workspace-semantic-form textarea')).to_have_value('Visible everyday work in a coastal town, including early morning market activity.')
+            expect(page.locator('#workspace-lot-notes-form textarea')).to_have_value('Visible everyday work in a coastal town, including early morning market activity.')
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'),name+' has horizontal page overflow'
             # Navigation is intentionally horizontally scrollable on mobile: hidden menu buttons
             # may lie beyond the viewport, but they must not expand the document width.

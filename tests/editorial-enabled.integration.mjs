@@ -14,7 +14,7 @@ let searchMode='success',embeddingMode='success',descriptionMode='success',sugge
 const images=JSON.parse(spawnSync('python3',['-c',`import io,json,base64
 from PIL import Image
 out={}
-for name,size,color in [('owner',(240,360),'blue'),('owner-link',(240,360),'cyan'),('owner-link-mobile',(240,360),'magenta'),('commons',(480,320),'red'),('1536x1024',(1536,1024),'green'),('1024x1536',(1024,1536),'yellow'),('1024x1024',(1024,1024),'purple')]:
+for name,size,color in [('owner',(240,360),'blue'),('owner-link',(240,360),'cyan'),('owner-link-mobile',(240,360),'magenta'),('commons',(480,320),'red'),('lot-canal',(300,200),'teal'),('1536x1024',(1536,1024),'green'),('1024x1536',(1024,1536),'yellow'),('1024x1024',(1024,1024),'purple')]:
  b=io.BytesIO();Image.new('RGB',size,color).save(b,'WEBP');out[name]=base64.b64encode(b.getvalue()).decode()
 for name,orientation,color in [('geometry-probe',6,'orange'),('legacy-desktop',6,'pink'),('legacy-mobile',8,'cyan'),('geometry-invalid',9,'gray')]:
  b=io.BytesIO();exif=Image.Exif();exif[274]=orientation;Image.new('RGB',(240,120),color).save(b,'JPEG',exif=exif);out[name]=base64.b64encode(b.getvalue()).decode()
@@ -104,6 +104,24 @@ b=io.BytesIO();Image.new('RGB',(${w},${h}),(${imageSequence*61%255},${imageSeque
    throw Error('Unexpected model task: '+name);
   }
   if(url.hostname==='commons.wikimedia.org'){
+   const generator=url.searchParams.get('generator');
+   if(generator==='search' || generator==='categorymembers'){
+    // Lot browsing (spec lotti 1.3.1): read-only, thumbnails only from upload.wikimedia.org.
+    if(url.searchParams.get('gsrsearch')==='commons down')return new globalThis.Response('fixture failure',{status:503});
+    const thumb=n=>'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/'+n+'/320px-'+n;
+    const page=(title,index,thumburl)=>({title,index,categories:[{title:'Category:Canals of Venice'},{title:'Category:'+title.slice(5)}],imageinfo:[{thumburl,width:3000,height:2000,
+     extmetadata:{Artist:{value:'<a href="https://example.org">Fixture <b>author</b></a>'},LicenseShortName:{value:'CC BY-SA 4.0'}}}]});
+    const pages=[page('File:Canal B.jpg',2,thumb('Canal_B.jpg')),page('File:Canal A.jpg',1,thumb('Canal_A.jpg')),
+     page('File:Clip.ogv',3,thumb('Clip.ogv')),page('File:Hostile.jpg',4,'https://example.org/x.jpg')];
+    const listed=generator==='search'?{search:[{title:'Category:Canals of Venice'},{title:'File:Not a category.jpg'}]}:
+     {categorymembers:[{title:'Category:Canal Grande'}]};
+    return globalThis.Response.json({query:{pages,...listed},continue:generator==='search'?{gsroffset:'30'}:{gcmcontinue:'file|NEXT'}});
+   }
+   if(url.searchParams.get('titles')==='File:Lot_canal.jpg' || url.searchParams.get('titles')==='File:Lot canal.jpg'){
+    return globalThis.Response.json({query:{pages:[{title:'File:Lot canal.jpg',imageinfo:[{url:'https://upload.wikimedia.org/wikipedia/commons/c/cc/Lot_canal.webp',
+     width:300,height:200,size:photo('lot-canal').length,extmetadata:{Artist:{value:'Fixture author'},LicenseUrl:{value:'https://creativecommons.org/licenses/by/4.0/'},
+     ImageDescription:{value:'Gondolas on a <i>canal</i>'},Categories:{value:'Canals of Venice|Gondolas'},DateTimeOriginal:{value:'2024-05-01'}}}]}]}});
+   }
    if(url.searchParams.get('list')==='search'){
     if(searchMode==='failed' || searchMode==='partial' && url.searchParams.get('srsearch').includes('second'))return new globalThis.Response('fixture failure',{status:503});
     return globalThis.Response.json({query:{search:searchMode==='empty'?[]:[{title:'File:Fixture.jpg'}]}});
@@ -115,6 +133,7 @@ b=io.BytesIO();Image.new('RGB',(${w},${h}),(${imageSequence*61%255},${imageSeque
     width:ownerLink?240:480,height:ownerLink?360:320,size:photo(ownerMobile?'owner-link-mobile':ownerLink?'owner-link':'commons').length,
     extmetadata:{Artist:{value:'Fixture author'},LicenseUrl:{value:'https://creativecommons.org/licenses/by/4.0/'}}}]}]}});
   }
+  if(url.hostname==='upload.wikimedia.org' && url.pathname.endsWith('/Lot_canal.webp'))return new globalThis.Response(photo('lot-canal'),{headers:{'Content-Type':'image/webp'}});
   if(url.hostname==='upload.wikimedia.org')return new globalThis.Response(photo(url.pathname.endsWith('/OwnerLinkMobile.webp')?'owner-link-mobile':url.pathname.endsWith('/OwnerLink.webp')?'owner-link':'commons'),{headers:{'Content-Type':'image/webp'}});
   throw Error('External network forbidden in fixtures: '+url.hostname);
  }
@@ -150,6 +169,31 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  const emptyCalls=calls.length;
  await api(intel+'/suggest',{operation_id:emptyOp});assert.equal(calls.length,emptyCalls);
  await api(intel+'/topic-discovery/settings',{enabled:false});suggestionMode='standard';
+ // Lots (spec lotti 1.3.1, phase 1): no model call, Commons browsing and selected metadata at acquisition.
+ const lotCalls=calls.length;
+ const lot=await api(ws+'/lots',{title:'Fixture lot canals',notes:'Only canals.'},201);
+ assert.equal(lot.lot_revision,1);assert.equal(calls.length,lotCalls,'Creating a lot must not call a model');
+ const found=await api(ws+'/commons/search?q='+encodeURIComponent('venice canals'));
+ assert.deepEqual(found.files.map(f=>f.title),['File:Canal A.jpg','File:Canal B.jpg']);
+ assert.equal(found.files[0].page_url,'https://commons.wikimedia.org/wiki/File:Canal_A.jpg');
+ assert.equal(found.files[0].author,'Fixture author');assert.equal(found.files[0].license,'CC BY-SA 4.0');
+ assert.deepEqual(found.categories,['Category:Canals of Venice']);assert.equal(found.next,'30');
+ await api(ws+'/commons/search?q=x',undefined,400);
+ await api(ws+'/commons/search?q=venice&offset=abc',undefined,400);
+ await api(ws+'/commons/search?q='+encodeURIComponent('commons down'),undefined,502);
+ const category=await api(ws+'/commons/category?name='+encodeURIComponent('Category:Canals_of_Venice'));
+ assert.deepEqual(category.categories,['Category:Canal Grande']);assert.equal(category.next,'file|NEXT');
+ await api(ws+'/commons/category?name='+encodeURIComponent('Bad|name'),undefined,400);
+ const added=await api(ws+'/links/batch',{topic_id:lot.id,source_urls:['https://upload.wikimedia.org/wikipedia/commons/c/cc/Lot_canal.jpg']},201);
+ assert.equal(added.saved,1);
+ const lotProposal=(await api(ws)).proposals.find(p=>p.topic_id===lot.id);
+ assert.equal(lotProposal.source_url,'https://commons.wikimedia.org/wiki/File:Lot_canal.jpg');
+ const acquired=await api(intel+'/acquire',{proposal_id:lotProposal.id},[200,201]);
+ const lotMeta=JSON.parse((await db.prepare('SELECT metadata_json FROM editorial_review_inbox WHERE id=?').bind(acquired.inbox_id).first()).metadata_json);
+ assert.equal(lotMeta.topic_id,lot.id);assert.deepEqual(lotMeta.provenance.commons_categories,['Canals of Venice','Gondolas']);
+ assert.equal(lotMeta.provenance.commons_date,'2024-05-01');
+ await api(ws+'/proposals/'+lotProposal.id+'/dismiss',{},409);
+ assert.ok(calls.slice(lotCalls).every(c=>/^https:\/\/(commons|upload)\.wikimedia\.org\//.test(c.url)),'Browsing and acquiring Commons must not call a model');
  const originalCalls=calls.length;
  const original=await api(ws+'/topics',{title:'Brussels agricultural protests in 2024',description:'Agricultural workers demonstrating in Brussels during 2024.'},201);
  assert.equal(original.embedding_status,'ready');assert.equal(calls.length,originalCalls+1);
