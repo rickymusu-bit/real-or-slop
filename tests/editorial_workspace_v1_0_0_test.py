@@ -18,7 +18,7 @@ class WorkspaceSchemaTest(unittest.TestCase):
     def test_link_and_upload_are_audited_separately(self):
         db = self.db
         db.execute("INSERT INTO editorial_workspace_topics VALUES(?,?,?,?)",
-                   ("t1", "Proteste a Parigi, ottobre 2026", "proteste a parigi, ottobre 2026", "2026-11-07T13:00:00Z"))
+                   ("t1", "Proteste a Bruxelles, ottobre 2026", "proteste a bruxelles, ottobre 2026", "2026-11-07T13:00:00Z"))
         db.execute("INSERT INTO editorial_workspace_proposals VALUES(?,?,?,?,?,?,?)",
                    ("p1", "t1", "link", "https://commons.wikimedia.org/wiki/File:Example", None, "", "now"))
         with self.assertRaises(sqlite3.IntegrityError):
@@ -39,10 +39,10 @@ class WorkspaceSchemaTest(unittest.TestCase):
     def test_topic_key_is_unique_and_previous_review_audit_remains(self):
         db = self.db
         db.execute("INSERT INTO editorial_workspace_topics VALUES(?,?,?,?)",
-                   ("t1","Proteste a Parigi","proteste a parigi","now"))
+                   ("t1","Proteste a Bruxelles","proteste a bruxelles","now"))
         with self.assertRaises(sqlite3.IntegrityError):
             db.execute("INSERT INTO editorial_workspace_topics VALUES(?,?,?,?)",
-                       ("t2","PROTESTE A PARIGI","proteste a parigi","now"))
+                       ("t2","PROTESTE A BRUXELLES","proteste a bruxelles","now"))
         self.assertTrue(db.execute("SELECT name FROM sqlite_master WHERE name='editorial_review_inbox_events'").fetchone())
 
 if __name__ == "__main__":

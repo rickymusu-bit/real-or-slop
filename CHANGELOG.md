@@ -1,3 +1,11 @@
+## 0.22.1 — 2026-11-08T12:52:41.502Z (proposta, non pubblicata)
+
+- Caricamento dashboard senza mostrare temporaneamente i vecchi moduli.
+- Proposte batch di fino a 20 link HTTPS, validazione preventiva, duplicati ignorati e risultati espliciti.
+- Pulsante di acquisizione Commons su ciascun link e feedback locale; fonti non supportate indicate chiaramente.
+- Rimosso il placeholder il precedente esempio dimostrativo; nessun argomento viene selezionato automaticamente o cancellato dal database.
+- Route admin additiva e test browser desktop/mobile aggiornati. Nessuna migrazione o costo AI.
+
 ## 0.22.0 — 2026-11-08T11:05:14.575Z (proposta in PR, non pubblicata)
 
 - Dashboard amministrativa divisa in sei sezioni: Panoramica, Argomenti, Produzione immagini, Revisione, Pubblicazione, Impostazioni.

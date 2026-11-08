@@ -49,7 +49,7 @@ assert code==200 and switched["topic_discovery_enabled"] is False and switched["
 assert call(prefix)[1]["topic_discovery_enabled"] is False
 assert call(prefix+"/suggest",{"operation_id":str(uuid.uuid4())})[0]==409
 assert not [job for job in call(prefix)[1]["jobs"] if job["kind"]=="suggest"]
-title="Proteste a Parigi, ottobre 2026 "+uuid.uuid4().hex[:8]
+title="Proteste a Bruxelles, ottobre 2026 "+uuid.uuid4().hex[:8]
 code,unavailable=call("/api/admin/editorial/workspace/topics",{"title":title,"operation_id":str(uuid.uuid4())})
 assert code==503,(code,unavailable)
 assert all(t['title']!=title for t in call('/api/admin/editorial/workspace')[1]['topics'])

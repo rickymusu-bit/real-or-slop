@@ -1,6 +1,7 @@
 import "./editorial-workspace.v1.0.0.css";
 import { api, content as mainContent, escape } from "./main";
-import { imageMime, sourcePageUrl } from "../shared/editorial-workspace.v1.0.0";
+import { imageMime } from "../shared/editorial-workspace.v1.0.0";
+import { canAcquireCommons, parseLinkLines } from "../shared/editorial-link-batch.v1.0.0";
 
 interface Topic { id: string; title: string; created_at: string; description?:string|null; embedding_status?: string|null; input_sha256?:string|null;error_code?:string|null }
 interface Proposal { id: string; topic_id: string; kind: "link" | "upload"; source_url: string | null; inbox_id: string | null; note: string; review_status: string | null }
@@ -16,16 +17,16 @@ export async function mountEditorialWorkspace() {
     '<div class="eyebrow">AMMINISTRAZIONE PRIVATA</div>' +
     '<h1>Studio editoriale.</h1>' +
     '<p>Decidi tu gli argomenti e proponi le fotografie prima della ricerca GPT. I file vengono conservati in quarantena: non sono automaticamente autentici, autorizzati o pubblicati.</p>' +
-    '<form id="workspace-topic-form"><label>Nuovo argomento specifico<input name="title" maxlength="200" minlength="6" required placeholder="Proteste a Parigi, ottobre 2026"></label>'+
+    '<form id="workspace-topic-form"><label>Nuovo argomento specifico<input name="title" maxlength="200" minlength="6" required placeholder="Es. Vita quotidiana nei mercati di quartiere"></label>'+
     '<label>Descrizione in inglese (massimo 500 caratteri)<textarea name="description" maxlength="500" rows="3" placeholder="Scrivila tu oppure lascia vuoto per ricevere una proposta GPT da approvare."></textarea></label>'+
     '<p class="workspace-hint">Con il solo titolo, Continua richiede una proposta GPT a pagamento: nessun argomento o embedding prima della tua approvazione. Con una descrizione scritta da te, registra e indicizza direttamente entro i limiti configurati. Funziona anche con Topic Discovery spento.</p>'+
     '<button type="submit">Continua</button><div id="workspace-description-preview" hidden><h2>Rivedi la descrizione proposta</h2><p>Proposta GPT non verificata: modifica il testo qui sopra prima di approvare. Non è una ricerca documentale né una fonte. Se cambi il titolo, annulla la bozza e richiedine una nuova.</p><p id="workspace-description-ambiguity"></p><div class="workspace-draft-actions"><button type="button" data-description="approve">Approva e registra</button><button type="button" data-description="regenerate">Rigenera con GPT</button><button type="button" data-description="cancel">Annulla</button></div></div></form>' +
     '<p id="workspace-topic-status" role="status" aria-live="polite"></p><div id="workspace-description-drafts"></div>' +
     '<label>Argomento corrente<select id="workspace-topic-select" aria-label="Argomento corrente"></select></label>' +
     '<form id="workspace-semantic-form"><h2>Memoria dell’argomento corrente</h2><p id="workspace-semantic-state"></p><label>Descrizione semantica<textarea name="description" maxlength="500" rows="3"></textarea></label><button type="submit">Salva descrizione / indicizza argomento</button><p>Conserva le revisioni precedenti. Se il servizio è configurato, questa azione autorizza un embedding entro il tetto indicato. Nessun reinvio di esiti incerti.</p></form>' +
-    '<div class="workspace-columns"><form id="workspace-link-form"><h2>Proponi una fotografia tramite link</h2><label>Pagina o immagine originale HTTPS<input name="source_url" type="url" required placeholder="https://commons.wikimedia.org/wiki/File:..."></label><label>Nota facoltativa<textarea name="note" maxlength="1000" rows="2"></textarea></label><button type="submit">Salva proposta</button><p class="workspace-hint">Il link viene registrato, ma non entra nella coda di valutazione finché non viene acquisito e verificato il file originale.</p></form>' +
+    '<div class="workspace-columns"><form id="workspace-link-form"><h2>Proponi fotografie tramite link</h2><label>URL HTTPS, uno per riga (massimo 20)<textarea name="source_urls" rows="6" required placeholder="https://commons.wikimedia.org/wiki/File:...&#10;https://commons.wikimedia.org/wiki/File:..."></textarea></label><label>Nota comune facoltativa<textarea name="note" maxlength="1000" rows="2"></textarea></label><button type="submit">Registra i link</button><p class="workspace-hint">I duplicati vengono saltati. Registrare un link non significa acquisire o approvare la fotografia. Per Commons puoi usare «Acquisisci» accanto alla proposta; per altre fonti carica il file dal dispositivo.</p><p id="workspace-link-feedback" role="status" aria-live="polite"></p></form>' +
     '<form id="workspace-upload-form"><h2>Proponi fotografie dal dispositivo</h2><label>Fotografie originali<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required></label><label>Nota facoltativa<textarea name="note" maxlength="1000" rows="2"></textarea></label><button type="submit">Carica nella coda privata</button><p class="workspace-hint">Solo per l’amministratore. Nessun ritaglio: ogni file conserva proporzioni e pixel originali. Limite di 12 MB per file.</p></form></div>' +
-    '<h2>Le tue proposte</h2><div id="workspace-proposals"><p>Caricamento…</p></div>' +
+    '<h2>Le tue proposte</h2><p id="workspace-acquire-status" role="status" aria-live="polite"></p><div id="workspace-proposals"><p>Caricamento…</p></div>' +
     '<p class="workspace-hint">Ricerca GPT, analisi visiva e generazione SLOP richiedono i comandi espliciti della sezione seguente. Puoi terminare il lotto con le sole foto manuali.</p>' +
     '<p id="workspace-status" role="status" aria-live="polite"></p>';
   root.insertBefore(section, root.firstChild);
@@ -75,17 +76,22 @@ export async function mountEditorialWorkspace() {
       const detail = p.kind === "link" && p.source_url
         ? '<a href="' + escape(p.source_url) + '" target="_blank" rel="noopener noreferrer">Apri la fonte originale</a> — '+(p.inbox_id?'acquisita, revisione: '+escape(p.review_status || 'da rivedere'):'da acquisire')
         : 'File nell’archivio privato — revisione: ' + escape(p.review_status || "da rivedere");
+      const acquire = p.kind === "link" && p.source_url && !p.inbox_id
+        ? (canAcquireCommons(p.source_url)
+          ? '<button type="button" data-workspace-acquire="' + escape(p.id) + '">Acquisisci fotografia da Commons</button>'
+          : '<p class="workspace-hint">Fonte non supportata per l’acquisizione automatica: scarica l’originale autorizzato e caricalo dal dispositivo.</p>')
+        : "";
       return '<article class="workspace-proposal"><strong>' + (p.kind === "link" ? "Link proposto" : "Fotografia caricata") +
-        '</strong><p>' + detail + '</p>' + (p.note ? '<p>' + escape(p.note) + '</p>' : "") + '</article>';
+        '</strong><p>' + detail + '</p>' + acquire + (p.note ? '<p>' + escape(p.note) + '</p>' : "") + '</article>';
     }).join("") : '<p>Nessuna proposta per questo argomento.</p>';
   };
   const refresh = async (prefer?: string) => {
     workspace = await api<Workspace>("/admin/editorial/workspace");
     const selected = prefer || select.value;
-    select.innerHTML = workspace.topics.length
-      ? workspace.topics.map(t => '<option value="' + escape(t.id) + '">' + escape(t.title) + (t.embedding_status==="ready"?" ✓":t.embedding_status==="uncertain"?" (embedding incerto)":" (non indicizzato)") + '</option>').join("")
-      : '<option value="">Registra prima un argomento</option>';
-    if (workspace.topics.some(t => t.id === selected)) select.value = selected;
+    select.innerHTML = '<option value="">' + (workspace.topics.length ? 'Seleziona un argomento…' : 'Registra prima un argomento') + '</option>' +
+      workspace.topics.map(t => '<option value="' + escape(t.id) + '">' + escape(t.title) +
+        (t.embedding_status==="ready"?" ✓":t.embedding_status==="uncertain"?" (embedding incerto)":" (da indicizzare)") + '</option>').join("");
+    select.value = workspace.topics.some(t => t.id === selected) ? selected : "";
     select.disabled = busy || !workspace.topics.length;
     renderProposals();
     section.querySelector<HTMLElement>('#workspace-description-drafts')!.innerHTML=(workspace.description_drafts || []).map(d=>
@@ -158,16 +164,48 @@ export async function mountEditorialWorkspace() {
   });
   linkForm.addEventListener("submit", async event => {
     event.preventDefault(); if (busy) return;
-    if (!select.value) { status.textContent = "Registra prima un argomento."; return; }
+    const feedback=section.querySelector<HTMLElement>("#workspace-link-feedback")!;
+    if (!select.value) { feedback.textContent="Seleziona prima un argomento."; return; }
+    const data=new FormData(linkForm);
+    let urls:string[];
+    try { urls=parseLinkLines(String(data.get("source_urls") || "")); }
+    catch(error) { feedback.textContent=String(error); return; }
     setBusy(true);
+    feedback.textContent="Registrazione di "+urls.length+" link in corso…";
     try {
-      const data = new FormData(linkForm);
-      const source_url = sourcePageUrl(String(data.get("source_url") || ""));
-      await api("/admin/editorial/workspace/links", { method: "POST",
-        body: JSON.stringify({ topic_id: select.value, source_url, note: String(data.get("note") || "") }) });
-      await refresh(select.value); linkForm.reset();
-      status.textContent = "Link registrato: è ancora da acquisire e verificare, non è una REAL approvata.";
-    } catch (error) { status.textContent = String(error); } finally { setBusy(false); }
+      const result=await api<{saved:number;already_present:number}>("/admin/editorial/workspace/links/batch",{
+        method:"POST",body:JSON.stringify({topic_id:select.value,source_urls:urls,note:String(data.get("note") || "")})
+      });
+      await refresh(select.value);linkForm.reset();
+      feedback.textContent=result.saved+" link registrati; "+result.already_present+
+        " già presenti. Non ancora acquisiti o approvati: usa «Acquisisci» accanto ai link Commons.";
+      status.textContent=feedback.textContent;
+    }catch(error){feedback.textContent="Registrazione non completata: "+String(error)+". I link restano nel campo.";}
+    finally{setBusy(false);}
+  });
+  section.addEventListener("click",async event=>{
+    const button=(event.target as HTMLElement).closest<HTMLButtonElement>("[data-workspace-acquire]");
+    if(!button || busy)return;
+    const message=section.querySelector<HTMLElement>("#workspace-acquire-status")!;
+    const proposalId=button.dataset.workspaceAcquire || "";
+    const proposal=workspace.proposals.find(p=>p.id===proposalId && p.topic_id===select.value);
+    if(!proposal || !proposal.source_url || !canAcquireCommons(proposal.source_url)){
+      message.textContent="L’acquisizione automatica supporta soltanto file Wikimedia Commons.";return;
+    }
+    setBusy(true);message.textContent="Acquisizione della fotografia in corso…";
+    try{
+      const result=await api<{already_acquired?:boolean}>("/admin/editorial/intelligence/acquire",{
+        method:"POST",body:JSON.stringify({proposal_id:proposalId})
+      });
+      await refresh(select.value);
+      message.textContent=result.already_acquired?
+        "Fotografia già acquisita: controlla la Revisione.":
+        "Fotografia acquisita in quarantena. Apri Revisione per valutarla.";
+      document.querySelector<HTMLButtonElement>("#refresh-review")?.click();
+    }catch(error){
+      message.textContent="Acquisizione non riuscita: "+String(error)+
+        ". La proposta rimane registrata; verifica il link Commons e i diritti.";
+    }finally{setBusy(false);}
   });
   uploadForm.addEventListener("submit", async event => {
     event.preventDefault(); if (busy) return;
@@ -199,6 +237,9 @@ export async function mountEditorialWorkspace() {
       status.textContent = String(error) + ". Le foto precedenti eventualmente caricate restano in revisione.";
     } finally { setBusy(false); }
   });
+  section.addEventListener("workspace-request-refresh",()=>void refresh(select.value).catch(error=>{
+    section.querySelector<HTMLElement>("#workspace-acquire-status")!.textContent=String(error);
+  }));
   try { await refresh(); } catch (error) {
     output.textContent = "Workspace non disponibile: verificare le migrazioni D1 fino alla 0024. " + String(error);
     setBusy(true);

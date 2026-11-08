@@ -8,9 +8,9 @@ test("semantic comparison rejects invalid and incompatible vectors and never equ
  assert.equal(cosine([1],[1,2]),null);
  assert.equal(cosine([NaN,1],[1,1]),null);
  assert.equal(cosine([1,0],[0,1]),0);
- const item:SemanticVector={id:"new",title:"Paris protests 2026",description:"A new episode",model:"small",template_version:"1",vector:[1,0]};
+ const item:SemanticVector={id:"new",title:"Brussels protests 2026",description:"A new episode",model:"small",template_version:"1",vector:[1,0]};
  const history=[
-  {...item,id:"old",title:"Paris protests 2024",vector:[1,0]},
+  {...item,id:"old",title:"Brussels protests 2024",vector:[1,0]},
   {...item,id:"different-model",model:"large"},
   {...item,id:"different-template",template_version:"2"},
   {...item,id:"remote",vector:[0,1]},
@@ -19,7 +19,7 @@ test("semantic comparison rejects invalid and incompatible vectors and never equ
  const neighbors=semanticNeighbors(item,history);
  assert.deepEqual(neighbors.map(x=>x.id),["old","remote"]);
  assert.equal(neighbors[0].similarity,1);
- assert.equal(neighbors[0].title,"Paris protests 2024");
+ assert.equal(neighbors[0].title,"Brussels protests 2024");
  assert.equal("duplicate" in neighbors[0],false);
 });
 test("SLOP rotates frozen formats independently of REAL and varies the first format between topics",()=>{

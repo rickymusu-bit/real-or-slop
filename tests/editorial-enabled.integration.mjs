@@ -14,7 +14,7 @@ let searchMode='success',embeddingMode='success',descriptionMode='success',sugge
 const images=JSON.parse(spawnSync('python3',['-c',`import io,json,base64
 from PIL import Image
 out={}
-for name,size,color in [('owner',(240,360),'blue'),('commons',(480,320),'red'),('1536x1024',(1536,1024),'green'),('1024x1536',(1024,1536),'yellow'),('1024x1024',(1024,1024),'purple')]:
+for name,size,color in [('owner',(240,360),'blue'),('owner-link',(240,360),'cyan'),('owner-link-mobile',(240,360),'magenta'),('commons',(480,320),'red'),('1536x1024',(1536,1024),'green'),('1024x1536',(1024,1536),'yellow'),('1024x1024',(1024,1024),'purple')]:
  b=io.BytesIO();Image.new('RGB',size,color).save(b,'WEBP');out[name]=base64.b64encode(b.getvalue()).decode()
 for name,orientation,color in [('geometry-probe',6,'orange'),('legacy-desktop',6,'pink'),('legacy-mobile',8,'cyan'),('geometry-invalid',9,'gray')]:
  b=io.BytesIO();exif=Image.Exif();exif[274]=orientation;Image.new('RGB',(240,120),color).save(b,'JPEG',exif=exif);out[name]=base64.b64encode(b.getvalue()).decode()
@@ -23,8 +23,8 @@ const photo=name=>Buffer.from(images[name],'base64');
 const reply=value=>globalThis.Response.json({output:[{content:[{type:'output_text',text:JSON.stringify(value)}]}]});
 const plausible={coherent:true,specific:true,photographically_plausible:true,reason:'An understandable subject with photographically plausible visible activity.'};
 const topics=[
- {title:'Paris agricultural protests in 2026',description:'Farmers demonstrating in Paris during 2026.',rationale:'A distinct later episode.'},
- {title:'Farm demonstrations Paris 2024',description:'Agricultural workers protesting in Paris in 2024.',rationale:'A paraphrase of the historical topic.'},
+ {title:'Brussels agricultural protests in 2026',description:'Farmers demonstrating in Brussels during 2026.',rationale:'A distinct later episode.'},
+ {title:'Farm demonstrations Brussels 2024',description:'Agricultural workers protesting in Brussels in 2024.',rationale:'A paraphrase of the historical topic.'},
  {title:'Night work in coastal fish markets',description:'Fish vendors preparing coastal markets before sunrise.',rationale:'A photographically feasible new perspective.'}
 ].map(t=>({...t,assessment:plausible}));
 const nonsense={title:'Invisible arithmetic sleeps outside time',description:'A literal photograph of an abstract calculation sleeping outside time.',rationale:'Far from the catalog is not a reason to recommend it.',assessment:{...plausible,coherent:false,photographically_plausible:false,reason:'No coherent photographic subject.'}};
@@ -81,10 +81,10 @@ b=io.BytesIO();Image.new('RGB',(${w},${h}),(${imageSequence*61%255},${imageSeque
     const comparisons=JSON.parse(data.input[1].content[0].text);
     assert.ok(data.input[0].content.startsWith('First review coherence'));
     if(suggestionMode==='empty')assert.ok(comparisons.every(c=>c.neighbors.length===0 && c.batch_neighbors.length===1));
-    if(suggestionMode==='standard')assert.ok(comparisons.every(c=>c.neighbors.some(n=>n.title==='Paris agricultural protests in 2024')));
+    if(suggestionMode==='standard')assert.ok(comparisons.every(c=>c.neighbors.some(n=>n.title==='Brussels agricultural protests in 2024')));
     if(suggestionMode==='uncertain')return globalThis.Response.json({error:'review uncertain'},{status:503});
     if(suggestionMode==='invalid_review')return reply({decisions:comparisons.map(c=>({id:c.id,eligible:'true',duplicate:false,reason:'Malformed response must not admit a candidate.'}))});
-    return reply({decisions:comparisons.map(c=>({id:c.id,eligible:suggestionMode!=='remote',duplicate:c.title==='Farm demonstrations Paris 2024',reason:suggestionMode==='remote'?'An incoherent topic is not useful merely because it is distant.':c.title.includes('2026')?'Distinct year and episode':'Same topic paraphrased or new subject'}))});
+    return reply({decisions:comparisons.map(c=>({id:c.id,eligible:suggestionMode!=='remote',duplicate:c.title==='Farm demonstrations Brussels 2024',reason:suggestionMode==='remote'?'An incoherent topic is not useful merely because it is distant.':c.title.includes('2026')?'Distinct year and episode':'Same topic paraphrased or new subject'}))});
    }
    if(name==='commons_queries'){
     assert.ok(!JSON.stringify(data.input).includes('SEMANTIC_DESCRIPTION_SENTINEL'));
@@ -108,10 +108,14 @@ b=io.BytesIO();Image.new('RGB',(${w},${h}),(${imageSequence*61%255},${imageSeque
     if(searchMode==='failed' || searchMode==='partial' && url.searchParams.get('srsearch').includes('second'))return new globalThis.Response('fixture failure',{status:503});
     return globalThis.Response.json({query:{search:searchMode==='empty'?[]:[{title:'File:Fixture.jpg'}]}});
    }
-   return globalThis.Response.json({query:{pages:[{title:'File:Fixture.jpg',imageinfo:[{url:'https://upload.wikimedia.org/wikipedia/commons/a/ab/Fixture.webp',width:480,height:320,size:photo('commons').length,
+   const requestedFile=url.searchParams.get('titles');
+   const ownerMobile=requestedFile==='File:OwnerLinkMobile.jpg';
+   const ownerLink=requestedFile==='File:OwnerLinkDesktop.jpg' || ownerMobile;
+   return globalThis.Response.json({query:{pages:[{title:ownerLink?(ownerMobile?'File:OwnerLinkMobile.jpg':'File:OwnerLinkDesktop.jpg'):'File:Fixture.jpg',imageinfo:[{url:ownerLink?('https://upload.wikimedia.org/wikipedia/commons/a/ab/'+(ownerMobile?'OwnerLinkMobile.webp':'OwnerLink.webp')):'https://upload.wikimedia.org/wikipedia/commons/a/ab/Fixture.webp',
+    width:ownerLink?240:480,height:ownerLink?360:320,size:photo(ownerMobile?'owner-link-mobile':ownerLink?'owner-link':'commons').length,
     extmetadata:{Artist:{value:'Fixture author'},LicenseUrl:{value:'https://creativecommons.org/licenses/by/4.0/'}}}]}]}});
   }
-  if(url.hostname==='upload.wikimedia.org')return new globalThis.Response(photo('commons'),{headers:{'Content-Type':'image/webp'}});
+  if(url.hostname==='upload.wikimedia.org')return new globalThis.Response(photo(url.pathname.endsWith('/OwnerLinkMobile.webp')?'owner-link-mobile':url.pathname.endsWith('/OwnerLink.webp')?'owner-link':'commons'),{headers:{'Content-Type':'image/webp'}});
   throw Error('External network forbidden in fixtures: '+url.hostname);
  }
 }]}));
@@ -147,9 +151,9 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  await api(intel+'/suggest',{operation_id:emptyOp});assert.equal(calls.length,emptyCalls);
  await api(intel+'/topic-discovery/settings',{enabled:false});suggestionMode='standard';
  const originalCalls=calls.length;
- const original=await api(ws+'/topics',{title:'Paris agricultural protests in 2024',description:'Agricultural workers demonstrating in Paris during 2024.'},201);
+ const original=await api(ws+'/topics',{title:'Brussels agricultural protests in 2024',description:'Agricultural workers demonstrating in Brussels during 2024.'},201);
  assert.equal(original.embedding_status,'ready');assert.equal(calls.length,originalCalls+1);
- await api(ws+'/topics',{title:'Paris agricultural protests in 2024'},200);assert.equal(calls.length,originalCalls+1);
+ await api(ws+'/topics',{title:'Brussels agricultural protests in 2024'},200);assert.equal(calls.length,originalCalls+1);
  const legacyId=globalThis.crypto.randomUUID();
  await db.prepare("INSERT INTO editorial_workspace_topics VALUES(?,?,?,?)").bind(legacyId,'An old unindexed owner topic','an old unindexed owner topic','2024').run();
  const pendingCalls=calls.length;
@@ -157,11 +161,11 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  assert.ok(indexed.some(r=>r.embedding_status==='ready'));
  assert.equal(calls.length,pendingCalls+1,'Concurrent backfill must embed once');
  const prior=(await api(ws)).topics.find(t=>t.id===original.id);
- await api(ws+'/topics/'+original.id+'/semantics',{description:'Farmers protesting in Paris in 2024, during a specific episode.',expected_sha256:prior.input_sha256});
+ await api(ws+'/topics/'+original.id+'/semantics',{description:'Farmers protesting in Brussels in 2024, during a specific episode.',expected_sha256:prior.input_sha256});
  assert.equal((await db.prepare('SELECT count(*) AS n FROM editorial_topic_semantic_history').first()).n,1);
  await api(ws+'/topics/'+original.id+'/semantics',{description:'A stale overwrite',expected_sha256:prior.input_sha256},409);
  const revised=(await api(ws)).topics.find(t=>t.id===original.id),beforeRestore=calls.length;
- await api(ws+'/topics/'+original.id+'/semantics',{description:'Agricultural workers demonstrating in Paris during 2024.',expected_sha256:revised.input_sha256});
+ await api(ws+'/topics/'+original.id+'/semantics',{description:'Agricultural workers demonstrating in Brussels during 2024.',expected_sha256:revised.input_sha256});
  assert.equal(calls.length,beforeRestore,'Restoring an archived vector must not bill again');
  embeddingMode='uncertain';
  const uncertain=await api(ws+'/topics',{title:'Uncertain provider receipt topic',description:'A fixture testing uncertain embedding receipts.'},201);
