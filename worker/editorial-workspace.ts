@@ -215,7 +215,8 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
 // Only topics without photographs, paid jobs, frozen SLOP prompts or immutable audit rows can be removed;
 // those records are never deleted or orphaned here. The normalized title becomes free again.
 const topicRemovalBlockers:[string,string][]=([
-  ["editorial_workspace_proposals","topic_id=?1","proposte di fotografie"],
+  // v1.1.0 (2026-11-08T21:00:00Z, spec lotti 1.4.0): unacquired links no longer block; photos do.
+  ["editorial_workspace_proposals p","p.topic_id=?1 AND (p.kind<>'link' OR p.inbox_id IS NOT NULL OR EXISTS(SELECT 1 FROM editorial_workspace_acquisitions a WHERE a.proposal_id=p.id))","fotografie caricate o acquisite"],
   ["editorial_topic_explorations","topic_id=?1","ricerche GPT"],
   ["editorial_slop_prompt_bank","topic_id=?1","prompt SLOP congelati"],
   ["editorial_workspace_jobs","topic_id=?1","operazioni AI registrate"],
@@ -236,18 +237,32 @@ export async function removeUnusedTopic(env:Env,topicId:string,data:Record<strin
   if(found.length)throw new HttpError(409,"Argomento non rimovibile perché collegato a: "+found.join(", ")+". Nessun dato è stato cancellato.");
   // Every statement repeats the guard so a concurrent change aborts the whole removal instead of leaving it half done.
   const guarded=(sql:string)=>env.DB.prepare(sql+" AND "+topicUnused).bind(topic.id);
+  // The append-only snapshot comes first: migration 0030 lets unacquired link rows go only after it exists.
+  const snapshot=env.DB.prepare(`INSERT INTO editorial_lot_removals(topic_id,title,normalized_key,snapshot_json,removed_at)
+    SELECT t.id,t.title,t.normalized_key,json_object('version','1.0.0','created_at',t.created_at,
+      'notes',(SELECT notes FROM editorial_lots WHERE topic_id=t.id),
+      'semantic_description',(SELECT description FROM editorial_topic_semantics WHERE topic_id=t.id),
+      'proposals',json((SELECT json_group_array(json_object('id',p.id,'source_url',p.source_url,'note',p.note,'created_at',p.created_at,
+        'dismissed_at',d.created_at,'dismiss_reason',d.reason)) FROM editorial_workspace_proposals p
+        LEFT JOIN editorial_workspace_proposal_dismissals d ON d.proposal_id=p.id WHERE p.topic_id=t.id)),
+      'note_events',json((SELECT json_group_array(json_object('revision',e.revision,'value',e.value,'created_at',e.created_at))
+        FROM editorial_lot_events e WHERE e.topic_id=t.id))),?2
+    FROM editorial_workspace_topics t WHERE t.id=?1 AND `+topicUnused).bind(topic.id,new Date().toISOString());
   const result=await env.DB.batch([
+    snapshot,
     guarded("UPDATE editorial_topic_description_drafts SET topic_id=NULL WHERE topic_id=?1"),
     guarded("UPDATE editorial_topic_description_jobs SET topic_id=NULL WHERE topic_id=?1"),
     guarded("DELETE FROM editorial_topic_semantics WHERE topic_id=?1"),
     guarded("DELETE FROM editorial_topic_slop_seed WHERE topic_id=?1"),
     guarded("DELETE FROM editorial_workspace_manual_stage WHERE topic_id=?1"),
+    guarded("DELETE FROM editorial_workspace_proposal_dismissals WHERE proposal_id IN (SELECT id FROM editorial_workspace_proposals WHERE topic_id=?1)"),
+    guarded("DELETE FROM editorial_workspace_proposals WHERE topic_id=?1"),
     guarded("DELETE FROM editorial_lot_events WHERE topic_id=?1"),
     guarded("DELETE FROM editorial_lots WHERE topic_id=?1"),
     guarded("DELETE FROM editorial_workspace_topics WHERE id=?1")
   ]);
   if(!result[result.length-1].meta.changes)throw new HttpError(409,"Argomento modificato durante la rimozione: ricaricare");
-  return {removed:true,id:topic.id,title:topic.title,paid_calls_started:false};
+  return {removed:true,id:topic.id,title:topic.title,removed_links:result[result.length-4].meta.changes,paid_calls_started:false};
 }
 
 // v1.0.0 (2026-11-08T20:00:26Z): editorial lots, phase 1 of docs/lotti-editoriali.v1.3.1.md.

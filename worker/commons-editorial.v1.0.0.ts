@@ -11,6 +11,15 @@ export interface CommonsFile {
   /** Selected context for the future lot planner (spec lotti 1.3.1, section 5.2); unverified claims. */
   categories: string[]; date: string;
 }
+/** Wikimedia rejects automated requests without an identifying User-Agent; Workers send none by default.
+ * v1.2.0 (2026-11-08T21:00:00Z). Contact is the public site, never a personal address. */
+export const COMMONS_HEADERS = {
+  "User-Agent": "RealOrSlop/0.24 (https://real-or-slop.rickymusu.workers.dev; owner curation tool) Cloudflare-Worker",
+  "Api-User-Agent": "RealOrSlop/0.24 (https://real-or-slop.rickymusu.workers.dev; owner curation tool)",
+};
+function commonsUnavailable(what: string, status: number): HttpError {
+  return new HttpError(502, what + " (HTTP " + status + "): riprova più tardi");
+}
 const allowedHosts = new Set(["commons.wikimedia.org","upload.wikimedia.org","thumb.wikimedia.org"]);
 const imageExt = /\.(?:jpe?g|png|webp)$/i;
 function decodeName(value: string) {
@@ -59,8 +68,8 @@ async function bounded(url: string, max = MAX_IMAGE_BYTES): Promise<{bytes:Array
   if (u.protocol !== "https:" || u.hostname !== "upload.wikimedia.org" ||
       !u.pathname.startsWith("/wikipedia/commons/") || u.username || u.password || u.port)
     throw new HttpError(400,"Download non consentito dal provider");
-  const response = await fetch(u.href,{redirect:"manual",headers:{"Accept":"image/jpeg,image/png,image/webp"}});
-  if (response.status !== 200 || !response.body) throw new HttpError(502,"Immagine Commons non raggiungibile");
+  const response = await fetch(u.href,{redirect:"manual",headers:{...COMMONS_HEADERS,"Accept":"image/jpeg,image/png,image/webp"}});
+  if (response.status !== 200 || !response.body) throw commonsUnavailable("Immagine Commons non raggiungibile", response.status);
   const length = Number(response.headers.get("content-length") || 0);
   if (length > max) throw new HttpError(413,"File Commons troppo grande");
   const reader = response.body.getReader();
@@ -83,8 +92,8 @@ async function bounded(url: string, max = MAX_IMAGE_BYTES): Promise<{bytes:Array
 }
 export async function commonsFile(value: string): Promise<CommonsFile> {
   const title = value.startsWith("File:") ? "File:" + decodeName(value.slice(5)) : commonsFileTitle(value);
-  const response = await fetch(commonsApiUrl(title),{redirect:"manual",headers:{"Accept":"application/json"}});
-  if (response.status !== 200) throw new HttpError(502,"API Commons non disponibile");
+  const response = await fetch(commonsApiUrl(title),{redirect:"manual",headers:{...COMMONS_HEADERS,"Accept":"application/json"}});
+  if (response.status !== 200) throw commonsUnavailable("API Commons non disponibile", response.status);
   const info = await response.json() as { query?: { pages?: Array<{title?:string;imageinfo?:Array<{
     url?:string;thumburl?:string;width?:number;height?:number;size?:number;
     extmetadata?:Record<string,{value?:string}>
@@ -114,8 +123,8 @@ export async function searchCommons(query:string,limit=12): Promise<string[]> {
   const url = new URL("https://commons.wikimedia.org/w/api.php");
   for (const [k,v] of Object.entries({action:"query",format:"json",formatversion:"2",list:"search",srnamespace:"6",
     srlimit:String(limit),srsearch:query})) url.searchParams.set(k,v);
-  const response = await fetch(url.href,{redirect:"manual",headers:{"Accept":"application/json"}});
-  if (response.status!==200) throw new HttpError(502,"Ricerca Commons non disponibile");
+  const response = await fetch(url.href,{redirect:"manual",headers:{...COMMONS_HEADERS,"Accept":"application/json"}});
+  if (response.status!==200) throw commonsUnavailable("Ricerca Commons non disponibile", response.status);
   const data = await response.json() as {query?:{search?:Array<{title?:string}>}};
   return (data.query?.search || []).map(x=>x.title || "").filter(x=>/^File:.+\.(jpe?g|png|webp)$/i.test(x)).slice(0,limit);
 }
@@ -142,8 +151,8 @@ async function browse(params: Record<string, string>, continueKey: string): Prom
   for (const [k, v] of Object.entries({ action: "query", format: "json", formatversion: "2", prop: "imageinfo|categories", clshow: "!hidden", cllimit: "max",
     iiprop: "url|size|extmetadata", iiurlwidth: "320", iiextmetadatafilter: "Artist|LicenseShortName",
     iiextmetadatalanguage: "en", ...params })) url.searchParams.set(k, v);
-  const response = await fetch(url.href, { redirect: "manual", headers: { "Accept": "application/json" } });
-  if (response.status !== 200) throw new HttpError(502, "Commons non disponibile: riprova più tardi");
+  const response = await fetch(url.href, { redirect: "manual", headers: { ...COMMONS_HEADERS, "Accept": "application/json" } });
+  if (response.status !== 200) throw commonsUnavailable("Commons non disponibile", response.status);
   const data = await response.json() as { query?: { pages?: BrowsePage[]; search?: Array<{ title?: string }>;
     categorymembers?: Array<{ title?: string }> }; continue?: Record<string, string> };
   const pages = [...(data.query?.pages || [])].sort((a, b) => (a.index || 0) - (b.index || 0));

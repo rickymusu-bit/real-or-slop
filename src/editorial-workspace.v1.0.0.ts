@@ -27,7 +27,7 @@ export async function mountEditorialWorkspace() {
     '<p id="workspace-topic-status" role="status" aria-live="polite"></p>' +
     '<label>Lotto corrente<select id="workspace-topic-select" aria-label="Lotto corrente"></select></label>' +
     '<form id="workspace-lot-notes-form"><h2>Note del lotto corrente</h2><p id="workspace-lot-state"></p><label>Note per la generazione<textarea name="notes" maxlength="500" rows="3"></textarea></label><button type="submit">Salva note</button><p class="workspace-hint">Le note precedenti restano nello storico. Nessuna chiamata a pagamento.</p></form>' +
-    '<div id="workspace-topic-removal"><button type="button" id="workspace-topic-remove">Rimuovi lotto inutilizzato</button><p class="workspace-hint">Rimuove soltanto lotti senza fotografie, link, ricerche, prompt SLOP o operazioni AI registrate, liberando il titolo. I lotti con lavoro collegato restano intatti.</p></div>' +
+    '<div id="workspace-topic-removal"><button type="button" id="workspace-topic-remove">Rimuovi lotto inutilizzato</button><p class="workspace-hint">Rimuove lotti senza fotografie caricate o acquisite, ricerche, prompt SLOP o operazioni AI registrate, liberando il titolo. I link mai acquisiti vengono rimossi con il lotto e restano nello storico delle rimozioni.</p></div>' +
     '<section id="workspace-commons-explorer"><h2>Esplora Commons</h2>'+
     '<form id="workspace-commons-search"><label>Cerca fotografie o categorie<input name="q" minlength="2" maxlength="200" required placeholder="Es. Venice canals"></label><button type="submit">Cerca</button></form>'+
     '<p id="workspace-commons-context" class="workspace-hint"></p><div id="workspace-commons-categories"></div><div id="workspace-commons-results"></div>'+
@@ -100,7 +100,7 @@ export async function mountEditorialWorkspace() {
   select.addEventListener("change", renderProposals);
   section.querySelector<HTMLButtonElement>('#workspace-topic-remove')!.addEventListener('click',async()=>{
     const topic=workspace.topics.find(t=>t.id===select.value);if(!topic || busy)return;
-    if(!window.confirm('Rimuovere definitivamente «'+topic.title+'»? Funziona solo se il lotto non ha fotografie, link, ricerche o operazioni AI collegate. Nessuna chiamata a pagamento.'))return;
+    if(!window.confirm('Rimuovere definitivamente «'+topic.title+'»? I link mai acquisiti vengono rimossi con il lotto e restano nello storico. Non funziona se il lotto ha fotografie caricate o acquisite, ricerche o operazioni AI. Nessuna chiamata a pagamento.'))return;
     setBusy(true);status.textContent='Rimozione del lotto…';
     try{
       await api("/admin/editorial/workspace/topics/"+encodeURIComponent(topic.id)+"/remove",{method:"POST",body:JSON.stringify({title:topic.title})});
