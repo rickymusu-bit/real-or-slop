@@ -4,6 +4,7 @@ import { ensureSlopSeed } from "./editorial-learning.v1.0.0";
 import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
 import { createTopicSemantics, embedTopicOnSubmission, embeddingConfig, DEFAULT_TOPIC_EMBEDDING_MODEL, semanticTopicDescription, semanticTopicText } from "./topic-semantic-memory.v1.0.0";
 import { hash } from "./core";
+import { approveDescription, cancelDescription, descriptionDraft, proposeDescription, publicDraft } from "./topic-description.v1.0.0";
 
 const base = "/api/admin/editorial/workspace";
 type TopicRow = { id: string; title: string; normalized_key: string; created_at: string; description: string | null; embedding_status: string | null };
@@ -31,15 +32,40 @@ async function existingTopic(env: Env, topicId: string) {
 }
 export async function editorialWorkspace(request: Request, env: Env, path: string): Promise<Response> {
   if (path === base && request.method === "GET") {
-    const [topics, proposals] = await Promise.all([
+    const [topics, proposals,drafts] = await Promise.all([
       env.DB.prepare("SELECT t.id,t.title,t.normalized_key,t.created_at,s.description,s.embedding_status,s.input_sha256,s.error_code FROM editorial_workspace_topics t LEFT JOIN editorial_topic_semantics s ON s.topic_id=t.id ORDER BY t.created_at DESC,t.id DESC").all<TopicRow>(),
       env.DB.prepare("SELECT p.id,p.topic_id,p.kind,p.source_url,COALESCE(p.inbox_id,a.inbox_id) AS inbox_id,p.note,p.created_at,i.status AS review_status FROM editorial_workspace_proposals p LEFT JOIN editorial_workspace_acquisitions a ON a.proposal_id=p.id LEFT JOIN editorial_review_inbox i ON i.id=COALESCE(p.inbox_id,a.inbox_id) ORDER BY p.created_at DESC,p.id DESC LIMIT 1000").all<ProposalRow>(),
+      env.DB.prepare("SELECT id,title,status,description,ambiguity,proposal_sha256 FROM editorial_topic_description_drafts WHERE status IN ('ready','preparing','uncertain','failed') ORDER BY created_at DESC LIMIT 30").all(),
     ]);
     let embeddingReady=false;
     try{embeddingReady=!!embeddingConfig(env);}catch{ /* expose unconfigured state without losing topics */ }
-    return json({ topics: topics.results, proposals: proposals.results, embedding_enabled:embeddingReady,
+    return json({ topics: topics.results, proposals: proposals.results,description_drafts:drafts.results,
+      description_cost:env.REAL_DISCOVERY_CALL_USD || null,embedding_enabled:embeddingReady,
       embedding_cost:env.TOPIC_EMBEDDING_CALL_USD || null, paid_search_enabled: false,
       slop_generation_enabled: false, autonomous_suggestions_enabled: false });
+  }
+  const descriptionPath=path.match(/^\/api\/admin\/editorial\/workspace\/topic-descriptions\/([a-f0-9-]{36})(?:\/(approve|regenerate|cancel))?$/i);
+  if(descriptionPath){
+    const [,draftId,action]=descriptionPath;
+    if(!action && request.method==="GET")return json({proposal:publicDraft(await descriptionDraft(env,draftId))});
+    if(request.method!=="POST" || !action)throw new HttpError(405,"Operazione bozza non consentita");
+    const data=await body(request,3000);
+    const allowed=action==="approve"?["title","description","expected_sha256"]:
+      action==="regenerate"?["title","expected_sha256","operation_id"]:["title","expected_sha256"];
+    if(Object.keys(data).some(k=>!allowed.includes(k)))throw new HttpError(400,"Campi bozza non previsti");
+    let title:string;
+    try{title=topicTitle(data.title);}catch(error){return invalid(error);}
+    if(action==="cancel"){
+      await cancelDescription(env,draftId,title,data.expected_sha256);return json({cancelled:true});
+    }
+    if(action==="regenerate")return json({proposal:await proposeDescription(env,title,data.operation_id,{id:draftId,expected:data.expected_sha256})},202);
+    const saved=await approveDescription(env,draftId,title,data.description,data.expected_sha256);
+    await ensureSlopSeed(env,saved);
+    const previous=saved.already_exists?await env.DB.prepare("SELECT embedding_status FROM editorial_topic_semantics WHERE topic_id=?")
+      .bind(saved.id).first<{embedding_status:string}>():null;
+    const embeddingStatus=saved.already_exists?(previous?.embedding_status || "pending"):
+      await createTopicSemantics(env,saved.id,saved.title,saved.description);
+    return json({...saved,embedding_status:embeddingStatus},saved.already_exists?200:201);
   }
   if(path===base+"/manual-stage" && request.method==="POST"){
     const data=await body(request,500);
@@ -77,7 +103,7 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
   }
   if (path === base + "/topics" && request.method === "POST") {
     const data = await body(request, 3000);
-    if (Object.keys(data).some(key => !["title","description"].includes(key))) throw new HttpError(400, "Campi argomento non previsti");
+    if (Object.keys(data).some(key => !["title","description","operation_id"].includes(key))) throw new HttpError(400, "Campi argomento non previsti");
     let title: string, key: string, description: string;
     try { title = topicTitle(data.title); key = topicKey(title); description = semanticTopicDescription(data.description); }
     catch (error) { return invalid(error); }
@@ -87,6 +113,7 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
         .bind(existing.id).first<{embedding_status:string}>();
       return json({ ...existing, already_exists: true,embedding_status:semantic?.embedding_status||"not_indexed" });
     }
+    if(!description)return json({proposal:await proposeDescription(env,title,data.operation_id)},202);
     const topic = { id: id(), title, normalized_key: key, created_at: new Date().toISOString() };
     try {
       await env.DB.prepare("INSERT INTO editorial_workspace_topics(id,title,normalized_key,created_at) VALUES(?,?,?,?)")

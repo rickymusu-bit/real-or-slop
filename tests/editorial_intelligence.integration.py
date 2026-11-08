@@ -50,7 +50,10 @@ assert call(prefix)[1]["topic_discovery_enabled"] is False
 assert call(prefix+"/suggest",{"operation_id":str(uuid.uuid4())})[0]==409
 assert not [job for job in call(prefix)[1]["jobs"] if job["kind"]=="suggest"]
 title="Proteste a Parigi, ottobre 2026 "+uuid.uuid4().hex[:8]
-code,created=call("/api/admin/editorial/workspace/topics",{"title":title})
+code,unavailable=call("/api/admin/editorial/workspace/topics",{"title":title,"operation_id":str(uuid.uuid4())})
+assert code==503,(code,unavailable)
+assert all(t['title']!=title for t in call('/api/admin/editorial/workspace')[1]['topics'])
+code,created=call("/api/admin/editorial/workspace/topics",{"title":title,"description":"Owner-supplied description without a model call."})
 assert code==201,(code,created)
 uid=created["id"]
 assert created["embedding_status"]=="pending",created
@@ -96,7 +99,7 @@ assert card["details"]["original_sha256"]==saved["sha256"]
 assert card["details"]["topic_id"]==uid
 # Candidates from another topic must not pollute a selected topic's REAL ranking.
 code,other=call("/api/admin/editorial/workspace/topics",{
-    "title":"Street photography in Tokyo, November 2026 "+uuid.uuid4().hex[:8]})
+    "title":"Street photography in Tokyo, November 2026 "+uuid.uuid4().hex[:8],"description":"Owner-supplied street photography topic."})
 assert code==201,(code,other)
 current=call(prefix+"?topic_id="+uid)[1]
 unrelated=call(prefix+"?topic_id="+other["id"])[1]
