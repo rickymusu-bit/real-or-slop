@@ -1,3 +1,7 @@
+## 0.23.1 — 2026-11-08T15:35:00Z (proposta, non pubblicata)
+
+- Pulsante «Rimuovi argomento inutilizzato» spostato fuori dal form della memoria semantica: il form conserva un solo pulsante (correzione della E2E browser fallita in CI).
+
 ## 0.23.0 — 2026-11-08T15:40:00Z (proposta, non pubblicata)
 
 - Azione admin «Rimuovi argomento inutilizzato» (`POST /api/admin/editorial/workspace/topics/:id/remove`) con conferma esplicita del titolo.
