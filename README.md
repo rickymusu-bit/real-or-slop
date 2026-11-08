@@ -1,5 +1,9 @@
 # Real or Slop
 
+La dashboard privata mostra il budget AI condiviso e permette di reimpostarlo
+all’importo configurato sul server, conservando prenotazioni e storico.
+[Funzionamento e limiti](docs/budget-dashboard.v1.0.0.md).
+
 [Istruzioni Codex](AGENTS.md) · [Mappa canonica e contratti correnti](MASTER.md) ·
 [Indice vigente/proposta/storica/archivio](docs/indice-documentazione.v1.5.0.md).
 L'[audit #57](docs/audit-architettura.v1.0.0.md) distingue main dalle PR in bozza;

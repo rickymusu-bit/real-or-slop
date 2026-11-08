@@ -44,3 +44,4 @@
 .editorial-intelligence .intel-discovery-control strong { font-size:13px; font-weight:600; }
 .editorial-intelligence .intel-discovery-control button { font-size:13px; }
 @media(max-width:650px) { .editorial-intelligence .intel-discovery-control button { width:100%; } }
+.intel-budget{margin:1rem 0;padding:1rem;border:1px solid var(--hairline);border-radius:12px;background:var(--surface)}.intel-budget h3{margin-top:0}.intel-budget p{overflow-wrap:anywhere}.intel-budget details{margin-top:1rem}

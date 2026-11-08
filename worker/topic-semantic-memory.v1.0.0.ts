@@ -60,12 +60,12 @@ export async function embedTopicOnSubmission(env:Env,topicId:string,target:Seman
   const run="topic-"+await hash(target+topicId+row.input_sha256+config.model),day=new Date().toISOString().slice(0,10),now=new Date().toISOString();
   const result=await env.DB.prepare(`INSERT OR IGNORE INTO editorial_usage
     SELECT ?,?,?,?,?,? WHERE
-    round(COALESCE((SELECT sum(reserved_usd) FROM editorial_usage),0)+?,6)<=? AND
-    round(COALESCE((SELECT sum(reserved_usd) FROM editorial_usage WHERE day=?),0)+?,6)<=? AND
+    round(COALESCE((SELECT sum(reserved_usd) FROM editorial_budget_usage),0)+?,6)<=COALESCE((SELECT allowance_usd FROM editorial_budget_current),?) AND
+    round(COALESCE((SELECT sum(reserved_usd) FROM editorial_budget_usage WHERE day=?),0)+?,6)<=? AND
     (SELECT count(*) FROM editorial_usage WHERE run_id=?)=0`)
     .bind(reservationId,run,day,"evaluation",config.cost,now,
       config.cost,config.total,day,config.cost,config.daily,run).run();
-  if(result.meta.changes!==1){
+  if(!result.meta.changes){
     // No extra request if the reservation has already been used, or the budget is exhausted.
     const previous=await env.DB.prepare("SELECT id FROM editorial_usage WHERE id=?")
       .bind(reservationId).first<{id:string}>();
