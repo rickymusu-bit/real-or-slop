@@ -3,10 +3,11 @@ import { profileTags, preferenceScore, rankEditorial, reliableFeedback,
   type PreferenceRow, type Origin, type Profile } from "../shared/editorial-intelligence.v1.0.0";
 import { isolatedSlopPlanningInput } from "../shared/editorial-workspace.v1.0.0";
 import { slopPromptFeedbackSignal } from "../shared/slop-feedback-policy.v1.0.0";
+import { snapshotJsonChunks } from "../shared/preference-snapshot.v1.0.0";
 
 interface Feedback {
   inbox_id: string; sha256:string; origin: Origin; profile_json:string;
-  decision:string; note:string;
+  decision:string; note:string;event_id:string;revision:number;created_at:string;profile_model:string;profile_created_at:string;
 }
 function editorialReason(raw:string):string {
   try { const obj = JSON.parse(raw) as {reason?: unknown}; return typeof obj.reason==="string" ? obj.reason : "editorial"; }
@@ -15,13 +16,14 @@ function editorialReason(raw:string):string {
 export interface Learned {
   observations:number; counts:PreferenceRow[]; approved:number; rejected:number;
   updated_at:string; version:string;
+  snapshot_id:string;
 }
 export async function learnedPreferences(env:Env,origin:Origin):Promise<Learned> {
-  const sql = "SELECT p.inbox_id,p.sha256,p.origin,p.profile_json,e.decision,e.note " +
+  const sql = "SELECT p.inbox_id,p.sha256,p.origin,p.profile_json,p.model AS profile_model,p.created_at AS profile_created_at,e.id AS event_id,e.revision,e.created_at,e.decision,e.note " +
     "FROM editorial_image_profiles p JOIN editorial_review_effective_images q ON q.id=p.inbox_id " +
     "JOIN editorial_review_inbox_events e ON e.image_id=q.id AND e.revision=q.revision AND e.image_sha256=q.sha256 " +
     "WHERE p.origin=? AND q.origin=? AND q.sha256=p.sha256 AND q.status IN ('approved','rejected') " +
-    "ORDER BY e.created_at DESC LIMIT 3000";
+    "ORDER BY e.created_at DESC,e.id DESC LIMIT 3000";
   const result = await env.DB.prepare(sql).bind(origin,origin).all<Feedback>();
   const counts = new Map<string,PreferenceRow>(); let approved=0,rejected=0;
   for (const row of result.results) {
@@ -35,11 +37,34 @@ export async function learnedPreferences(env:Env,origin:Origin):Promise<Learned>
       counts.set(feature,entry);
     }
   }
-  return {observations:approved+rejected,approved,rejected,counts:[...counts.values()].sort((a,b)=>a.feature.localeCompare(b.feature)),
-    updated_at:new Date().toISOString(),version:"1.0.0"};
+  const sources=await Promise.all(result.results.map(async row=>({
+    inbox_id:row.inbox_id,sha256:row.sha256,revision:row.revision,event_id:row.event_id,
+    decision:row.decision,reason:editorialReason(row.note),used:reliableFeedback(editorialReason(row.note),row.decision),
+    features:profileTags(JSON.parse(row.profile_json)).sort(),profile_sha256:await hash(row.profile_json),
+    profile_model:row.profile_model,profile_created_at:row.profile_created_at,reviewed_at:row.created_at
+  })));
+  sources.sort((a,b)=>a.inbox_id.localeCompare(b.inbox_id)||a.event_id.localeCompare(b.event_id));
+  const state={observations:approved+rejected,approved,rejected,counts:[...counts.values()].sort((a,b)=>a.feature.localeCompare(b.feature)),
+    version:"1.0.0",parameters:{prior_approved:2,prior_rejected:2,exploratory_every:5,maximum_feedback_rows:3000}};
+  const snapshotId=await hash(JSON.stringify({origin,state,sources})),created=new Date().toISOString();
+  const sourceUpdated=sources.flatMap(s=>[s.reviewed_at,s.profile_created_at]).filter(s=>/^\d{4}-\d\d-\d\dT/.test(s)).sort().at(-1) || null;
+  const prior=await env.DB.prepare("SELECT created_at FROM editorial_preference_snapshots WHERE id=?")
+    .bind(snapshotId).first<{created_at:string}>();
+  if(!prior){
+    const metadata={...state,counts:undefined};
+    const statements=[env.DB.prepare("INSERT OR IGNORE INTO editorial_preference_snapshots VALUES(?,?,?,?,?,?,?,?,?,?)")
+      .bind(snapshotId,origin,state.version,state.observations,approved,rejected,JSON.stringify(metadata),sources.length,sourceUpdated,created)];
+    for(const [kind,items] of [['counts',state.counts],['sources',sources]] as const)
+      snapshotJsonChunks([...items]).forEach((chunk,slot)=>statements.push(env.DB.prepare("INSERT OR IGNORE INTO editorial_preference_snapshot_chunks VALUES(?,?,?,?)")
+        .bind(snapshotId,kind,slot,chunk)));
+    await env.DB.batch(statements);
+  }
+  const stored=await env.DB.prepare("SELECT created_at FROM editorial_preference_snapshots WHERE id=?")
+    .bind(snapshotId).first<{created_at:string}>();
+  return {...state,updated_at:sourceUpdated || stored?.created_at || created,snapshot_id:snapshotId};
 }
-export async function rankPending(env:Env,origin:Origin,topicId?:string|null) {
-  const preference=await learnedPreferences(env,origin);
+export async function rankPending(env:Env,origin:Origin,topicId?:string|null,knownPreference?:Learned) {
+  const preference=knownPreference || await learnedPreferences(env,origin);
   const rows=(await env.DB.prepare("SELECT q.id,q.sha256,q.origin,p.profile_json,r.assessment_json " +
     "FROM editorial_review_effective_images q LEFT JOIN editorial_image_profiles p " +
     "ON p.inbox_id=q.id AND p.sha256=q.sha256 LEFT JOIN editorial_topic_semantics s ON s.topic_id=json_extract(q.metadata_json,'$.topic_id') " +

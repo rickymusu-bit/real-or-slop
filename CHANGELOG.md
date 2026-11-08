@@ -1,3 +1,9 @@
+## 0.19.0 — 2026-11-08T03:46:09Z (completamento #64)
+
+- Snapshot immutabili separati REAL/SLOP, riferimenti ai voti/profili, parametri e conteggi; cronologia privata e ricostruzione dello stato usato dai ranker, con tracce suddivise entro i limiti D1.
+- Audit EXIF delle otto orientazioni, dimensioni codificate/display separate e diagnostica per metadata non risolvibili. Lettura esplicita dei file storici senza modificare originali, hash o voti.
+- Migrazione additiva 0026, frontend desktop/mobile, regressioni su immutabilità, concorrenza, correzione dei voti e byte EXIF.
+
 ## 0.18.0 — 2026-11-08T02:30:59Z (proposta, non rilasciata)
 
 - #64: prima stime strutturate di coerenza/specificità/plausibilità, poi embedding e revisione dei duplicati; proposte escluse o incerte restano separate dai voti umani.

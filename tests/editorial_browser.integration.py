@@ -39,6 +39,13 @@ with sync_playwright() as p:
             page.locator('[data-intel=toggle-discovery]').click()
             expect(page.locator('[data-intel=toggle-discovery]')).to_have_text('Attiva Topic Discovery')
             form=page.locator('#workspace-topic-form')
+            formats=page.locator('#intel-format-audit')
+            formats.locator('summary').click()
+            unknown=page.locator('#intel-format-unknown article').filter(has_text='legacy-'+name)
+            unknown.locator('[data-intel=geometry]').click()
+            expect(page.locator('#intel-status')).to_contain_text('"orientation_status":"explicit"')
+            expect(unknown).to_have_count(0)
+            formats.screenshot(path=str(folder/(name+'-exif-audit.png')))
             # #78: title-only first shows an editable private proposal. Reload can resume it.
             draft_title='Browser ambiguous topic '+name
             form.locator('input[name=title]').fill(draft_title)
@@ -117,6 +124,14 @@ with sync_playwright() as p:
             voted_title=page.locator('#visual-queue h2').inner_text()
             page.locator('[data-visual-decision=approved]').click()
             expect(page.locator('#review-message')).to_contain_text('Approvata')
+            preferences=page.locator('#intel-preference-audit')
+            preferences.locator('summary').click()
+            page.locator('#intel-preference-origin').select_option('REAL')
+            expect(page.locator('#intel-preference-snapshots article').first).to_contain_text('REAL')
+            page.locator('[data-intel=snapshot-detail]').first.click()
+            expect(page.locator('#intel-snapshot-detail')).to_contain_text('"origin": "REAL"')
+            expect(page.locator('#intel-snapshot-detail')).to_contain_text('"sources"')
+            preferences.screenshot(path=str(folder/(name+'-preference-history.png')))
             # Voted image disappears from ranking and SLOP capacity updates without reloading.
             expect(page.locator('#intel-overview')).to_contain_text('1 sulla base dei voti correnti')
             page.locator('[data-intel=plan]').click()
