@@ -24,6 +24,8 @@ with sync_playwright() as p:
             page.on('dialog',lambda dialog:dialog.dismiss() if dialog_answers['cancel'] else dialog.accept())
             page.goto(base+'admin')
             expect(page.locator('.admin-dashboard')).to_be_visible()
+            assert not page.locator('main').evaluate("el=>el.classList.contains('admin-bootstrapping')")
+            expect(page.locator('#workspace-topic-form input[name=title]')).to_have_attribute('placeholder','Es. Vita quotidiana nei mercati di quartiere')
             expect(page.locator('#admin-overview')).to_be_visible()
             expect(page.locator('#editorial-workspace')).to_be_hidden()
             expect(page.locator('#admin-stat-mode')).to_contain_text('Demo')
@@ -124,9 +126,13 @@ with sync_playwright() as p:
             expect(page.locator('#workspace-status')).to_contain_text('Stato embedding: ready')
             page.get_by_role('button',name='Produzione immagini',exact=True).click()
             link=page.locator('#workspace-link-form')
-            link.locator('input[type=url]').fill('https://example.org/'+name+'/photo.jpg')
+            link.locator('textarea[name=source_urls]').fill('https://example.org/'+name+'/photo.jpg\nhttps://example.org/'+name+'/photo2.jpg')
             link.locator('button').click()
-            expect(page.locator('#workspace-status')).to_contain_text('ancora da acquisire')
+            expect(page.locator('#workspace-link-feedback')).to_contain_text('2 link registrati')
+            link.locator('textarea[name=source_urls]').fill('https://example.org/'+name+'/photo.jpg')
+            link.locator('button').click()
+            expect(page.locator('#workspace-link-feedback')).to_contain_text('1 già presenti')
+            assert page.locator('#workspace-proposals .workspace-proposal').count()==2
             files=[]
             for index,size in enumerate([(180,320),(900,180)]):
                 buffer=io.BytesIO()
@@ -225,6 +231,13 @@ with sync_playwright() as p:
             expect(page.locator('#cycle-state-result')).to_contain_text('Pubblicate 1 REAL e 1 SLOP')
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'),name+' publication has horizontal overflow'
             page.locator('#cycle-state-result').screenshot(path=str(folder/(name+'-publication.png')))
+            page.get_by_role('button',name='Produzione immagini',exact=True).click()
+            link.locator('textarea[name=source_urls]').fill('https://commons.wikimedia.org/wiki/File:Fixture.jpg')
+            link.locator('button').click()
+            expect(page.locator('#workspace-link-feedback')).to_contain_text('1 link registrati')
+            page.locator('#workspace-proposals [data-workspace-acquire]').click()
+            expect(page.locator('#workspace-acquire-status')).to_contain_text('Fotografia acquisita')
+            expect(page.locator('#workspace-proposals')).to_contain_text('acquisita')
             assert not errors,errors
             context.close()
             print('Editorial browser E2E passed: '+name)

@@ -391,3 +391,16 @@ form, listener o stato al cambio sezione. Il budget AI resta sotto Impostazioni
 pubblicazione sotto Pubblicazione e l'ammissione documentale sotto Revisione.
 Non ci sono modifiche allo schema D1, a Cloudflare, a costi o a gate AI.
 Dettagli: [dashboard v1](docs/admin-dashboard-navigation.v1.0.0.md).
+
+## Correzioni workspace amministrativo (0.22.1, proposta)
+
+All'apertura di `/admin` l'interfaccia evita il flash dei vecchi moduli.
+Nessun argomento viene selezionato implicitamente: il placeholder sulle proteste
+di Parigi è stato rimosso, senza modificare gli eventuali record effettivi in D1.
+Il form dei link accetta fino a 20 URL HTTPS su righe separate, tramite
+`POST /api/admin/editorial/workspace/links/batch`: validazione del lotto completo,
+deduplicazione e feedback sugli URL già presenti. Ogni link Commons può essere
+acquisito dal pulsante accanto alla proposta; le altre fonti richiedono il
+caricamento del file originale dal dispositivo. Nessun link viene approvato
+o pubblicato automaticamente.
+[Dettagli](docs/admin-workspace-ux.v1.0.0.md).
