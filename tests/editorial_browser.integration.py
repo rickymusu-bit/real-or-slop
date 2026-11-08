@@ -232,7 +232,7 @@ with sync_playwright() as p:
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'),name+' publication has horizontal overflow'
             page.locator('#cycle-state-result').screenshot(path=str(folder/(name+'-publication.png')))
             page.get_by_role('button',name='Produzione immagini',exact=True).click()
-            link.locator('textarea[name=source_urls]').fill('https://commons.wikimedia.org/wiki/File:OwnerLink.jpg')
+            link.locator('textarea[name=source_urls]').fill('https://commons.wikimedia.org/wiki/File:OwnerLink'+name.title()+'.jpg')
             link.locator('button').click()
             expect(page.locator('#workspace-link-feedback')).to_contain_text('1 link registrati')
             page.locator('#workspace-proposals [data-workspace-acquire]').click()

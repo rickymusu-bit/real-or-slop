@@ -14,7 +14,7 @@ let searchMode='success',embeddingMode='success',descriptionMode='success',sugge
 const images=JSON.parse(spawnSync('python3',['-c',`import io,json,base64
 from PIL import Image
 out={}
-for name,size,color in [('owner',(240,360),'blue'),('owner-link',(240,360),'cyan'),('commons',(480,320),'red'),('1536x1024',(1536,1024),'green'),('1024x1536',(1024,1536),'yellow'),('1024x1024',(1024,1024),'purple')]:
+for name,size,color in [('owner',(240,360),'blue'),('owner-link',(240,360),'cyan'),('owner-link-mobile',(240,360),'magenta'),('commons',(480,320),'red'),('1536x1024',(1536,1024),'green'),('1024x1536',(1024,1536),'yellow'),('1024x1024',(1024,1024),'purple')]:
  b=io.BytesIO();Image.new('RGB',size,color).save(b,'WEBP');out[name]=base64.b64encode(b.getvalue()).decode()
 for name,orientation,color in [('geometry-probe',6,'orange'),('legacy-desktop',6,'pink'),('legacy-mobile',8,'cyan'),('geometry-invalid',9,'gray')]:
  b=io.BytesIO();exif=Image.Exif();exif[274]=orientation;Image.new('RGB',(240,120),color).save(b,'JPEG',exif=exif);out[name]=base64.b64encode(b.getvalue()).decode()
@@ -108,12 +108,14 @@ b=io.BytesIO();Image.new('RGB',(${w},${h}),(${imageSequence*61%255},${imageSeque
     if(searchMode==='failed' || searchMode==='partial' && url.searchParams.get('srsearch').includes('second'))return new globalThis.Response('fixture failure',{status:503});
     return globalThis.Response.json({query:{search:searchMode==='empty'?[]:[{title:'File:Fixture.jpg'}]}});
    }
-   const ownerLink=url.searchParams.get('titles')==='File:OwnerLink.jpg';
-   return globalThis.Response.json({query:{pages:[{title:ownerLink?'File:OwnerLink.jpg':'File:Fixture.jpg',imageinfo:[{url:ownerLink?'https://upload.wikimedia.org/wikipedia/commons/a/ab/OwnerLink.webp':'https://upload.wikimedia.org/wikipedia/commons/a/ab/Fixture.webp',
-    width:ownerLink?240:480,height:ownerLink?360:320,size:photo(ownerLink?'owner-link':'commons').length,
+   const requestedFile=url.searchParams.get('titles');
+   const ownerMobile=requestedFile==='File:OwnerLinkMobile.jpg';
+   const ownerLink=requestedFile==='File:OwnerLinkDesktop.jpg' || ownerMobile;
+   return globalThis.Response.json({query:{pages:[{title:ownerLink?(ownerMobile?'File:OwnerLinkMobile.jpg':'File:OwnerLinkDesktop.jpg'):'File:Fixture.jpg',imageinfo:[{url:ownerLink?('https://upload.wikimedia.org/wikipedia/commons/a/ab/'+(ownerMobile?'OwnerLinkMobile.webp':'OwnerLink.webp')):'https://upload.wikimedia.org/wikipedia/commons/a/ab/Fixture.webp',
+    width:ownerLink?240:480,height:ownerLink?360:320,size:photo(ownerMobile?'owner-link-mobile':ownerLink?'owner-link':'commons').length,
     extmetadata:{Artist:{value:'Fixture author'},LicenseUrl:{value:'https://creativecommons.org/licenses/by/4.0/'}}}]}]}});
   }
-  if(url.hostname==='upload.wikimedia.org')return new globalThis.Response(photo(url.pathname.endsWith('/OwnerLink.webp')?'owner-link':'commons'),{headers:{'Content-Type':'image/webp'}});
+  if(url.hostname==='upload.wikimedia.org')return new globalThis.Response(photo(url.pathname.endsWith('/OwnerLinkMobile.webp')?'owner-link-mobile':url.pathname.endsWith('/OwnerLink.webp')?'owner-link':'commons'),{headers:{'Content-Type':'image/webp'}});
   throw Error('External network forbidden in fixtures: '+url.hostname);
  }
 }]}));
