@@ -1,8 +1,26 @@
-# Istruzioni Codex — versione canonica 12.0.0
+# Istruzioni Codex — versione canonica 13.0.0
 
-Snapshot: `docs/AGENTS.v12.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-08T07:01:53Z. Base main `7975604b4f52f7877124c7e89ec4e6cd63771333`.
-Le sezioni precedenti rimangono contesto storico per gli ambiti non sostituiti.
+Snapshot: `docs/AGENTS.v13.0.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-08T11:06:49.710Z. Base main `c9f25e624841e763652ef7e31751821d55e10d5c`.
+Le sezioni precedenti rimangono contesto per ambiti non sostituiti.
+
+## Interfaccia amministrativa 13.0.0
+
+Contratto attuale: `docs/admin-dashboard-navigation.v1.0.0.md`.
+La dashboard usa navigazione desktop/mobile e sei viste senza duplicare moduli,
+contenuti editoriali o operazioni. Su `/admin` preservare i form esistenti,
+le scelte intermedie dell'owner, la selezione dell'argomento e i listener; una
+navigazione non deve creare topic, chiamare GPT, pubblicare immagini o resettare
+budget. La revisione e la pubblicazione condividono lo stesso modulo e i
+controlli di approvazione documentale restano nella Revisione. Pubblicazione
+espone soltanto i controlli bilanciati e non aggira i gate previsti in D1.
+
+Qualunque refactor deve conservare autenticazione admin, API, audit, errori,
+conferme, no-store, sicurezza media, limite dei costi e separazione REAL/SLOP.
+Il controllo Demo/Produzione rimane indipendente dal deployment Cloudflare.
+Eseguire test unitari, lint, build, E2E HTTP e browser desktop/mobile, includendo
+cambi vista con dati non salvati. Mostrare un'anteprima verificata prima di
+richiedere l'approvazione, senza merge/deploy/migrazione impliciti.
 
 ## Budget condiviso e reset esplicito (12.0.0)
 
