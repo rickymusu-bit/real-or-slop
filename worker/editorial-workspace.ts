@@ -102,6 +102,8 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
       await createTopicSemantics(env,current.id,current.title,description);
     return json({id:current.id,embedding_status:status,input_sha256:digest});
   }
+  const removePath=path.match(/^\/api\/admin\/editorial\/workspace\/topics\/([a-f0-9-]{36})\/remove$/i);
+  if(removePath && request.method==="POST")return json(await removeUnusedTopic(env,removePath[1],await body(request,500)));
   if (path === base + "/topics" && request.method === "POST") {
     const data = await body(request, 3000);
     if (Object.keys(data).some(key => !["title","description","operation_id"].includes(key))) throw new HttpError(400, "Campi argomento non previsti");
@@ -203,4 +205,41 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
     return json({ id: proposalId, inbox_id: inboxId, sha256, status: "pending", published: false }, 201);
   }
   throw new HttpError(405, "Operazione editoriale non consentita");
+}
+
+// v1.0.0 (2026-11-08T15:40:00Z): owner-requested removal of an obsolete, unused topic.
+// Only topics without photographs, paid jobs, frozen SLOP prompts or immutable audit rows can be removed;
+// those records are never deleted or orphaned here. The normalized title becomes free again.
+const topicRemovalBlockers:[string,string][]=([
+  ["editorial_workspace_proposals","topic_id=?1","proposte di fotografie"],
+  ["editorial_topic_explorations","topic_id=?1","ricerche GPT"],
+  ["editorial_slop_prompt_bank","topic_id=?1","prompt SLOP congelati"],
+  ["editorial_workspace_jobs","topic_id=?1","operazioni AI registrate"],
+  ["editorial_image_relevance","topic_id=?1","valutazioni di pertinenza"],
+  ["editorial_workspace_generation_claims","topic_id=?1","generazioni SLOP"],
+  ["editorial_topic_semantic_history","topic_id=?1","revisioni semantiche archiviate"],
+  ["editorial_topic_semantics","topic_id=?1 AND embedding_status IN ('submitting','uncertain')","embedding avviato o incerto"],
+  ["editorial_topic_description_drafts","topic_id=?1 AND status IN ('preparing','ready','uncertain')","bozze di descrizione attive"]
+] as [string,string,string][]).map(([table,where,label]):[string,string]=>["SELECT 1 FROM "+table+" WHERE "+where,label]);
+const topicUnused=topicRemovalBlockers.map(([sql])=>"NOT EXISTS("+sql+")").join(" AND ");
+export async function removeUnusedTopic(env:Env,topicId:string,data:Record<string,unknown>) {
+  if(Object.keys(data).some(key=>key!=="title"))throw new HttpError(400,"Campi di rimozione non previsti");
+  const topic=await existingTopic(env,topicId);
+  if(data.title!==topic.title)throw new HttpError(409,"Titolo di conferma diverso: ricaricare l'argomento");
+  const found:string[]=[];
+  for(const [sql,label] of topicRemovalBlockers)
+    if(await env.DB.prepare(sql).bind(topic.id).first())found.push(label);
+  if(found.length)throw new HttpError(409,"Argomento non rimovibile perché collegato a: "+found.join(", ")+". Nessun dato è stato cancellato.");
+  // Every statement repeats the guard so a concurrent change aborts the whole removal instead of leaving it half done.
+  const guarded=(sql:string)=>env.DB.prepare(sql+" AND "+topicUnused).bind(topic.id);
+  const result=await env.DB.batch([
+    guarded("UPDATE editorial_topic_description_drafts SET topic_id=NULL WHERE topic_id=?1"),
+    guarded("UPDATE editorial_topic_description_jobs SET topic_id=NULL WHERE topic_id=?1"),
+    guarded("DELETE FROM editorial_topic_semantics WHERE topic_id=?1"),
+    guarded("DELETE FROM editorial_topic_slop_seed WHERE topic_id=?1"),
+    guarded("DELETE FROM editorial_workspace_manual_stage WHERE topic_id=?1"),
+    guarded("DELETE FROM editorial_workspace_topics WHERE id=?1")
+  ]);
+  if(!result[result.length-1].meta.changes)throw new HttpError(409,"Argomento modificato durante la rimozione: ricaricare");
+  return {removed:true,id:topic.id,title:topic.title,paid_calls_started:false};
 }
