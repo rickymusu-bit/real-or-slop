@@ -31,11 +31,19 @@ function aiProvenance(image: Candidate) {
 }
 export async function showAdmin() {
   if (new URL(location.href).searchParams.get("advanced") !== "1" && !new URL(location.href).searchParams.has("status")) {
-    await showVisualReview();
-    await mountGameCatalogMode();
-    await mountEditorialWorkspace();
-    await mountEditorialIntelligence();
-    mountAdminDashboard();
+    const root = content();
+    root.classList.add("admin-bootstrapping");
+    root.setAttribute("aria-busy", "true");
+    try {
+      await showVisualReview();
+      await mountGameCatalogMode();
+      await mountEditorialWorkspace();
+      await mountEditorialIntelligence();
+      mountAdminDashboard();
+    } finally {
+      root.classList.remove("admin-bootstrapping");
+      root.removeAttribute("aria-busy");
+    }
     return;
   }
   return showAdvancedAdmin();

@@ -23,3 +23,6 @@
   .editorial-workspace .workspace-columns form { padding: 16px; }
   .editorial-workspace form > button { justify-self: stretch; }
 }
+
+.editorial-workspace .workspace-proposal button { margin-top: 12px; text-align: left; white-space: normal; }
+.editorial-workspace #workspace-link-feedback, .editorial-workspace #workspace-acquire-status { min-height: 1.2em; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }

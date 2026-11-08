@@ -40,7 +40,7 @@ export async function mountEditorialIntelligence() {
     '<div class="intel-discovery-control"><strong id="intel-discovery-state">Disattivato</strong><button type="button" data-intel="toggle-discovery" aria-pressed="false">Attiva Topic Discovery</button></div>' +
     '<button data-intel="suggest">Suggerisci 5 argomenti</button><div id="intel-suggestions"></div></section>' +
     '<section><h3>Fotografie REAL</h3><p>Prima proponi le tue foto nella sezione precedente. Il pianificatore ricava query per parole chiave dal titolo e dalle preferenze REAL. La descrizione semantica non viene aggiunta automaticamente alla ricerca.</p>' +
-    '<div id="intel-links"></div><p id="intel-manual-state"></p><div class="intel-buttons"><button data-intel="manual-finished">Ho finito di proporre foto</button><button data-intel="manual-skip">Continua senza foto manuali</button></div><label>Numero di nuove candidate <select id="intel-limit"><option value="3">3</option><option value="5" selected>5</option><option value="10">10</option></select></label><button data-intel="search">Cerca altre REAL con GPT</button><div id="intel-ranking"></div></section>' +
+    '<div id="intel-links"></div><p id="intel-acquisition-feedback" role="status" aria-live="polite"></p><p id="intel-manual-state"></p><div class="intel-buttons"><button data-intel="manual-finished">Ho finito di proporre foto</button><button data-intel="manual-skip">Continua senza foto manuali</button></div><label>Numero di nuove candidate <select id="intel-limit"><option value="3">3</option><option value="5" selected>5</option><option value="10">10</option></select></label><button data-intel="search">Cerca altre REAL con GPT</button><div id="intel-ranking"></div></section>' +
     '<section><h3>Generazione SLOP</h3><p>Prompt indipendenti dal solo titolo e dai feedback storici SLOP congelati. La descrizione semantica non impone una scena; fotografie e giudizi REAL del ciclo restano esclusi.</p><button data-intel="plan">Prepara prompt indipendenti</button><div id="intel-prompts"></div></section></div>' +
     '<details id="intel-preference-audit"><summary>Storico delle preferenze</summary><p>I voti e i profili producono stati immutabili separati per REAL e SLOP. Questi conteggi descrivono le preferenze osservate, non misurano la qualità dei suggerimenti.</p><p id="intel-preference-current"></p><label>Preferenze da mostrare<select id="intel-preference-origin"><option value="all">REAL e SLOP</option><option value="REAL">REAL</option><option value="AI">SLOP</option></select></label><button data-intel="snapshot-history">Carica storico</button><div id="intel-preference-snapshots"></div><pre id="intel-snapshot-detail" class="intel-snapshot-detail" hidden></pre></details>'+
     '<details id="intel-format-audit"><summary>Formati REAL e SLOP</summary><p>Confronta le proporzioni prima di pubblicare: differenze sistematiche possono suggerire la risposta. La lettura EXIF conserva gli originali e non usa modelli AI. Metadati non risolvibili restano sconosciuti.</p><div id="intel-formats"></div><div id="intel-format-unknown"></div></details>'+
@@ -226,6 +226,11 @@ export async function mountEditorialIntelligence() {
       if(!path)throw Error("Comando sconosciuto");
       const result=await api<Record<string,unknown>>(path,{method:"POST",body:JSON.stringify(payload)});
       if(action==="accept"){window.location.reload();return;}
+      if(action==="acquire"){
+        section.querySelector<HTMLElement>("#intel-acquisition-feedback")!.textContent=
+          "Fotografia acquisita in quarantena. Apri Revisione per valutarla.";
+        workspace.dispatchEvent(new CustomEvent("workspace-request-refresh"));
+      }
       status.textContent=action==="toggle-discovery"
         ? (result.topic_discovery_enabled ? "Topic Discovery attivo. I suggerimenti partiranno soltanto se li richiedi." :
           "Topic Discovery disattivato. Puoi continuare a inserire argomenti e gestire REAL/SLOP.")
@@ -235,6 +240,8 @@ export async function mountEditorialIntelligence() {
         document.querySelector<HTMLButtonElement>("#refresh-review")?.click();
     } catch(error) {
       status.textContent=String(error);
+      if(action==="acquire")section.querySelector<HTMLElement>("#intel-acquisition-feedback")!.textContent=
+        "Acquisizione non riuscita: "+String(error)+". La proposta rimane registrata.";
     } finally{busyState(false);}
   });
   const selector=workspace.querySelector<HTMLSelectElement>("#workspace-topic-select");

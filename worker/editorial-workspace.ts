@@ -1,5 +1,6 @@
 import { body, HttpError, id, json, type Env } from "./core";
 import { imageMime, sourcePageUrl, topicKey, topicTitle } from "../shared/editorial-workspace.v1.0.0";
+import { normalizeLinkBatch } from "../shared/editorial-link-batch.v1.0.0";
 import { ensureSlopSeed } from "./editorial-learning.v1.0.0";
 import { imageGeometry } from "../shared/image-geometry.v1.0.0";
 import { createTopicSemantics, embedTopicOnSubmission, embeddingConfig, DEFAULT_TOPIC_EMBEDDING_MODEL, semanticTopicDescription, semanticTopicText } from "./topic-semantic-memory.v1.0.0";
@@ -124,6 +125,24 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
     try { embeddingStatus=await createTopicSemantics(env,topic.id,title,description); }
     catch { /* Topic remains saved: never pretend a vector was created on failure. */ }
     return json({...topic,description,embedding_status:embeddingStatus},201);
+  }
+  if (path === base + "/links/batch" && request.method === "POST") {
+    const data = await body(request, 35000);
+    if (Object.keys(data).some(key => !["topic_id","source_urls","note"].includes(key)))
+      throw new HttpError(400, "Campi della proposta non previsti");
+    const topicId = valueText(data.topic_id, 36, true);
+    await existingTopic(env, topicId);
+    const note = valueText(data.note, 1000);
+    let urls: string[];
+    try { urls = normalizeLinkBatch(data.source_urls); }
+    catch (error) { return invalid(error); }
+    const stamp = new Date().toISOString();
+    const results = await env.DB.batch(urls.map(url =>
+      env.DB.prepare("INSERT OR IGNORE INTO editorial_workspace_proposals(id,topic_id,kind,source_url,inbox_id,note,created_at) VALUES(?,?,'link',?,NULL,?,?)")
+        .bind(id(), topicId, url, note, stamp)));
+    const saved = results.filter(result => result.meta.changes === 1).length;
+    return json({submitted: urls.length, saved, already_present: urls.length - saved,
+      status: "awaiting_acquisition"}, 201);
   }
   if (path === base + "/links" && request.method === "POST") {
     const data = await body(request, 5000);

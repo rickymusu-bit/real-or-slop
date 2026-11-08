@@ -1,3 +1,14 @@
+.admin-bootstrapping { min-height: 50vh; }
+.admin-bootstrapping > * { display: none !important; }
+.admin-bootstrapping::before {
+  content: "Preparazione della dashboard amministrativa…";
+  display: block;
+  width: min(100% - 40px, 920px);
+  margin: clamp(40px, 8vh, 90px) auto;
+  padding: 25px 22px; border: 1px solid var(--hairline);
+  border-radius: 12px; background: var(--surface);
+  color: var(--muted); font-size: 14px;
+}
 .admin-dashboard [hidden] { display: none !important; }
 .admin-dashboard {
   width: min(100%, 1420px);
