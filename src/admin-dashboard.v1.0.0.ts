@@ -49,10 +49,10 @@ function directChildren(element: HTMLElement) {
 
 export function mountAdminDashboard() {
   const root = content();
-  const review = root.querySelector<HTMLElement>(".visual-review");
-  const catalog = root.querySelector<HTMLElement>(".game-catalog-mode");
-  const workspace = root.querySelector<HTMLElement>("#editorial-workspace");
-  const intelligence = root.querySelector<HTMLElement>("#editorial-intelligence");
+  const review = root.querySelector<HTMLElement>(".visual-review")!;
+  const catalog = root.querySelector<HTMLElement>(".game-catalog-mode")!;
+  const workspace = root.querySelector<HTMLElement>("#editorial-workspace")!;
+  const intelligence = root.querySelector<HTMLElement>("#editorial-intelligence")!;
   if (!review || !catalog || !workspace || !intelligence)
     throw new Error("Dashboard incompleta: manca un modulo amministrativo");
 
