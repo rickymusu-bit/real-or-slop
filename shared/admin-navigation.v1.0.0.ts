@@ -1,6 +1,6 @@
 export const ADMIN_VIEWS = [
   { id: "overview", label: "Panoramica", description: "Stato del catalogo e operazioni da completare." },
-  { id: "topics", label: "Argomenti", description: "Nuovi argomenti, memoria semantica e Topic Discovery." },
+  { id: "topics", label: "Lotti", description: "Nuovi lotti, note per la generazione e Topic Discovery (rinviato)." },
   { id: "production", label: "Produzione immagini", description: "Proposte, ricerca REAL, generazione SLOP e diagnostica editoriale." },
   { id: "review", label: "Revisione", description: "Valutazione delle immagini e verifiche di ammissione." },
   { id: "publication", label: "Pubblicazione", description: "Bilanciamento REAL/SLOP e pubblicazione dei cicli." },

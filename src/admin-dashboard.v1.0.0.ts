@@ -17,7 +17,7 @@ const overviewMarkup = `
     </div>
     <div class="admin-stat-grid">
       <article class="admin-stat"><span>Da revisionare</span><strong id="admin-stat-pending">—</strong><small>Immagini nella coda editoriale</small></article>
-      <article class="admin-stat"><span>Argomenti</span><strong id="admin-stat-topics">—</strong><small>Argomenti registrati</small></article>
+      <article class="admin-stat"><span>Lotti</span><strong id="admin-stat-topics">—</strong><small>Lotti registrati</small></article>
       <article class="admin-stat"><span>Pubblicate</span><strong id="admin-stat-published">—</strong><small>REAL + SLOP nel catalogo giocabile</small></article>
       <article class="admin-stat"><span>Partite</span><strong id="admin-stat-mode">—</strong><small>Modalità attualmente selezionata</small></article>
     </div>
@@ -25,7 +25,7 @@ const overviewMarkup = `
     <section class="admin-action-panel" aria-labelledby="admin-actions-title">
       <h2 id="admin-actions-title">Da dove vuoi iniziare?</h2>
       <div class="admin-action-grid">
-        <button type="button" data-admin-open="topics"><strong>Nuovo argomento</strong><span>Definisci e indicizza un tema</span></button>
+        <button type="button" data-admin-open="topics"><strong>Nuovo lotto</strong><span>Crea una galleria e aggiungi le foto</span></button>
         <button type="button" data-admin-open="production"><strong>Produci immagini</strong><span>Carica foto e prepara REAL / SLOP</span></button>
         <button type="button" data-admin-open="review"><strong>Revisione</strong><span>Esamina le candidate in attesa</span></button>
         <button type="button" data-admin-open="publication"><strong>Pubblica un ciclo</strong><span>Controlla gli insiemi bilanciati</span></button>
@@ -99,8 +99,7 @@ export function mountAdminDashboard() {
   const topicOnly = new Set<HTMLElement>([
     workspace.querySelector<HTMLElement>("#workspace-topic-form")!,
     workspace.querySelector<HTMLElement>("#workspace-topic-status")!,
-    workspace.querySelector<HTMLElement>("#workspace-description-drafts")!,
-    workspace.querySelector<HTMLElement>("#workspace-semantic-form")!,
+    workspace.querySelector<HTMLElement>("#workspace-lot-notes-form")!,
     workspace.querySelector<HTMLElement>("#workspace-topic-removal")!,
   ]);
   const topicPicker = workspace.querySelector<HTMLElement>("#workspace-topic-select")?.closest("label") as HTMLElement | null;

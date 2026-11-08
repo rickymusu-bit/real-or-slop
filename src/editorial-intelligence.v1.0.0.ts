@@ -102,7 +102,7 @@ export async function mountEditorialIntelligence() {
       .reduce((n,x)=>n+x.n,0);
     const deficit=Math.max(0,approvedReal-slopReady);
     overview.innerHTML =
-      '<div><strong>Argomento attivo</strong><span>'+(topic?"Selezionato nella sezione precedente":"Nessun argomento selezionato")+'</span></div>' +
+      '<div><strong>Lotto attivo</strong><span>'+(topic?"Selezionato nella sezione precedente":"Nessun lotto selezionato")+'</span></div>' +
       '<div><strong>Preferenze REAL</strong><span>'+state.preferences.real.observations+' giudizi con profilo</span></div>' +
       '<div><strong>Preferenze SLOP</strong><span>'+state.preferences.slop.observations+' giudizi con profilo</span></div>' +
       '<div><strong>SLOP mancanti</strong><span>'+deficit+' sulla base dei voti correnti</span></div>';

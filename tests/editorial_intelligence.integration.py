@@ -89,6 +89,42 @@ code,link=call("/api/admin/editorial/workspace/links",{"topic_id":uid,"source_ur
 assert code==201,(code,link)
 code,dupe=call("/api/admin/editorial/workspace/links",{"topic_id":uid,"source_url":url})
 assert code==409,(code,dupe)
+# Lots (spec lotti 1.3.1, phase 1): title only, optional notes, no paid call, history and dismissals.
+lot_title="Venice canals "+uuid.uuid4().hex[:8]
+code,lot=call("/api/admin/editorial/workspace/lots",{"title":lot_title})
+assert code==201 and lot["notes"]=="" and lot["lot_revision"]==0 and lot["paid_calls_started"] is False,(code,lot)
+assert call("/api/admin/editorial/workspace/lots",{"title":lot_title,"notes":"x"*501})[0]==400
+assert call("/api/admin/editorial/workspace/lots",{"title":"Other lot "+uuid.uuid4().hex[:8],"notes":"x"*501})[0]==400
+assert call("/api/admin/editorial/workspace/lots",{"title":lot_title,"description":"no"})[0]==400
+code,same=call("/api/admin/editorial/workspace/lots",{"title":lot_title.upper()})
+assert code==200 and same["already_exists"] is True and same["id"]==lot["id"],(code,same)
+notes_path="/api/admin/editorial/workspace/lots/"+lot["id"]+"/notes"
+assert call(notes_path,{"notes":"Only canals"},auth="not-a-token")[0]==401
+assert call(notes_path,{"notes":"Only canals"})[0]==400
+code,first=call(notes_path,{"notes":"Only canals, no tourists in the foreground.","expected_revision":0})
+assert code==200 and first["lot_revision"]==1 and first["changed"] is True,(code,first)
+assert call(notes_path,{"notes":"Stale edit","expected_revision":0})[0]==409
+code,repeat=call(notes_path,{"notes":"Only canals, no tourists in the foreground.","expected_revision":1})
+assert code==200 and repeat["changed"] is False,(code,repeat)
+code,second=call(notes_path,{"notes":"","expected_revision":1})
+assert code==200 and second["lot_revision"]==2,(code,second)
+row=next(t for t in call("/api/admin/editorial/workspace")[1]["topics"] if t["id"]==lot["id"])
+assert row["notes"]=="" and row["lot_status"]=="open" and row["lot_revision"]==2 and row["embedding_status"] is None,row
+# Legacy topics expose their semantic description as initial notes, revision 0.
+legacy=next(t for t in call("/api/admin/editorial/workspace")[1]["topics"] if t["id"]==described["id"])
+assert legacy["notes"]==detail and legacy["lot_revision"]==0,legacy
+code,thumb=call("/api/admin/editorial/workspace/links/batch",{"topic_id":lot["id"],"source_urls":[
+    "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a3/Canal_Grande_1.jpg/1920px-Canal_Grande_1.jpg?utm_source=x",
+    "https://commons.wikimedia.org/wiki/File:Canal_Grande_1.jpg"]})
+assert code==201 and thumb["submitted"]==1 and thumb["saved"]==1,(code,thumb)
+proposals=[p for p in call("/api/admin/editorial/workspace")[1]["proposals"] if p["topic_id"]==lot["id"]]
+assert [p["source_url"] for p in proposals]==["https://commons.wikimedia.org/wiki/File:Canal_Grande_1.jpg"],proposals
+dismiss="/api/admin/editorial/workspace/proposals/"+proposals[0]["id"]+"/dismiss"
+assert call(dismiss,{"reason":"x"*301})[0]==400
+code,gone=call(dismiss,{"reason":"Wrong framing"})
+assert code==200 and gone["dismissed"] is True and gone["already_dismissed"] is False,(code,gone)
+assert call(dismiss,{})[1]["already_dismissed"] is True
+assert all(p["topic_id"]!=lot["id"] for p in call("/api/admin/editorial/workspace")[1]["proposals"])
 code,kept=call("/api/admin/editorial/workspace/topics/"+uid+"/remove",{"title":title})
 assert code==409 and "proposte" in kept.get("error",""),(code,kept)
 assert any(t["id"]==uid for t in call("/api/admin/editorial/workspace")[1]["topics"])
@@ -109,6 +145,8 @@ url="/api/admin/editorial/workspace/uploads?"+urllib.parse.urlencode(
 code,saved=call(url,png,binary=True)
 assert code==201,(code,saved)
 inbox=saved["inbox_id"]
+upload=next(p for p in call("/api/admin/editorial/workspace")[1]["proposals"] if p["inbox_id"]==inbox)
+assert call("/api/admin/editorial/workspace/proposals/"+upload["id"]+"/dismiss",{})[0]==409
 state=call("/api/admin/review-inbox?state=pending&origin=REAL")[1]
 card=next((x for x in state["images"] if x["id"]==inbox),None)
 assert card and card["sha256"]==saved["sha256"],card

@@ -47,7 +47,8 @@ async function saveCommons(env:Env,t:Topic,photo:CommonsFile,kind:"gpt-commons"|
     author:photo.author,source_url:photo.source_url,license_url:photo.license_url,
     original_key:mediaKey,original_sha256:sha,provenance_status:"unverified",image_geometry:imageGeometry(new Uint8Array(photo.bytes)),
     provenance:{provider:"commons",original_url:photo.download_url,original_is_preview:photo.original_is_preview,
-      source_evidence:photo.description,width:photo.width,height:photo.height}});
+      source_evidence:photo.description,width:photo.width,height:photo.height,
+      commons_categories:photo.categories,commons_date:photo.date}});
   await env.QUARANTINE.put(mediaKey,photo.bytes,{httpMetadata:{contentType:photo.mime},customMetadata:{sha256:sha}});
   try{
     const statements=[

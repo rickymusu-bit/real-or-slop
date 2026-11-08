@@ -2,11 +2,14 @@ import "./editorial-workspace.v1.0.0.css";
 import { api, content as mainContent, escape } from "./main";
 import { imageMime } from "../shared/editorial-workspace.v1.0.0";
 import { canAcquireCommons, parseLinkLines } from "../shared/editorial-link-batch.v1.0.0";
+import { proposeLotTitle } from "../shared/editorial-lots.v1.0.0";
 
-interface Topic { id: string; title: string; created_at: string; description?:string|null; embedding_status?: string|null; input_sha256?:string|null;error_code?:string|null }
+// v1.1.0 (2026-11-08T20:00:26Z): lots, phase 1 of docs/lotti-editoriali.v1.3.1.md. No GPT or embedding to create a lot.
+interface Topic { id: string; title: string; created_at: string; notes:string; lot_status:string; lot_revision:number }
 interface Proposal { id: string; topic_id: string; kind: "link" | "upload"; source_url: string | null; inbox_id: string | null; note: string; review_status: string | null }
-interface DescriptionDraft {id:string;title:string;status:string;description:string|null;ambiguity:string|null;proposal_sha256:string|null}
-interface Workspace { topics: Topic[]; proposals: Proposal[];embedding_enabled?:boolean;embedding_cost?:string|null;description_cost?:string|null;description_drafts?:DescriptionDraft[] }
+interface Workspace { topics: Topic[]; proposals: Proposal[] }
+interface CommonsFile { title:string; page_url:string; thumb_url:string; width:number; height:number; author:string; license:string; categories:string[] }
+interface CommonsPage { files:CommonsFile[]; categories:string[]; next:string|null }
 
 export async function mountEditorialWorkspace() {
   const root = mainContent();
@@ -16,22 +19,31 @@ export async function mountEditorialWorkspace() {
   section.innerHTML =
     '<div class="eyebrow">AMMINISTRAZIONE PRIVATA</div>' +
     '<h1>Studio editoriale.</h1>' +
-    '<p>Decidi tu gli argomenti e proponi le fotografie prima della ricerca GPT. I file vengono conservati in quarantena: non sono automaticamente autentici, autorizzati o pubblicati.</p>' +
-    '<form id="workspace-topic-form"><label>Nuovo argomento specifico<input name="title" maxlength="200" minlength="6" required placeholder="Es. Vita quotidiana nei mercati di quartiere"></label>'+
-    '<label>Descrizione in inglese (massimo 500 caratteri)<textarea name="description" maxlength="500" rows="3" placeholder="Scrivila tu oppure lascia vuoto per ricevere una proposta GPT da approvare."></textarea></label>'+
-    '<p class="workspace-hint">Con il solo titolo, Continua richiede una proposta GPT a pagamento: nessun argomento o embedding prima della tua approvazione. Con una descrizione scritta da te, registra e indicizza direttamente entro i limiti configurati. Funziona anche con Topic Discovery spento.</p>'+
-    '<button type="submit">Continua</button><div id="workspace-description-preview" hidden><h2>Rivedi la descrizione proposta</h2><p>Proposta GPT non verificata: modifica il testo qui sopra prima di approvare. Non è una ricerca documentale né una fonte. Se cambi il titolo, annulla la bozza e richiedine una nuova.</p><p id="workspace-description-ambiguity"></p><div class="workspace-draft-actions"><button type="button" data-description="approve">Approva e registra</button><button type="button" data-description="regenerate">Rigenera con GPT</button><button type="button" data-description="cancel">Annulla</button></div></div></form>' +
-    '<p id="workspace-topic-status" role="status" aria-live="polite"></p><div id="workspace-description-drafts"></div>' +
-    '<label>Argomento corrente<select id="workspace-topic-select" aria-label="Argomento corrente"></select></label>' +
-    '<form id="workspace-semantic-form"><h2>Memoria dell’argomento corrente</h2><p id="workspace-semantic-state"></p><label>Descrizione semantica<textarea name="description" maxlength="500" rows="3"></textarea></label><button type="submit">Salva descrizione / indicizza argomento</button><p>Conserva le revisioni precedenti. Se il servizio è configurato, questa azione autorizza un embedding entro il tetto indicato. Nessun reinvio di esiti incerti.</p></form><div id="workspace-topic-removal"><button type="button" id="workspace-topic-remove">Rimuovi argomento inutilizzato</button><p class="workspace-hint">Rimuove soltanto argomenti senza fotografie, ricerche, prompt SLOP o operazioni AI registrate, liberando il titolo. Gli argomenti con lavoro collegato restano intatti.</p></div>' +
-    '<div class="workspace-columns"><form id="workspace-link-form"><h2>Proponi fotografie tramite link</h2><label>URL HTTPS, uno per riga (massimo 20)<textarea name="source_urls" rows="6" required placeholder="https://commons.wikimedia.org/wiki/File:...&#10;https://commons.wikimedia.org/wiki/File:..."></textarea></label><label>Nota comune facoltativa<textarea name="note" maxlength="1000" rows="2"></textarea></label><button type="submit">Registra i link</button><p class="workspace-hint">I duplicati vengono saltati. Registrare un link non significa acquisire o approvare la fotografia. Per Commons puoi usare «Acquisisci» accanto alla proposta; per altre fonti carica il file dal dispositivo.</p><p id="workspace-link-feedback" role="status" aria-live="polite"></p></form>' +
+    '<p>Ogni lotto è una galleria monotematica di fotografie REAL scelte da te. I file vengono conservati in quarantena: non sono automaticamente autentici, autorizzati o pubblicati.</p>' +
+    '<form id="workspace-topic-form"><h2>Nuovo lotto</h2><label>Titolo breve<input name="title" maxlength="200" minlength="6" required placeholder="Es. Canali di Venezia"></label>'+
+    '<label>Note per la generazione (facoltative, massimo 500 caratteri)<textarea name="notes" maxlength="500" rows="3" placeholder="Solo se serve: contesto che le foto non mostrano o indicazioni per le SLOP."></textarea></label>'+
+    '<p class="workspace-hint">Crea il lotto senza chiamate a pagamento. Puoi aggiungere le foto da Esplora Commons, con i link o dal dispositivo.</p>'+
+    '<button type="submit">Crea lotto</button></form>' +
+    '<p id="workspace-topic-status" role="status" aria-live="polite"></p>' +
+    '<label>Lotto corrente<select id="workspace-topic-select" aria-label="Lotto corrente"></select></label>' +
+    '<form id="workspace-lot-notes-form"><h2>Note del lotto corrente</h2><p id="workspace-lot-state"></p><label>Note per la generazione<textarea name="notes" maxlength="500" rows="3"></textarea></label><button type="submit">Salva note</button><p class="workspace-hint">Le note precedenti restano nello storico. Nessuna chiamata a pagamento.</p></form>' +
+    '<div id="workspace-topic-removal"><button type="button" id="workspace-topic-remove">Rimuovi lotto inutilizzato</button><p class="workspace-hint">Rimuove soltanto lotti senza fotografie, link, ricerche, prompt SLOP o operazioni AI registrate, liberando il titolo. I lotti con lavoro collegato restano intatti.</p></div>' +
+    '<section id="workspace-commons-explorer"><h2>Esplora Commons</h2>'+
+    '<form id="workspace-commons-search"><label>Cerca fotografie o categorie<input name="q" minlength="2" maxlength="200" required placeholder="Es. Venice canals"></label><button type="submit">Cerca</button></form>'+
+    '<p id="workspace-commons-context" class="workspace-hint"></p><div id="workspace-commons-categories"></div><div id="workspace-commons-results"></div>'+
+    '<div class="workspace-commons-actions"><button type="button" id="workspace-commons-more" hidden>Altri risultati</button>'+
+    '<label class="workspace-inline"><input type="checkbox" id="workspace-commons-acquire" checked> Acquisisci subito le foto aggiunte</label>'+
+    '<button type="button" id="workspace-commons-add" disabled>Aggiungi le selezionate al lotto corrente</button>'+
+    '<button type="button" id="workspace-commons-new-lot" disabled>Crea un lotto con le selezionate</button></div>'+
+    '<p id="workspace-commons-status" role="status" aria-live="polite"></p></section>' +
+    '<div class="workspace-columns"><form id="workspace-link-form"><h2>Proponi fotografie tramite link</h2><label>URL HTTPS, uno per riga (massimo 20)<textarea name="source_urls" rows="6" required placeholder="https://commons.wikimedia.org/wiki/File:...&#10;https://commons.wikimedia.org/wiki/File:..."></textarea></label><label>Nota comune facoltativa<textarea name="note" maxlength="1000" rows="2"></textarea></label><button type="submit">Registra i link</button><p class="workspace-hint">I duplicati vengono saltati. Anteprime, file originali e link del visualizzatore di Commons vengono ricondotti alla pagina File:. Registrare un link non significa acquisire o approvare la fotografia.</p><p id="workspace-link-feedback" role="status" aria-live="polite"></p></form>' +
     '<form id="workspace-upload-form"><h2>Proponi fotografie dal dispositivo</h2><label>Fotografie originali<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required></label><label>Nota facoltativa<textarea name="note" maxlength="1000" rows="2"></textarea></label><button type="submit">Carica nella coda privata</button><p class="workspace-hint">Solo per l’amministratore. Nessun ritaglio: ogni file conserva proporzioni e pixel originali. Limite di 12 MB per file.</p></form></div>' +
     '<h2>Le tue proposte</h2><p id="workspace-acquire-status" role="status" aria-live="polite"></p><div id="workspace-proposals"><p>Caricamento…</p></div>' +
     '<p class="workspace-hint">Ricerca GPT, analisi visiva e generazione SLOP richiedono i comandi espliciti della sezione seguente. Puoi terminare il lotto con le sole foto manuali.</p>' +
     '<p id="workspace-status" role="status" aria-live="polite"></p>';
   root.insertBefore(section, root.firstChild);
   const topicForm = section.querySelector<HTMLFormElement>("#workspace-topic-form")!;
-  const semanticForm=section.querySelector<HTMLFormElement>("#workspace-semantic-form")!;
+  const notesForm=section.querySelector<HTMLFormElement>("#workspace-lot-notes-form")!;
   const linkForm = section.querySelector<HTMLFormElement>("#workspace-link-form")!;
   const uploadForm = section.querySelector<HTMLFormElement>("#workspace-upload-form")!;
   const select = section.querySelector<HTMLSelectElement>("#workspace-topic-select")!;
@@ -39,22 +51,12 @@ export async function mountEditorialWorkspace() {
   const status = section.querySelector<HTMLElement>("#workspace-status")!;
   const reportTopic=(message:string)=>{status.textContent=message;section.querySelector<HTMLElement>('#workspace-topic-status')!.textContent=message;};
   let workspace: Workspace = { topics: [], proposals: [] };
-  let draft:DescriptionDraft|null=null;
-  let descriptionOperation:{title:string;id:string}|null=null;
-  const preview=section.querySelector<HTMLElement>('#workspace-description-preview')!;
-  const topicTitleInput=topicForm.querySelector<HTMLInputElement>('input[name=title]')!;
-  const topicDescription=topicForm.querySelector<HTMLTextAreaElement>('textarea')!;
-  const showDraft=(proposal:DescriptionDraft|null)=>{
-    draft=proposal;preview.hidden=!draft;
-    topicForm.querySelector<HTMLButtonElement>('button[type=submit]')!.hidden=!!draft;
-    if(draft){
-      topicTitleInput.value=draft.title;topicDescription.value=draft.description || '';
-      section.querySelector<HTMLElement>('#workspace-description-ambiguity')!.textContent=draft.ambiguity?
-        'Ambiguità da valutare: '+draft.ambiguity:'Il testo resta una proposta da verificare.';
-      topicDescription.focus();
-    }
-  };
+  const selected=new Map<string,CommonsFile>();
   let busy = false;
+  const updateExplorerButtons=()=>{
+    section.querySelector<HTMLButtonElement>('#workspace-commons-add')!.disabled=busy || !selected.size || !select.value;
+    section.querySelector<HTMLButtonElement>('#workspace-commons-new-lot')!.disabled=busy || !selected.size;
+  };
   const setBusy = (enabled: boolean) => {
     busy = enabled;
     section.querySelectorAll<HTMLButtonElement>("button").forEach(button => button.disabled = enabled);
@@ -64,14 +66,11 @@ export async function mountEditorialWorkspace() {
   };
   const renderProposals = () => {
     const topic=workspace.topics.find(t=>t.id===select.value);
-    semanticForm.querySelector<HTMLTextAreaElement>('textarea')!.value=topic?.description || "";
-    const locked=!!topic && ["uncertain","submitting"].includes(topic.embedding_status || "");
-    semanticForm.querySelector<HTMLButtonElement>('button')!.disabled=busy || !topic || locked;
-    section.querySelector<HTMLButtonElement>('#workspace-topic-remove')!.disabled=busy || !topic || locked;
-    section.querySelector<HTMLElement>('#workspace-semantic-state')!.textContent=topic ?
-      "Stato embedding: "+(topic.embedding_status || "non indicizzato")+". "+(!topic.description?"Descrizione mancante. ":"")+
-      (topic.error_code?"Diagnostica: "+topic.error_code+". ":"")+
-      (workspace.embedding_enabled?"Tetto per chiamata: "+workspace.embedding_cost+" USD.":"Servizio non configurato: il testo resta in attesa.") : "Seleziona un argomento.";
+    notesForm.querySelector<HTMLTextAreaElement>('textarea')!.value=topic?.notes || "";
+    notesForm.querySelector<HTMLButtonElement>('button')!.disabled=busy || !topic;
+    section.querySelector<HTMLButtonElement>('#workspace-topic-remove')!.disabled=busy || !topic;
+    section.querySelector<HTMLElement>('#workspace-lot-state')!.textContent=topic ?
+      "Lotto "+(topic.lot_status==="closed"?"chiuso":"aperto")+". "+(topic.notes?"":"Nessuna nota: bastano le foto e il titolo.") : "Seleziona un lotto.";
     const proposals = workspace.proposals.filter(p => p.topic_id === select.value);
     output.innerHTML = proposals.length ? proposals.map(p => {
       const detail = p.kind === "link" && p.source_url
@@ -82,94 +81,169 @@ export async function mountEditorialWorkspace() {
           ? '<button type="button" data-workspace-acquire="' + escape(p.id) + '">Acquisisci fotografia da Commons</button>'
           : '<p class="workspace-hint">Fonte non supportata per l’acquisizione automatica: scarica l’originale autorizzato e caricalo dal dispositivo.</p>')
         : "";
+      const dismiss = p.kind === "link" && !p.inbox_id ? '<button type="button" data-workspace-dismiss="' + escape(p.id) + '">Scarta link</button>' : "";
       return '<article class="workspace-proposal"><strong>' + (p.kind === "link" ? "Link proposto" : "Fotografia caricata") +
-        '</strong><p>' + detail + '</p>' + acquire + (p.note ? '<p>' + escape(p.note) + '</p>' : "") + '</article>';
-    }).join("") : '<p>Nessuna proposta per questo argomento.</p>';
+        '</strong><p>' + detail + '</p>' + acquire + dismiss + (p.note ? '<p>' + escape(p.note) + '</p>' : "") + '</article>';
+    }).join("") : '<p>Nessuna proposta per questo lotto.</p>';
+    updateExplorerButtons();
   };
   const refresh = async (prefer?: string) => {
     workspace = await api<Workspace>("/admin/editorial/workspace");
-    const selected = prefer || select.value;
-    select.innerHTML = '<option value="">' + (workspace.topics.length ? 'Seleziona un argomento…' : 'Registra prima un argomento') + '</option>' +
-      workspace.topics.map(t => '<option value="' + escape(t.id) + '">' + escape(t.title) +
-        (t.embedding_status==="ready"?" ✓":t.embedding_status==="uncertain"?" (embedding incerto)":" (da indicizzare)") + '</option>').join("");
-    select.value = workspace.topics.some(t => t.id === selected) ? selected : "";
+    const current = prefer ?? select.value;
+    select.innerHTML = '<option value="">' + (workspace.topics.length ? 'Seleziona un lotto…' : 'Crea prima un lotto') + '</option>' +
+      workspace.topics.map(t => '<option value="' + escape(t.id) + '">' + escape(t.title) + (t.lot_status==="closed"?" (chiuso)":"") + '</option>').join("");
+    select.value = workspace.topics.some(t => t.id === current) ? current : "";
     select.disabled = busy || !workspace.topics.length;
     renderProposals();
-    section.querySelector<HTMLElement>('#workspace-description-drafts')!.innerHTML=(workspace.description_drafts || []).map(d=>
-      '<p>Bozza: '+escape(d.title)+' — '+escape(d.status)+(d.status==='ready'?'<button type="button" data-resume-description="'+escape(d.id)+'">Riprendi la descrizione</button>':' — Puoi scrivere una descrizione manuale; nessun reinvio automatico.')+'</p>').join('');
     section.dispatchEvent(new CustomEvent("workspace-updated"));
   };
   select.addEventListener("change", renderProposals);
   section.querySelector<HTMLButtonElement>('#workspace-topic-remove')!.addEventListener('click',async()=>{
     const topic=workspace.topics.find(t=>t.id===select.value);if(!topic || busy)return;
-    if(!window.confirm('Rimuovere definitivamente «'+topic.title+'»? Funziona solo se l’argomento non ha fotografie, ricerche o operazioni AI collegate. Nessuna chiamata a pagamento.'))return;
-    setBusy(true);status.textContent='Rimozione dell’argomento…';
+    if(!window.confirm('Rimuovere definitivamente «'+topic.title+'»? Funziona solo se il lotto non ha fotografie, link, ricerche o operazioni AI collegate. Nessuna chiamata a pagamento.'))return;
+    setBusy(true);status.textContent='Rimozione del lotto…';
     try{
       await api("/admin/editorial/workspace/topics/"+encodeURIComponent(topic.id)+"/remove",{method:"POST",body:JSON.stringify({title:topic.title})});
-      select.value="";await refresh("");reportTopic('Argomento «'+topic.title+'» rimosso: il titolo può essere registrato di nuovo.');
+      select.value="";await refresh("");reportTopic('Lotto «'+topic.title+'» rimosso: il titolo può essere registrato di nuovo.');
     }catch(error){status.textContent=String(error);}finally{setBusy(false);}
   });
-  semanticForm.addEventListener("submit",async event=>{
-    event.preventDefault();if(busy)return;
-    const topic=workspace.topics.find(t=>t.id===select.value);if(!topic)return;
-    if(workspace.embedding_enabled && !window.confirm("Salvare e indicizzare questo argomento? Tetto: "+workspace.embedding_cost+" USD. Nessun suggerimento o ricerca verrà avviato."))return;
-    setBusy(true);
-    status.textContent='Salvataggio della memoria semantica…';
-    try{
-      const result=await api<{embedding_status:string}>("/admin/editorial/workspace/topics/"+encodeURIComponent(topic.id)+"/semantics",{
-        method:"POST",body:JSON.stringify({description:String(new FormData(semanticForm).get("description") || ""),expected_sha256:topic.input_sha256 || null})});
-      await refresh(topic.id);status.textContent="Testo conservato. Stato embedding: "+result.embedding_status;
-    }catch(error){status.textContent=String(error);}finally{setBusy(false);renderProposals();}
-  });
-  const registered=async(result:{id:string;already_exists?:boolean;embedding_status?:string})=>{
-    showDraft(null);descriptionOperation=null;
-    await refresh(result.id);topicForm.reset();
-    const indexing=result.embedding_status==='ready'?'Embedding calcolato e archiviato.':
-      result.embedding_status==='uncertain'?'Embedding incerto: nessun nuovo tentativo automatico.':'Embedding in attesa di configurazione o budget: testo conservato.';
-    reportTopic((result.already_exists?'Argomento già registrato: selezionato. ':'Argomento registrato. ')+indexing+' Puoi proporre le fotografie.');
+  const createLot=async(title:string,notes:string)=>{
+    const result=await api<{id:string;already_exists?:boolean}>("/admin/editorial/workspace/lots",{method:'POST',body:JSON.stringify({title,notes})});
+    await refresh(result.id);
+    return result;
   };
   topicForm.addEventListener("submit", async event => {
-    event.preventDefault(); if (busy || draft) return;
-    const title=topicTitleInput.value,description=topicDescription.value;
-    if(!description.trim() && !window.confirm('Richiedere una descrizione GPT? È una chiamata a pagamento, tetto '+(workspace.description_cost || 'non configurato')+' USD. Nessun embedding prima della tua approvazione.'))return;
-    if(description.trim() && workspace.embedding_enabled && !window.confirm('Registrare e indicizzare il testo? Tetto embedding: '+workspace.embedding_cost+' USD.'))return;
-    if(!descriptionOperation || descriptionOperation.title!==title)descriptionOperation={title,id:crypto.randomUUID()};
-    setBusy(true);
-    reportTopic(description.trim()?'Registrazione dell’argomento…':'Preparazione della proposta GPT…');
+    event.preventDefault(); if (busy) return;
+    const data=new FormData(topicForm);
+    setBusy(true);reportTopic('Creazione del lotto…');
     try {
-      const result = await api<{id:string;already_exists?:boolean;embedding_status?:string;proposal?:DescriptionDraft}>("/admin/editorial/workspace/topics",
-        {method:'POST',body:JSON.stringify({title,description,operation_id:descriptionOperation.id})});
-      if(result.proposal){showDraft(result.proposal);reportTopic('Proposta pronta: rivedi e approva esplicitamente. Nessun argomento o embedding creato.');await refresh();}
-      else await registered(result);
-    } catch (error) { reportTopic(String(error)+'. Il testo resta qui: puoi scrivere la descrizione e registrarla senza GPT.');await refresh().catch(()=>{}); }
+      const result=await createLot(String(data.get('title') || ''),String(data.get('notes') || ''));
+      topicForm.reset();
+      reportTopic(result.already_exists?'Lotto già esistente: selezionato. Le note non sono state modificate.':'Lotto creato e selezionato. Aggiungi le fotografie.');
+    } catch (error) { reportTopic(String(error)+'. Il testo resta nel modulo.'); }
     finally { setBusy(false); }
   });
-  section.addEventListener('click',async event=>{
-    const button=(event.target as Element).closest<HTMLButtonElement>('[data-description],[data-resume-description]');
-    if(!button || busy)return;
-    if(button.dataset.resumeDescription){
-      const candidate=workspace.description_drafts?.find(d=>d.id===button.dataset.resumeDescription);
-      if(candidate){showDraft(candidate);topicForm.scrollIntoView({block:'start'});}return;
-    }
-    if(!draft)return;
-    const action=button.dataset.description;
-    if(action==='regenerate' && !window.confirm('Rigenerare la descrizione? Nuova chiamata GPT a pagamento, tetto '+(workspace.description_cost || 'non configurato')+' USD. La proposta precedente non sarà più approvabile.'))return;
-    if(action==='approve' && workspace.embedding_enabled && !window.confirm('Approvare questo testo e indicizzarlo? Tetto embedding: '+workspace.embedding_cost+' USD.'))return;
-    const payload:Record<string,unknown>={title:action==='cancel'?draft.title:topicTitleInput.value,expected_sha256:draft.proposal_sha256};
-    if(action==='approve')payload.description=topicDescription.value;
-    if(action==='regenerate')payload.operation_id=crypto.randomUUID();
-    setBusy(true);
-    reportTopic(action==='approve'?'Registrazione del testo approvato…':action==='regenerate'?'Preparazione di una nuova proposta GPT…':'Annullamento della bozza…');
+  notesForm.addEventListener("submit",async event=>{
+    event.preventDefault();if(busy)return;
+    const topic=workspace.topics.find(t=>t.id===select.value);if(!topic)return;
+    setBusy(true);status.textContent='Salvataggio delle note…';
     try{
-      const result=await api<{id:string;embedding_status?:string;already_exists?:boolean;proposal?:DescriptionDraft}>(
-        '/admin/editorial/workspace/topic-descriptions/'+draft.id+'/'+action,{method:'POST',body:JSON.stringify(payload)});
-      if(action==='cancel'){showDraft(null);topicDescription.value='';descriptionOperation=null;await refresh();reportTopic('Bozza annullata. Nessun argomento o embedding creato.');}
-      else if(result.proposal){showDraft(result.proposal);await refresh();reportTopic('Nuova proposta pronta: nessuna registrazione o indicizzazione.');}
-      else await registered(result);
-    }catch(error){
-      reportTopic(String(error));await refresh().catch(()=>{});
-      if(draft && !workspace.description_drafts?.some(d=>d.id===draft?.id && d.status==='ready'))showDraft(null);
+      const result=await api<{changed:boolean}>("/admin/editorial/workspace/lots/"+encodeURIComponent(topic.id)+"/notes",{
+        method:"POST",body:JSON.stringify({notes:String(new FormData(notesForm).get("notes") || ""),expected_revision:topic.lot_revision})});
+      await refresh(topic.id);status.textContent=result.changed?"Note salvate.":"Nessuna modifica alle note.";
+    }catch(error){status.textContent=String(error);}finally{setBusy(false);}
+  });
+  // Commons explorer: read-only browsing through the Worker; selections become proposals of the chosen lot.
+  const explorer=section.querySelector<HTMLElement>("#workspace-commons-explorer")!;
+  const results=explorer.querySelector<HTMLElement>("#workspace-commons-results")!;
+  const categoryList=explorer.querySelector<HTMLElement>("#workspace-commons-categories")!;
+  const explorerStatus=explorer.querySelector<HTMLElement>("#workspace-commons-status")!;
+  const more=explorer.querySelector<HTMLButtonElement>("#workspace-commons-more")!;
+  let context:{kind:"search"|"category";value:string;next:string|null}|null=null;
+  const shown=new Map<string,CommonsFile>();
+  const renderFiles=(files:CommonsFile[],append:boolean)=>{
+    if(!append){results.innerHTML="";shown.clear();}
+    for(const file of files){
+      if(shown.has(file.page_url))continue;
+      shown.set(file.page_url,file);
+      const card=document.createElement("label");
+      card.className="workspace-commons-file";
+      card.innerHTML='<input type="checkbox" data-commons-select="'+escape(file.page_url)+'"'+(selected.has(file.page_url)?' checked':'')+'>'+
+        '<img src="'+escape(file.thumb_url)+'" alt="" loading="lazy" referrerpolicy="no-referrer">'+
+        '<span><strong>'+escape(file.title.replace(/^File:/,""))+'</strong><small>'+escape([file.author,file.license,file.width&&file.height?file.width+"×"+file.height:""].filter(Boolean).join(" · "))+'</small></span>'+
+        '<a href="'+escape(file.page_url)+'" target="_blank" rel="noopener noreferrer">Apri su Commons</a>';
+      results.append(card);
     }
+    if(!shown.size)results.innerHTML='<p>Nessuna fotografia JPEG, PNG o WebP in questa pagina.</p>';
+  };
+  const load=async(next:{kind:"search"|"category";value:string},append=false)=>{
+    if(busy)return;
+    const params=new URLSearchParams(next.kind==="search"?{q:next.value}:{name:next.value});
+    if(append && context?.next)params.set(next.kind==="search"?"offset":"continue",context.next);
+    explorerStatus.textContent="Caricamento da Commons…";more.disabled=true;
+    try{
+      const page=await api<CommonsPage>("/admin/editorial/workspace/commons/"+next.kind+"?"+params);
+      context={...next,next:page.next};
+      renderFiles(page.files,append);
+      if(!append)categoryList.innerHTML=page.categories.length?'<p class="workspace-hint">'+(next.kind==="search"?"Categorie trovate":"Sottocategorie")+':</p>'+
+        page.categories.map(c=>'<button type="button" data-commons-category="'+escape(c)+'">'+escape(c.replace(/^Category:/,""))+'</button>').join(""):"";
+      explorer.querySelector<HTMLElement>("#workspace-commons-context")!.textContent=next.kind==="search"?"Risultati per «"+next.value+"»":"Categoria: "+next.value.replace(/^Category:/,"");
+      more.hidden=!page.next;more.disabled=false;
+      explorerStatus.textContent=selected.size+" fotografie selezionate.";
+    }catch(error){explorerStatus.textContent="Commons non raggiungibile: "+String(error);more.disabled=false;}
+  };
+  explorer.querySelector<HTMLFormElement>("#workspace-commons-search")!.addEventListener("submit",event=>{
+    event.preventDefault();
+    void load({kind:"search",value:String(new FormData(event.target as HTMLFormElement).get("q") || "").trim()});
+  });
+  more.addEventListener("click",()=>{if(context)void load(context,true);});
+  explorer.addEventListener("click",event=>{
+    const category=(event.target as HTMLElement).closest<HTMLButtonElement>("[data-commons-category]");
+    if(category)void load({kind:"category",value:category.dataset.commonsCategory || ""});
+  });
+  explorer.addEventListener("change",event=>{
+    const box=(event.target as HTMLElement).closest<HTMLInputElement>("[data-commons-select]");
+    if(!box)return;
+    const file=shown.get(box.dataset.commonsSelect || "");
+    if(file && box.checked)selected.set(file.page_url,file);else selected.delete(box.dataset.commonsSelect || "");
+    explorerStatus.textContent=selected.size+" fotografie selezionate.";
+    updateExplorerButtons();
+  });
+  const addSelection=async(topicId:string)=>{
+    const files=[...selected.values()];
+    const acquire=explorer.querySelector<HTMLInputElement>("#workspace-commons-acquire")!.checked;
+    let saved=0,present=0,acquired=0,failed=0;
+    for(let i=0;i<files.length;i+=20){
+      const result=await api<{saved:number;already_present:number}>("/admin/editorial/workspace/links/batch",{
+        method:"POST",body:JSON.stringify({topic_id:topicId,source_urls:files.slice(i,i+20).map(f=>f.page_url)})});
+      saved+=result.saved;present+=result.already_present;
+    }
+    await refresh(topicId);
+    if(acquire){
+      const urls=new Set(files.map(f=>f.page_url));
+      const pending=workspace.proposals.filter(p=>p.topic_id===topicId && p.kind==="link" && !p.inbox_id && p.source_url && urls.has(p.source_url));
+      for(const [index,proposal] of pending.entries()){
+        explorerStatus.textContent="Acquisizione "+(index+1)+" di "+pending.length+"…";
+        try{await api("/admin/editorial/intelligence/acquire",{method:"POST",body:JSON.stringify({proposal_id:proposal.id})});acquired++;}
+        catch{failed++;}
+      }
+      await refresh(topicId);
+      document.querySelector<HTMLButtonElement>("#refresh-review")?.click();
+    }
+    selected.clear();
+    results.querySelectorAll<HTMLInputElement>("[data-commons-select]").forEach(box=>box.checked=false);
+    explorerStatus.textContent=saved+" link aggiunti, "+present+" già presenti"+(acquire?"; "+acquired+" fotografie acquisite"+(failed?", "+failed+" non acquisite (restano tra le proposte)":""):"")+".";
+    status.textContent=explorerStatus.textContent;
+  };
+  explorer.querySelector<HTMLButtonElement>("#workspace-commons-add")!.addEventListener("click",async()=>{
+    if(busy || !select.value || !selected.size)return;
+    setBusy(true);
+    try{await addSelection(select.value);}catch(error){explorerStatus.textContent="Aggiunta non completata: "+String(error);}
+    finally{setBusy(false);}
+  });
+  explorer.querySelector<HTMLButtonElement>("#workspace-commons-new-lot")!.addEventListener("click",async()=>{
+    if(busy || !selected.size)return;
+    const proposal=proposeLotTitle([...selected.values()],context?.value || "");
+    const title=window.prompt("Titolo del nuovo lotto (proposto dalle categorie Commons, modificabile):",proposal);
+    if(title===null)return;
+    setBusy(true);
+    try{
+      const lot=await createLot(title,"");
+      reportTopic(lot.already_exists?"Lotto già esistente: le foto vengono aggiunte a quello.":"Lotto creato dalla selezione.");
+      await addSelection(lot.id);
+    }catch(error){explorerStatus.textContent="Lotto non creato: "+String(error);}
+    finally{setBusy(false);}
+  });
+  section.addEventListener("click",async event=>{
+    const button=(event.target as HTMLElement).closest<HTMLButtonElement>("[data-workspace-dismiss]");
+    if(!button || busy)return;
+    if(!window.confirm("Scartare questo link? Resta nello storico ma non compare più tra le proposte."))return;
+    const message=section.querySelector<HTMLElement>("#workspace-acquire-status")!;
+    setBusy(true);
+    try{
+      await api("/admin/editorial/workspace/proposals/"+encodeURIComponent(button.dataset.workspaceDismiss || "")+"/dismiss",{method:"POST",body:"{}"});
+      await refresh(select.value);message.textContent="Link scartato.";
+    }catch(error){message.textContent="Scarto non riuscito: "+String(error);}
     finally{setBusy(false);}
   });
   linkForm.addEventListener("submit", async event => {

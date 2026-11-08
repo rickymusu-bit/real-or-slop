@@ -26,3 +26,26 @@
 
 .editorial-workspace .workspace-proposal button { margin-top: 12px; text-align: left; white-space: normal; }
 .editorial-workspace #workspace-link-feedback, .editorial-workspace #workspace-acquire-status { min-height: 1.2em; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+
+/* v1.1.0 (2026-11-08T20:00:26Z): lots and Commons explorer. */
+.editorial-workspace #workspace-commons-explorer { margin: 22px 0; padding: 22px; border: 1px solid var(--hairline); min-width: 0; }
+.editorial-workspace #workspace-commons-search { grid-template-columns: minmax(0,1fr) auto; align-items: end; margin: 0 0 12px; }
+.editorial-workspace #workspace-commons-categories { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.editorial-workspace #workspace-commons-categories p { flex-basis: 100%; margin: 0; }
+.editorial-workspace #workspace-commons-categories button { white-space: normal; text-align: left; }
+.editorial-workspace #workspace-commons-results { display: grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap: 12px; margin: 12px 0; }
+.editorial-workspace .workspace-commons-file { display: grid; gap: 6px; align-content: start; padding: 8px; border: 1px solid var(--hairline); min-width: 0; overflow-wrap: anywhere; font-size: 12px; cursor: pointer; }
+.editorial-workspace .workspace-commons-file:has(input:checked) { outline: 2px solid currentColor; }
+.editorial-workspace .workspace-commons-file input { width: auto; justify-self: start; }
+.editorial-workspace .workspace-commons-file img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: rgba(127,127,127,.12); }
+.editorial-workspace .workspace-commons-file small { display: block; color: var(--muted); }
+.editorial-workspace .workspace-commons-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.editorial-workspace .workspace-inline { display: flex; gap: 8px; align-items: center; }
+.editorial-workspace .workspace-inline input { width: auto; }
+.editorial-workspace #workspace-commons-status { min-height: 1.2em; font-size: 13px; overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .editorial-workspace #workspace-commons-explorer { padding: 16px; }
+  .editorial-workspace #workspace-commons-search { grid-template-columns: 1fr; }
+  .editorial-workspace #workspace-commons-results { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .editorial-workspace .workspace-commons-actions button { flex: 1 1 100%; }
+}
