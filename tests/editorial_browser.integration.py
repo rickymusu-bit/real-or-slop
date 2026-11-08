@@ -115,6 +115,13 @@ with sync_playwright() as p:
             form.locator('textarea').fill('A description written entirely by the owner after the unavailable service.')
             form.locator('button[type=submit]').click()
             expect(page.locator('#workspace-status')).to_contain_text('Embedding calcolato')
+            # The removal control lives in the Topics view and frees the title of an unused topic.
+            removable=page.locator('#workspace-topic-select').input_value()
+            remove=page.get_by_role('button',name='Rimuovi argomento inutilizzato')
+            expect(remove).to_be_visible()
+            remove.click()
+            expect(page.locator('#workspace-status')).to_contain_text('rimosso')
+            assert page.locator('#workspace-topic-select option[value="'+removable+'"]').count()==0
             form.locator('input[name=title]').fill('Browser photographic topic '+name)
             form.locator('textarea').fill('Photographs of everyday work in a coastal town, with visible human activity.')
             form.locator('button[type=submit]').click()
