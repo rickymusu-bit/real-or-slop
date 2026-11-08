@@ -1,5 +1,15 @@
 name: Checks
-on: [pull_request, workflow_dispatch]
+on:
+  pull_request:
+    # Le modifiche solo documentali non toccano codice, test o build.
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+  workflow_dispatch:
+# Un nuovo push sulla stessa PR annulla la verifica precedente ancora in corso.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
