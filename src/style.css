@@ -336,3 +336,16 @@ dialog button { margin-bottom: 12px; }
 #inbox-delete-all[hidden] { display: none; }
 #inbox-delete-dialog, #inbox-delete-all-dialog { max-width: min(520px, calc(100vw - 32px)); border: 1px solid var(--hairline); padding: 24px; background: var(--surface); color: var(--text); }
 #inbox-delete-dialog::backdrop, #inbox-delete-all-dialog::backdrop { background: rgb(0 0 0 / 55%); }
+
+/* Owner-only game catalog selector v0.21.0 */
+.game-catalog-mode { margin: 20px auto 28px; padding: clamp(20px,3vw,28px); border: 1px solid var(--hairline); border-radius: 18px; background: var(--surface); }
+.game-catalog-mode h2 { margin: 4px 0 8px; }
+.game-catalog-mode p { color: var(--muted); }
+.game-catalog-mode fieldset { padding: 0; margin: 16px 0; border: 0; }
+.game-catalog-mode legend { font-weight: 600; padding-bottom: 8px; }
+.game-catalog-mode label { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--hairline); border-radius: 12px; padding: 14px; margin-top: 8px; cursor: pointer; }
+.game-catalog-mode label:has(input:checked) { border-color: var(--real); }
+.game-catalog-mode label input { margin-top: 5px; }
+.game-catalog-mode small { display: block; color: var(--muted); line-height: 1.45; }
+.game-catalog-mode button { margin-right: 8px; margin-bottom: 6px; }
+.game-catalog-mode button:disabled { opacity: .52; cursor: not-allowed; }
