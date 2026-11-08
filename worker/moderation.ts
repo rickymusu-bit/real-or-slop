@@ -22,7 +22,7 @@ import { realDiscovery } from "./real-discovery";
 import { editorialCycle } from "./editorial-cycle";
 import { editorialWorkspace } from "./editorial-workspace";
 import { editorialIntelligence } from "./editorial-intelligence.v1.0.0";
-import { gameCatalogModeAdmin } from "./game-catalog-mode";
+import { gameCatalogModeAdmin } from "./game-catalog-mode.v1.0.0";
 function text(data: Record<string, unknown>, key: string, max = 4000) {
   const v = data[key];
   if (typeof v !== "string" || !v.trim() || v.length > max)

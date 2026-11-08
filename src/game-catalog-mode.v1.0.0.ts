@@ -1,4 +1,4 @@
-import { api, content, escape } from "./main";
+import { api, content } from "./main";
 interface ModeState {
   mode: "demo" | "production";
   revision: number;

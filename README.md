@@ -361,3 +361,18 @@ Nella dashboard esistente mantenere **Build: `npm run build`**, **Deploy: `npm r
 Controllo senza rete: `npm run deploy:check`. Packaging senza modifiche remote: `npm run deploy:demo -- --dry-run`. L’admin richiede `ADMIN_TOKEN` come segreto del Worker; l’importatore usa lo stesso valore tramite `REAL_OR_SLOP_ADMIN_TOKEN`. Un deploy mantiene i binding dichiarati nel repository anche se erano stati aggiunti dalla dashboard.
 
 Sviluppo locale con `--local --env local`: solo emulatori `*-local`. CI verifica sia la moderazione con R2 emulato sia il gioco senza R2, ricavando per quest’ultimo una configurazione temporanea locale priva di bucket. Le preview restano bloccate fino alla configurazione di risorse di test distinte. [Procedura di rilascio](docs/cloudflare.md), [importazione diretta](docs/importazione-diretta-r2.md).
+
+## Catalogo di gioco selezionabile (0.21.0, proposta)
+
+La dashboard privata `/admin` offre un controllo **Demo / Produzione** per le
+nuove partite. La preferenza è in D1 (`game_catalog_control`, migrazione 0028)
+e non cambia `DATA_MODE`, la configurazione Wrangler o gli asset editoriali.
+Il default dopo la migrazione è Demo. Produzione è attivabile solo se R2 è
+disponibile e nel catalogo sono già state pubblicate almeno una REAL e una SLOP.
+Le partite esistenti rimangono vincolate alle immagini assegnate, anche cambiando
+modalità; la scelta viene confermata e storicizzata.
+
+Per il rollout è **obbligatorio** applicare 0028 prima di distribuire il Worker,
+con backup D1 e i controlli già previsti dalla procedura di rilascio. Non
+considerare questa PR un'autorizzazione ad attivare Produzione.
+Dettagli: [specifica e test](docs/game-catalog-mode.v1.0.0.md).

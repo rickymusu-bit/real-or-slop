@@ -2,7 +2,7 @@ import { sourcePhotoPreview, type SourcePhoto } from "./editorial-view";
 import { showVisualReview } from "./review";
 import { mountEditorialWorkspace } from "./editorial-workspace.v1.0.0";
 import { mountEditorialIntelligence } from "./editorial-intelligence.v1.0.0";
-import { mountGameCatalogMode } from "./game-catalog-mode";
+import { mountGameCatalogMode } from "./game-catalog-mode.v1.0.0";
 import { api, content, escape } from "./main";
 import { curationDirty, curationForm, rememberCuration, setupCuration } from "./curation";
 import type { CurationRecord } from "../shared/curation";
