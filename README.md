@@ -376,3 +376,18 @@ Per il rollout è **obbligatorio** applicare 0028 prima di distribuire il Worker
 con backup D1 e i controlli già previsti dalla procedura di rilascio. Non
 considerare questa PR un'autorizzazione ad attivare Produzione.
 Dettagli: [specifica e test](docs/game-catalog-mode.v1.0.0.md).
+
+## Dashboard amministrativa a sezioni (0.22.0, proposta)
+
+Il percorso privato `/admin` usa sei viste accessibili con menu laterale su
+desktop e navigazione orizzontale su mobile: Panoramica, Argomenti, Produzione
+immagini, Revisione, Pubblicazione, Impostazioni. La vista può essere riaperta
+con il parametro `?view=topics|production|review|publication|settings`.
+`?advanced=1` continua ad aprire la pagina di gestione avanzata storica.
+
+I moduli editoriali già inizializzati vengono riutilizzati senza sostituire
+form, listener o stato al cambio sezione. Il budget AI resta sotto Impostazioni
+(e visibile anche durante la Produzione), Topic Discovery sotto Argomenti, la
+pubblicazione sotto Pubblicazione e l'ammissione documentale sotto Revisione.
+Non ci sono modifiche allo schema D1, a Cloudflare, a costi o a gate AI.
+Dettagli: [dashboard v1](docs/admin-dashboard-navigation.v1.0.0.md).

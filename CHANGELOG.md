@@ -1,3 +1,11 @@
+## 0.22.0 — 2026-11-08T11:05:14.575Z (proposta in PR, non pubblicata)
+
+- Dashboard amministrativa divisa in sei sezioni: Panoramica, Argomenti, Produzione immagini, Revisione, Pubblicazione, Impostazioni.
+- Navigazione laterale desktop e orizzontale compatta su mobile. Stato e filtri dei moduli rimangono intatti quando si cambia sezione.
+- Panoramica con dati reali da API private (argomenti, coda, catalogo e modalità partite); errori non mascherati da conteggi inventati.
+- Spostamento della pubblicazione in una sezione distinta senza duplicare i controlli, con conferme e verifiche preesistenti.
+- Nuovi test della navigazione e verifica browser desktop/mobile; nessuna migrazione D1 o azione AI automatica.
+
 ## 0.21.0 — 2026-11-08T08:08:38.708Z (proposta in PR, non pubblicata)
 
 - Selettore Demo/Produzione nella dashboard owner, persistito in D1 e indipendente dal deploy Cloudflare.

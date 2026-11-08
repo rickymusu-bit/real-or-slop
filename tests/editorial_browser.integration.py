@@ -23,7 +23,13 @@ with sync_playwright() as p:
             dialog_answers={'cancel':False}
             page.on('dialog',lambda dialog:dialog.dismiss() if dialog_answers['cancel'] else dialog.accept())
             page.goto(base+'admin')
-            expect(page.locator('#workspace-topic-form button[type=submit]')).to_be_enabled()
+            expect(page.locator('.admin-dashboard')).to_be_visible()
+            expect(page.locator('#admin-overview')).to_be_visible()
+            expect(page.locator('#editorial-workspace')).to_be_hidden()
+            expect(page.locator('#admin-stat-mode')).to_contain_text('Demo')
+            page.screenshot(path=str(folder/(name+'-overview.png')),full_page=True)
+            page.get_by_role('button',name='Impostazioni',exact=True).click()
+            expect(page.locator('#game-catalog-form')).to_be_visible()
             budget=page.locator('#intel-budget')
             expect(budget).to_contain_text('Budget operazioni AI')
             before_budget=page.request.get(base+'api/admin/editorial/intelligence').json()['budget']
@@ -43,6 +49,8 @@ with sync_playwright() as p:
             budget.locator('summary').click()
             budget.screenshot(path=str(folder/(name+'-budget-reset.png')))
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'),name+' budget has horizontal overflow'
+            page.get_by_role('button',name='Argomenti',exact=True).click()
+            expect(page.locator('#workspace-topic-form button[type=submit]')).to_be_enabled()
             discovery=page.locator('#intel-topic-discovery')
             expect(page.locator('#intel-topic-memory')).to_contain_text('Memoria in popolamento')
             expect(discovery).to_contain_text('Qualità e copertura non validate')
@@ -58,7 +66,7 @@ with sync_playwright() as p:
             excluded.screenshot(path=str(folder/(name+'-excluded-topic.png')))
             page.locator('[data-intel=toggle-discovery]').click()
             expect(page.locator('[data-intel=toggle-discovery]')).to_have_text('Attiva Topic Discovery')
-            form=page.locator('#workspace-topic-form')
+            page.get_by_role('button',name='Produzione immagini',exact=True).click()
             formats=page.locator('#intel-format-audit')
             formats.locator('summary').click()
             unknown=page.locator('#intel-format-unknown article').filter(has_text='legacy-'+name)
@@ -66,6 +74,8 @@ with sync_playwright() as p:
             expect(page.locator('#intel-status')).to_contain_text('"orientation_status":"explicit"')
             expect(unknown).to_have_count(0)
             formats.screenshot(path=str(folder/(name+'-exif-audit.png')))
+            page.get_by_role('button',name='Argomenti',exact=True).click()
+            form=page.locator('#workspace-topic-form')
             # #78: title-only first shows an editable private proposal. Reload can resume it.
             draft_title='Browser ambiguous topic '+name
             form.locator('input[name=title]').fill(draft_title)
@@ -112,6 +122,7 @@ with sync_playwright() as p:
             semantic.locator('textarea').fill('Visible everyday work in a coastal town, including early morning market activity.')
             semantic.locator('button').click()
             expect(page.locator('#workspace-status')).to_contain_text('Stato embedding: ready')
+            page.get_by_role('button',name='Produzione immagini',exact=True).click()
             link=page.locator('#workspace-link-form')
             link.locator('input[type=url]').fill('https://example.org/'+name+'/photo.jpg')
             link.locator('button').click()
@@ -134,6 +145,8 @@ with sync_playwright() as p:
             expect(page.locator('#intel-status')).to_contain_text('mismatch')
             expect(ranking).to_have_attribute('open','')
             # Review only the selected topic's uploaded photo through the existing single queue.
+            page.get_by_role('button',name='Revisione',exact=True).click()
+            expect(page.locator('#visual-queue')).to_be_visible()
             page.locator('#inbox-origin').select_option('REAL')
             page.locator('#refresh-review').click()
             expect(page.locator('.inbox-selected-image')).to_be_visible()
@@ -144,6 +157,7 @@ with sync_playwright() as p:
             voted_title=page.locator('#visual-queue h2').inner_text()
             page.locator('[data-visual-decision=approved]').click()
             expect(page.locator('#review-message')).to_contain_text('Approvata')
+            page.get_by_role('button',name='Produzione immagini',exact=True).click()
             preferences=page.locator('#intel-preference-audit')
             preferences.locator('summary').click()
             page.locator('#intel-preference-origin').select_option('REAL')
@@ -165,14 +179,19 @@ with sync_playwright() as p:
             expect(page.locator('#intel-status')).to_contain_text('Operazione registrata')
             # Persisted topic text and Discovery setting survive navigation/refresh.
             page.reload()
+            page.get_by_role('button',name='Argomenti',exact=True).click()
             page.locator('#workspace-topic-select').select_option(topic)
             expect(page.locator('#workspace-semantic-form textarea')).to_have_value('Visible everyday work in a coastal town, including early morning market activity.')
-            overflow=page.locator('body *').evaluate_all("els=>els.filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>({tag:e.tagName,id:e.id,cls:e.className,right:e.getBoundingClientRect().right,text:e.textContent.slice(0,80)}))")
+            assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'),name+' has horizontal page overflow'
+            # Navigation is intentionally horizontally scrollable on mobile: hidden menu buttons
+            # may lie beyond the viewport, but they must not expand the document width.
+            overflow=page.locator('body *').evaluate_all("els=>els.filter(e=>e.getBoundingClientRect().right>innerWidth+1 && !e.closest('.admin-navigation')).map(e=>({tag:e.tagName,id:e.id,cls:e.className,right:e.getBoundingClientRect().right,text:e.textContent.slice(0,80)}))")
             page.screenshot(path=str(folder/(name+'-layout.png')),full_page=True)
             assert not overflow,json.dumps(overflow,ensure_ascii=False)
             page.screenshot(path=str(folder/(name+'.png')),full_page=True)
             page.locator('#editorial-intelligence').scroll_into_view_if_needed()
             page.screenshot(path=str(folder/(name+'-dashboard.png')))
+            page.get_by_role('button',name='Revisione',exact=True).click()
             def admit(title,origin):
                 page.locator('#inbox-origin').select_option(origin)
                 page.locator('#inbox-state').select_option('approved')
@@ -197,7 +216,8 @@ with sync_playwright() as p:
             page.locator('[data-visual-decision=approved]').click()
             expect(page.locator('#review-message')).to_contain_text('Approvata')
             admit(slop_title,'AI')
-            page.get_by_text('Pubblicazione del ciclo',exact=True).click()
+            page.get_by_role('button',name='Pubblicazione',exact=True).click()
+            expect(page.locator('.admin-publication-area')).to_be_visible()
             page.locator('#publication-cycle').fill('browser-'+name)
             page.locator('#cycle-state').click()
             expect(page.locator('#cycle-state-result')).to_contain_text('1 REAL e 1 SLOP')

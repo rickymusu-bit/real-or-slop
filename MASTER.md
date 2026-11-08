@@ -1,8 +1,29 @@
-# Mappa canonica — versione canonica 12.0.0
+# Mappa canonica — versione canonica 13.0.0
 
-Snapshot: `docs/MASTER.v12.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-08T07:01:53Z. Base main `7975604b4f52f7877124c7e89ec4e6cd63771333`.
-Le sezioni precedenti rimangono contesto storico per gli ambiti non sostituiti.
+Snapshot: `docs/MASTER.v13.0.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-08T11:06:49.710Z. Base main `c9f25e624841e763652ef7e31751821d55e10d5c`.
+Le sezioni precedenti rimangono vigenti per gli ambiti non modificati.
+
+## Dashboard amministrativa a sezioni (13.0.0)
+
+Specifica: `docs/admin-dashboard-navigation.v1.0.0.md`.
+App proposta 0.22.0, a partire da 0.21.0 già integrata. Il frontend `/admin`
+presenta sei sezioni: Panoramica, Argomenti, Produzione immagini, Revisione,
+Pubblicazione, Impostazioni. Stato e conteggi della Panoramica provengono dalle
+API amministrative autenticate, non da metriche simulate.
+I moduli React-free preesistenti vengono montati una volta e mantenuti nel DOM:
+il cambio sezione modifica la visibilità, senza ricreare form o scartare input.
+
+La revisione e l'ammissione documentale restano nello stesso modulo; la
+pubblicazione ne usa i controlli originari, ora isolati visivamente. Il selettore
+Demo/Produzione e il budget restano sotto Impostazioni; gestione argomenti e
+Topic Discovery sotto Argomenti; upload/REAL/SLOP e diagnosi nella Produzione.
+Le API e i gate economici non cambiano, né si eseguono operazioni automatiche.
+
+Nessuna migrazione di database. Prima di qualunque merge, verificare desktop e
+mobile, cambio viste senza perdita di input, percorso review→admit→publish,
+interruttore catalogo, budget, Topic Discovery, protezione admin e test CI.
+La PR e le anteprime non autorizzano deploy o produzione.
 
 ## Budget condiviso e reset esplicito (12.0.0)
 
