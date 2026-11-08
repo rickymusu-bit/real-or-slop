@@ -103,6 +103,8 @@ b=io.BytesIO();Image.new('RGB',(${w},${h}),(${imageSequence*61%255},${imageSeque
    }
    throw Error('Unexpected model task: '+name);
   }
+  if(url.hostname==='commons.wikimedia.org' || url.hostname==='upload.wikimedia.org')
+   assert.match(request.headers.get('user-agent') || '',/^RealOrSlop\/[\d.]+ \(https:\/\//,'Wikimedia requires an identifying User-Agent');
   if(url.hostname==='commons.wikimedia.org'){
    const generator=url.searchParams.get('generator');
    if(generator==='search' || generator==='categorymembers'){

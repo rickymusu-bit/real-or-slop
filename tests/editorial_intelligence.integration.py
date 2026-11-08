@@ -125,9 +125,13 @@ code,gone=call(dismiss,{"reason":"Wrong framing"})
 assert code==200 and gone["dismissed"] is True and gone["already_dismissed"] is False,(code,gone)
 assert call(dismiss,{})[1]["already_dismissed"] is True
 assert all(p["topic_id"]!=lot["id"] for p in call("/api/admin/editorial/workspace")[1]["proposals"])
-code,kept=call("/api/admin/editorial/workspace/topics/"+uid+"/remove",{"title":title})
-assert code==409 and "proposte" in kept.get("error",""),(code,kept)
-assert any(t["id"]==uid for t in call("/api/admin/editorial/workspace")[1]["topics"])
+# A lot with only unacquired links (dismissed or not) can be removed; a snapshot keeps them (spec 1.4.0).
+assert call("/api/admin/editorial/workspace/links/batch",{"topic_id":lot["id"],"source_urls":["https://commons.wikimedia.org/wiki/File:Canal_Grande_2.jpg"]})[0]==201
+code,removed=call("/api/admin/editorial/workspace/topics/"+lot["id"]+"/remove",{"title":lot_title})
+assert code==200 and removed["removed"] is True and removed["removed_links"]==2,(code,removed)
+assert all(t["id"]!=lot["id"] for t in call("/api/admin/editorial/workspace")[1]["topics"])
+code,again=call("/api/admin/editorial/workspace/lots",{"title":lot_title})
+assert code==201 and again["id"]!=lot["id"] and again["already_exists"] is False,(code,again)
 external=call("/api/admin/editorial/workspace/links",{
     "topic_id":uid,"source_url":"https://example.org/unsafe.jpg"})[1]
 assert call(prefix+"/acquire",{"proposal_id":external["id"]})[0]==400
@@ -147,6 +151,9 @@ assert code==201,(code,saved)
 inbox=saved["inbox_id"]
 upload=next(p for p in call("/api/admin/editorial/workspace")[1]["proposals"] if p["inbox_id"]==inbox)
 assert call("/api/admin/editorial/workspace/proposals/"+upload["id"]+"/dismiss",{})[0]==409
+code,kept=call("/api/admin/editorial/workspace/topics/"+uid+"/remove",{"title":title})
+assert code==409 and "fotografie caricate o acquisite" in kept.get("error",""),(code,kept)
+assert any(t["id"]==uid for t in call("/api/admin/editorial/workspace")[1]["topics"])
 state=call("/api/admin/review-inbox?state=pending&origin=REAL")[1]
 card=next((x for x in state["images"] if x["id"]==inbox),None)
 assert card and card["sha256"]==saved["sha256"],card

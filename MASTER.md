@@ -1,15 +1,16 @@
-# Mappa canonica — versione canonica 14.0.0
+# Mappa canonica — versione canonica 14.1.0
 
-Snapshot: `docs/MASTER.v14.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-08T20:00:26Z. Base main `ca07046`.
+Snapshot: `docs/MASTER.v14.1.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-08T21:00:00Z. Base main `5113292`.
 Le sezioni precedenti rimangono vigenti per gli ambiti non modificati.
 
 ## Lotti editoriali (14.0.0)
 
-Aggiornato: 2026-11-08T20:00:26Z. Specifica: `docs/lotti-editoriali.v1.3.1.md`.
+Aggiornato: 2026-11-08T21:00:00Z. Specifica: `docs/lotti-editoriali.v1.4.0.md`.
 Base main `ca07046` (app 0.23.2, schema 0028). Il lotto riusa
 `editorial_workspace_topics` come identità; la migrazione additiva 0029 aggiunge stato e
-note del lotto e gli scarti delle proposte. Fasi: (1) lotti, Esplora Commons, scarto e
+note del lotto e gli scarti delle proposte; la 0030 aggiunge l'istantanea di rimozione dei
+lotti senza foto e ammette la cancellazione dei soli link mai acquisiti di quei lotti. Fasi: (1) lotti, Esplora Commons, scarto e
 conversione dei link Commons verso pagine `File:`; (2) vocabolario e tag per foto con
 `untagged`; (3) piano e generazione SLOP con margine; (4) pubblicazione per lotto e
 avvisi di composizione. Ogni fase aggiorna questa sezione con lo stato effettivo.

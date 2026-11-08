@@ -1,12 +1,12 @@
-# Istruzioni Codex — versione canonica 14.0.0
+# Istruzioni Codex — versione canonica 14.1.0
 
-Snapshot: `docs/AGENTS.v14.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-08T20:00:26Z. Base main `ca07046`.
+Snapshot: `docs/AGENTS.v14.1.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-08T21:00:00Z. Base main `5113292`.
 Le sezioni precedenti rimangono contesto per ambiti non sostituiti.
 
 ## Lotti editoriali, tag e SLOP dal lotto (14.0.0)
 
-Aggiornato: 2026-11-08T20:00:26Z. Specifica approvata: `docs/lotti-editoriali.v1.3.1.md`.
+Aggiornato: 2026-11-08T21:00:00Z. Specifica approvata: `docs/lotti-editoriali.v1.4.0.md`.
 Decisione esplicita dell'owner nella sessione corrente; per i nuovi lotti prevale sulle
 sezioni 13.0.0 e precedenti indicate nella sezione 9 della specifica.
 
@@ -14,8 +14,9 @@ Un lotto è una galleria monotematica di REAL scelte dall'owner (per ora Commons
 dal dispositivo ammesso), con titolo breve obbligatorio e note facoltative (≤500
 caratteri). Gli argomenti esistenti sono lotti: stessi id, titoli e proposte. Creare un
 lotto non richiede proposte GPT né embedding; Topic Discovery resta spento e rinviato.
-I link di proposta restano immutabili: lo scarto è un evento append-only, non una
-cancellazione. Esplora Commons passa dal Worker con l'allowlist esistente, senza costi.
+I link di proposta restano immutabili: lo scarto è un evento append-only. Un lotto senza
+foto caricate/acquisite si può rimuovere con i suoi link mai acquisiti, dopo un'istantanea
+append-only (0030, `docs/lotti-editoriali.v1.4.0.md`). Esplora Commons passa dal Worker con l'allowlist esistente, senza costi.
 
 Tag per singola foto, REAL e SLOP: minuscoli, senza spazi, trattino come separatore,
 inglese per i termini comuni e nomi propri in qualunque lingua; nessun tag che riveli

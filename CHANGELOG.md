@@ -1,3 +1,10 @@
+## 0.25.0 — 2026-11-08T21:00:00Z (proposta, non pubblicata)
+
+- Esplora Commons e acquisizioni: tutte le richieste a Wikimedia inviano un `User-Agent` identificativo (il sito pubblico), richiesto dalla policy Wikimedia; i Worker non ne inviano uno di default. Gli errori riportano il codice HTTP di Commons.
+- Rimozione dei lotti senza fotografie caricate o acquisite anche quando contengono link mai acquisiti, scartati o no: istantanea append-only in `editorial_lot_removals`, poi cancellazione di link, scarti, note e lotto; il titolo torna libero.
+- Migrazione 0030: nuova tabella di audit e trigger di proposte/scarti sostituiti per ammettere solo quella cancellazione. Upload, foto acquisite, revisione e ricevute restano protetti.
+- Specifica `docs/lotti-editoriali.v1.4.0.md`, AGENTS/MASTER 14.1.0.
+
 ## 0.24.0 — 2026-11-08T20:00:26Z (proposta, non pubblicata)
 
 Fase 1 dei lotti editoriali (`docs/lotti-editoriali.v1.3.1.md`, AGENTS/MASTER 14.0.0).

@@ -59,3 +59,43 @@ class LotSchemaTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LotRemovalSchemaTest(unittest.TestCase):
+    """Schema 0030: unacquired links are deletable only after a removal snapshot. v1.0.0, 2026-11-08T21:00:00Z."""
+    def setUp(self):
+        self.db = sqlite3.connect(":memory:")
+        self.db.execute("PRAGMA foreign_keys=ON")
+        for filename in MIGRATIONS + ("0030_editorial_lot_removal.v1.0.0.sql",):
+            self.db.executescript((ROOT / "migrations" / filename).read_text())
+        db = self.db
+        db.execute("INSERT INTO editorial_workspace_topics VALUES('t1','Paris protests','paris protests','now')")
+        db.execute("INSERT INTO editorial_workspace_proposals VALUES('link','t1','link','https://commons.wikimedia.org/wiki/File:A.jpg',NULL,'','now')")
+        db.execute("INSERT INTO editorial_workspace_proposal_dismissals VALUES('link','thumbnail','now')")
+        db.execute("INSERT INTO editorial_review_inbox(id,origin,sha256,media_key,metadata_json,created_at) VALUES('i1','REAL',?,'k','{}','now')", ("a" * 64,))
+        db.execute("INSERT INTO editorial_workspace_proposals VALUES('upload','t1','upload',NULL,'i1','','now')")
+        db.execute("INSERT INTO editorial_workspace_proposals VALUES('acquired','t1','link','https://commons.wikimedia.org/wiki/File:B.jpg',NULL,'','now')")
+        db.execute("INSERT INTO editorial_workspace_acquisitions VALUES('acquired','i1','{}','now')")
+
+    def tearDown(self):
+        self.db.close()
+
+    def test_links_need_a_removal_snapshot_and_photos_stay_protected(self):
+        db = self.db
+        for statement in ("DELETE FROM editorial_workspace_proposal_dismissals WHERE proposal_id='link'",
+                          "DELETE FROM editorial_workspace_proposals WHERE id='link'"):
+            with self.assertRaises(sqlite3.IntegrityError, msg=statement):
+                db.execute(statement)
+        db.execute("INSERT INTO editorial_lot_removals VALUES('t1','Paris protests','paris protests','{}','now')")
+        db.execute("DELETE FROM editorial_workspace_proposal_dismissals WHERE proposal_id='link'")
+        db.execute("DELETE FROM editorial_workspace_proposals WHERE id='link'")
+        for pid in ("upload", "acquired"):
+            with self.assertRaises(sqlite3.IntegrityError, msg=pid):
+                db.execute("DELETE FROM editorial_workspace_proposals WHERE id=?", (pid,))
+        with self.assertRaises(sqlite3.IntegrityError):
+            db.execute("UPDATE editorial_lot_removals SET title='x'")
+        with self.assertRaises(sqlite3.IntegrityError):
+            db.execute("DELETE FROM editorial_lot_removals")
+        with self.assertRaises(sqlite3.IntegrityError):
+            db.execute("INSERT INTO editorial_lot_removals VALUES('t2','x','x','not json','now')")
+        self.assertEqual(db.execute("SELECT count(*) FROM editorial_workspace_proposals").fetchone()[0], 2)
