@@ -1,14 +1,14 @@
 export { GameRoom } from "./room";
 import { game, stats } from "./game";
 import { moderation } from "./moderation";
-import { admin, HttpError, json, sameOrigin, type Env } from "./core";
+import { admin, currentGameMode, HttpError, json, sameOrigin, type Env } from "./core";
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     try {
       const url = new URL(request.url);
       if (request.method !== "GET") sameOrigin(request);
       if (url.pathname === "/api/health")
-        return json({ name: "Real or Slop", demo: env.DATA_MODE === "demo" });
+        return json({ name: "Real or Slop", demo: (await currentGameMode(env)) === "demo" });
       if (url.pathname === "/api/categories")
         return json(
           (

@@ -1,6 +1,7 @@
 import {
   body,
   catalog,
+  currentGameMode,
   hash,
   HttpError,
   id,
@@ -38,8 +39,9 @@ export async function filteredCatalog(
   env: Env,
   filters: { categories: string[] },
 ) {
-  let rows = await catalog(env);
-  const demo = env.DATA_MODE === "demo" ? 1 : 0;
+  const selectedMode = await currentGameMode(env);
+  let rows = await catalog(env, selectedMode);
+  const demo = selectedMode === "demo" ? 1 : 0;
   const [assignments, metadata] = await Promise.all([
     env.DB.prepare("SELECT ic.image_id,ic.category_id FROM image_categories ic JOIN images i ON i.id=ic.image_id WHERE i.id IN (SELECT image_id FROM published_images) AND i.demo=?")
       .bind(demo).all<{ image_id: string; category_id: string }>(),
@@ -165,7 +167,8 @@ async function state(env: Env, s: Session) {
   }
   const credits = s.phase === "completed" ? (await env.DB.prepare("SELECT i.*,s.page_url AS source_url,l.name AS license_name,l.url AS license_url,COALESCE(a.correct,0) AS correct,r.timed_out FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id JOIN images i ON i.id=r.image_id LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id WHERE r.session_id=? AND (a.round_id IS NOT NULL OR r.timed_out=1) ORDER BY r.position")
     .bind(s.id).all<ImageRow & { correct: number; timed_out: number }>()).results.map(image => ({ ...reveal(image), correct: !!image.correct, timedOut: !!image.timed_out })) : [];
-  return json({ id: s.id, mode: s.mode, demo: env.DATA_MODE === "demo", protocolVersion: s.protocol_version,
+  const assignedOrigin = await env.DB.prepare("SELECT i.demo FROM game_rounds r JOIN images i ON i.id=r.image_id WHERE r.session_id=? ORDER BY r.position LIMIT 1").bind(s.id).first<{ demo: number }>();
+  return json({ id: s.id, mode: s.mode, demo: assignedOrigin?.demo === 1, protocolVersion: s.protocol_version,
     phase: s.phase, invalidReason: s.invalid_reason, preparationExpiresAt: s.preparation_expires_at,
     serverNow: Date.now(), expiresAt: s.timing_mode === "per-image" ? roundExpiresAt : s.expires_at, startedAt: s.started_at, done, total,
     timingMode: s.timing_mode, roundSeconds: s.round_seconds, timedOut: timeouts,
