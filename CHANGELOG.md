@@ -1,3 +1,10 @@
+## 0.21.0 — 2026-11-08T08:08:38.708Z (proposta in PR, non pubblicata)
+
+- Selettore Demo/Produzione nella dashboard owner, persistito in D1 e indipendente dal deploy Cloudflare.
+- Attivazione produzione soltanto con immagini REAL e SLOP pubblicate in R2; revisione ottimistica e audit immutabile.
+- Nuove partite scelgono il catalogo corrente; le partite già assegnate conservano immagini, risposta, sorgente e corretta etichetta.
+- Test e anteprima; migrazione additiva 0028. Nessuna attivazione automatica della produzione.
+
 ## 0.20.0 — 2026-11-08T07:01:53Z
 
 - Budget AI condiviso visibile in dashboard con reset esplicito a importo server, storico immutabile e prenotazioni conservate.

@@ -119,6 +119,15 @@ export async function rateLimit(env: Env, key: string, max = 30) {
   if (row && row.count > max)
     throw new HttpError(429, "Troppe richieste. Riprova tra un minuto.");
 }
+export type GameCatalogMode = "demo" | "production";
+export async function currentGameMode(env: Env): Promise<GameCatalogMode> {
+  // Unit fixtures without D1 retain the deployment default; real Workers require migration 0028.
+  if (!env.DB) return env.DATA_MODE === "production" ? "production" : "demo";
+  const row = await env.DB.prepare("SELECT mode FROM game_catalog_control WHERE id=1").first<{ mode: string }>();
+  if (!row || (row.mode !== "demo" && row.mode !== "production"))
+    throw new HttpError(503, "Controllo catalogo non inizializzato: applicare la migrazione 0028");
+  return row.mode;
+}
 export interface ImageRow {
   id: string;
   type: "REAL" | "AI";
@@ -132,12 +141,13 @@ export interface ImageRow {
   license_name?: string;
   license_url?: string;
 }
-export async function catalog(env: Env) {
+export async function catalog(env: Env, mode?: GameCatalogMode) {
+  const selectedMode = mode ?? await currentGameMode(env);
   return (
     await env.DB.prepare(
       "SELECT i.* FROM images i JOIN published_images p ON p.image_id=i.id WHERE i.status='approved' AND i.demo=?",
     )
-      .bind(env.DATA_MODE === "demo" ? 1 : 0)
+      .bind(selectedMode === "demo" ? 1 : 0)
       .all<ImageRow & { status: string; sha256: string; perceptual_hash: string | null }>()
   ).results;
 }

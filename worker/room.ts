@@ -171,7 +171,7 @@ export class GameRoom {
       phase: r.phase,
       round: r.round + 1,
       total: r.images.length,
-      demo: this.env.DATA_MODE === "demo",
+      demo: r.images[0]?.demo === 1,
       serverNow: this.now(),
       deadline: r.deadline,
       protocolVersion: r.protocolVersion || 1,
@@ -438,7 +438,7 @@ export class GameRoom {
           JSON.stringify({
             ...config,
             roundSeconds: seconds,
-            demo: this.env.DATA_MODE === "demo",
+            demo: selected[0]?.demo === 1,
           }),
         ),
         this.env.DB.prepare(

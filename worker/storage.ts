@@ -29,7 +29,7 @@ export class DemoStore implements ObjectStore {
 }
 export async function media(env: Env, image: ImageRow) {
   const store =
-    image.demo && env.DATA_MODE === "demo"
+    image.demo === 1
       ? new DemoStore()
       : env.IMAGES
         ? new R2Store(env.IMAGES)
