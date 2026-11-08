@@ -106,19 +106,28 @@ b=io.BytesIO();Image.new('RGB',(${w},${h}),(${imageSequence*61%255},${imageSeque
   if(url.hostname==='commons.wikimedia.org' || url.hostname==='upload.wikimedia.org')
    assert.match(request.headers.get('user-agent') || '',/^RealOrSlop\/[\d.]+ \(https:\/\//,'Wikimedia requires an identifying User-Agent');
   if(url.hostname==='commons.wikimedia.org'){
-   const generator=url.searchParams.get('generator');
+   const generator=url.searchParams.get('generator'),list=url.searchParams.get('list');
+   // Lot browsing (spec lotti 1.4.0): files and categories are separate requests, as the real API requires.
+   if(generator && list===generator)throw Error('Commons module used as both generator and list: '+generator);
    if(generator==='search' || generator==='categorymembers'){
-    // Lot browsing (spec lotti 1.3.1): read-only, thumbnails only from upload.wikimedia.org.
-    if(url.searchParams.get('gsrsearch')==='commons down')return new globalThis.Response('fixture failure',{status:503});
-    const thumb=n=>'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/'+n+'/320px-'+n;
-    const page=(title,index,thumburl)=>({title,index,categories:[{title:'Category:Canals of Venice'},{title:'Category:'+title.slice(5)}],imageinfo:[{thumburl,width:3000,height:2000,
-     extmetadata:{Artist:{value:'<a href="https://example.org">Fixture <b>author</b></a>'},LicenseShortName:{value:'CC BY-SA 4.0'}}}]});
-    const pages=[page('File:Canal B.jpg',2,thumb('Canal_B.jpg')),page('File:Canal A.jpg',1,thumb('Canal_A.jpg')),
+    if((url.searchParams.get('gsrsearch')||'').startsWith('commons down'))return new globalThis.Response('fixture failure',{status:503});
+    if(generator==='search'){
+     assert.ok(url.searchParams.get('gsrsearch').endsWith(' filetype:bitmap'));
+     if(url.searchParams.get('gsrsearch').startsWith('newest'))assert.equal(url.searchParams.get('gsrsort'),'create_timestamp_desc');
+    }
+    const thumb=n=>'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/'+n+'/400px-'+n;
+    const page=(title,index,thumburl,width=3000)=>({title,index,categories:[{title:'Category:Canals of Venice'},{title:'Category:'+title.slice(5)}],
+     imageinfo:[{thumburl,url:'https://upload.wikimedia.org/wikipedia/commons/c/cc/'+title.slice(5).replace(/ /g,'_'),width,height:2000,
+     extmetadata:{Artist:{value:'<a href="https://example.org">Fixture <b>author</b></a>'},LicenseShortName:{value:'CC BY-SA 4.0'},
+      ImageDescription:{value:'Gondolas <i>at dusk</i>'},DateTimeOriginal:{value:'2024-05-01'}}}]});
+    const pages=[page('File:Canal B.jpg',2,thumb('Canal_B.jpg'),900),page('File:Canal A.jpg',1,thumb('Canal_A.jpg')),
      page('File:Clip.ogv',3,thumb('Clip.ogv')),page('File:Hostile.jpg',4,'https://example.org/x.jpg')];
-    const listed=generator==='search'?{search:[{title:'Category:Canals of Venice'},{title:'File:Not a category.jpg'}]}:
-     {categorymembers:[{title:'Category:Canal Grande'}]};
-    return globalThis.Response.json({query:{pages,...listed},continue:generator==='search'?{gsroffset:'30'}:{gcmcontinue:'file|NEXT'}});
+    return globalThis.Response.json({query:{pages},continue:generator==='search'?{gsroffset:30,continue:'gsroffset||'}:{gcmcontinue:'file|NEXT',continue:'gcmcontinue||'}});
    }
+   if(list==='search' && url.searchParams.get('srnamespace')==='14')
+    return globalThis.Response.json({query:{search:[{title:'Category:Canals of Venice'},{title:'File:Not a category.jpg'}]}});
+   if(list==='categorymembers' && url.searchParams.get('cmtype')==='subcat')
+    return globalThis.Response.json({query:{categorymembers:[{title:'Category:Canal Grande'}]}});
    if(url.searchParams.get('titles')==='File:Lot_canal.jpg' || url.searchParams.get('titles')==='File:Lot canal.jpg'){
     return globalThis.Response.json({query:{pages:[{title:'File:Lot canal.jpg',imageinfo:[{url:'https://upload.wikimedia.org/wikipedia/commons/c/cc/Lot_canal.webp',
      width:300,height:200,size:photo('lot-canal').length,extmetadata:{Artist:{value:'Fixture author'},LicenseUrl:{value:'https://creativecommons.org/licenses/by/4.0/'},
@@ -179,6 +188,12 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  assert.deepEqual(found.files.map(f=>f.title),['File:Canal A.jpg','File:Canal B.jpg']);
  assert.equal(found.files[0].page_url,'https://commons.wikimedia.org/wiki/File:Canal_A.jpg');
  assert.equal(found.files[0].author,'Fixture author');assert.equal(found.files[0].license,'CC BY-SA 4.0');
+ assert.equal(found.files[0].preview_url,'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Canal_A.jpg/1280px-Canal_A.jpg');
+ assert.equal(found.files[1].preview_url,'https://upload.wikimedia.org/wikipedia/commons/c/cc/Canal_B.jpg','small originals preview themselves');
+ assert.equal(found.files[0].description,'Gondolas at dusk');assert.equal(found.files[0].date,'2024-05-01');
+ const newest=await api(ws+'/commons/search?sort=recent&q='+encodeURIComponent('newest canals'));assert.equal(newest.files.length,2);
+ await api(ws+'/commons/search?sort=random&q=venice',undefined,400);
+ const page2=await api(ws+'/commons/search?offset=30&q=venice');assert.deepEqual(page2.categories,[]);
  assert.deepEqual(found.categories,['Category:Canals of Venice']);assert.equal(found.next,'30');
  await api(ws+'/commons/search?q=x',undefined,400);
  await api(ws+'/commons/search?q=venice&offset=abc',undefined,400);

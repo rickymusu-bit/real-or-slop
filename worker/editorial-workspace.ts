@@ -350,7 +350,7 @@ async function editorialLots(request:Request,env:Env,path:string):Promise<Respon
   }
   if(path===base+"/commons/search" && request.method==="GET"){
     const params=new URL(request.url).searchParams;
-    return json(await browseCommonsSearch(params.get("q") || "",params.get("offset") || ""));
+    return json(await browseCommonsSearch(params.get("q") || "",params.get("offset") || "",params.get("sort") || "relevance"));
   }
   if(path===base+"/commons/category" && request.method==="GET"){
     const params=new URL(request.url).searchParams;
