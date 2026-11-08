@@ -1,3 +1,10 @@
+## 0.26.0 — 2026-11-08T22:40:00Z (proposta, non pubblicata)
+
+- Esplora Commons mostra le fotografie: foto e categorie ora usano richieste API separate (insieme, l'API restituiva solo le categorie).
+- Griglia di miniature con selezione sovrapposta; anteprima grande con autore, licenza, data, dimensioni, descrizione, selezione e navigazione tra le foto.
+- Ricerca limitata alle immagini bitmap e ordinabile per pertinenza o per data; categorie collegate in un pannello richiudibile; barra della selezione fissa in basso.
+- Specifica `docs/lotti-editoriali.v1.4.1.md`. Nessuna migrazione.
+
 ## 0.25.0 — 2026-11-08T21:00:00Z (proposta, non pubblicata)
 
 - Esplora Commons e acquisizioni: tutte le richieste a Wikimedia inviano un `User-Agent` identificativo (il sito pubblico), richiesto dalla policy Wikimedia; i Worker non ne inviano uno di default. Gli errori riportano il codice HTTP di Commons.
