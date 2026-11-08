@@ -1,10 +1,38 @@
-# Mappa canonica — versione 10.0.0
+# Mappa canonica — versione 11.0.0
 
-Snapshot: `docs/MASTER.v10.0.0.md`. Percorsi relativi alla radice del repository.
-Verificato: 2026-11-08T02:30:59Z. Base main `ff11c3dcd1b4ad6118ac72d443a680113b646e7a`.
-La PR #79 è integrata; questo delta implementa la successiva decisione della
-sessione sulla plausibilità dei temi e sulla libertà dei rami REAL/SLOP.
-La migrazione 0025 è provata soltanto in locale; nessun rilascio remoto incluso.
+Snapshot: `docs/MASTER.v11.0.0.md`. Percorsi relativi alla radice del repository.
+Verificato: 2026-11-08T03:46:09Z. Base main `0a595bfa18c448a422c16310bb1c79f1899c290c`.
+Il rilascio della sessione ha portato il Worker allo schema 0025; il nuovo delta
+aggiunge snapshot delle preferenze e audit geometrici senza modificare immagini.
+Le versioni precedenti restano contesto storico per gli ambiti non sostituiti.
+
+## Completamento corrente #64 — snapshot e geometria EXIF (11.0.0)
+
+Aggiornato: 2026-11-08T03:46:09Z. Specifica: `docs/snapshot-preferenze-geometria.v1.0.0.md`.
+L'owner ha autorizzato di procedere con rilascio e completamenti nella sessione
+corrente. Main 0a595bf con migrazioni 0024–0025 è già rilasciato; schema 0026 e
+questo incremento vanno verificati prima del successivo rilascio. Non richiedere
+una nuova autorizzazione per le azioni già comprese nel procedere dell'owner.
+L'attivazione di spese richiede limiti numerici: la scelta del budget è pendente.
+
+I ranker REAL e SLOP conservano snapshot immutabili con versione dell'algoritmo,
+parametri, conteggi, provenienza dei voti/profili e hash degli input. Lo stesso
+stato viene riusato senza duplicazioni; modifiche dei voti producono nuovi stati.
+Le chunk JSON limitate conservano anche tracce grandi entro i limiti delle righe D1.
+Snapshot e cronologia non certificano utilità dei suggerimenti o apprendimento
+misurato. I seed SLOP congelati e i confini della decisione 10.0.0 restano invariati.
+
+La geometria legge EXIF in modo limitato e controllato, risolve le orientazioni
+1–8 e distingue dimensioni codificate da dimensioni di visualizzazione. Originali,
+SHA, revisione, voti, provenienza/licenza rimangono invariati. TIFF/EXIF incompleti
+o incoerenti restano unknown, con diagnostica. La lettura dei file storici avviene
+su azione amministrativa esplicita senza chiamate AI, con hash corrente verificato;
+il risultato è un audit append-only, non una riscrittura dei metadata storici.
+
+La migrazione additiva 0026 aggiunge stati, chunk e audit geometrici. Nessun cron,
+riimportazione o ripristino delle immagini eliminate. Testare immutabilità,
+concorrenza, correzioni dei voti, esclusioni di diritti/provenienza dal gusto,
+orientamenti/byte order, metadata invalidi, originali invariati e UI desktop/mobile.
 
 ## Decisione corrente #64 — significato prima della distanza (10.0.0)
 

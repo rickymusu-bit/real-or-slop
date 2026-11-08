@@ -3,6 +3,8 @@ import { topicKey, topicTitle, imageMime } from "../shared/editorial-workspace.v
 import { imageFormatChoice, topicImageFormatChoice, profileTags, type Profile } from "../shared/editorial-intelligence.v1.0.0";
 import { commonsFile, searchCommons, type CommonsFile, MAX_IMAGE_BYTES } from "./commons-editorial.v1.0.0";
 import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
+import { imageGeometry } from "../shared/image-geometry.v1.0.0";
+import { auditGeometry,formatAudit,preferenceSnapshotHistory } from "./editorial-audits.v1.0.0";
 import { ensureSlopSeed, headlineStats, rankPending } from "./editorial-learning.v1.0.0";
 import { fields, modelImage, modelJSON } from "./workspace-ai.v1.0.0";
 import { topicDiscoveryEnabled, setTopicDiscoveryEnabled } from "./topic-discovery-opt-in.v1.0.0";
@@ -42,7 +44,7 @@ async function saveCommons(env:Env,t:Topic,photo:CommonsFile,kind:"gpt-commons"|
   const inbox="commons-"+id(),mediaKey="editorial-intelligence/"+inbox;
   const metadata=JSON.stringify({source_kind:kind,topic_id:t.id,title:photo.title,
     author:photo.author,source_url:photo.source_url,license_url:photo.license_url,
-    original_key:mediaKey,original_sha256:sha,provenance_status:"unverified",image_geometry:imageDimensions(new Uint8Array(photo.bytes)),
+    original_key:mediaKey,original_sha256:sha,provenance_status:"unverified",image_geometry:imageGeometry(new Uint8Array(photo.bytes)),
     provenance:{provider:"commons",original_url:photo.download_url,original_is_preview:photo.original_is_preview,
       source_evidence:photo.description,width:photo.width,height:photo.height}});
   await env.QUARANTINE.put(mediaKey,photo.bytes,{httpMetadata:{contentType:photo.mime},customMetadata:{sha256:sha}});
@@ -61,13 +63,16 @@ async function saveCommons(env:Env,t:Topic,photo:CommonsFile,kind:"gpt-commons"|
   return {inbox_id:inbox,sha256:sha,title:photo.title,source_url:photo.source_url};
 }
 export async function editorialIntelligence(request:Request,env:Env,path:string):Promise<Response>{
+  const snapshots=path.match(/^\/api\/admin\/editorial\/intelligence\/preferences\/snapshots(?:\/([a-f0-9]{64}))?$/);
+  if(snapshots && request.method==='GET')return preferenceSnapshotHistory(request,env,snapshots[1]);
   if(path===base && request.method==="GET"){
     const requestedTopic = new URL(request.url).searchParams.get("topic_id");
     const selectedTopic = requestedTopic ? uid(requestedTopic) : null;
     const manualStage=await env.DB.prepare("SELECT decision FROM editorial_workspace_manual_stage WHERE topic_id=?").bind(selectedTopic || "").first();
-    const [discoveryOn,stats,reals,slops,suggestions,searches,jobs,prompts,topicCounts,reviewedUnprofiled,formats,topicMemory]=await Promise.all([
+    const stats=await headlineStats(env);
+    const [discoveryOn,reals,slops,suggestions,searches,jobs,prompts,topicCounts,reviewedUnprofiled,formatState,topicMemory]=await Promise.all([
       topicDiscoveryEnabled(env),
-      headlineStats(env),rankPending(env,"REAL",selectedTopic),rankPending(env,"AI",selectedTopic),
+      rankPending(env,"REAL",selectedTopic,stats.real),rankPending(env,"AI",selectedTopic,stats.slop),
       env.DB.prepare("SELECT t.*,COALESCE(s.description,a.description) AS description,s.embedding_status,c.status AS screening_status,c.novelty,c.neighbors_json,c.reason AS screening_reason,a.status AS assessment_status,a.assessment_json,a.review_json FROM editorial_topic_suggestions t LEFT JOIN editorial_topic_suggestion_semantics s ON s.topic_id=t.id LEFT JOIN editorial_topic_suggestion_screening c ON c.suggestion_id=t.id LEFT JOIN editorial_topic_suggestion_assessments a ON a.suggestion_id=t.id ORDER BY t.created_at DESC LIMIT 100").all(),
       env.DB.prepare("SELECT * FROM editorial_topic_explorations ORDER BY created_at DESC LIMIT 50").all(),
       env.DB.prepare("SELECT kind,status,topic_id,created_at,updated_at FROM editorial_workspace_jobs UNION ALL SELECT kind,status,topic_id,created_at,updated_at FROM editorial_topic_description_jobs ORDER BY created_at DESC LIMIT 30").all(),
@@ -76,23 +81,13 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
       env.DB.prepare("SELECT q.id,q.sha256,q.origin,q.status FROM editorial_review_effective_images q " +
         "LEFT JOIN editorial_image_profiles p ON p.inbox_id=q.id AND p.sha256=q.sha256 " +
         "WHERE p.inbox_id IS NULL AND q.status IN ('approved','rejected') ORDER BY q.created_at DESC LIMIT 40").all(),
-      env.DB.prepare(`WITH geometry AS (
-        SELECT q.id,q.origin,q.metadata_json,
-          json_extract(q.metadata_json,'$.image_geometry.width') AS w,
-          json_extract(q.metadata_json,'$.image_geometry.height') AS h,
-          EXISTS(SELECT 1 FROM editorial_cycle_admissions a JOIN published_images p ON p.image_id=a.image_id WHERE a.inbox_id=q.id) AS published
-        FROM editorial_review_effective_images q
-      ) SELECT origin,published,CASE
-        WHEN w IS NULL OR h IS NULL OR h<=0 OR json_extract(metadata_json,'$.image_geometry.mime')='image/jpeg' THEN 'unknown'
-        WHEN max(w*1.0/h,h*1.0/w)>2.5 THEN 'panorama'
-        WHEN abs(w*1.0/h-1)<0.02 THEN 'square'
-        WHEN w>h THEN 'landscape' ELSE 'portrait' END AS format,count(*) AS n
-        FROM geometry GROUP BY origin,published,format`).all(),topicMemoryStatus(env)
+      formatAudit(env),topicMemoryStatus(env)
     ]);
     return json({version:"1.0.0",topic_discovery_enabled:discoveryOn,topic_memory:topicMemory,preferences:stats,ranked_real:reals.ranked.slice(0,30),ranked_slop:slops.ranked.slice(0,30),
       suggestions:suggestions.results,searches:searches.results,jobs:jobs.results,prompts:prompts.results,topic_counts:topicCounts.results,
       reviewed_unprofiled:reviewedUnprofiled.results,
-      formats:formats.results,
+      formats:formatState.formats,format_unknown:formatState.unknown,
+      ranked_real_snapshot_id:reals.preference.snapshot_id,ranked_slop_snapshot_id:slops.preference.snapshot_id,
       manual_stage_complete:!!manualStage,
       enabled:env.WORKSPACE_AI_ENABLED==="true" && env.ENABLE_REAL_DISCOVERY_PAID==="true" && !!env.OPENAI_API_KEY,
       generation_enabled:env.WORKSPACE_AI_ENABLED==="true" && env.ENABLE_EDITORIAL_CYCLE_GENERATION==="true" && !!env.OPENAI_API_KEY,
@@ -108,6 +103,11 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     return json({topic_discovery_enabled:data.enabled,paid_calls_started:false});
   }
   if(request.method!=="POST")throw new HttpError(405,"Metodo non consentito");
+  if(path===base+'/formats/analyze'){
+    const data=await body(request,500);
+    if(Object.keys(data).sort().join(',')!=='inbox_id,sha256')throw new HttpError(400,"Campi audit non previsti");
+    return json(await auditGeometry(env,data.inbox_id,data.sha256));
+  }
   const match=path.match(/^\/api\/admin\/editorial\/intelligence\/suggestions\/([a-f0-9-]{36})\/decision$/);
   if(match){
     const data=await body(request,1200);
@@ -262,7 +262,7 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     await ensureSlopSeed(env,t);
     const stats=await headlineStats(env);
     const resp=await modelJSON(env,"search",t.id,"search:"+operationId,
-      {topic:t.title,limit,real_preference:stats.real.counts},
+      {topic:t.title,limit,real_preference:stats.real.counts,real_preference_snapshot_id:stats.real.snapshot_id},
       "Write 2-3 specific Wikimedia Commons MediaWiki text search queries for authentic photos of the user's subject. Match Commons terminology and the relevant historical time/place; no URLs or QIDs. Favor visual subjects/actions fitting the editor's learned visual tags; avoid generic moods. Never claim results are authentic. Output only queries.",
       "Subject: "+t.title+". REAL approved/rejected visual tags: "+JSON.stringify(stats.real.counts)+
         ". Need up to "+limit+" varied candidate photos.",fields.search);
@@ -357,7 +357,7 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
       const bytes=result.bytes;
       if(bytes.byteLength>MAX_IMAGE_BYTES || imageMime(new Uint8Array(bytes))!=="image/webp")
         throw new HttpError(415,"Generazione SLOP non in formato WebP previsto");
-      const dimensions=imageDimensions(new Uint8Array(bytes));
+      const dimensions=imageGeometry(new Uint8Array(bytes));
       if(dimensions.width+"x"+dimensions.height!==size.size)
         throw new HttpError(415,"La SLOP non rispetta le dimensioni richieste");
       const sha=[...new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))]

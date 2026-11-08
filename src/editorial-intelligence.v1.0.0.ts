@@ -7,13 +7,15 @@ interface Proposal {id:string;topic_id:string;kind:string;source_url:string|null
 interface TopicCount {origin:string;status:string;n:number}
 interface Ranked {id:string;sha256:string;tags:string[];score:number;reason:string;has_profile?:boolean;relevance?:{match:string;reason:string}|null}
 interface Bank {slot:number;prompt:string;variant:string}
+interface PreferenceSnapshot {id:string;origin:string;learner_version:string;observations:number;approved:number;rejected:number;created_at:string}
 interface Panel {
   enabled:boolean;generation_enabled:boolean;manual_stage_complete:boolean;topic_discovery_enabled:boolean; cost_per_text_call:string|null;cost_per_image_call:string|null;
   suggestions:Suggestion[];prompts:Bank[];topic_counts:TopicCount[];ranked_real:Ranked[];
-  preferences:{real:{observations:number;approved:number;rejected:number};slop:{observations:number;approved:number;rejected:number}};
+  preferences:{real:{observations:number;approved:number;rejected:number;snapshot_id:string};slop:{observations:number;approved:number;rejected:number;snapshot_id:string}};
   reviewed_unprofiled:Array<{id:string;sha256:string;origin:string;status:string}>;
   searches:Array<{topic_id:string;status:string;candidates:number;created_at:string;diagnostics_json?:string}>;
   formats:Array<{origin:string;published:number;format:string;n:number}>;
+  format_unknown:Array<{id:string;origin:string;sha256:string;title:string|null;diagnostic:string}>;
   jobs:Array<{kind:string;status:string;topic_id:string|null;created_at:string}>;
   topic_memory:{topics:number;indexed_topics:number;proposals:number;owner_reviewed_proposals:number;quality_validated:false;coverage_validated:false};
 }
@@ -37,7 +39,8 @@ export async function mountEditorialIntelligence() {
     '<section><h3>Fotografie REAL</h3><p>Prima proponi le tue foto nella sezione precedente. Il pianificatore ricava query per parole chiave dal titolo e dalle preferenze REAL. La descrizione semantica non viene aggiunta automaticamente alla ricerca.</p>' +
     '<div id="intel-links"></div><p id="intel-manual-state"></p><div class="intel-buttons"><button data-intel="manual-finished">Ho finito di proporre foto</button><button data-intel="manual-skip">Continua senza foto manuali</button></div><label>Numero di nuove candidate <select id="intel-limit"><option value="3">3</option><option value="5" selected>5</option><option value="10">10</option></select></label><button data-intel="search">Cerca altre REAL con GPT</button><div id="intel-ranking"></div></section>' +
     '<section><h3>Generazione SLOP</h3><p>Prompt indipendenti dal solo titolo e dai feedback storici SLOP congelati. La descrizione semantica non impone una scena; fotografie e giudizi REAL del ciclo restano esclusi.</p><button data-intel="plan">Prepara prompt indipendenti</button><div id="intel-prompts"></div></section></div>' +
-    '<details><summary>Formati REAL e SLOP</summary><p>Confronta le proporzioni prima di pubblicare: differenze sistematiche possono suggerire la risposta. I formati sconosciuti restano da verificare.</p><div id="intel-formats"></div></details>'+
+    '<details id="intel-preference-audit"><summary>Storico delle preferenze</summary><p>I voti e i profili producono stati immutabili separati per REAL e SLOP. Questi conteggi descrivono le preferenze osservate, non misurano la qualità dei suggerimenti.</p><p id="intel-preference-current"></p><label>Preferenze da mostrare<select id="intel-preference-origin"><option value="all">REAL e SLOP</option><option value="REAL">REAL</option><option value="AI">SLOP</option></select></label><button data-intel="snapshot-history">Carica storico</button><div id="intel-preference-snapshots"></div><pre id="intel-snapshot-detail" class="intel-snapshot-detail" hidden></pre></details>'+
+    '<details id="intel-format-audit"><summary>Formati REAL e SLOP</summary><p>Confronta le proporzioni prima di pubblicare: differenze sistematiche possono suggerire la risposta. La lettura EXIF conserva gli originali e non usa modelli AI. Metadati non risolvibili restano sconosciuti.</p><div id="intel-formats"></div><div id="intel-format-unknown"></div></details>'+
     '<details class="intel-audit"><summary>Storico delle operazioni</summary><div id="intel-history"></div></details>' +
     '<p id="intel-status" role="status" aria-live="polite"></p>';
   workspace.insertAdjacentElement("afterend",section);
@@ -49,16 +52,30 @@ export async function mountEditorialIntelligence() {
   const prompts=section.querySelector<HTMLElement>("#intel-prompts")!;
   const history=section.querySelector<HTMLElement>("#intel-history")!;
   let panel:Panel|null=null, busy=false, refreshSequence=0;
+  let snapshotRows:PreferenceSnapshot[]=[],snapshotOrigin='all';
+  const loadSnapshots=async(reset=false)=>{
+    const origin=section.querySelector<HTMLSelectElement>('#intel-preference-origin')!.value;
+    if(reset || origin!==snapshotOrigin)snapshotRows=[];
+    snapshotOrigin=origin;
+    const result=await api<{snapshots:PreferenceSnapshot[];total:number}>(base+'/preferences/snapshots?'+new URLSearchParams({origin,offset:String(snapshotRows.length)}));
+    snapshotRows.push(...result.snapshots);
+    section.querySelector<HTMLElement>('#intel-preference-snapshots')!.innerHTML=snapshotRows.map(s=>
+      '<article><strong>'+(s.origin==='AI'?'SLOP':'REAL')+' · versione '+escape(s.learner_version)+'</strong><p>'+s.observations+' giudizi usati: '+s.approved+' approvati, '+s.rejected+' rifiutati.</p><p>'+escape(s.created_at)+'</p><button data-intel="snapshot-detail" data-id="'+escape(s.id)+'">Apri stato '+escape(s.id.slice(0,8))+'</button></article>').join('') || '<p>Nessuno stato archiviato.</p>';
+    const button=section.querySelector<HTMLButtonElement>('[data-intel="snapshot-history"]')!;
+    button.textContent=snapshotRows.length<result.total?'Carica altri stati':'Aggiorna storico';
+    button.dataset.reset=snapshotRows.length<result.total?'0':'1';
+  };
   const busyState=(next:boolean)=>{
     busy=next;
     section.querySelectorAll<HTMLButtonElement>("[data-intel]").forEach(button=>{
       button.disabled=next || (!panel?.enabled && button.dataset.intel!=="acquire" && button.dataset.intel!=="accept" &&
-        button.dataset.intel!=="reject" && button.dataset.intel!=="defer" && button.dataset.intel!=="toggle-discovery" && !button.dataset.intel?.startsWith("manual-")) ||
+        button.dataset.intel!=="reject" && button.dataset.intel!=="defer" && button.dataset.intel!=="toggle-discovery" && !["geometry","snapshot-history","snapshot-detail"].includes(button.dataset.intel || "") && !button.dataset.intel?.startsWith("manual-")) ||
         (button.dataset.intel==="search" && !panel?.manual_stage_complete) ||
         (button.dataset.intel==="accept" && button.dataset.screened==="0") ||
         (button.dataset.intel==="suggest" && !panel?.topic_discovery_enabled) ||
         (button.dataset.intel==="generate" && (!panel?.generation_enabled || button.dataset.capacity==="0"));
     });
+    section.querySelector<HTMLSelectElement>('#intel-preference-origin')!.disabled=next;
   };
   async function refresh() {
     const sequence=++refreshSequence,topic=activeTopic();
@@ -88,6 +105,7 @@ export async function mountEditorialIntelligence() {
     }
     if(discoveryStatus) discoveryStatus.textContent=state.topic_discovery_enabled?"Attivo (solo su richiesta)":"Disattivato";
     const memory=state.topic_memory;
+    section.querySelector<HTMLElement>('#intel-preference-current')!.textContent='Stati correnti: REAL '+state.preferences.real.snapshot_id.slice(0,8)+'; SLOP '+state.preferences.slop.snapshot_id.slice(0,8)+'.';
     section.querySelector<HTMLElement>('#intel-topic-memory')!.textContent='Memoria in popolamento: '+memory.topics+' argomenti registrati, '+memory.indexed_topics+' indicizzati; '+memory.owner_reviewed_proposals+' proposte valutate da te su '+memory.proposals+'. Il numero di vettori non certifica la qualità.';
     const buttonLabel=state.enabled?"":" — IA non configurata";
     suggestions.innerHTML=state.topic_discovery_enabled ? state.suggestions.filter(s=>s.status==="suggested"||s.status==="deferred").slice(0,8)
@@ -125,6 +143,8 @@ export async function mountEditorialIntelligence() {
       : '<p>Nessun prompt congelato per questo argomento.</p>');
     const labels:Record<string,string>={square:"quadrate",landscape:"orizzontali",portrait:"verticali",panorama:"panoramiche",unknown:"sconosciute"};
     section.querySelector<HTMLElement>("#intel-formats")!.textContent=state.formats.map(f=>(f.origin==="AI"?"SLOP":"REAL")+" "+(f.published?"pubblicate":"private")+": "+f.n+" "+(labels[f.format] || f.format)).join(" · ") || "Nessuna fotografia registrata.";
+    section.querySelector<HTMLElement>('#intel-format-unknown')!.innerHTML=state.format_unknown.map(f=>
+      '<article><p>'+escape(f.title || f.id)+' — '+escape(f.diagnostic)+'</p><button data-intel="geometry" data-id="'+escape(f.id)+'" data-sha="'+escape(f.sha256)+'">Leggi geometria ed EXIF</button></article>').join('') || '<p>Nessun formato sconosciuto nella coda.</p>';
     history.innerHTML=(state.searches.length?state.searches.slice(0,10).map(s=>'<p>Ricerca REAL: '+escape(s.status)+' — '+s.candidates+' candidate — '+escape((()=>{try{const d=JSON.parse(s.diagnostics_json || '{}') as {errors?:unknown[];skipped?:number};return d.errors?.length?d.errors.length+' problemi provider/acquisizione; '+(d.skipped || 0)+' file esclusi':'nessun errore segnalato';}catch{return 'diagnostica non disponibile';}})())+' — '+escape(s.created_at)+'</p>').join(""):"")+
       (state.jobs.length ? state.jobs.slice(0,20).map(j=>'<p>'+escape(j.kind)+' — '+
       escape(j.status)+' — '+escape(j.created_at)+'</p>').join("") : '<p>Nessuna chiamata registrata.</p>');
@@ -139,8 +159,19 @@ export async function mountEditorialIntelligence() {
     const button=(event.target as HTMLElement).closest<HTMLButtonElement>("button[data-intel]");
     if(!button || busy || button.disabled)return;
     const action=button.dataset.intel||"",topicId=activeTopic();
+    if(action==='snapshot-history' || action==='snapshot-detail'){
+      busyState(true);
+      try{
+        if(action==='snapshot-history')await loadSnapshots(button.dataset.reset==='1');
+        else{
+          const value=await api(base+'/preferences/snapshots/'+encodeURIComponent(button.dataset.id || ''));
+          const detail=section.querySelector<HTMLElement>('#intel-snapshot-detail')!;detail.hidden=false;detail.textContent=JSON.stringify(value,null,2);
+        }
+        status.textContent='Stato delle preferenze letto dall’archivio privato.';
+      }catch(error){status.textContent=String(error);}finally{busyState(false);}return;
+    }
     const paid=["suggest","search","plan","profile","relevance","generate"].includes(action);
-    if(!topicId && action!=="suggest" && !["accept","reject","defer","toggle-discovery"].includes(action)){
+    if(!topicId && action!=="suggest" && !["accept","reject","defer","toggle-discovery","geometry"].includes(action)){
       status.textContent="Registra o seleziona prima un argomento.";return;
     }
     if(paid){
@@ -161,6 +192,7 @@ export async function mountEditorialIntelligence() {
         path=base+"/suggestions/"+encodeURIComponent(button.dataset.id||"")+"/decision";
         payload={decision:action==="accept"?"accepted":action==="reject"?"rejected":"deferred"};
       } else if(action==="acquire"){path=base+"/acquire";payload={proposal_id:button.dataset.id};}
+      else if(action==='geometry'){path=base+'/formats/analyze';payload={inbox_id:button.dataset.id,sha256:button.dataset.sha};}
       else if(action==="suggest"){path=base+"/suggest";payload={operation_id:crypto.randomUUID()};}
       else if(action==="search"){path=base+"/search";payload={topic_id:topicId,limit:Number(section.querySelector<HTMLSelectElement>("#intel-limit")!.value),
         operation_id:crypto.randomUUID()};}
@@ -185,7 +217,10 @@ export async function mountEditorialIntelligence() {
     } finally{busyState(false);}
   });
   const selector=workspace.querySelector<HTMLSelectElement>("#workspace-topic-select");
+  section.querySelector<HTMLSelectElement>('#intel-preference-origin')!.addEventListener('change',()=>{
+    if(busy)return;busyState(true);void loadSnapshots(true).catch(error=>{status.textContent=String(error);}).finally(()=>busyState(false));
+  });
   selector?.addEventListener("change",()=>void refresh().catch(error=>{status.textContent=String(error);}));
   workspace.addEventListener("workspace-updated",()=>void refresh().catch(error=>{status.textContent=String(error);}));
-  try{await refresh();}catch(error){status.textContent="Workspace non disponibile: verificare le migrazioni fino alla 0025. "+String(error);busyState(true);}
+  try{await refresh();}catch(error){status.textContent="Workspace non disponibile: verificare le migrazioni fino alla 0026. "+String(error);busyState(true);}
 }

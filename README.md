@@ -6,6 +6,11 @@ L'[audit #57](docs/audit-architettura.v1.0.0.md) distingue main dalle PR in bozz
 il [piano di integrazione](docs/piano-integrazione-editoriale.v1.0.0.md) prepara
 la #56 senza adottare anticipatamente la v4.
 
+Completamento #64: [snapshot delle preferenze e geometria EXIF](docs/snapshot-preferenze-geometria.v1.0.0.md).
+Stati immutabili separati REAL/SLOP, cronologia e fonti riproducibili; geometria
+orientata con originali conservati e lettura esplicita dei file storici. Migrazione
+additiva 0026. Le metriche sono osservazioni, non una validazione della qualità.
+
 Decisione #64: [argomenti plausibili e memoria semantica](docs/scoperta-argomenti-prudenti.v1.0.0.md).
 Prima coerenza e plausibilità, poi vicini per confrontare ripetizioni. Una grande
 distanza non certifica utilità; qualità e copertura restano da valutare con un

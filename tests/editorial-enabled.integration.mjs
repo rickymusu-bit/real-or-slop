@@ -16,6 +16,8 @@ from PIL import Image
 out={}
 for name,size,color in [('owner',(240,360),'blue'),('commons',(480,320),'red'),('1536x1024',(1536,1024),'green'),('1024x1536',(1024,1536),'yellow'),('1024x1024',(1024,1024),'purple')]:
  b=io.BytesIO();Image.new('RGB',size,color).save(b,'WEBP');out[name]=base64.b64encode(b.getvalue()).decode()
+for name,orientation,color in [('geometry-probe',6,'orange'),('legacy-desktop',6,'pink'),('legacy-mobile',8,'cyan'),('geometry-invalid',9,'gray')]:
+ b=io.BytesIO();exif=Image.Exif();exif[274]=orientation;Image.new('RGB',(240,120),color).save(b,'JPEG',exif=exif);out[name]=base64.b64encode(b.getvalue()).decode()
 print(json.dumps(out))`],{encoding:'utf8'}).stdout);
 const photo=name=>Buffer.from(images[name],'base64');
 const reply=value=>globalThis.Response.json({output:[{content:[{type:'output_text',text:JSON.stringify(value)}]}]});
@@ -305,6 +307,30 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  const card=queue.images.find(i=>i.id===saved.inbox_id);
  await api('review-inbox/'+saved.inbox_id+'/decision',{decision:'approved',revision:card.revision,sha256:saved.sha256,reason:'editorial',note:''});
  assert.equal((await api(intel)).preferences.real.observations,1);
+ // Persisted states reproduce their inputs and never duplicate on concurrent reads.
+ const approvedState=(await api(intel)).preferences.real;
+ assert.equal((await api(intel)).ranked_real_snapshot_id,approvedState.snapshot_id);
+ const snapshotCount=(await db.prepare('SELECT count(*) AS n FROM editorial_preference_snapshots').first()).n;
+ const repeated=await Promise.all([0,1,2].map(()=>api(intel)));
+ assert.ok(repeated.every(p=>p.preferences.real.snapshot_id===approvedState.snapshot_id));
+ assert.equal((await db.prepare('SELECT count(*) AS n FROM editorial_preference_snapshots').first()).n,snapshotCount);
+ const archived=await api(intel+'/preferences/snapshots/'+approvedState.snapshot_id);
+ assert.equal(createHash('sha256').update(JSON.stringify({origin:archived.origin,state:archived.state,sources:archived.sources})).digest('hex'),approvedState.snapshot_id);
+ assert.equal(archived.origin,'REAL');assert.equal(archived.sources[0].inbox_id,saved.inbox_id);
+ assert.equal(archived.sources[0].sha256,saved.sha256);assert.equal(archived.sources[0].used,true);
+ assert.ok(archived.state.counts.every(c=>c.approved===1 && c.rejected===0));
+ const snapshotVote=async(decision,reason)=>{
+  const current=(await api('review-inbox?state=all&origin=REAL')).images.find(i=>i.id===saved.inbox_id);
+  await api('review-inbox/'+saved.inbox_id+'/decision',{decision,revision:current.revision,sha256:current.sha256,reason,note:''});
+  return (await api(intel)).preferences.real;
+ };
+ const rights=await snapshotVote('rejected','rights');assert.equal(rights.observations,0);assert.notEqual(rights.snapshot_id,approvedState.snapshot_id);
+ const negative=await snapshotVote('rejected','editorial');assert.equal(negative.rejected,1);
+ const restored=await snapshotVote('approved','editorial');assert.equal(restored.approved,1);assert.notEqual(restored.snapshot_id,approvedState.snapshot_id);
+ assert.equal((await api(intel+'/preferences/snapshots/'+approvedState.snapshot_id)).approved,1);
+ assert.ok((await api(intel+'/preferences/snapshots?origin=REAL')).snapshots.every(s=>s.origin==='REAL'));
+ await assert.rejects(()=>db.prepare("UPDATE editorial_preference_snapshots SET approved=9 WHERE id=?").bind(approvedState.snapshot_id).run(),/immutable/);
+ await assert.rejects(()=>db.prepare("DELETE FROM editorial_preference_snapshot_chunks WHERE snapshot_id=?").bind(approvedState.snapshot_id).run(),/immutable/);
  await api(intel+'/slop/plan',{topic_id:original.id});
  const generationCalls=calls.filter(c=>c.url.endsWith('/images/generations')).length;
  const concurrent=await Promise.all([0,1].map(slot=>api(intel+'/slop/generate',{topic_id:original.id,slot},[201,409])));
@@ -336,6 +362,25 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  await api(ws+'/manual-stage',{topic_id:isolated.id,decision:'skip'});searchMode='empty';
  await api(intel+'/search',{topic_id:isolated.id,limit:1,operation_id:globalThis.crypto.randomUUID()});
  await api(intel+'/slop/plan',{topic_id:isolated.id});
+ // Legacy geometry is audited explicitly against private bytes, without metadata/vote rewrites.
+ const bucket=await mf.getR2Bucket('QUARANTINE');
+ for(const name of ['geometry-probe','legacy-desktop','legacy-mobile','geometry-invalid']){
+  const bytes=photo(name),sha=createHash('sha256').update(bytes).digest('hex'),key='geometry/'+name;
+  await bucket.put(key,bytes,{httpMetadata:{contentType:'image/jpeg'}});
+  const metadata=JSON.stringify({title:name,topic_id:isolated.id,image_geometry:{mime:'image/jpeg',width:240,height:120}});
+  await db.prepare("INSERT INTO editorial_review_inbox(id,origin,sha256,media_key,metadata_json,created_at) VALUES(?,'REAL',?,?,?,?)").bind(name,sha,key,metadata,new Date().toISOString()).run();
+  if(name.startsWith('legacy-'))continue; // The browser audits these fixtures independently.
+  const beforeAudit=await db.prepare('SELECT * FROM editorial_review_inbox WHERE id=?').bind(name).first();
+  const result=await api(intel+'/formats/analyze',{inbox_id:name,sha256:sha});
+  assert.equal(result.geometry.orientation_status,name==='geometry-invalid'?'unknown':'explicit');
+  if(name==='geometry-probe'){assert.equal(result.geometry.width,120);assert.equal(result.geometry.height,240);}
+  assert.equal((await api(intel+'/formats/analyze',{inbox_id:name,sha256:sha})).already_audited,true);
+  assert.deepEqual(await db.prepare('SELECT * FROM editorial_review_inbox WHERE id=?').bind(name).first(),beforeAudit);
+  assert.deepEqual(Buffer.from(await (await bucket.get(key)).arrayBuffer()),bytes);
+  await api(intel+'/formats/analyze',{inbox_id:name,sha256:'0'.repeat(64)},409);
+  await assert.rejects(()=>db.prepare('DELETE FROM editorial_image_geometry WHERE inbox_id=?').bind(name).run(),/immutable/);
+ }
+ assert.ok((await api(intel)).format_unknown.some(f=>f.id==='geometry-invalid'));
  assert.equal((await db.prepare('SELECT count(*) AS n FROM published_images').first()).n,0);
  await mkdir('artifacts',{recursive:true});await writeFile('artifacts/editorial-enabled-receipts.json',JSON.stringify(calls,null,2));
  if(process.env.ROS_TEST_BROWSER==='1'){

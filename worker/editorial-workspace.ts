@@ -1,7 +1,7 @@
 import { body, HttpError, id, json, type Env } from "./core";
 import { imageMime, sourcePageUrl, topicKey, topicTitle } from "../shared/editorial-workspace.v1.0.0";
 import { ensureSlopSeed } from "./editorial-learning.v1.0.0";
-import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
+import { imageGeometry } from "../shared/image-geometry.v1.0.0";
 import { createTopicSemantics, embedTopicOnSubmission, embeddingConfig, DEFAULT_TOPIC_EMBEDDING_MODEL, semanticTopicDescription, semanticTopicText } from "./topic-semantic-memory.v1.0.0";
 import { hash } from "./core";
 import { approveDescription, cancelDescription, descriptionDraft, proposeDescription, publicDraft } from "./topic-description.v1.0.0";
@@ -155,7 +155,7 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
     const mime = imageMime(new Uint8Array(bytes));
     if (!mime) throw new HttpError(415, "Usare JPEG, PNG o WebP");
     let geometry;
-    try { geometry=imageDimensions(new Uint8Array(bytes)); } catch { throw new HttpError(415, "Immagine non valida o oltre 32 megapixel"); }
+    try { geometry=imageGeometry(new Uint8Array(bytes)); } catch { throw new HttpError(415, "Immagine non valida o oltre 32 megapixel"); }
     const sha256 = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
       .map(x => x.toString(16).padStart(2, "0")).join("");
     const [existing, rejected, published] = await Promise.all([
