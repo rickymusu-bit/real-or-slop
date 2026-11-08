@@ -1,3 +1,8 @@
+## 0.23.2 — 2026-11-08T16:20:00Z (proposta, non pubblicata)
+
+- Il pulsante «Rimuovi argomento inutilizzato» è ora visibile nella sezione Argomenti: la navigazione a sezioni lo assegnava a Produzione immagini, nascondendolo.
+- E2E browser desktop/mobile: verifica visibilità del pulsante nella vista Argomenti e rimozione di un argomento inutilizzato.
+
 ## 0.23.1 — 2026-11-08T15:35:00Z (proposta, non pubblicata)
 
 - Pulsante «Rimuovi argomento inutilizzato» spostato fuori dal form della memoria semantica: il form conserva un solo pulsante (correzione della E2E browser fallita in CI).

@@ -101,6 +101,7 @@ export function mountAdminDashboard() {
     workspace.querySelector<HTMLElement>("#workspace-topic-status")!,
     workspace.querySelector<HTMLElement>("#workspace-description-drafts")!,
     workspace.querySelector<HTMLElement>("#workspace-semantic-form")!,
+    workspace.querySelector<HTMLElement>("#workspace-topic-removal")!,
   ]);
   const topicPicker = workspace.querySelector<HTMLElement>("#workspace-topic-select")?.closest("label") as HTMLElement | null;
   const workspaceStatus = workspace.querySelector<HTMLElement>("#workspace-status");
