@@ -67,6 +67,20 @@ code,described=call("/api/admin/editorial/workspace/topics",{
     "title":"Farmers mobilizations across Europe "+uuid.uuid4().hex[:8],
     "description":detail})
 assert code==201 and described["embedding_status"]=="pending",(code,described)
+# Obsolete unused topics can be removed by the owner; the title becomes free again.
+obsolete="Proteste a Parigi, ottobre 2026 "+uuid.uuid4().hex[:8]
+code,old=call("/api/admin/editorial/workspace/topics",{"title":obsolete,"description":"Obsolete example topic."})
+assert code==201,(code,old)
+remove="/api/admin/editorial/workspace/topics/"+old["id"]+"/remove"
+assert call(remove,{"title":obsolete},auth="not-a-token")[0]==401
+assert call(remove,{"title":"wrong title"})[0]==409
+assert call(remove,{"title":obsolete,"extra":1})[0]==400
+code,gone=call(remove,{"title":obsolete})
+assert code==200 and gone["removed"] is True,(code,gone)
+assert all(t["id"]!=old["id"] for t in call("/api/admin/editorial/workspace")[1]["topics"])
+assert call(remove,{"title":obsolete})[0]==404
+code,again=call("/api/admin/editorial/workspace/topics",{"title":obsolete,"description":"The real topic."})
+assert code==201 and again["id"]!=old["id"],(code,again)
 described_row=next(t for t in call("/api/admin/editorial/workspace")[1]["topics"] if t["id"]==described["id"])
 assert described_row["description"]==detail,described_row
 assert call(prefix)[1]["topic_discovery_enabled"] is False
@@ -75,6 +89,9 @@ code,link=call("/api/admin/editorial/workspace/links",{"topic_id":uid,"source_ur
 assert code==201,(code,link)
 code,dupe=call("/api/admin/editorial/workspace/links",{"topic_id":uid,"source_url":url})
 assert code==409,(code,dupe)
+code,kept=call("/api/admin/editorial/workspace/topics/"+uid+"/remove",{"title":title})
+assert code==409 and "proposte" in kept.get("error",""),(code,kept)
+assert any(t["id"]==uid for t in call("/api/admin/editorial/workspace")[1]["topics"])
 external=call("/api/admin/editorial/workspace/links",{
     "topic_id":uid,"source_url":"https://example.org/unsafe.jpg"})[1]
 assert call(prefix+"/acquire",{"proposal_id":external["id"]})[0]==400

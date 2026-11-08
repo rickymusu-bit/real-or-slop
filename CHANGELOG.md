@@ -1,3 +1,10 @@
+## 0.23.0 — 2026-11-08T15:40:00Z (proposta, non pubblicata)
+
+- Azione admin «Rimuovi argomento inutilizzato» (`POST /api/admin/editorial/workspace/topics/:id/remove`) con conferma esplicita del titolo.
+- Rimozione consentita solo senza proposte, ricerche, prompt SLOP, job AI, pertinenze, generazioni, revisioni semantiche archiviate, embedding incerti o bozze attive; altrimenti 409 senza modifiche.
+- Rimuove tema, memoria semantica corrente, seed SLOP e fase manuale; bozze e ricevute di descrizione restano con `topic_id` scollegato. Il titolo normalizzato torna disponibile.
+- Motivo: l'argomento obsoleto «Proteste a Parigi, ottobre 2026» impediva di registrare quello reale. Nessuna migrazione, nessuna chiamata AI; il dato remoto non è stato toccato da questa modifica.
+
 ## 0.22.1 — 2026-11-08T12:52:41.502Z (proposta, non pubblicata)
 
 - Caricamento dashboard senza mostrare temporaneamente i vecchi moduli.

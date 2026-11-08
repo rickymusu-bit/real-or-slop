@@ -23,7 +23,7 @@ export async function mountEditorialWorkspace() {
     '<button type="submit">Continua</button><div id="workspace-description-preview" hidden><h2>Rivedi la descrizione proposta</h2><p>Proposta GPT non verificata: modifica il testo qui sopra prima di approvare. Non è una ricerca documentale né una fonte. Se cambi il titolo, annulla la bozza e richiedine una nuova.</p><p id="workspace-description-ambiguity"></p><div class="workspace-draft-actions"><button type="button" data-description="approve">Approva e registra</button><button type="button" data-description="regenerate">Rigenera con GPT</button><button type="button" data-description="cancel">Annulla</button></div></div></form>' +
     '<p id="workspace-topic-status" role="status" aria-live="polite"></p><div id="workspace-description-drafts"></div>' +
     '<label>Argomento corrente<select id="workspace-topic-select" aria-label="Argomento corrente"></select></label>' +
-    '<form id="workspace-semantic-form"><h2>Memoria dell’argomento corrente</h2><p id="workspace-semantic-state"></p><label>Descrizione semantica<textarea name="description" maxlength="500" rows="3"></textarea></label><button type="submit">Salva descrizione / indicizza argomento</button><p>Conserva le revisioni precedenti. Se il servizio è configurato, questa azione autorizza un embedding entro il tetto indicato. Nessun reinvio di esiti incerti.</p></form>' +
+    '<form id="workspace-semantic-form"><h2>Memoria dell’argomento corrente</h2><p id="workspace-semantic-state"></p><label>Descrizione semantica<textarea name="description" maxlength="500" rows="3"></textarea></label><button type="submit">Salva descrizione / indicizza argomento</button><p>Conserva le revisioni precedenti. Se il servizio è configurato, questa azione autorizza un embedding entro il tetto indicato. Nessun reinvio di esiti incerti.</p><button type="button" id="workspace-topic-remove">Rimuovi argomento inutilizzato</button><p class="workspace-hint">Rimuove soltanto argomenti senza fotografie, ricerche, prompt SLOP o operazioni AI registrate, liberando il titolo. Gli argomenti con lavoro collegato restano intatti.</p></form>' +
     '<div class="workspace-columns"><form id="workspace-link-form"><h2>Proponi fotografie tramite link</h2><label>URL HTTPS, uno per riga (massimo 20)<textarea name="source_urls" rows="6" required placeholder="https://commons.wikimedia.org/wiki/File:...&#10;https://commons.wikimedia.org/wiki/File:..."></textarea></label><label>Nota comune facoltativa<textarea name="note" maxlength="1000" rows="2"></textarea></label><button type="submit">Registra i link</button><p class="workspace-hint">I duplicati vengono saltati. Registrare un link non significa acquisire o approvare la fotografia. Per Commons puoi usare «Acquisisci» accanto alla proposta; per altre fonti carica il file dal dispositivo.</p><p id="workspace-link-feedback" role="status" aria-live="polite"></p></form>' +
     '<form id="workspace-upload-form"><h2>Proponi fotografie dal dispositivo</h2><label>Fotografie originali<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required></label><label>Nota facoltativa<textarea name="note" maxlength="1000" rows="2"></textarea></label><button type="submit">Carica nella coda privata</button><p class="workspace-hint">Solo per l’amministratore. Nessun ritaglio: ogni file conserva proporzioni e pixel originali. Limite di 12 MB per file.</p></form></div>' +
     '<h2>Le tue proposte</h2><p id="workspace-acquire-status" role="status" aria-live="polite"></p><div id="workspace-proposals"><p>Caricamento…</p></div>' +
@@ -67,6 +67,7 @@ export async function mountEditorialWorkspace() {
     semanticForm.querySelector<HTMLTextAreaElement>('textarea')!.value=topic?.description || "";
     const locked=!!topic && ["uncertain","submitting"].includes(topic.embedding_status || "");
     semanticForm.querySelector<HTMLButtonElement>('button')!.disabled=busy || !topic || locked;
+    section.querySelector<HTMLButtonElement>('#workspace-topic-remove')!.disabled=busy || !topic || locked;
     section.querySelector<HTMLElement>('#workspace-semantic-state')!.textContent=topic ?
       "Stato embedding: "+(topic.embedding_status || "non indicizzato")+". "+(!topic.description?"Descrizione mancante. ":"")+
       (topic.error_code?"Diagnostica: "+topic.error_code+". ":"")+
@@ -99,6 +100,15 @@ export async function mountEditorialWorkspace() {
     section.dispatchEvent(new CustomEvent("workspace-updated"));
   };
   select.addEventListener("change", renderProposals);
+  section.querySelector<HTMLButtonElement>('#workspace-topic-remove')!.addEventListener('click',async()=>{
+    const topic=workspace.topics.find(t=>t.id===select.value);if(!topic || busy)return;
+    if(!window.confirm('Rimuovere definitivamente «'+topic.title+'»? Funziona solo se l’argomento non ha fotografie, ricerche o operazioni AI collegate. Nessuna chiamata a pagamento.'))return;
+    setBusy(true);status.textContent='Rimozione dell’argomento…';
+    try{
+      await api("/admin/editorial/workspace/topics/"+encodeURIComponent(topic.id)+"/remove",{method:"POST",body:JSON.stringify({title:topic.title})});
+      select.value="";await refresh("");reportTopic('Argomento «'+topic.title+'» rimosso: il titolo può essere registrato di nuovo.');
+    }catch(error){status.textContent=String(error);}finally{setBusy(false);}
+  });
   semanticForm.addEventListener("submit",async event=>{
     event.preventDefault();if(busy)return;
     const topic=workspace.topics.find(t=>t.id===select.value);if(!topic)return;
