@@ -1,3 +1,9 @@
+## 0.18.0 — 2026-11-08T02:30:59Z (proposta, non rilasciata)
+
+- #64: prima stime strutturate di coerenza/specificità/plausibilità, poi embedding e revisione dei duplicati; proposte escluse o incerte restano separate dai voti umani.
+- Distanza semantica solo diagnostica, vicini storici separati da quelli del lotto corrente, contatori senza certificazioni automatiche della qualità o copertura.
+- Migrazione additiva 0025, registro idempotente dell'intero lotto, UI desktop/mobile e regressioni su corpus vuoto/outlier/replay. Descrizioni escluse dalle query REAL e dai seed/prompt SLOP, con test sui payload e sul freeze.
+
 ## 0.17.0 — 2026-11-07T23:12:00Z (proposta, non rilasciata)
 
 - #64/#78: un titolo senza descrizione prepara una proposta GPT inglese modificabile, con ambiguità e conferma obbligatoria prima del tema definitivo e dell'embedding. Descrizioni manuali conservano il percorso diretto.

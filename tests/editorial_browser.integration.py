@@ -23,6 +23,21 @@ with sync_playwright() as p:
             page.on('dialog',lambda dialog:dialog.accept())
             page.goto(base+'admin')
             expect(page.locator('#workspace-topic-form button[type=submit]')).to_be_enabled()
+            discovery=page.locator('#intel-topic-discovery')
+            expect(page.locator('#intel-topic-memory')).to_contain_text('Memoria in popolamento')
+            expect(discovery).to_contain_text('Qualità e copertura non validate')
+            page.locator('[data-intel=toggle-discovery]').click()
+            expect(page.locator('[data-intel=toggle-discovery]')).to_have_text('Disattiva Topic Discovery')
+            excluded=discovery.locator('article').filter(has_text='Remote incoherent proposal')
+            expect(excluded.locator('[data-intel=accept]')).to_be_disabled()
+            expect(excluded).to_contain_text('non ammissibile')
+            expect(discovery.locator('article').filter(has_text='Historical title-only suggestion').locator('[data-intel=accept]')).to_be_disabled()
+            assert '%' not in discovery.inner_text(), 'Semantic distance was presented as a quality percentage'
+            discovery.evaluate("el=>el.scrollIntoView({block:'start'})")
+            page.screenshot(path=str(folder/(name+'-grounded-discovery.png')))
+            excluded.screenshot(path=str(folder/(name+'-excluded-topic.png')))
+            page.locator('[data-intel=toggle-discovery]').click()
+            expect(page.locator('[data-intel=toggle-discovery]')).to_have_text('Attiva Topic Discovery')
             form=page.locator('#workspace-topic-form')
             # #78: title-only first shows an editable private proposal. Reload can resume it.
             draft_title='Browser ambiguous topic '+name

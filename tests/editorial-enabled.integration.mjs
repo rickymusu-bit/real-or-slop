@@ -10,7 +10,7 @@ import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 
 const token='fixture-admin-token-never-used-remotely-000064';
 const calls=[];
-let searchMode='success',embeddingMode='success',descriptionMode='success',imageSequence=0;
+let searchMode='success',embeddingMode='success',descriptionMode='success',suggestionMode='standard',imageSequence=0;
 const images=JSON.parse(spawnSync('python3',['-c',`import io,json,base64
 from PIL import Image
 out={}
@@ -19,11 +19,13 @@ for name,size,color in [('owner',(240,360),'blue'),('commons',(480,320),'red'),(
 print(json.dumps(out))`],{encoding:'utf8'}).stdout);
 const photo=name=>Buffer.from(images[name],'base64');
 const reply=value=>globalThis.Response.json({output:[{content:[{type:'output_text',text:JSON.stringify(value)}]}]});
+const plausible={coherent:true,specific:true,photographically_plausible:true,reason:'An understandable subject with photographically plausible visible activity.'};
 const topics=[
  {title:'Paris agricultural protests in 2026',description:'Farmers demonstrating in Paris during 2026.',rationale:'A distinct later episode.'},
  {title:'Farm demonstrations Paris 2024',description:'Agricultural workers protesting in Paris in 2024.',rationale:'A paraphrase of the historical topic.'},
  {title:'Night work in coastal fish markets',description:'Fish vendors preparing coastal markets before sunrise.',rationale:'A photographically feasible new perspective.'}
-];
+].map(t=>({...t,assessment:plausible}));
+const nonsense={title:'Invisible arithmetic sleeps outside time',description:'A literal photograph of an abstract calculation sleeping outside time.',rationale:'Far from the catalog is not a reason to recommend it.',assessment:{...plausible,coherent:false,photographically_plausible:false,reason:'No coherent photographic subject.'}};
 const result=await build({entryPoints:['worker/index.ts'],bundle:true,write:false,format:'esm',platform:'browser',target:'es2022'});
 const mf=new Miniflare(convertV4MiniflareOptions({host:'127.0.0.1',port:0,inspectorPort:0,workers:[{name:'editorial-fixture',modules:true,script:result.outputFiles[0].text,compatibilityDate:'2026-10-25',
  d1Databases:{DB:'editorial-enabled-fixture'},r2Buckets:['QUARANTINE','IMAGES'],
@@ -41,7 +43,8 @@ const mf=new Miniflare(convertV4MiniflareOptions({host:'127.0.0.1',port:0,inspec
    if(url.pathname==='/v1/embeddings'){
     if(embeddingMode==='uncertain')return globalThis.Response.json({error:'uncertain'},{status:503});
     assert.equal(data.dimensions,1536);
-    return globalThis.Response.json({model:'text-embedding-3-small',data:[{index:0,embedding:[1,...Array(1535).fill(0)]}],usage:{total_tokens:24}});
+    const vector=data.input.includes('Remote incoherent proposal')?[0,1,...Array(1534).fill(0)]:[1,...Array(1535).fill(0)];
+    return globalThis.Response.json({model:'text-embedding-3-small',data:[{index:0,embedding:vector}],usage:{total_tokens:24}});
    }
    if(url.pathname==='/v1/images/generations'){
     assert.equal(data.n,1);assert.ok(!JSON.stringify(data).includes('OWNER_REAL_SECRET'));
@@ -61,13 +64,30 @@ b=io.BytesIO();Image.new('RGB',(${w},${h}),(${imageSequence*61%255},${imageSeque
     if(descriptionMode==='invalid')return reply({description:'x'.repeat(501),ambiguity:''});
     return reply({description:'An open photographic topic whose specific place, period and participants have not been supplied.',ambiguity:'The title does not establish a location, date or particular event.'});
    }
-   if(name==='topic_suggestions')return reply({suggestions:topics});
+   if(name==='topic_suggestions'){
+    assert.ok(data.input[0].content.includes('never arbitrary vectors or empty regions'));
+    if(suggestionMode==='empty')return reply({suggestions:[{title:'Workers opening a morning market',description:'Visible preparations for an ordinary market day.',rationale:'A plausible subject before any corpus exists.',assessment:plausible},
+      {title:'Bicycle repairs on neighborhood streets',description:'People repairing bicycles on neighborhood streets.',rationale:'A different everyday activity.',assessment:plausible}]});
+    if(suggestionMode==='allbad')return reply({suggestions:[nonsense]});
+    if(suggestionMode==='remote')return reply({suggestions:[{...nonsense,title:'Remote incoherent proposal',assessment:plausible}]});
+    if(suggestionMode==='invalid')return reply({suggestions:[{...nonsense,title:'Incomplete model assessment proposal',assessment:{...plausible,coherent:'true'}}]});
+    if(suggestionMode==='uncertain')return reply({suggestions:[{...topics[2],title:'A new topic with an uncertain review'}]});
+    if(suggestionMode==='invalid_review')return reply({suggestions:[{...topics[2],title:'Incomplete second review proposal'}]});
+    return reply({suggestions:[...topics,nonsense]});
+   }
    if(name==='topic_duplicate_checks'){
     const comparisons=JSON.parse(data.input[1].content[0].text);
-    assert.ok(comparisons.every(c=>c.neighbors.some(n=>n.title==='Paris agricultural protests in 2024')));
-    return reply({decisions:comparisons.map(c=>({id:c.id,duplicate:c.title==='Farm demonstrations Paris 2024',reason:c.title.includes('2026')?'Distinct year and episode':'Same topic paraphrased or new subject'}))});
+    assert.ok(data.input[0].content.startsWith('First review coherence'));
+    if(suggestionMode==='empty')assert.ok(comparisons.every(c=>c.neighbors.length===0 && c.batch_neighbors.length===1));
+    if(suggestionMode==='standard')assert.ok(comparisons.every(c=>c.neighbors.some(n=>n.title==='Paris agricultural protests in 2024')));
+    if(suggestionMode==='uncertain')return globalThis.Response.json({error:'review uncertain'},{status:503});
+    if(suggestionMode==='invalid_review')return reply({decisions:comparisons.map(c=>({id:c.id,eligible:'true',duplicate:false,reason:'Malformed response must not admit a candidate.'}))});
+    return reply({decisions:comparisons.map(c=>({id:c.id,eligible:suggestionMode!=='remote',duplicate:c.title==='Farm demonstrations Paris 2024',reason:suggestionMode==='remote'?'An incoherent topic is not useful merely because it is distant.':c.title.includes('2026')?'Distinct year and episode':'Same topic paraphrased or new subject'}))});
    }
-   if(name==='commons_queries')return reply({queries:['fixture successful query','fixture second query']});
+   if(name==='commons_queries'){
+    assert.ok(!JSON.stringify(data.input).includes('SEMANTIC_DESCRIPTION_SENTINEL'));
+    return reply({queries:['fixture successful query','fixture second query']});
+   }
    if(name==='visual_profile'){
     assert.ok(!JSON.stringify(data.input).includes('OWNER_REAL_SECRET'),'Pixel-only model received title/metadata');
     return reply({subject:'Blue facade',action:'No visible action',setting:'Exterior',composition:'Portrait framing',visibility:'Clearly visible facade',interest:'Geometric patterns',tags:['blue_facade','geometry','architecture']});
@@ -76,6 +96,7 @@ b=io.BytesIO();Image.new('RGB',(${w},${h}),(${imageSequence*61%255},${imageSeque
    if(name==='slop_prompts'){
     assert.ok(!JSON.stringify(data.input).includes('OWNER_REAL_SECRET'));
     assert.ok(!JSON.stringify(data.input).includes('blue_facade'));
+    assert.ok(!JSON.stringify(data.input).includes('SEMANTIC_DESCRIPTION_SENTINEL'));
     return reply({prompts:Array.from({length:8},(_,i)=>`Original synthetic editorial photograph variant ${i}, a natural candid scene with ambient daylight and a visible setting.`)});
    }
    throw Error('Unexpected model task: '+name);
@@ -113,9 +134,20 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  }
  const ws='editorial/workspace',intel='editorial/intelligence';
  assert.equal((await api(intel)).topic_discovery_enabled,false);
+ assert.deepEqual((await api(intel)).topic_memory,{topics:0,indexed_topics:0,proposals:0,owner_reviewed_proposals:0,quality_validated:false,coverage_validated:false});
+ suggestionMode='empty';await api(intel+'/topic-discovery/settings',{enabled:true});
+ const emptyOp=globalThis.crypto.randomUUID();
+ const emptyRuns=await Promise.all([0,1].map(()=>api(intel+'/suggest',{operation_id:emptyOp},[200,409])));
+ const emptyResult=emptyRuns.find(r=>r.suggested===2);assert.ok(emptyResult);assert.equal(emptyResult.compared_records,0);
+ const firstProposals=(await api(intel)).suggestions;
+ assert.ok(firstProposals.every(s=>s.assessment_status==='eligible' && s.novelty===null && JSON.parse(s.neighbors_json).length===0));
+ const emptyCalls=calls.length;
+ await api(intel+'/suggest',{operation_id:emptyOp});assert.equal(calls.length,emptyCalls);
+ await api(intel+'/topic-discovery/settings',{enabled:false});suggestionMode='standard';
+ const originalCalls=calls.length;
  const original=await api(ws+'/topics',{title:'Paris agricultural protests in 2024',description:'Agricultural workers demonstrating in Paris during 2024.'},201);
- assert.equal(original.embedding_status,'ready');assert.equal(calls.length,1);
- await api(ws+'/topics',{title:'Paris agricultural protests in 2024'},200);assert.equal(calls.length,1);
+ assert.equal(original.embedding_status,'ready');assert.equal(calls.length,originalCalls+1);
+ await api(ws+'/topics',{title:'Paris agricultural protests in 2024'},200);assert.equal(calls.length,originalCalls+1);
  const legacyId=globalThis.crypto.randomUUID();
  await db.prepare("INSERT INTO editorial_workspace_topics VALUES(?,?,?,?)").bind(legacyId,'An old unindexed owner topic','an old unindexed owner topic','2024').run();
  const pendingCalls=calls.length;
@@ -142,11 +174,36 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  const suggestions=(await api(intel)).suggestions;
  assert.equal(suggestions.find(s=>s.title===topics[0].title).screening_status,'ready');
  assert.equal(suggestions.find(s=>s.title===topics[1].title).screening_status,'duplicate');
+ const excluded=suggestions.find(s=>s.title===nonsense.title);
+ assert.equal(excluded.assessment_status,'ineligible');assert.equal(excluded.embedding_status,null);
+ assert.equal(excluded.status,'suggested','A model exclusion must not become an owner rejection');
+ await api(intel+'/suggestions/'+excluded.id+'/decision',{decision:'accepted'},409);
+ assert.ok(!calls.some(c=>c.url.endsWith('/embeddings') && c.body.input.includes(nonsense.title)));
  await api(intel+'/suggestions/'+suggestions.find(s=>s.title===topics[1].title).id+'/decision',{decision:'accepted'},409);
  const selected=suggestions.find(s=>s.title===topics[0].title);
  await api(intel+'/suggestions/'+selected.id+'/decision',{decision:'accepted'});
  const accepted=(await api(ws)).topics.find(t=>t.title===selected.title);
  assert.equal(accepted.description,topics[0].description);assert.equal(accepted.embedding_status,'ready');
+ const cachedCalls=calls.length;await api(intel+'/suggest',{operation_id});assert.equal(calls.length,cachedCalls);
+ const memory=(await api(intel)).topic_memory;
+ assert.equal(memory.owner_reviewed_proposals,1);assert.equal(memory.quality_validated,false);assert.equal(memory.coverage_validated,false);
+ for(const mode of ['allbad','remote','invalid','uncertain','invalid_review']){
+  suggestionMode=mode;const op=globalThis.crypto.randomUUID(),startCalls=calls.length;
+  const result=await api(intel+'/suggest',{operation_id:op},['uncertain','invalid','invalid_review'].includes(mode)?502:200);
+  if(!['uncertain','invalid','invalid_review'].includes(mode))assert.equal(result.suggested,0);
+  if(mode==='allbad' || mode==='invalid')assert.equal(calls.filter(c=>c.url.endsWith('/embeddings')).length,calls.slice(0,startCalls).filter(c=>c.url.endsWith('/embeddings')).length);
+  if(mode==='remote'){
+   const remote=(await api(intel)).suggestions.find(s=>s.title==='Remote incoherent proposal');
+   assert.equal(remote.novelty,1);assert.equal(remote.assessment_status,'ineligible');
+   await api(intel+'/suggestions/'+remote.id+'/decision',{decision:'accepted'},409);
+  }
+  if(['uncertain','invalid','invalid_review'].includes(mode)){
+   const after=calls.length;await api(intel+'/suggest',{operation_id:op},409);assert.equal(calls.length,after);
+   const pending=(await api(intel)).suggestions.find(s=>s.title===(mode==='uncertain'?'A new topic with an uncertain review':mode==='invalid_review'?'Incomplete second review proposal':'Incomplete model assessment proposal'));
+   assert.equal(pending.assessment_status,'uncertain');await api(intel+'/suggestions/'+pending.id+'/decision',{decision:'accepted'},409);
+  }
+ }
+ suggestionMode='standard';
  await api(intel+'/topic-discovery/settings',{enabled:false});
  // #78: title-only is a private proposal, with no topic, SLOP seed or embedding until approval.
  const count=async table=>(await db.prepare('SELECT count(*) AS n FROM '+table).first()).n;
@@ -268,6 +325,17 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
   const result=await api(intel+'/search',{topic_id:original.id,limit:1,operation_id:globalThis.crypto.randomUUID()});
   assert.equal(result.found,0);assert.equal(result.status,mode==='failed'?'failed':'completed');
  }
+ // Agreement: semantic descriptions never silently become REAL query or SLOP prompt constraints.
+ const isolated=await api(ws+'/topics',{title:'Independent planning context for ordinary market work',description:'SEMANTIC_DESCRIPTION_SENTINEL: a detailed composition that must stay out of search and SLOP.'},201);
+ const frozenBefore=await db.prepare('SELECT seed_json,sha256 FROM editorial_topic_slop_seed WHERE topic_id=?').bind(isolated.id).first();
+ assert.ok(!frozenBefore.seed_json.includes('SEMANTIC_DESCRIPTION_SENTINEL'));
+ const isolatedTopic=(await api(ws)).topics.find(t=>t.id===isolated.id);
+ await api(ws+'/topics/'+isolated.id+'/semantics',{description:'SEMANTIC_DESCRIPTION_SENTINEL: an edited composition must not replace the frozen SLOP context.',expected_sha256:isolatedTopic.input_sha256});
+ const frozenAfter=await db.prepare('SELECT seed_json,sha256 FROM editorial_topic_slop_seed WHERE topic_id=?').bind(isolated.id).first();
+ assert.deepEqual(frozenAfter,frozenBefore);
+ await api(ws+'/manual-stage',{topic_id:isolated.id,decision:'skip'});searchMode='empty';
+ await api(intel+'/search',{topic_id:isolated.id,limit:1,operation_id:globalThis.crypto.randomUUID()});
+ await api(intel+'/slop/plan',{topic_id:isolated.id});
  assert.equal((await db.prepare('SELECT count(*) AS n FROM published_images').first()).n,0);
  await mkdir('artifacts',{recursive:true});await writeFile('artifacts/editorial-enabled-receipts.json',JSON.stringify(calls,null,2));
  if(process.env.ROS_TEST_BROWSER==='1'){

@@ -78,9 +78,11 @@ function schema(name:string,properties:Record<string,unknown>) {
 export const fields={
   description:schema("topic_description",{description:{type:"string",minLength:1,maxLength:500},ambiguity:{type:"string",maxLength:500}}),
   suggestion:schema("topic_suggestions",{suggestions:{type:"array",items:{type:"object",additionalProperties:false,
-    required:["title","description","rationale"],properties:{title:{type:"string"},description:{type:"string",maxLength:500},rationale:{type:"string"}}}}}),
+    required:["title","description","rationale","assessment"],properties:{title:{type:"string"},description:{type:"string",maxLength:500},rationale:{type:"string"},
+      assessment:{type:"object",additionalProperties:false,required:["coherent","specific","photographically_plausible","reason"],properties:{
+        coherent:{type:"boolean"},specific:{type:"boolean"},photographically_plausible:{type:"boolean"},reason:{type:"string",maxLength:600}}}}}}}),
   duplicates:schema("topic_duplicate_checks",{decisions:{type:"array",items:{type:"object",additionalProperties:false,
-    required:["id","duplicate","reason"],properties:{id:{type:"string"},duplicate:{type:"boolean"},reason:{type:"string"}}}}}),
+    required:["id","eligible","duplicate","reason"],properties:{id:{type:"string"},eligible:{type:"boolean"},duplicate:{type:"boolean"},reason:{type:"string"}}}}}),
   relevance:schema("topic_relevance",{match:{type:"string",enum:["visible_match","mismatch","uncertain"]},reason:{type:"string"}}),
   search:schema("commons_queries",{queries:{type:"array",items:{type:"string"}}}),
   profile:schema("visual_profile",{subject:{type:"string"},action:{type:"string"},setting:{type:"string"},

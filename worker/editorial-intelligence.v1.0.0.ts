@@ -6,7 +6,7 @@ import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
 import { ensureSlopSeed, headlineStats, rankPending } from "./editorial-learning.v1.0.0";
 import { fields, modelImage, modelJSON } from "./workspace-ai.v1.0.0";
 import { topicDiscoveryEnabled, setTopicDiscoveryEnabled } from "./topic-discovery-opt-in.v1.0.0";
-import { suggestTopics } from "./topic-recommender.v1.0.0";
+import { suggestTopics,topicMemoryStatus } from "./topic-recommender.v1.0.0";
 import { createTopicSemantics, semanticTopicDescription } from "./topic-semantic-memory.v1.0.0";
 
 const base="/api/admin/editorial/intelligence";
@@ -65,10 +65,10 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     const requestedTopic = new URL(request.url).searchParams.get("topic_id");
     const selectedTopic = requestedTopic ? uid(requestedTopic) : null;
     const manualStage=await env.DB.prepare("SELECT decision FROM editorial_workspace_manual_stage WHERE topic_id=?").bind(selectedTopic || "").first();
-    const [discoveryOn,stats,reals,slops,suggestions,searches,jobs,prompts,topicCounts,reviewedUnprofiled,formats]=await Promise.all([
+    const [discoveryOn,stats,reals,slops,suggestions,searches,jobs,prompts,topicCounts,reviewedUnprofiled,formats,topicMemory]=await Promise.all([
       topicDiscoveryEnabled(env),
       headlineStats(env),rankPending(env,"REAL",selectedTopic),rankPending(env,"AI",selectedTopic),
-      env.DB.prepare("SELECT t.*,s.description,s.embedding_status,c.status AS screening_status,c.novelty,c.neighbors_json,c.reason AS screening_reason FROM editorial_topic_suggestions t LEFT JOIN editorial_topic_suggestion_semantics s ON s.topic_id=t.id LEFT JOIN editorial_topic_suggestion_screening c ON c.suggestion_id=t.id ORDER BY t.created_at DESC LIMIT 100").all(),
+      env.DB.prepare("SELECT t.*,COALESCE(s.description,a.description) AS description,s.embedding_status,c.status AS screening_status,c.novelty,c.neighbors_json,c.reason AS screening_reason,a.status AS assessment_status,a.assessment_json,a.review_json FROM editorial_topic_suggestions t LEFT JOIN editorial_topic_suggestion_semantics s ON s.topic_id=t.id LEFT JOIN editorial_topic_suggestion_screening c ON c.suggestion_id=t.id LEFT JOIN editorial_topic_suggestion_assessments a ON a.suggestion_id=t.id ORDER BY t.created_at DESC LIMIT 100").all(),
       env.DB.prepare("SELECT * FROM editorial_topic_explorations ORDER BY created_at DESC LIMIT 50").all(),
       env.DB.prepare("SELECT kind,status,topic_id,created_at,updated_at FROM editorial_workspace_jobs UNION ALL SELECT kind,status,topic_id,created_at,updated_at FROM editorial_topic_description_jobs ORDER BY created_at DESC LIMIT 30").all(),
       env.DB.prepare("SELECT slot,prompt,variant,frozen_sha256 FROM editorial_slop_prompt_bank WHERE topic_id=? ORDER BY slot").bind(selectedTopic || "").all(),
@@ -87,9 +87,9 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
         WHEN max(w*1.0/h,h*1.0/w)>2.5 THEN 'panorama'
         WHEN abs(w*1.0/h-1)<0.02 THEN 'square'
         WHEN w>h THEN 'landscape' ELSE 'portrait' END AS format,count(*) AS n
-        FROM geometry GROUP BY origin,published,format`).all()
+        FROM geometry GROUP BY origin,published,format`).all(),topicMemoryStatus(env)
     ]);
-    return json({version:"1.0.0",topic_discovery_enabled:discoveryOn,preferences:stats,ranked_real:reals.ranked.slice(0,30),ranked_slop:slops.ranked.slice(0,30),
+    return json({version:"1.0.0",topic_discovery_enabled:discoveryOn,topic_memory:topicMemory,preferences:stats,ranked_real:reals.ranked.slice(0,30),ranked_slop:slops.ranked.slice(0,30),
       suggestions:suggestions.results,searches:searches.results,jobs:jobs.results,prompts:prompts.results,topic_counts:topicCounts.results,
       reviewed_unprofiled:reviewedUnprofiled.results,
       formats:formats.results,
@@ -115,6 +115,10 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
     const row=await env.DB.prepare("SELECT t.title,t.normalized_key,t.status,t.rationale,s.description,c.status AS screening_status FROM editorial_topic_suggestions t LEFT JOIN editorial_topic_suggestion_semantics s ON s.topic_id=t.id LEFT JOIN editorial_topic_suggestion_screening c ON c.suggestion_id=t.id WHERE t.id=?")
       .bind(match[1]).first<{title:string;normalized_key:string;status:string;rationale:string;description:string|null;screening_status:string|null}>();
     if(!row)throw new HttpError(404,"Suggerimento non trovato");
+    const assessment=await env.DB.prepare("SELECT status FROM editorial_topic_suggestion_assessments WHERE suggestion_id=?")
+      .bind(match[1]).first<{status:string}>();
+    if(data.decision==="accepted" && assessment && assessment.status!=="eligible")
+      throw new HttpError(409,"Proposta non ammissibile o verifica incompleta: la distanza semantica non ne dimostra l'utilità");
     if(data.decision==="accepted" && !semanticTopicDescription(row.description))
       throw new HttpError(409,"Suggerimento senza descrizione: usa Nuovo argomento con questo titolo, rivedi la descrizione e approva prima di registrare");
     if(data.decision==="accepted" && row.screening_status && row.screening_status!=="ready")throw new HttpError(409,"La verifica della proposta non è completa o rileva un duplicato");

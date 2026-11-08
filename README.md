@@ -6,6 +6,12 @@ L'[audit #57](docs/audit-architettura.v1.0.0.md) distingue main dalle PR in bozz
 il [piano di integrazione](docs/piano-integrazione-editoriale.v1.0.0.md) prepara
 la #56 senza adottare anticipatamente la v4.
 
+Decisione #64: [argomenti plausibili e memoria semantica](docs/scoperta-argomenti-prudenti.v1.0.0.md).
+Prima coerenza e plausibilità, poi vicini per confrontare ripetizioni. Una grande
+distanza non certifica utilità; qualità e copertura restano da valutare con un
+corpus rappresentativo. La descrizione non passa automaticamente alle query REAL
+né ai prompt SLOP. Migrazione additiva 0025, nessuna attivazione remota.
+
 Aggiornamento #64/#78: [descrizione GPT con conferma](docs/topic-description-confirmation.v1.0.0.md).
 Con il solo titolo l'admin prepara una bozza modificabile; registra e indicizza solo
 su **Approva e registra**. Rigenerazione e annullamento non creano argomenti.
