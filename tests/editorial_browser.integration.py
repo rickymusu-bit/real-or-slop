@@ -182,7 +182,10 @@ with sync_playwright() as p:
             page.get_by_role('button',name='Argomenti',exact=True).click()
             page.locator('#workspace-topic-select').select_option(topic)
             expect(page.locator('#workspace-semantic-form textarea')).to_have_value('Visible everyday work in a coastal town, including early morning market activity.')
-            overflow=page.locator('body *').evaluate_all("els=>els.filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>({tag:e.tagName,id:e.id,cls:e.className,right:e.getBoundingClientRect().right,text:e.textContent.slice(0,80)}))")
+            assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'),name+' has horizontal page overflow'
+            # Navigation is intentionally horizontally scrollable on mobile: hidden menu buttons
+            # may lie beyond the viewport, but they must not expand the document width.
+            overflow=page.locator('body *').evaluate_all("els=>els.filter(e=>e.getBoundingClientRect().right>innerWidth+1 && !e.closest('.admin-navigation')).map(e=>({tag:e.tagName,id:e.id,cls:e.className,right:e.getBoundingClientRect().right,text:e.textContent.slice(0,80)}))")
             page.screenshot(path=str(folder/(name+'-layout.png')),full_page=True)
             assert not overflow,json.dumps(overflow,ensure_ascii=False)
             page.screenshot(path=str(folder/(name+'.png')),full_page=True)
