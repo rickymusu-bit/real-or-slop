@@ -1,11 +1,44 @@
-# Mappa canonica — versione 9.0.0
+# Mappa canonica — versione 10.0.0
 
-Snapshot: `docs/MASTER.v9.0.0.md`. Percorsi relativi alla radice del repository.
-Verificato: 2026-11-07T23:12:00Z, base main `a10401a6c87586ef4d7517ad4f5e5e53dddad784`.
-La PR #77 è integrata e il rilascio precedente comprende lo schema 0023.
-Questa proposta aggiunge lo schema 0024 esclusivamente in locale; nessuna nuova
-migrazione remota o attivazione di provider. Le sezioni precedenti alla revisione
-9 rimangono contesto storico e non descrivono lo stato attuale del rilascio.
+Snapshot: `docs/MASTER.v10.0.0.md`. Percorsi relativi alla radice del repository.
+Verificato: 2026-11-08T02:30:59Z. Base main `ff11c3dcd1b4ad6118ac72d443a680113b646e7a`.
+La PR #79 è integrata; questo delta implementa la successiva decisione della
+sessione sulla plausibilità dei temi e sulla libertà dei rami REAL/SLOP.
+La migrazione 0025 è provata soltanto in locale; nessun rilascio remoto incluso.
+
+## Decisione corrente #64 — significato prima della distanza (10.0.0)
+
+Aggiornato: 2026-11-08T02:30:59Z. Specifica: `docs/scoperta-argomenti-prudenti.v1.0.0.md`.
+La decisione esplicita dell'owner nella sessione corrente sostituisce la ricerca
+obbligatoria di cluster vuoti/zone poco coperte proposta nella #64. Le sezioni
+9.0.0 e precedenti rimangono contesto storico per gli ambiti non sostituiti.
+
+Topic Discovery propone prima argomenti comprensibili, specifici e fotograficamente
+plausibili. Una prima autovalutazione negativa/incompleta impedisce l'embedding;
+una seconda revisione controlla ammissibilità e duplicati. Entrambe sono stime del
+modello, separate dal voto dell'owner. Una proposta molto distante può essere
+inammissibile; episodi distinti possono essere validi anche con coseno elevato.
+Nessuna ricerca di vettori arbitrari o generazione per riempire regioni vuote.
+
+La distanza resta diagnostica secondaria di confronto con lo storico; mai una
+percentuale di qualità o prova di novità. Separare vicini dello stesso lotto e
+vicini storici. I contatori descrivono il corpus, senza attestare automaticamente
+maturità, qualità o copertura in base al numero di vettori. La valutazione utile
+richiede dati sufficientemente rappresentativi e giudizi dell'owner; nessun
+benchmark di efficacia reale su un corpus ancora in popolamento.
+
+La descrizione confermata continua nella memoria semantica e nel confronto di
+pertinenza già esistente. Non propagarla automaticamente alle query REAL o ai
+prompt SLOP: REAL usa titolo e preferenze per pianificare keyword; SLOP mantiene
+solo titolo e feedback storici congelati prima delle REAL. Eventuali esperimenti
+con la descrizione sono separati, espliciti e da valutare prima di cambiare default.
+
+La migrazione additiva 0025 conserva valutazioni del modello distinte dalle
+scelte umane e un registro idempotente per lotto. Non cambiare gate, tetti,
+secret, dati remoti o pipeline storiche. Restano fino a due chiamate testo e
+cinque embedding per richiesta esplicita, senza chiamate reali nei test.
+Verificare corpus vuoto, outlier esclusi, alta somiglianza con episodio diverso,
+risposte invalide/incerte, replay concorrenti e isolamento REAL/SLOP nel browser.
 
 ## Aggiornamento #64 / #78 — conferma delle descrizioni 9.0.0
 

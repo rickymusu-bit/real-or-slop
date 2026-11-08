@@ -2,7 +2,7 @@ import { api, content, escape } from "./main";
 import { visualProfilePreview } from "./editorial-profile-preview.v1.0.0";
 import "./editorial-intelligence.v1.0.0.css";
 
-interface Suggestion {id:string;title:string;rationale:string;status:string;description?:string;novelty?:number|null;neighbors_json?:string;screening_reason?:string;screening_status?:string|null;embedding_status?:string}
+interface Suggestion {id:string;title:string;rationale:string;status:string;description?:string;novelty?:number|null;neighbors_json?:string;screening_reason?:string;screening_status?:string|null;embedding_status?:string;assessment_status?:string|null;assessment_json?:string|null;review_json?:string|null}
 interface Proposal {id:string;topic_id:string;kind:string;source_url:string|null;inbox_id:string|null}
 interface TopicCount {origin:string;status:string;n:number}
 interface Ranked {id:string;sha256:string;tags:string[];score:number;reason:string;has_profile?:boolean;relevance?:{match:string;reason:string}|null}
@@ -15,6 +15,7 @@ interface Panel {
   searches:Array<{topic_id:string;status:string;candidates:number;created_at:string;diagnostics_json?:string}>;
   formats:Array<{origin:string;published:number;format:string;n:number}>;
   jobs:Array<{kind:string;status:string;topic_id:string|null;created_at:string}>;
+  topic_memory:{topics:number;indexed_topics:number;proposals:number;owner_reviewed_proposals:number;quality_validated:false;coverage_validated:false};
 }
 const base="/admin/editorial/intelligence";
 function activeTopic():string {
@@ -30,12 +31,12 @@ export async function mountEditorialIntelligence() {
     '<div class="eyebrow">SCOPERTA E APPRENDIMENTO</div><h2>Esplora, valuta, affina.</h2>' +
     '<p>Le tre componenti imparano dai tuoi giudizi, ma solo tu avvii ricerche, analisi o generazioni a pagamento. Le immagini non vengono pubblicate automaticamente.</p>' +
     '<div id="intel-overview" class="intel-overview">Caricamento...</div>' +
-    '<div class="intel-columns"><section><h3>Topic Discovery</h3><p>Facoltativo: per ora puoi scegliere personalmente tutti gli argomenti. Nessun suggerimento viene avviato automaticamente.</p>' +
+    '<div class="intel-columns"><section id="intel-topic-discovery"><h3>Topic Discovery</h3><p>Prima argomenti comprensibili e fotograficamente plausibili, poi confronto con lo storico. I vicini aiutano a valutare ripetizioni; una zona vuota o una grande distanza non dimostrano utilità.</p><p id="intel-topic-memory"></p><p>Qualità e copertura non validate: servono un corpus rappresentativo e le tue valutazioni. Puoi continuare a popolare la memoria con Discovery spento. Se non condividi la stima del modello, puoi registrare personalmente il tema nel modulo precedente.</p>' +
     '<div class="intel-discovery-control"><strong id="intel-discovery-state">Disattivato</strong><button type="button" data-intel="toggle-discovery" aria-pressed="false">Attiva Topic Discovery</button></div>' +
     '<button data-intel="suggest">Suggerisci 5 argomenti</button><div id="intel-suggestions"></div></section>' +
-    '<section><h3>Fotografie REAL</h3><p>Prima proponi le tue foto nella sezione precedente. Puoi acquisire link Commons o richiedere una ricerca limitata.</p>' +
+    '<section><h3>Fotografie REAL</h3><p>Prima proponi le tue foto nella sezione precedente. Il pianificatore ricava query per parole chiave dal titolo e dalle preferenze REAL. La descrizione semantica non viene aggiunta automaticamente alla ricerca.</p>' +
     '<div id="intel-links"></div><p id="intel-manual-state"></p><div class="intel-buttons"><button data-intel="manual-finished">Ho finito di proporre foto</button><button data-intel="manual-skip">Continua senza foto manuali</button></div><label>Numero di nuove candidate <select id="intel-limit"><option value="3">3</option><option value="5" selected>5</option><option value="10">10</option></select></label><button data-intel="search">Cerca altre REAL con GPT</button><div id="intel-ranking"></div></section>' +
-    '<section><h3>Generazione SLOP</h3><p>Il modello usa solo l’argomento e lo storico SLOP congelato: non riceve fotografie REAL del ciclo.</p><button data-intel="plan">Prepara prompt indipendenti</button><div id="intel-prompts"></div></section></div>' +
+    '<section><h3>Generazione SLOP</h3><p>Prompt indipendenti dal solo titolo e dai feedback storici SLOP congelati. La descrizione semantica non impone una scena; fotografie e giudizi REAL del ciclo restano esclusi.</p><button data-intel="plan">Prepara prompt indipendenti</button><div id="intel-prompts"></div></section></div>' +
     '<details><summary>Formati REAL e SLOP</summary><p>Confronta le proporzioni prima di pubblicare: differenze sistematiche possono suggerire la risposta. I formati sconosciuti restano da verificare.</p><div id="intel-formats"></div></details>'+
     '<details class="intel-audit"><summary>Storico delle operazioni</summary><div id="intel-history"></div></details>' +
     '<p id="intel-status" role="status" aria-live="polite"></p>';
@@ -86,12 +87,15 @@ export async function mountEditorialIntelligence() {
       discovery.setAttribute("aria-pressed",String(state.topic_discovery_enabled));
     }
     if(discoveryStatus) discoveryStatus.textContent=state.topic_discovery_enabled?"Attivo (solo su richiesta)":"Disattivato";
+    const memory=state.topic_memory;
+    section.querySelector<HTMLElement>('#intel-topic-memory')!.textContent='Memoria in popolamento: '+memory.topics+' argomenti registrati, '+memory.indexed_topics+' indicizzati; '+memory.owner_reviewed_proposals+' proposte valutate da te su '+memory.proposals+'. Il numero di vettori non certifica la qualità.';
     const buttonLabel=state.enabled?"":" — IA non configurata";
     suggestions.innerHTML=state.topic_discovery_enabled ? state.suggestions.filter(s=>s.status==="suggested"||s.status==="deferred").slice(0,8)
       .map(s=>'<article><strong>'+escape(s.title)+'</strong><p>'+escape(s.description || s.rationale)+'</p><p>'+escape(s.screening_reason || s.rationale)+'</p>'+
-        '<p>Indicizzazione: '+escape(s.embedding_status || 'non disponibile')+'; novità: '+(typeof s.novelty==='number'?Math.round(s.novelty*100)+'% distanza dal vicino':'non misurata')+'</p>'+
-        '<p>Vicini: '+escape((()=>{try{return (JSON.parse(s.neighbors_json || '[]') as Array<{title:string}>).map(n=>n.title).join('; ') || 'nessuno compatibile';}catch{return 'non disponibili';}})())+'</p><div class="intel-buttons">'+
-        '<button data-intel="accept" data-id="'+escape(s.id)+'" data-screened="'+(!s.screening_status||s.screening_status==='ready'?'1':'0')+'">Esplora</button>'+
+        '<p>Stima del modello: '+escape(s.assessment_status==='eligible'?'ammissibile, da valutare':s.assessment_status==='ineligible'?'non ammissibile':s.assessment_status?'verifica incompleta':'proposta precedente senza questa verifica')+' — '+escape((()=>{try{const a=JSON.parse(s.review_json || s.assessment_json || '{}') as {reason?:string};return a.reason || 'nessuna valutazione strutturata disponibile';}catch{return 'valutazione non disponibile';}})())+'</p>'+
+        '<p>Indicizzazione: '+escape(s.embedding_status || 'non disponibile')+'; distanza dal vicino storico: '+(typeof s.novelty==='number'&&Number.isFinite(s.novelty)?s.novelty.toFixed(3)+' (solo confronto semantico)':'non disponibile')+'</p>'+
+        '<p>Vicini storici: '+escape((()=>{try{return (JSON.parse(s.neighbors_json || '[]') as Array<{title:string}>).map(n=>n.title).join('; ') || 'nessuno compatibile; copertura non deducibile';}catch{return 'non disponibili';}})())+'</p><div class="intel-buttons">'+
+        '<button data-intel="accept" data-id="'+escape(s.id)+'" data-screened="'+(s.description?.trim()&&(!s.screening_status||s.screening_status==='ready')&&(!s.assessment_status||s.assessment_status==='eligible')?'1':'0')+'">Esplora</button>'+
         '<button data-intel="defer" data-id="'+escape(s.id)+'">Rimanda</button>'+
         '<button data-intel="reject" data-id="'+escape(s.id)+'">Scarta</button></div></article>').join("") ||
       '<p>Nessun suggerimento nuovo. Generarli richiede un comando esplicito.</p>' :
@@ -183,5 +187,5 @@ export async function mountEditorialIntelligence() {
   const selector=workspace.querySelector<HTMLSelectElement>("#workspace-topic-select");
   selector?.addEventListener("change",()=>void refresh().catch(error=>{status.textContent=String(error);}));
   workspace.addEventListener("workspace-updated",()=>void refresh().catch(error=>{status.textContent=String(error);}));
-  try{await refresh();}catch(error){status.textContent="Workspace non disponibile: verificare la migrazione 0020. "+String(error);busyState(true);}
+  try{await refresh();}catch(error){status.textContent="Workspace non disponibile: verificare le migrazioni fino alla 0025. "+String(error);busyState(true);}
 }
