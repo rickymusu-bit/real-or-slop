@@ -16,7 +16,7 @@ class IntelligenceSchemaTest(unittest.TestCase):
         ):
             self.db.executescript((ROOT/"migrations"/filename).read_text())
         self.db.execute("INSERT INTO editorial_workspace_topics VALUES(?,?,?,?)",
-                        ("t", "Proteste a Parigi nell'ottobre 2026", "proteste a parigi nell'ottobre 2026", "now"))
+                        ("t", "Proteste a Bruxelles nell'ottobre 2026", "proteste a bruxelles nell'ottobre 2026", "now"))
 
     def tearDown(self):
         self.db.close()
@@ -24,7 +24,7 @@ class IntelligenceSchemaTest(unittest.TestCase):
     def test_immutable_topic_seed_and_per_slot_prompt(self):
         db=self.db
         db.execute("INSERT INTO editorial_topic_slop_seed VALUES(?,?,?,?)",
-                   ("t",'{"topic":"Proteste a Parigi nell\\u0027ottobre 2026","taxonomy_version":"1.0.0","slop_feedback":[]}',"f"*64,"now"))
+                   ("t",'{"topic":"Proteste a Bruxelles nell\\u0027ottobre 2026","taxonomy_version":"1.0.0","slop_feedback":[]}',"f"*64,"now"))
         db.execute("INSERT INTO editorial_slop_prompt_bank VALUES(?,?,?,?,?,?,?,?)",
                    ("p", "t", 0, "An original documentary-style invented photo scene.", "landscape","gpt-6.1-terra","a"*64,"now"))
         with self.assertRaises(sqlite3.IntegrityError):

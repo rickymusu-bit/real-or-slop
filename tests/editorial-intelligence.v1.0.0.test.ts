@@ -5,10 +5,10 @@ import { editorialIntelligenceVersion,topicTerms,similarTopic,suggestedTopicTitl
 } from "../shared/editorial-intelligence.v1.0.0";
 test("SemVer, topic novelty, overlap and meaningful specificity",()=>{
   assert.equal(editorialIntelligenceVersion,"1.0.0");
-  assert.deepEqual(topicTerms("Proteste a Parigi nell'ottobre del 2026"),["proteste","parigi","nell","ottobre","2026"]);
-  assert.ok(similarTopic("Proteste a Parigi nell'ottobre 2026","Proteste a Parigi, ottobre 2026"));
-  assert.equal(similarTopic("Proteste a Parigi ottobre 2026","Aurora boreale a Roma maggio 2024"),false);
-  assert.equal(suggestedTopicTitle("Proteste   a Parigi, ottobre 2026"),"Proteste a Parigi, ottobre 2026");
+  assert.deepEqual(topicTerms("Proteste a Bruxelles nell'ottobre del 2026"),["proteste","bruxelles","nell","ottobre","2026"]);
+  assert.ok(similarTopic("Proteste a Bruxelles nell'ottobre 2026","Proteste a Bruxelles, ottobre 2026"));
+  assert.equal(similarTopic("Proteste a Bruxelles ottobre 2026","Aurora boreale a Roma maggio 2024"),false);
+  assert.equal(suggestedTopicTitle("Proteste   a Bruxelles, ottobre 2026"),"Proteste a Bruxelles, ottobre 2026");
   assert.throws(()=>suggestedTopicTitle("sport"),/generico/);
 });
 test("only valid visual tags, Bayesian smoothing and transparent ranking",()=>{

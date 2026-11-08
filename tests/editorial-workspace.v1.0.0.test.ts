@@ -4,8 +4,8 @@ import { editorialWorkspaceVersion, imageMime, isolatedSlopPlanningInput, source
 
 test("workspace version and topic normalization preserve concrete subject/time", () => {
   assert.equal(editorialWorkspaceVersion, "1.0.0");
-  assert.equal(topicTitle("  Proteste   a Parigi, ottobre 2026  "), "Proteste a Parigi, ottobre 2026");
-  assert.equal(topicKey("  PROTESTE A PARIGI, ottobre 2026 "), topicKey("proteste a parigi, ottobre 2026"));
+  assert.equal(topicTitle("  Proteste   a Bruxelles, ottobre 2026  "), "Proteste a Bruxelles, ottobre 2026");
+  assert.equal(topicKey("  PROTESTE A BRUXELLES, ottobre 2026 "), topicKey("proteste a bruxelles, ottobre 2026"));
   assert.throws(() => topicTitle("   "), /Argomento/);
   assert.throws(() => topicTitle("x"), /Argomento/);
 });
@@ -21,7 +21,7 @@ test("binary header checks block active HTML/SVG without forcing square crops", 
   assert.equal(imageMime(new TextEncoder().encode("<svg onload=alert(1)>")), null);
 });
 test("SLOP prompt planning input rejects REAL contamination at boundary", () => {
-  const allowed = { topic:"Proteste a Parigi, ottobre 2026", taxonomy_version:"1.0.0",
+  const allowed = { topic:"Proteste a Bruxelles, ottobre 2026", taxonomy_version:"1.0.0",
     slop_feedback:["Prefer candid camera composition"] };
   assert.deepEqual(isolatedSlopPlanningInput(allowed), allowed);
   assert.throws(() => isolatedSlopPlanningInput({ ...allowed, real_candidates:["https://example.org/a.jpg"] }), /non ammessi/);

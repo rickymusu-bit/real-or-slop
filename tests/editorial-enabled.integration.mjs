@@ -23,8 +23,8 @@ const photo=name=>Buffer.from(images[name],'base64');
 const reply=value=>globalThis.Response.json({output:[{content:[{type:'output_text',text:JSON.stringify(value)}]}]});
 const plausible={coherent:true,specific:true,photographically_plausible:true,reason:'An understandable subject with photographically plausible visible activity.'};
 const topics=[
- {title:'Paris agricultural protests in 2026',description:'Farmers demonstrating in Paris during 2026.',rationale:'A distinct later episode.'},
- {title:'Farm demonstrations Paris 2024',description:'Agricultural workers protesting in Paris in 2024.',rationale:'A paraphrase of the historical topic.'},
+ {title:'Brussels agricultural protests in 2026',description:'Farmers demonstrating in Brussels during 2026.',rationale:'A distinct later episode.'},
+ {title:'Farm demonstrations Brussels 2024',description:'Agricultural workers protesting in Brussels in 2024.',rationale:'A paraphrase of the historical topic.'},
  {title:'Night work in coastal fish markets',description:'Fish vendors preparing coastal markets before sunrise.',rationale:'A photographically feasible new perspective.'}
 ].map(t=>({...t,assessment:plausible}));
 const nonsense={title:'Invisible arithmetic sleeps outside time',description:'A literal photograph of an abstract calculation sleeping outside time.',rationale:'Far from the catalog is not a reason to recommend it.',assessment:{...plausible,coherent:false,photographically_plausible:false,reason:'No coherent photographic subject.'}};
@@ -81,10 +81,10 @@ b=io.BytesIO();Image.new('RGB',(${w},${h}),(${imageSequence*61%255},${imageSeque
     const comparisons=JSON.parse(data.input[1].content[0].text);
     assert.ok(data.input[0].content.startsWith('First review coherence'));
     if(suggestionMode==='empty')assert.ok(comparisons.every(c=>c.neighbors.length===0 && c.batch_neighbors.length===1));
-    if(suggestionMode==='standard')assert.ok(comparisons.every(c=>c.neighbors.some(n=>n.title==='Paris agricultural protests in 2024')));
+    if(suggestionMode==='standard')assert.ok(comparisons.every(c=>c.neighbors.some(n=>n.title==='Brussels agricultural protests in 2024')));
     if(suggestionMode==='uncertain')return globalThis.Response.json({error:'review uncertain'},{status:503});
     if(suggestionMode==='invalid_review')return reply({decisions:comparisons.map(c=>({id:c.id,eligible:'true',duplicate:false,reason:'Malformed response must not admit a candidate.'}))});
-    return reply({decisions:comparisons.map(c=>({id:c.id,eligible:suggestionMode!=='remote',duplicate:c.title==='Farm demonstrations Paris 2024',reason:suggestionMode==='remote'?'An incoherent topic is not useful merely because it is distant.':c.title.includes('2026')?'Distinct year and episode':'Same topic paraphrased or new subject'}))});
+    return reply({decisions:comparisons.map(c=>({id:c.id,eligible:suggestionMode!=='remote',duplicate:c.title==='Farm demonstrations Brussels 2024',reason:suggestionMode==='remote'?'An incoherent topic is not useful merely because it is distant.':c.title.includes('2026')?'Distinct year and episode':'Same topic paraphrased or new subject'}))});
    }
    if(name==='commons_queries'){
     assert.ok(!JSON.stringify(data.input).includes('SEMANTIC_DESCRIPTION_SENTINEL'));
@@ -151,9 +151,9 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  await api(intel+'/suggest',{operation_id:emptyOp});assert.equal(calls.length,emptyCalls);
  await api(intel+'/topic-discovery/settings',{enabled:false});suggestionMode='standard';
  const originalCalls=calls.length;
- const original=await api(ws+'/topics',{title:'Paris agricultural protests in 2024',description:'Agricultural workers demonstrating in Paris during 2024.'},201);
+ const original=await api(ws+'/topics',{title:'Brussels agricultural protests in 2024',description:'Agricultural workers demonstrating in Brussels during 2024.'},201);
  assert.equal(original.embedding_status,'ready');assert.equal(calls.length,originalCalls+1);
- await api(ws+'/topics',{title:'Paris agricultural protests in 2024'},200);assert.equal(calls.length,originalCalls+1);
+ await api(ws+'/topics',{title:'Brussels agricultural protests in 2024'},200);assert.equal(calls.length,originalCalls+1);
  const legacyId=globalThis.crypto.randomUUID();
  await db.prepare("INSERT INTO editorial_workspace_topics VALUES(?,?,?,?)").bind(legacyId,'An old unindexed owner topic','an old unindexed owner topic','2024').run();
  const pendingCalls=calls.length;
@@ -161,11 +161,11 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  assert.ok(indexed.some(r=>r.embedding_status==='ready'));
  assert.equal(calls.length,pendingCalls+1,'Concurrent backfill must embed once');
  const prior=(await api(ws)).topics.find(t=>t.id===original.id);
- await api(ws+'/topics/'+original.id+'/semantics',{description:'Farmers protesting in Paris in 2024, during a specific episode.',expected_sha256:prior.input_sha256});
+ await api(ws+'/topics/'+original.id+'/semantics',{description:'Farmers protesting in Brussels in 2024, during a specific episode.',expected_sha256:prior.input_sha256});
  assert.equal((await db.prepare('SELECT count(*) AS n FROM editorial_topic_semantic_history').first()).n,1);
  await api(ws+'/topics/'+original.id+'/semantics',{description:'A stale overwrite',expected_sha256:prior.input_sha256},409);
  const revised=(await api(ws)).topics.find(t=>t.id===original.id),beforeRestore=calls.length;
- await api(ws+'/topics/'+original.id+'/semantics',{description:'Agricultural workers demonstrating in Paris during 2024.',expected_sha256:revised.input_sha256});
+ await api(ws+'/topics/'+original.id+'/semantics',{description:'Agricultural workers demonstrating in Brussels during 2024.',expected_sha256:revised.input_sha256});
  assert.equal(calls.length,beforeRestore,'Restoring an archived vector must not bill again');
  embeddingMode='uncertain';
  const uncertain=await api(ws+'/topics',{title:'Uncertain provider receipt topic',description:'A fixture testing uncertain embedding receipts.'},201);

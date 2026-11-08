@@ -3,10 +3,10 @@ import test from "node:test";
 import { commonsApiUrl, commonsFileTitle } from "../worker/commons-editorial.v1.0.0";
 
 test("Commons File pages and user-supplied thumbnail URLs normalize to one file identity",()=>{
-  assert.equal(commonsFileTitle("https://commons.wikimedia.org/wiki/File:Manifestation_du_5_novembre_2026_%C3%A0_Paris_19.jpg"),
-    "File:Manifestation du 5 novembre 2026 à Paris 19.jpg");
-  assert.equal(commonsFileTitle("https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e1/Manifestation_du_5_novembre_2026_%C3%A0_Paris_19.jpg/1920px-Manifestation_du_5_novembre_2026_%C3%A0_Paris_19.jpg?utm_source=commons.wikimedia.org"),
-    "File:Manifestation du 5 novembre 2026 à Paris 19.jpg");
+  assert.equal(commonsFileTitle("https://commons.wikimedia.org/wiki/File:March%C3%A9_de_printemps_2025_%C3%A0_Lyon.jpg"),
+    "File:Marché de printemps 2025 à Lyon.jpg");
+  assert.equal(commonsFileTitle("https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e1/March%C3%A9_de_printemps_2025_%C3%A0_Lyon.jpg/1920px-March%C3%A9_de_printemps_2025_%C3%A0_Lyon.jpg?utm_source=commons.wikimedia.org"),
+    "File:Marché de printemps 2025 à Lyon.jpg");
   assert.equal(commonsFileTitle("https://upload.wikimedia.org/wikipedia/commons/2/2a/Photo_2026.webp"),
     "File:Photo 2026.webp");
 });

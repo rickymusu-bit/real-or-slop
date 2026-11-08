@@ -58,7 +58,7 @@ function fixtureEnv() {
   } as unknown as Env;
   return {env,jobs,usage,getReserved:()=>reserved};
 }
-const fakeJson={queries:["Paris October 2026 protest photography","Paris demonstration 2026"]};
+const fakeJson={queries:["Brussels October 2026 protest photography","Brussels demonstration 2026"]};
 test("a paid model response is reserved, parsed, audited and cached without double billing",async()=>{
   const {env,jobs,usage,getReserved}=fixtureEnv();
   const old=globalThis.fetch;
@@ -70,13 +70,13 @@ test("a paid model response is reserved, parsed, audited and cached without doub
     const request=JSON.parse(String(init?.body)) as {store:boolean;text:{format:unknown};input:unknown};
     assert.equal(request.store,false);
     assert.ok(request.text.format);
-    assert.ok(JSON.stringify(request.input).includes("Paris"));
+    assert.ok(JSON.stringify(request.input).includes("Brussels"));
     return Response.json({output:[{content:[{type:"output_text",text:JSON.stringify(fakeJson)}]}]});
   };
   try {
-    const input={topic:"Paris",limit:3},key="fixture-search-1";
+    const input={topic:"Brussels",limit:3},key="fixture-search-1";
     const args=[env,"search" as const,null,key,input,
-      "Return only valid JSON","Paris 2026",fields.search] as const;
+      "Return only valid JSON","Brussels 2026",fields.search] as const;
     const first=await modelJSON(...args);
     assert.deepEqual(first,fakeJson);
     const second=await modelJSON(...args);

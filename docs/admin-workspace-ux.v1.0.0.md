@@ -13,7 +13,7 @@ accetta massimo venti link HTTPS, valida integralmente prima del salvataggio,
 ignora i duplicati per argomento e riporta quanti URL sono già presenti.
 Non avvia acquisizione, modelli né pubblicazione.
 
-«Proteste a Parigi, ottobre 2026» era un placeholder dimostrativo nel codice,
+il precedente esempio dimostrativo era un placeholder dimostrativo nel codice,
 non un seed automatico. Se l'argomento compare nell'elenco, è presente nei dati
 correnti. Nessun record viene eliminato o modificato; inoltre non si seleziona
 più automaticamente il primo tema.
