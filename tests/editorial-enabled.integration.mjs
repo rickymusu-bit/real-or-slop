@@ -32,7 +32,7 @@ const result=await build({entryPoints:['worker/index.ts'],bundle:true,write:fals
 const mf=new Miniflare(convertV4MiniflareOptions({host:'127.0.0.1',port:0,inspectorPort:0,workers:[{name:'editorial-fixture',modules:true,script:result.outputFiles[0].text,compatibilityDate:'2026-10-25',
  d1Databases:{DB:'editorial-enabled-fixture'},r2Buckets:['QUARANTINE','IMAGES'],
  assets:{directory:'dist',binding:'ASSETS',routerConfig:{has_user_worker:true},run_worker_first:['/api/*','/admin','/admin/*'],assetConfig:{not_found_handling:'single-page-application'}},
- bindings:{ADMIN_TOKEN:token,DATA_MODE:'demo',OPENAI_API_KEY:'fixture-not-a-real-key',WORKSPACE_AI_ENABLED:'true',
+ bindings:{ADMIN_TOKEN:token,DATA_MODE:'demo',OPENAI_API_KEY:'fixture-not-a-real-key',WORKSPACE_AI_ENABLED:'true',EDITORIAL_BUDGET_RESET_USD:'5',
   ENABLE_REAL_DISCOVERY_PAID:'true',ENABLE_EDITORIAL_CYCLE_GENERATION:'true',
   REAL_DISCOVERY_MODEL:'gpt-6.1-terra',REAL_DISCOVERY_CALL_USD:'0.01',REAL_DISCOVERY_RUN_USD:'2',
   REAL_DISCOVERY_DAILY_USD:'10',REAL_DISCOVERY_TOTAL_USD:'10',REAL_DISCOVERY_MAX_CALLS:'100',
@@ -381,6 +381,42 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
   await assert.rejects(()=>db.prepare('DELETE FROM editorial_image_geometry WHERE inbox_id=?').bind(name).run(),/immutable/);
  }
  assert.ok((await api(intel)).format_unknown.some(f=>f.id==='geometry-invalid'));
+ // Explicit budget reset is atomic/idempotent and never erases charged/uncertain work.
+ const ledgerBefore=(await db.prepare('SELECT * FROM editorial_usage ORDER BY id').all()).results;
+ const uncertainBefore=(await db.prepare("SELECT * FROM editorial_workspace_jobs WHERE status='uncertain' ORDER BY id").all()).results;
+ const resetCalls=calls.length,resetBody={operation_id:globalThis.crypto.randomUUID(),expected_period_id:null,amount_usd:5};
+ const resets=await Promise.all([0,1].map(()=>api(intel+'/budget/reset',resetBody)));
+ assert.equal(resets[0].period_id,resets[1].period_id);
+ assert.equal((await db.prepare('SELECT count(*) AS n FROM editorial_budget_periods').first()).n,1);
+ assert.equal(resets[0].budget.remaining_usd,5);assert.equal(resets[0].budget.used_usd,0);
+ await api(intel+'/budget/reset',{...resetBody,operation_id:globalThis.crypto.randomUUID()},409);
+ await api(intel+'/budget/reset',{...resetBody,amount_usd:50},400);
+ assert.deepEqual((await db.prepare('SELECT * FROM editorial_usage ORDER BY id').all()).results,ledgerBefore);
+ assert.deepEqual((await db.prepare("SELECT * FROM editorial_workspace_jobs WHERE status='uncertain' ORDER BY id").all()).results,uncertainBefore);
+ assert.equal(calls.length,resetCalls);
+ const firstPeriod=resets[0].period_id;
+ // Active calls must finish before the owner can start a fresh budget period.
+ const completedJob=await db.prepare("SELECT id FROM editorial_workspace_jobs WHERE status='completed' LIMIT 1").first();
+ await db.prepare("UPDATE editorial_workspace_jobs SET status='submitting' WHERE id=?").bind(completedJob.id).run();
+ await api(intel+'/budget/reset',{...resetBody,operation_id:globalThis.crypto.randomUUID(),expected_period_id:firstPeriod},409);
+ await db.prepare("UPDATE editorial_workspace_jobs SET status='completed' WHERE id=?").bind(completedJob.id).run();
+ await db.prepare("INSERT INTO editorial_usage VALUES('fill-period','fixture','2026-11-08','generation',4.99,'fixture')").run();
+ const reserveBody={run_id:'budget-probe',stage:'visual',model:'gpt-6.1-terra',fingerprint:'1'.repeat(64)};
+ const reservations=await Promise.all([1,2].map(n=>api('editorial/real-discovery/reserve',{...reserveBody,fingerprint:String(n).repeat(64)},[201,409])));
+ assert.equal(reservations.filter(r=>r.reserved_usd===.01).length,1);
+ assert.equal((await api(intel)).budget.used_usd,5);
+ const success=reservations[0].reserved_usd===.01?1:2;
+ assert.equal((await api('editorial/real-discovery/reserve',{...reserveBody,fingerprint:String(success).repeat(64)})).already_reserved,true);
+ const callsAtLimit=calls.length;
+ const limitedTopic=await api(ws+'/topics',{title:'Budget exhausted embedding',description:'A new manually described topic retained when the shared budget is exhausted.'},201);
+ assert.equal(limitedTopic.embedding_status,'pending');assert.equal(calls.length,callsAtLimit);
+ const nextReset=await api(intel+'/budget/reset',{...resetBody,operation_id:globalThis.crypto.randomUUID(),expected_period_id:firstPeriod});
+ assert.equal(nextReset.budget.remaining_usd,5);
+ assert.equal((await api(intel+'/budget/reset',resetBody)).period_id,firstPeriod);
+ assert.equal((await db.prepare('SELECT count(*) AS n FROM editorial_budget_periods').first()).n,2);
+ const budgetIndexed=await api(ws+'/topics',{title:'Embedding after budget reset',description:'A new manually described photographic topic indexed within the fresh allowance.'},201);
+ assert.equal(budgetIndexed.embedding_status,'ready');
+ for(const sql of ['DELETE FROM editorial_budget_periods','UPDATE editorial_budget_periods SET allowance_usd=50','DELETE FROM editorial_budget_allocations'])await assert.rejects(()=>db.prepare(sql).run(),/immutable/);
  assert.equal((await db.prepare('SELECT count(*) AS n FROM published_images').first()).n,0);
  await mkdir('artifacts',{recursive:true});await writeFile('artifacts/editorial-enabled-receipts.json',JSON.stringify(calls,null,2));
  if(process.env.ROS_TEST_BROWSER==='1'){

@@ -29,9 +29,9 @@ export async function realDiscovery(request: Request, env: Env): Promise<Respons
   const now = new Date().toISOString(), day = now.slice(0, 10);
   const result = await env.DB.prepare(`INSERT OR IGNORE INTO editorial_usage
     SELECT ?,?,?,?,?,? WHERE
-    round(COALESCE((SELECT sum(reserved_usd) FROM editorial_usage),0)+?,6)<=? AND
-    round(COALESCE((SELECT sum(reserved_usd) FROM editorial_usage WHERE run_id=?),0)+?,6)<=? AND
-    round(COALESCE((SELECT sum(reserved_usd) FROM editorial_usage WHERE day=?),0)+?,6)<=? AND
+    round(COALESCE((SELECT sum(reserved_usd) FROM editorial_budget_usage),0)+?,6)<=COALESCE((SELECT allowance_usd FROM editorial_budget_current),?) AND
+    round(COALESCE((SELECT sum(reserved_usd) FROM editorial_budget_usage WHERE run_id=?),0)+?,6)<=? AND
+    round(COALESCE((SELECT sum(reserved_usd) FROM editorial_budget_usage WHERE day=?),0)+?,6)<=? AND
     (SELECT count(*) FROM editorial_usage WHERE run_id=?)<? AND
     (?=0 OR (SELECT count(*) FROM editorial_usage WHERE run_id=? AND kind='generation')<?)`)
     .bind(uid, run, day, generation ? "generation" : "evaluation", cost, now, cost, totalCap, run, cost, runCap, day, cost, dayCap, run, maxCalls,

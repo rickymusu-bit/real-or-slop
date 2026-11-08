@@ -10,6 +10,7 @@ import { fields, modelImage, modelJSON } from "./workspace-ai.v1.0.0";
 import { topicDiscoveryEnabled, setTopicDiscoveryEnabled } from "./topic-discovery-opt-in.v1.0.0";
 import { suggestTopics,topicMemoryStatus } from "./topic-recommender.v1.0.0";
 import { createTopicSemantics, semanticTopicDescription } from "./topic-semantic-memory.v1.0.0";
+import { editorialBudgetStatus,resetEditorialBudget } from "./editorial-budget.v1.0.0";
 
 const base="/api/admin/editorial/intelligence";
 interface Topic { id:string;title:string }
@@ -65,6 +66,10 @@ async function saveCommons(env:Env,t:Topic,photo:CommonsFile,kind:"gpt-commons"|
 export async function editorialIntelligence(request:Request,env:Env,path:string):Promise<Response>{
   const snapshots=path.match(/^\/api\/admin\/editorial\/intelligence\/preferences\/snapshots(?:\/([a-f0-9]{64}))?$/);
   if(snapshots && request.method==='GET')return preferenceSnapshotHistory(request,env,snapshots[1]);
+  if(path===base+'/budget/reset'){
+    if(request.method!=='POST')throw new HttpError(405,"Metodo non consentito");
+    return resetEditorialBudget(request,env);
+  }
   if(path===base && request.method==="GET"){
     const requestedTopic = new URL(request.url).searchParams.get("topic_id");
     const selectedTopic = requestedTopic ? uid(requestedTopic) : null;
@@ -91,6 +96,7 @@ export async function editorialIntelligence(request:Request,env:Env,path:string)
       manual_stage_complete:!!manualStage,
       enabled:env.WORKSPACE_AI_ENABLED==="true" && env.ENABLE_REAL_DISCOVERY_PAID==="true" && !!env.OPENAI_API_KEY,
       generation_enabled:env.WORKSPACE_AI_ENABLED==="true" && env.ENABLE_EDITORIAL_CYCLE_GENERATION==="true" && !!env.OPENAI_API_KEY,
+      budget:await editorialBudgetStatus(env),
       cost_per_text_call:env.REAL_DISCOVERY_CALL_USD || null,
       cost_per_image_call:env.EDITORIAL_CYCLE_GENERATION_USD || null});
   }

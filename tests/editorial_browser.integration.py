@@ -20,9 +20,29 @@ with sync_playwright() as p:
             page=context.new_page()
             errors=[]
             page.on('pageerror',lambda error:errors.append(str(error)))
-            page.on('dialog',lambda dialog:dialog.accept())
+            dialog_answers={'cancel':False}
+            page.on('dialog',lambda dialog:dialog.dismiss() if dialog_answers['cancel'] else dialog.accept())
             page.goto(base+'admin')
             expect(page.locator('#workspace-topic-form button[type=submit]')).to_be_enabled()
+            budget=page.locator('#intel-budget')
+            expect(budget).to_contain_text('Budget operazioni AI')
+            before_budget=page.request.get(base+'api/admin/editorial/intelligence').json()['budget']
+            dialog_answers['cancel']=True
+            budget.locator('[data-intel=reset-budget]').click()
+            assert page.request.get(base+'api/admin/editorial/intelligence').json()['budget']['period_id']==before_budget['period_id']
+            dialog_answers['cancel']=False
+            budget.locator('[data-intel=reset-budget]').click()
+            expect(page.locator('#intel-status')).to_contain_text('Budget reimpostato')
+            after_budget=page.request.get(base+'api/admin/editorial/intelligence').json()['budget']
+            assert after_budget['remaining_usd']==5 and after_budget['used_usd']==0
+            assert after_budget['lifetime_usd']==before_budget['lifetime_usd']
+            assert after_budget['period_id']!=before_budget['period_id']
+            page.reload()
+            expect(budget.locator('[data-intel=reset-budget]')).to_be_enabled()
+            assert page.request.get(base+'api/admin/editorial/intelligence').json()['budget']['period_id']==after_budget['period_id']
+            budget.locator('summary').click()
+            budget.screenshot(path=str(folder/(name+'-budget-reset.png')))
+            assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'),name+' budget has horizontal overflow'
             discovery=page.locator('#intel-topic-discovery')
             expect(page.locator('#intel-topic-memory')).to_contain_text('Memoria in popolamento')
             expect(discovery).to_contain_text('Qualità e copertura non validate')

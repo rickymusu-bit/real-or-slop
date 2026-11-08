@@ -1,3 +1,9 @@
+## 0.20.0 — 2026-11-08T07:01:53Z
+
+- Budget AI condiviso visibile in dashboard con reset esplicito a importo server, storico immutabile e prenotazioni conservate.
+- Periodi e assegnazioni atomiche: concorrenza, schede obsolete e doppi clic non moltiplicano il credito; limite comune per testo, immagini ed embedding.
+- Migrazione additiva 0027, regressioni su esaurimento/ripristino, audit contabile e UI desktop/mobile.
+
 ## 0.19.0 — 2026-11-08T03:46:09Z (completamento #64)
 
 - Snapshot immutabili separati REAL/SLOP, riferimenti ai voti/profili, parametri e conteggi; cronologia privata e ricostruzione dello stato usato dai ranker, con tracce suddivise entro i limiti D1.

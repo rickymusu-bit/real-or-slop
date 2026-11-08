@@ -8,7 +8,9 @@ interface TopicCount {origin:string;status:string;n:number}
 interface Ranked {id:string;sha256:string;tags:string[];score:number;reason:string;has_profile?:boolean;relevance?:{match:string;reason:string}|null}
 interface Bank {slot:number;prompt:string;variant:string}
 interface PreferenceSnapshot {id:string;origin:string;learner_version:string;observations:number;approved:number;rejected:number;created_at:string}
+interface Budget {period_id:number|null;limit_usd:number|null;used_usd:number;remaining_usd:number|null;lifetime_usd:number;reset_amount_usd:number|null;history:Array<{id:number;baseline_usd:number;allowance_usd:number;created_at:string}>}
 interface Panel {
+  budget:Budget;
   enabled:boolean;generation_enabled:boolean;manual_stage_complete:boolean;topic_discovery_enabled:boolean; cost_per_text_call:string|null;cost_per_image_call:string|null;
   suggestions:Suggestion[];prompts:Bank[];topic_counts:TopicCount[];ranked_real:Ranked[];
   preferences:{real:{observations:number;approved:number;rejected:number;snapshot_id:string};slop:{observations:number;approved:number;rejected:number;snapshot_id:string}};
@@ -33,6 +35,7 @@ export async function mountEditorialIntelligence() {
     '<div class="eyebrow">SCOPERTA E APPRENDIMENTO</div><h2>Esplora, valuta, affina.</h2>' +
     '<p>Le tre componenti imparano dai tuoi giudizi, ma solo tu avvii ricerche, analisi o generazioni a pagamento. Le immagini non vengono pubblicate automaticamente.</p>' +
     '<div id="intel-overview" class="intel-overview">Caricamento...</div>' +
+    '<section id="intel-budget" class="intel-budget" aria-labelledby="intel-budget-heading"><h3 id="intel-budget-heading">Budget operazioni AI</h3><p id="intel-budget-balance"></p><p>Testo, immagini ed embedding condividono questo limite. Le cifre sono prenotazioni prudenziali, non il saldo o la fattura OpenAI.</p><button type="button" data-intel="reset-budget" disabled>Reimposta budget</button><details><summary>Storico dei reset</summary><div id="intel-budget-history"></div></details></section>'+
     '<div class="intel-columns"><section id="intel-topic-discovery"><h3>Topic Discovery</h3><p>Prima argomenti comprensibili e fotograficamente plausibili, poi confronto con lo storico. I vicini aiutano a valutare ripetizioni; una zona vuota o una grande distanza non dimostrano utilità.</p><p id="intel-topic-memory"></p><p>Qualità e copertura non validate: servono un corpus rappresentativo e le tue valutazioni. Puoi continuare a popolare la memoria con Discovery spento. Se non condividi la stima del modello, puoi registrare personalmente il tema nel modulo precedente.</p>' +
     '<div class="intel-discovery-control"><strong id="intel-discovery-state">Disattivato</strong><button type="button" data-intel="toggle-discovery" aria-pressed="false">Attiva Topic Discovery</button></div>' +
     '<button data-intel="suggest">Suggerisci 5 argomenti</button><div id="intel-suggestions"></div></section>' +
@@ -69,7 +72,8 @@ export async function mountEditorialIntelligence() {
     busy=next;
     section.querySelectorAll<HTMLButtonElement>("[data-intel]").forEach(button=>{
       button.disabled=next || (!panel?.enabled && button.dataset.intel!=="acquire" && button.dataset.intel!=="accept" &&
-        button.dataset.intel!=="reject" && button.dataset.intel!=="defer" && button.dataset.intel!=="toggle-discovery" && !["geometry","snapshot-history","snapshot-detail"].includes(button.dataset.intel || "") && !button.dataset.intel?.startsWith("manual-")) ||
+        button.dataset.intel!=="reject" && button.dataset.intel!=="defer" && button.dataset.intel!=="toggle-discovery" && !["reset-budget","geometry","snapshot-history","snapshot-detail"].includes(button.dataset.intel || "") && !button.dataset.intel?.startsWith("manual-")) ||
+        (button.dataset.intel==='reset-budget' && panel?.budget.reset_amount_usd==null) ||
         (button.dataset.intel==="search" && !panel?.manual_stage_complete) ||
         (button.dataset.intel==="accept" && button.dataset.screened==="0") ||
         (button.dataset.intel==="suggest" && !panel?.topic_discovery_enabled) ||
@@ -87,6 +91,11 @@ export async function mountEditorialIntelligence() {
     const expanded=new Set([...section.querySelectorAll<HTMLDetailsElement>('details[open]')]
       .map(details=>details.querySelector('summary')?.textContent));
     panel=state;
+    const money=(value:number|null)=>value===null?'non configurato':new Intl.NumberFormat('it-IT',{style:'currency',currency:'USD',maximumFractionDigits:6}).format(value);
+    const budget=state.budget;
+    section.querySelector<HTMLElement>('#intel-budget-balance')!.textContent='Disponibile: '+money(budget.remaining_usd)+' · Prenotato nel periodo: '+money(budget.used_usd)+' · Limite: '+money(budget.limit_usd)+'. Totale storico prenotato: '+money(budget.lifetime_usd)+'.';
+    section.querySelector<HTMLButtonElement>('[data-intel="reset-budget"]')!.textContent=budget.reset_amount_usd===null?'Reset non configurato':'Reimposta budget a '+money(budget.reset_amount_usd);
+    section.querySelector<HTMLElement>('#intel-budget-history')!.innerHTML=budget.history.length?budget.history.map(h=>'<p>Periodo '+h.id+' · '+escape(h.created_at)+' · disponibilità iniziale '+escape(money(h.allowance_usd))+' · storico precedente '+escape(money(h.baseline_usd))+'</p>').join(''):'<p>Nessun reset registrato.</p>';
     const approvedReal=state.topic_counts.filter(x=>x.origin==="REAL"&&x.status==="approved")
       .reduce((n,x)=>n+x.n,0);
     const slopReady=state.topic_counts.filter(x=>x.origin==="AI"&&["approved","pending"].includes(x.status))
@@ -159,6 +168,18 @@ export async function mountEditorialIntelligence() {
     const button=(event.target as HTMLElement).closest<HTMLButtonElement>("button[data-intel]");
     if(!button || busy || button.disabled)return;
     const action=button.dataset.intel||"",topicId=activeTopic();
+    if(action==='reset-budget'){
+      const budget=panel?.budget;
+      if(!budget || budget.reset_amount_usd===null)return;
+      if(!window.confirm('Reimpostare la disponibilità a '+budget.reset_amount_usd+' USD? Il residuo attuale viene sostituito, senza accumularlo. Storico, prenotazioni ed esiti incerti restano conservati. Non ricarica il conto OpenAI e non avvia chiamate AI.'))return;
+      busyState(true);
+      try{
+        await api(base+'/budget/reset',{method:'POST',body:JSON.stringify({operation_id:crypto.randomUUID(),expected_period_id:budget.period_id,amount_usd:budget.reset_amount_usd})});
+        status.textContent='Budget reimpostato. Storico conservato; nessuna chiamata AI avviata.';
+      }catch(error){status.textContent=String(error);}
+      finally{try{await refresh();}catch(error){status.textContent+=' '+String(error);}busyState(false);}
+      return;
+    }
     if(action==='snapshot-history' || action==='snapshot-detail'){
       busyState(true);
       try{

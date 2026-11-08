@@ -1,10 +1,38 @@
-# Istruzioni Codex — versione canonica 11.0.0
+# Istruzioni Codex — versione canonica 12.0.0
 
-Snapshot: `docs/AGENTS.v11.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-08T03:46:09Z. Base main `0a595bfa18c448a422c16310bb1c79f1899c290c`.
-Il rilascio della sessione ha portato il Worker allo schema 0025; il nuovo delta
-aggiunge snapshot delle preferenze e audit geometrici senza modificare immagini.
-Le versioni precedenti restano contesto storico per gli ambiti non sostituiti.
+Snapshot: `docs/AGENTS.v12.0.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-08T07:01:53Z. Base main `7975604b4f52f7877124c7e89ec4e6cd63771333`.
+Le sezioni precedenti rimangono contesto storico per gli ambiti non sostituiti.
+
+## Budget condiviso e reset esplicito (12.0.0)
+
+Aggiornato: 2026-11-08T07:01:53Z. Specifica: `docs/budget-dashboard.v1.0.0.md`.
+Base main `7975604`, app 0.19.0 e schema 0026 già rilasciati. L'owner ha
+richiesto il pulsante di reset e autorizzato **5 USD aggiuntivi** nella sessione
+corrente. Implementare, verificare e rilasciare il delta senza una nuova richiesta
+di permesso; configurare le funzioni owner-first entro questo unico budget.
+La #76 rimane esclusa. Nessuna inferenza a pagamento nei test o all'attivazione.
+
+Il reset apre un periodo con disponibilità pari a `EDITORIAL_BUDGET_RESET_USD`
+(5 USD), sostituendo il residuo senza accumularlo. Non cancellare/rimborsare
+prenotazioni, ricevute o esiti incerti, né dichiarare una ricarica dell'account
+OpenAI. Testo, immagini ed embedding condividono la stessa disponibilità;
+l'assegnazione di ciascuna nuova prenotazione al periodo è atomica e immutabile.
+I costi mostrati sono stime prudenziali, non fatturazione verificata.
+
+Il pulsante privato richiede conferma esplicita e funziona senza un argomento
+selezionato o le funzioni AI attive. Il server controlla importo configurato,
+ID idempotente e periodo atteso: doppi invii o schede obsolete non moltiplicano
+il budget. Nessun reset mentre una chiamata AI risulta prepared/submitting.
+Limiti monetari giornalieri/per-run sono nel periodo; conteggi di chiamate,
+generazioni e deduplica delle operazioni rimangono storici. Il cap condiviso
+DB protegge anche le prenotazioni legacy; i relativi gate restano spenti.
+
+La migrazione additiva 0027 non crea periodi né altera dati storici. Prima del
+rilascio: backup fresco, restore rehearsal, test di concorrenza/esaurimento,
+provider fittizi, browser desktop/mobile e CI. Dopo il rilascio aprire il primo
+periodo con il residuo precedente più i 5 USD aggiuntivi e attivare soltanto i percorsi owner-first ed embedding.
+Nessun cron, backfill automatico o ripristino di immagini eliminate.
 
 ## Completamento corrente #64 — snapshot e geometria EXIF (11.0.0)
 
