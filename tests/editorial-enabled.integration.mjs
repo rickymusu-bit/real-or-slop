@@ -108,10 +108,12 @@ b=io.BytesIO();Image.new('RGB',(${w},${h}),(${imageSequence*61%255},${imageSeque
     if(searchMode==='failed' || searchMode==='partial' && url.searchParams.get('srsearch').includes('second'))return new globalThis.Response('fixture failure',{status:503});
     return globalThis.Response.json({query:{search:searchMode==='empty'?[]:[{title:'File:Fixture.jpg'}]}});
    }
-   return globalThis.Response.json({query:{pages:[{title:'File:Fixture.jpg',imageinfo:[{url:'https://upload.wikimedia.org/wikipedia/commons/a/ab/Fixture.webp',width:480,height:320,size:photo('commons').length,
+   const ownerLink=url.searchParams.get('titles')==='File:OwnerLink.jpg';
+   return globalThis.Response.json({query:{pages:[{title:ownerLink?'File:OwnerLink.jpg':'File:Fixture.jpg',imageinfo:[{url:ownerLink?'https://upload.wikimedia.org/wikipedia/commons/a/ab/OwnerLink.webp':'https://upload.wikimedia.org/wikipedia/commons/a/ab/Fixture.webp',
+    width:ownerLink?240:480,height:ownerLink?360:320,size:photo(ownerLink?'owner':'commons').length,
     extmetadata:{Artist:{value:'Fixture author'},LicenseUrl:{value:'https://creativecommons.org/licenses/by/4.0/'}}}]}]}});
   }
-  if(url.hostname==='upload.wikimedia.org')return new globalThis.Response(photo('commons'),{headers:{'Content-Type':'image/webp'}});
+  if(url.hostname==='upload.wikimedia.org')return new globalThis.Response(photo(url.pathname.endsWith('/OwnerLink.webp')?'owner':'commons'),{headers:{'Content-Type':'image/webp'}});
   throw Error('External network forbidden in fixtures: '+url.hostname);
  }
 }]}));
