@@ -294,9 +294,9 @@ export async function mountEditorialWorkspace() {
     const acquire=explorer.querySelector<HTMLInputElement>("#workspace-commons-acquire")!.checked;
     let saved=0,present=0,acquired=0,failed=0;
     for(let i=0;i<files.length;i+=20){
-      const result=await api<{saved:number;restored?:number;already_present:number}>("/admin/editorial/workspace/links/batch",{
+      const result=await api<{saved:number;already_present:number}>("/admin/editorial/workspace/links/batch",{
         method:"POST",body:JSON.stringify({topic_id:topicId,source_urls:files.slice(i,i+20).map(f=>f.page_url)})});
-      saved+=result.saved+(result.restored || 0);present+=result.already_present;
+      saved+=result.saved;present+=result.already_present;
     }
     await refresh(topicId);
     if(acquire){
@@ -357,11 +357,11 @@ export async function mountEditorialWorkspace() {
     setBusy(true);
     feedback.textContent="Registrazione di "+urls.length+" link in corso…";
     try {
-      const result=await api<{saved:number;restored?:number;already_present:number}>("/admin/editorial/workspace/links/batch",{
+      const result=await api<{saved:number;already_present:number}>("/admin/editorial/workspace/links/batch",{
         method:"POST",body:JSON.stringify({topic_id:select.value,source_urls:urls,note:String(data.get("note") || "")})
       });
       await refresh(select.value);linkForm.reset();
-      feedback.textContent=result.saved+" link registrati; "+(result.restored?result.restored+" scartati in precedenza e ripristinati; ":"")+result.already_present+
+      feedback.textContent=result.saved+" link registrati; "+result.already_present+
         " già presenti. Non ancora acquisiti o approvati: usa «Acquisisci» accanto ai link Commons.";
       status.textContent=feedback.textContent;
     }catch(error){feedback.textContent="Registrazione non completata: "+String(error)+". I link restano nel campo.";}

@@ -99,37 +99,3 @@ class LotRemovalSchemaTest(unittest.TestCase):
         with self.assertRaises(sqlite3.IntegrityError):
             db.execute("INSERT INTO editorial_lot_removals VALUES('t2','x','x','not json','now')")
         self.assertEqual(db.execute("SELECT count(*) FROM editorial_workspace_proposals").fetchone()[0], 2)
-
-
-class ProposalVisibilitySchemaTest(unittest.TestCase):
-    """Schema 0032: append-only dismiss/restore events. v1.0.0, 2026-11-09T07:50:00Z."""
-    def setUp(self):
-        self.db = sqlite3.connect(":memory:")
-        self.db.execute("PRAGMA foreign_keys=ON")
-        for filename in MIGRATIONS + ("0030_editorial_lot_removal.v1.0.0.sql", "0032_proposal_visibility.v1.0.0.sql"):
-            self.db.executescript((ROOT / "migrations" / filename).read_text())
-        db = self.db
-        db.execute("INSERT INTO editorial_workspace_topics VALUES('t1','Paris riots','paris riots','now')")
-        db.execute("INSERT INTO editorial_workspace_proposals VALUES('link','t1','link','https://commons.wikimedia.org/wiki/File:A.jpg',NULL,'','now')")
-        db.execute("INSERT INTO editorial_review_inbox(id,origin,sha256,media_key,metadata_json,created_at) VALUES('i1','REAL',?,'k','{}','now')", ("a" * 64,))
-        db.execute("INSERT INTO editorial_workspace_proposals VALUES('upload','t1','upload',NULL,'i1','','now')")
-
-    def tearDown(self):
-        self.db.close()
-
-    def test_events_are_ordered_append_only_and_limited_to_unacquired_links(self):
-        db = self.db
-        db.execute("INSERT INTO editorial_workspace_proposal_visibility VALUES('e1','link','dismiss','',1,'now')")
-        db.execute("INSERT INTO editorial_workspace_proposal_visibility VALUES('e2','link','restore','',2,'now')")
-        with self.assertRaises(sqlite3.IntegrityError):
-            db.execute("INSERT INTO editorial_workspace_proposal_visibility VALUES('e3','link','dismiss','',2,'now')")  # same seq
-        with self.assertRaises(sqlite3.IntegrityError):
-            db.execute("INSERT INTO editorial_workspace_proposal_visibility VALUES('e4','upload','dismiss','',1,'now')")
-        db.execute("INSERT INTO editorial_workspace_proposal_visibility VALUES('e5','upload','restore','',1,'now')")  # harmless
-        with self.assertRaises(sqlite3.IntegrityError):
-            db.execute("INSERT INTO editorial_workspace_proposal_visibility VALUES('e6','link','hide','',3,'now')")
-        for statement in ("UPDATE editorial_workspace_proposal_visibility SET action='dismiss'", "DELETE FROM editorial_workspace_proposal_visibility WHERE proposal_id='link'"):
-            with self.assertRaises(sqlite3.IntegrityError, msg=statement):
-                db.execute(statement)
-        db.execute("INSERT INTO editorial_lot_removals VALUES('t1','Paris','paris','{}','now')")
-        db.execute("DELETE FROM editorial_workspace_proposal_visibility WHERE proposal_id='link'")  # only with the lot's removal snapshot
