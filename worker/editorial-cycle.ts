@@ -2,9 +2,10 @@ import { body, hash, HttpError, id, json, type Env } from "./core";
 import { prepareImport, importText } from "./import";
 import { recognizedLicense } from "../shared/licenses";
 import { hasTags } from "./tags.v1.0.0";
+import { GAME_COPY_MISSING, hasGameCopy } from "./review-inbox";
 
 const base = "/api/admin/editorial/cycle";
-interface Review { id: string; origin: string; sha256: string; media_key: string; metadata_json: string; revision: number; status: string }
+interface Review { id: string; origin: string; sha256: string; source_sha256: string; media_key: string; metadata_json: string; revision: number; status: string }
 function cycleId(value: unknown) {
   if (typeof value !== "string" || !/^[\w-]{1,100}$/.test(value)) throw new HttpError(400, "ID ciclo non valido");
   return value;
@@ -62,6 +63,9 @@ export async function editorialCycle(request: Request, env: Env, path: string): 
     .bind(row.id,row.revision,row.sha256).first<{id:string}>();
   if (!event) throw new HttpError(409, "Approvare personalmente questi pixel nella coda del sito");
   if (!(await hasTags(env, row.id))) throw new HttpError(409, "Aggiungi almeno un tag prima dell'ammissione: una foto con il solo «untagged» non si pubblica");
+  // Approvals given on an original before game copies existed do not count: the copy must be the voted file.
+  if (!(await hasGameCopy(env, row)))
+    throw new HttpError(409, GAME_COPY_MISSING);
   const metadata = JSON.parse(row.metadata_json) as Record<string,unknown>;
   if (metadata.cycle_id && metadata.cycle_id !== cycle) throw new HttpError(409, "Usare il ciclo di provenienza dell'immagine");
   if (typeof metadata.original_key !== "string" || typeof metadata.original_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(metadata.original_sha256))
@@ -93,13 +97,11 @@ export async function editorialCycle(request: Request, env: Env, path: string): 
     WHERE s.provider='editorial-cycle' AND s.source_id=?`).bind(row.id).first<{id:string;sha256:string;r2_key:string}>();
   const priorCycle = await env.DB.prepare("SELECT cycle_id FROM editorial_cycle_admissions WHERE inbox_id=? LIMIT 1").bind(row.id).first<{cycle_id:string}>();
   if (existing && (existing.sha256 !== row.sha256 || priorCycle?.cycle_id !== cycle)) throw new HttpError(409, "Immagine già ammessa con identità o ciclo diversi");
-  const [original, preview] = await Promise.all([bytes(env,metadata.original_key,metadata.original_sha256),bytes(env,row.media_key,row.sha256)]);
+  // Both files are verified; only the approved game file is copied, into the catalog bucket. The original and
+  // the approved file stay where they are in the queue's quarantine (docs/spazio-file.v1.0.0.md).
+  const [, preview] = await Promise.all([bytes(env,metadata.original_key,metadata.original_sha256),bytes(env,row.media_key,row.sha256)]);
   const imageId = existing?.id || prepared.id, key = existing?.r2_key || "editorial-cycle/"+row.origin+"/"+row.sha256;
-  await Promise.all([
-    env.QUARANTINE.put("originals/"+imageId,original.buffer,{httpMetadata:original.httpMetadata,customMetadata:{sha256:metadata.original_sha256}}),
-    env.QUARANTINE.put(key,preview.buffer,{httpMetadata:preview.httpMetadata}),
-    env.IMAGES.put(key,preview.buffer,{httpMetadata:preview.httpMetadata}),
-  ]);
+  await env.IMAGES.put(key,preview.buffer,{httpMetadata:preview.httpMetadata});
   const insertion = existing ? [] : prepared.statements;
   const target = imageId;
   const license = recognizedLicense(data.license_url)!;

@@ -1,5 +1,6 @@
 import { api, content, escape } from "./main";
 import { visualProfilePreview } from "./editorial-profile-preview.v1.0.0";
+import { ensureReviewCopies, ensureReviewCopy } from "./game-copy.v1.0.0";
 import "./editorial-intelligence.v1.0.0.css";
 
 interface Suggestion {id:string;title:string;rationale:string;status:string;description?:string;novelty?:number|null;neighbors_json?:string;screening_reason?:string;screening_status?:string|null;embedding_status?:string;assessment_status?:string|null;assessment_json?:string|null;review_json?:string|null}
@@ -218,13 +219,16 @@ export async function mountEditorialIntelligence() {
       else if(action==="search"){path=base+"/search";payload={topic_id:topicId,limit:Number(section.querySelector<HTMLSelectElement>("#intel-limit")!.value),
         operation_id:crypto.randomUUID()};}
       else if(action==="relevance"){path=base+"/relevance";payload={inbox_id:button.dataset.id,sha256:button.dataset.sha};}
-      else if(action==="profile"){path=base+"/profile";status.textContent="Preparo una miniatura proporzionale dalla fotografia originale...";
-        payload={inbox_id:button.dataset.id,sha256:button.dataset.sha,
+      else if(action==="profile"){path=base+"/profile";status.textContent="Preparo la copia di gioco e una miniatura proporzionale...";
+        // The profile is bound to the game copy, the file the owner will approve (docs/copie-di-gioco.v2.0.0.md).
+        const sha=await ensureReviewCopy(button.dataset.id || "",button.dataset.sha || "");
+        payload={inbox_id:button.dataset.id,sha256:sha,
           preview_base64:await visualProfilePreview(button.dataset.id || "")};}
       else if(action==="plan"){path=base+"/slop/plan";payload={topic_id:topicId};}
       else if(action==="generate"){path=base+"/slop/generate";payload={topic_id:topicId,slot:Number(button.dataset.slot)};}
       if(!path)throw Error("Comando sconosciuto");
       const result=await api<Record<string,unknown>>(path,{method:"POST",body:JSON.stringify(payload)});
+      if(action==="acquire" || action==="generate")await ensureReviewCopies([result as {inbox_id?:string;sha256?:string}]);
       if(action==="accept"){window.location.reload();return;}
       if(action==="acquire"){
         section.querySelector<HTMLElement>("#intel-acquisition-feedback")!.textContent=

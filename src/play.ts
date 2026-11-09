@@ -3,6 +3,7 @@ import { safeUrl } from "./admin";
 import { ImagePreloader } from "./preload";
 import { serverCountdown } from "./clock";
 import { protectGameMedia } from "./media-privacy";
+import { markGameMedia } from "./media-mark.v1.0.0";
 export interface Reveal {
   serverNow?: number;
   expiresAt?: number | null;
@@ -45,16 +46,18 @@ interface State {
 }
 export let stopPlay = () => {};
 export function zoom() {
+  markGameMedia(content());
   document.querySelector(".play-image")?.addEventListener("click", (event) => {
     const img = event.target as HTMLImageElement;
     const d = document.createElement("dialog");
     d.setAttribute("aria-label", "Immagine ingrandita");
     d.dataset.gameZoom = "";
-    d.innerHTML = `<button autofocus>Chiudi ×</button><br><img data-game-media draggable="false" src="${escape(img.src)}" alt="${escape(img.alt)}">`;
+    d.innerHTML = `<button autofocus>Chiudi ×</button><br><div class="game-media-surface"><img data-game-media draggable="false" src="${escape(img.src)}" alt="${escape(img.alt)}"></div>`;
     document.body.append(d);
     d.querySelector("button")!.onclick = () => d.close();
     d.addEventListener("close", () => { d.remove(); img.focus(); });
     d.showModal();
+    markGameMedia(d);
   });
   document.querySelector(".play-image")?.addEventListener("keydown", (event) => {
     const key = (event as KeyboardEvent).key;

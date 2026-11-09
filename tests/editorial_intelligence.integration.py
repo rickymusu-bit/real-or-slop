@@ -9,6 +9,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+import sys
+sys.path.insert(0,str(Path(__file__).parent))
+import game_copy_helper
 
 base=os.environ["ROS_TEST_BASE"]
 token=Path(".dev.vars").read_text().strip().split("=",1)[1]
@@ -168,6 +171,8 @@ unrelated=call(prefix+"?topic_id="+other["id"])[1]
 assert any(item["id"]==inbox for item in current["ranked_real"])
 assert all(item["id"]!=inbox for item in unrelated["ranked_real"])
 assert call("/api/admin/review-inbox/"+inbox+"/tags",{"add":["owner-photo"]})[0]==200  # approval needs a tag
+# ...and the WebP game copy, which becomes the file voted and profiled (docs/copie-di-gioco.v2.0.0.md).
+saved["sha256"]=game_copy_helper.prepare(base,token,inbox,saved["sha256"],png)
 code,vote=call("/api/admin/review-inbox/"+inbox+"/decision",{
     "decision":"approved","revision":card["revision"],"sha256":saved["sha256"],
     "note":"Owner-selected photograph, rights and origin still unverified","reason":"editorial"

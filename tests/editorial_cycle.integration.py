@@ -15,6 +15,8 @@ import uuid
 sys.path.insert(0,str(Path('.').resolve()))
 from pipeline.real.inbox import helpers
 from pipeline.v2.fixtures import picture
+sys.path.insert(0,str(Path(__file__).parent))
+import game_copy_helper
 
 base=os.environ['ROS_TEST_BASE'];assert base.startswith('http://127.0.0.1:')
 token=Path('.dev.vars').read_text().strip().split('=',1)[1]
@@ -65,14 +67,33 @@ with tempfile.TemporaryDirectory() as folder:
             evidence='LOCAL synthetic fixture: owner independently checked origin and rights.',
             explanation='A fully synthetic local test, not a factual provenance claim.',categories=['arte'],
             **(dict(owner_declaration=True) if image['origin']=='AI' else {}))
+    sources={image['id']:image['sha256'] for image in images}
     def vote(index,decision,revision=0,**kwargs):
         image=images[index]
         if decision=='approved':  # approval needs at least one tag (spec lotti 1.4.2)
             assert call('/api/admin/review-inbox/'+image['id']+'/tags',dict(add=['fixture-scene']))[0]==200
+            # ...and is given on the WebP game copy, which then becomes the voted file (docs/copie-di-gioco.v2.0.0.md).
+            image['sha256']=game_copy_helper.prepare(base,token,image['id'],sources[image['id']],Path(image['file']).read_bytes())
         return call('/api/admin/review-inbox/'+image['id']+'/decision',dict(decision=decision,sha256=image['sha256'],revision=revision,note='LOCAL fixture vote',**kwargs))
 
     assert call(route+'/admit',admission(0))[0]==409  # No owner approval.
+    # Game copy checks: approval impossible without it; wrong shape, format, size or stale source refused.
+    first=images[0];source=Path(first['file']).read_bytes()
+    assert call('/api/admin/review-inbox/'+first['id']+'/tags',dict(add=['fixture-scene']))[0]==200
+    status,result=call('/api/admin/review-inbox/'+first['id']+'/decision',dict(decision='approved',sha256=first['sha256'],revision=0,note='No copy'))
+    assert status==409 and 'copia di gioco' in result['error'],(status,result)
+    copy=lambda data,mime='image/webp',sha=None:game_copy_helper.upload(base,token,first['id'],sha or sources[first['id']],data,mime)[0]
+    assert copy(game_copy_helper.encode(source,(40,48)))==409
+    assert copy(game_copy_helper.encode(source,fmt='PNG'),'image/png')==415
+    assert copy(b'not an image')==415
+    assert copy(b'x'*4_000_001)==413
+    assert copy(game_copy_helper.encode(source),sha='f'*64)==409
+    assert copy(game_copy_helper.encode(source,fmt='JPEG'),'image/jpeg')==415
     for i in range(5):assert vote(i,'approved')[0]==200
+    assert game_copy_helper.upload(base,token,first['id'],sources[first['id']],game_copy_helper.encode(source))[1]['already_prepared'] is True
+    copies=sql("SELECT inbox_id,mime,width,height,recipe FROM editorial_review_game_copies WHERE inbox_id LIKE "+literal(cycle+'-%'))
+    assert len(copies)==5 and all(c['mime']=='image/webp' and (c['width'],c['height'])==(48,48) for c in copies),copies
+    assert call('/api/admin/review-inbox/'+first['id']+'/image')[1]!=source  # the copy is what the owner sees
     assert vote(5,'rejected',reason='generation')[0]==200
     assert call(route+'/admit',{**admission(0),'rights_confirmed':False})[0]==400
     assert call(route+'/admit',{**admission(0),'categories':['missing']})[0]==400
@@ -111,7 +132,15 @@ with tempfile.TemporaryDirectory() as folder:
     assert status==200 and replayed['already_admitted'] and replayed['published'],(status,replayed)
     admitted=replayed['image_id'];assert admitted==published['image_id']
     assert call('/api/admin/originals/'+admitted)[1]==Path(images[published_index]['file']).read_bytes()
-    assert call('/api/admin/assets/'+admitted)[1]==Path(images[published_index]['file']).read_bytes()
+    # No duplicates in quarantine: the admin routes read the original and the approved copy from the queue.
+    for key in ('originals/'+admitted,'editorial-cycle/'+images[published_index]['origin']+'/'+images[published_index]['sha256']):
+        with tempfile.TemporaryDirectory() as folder:
+            got=subprocess.run(['npx','wrangler','r2','object','get','real-or-slop-quarantine-local/'+key,'--file',str(Path(folder)/'f'),
+                '--local','--env','local','--persist-to',os.environ['ROS_TEST_STATE']],capture_output=True)
+            assert not (Path(folder)/'f').exists() or (Path(folder)/'f').stat().st_size==0,key
+    # The game asset is the approved WebP copy; the original is kept separately.
+    served=call('/api/admin/assets/'+admitted)[1]
+    assert served[:4]==b'RIFF' and served[8:12]==b'WEBP' and hashlib.sha256(served).hexdigest()==images[published_index]['sha256']
     totals=sql("SELECT i.type,count(*) AS n FROM images i JOIN published_images p ON p.image_id=i.id WHERE i.demo=0 GROUP BY i.type")
     assert len({r['n'] for r in totals})==1,totals
     assert len(sql("SELECT * FROM editorial_review_inbox_events WHERE image_id="+literal(images[4]['id'])))==3

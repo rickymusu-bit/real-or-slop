@@ -1,4 +1,5 @@
 import { body, hash, HttpError, id, json, type Env } from "./core";
+import { queueFiles, releaseFiles } from "./review-files.v1.0.0";
 
 type Origin = "all" | "REAL" | "AI";
 interface RejectedImage { id: string; sha256: string; revision: number }
@@ -45,10 +46,12 @@ export async function bulkRejectedDeletion(request: Request, env: Env): Promise<
   // Stable reviewer fingerprint plus a unique operation ID: only the marks
   // created by this exact request can authorize the second statement.
   const actor = (await hash(env.ADMIN_TOKEN!)).slice(0, 12) + ":" + id();
+  const files = await queueFiles(env, current.rows.map(row => row.id));
   const result = await env.DB.batch([
     env.DB.prepare(insertRejectedDeletions).bind(actor, now, selection, selection, selection),
     env.DB.prepare(deleteRejectedImages).bind(selection, actor, now),
   ]);
   if (result[1].meta.changes !== current.rows.length) throw new HttpError(409, "La selezione è cambiata: nessuna immagine eliminata, aggiorna e riprova");
-  return json({ deleted: current.rows.length, origin, history_preserved: true, published: false });
+  const released = await releaseFiles(env, files);
+  return json({ deleted: current.rows.length, origin, history_preserved: true, published: false, files_deleted: released.length });
 }

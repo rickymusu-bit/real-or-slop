@@ -24,6 +24,7 @@ import { editorialWorkspace } from "./editorial-workspace";
 import { editorialIntelligence } from "./editorial-intelligence.v1.0.0";
 import { gameCatalogModeAdmin } from "./game-catalog-mode.v1.0.0";
 import { tagsAdmin } from "./tags.v1.0.0";
+import { admittedFile } from "./review-files.v1.0.0";
 function text(data: Record<string, unknown>, key: string, max = 4000) {
   const v = data[key];
   if (typeof v !== "string" || !v.trim() || v.length > max)
@@ -137,7 +138,9 @@ export async function moderation(request: Request, env: Env, path: string) {
       throw new HttpError(503, "Quarantena privata non configurata");
     const key = original ? `originals/${image.id}` : image.r2_key;
     if (request.method === "GET") {
-      const object = await env.QUARANTINE.get(key);
+      // Images admitted from the review queue keep their files there, without duplicates in quarantine.
+      const object = await env.QUARANTINE.get(key) ||
+        await (async () => { const queued = await admittedFile(env, image.id, original ? "original" : "approved"); return queued ? env.QUARANTINE!.get(queued) : null; })();
       if (!object) throw new HttpError(404, "File non caricato");
       return new Response(object.body, {
         headers: {
