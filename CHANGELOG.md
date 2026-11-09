@@ -1,3 +1,9 @@
+## 0.28.1 — 2026-11-09T07:00:00Z (proposta, non pubblicata)
+
+- Acquisizione Commons: gli originali con più di 32 milioni di pixel (per esempio 9504×6336) venivano rifiutati anche se il Worker avrebbe scaricato la copia proporzionale; ora si passa alla copia anche per numero di pixel, e i limiti si controllano sul file effettivamente scaricato, misurato di nuovo dai byte.
+- Messaggio più chiaro quando un titolo non esiste su Commons, con l'indicazione del caso tipico (trattini bassi persi copiando il link).
+- Nessuna migrazione.
+
 ## 0.28.0 — 2026-11-09T05:00:00Z (proposta, non pubblicata)
 
 Tag per foto (`docs/lotti-editoriali.v1.5.0.md`, sezione 4). Tag solo manuali: nessuna proposta da modelli e nessuna chiamata a pagamento, per decisione dell'owner.
