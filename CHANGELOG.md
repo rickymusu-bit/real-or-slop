@@ -1,3 +1,9 @@
+## 0.26.1 — 2026-11-08T23:10:00Z (proposta, non pubblicata)
+
+- Esplora Commons: le miniature servite da `thumb.wikimedia.org` (forma attuale dell'API) erano scartate perché era ammesso solo `upload.wikimedia.org`; ora entrambi gli host, limitati a `/wikipedia/commons/`, con i parametri `utm_*` rimossi. Verificato sulla risposta reale per «Paris protest»: 30 foto su 30.
+- Acquisizione: gli originali oltre 12 MB, scaricati come miniatura proporzionale da `thumb.wikimedia.org`, non vengono più rifiutati.
+- Nessuna migrazione.
+
 ## 0.26.0 — 2026-11-08T22:40:00Z (proposta, non pubblicata)
 
 - Esplora Commons mostra le fotografie: foto e categorie ora usano richieste API separate (insieme, l'API restituiva solo le categorie).

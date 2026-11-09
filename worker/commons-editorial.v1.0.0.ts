@@ -63,11 +63,23 @@ export function commonsApiUrl(title: string): string {
 function simpleHtml(value: unknown): string {
   return typeof value === "string" ? value.replace(/<[^>]*>/g, " ").replace(/&(?:nbsp|amp|lt|gt|quot);/g, " ").replace(/\s+/g," ").trim().slice(0,500) : "";
 }
+/** Commons media hosts: originals on upload.wikimedia.org, thumbnails on thumb.wikimedia.org (v1.4.0, 2026-11-08T23:10:00Z).
+ * Only the /wikipedia/commons/ tree over plain HTTPS; tracking parameters (utm_*) are dropped. */
+const MEDIA_HOSTS = new Set(["upload.wikimedia.org", "thumb.wikimedia.org"]);
+export function commonsMediaUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  let u: URL;
+  try { u = new URL(value); } catch { return null; }
+  if (u.protocol !== "https:" || !MEDIA_HOSTS.has(u.hostname) || !u.pathname.startsWith("/wikipedia/commons/") ||
+      u.username || u.password || u.port) return null;
+  for (const key of [...u.searchParams.keys()]) if (key.startsWith("utm_")) u.searchParams.delete(key);
+  u.hash = "";
+  return u.href;
+}
 async function bounded(url: string, max = MAX_IMAGE_BYTES): Promise<{bytes:ArrayBuffer;mime:string}> {
-  const u = new URL(url);
-  if (u.protocol !== "https:" || u.hostname !== "upload.wikimedia.org" ||
-      !u.pathname.startsWith("/wikipedia/commons/") || u.username || u.password || u.port)
-    throw new HttpError(400,"Download non consentito dal provider");
+  const allowed = commonsMediaUrl(url);
+  if (!allowed) throw new HttpError(400,"Download non consentito dal provider");
+  const u = new URL(allowed);
   const response = await fetch(u.href,{redirect:"manual",headers:{...COMMONS_HEADERS,"Accept":"image/jpeg,image/png,image/webp"}});
   if (response.status !== 200 || !response.body) throw commonsUnavailable("Immagine Commons non raggiungibile", response.status);
   const length = Number(response.headers.get("content-length") || 0);
@@ -105,7 +117,7 @@ export async function commonsFile(value: string): Promise<CommonsFile> {
       (image.width || 0)*(image.height || 0)>MAX_IMAGE_PIXELS)
     throw new HttpError(413,"Dimensioni dell'originale fuori limite");
   const chooseThumb = (image.size || 0)>MAX_IMAGE_BYTES;
-  const download = chooseThumb ? image.thumburl : image.url;
+  const download = commonsMediaUrl(chooseThumb ? image.thumburl : image.url);
   if (!download) throw new HttpError(413,"Nessuna copia proporzionale disponibile");
   const file = await bounded(download);
   const ext = image.extmetadata || {};
@@ -138,16 +150,9 @@ const BROWSE_IMAGE = /^File:.+\.(?:jpe?g|png|webp)$/i;
 function pageUrl(title: string) {
   return "https://commons.wikimedia.org/wiki/" + encodeURIComponent(title.replace(/ /g, "_")).replace(/%3A/ig, ":");
 }
-function uploadUrl(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  try {
-    const u = new URL(value);
-    return u.protocol === "https:" && u.hostname === "upload.wikimedia.org" && u.pathname.startsWith("/wikipedia/commons/");
-  } catch { return false; }
-}
 type BrowsePage = { title?: string; index?: number; categories?: Array<{ title?: string }>; imageinfo?: Array<{ url?: string; thumburl?: string;
   width?: number; height?: number; extmetadata?: Record<string, { value?: string }> }> };
-type ApiReply = { query?: { pages?: BrowsePage[]; search?: Array<{ title?: string }>; categorymembers?: Array<{ title?: string }> };
+export type ApiReply = { query?: { pages?: BrowsePage[]; search?: Array<{ title?: string }>; categorymembers?: Array<{ title?: string }> };
   continue?: Record<string, string> };
 async function commonsQuery(params: Record<string, string>): Promise<ApiReply> {
   const url = new URL("https://commons.wikimedia.org/w/api.php");
@@ -158,18 +163,20 @@ async function commonsQuery(params: Record<string, string>): Promise<ApiReply> {
 }
 const FILE_PROPS = { prop: "imageinfo|categories", clshow: "!hidden", cllimit: "max", iiprop: "url|size|extmetadata", iiurlwidth: "400",
   iiextmetadatafilter: "Artist|LicenseShortName|ImageDescription|DateTimeOriginal", iiextmetadatalanguage: "en" };
-function browseFiles(data: ApiReply): CommonsBrowseFile[] {
+export function browseFiles(data: ApiReply): CommonsBrowseFile[] {
   const pages = [...(data.query?.pages || [])].sort((a, b) => (a.index || 0) - (b.index || 0));
   const files: CommonsBrowseFile[] = [];
   for (const page of pages) {
     const info = page.imageinfo?.[0], title = page.title || "";
-    if (!BROWSE_IMAGE.test(title) || !info || !uploadUrl(info.thumburl)) continue;
+    const thumb = commonsMediaUrl(info?.thumburl);
+    if (!BROWSE_IMAGE.test(title) || !info || !thumb) continue;
     const width = info.width || 0, height = info.height || 0;
     // Preview: a 1280 px thumbnail of large originals, the original itself when it is already small.
-    const large = info.thumburl.replace(/\/(\d+)px-([^/]+)$/, "/1280px-$2");
-    const preview = width > 1280 && large !== info.thumburl ? large : uploadUrl(info.url) ? info.url : info.thumburl;
+    const large = thumb.replace(/\/(\d+)px-([^/?]+)(\?.*)?$/, "/1280px-$2");
+    const original = commonsMediaUrl(info.url);
+    const preview = width > 1280 && large !== thumb ? large : original || thumb;
     const meta = (key: string) => simpleHtml(info.extmetadata?.[key]?.value);
-    files.push({ title, page_url: pageUrl(title), thumb_url: info.thumburl, preview_url: preview, width, height,
+    files.push({ title, page_url: pageUrl(title), thumb_url: thumb, preview_url: preview, width, height,
       author: meta("Artist").slice(0, 200), license: meta("LicenseShortName").slice(0, 100),
       description: meta("ImageDescription").slice(0, 300), date: meta("DateTimeOriginal").slice(0, 100),
       categories: (page.categories || []).map(c => (c.title || "").replace(/^Category:/, "")).filter(c => c && c.length <= 200).slice(0, 12) });
