@@ -46,6 +46,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   const pending = new Map<string, Hit | null>();
   const generated = new Map<string, { tags?: string[]; caption?: string }>();
   const captionDrafts = new Map<string, string>();
+  let captionSaving: Promise<void> = Promise.resolve();
   const staged = () => images.filter(i => i.origin === "REAL" && (i.status === "new" || i.status === "approved"));
   const persist = () => {
     try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ids: staged().map(i => i.id), stage, generated: [...generated.entries()] })); } catch { /* private browsing */ }
@@ -279,9 +280,14 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     if (target.id === "rw-generation-all") {
       root.querySelectorAll<HTMLInputElement>("[data-rw-gen]:not(:disabled)").forEach(c => { c.checked = target.checked; });
     }
-    if (target.matches("[data-rw-caption]") && !busy) {
-      busy = true;
-      void flushCaptions().catch(error => { notice = errorText(error); }).finally(() => { busy = false; render(); });
+    if (target.matches("[data-rw-caption]")) {
+      // Blur must not swallow the user\'s following click while the caption is being saved.
+      captionSaving = captionSaving.catch(() => {}).then(flushCaptions);
+      void captionSaving.catch(error => {
+        notice = errorText(error);
+        const output = root.querySelector<HTMLElement>(".rw-message");
+        if (output) output.textContent = notice;
+      });
     }
   });
   root.addEventListener("submit", event => {
@@ -314,12 +320,13 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       const ids = [...root.querySelectorAll<HTMLInputElement>("[data-rw-gen]:checked")].map(x => x.dataset.rwGen!);
       root.querySelector<HTMLDialogElement>("#rw-generation-dialog")?.close();
       busy = true;
-      try { await flushCaptions(); await generate(generating, ids); } catch (error) { notice = errorText(error); render(); }
+      try { await captionSaving; await flushCaptions(); await generate(generating, ids); } catch (error) { notice = errorText(error); render(); }
       finally { busy = false; render(); }
       return;
     }
     busy = true;
     try {
+      await captionSaving;
       if (action === "add-links") {
         const input = root.querySelector<HTMLTextAreaElement>("#rw-links")!;
         addLinks(input.value.split(/\s+/).filter(Boolean));
