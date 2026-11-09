@@ -37,15 +37,3 @@ export async function admittedFile(env: Env, imageId: string, kind: "original" |
     WHERE a.image_id=? ORDER BY a.created_at DESC LIMIT 1`).bind(imageId).first<{ media_key: string; original_key: string | null }>();
   return row ? (kind === "original" ? row.original_key : row.media_key) : null;
 }
-
-/** The single photo ?1, at revision ?3, is rejected and marked as deleted by the current request. */
-export const MARKED_SINGLE = `EXISTS(SELECT 1 FROM editorial_review_inbox q JOIN editorial_review_deleted_images d ON d.image_id=q.id
-  AND d.revision=q.revision AND d.sha256=q.sha256 WHERE q.id=?1 AND q.revision=?3 AND q.status='rejected')`;
-/** Snapshot of the proposals of the photos listed by `ids` (SQL yielding inbox ids, using ?1), deleted at ?2.
- * Uploads point to their photo; Commons links through their acquisition (docs/spazio-file.v1.1.0.md). */
-export function deleteProposalSnapshot(ids: string, guard = MARKED_SINGLE): string {
-  return `INSERT INTO editorial_deleted_photo_proposals(proposal_id,inbox_id,topic_id,kind,source_url,note,proposed_at,deleted_at)
-    SELECT p.id,COALESCE(p.inbox_id,a.inbox_id),p.topic_id,p.kind,p.source_url,p.note,p.created_at,?2
-    FROM editorial_workspace_proposals p LEFT JOIN editorial_workspace_acquisitions a ON a.proposal_id=p.id
-    WHERE COALESCE(p.inbox_id,a.inbox_id) IN (${ids}) AND ${guard.replace("q.id=?1", "q.id=COALESCE(p.inbox_id,a.inbox_id)")}`;
-}

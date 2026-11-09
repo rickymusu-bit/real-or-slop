@@ -1,5 +1,5 @@
 import { body, hash, HttpError, id, json, type Env } from "./core";
-import { deleteProposalSnapshot, queueFiles, releaseFiles } from "./review-files.v1.0.0";
+import { queueFiles, releaseFiles } from "./review-files.v1.0.0";
 
 type Origin = "all" | "REAL" | "AI";
 interface RejectedImage { id: string; sha256: string; revision: number }
@@ -29,18 +29,6 @@ export const deleteRejectedImages = `DELETE FROM editorial_review_inbox
       AND d.revision=editorial_review_inbox.revision AND d.sha256=editorial_review_inbox.sha256
       AND d.deleted_by=? AND d.deleted_at=?)`;
 
-/** Marked by this request (?2 deleted_at, ?3 actor), rejected: the photo q.id=?1 placeholder is rewritten per use. */
-const MARKED_BULK = `EXISTS(SELECT 1 FROM editorial_review_inbox q JOIN editorial_review_deleted_images d ON d.image_id=q.id
-  AND d.revision=q.revision AND d.sha256=q.sha256 AND d.deleted_at=?2 AND d.deleted_by=?3 WHERE q.id=?1 AND q.status='rejected')`;
-const SELECTED = "SELECT json_extract(value,'$.id') FROM json_each(?1)";
-/** Proposals of the marked photos (Commons links and uploads): snapshot, acquisition links, proposals (0033). */
-export const snapshotRejectedProposals = deleteProposalSnapshot(SELECTED, MARKED_BULK);
-export const deleteRejectedAcquisitions = `DELETE FROM editorial_workspace_acquisitions WHERE inbox_id IN (${SELECTED})
-  AND ${MARKED_BULK.replace("q.id=?1", "q.id=editorial_workspace_acquisitions.inbox_id")}`;
-export const deleteRejectedProposals = `DELETE FROM editorial_workspace_proposals WHERE id IN (
-  SELECT s.proposal_id FROM editorial_deleted_photo_proposals s WHERE s.inbox_id IN (${SELECTED})
-  AND ${MARKED_BULK.replace("q.id=?1", "q.id=s.inbox_id")})`;
-
 export async function bulkRejectedDeletion(request: Request, env: Env): Promise<Response> {
   if (request.method === "GET") {
     const origin = originFilter(new URL(request.url).searchParams.get("origin") || "all");
@@ -61,12 +49,9 @@ export async function bulkRejectedDeletion(request: Request, env: Env): Promise<
   const files = await queueFiles(env, current.rows.map(row => row.id));
   const result = await env.DB.batch([
     env.DB.prepare(insertRejectedDeletions).bind(actor, now, selection, selection, selection),
-    env.DB.prepare(snapshotRejectedProposals).bind(selection, now, actor),
-    env.DB.prepare(deleteRejectedAcquisitions).bind(selection, now, actor),
-    env.DB.prepare(deleteRejectedProposals).bind(selection, now, actor),
     env.DB.prepare(deleteRejectedImages).bind(selection, actor, now),
   ]);
-  if (result[4].meta.changes !== current.rows.length) throw new HttpError(409, "La selezione è cambiata: nessuna immagine eliminata, aggiorna e riprova");
+  if (result[1].meta.changes !== current.rows.length) throw new HttpError(409, "La selezione è cambiata: nessuna immagine eliminata, aggiorna e riprova");
   const released = await releaseFiles(env, files);
   return json({ deleted: current.rows.length, origin, history_preserved: true, published: false, files_deleted: released.length });
 }

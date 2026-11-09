@@ -1,26 +1,12 @@
-# Mappa canonica — versione canonica 16.3.0
+# Mappa canonica — versione canonica 16.1.0
 
-Snapshot: `docs/MASTER.v16.3.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-09T15:00:00Z. Base main `9c4aa39`.
+Snapshot: `docs/MASTER.v16.1.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-09T13:00:00Z. Base main `9c4aa39`.
 Le sezioni precedenti rimangono vigenti per gli ambiti non modificati.
-
-## Foto eliminate: si possono ricaricare (16.3.0)
-
-Aggiornato: 2026-11-09T15:00:00Z. Specifica: `docs/spazio-file.v1.2.0.md`, app 0.35.0. La 0033 ridefinisce
-`review_inbox_prevent_reimport`: il blocco per hash vale solo per gli id importati automaticamente, non per
-`owner-`, `commons-` e `generated-`. Controlli di ingresso in `worker/editorial-workspace.ts` (upload) e
-`worker/editorial-intelligence.v1.0.0.ts` (Commons: blocco solo per la ricerca automatica).
-
-## Foto eliminate e proposte (16.2.0)
-
-Aggiornato: 2026-11-09T14:30:00Z. Specifica: `docs/spazio-file.v1.1.0.md`, app 0.34.0, schema 0033
-(`editorial_deleted_photo_proposals` e guardia di cancellazione delle proposte estesa). Eliminazione
-singola in `worker/review-inbox.ts`, in blocco in `worker/review-bulk-delete.ts`; istantanea e condizioni
-condivise in `worker/review-files.v1.0.0.ts`.
 
 ## Spazio dei file (16.1.0)
 
-Aggiornato: 2026-11-09T13:00:00Z. Specifica: `docs/spazio-file.v1.0.1.md`, app 0.33.1. Modulo
+Aggiornato: 2026-11-09T13:00:00Z. Specifica: `docs/spazio-file.v1.0.0.md`, app 0.33.0. Modulo
 `worker/review-files.v1.0.0.ts` (`queueFiles`, `releaseFiles`, `admittedFile`), usato da
 `worker/review-inbox.ts`, `worker/review-bulk-delete.ts` e dalle route `assets`/`originals` di
 `worker/moderation.ts`. L'ammissione in `worker/editorial-cycle.ts` scrive solo nel bucket `IMAGES`.
