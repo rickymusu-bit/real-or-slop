@@ -172,11 +172,12 @@ export async function showLibrary() {
     if (!detail.open) detail.showModal();
     markGameMedia(detail);
   };
+  detail.addEventListener("close", () => { open = null; });
   const detailMessage = (text: string) => { const el = detail.querySelector("#library-detail-message"); if (el) el.textContent = text; };
   detail.addEventListener("change", async event => {
     const field = (event.target as HTMLElement).closest<HTMLInputElement | HTMLTextAreaElement>("[data-field]");
     if (!field || !open || field.readOnly) return;
-    try { open = await save(open, { [field.dataset.field!]: field.value }); detailMessage("Salvato."); showDetail(open); render(); }
+    try { open = await save(open, { [field.dataset.field!]: field.value }); showDetail(open); detailMessage("Salvato."); render(); }
     catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
   });
   detail.addEventListener("keydown", async event => {
@@ -190,7 +191,7 @@ export async function showLibrary() {
   });
   detail.addEventListener("click", async event => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
-    if (!button || !open || busy) return;
+    if (!button || !open || busy || !(button.dataset.tagRemove || button.dataset.action || button.id === "library-copy")) return;
     busy = true;
     try {
       if (button.dataset.tagRemove) open = await save(open, { tags: open.tags.filter(t => t !== button.dataset.tagRemove) });
