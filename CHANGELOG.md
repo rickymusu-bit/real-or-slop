@@ -1,3 +1,14 @@
+## 1.0.0 — 2026-11-09T16:30:00Z (proposta, non pubblicata)
+
+Libreria immagini e database in ordine (`docs/libreria-immagini.v1.1.0.md`), per decisione dell'owner.
+
+- Una sola libreria REAL e SLOP gestita come un file system: caricamento multiplo e trascinamento, Commons (link e ricerca), modifica in linea di titolo, descrizione, didascalia, spiegazione, fonte e tag, selezione multipla, cestino senza conferme, eliminazione definitiva di ogni riga e file.
+- Copia di gioco WebP creata nel browser dal file appena caricato; si approva la copia, che il gioco serve.
+- Tag ASCII senza accenti (`place-de-la-republique`); approvare richiede almeno un tag e, per le REAL, la conferma dei diritti.
+- Didascalia mostrata sotto l'immagine durante il round.
+- Migrazione **distruttiva** `0033_clean_slate`: elimina tutte le tabelle precedenti (archivi storici, lotti, proposte, registri, partite, catalogo demo) e crea lo schema nuovo. Le migrazioni 0001–0032 escono dal repository.
+- Eliminati: pipeline Python, studio SLOP, cicli editoriali, Topic Discovery, profili, similarità, modalità demo, script e workflow delle vecchie pipeline (compreso quello programmato ogni giorno), test relativi.
+
 ## 0.28.1 — 2026-11-09T07:00:00Z (proposta, non pubblicata)
 
 - Acquisizione Commons: gli originali con più di 32 milioni di pixel (per esempio 9504×6336) venivano rifiutati anche se il Worker avrebbe scaricato la copia proporzionale; ora si passa alla copia anche per numero di pixel, e i limiti si controllano sul file effettivamente scaricato, misurato di nuovo dai byte.

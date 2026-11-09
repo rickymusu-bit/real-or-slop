@@ -1,5 +1,5 @@
 import { api, content, escape, publicDemo } from "./main";
-import { safeUrl } from "./admin";
+import { safeUrl } from "../shared/html";
 import { ImagePreloader } from "./preload";
 import { serverCountdown } from "./clock";
 import { protectGameMedia } from "./media-privacy";
@@ -23,6 +23,7 @@ interface Question {
   number: number;
   image: string;
   alt: string;
+  caption?: string;
 }
 interface State {
   id: string;
@@ -76,27 +77,11 @@ export const feedback = (r: Reveal) =>
 export async function setupGame(mode: string) {
   stopPlay();
   const saved = sessionStorage.getItem("ros_" + mode);
-  content().innerHTML = `<section class="page narrow"><div class="eyebrow">${publicDemo ? "DEMO SINTETICA · RISPOSTE SIMULATE" : "CATALOGO VERIFICATO"}</div><h1>${mode === "training" ? "Allena lo sguardo." : "Sfida il tempo."}</h1><p class="lead">Scegli cosa osservare. Ogni risposta corretta vale 100 punti. ${mode === "training" ? "Il tempo è misurato per il riepilogo e non cambia il punteggio." : "Ogni immagine ha il proprio countdown. Alla scadenza si passa alla successiva, senza punti per quella scaduta."}</p>${saved ? '<button id="resume">Riprendi la partita precedente</button>' : ""}<form id="settings"><fieldset class="category-fieldset"><legend>Categorie e sottocategorie (selezione multipla)</legend><div class="category-options" id="categories">Caricamento…</div></fieldset><div class="form-grid"><div><label for="count">Numero di immagini</label><input type="number" id="count" min="1" max="50" value="10"></div><div>${mode === "timed" ? '<label for="round-seconds">Tempo per immagine</label><select id="round-seconds"><option value="10">10 secondi</option><option value="20" selected>20 secondi</option><option value="30">30 secondi</option></select>' : ""}</div></div>${mode === "timed" ? "<p>Prepariamo una sola immagine alla volta. Il countdown continua anche cambiando scheda o applicazione.</p>" : ""}<p>${publicDemo ? "La demo usa illustrazioni geometriche con etichette simulate. Non misura la capacità di riconoscere immagini IA." : "Giocherai con le immagini REAL e SLOP pubblicate. Le immagini in revisione restano escluse."}</p><p><a href="/informazioni#origine">Regole delle immagini e limiti della verifica visiva</a></p><button class="primary" type="submit">Inizia la partita</button><div id="error" role="alert"></div></form></section>`;
+  content().innerHTML = `<section class="page narrow"><div class="eyebrow">${publicDemo ? "DEMO SINTETICA · RISPOSTE SIMULATE" : "CATALOGO VERIFICATO"}</div><h1>${mode === "training" ? "Allena lo sguardo." : "Sfida il tempo."}</h1><p class="lead">Scegli cosa osservare. Ogni risposta corretta vale 100 punti. ${mode === "training" ? "Il tempo è misurato per il riepilogo e non cambia il punteggio." : "Ogni immagine ha il proprio countdown. Alla scadenza si passa alla successiva, senza punti per quella scaduta."}</p>${saved ? '<button id="resume">Riprendi la partita precedente</button>' : ""}<form id="settings"><div class="form-grid"><div><label for="count">Numero di immagini</label><input type="number" id="count" min="1" max="50" value="10"></div><div>${mode === "timed" ? '<label for="round-seconds">Tempo per immagine</label><select id="round-seconds"><option value="10">10 secondi</option><option value="20" selected>20 secondi</option><option value="30">30 secondi</option></select>' : ""}</div></div>${mode === "timed" ? "<p>Prepariamo una sola immagine alla volta. Il countdown continua anche cambiando scheda o applicazione.</p>" : ""}<p>${publicDemo ? "La demo usa illustrazioni geometriche con etichette simulate. Non misura la capacità di riconoscere immagini IA." : "Giocherai con le immagini REAL e SLOP pubblicate. Le immagini in revisione restano escluse."}</p><p><a href="/informazioni#origine">Regole delle immagini e limiti della verifica visiva</a></p><button class="primary" type="submit">Inizia la partita</button><div id="error" role="alert"></div></form></section>`;
   document
     .querySelector("#resume")
     ?.addEventListener("click", () => void play(saved!));
   const formElement = document.querySelector<HTMLFormElement>("#settings")!;
-  try {
-    const rows =
-      await api<{ id: string; name: string; parent_id: string | null }[]>(
-        "/categories",
-      );
-    if (!formElement.isConnected) return;
-    document.querySelector("#categories")!.innerHTML = rows
-      .map(
-        (c) =>
-          `<label class="chip"><input type="checkbox" value="${escape(c.id)}">${c.parent_id ? "↳ " : ""}${escape(c.name)}</label>`,
-      )
-      .join("");
-  } catch (e) {
-    if (!formElement.isConnected) return;
-    document.querySelector("#categories")!.textContent = String(e);
-  }
   document
     .querySelector("#settings")!
     .addEventListener("submit", async (event) => {
@@ -117,11 +102,6 @@ export async function setupGame(mode: string) {
                 document.querySelector<HTMLSelectElement>("#round-seconds")?.value ||
                   20,
               ),
-              categories: Array.from(
-                document.querySelectorAll<HTMLInputElement>(
-                  "#categories input:checked",
-                ),
-              ).map((i) => i.value),
             }),
           },
         );
@@ -218,7 +198,7 @@ async function play(sid: string, warning = "") {
       syncClock(state);
     }
     last = state; busy = false; refreshing = false;
-    content().innerHTML = `<section class="play" aria-label="Domanda ${q.number} di ${state.total}"><div class="play-top"><span>${state.mode === "training" ? "ALLENAMENTO" : "A TEMPO"}${state.demo ? " · DEMO" : ""}</span><div class="play-metrics"><span>Round <strong>${q.number}/${state.total}</strong></span><span><strong>${state.score}</strong> pt</span><strong id="clock" role="timer" aria-label="Tempo rimasto"></strong></div></div>${progress(state.answered, state.total)}${warning ? `<details class="play-warning"><summary>Nota sul catalogo</summary><p>${escape(warning)}</p></details>` : ""}<div class="game-media-surface"><img data-game-media draggable="false" class="play-image" src="${escape(asset.url)}" alt="${escape(q.alt)}" loading="eager" fetchpriority="high" decoding="async" tabindex="0" role="button" aria-label="Ingrandisci l’immagine"><div class="media-privacy-cover"><p>Immagine oscurata dopo aver lasciato la pagina. Il tempo continua.</p><button type="button" data-reveal-media>Mostra immagine</button></div></div><p class="sr-only">R per REAL, I per SLOP (generata con IA).</p>${choices("data-choice")}<div id="feedback" aria-live="polite"></div><div id="play-error" role="alert"></div></section>`;
+    content().innerHTML = `<section class="play" aria-label="Domanda ${q.number} di ${state.total}"><div class="play-top"><span>${state.mode === "training" ? "ALLENAMENTO" : "A TEMPO"}${state.demo ? " · DEMO" : ""}</span><div class="play-metrics"><span>Round <strong>${q.number}/${state.total}</strong></span><span><strong>${state.score}</strong> pt</span><strong id="clock" role="timer" aria-label="Tempo rimasto"></strong></div></div>${progress(state.answered, state.total)}${warning ? `<details class="play-warning"><summary>Nota sul catalogo</summary><p>${escape(warning)}</p></details>` : ""}<div class="game-media-surface"><img data-game-media draggable="false" class="play-image" src="${escape(asset.url)}" alt="${escape(q.alt)}" loading="eager" fetchpriority="high" decoding="async" tabindex="0" role="button" aria-label="Ingrandisci l’immagine"><div class="media-privacy-cover"><p>Immagine oscurata dopo aver lasciato la pagina. Il tempo continua.</p><button type="button" data-reveal-media>Mostra immagine</button></div></div>${q.caption ? `<p class="play-caption">${escape(q.caption)}</p>` : ""}<p class="sr-only">R per REAL, I per SLOP (generata con IA).</p>${choices("data-choice")}<div id="feedback" aria-live="polite"></div><div id="play-error" role="alert"></div></section>`;
     if (seconds) document.querySelector("#clock")!.textContent = seconds() + " s";
     mediaPrivacy.refresh();
     zoom();

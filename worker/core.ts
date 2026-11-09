@@ -1,49 +1,10 @@
 export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
-  DATA_MODE: string;
   PRELOAD_PROTOCOL?: string;
   IMAGES?: R2Bucket;
   QUARANTINE?: R2Bucket;
   ADMIN_TOKEN?: string;
-  OPENAI_API_KEY?: string;
-  WORKSPACE_AI_ENABLED?: string;
-  EDITORIAL_BUDGET_RESET_USD?: string;
-  TOPIC_EMBEDDING_MODEL?: string;
-  TOPIC_EMBEDDING_CALL_USD?: string;
-  TOPIC_EMBEDDING_DAILY_USD?: string;
-  TOPIC_EMBEDDING_TOTAL_USD?: string;
-  ENABLE_EDITORIAL_PAID?: string;
-  ENABLE_EDITORIAL_V2_EXPERIMENTS?: string;
-  ENABLE_EDITORIAL_V2_PAID?: string;
-  ENABLE_REAL_DISCOVERY_PAID?: string;
-  ENABLE_EDITORIAL_CYCLE_GENERATION?: string;
-  EDITORIAL_CYCLE_IMAGE_MODEL?: string;
-  EDITORIAL_CYCLE_GENERATION_USD?: string;
-  EDITORIAL_CYCLE_MAX_GENERATIONS?: string;
-  REAL_DISCOVERY_MODEL?: string;
-  REAL_DISCOVERY_CALL_USD?: string;
-  REAL_DISCOVERY_RUN_USD?: string;
-  REAL_DISCOVERY_DAILY_USD?: string;
-  REAL_DISCOVERY_TOTAL_USD?: string;
-  REAL_DISCOVERY_MAX_CALLS?: string;
-  EDITORIAL_V2_EVALUATION_USD?: string;
-  EDITORIAL_V2_GENERATION_USD?: string;
-  EDITORIAL_V2_RUN_USD?: string;
-  EDITORIAL_V2_DAILY_USD?: string;
-  EDITORIAL_V2_TOTAL_USD?: string;
-  EDITORIAL_V2_MAX_EVALUATIONS?: string;
-  EDITORIAL_V2_MAX_GENERATIONS?: string;
-  EDITORIAL_EVALUATION_USD?: string;
-  EDITORIAL_GENERATION_USD?: string;
-  EDITORIAL_BATCH_EVALUATION_USD?: string;
-  EDITORIAL_BATCH_GENERATION_USD?: string;
-  EDITORIAL_RUN_USD?: string;
-  EDITORIAL_DAILY_USD?: string;
-  EDITORIAL_TOTAL_USD?: string;
-  EDITORIAL_MAX_EVALUATIONS?: string;
-  EDITORIAL_MAX_GENERATIONS?: string;
-  EDITORIAL_MAX_REGENERATIONS?: string;
   ROOMS?: DurableObjectNamespace;
 }
 export class HttpError extends Error {
@@ -119,45 +80,27 @@ export async function rateLimit(env: Env, key: string, max = 30) {
   if (row && row.count > max)
     throw new HttpError(429, "Troppe richieste. Riprova tra un minuto.");
 }
-export type GameCatalogMode = "demo" | "production";
-export async function currentGameMode(env: Env): Promise<GameCatalogMode> {
-  // Unit fixtures without D1 retain the deployment default; real Workers require migration 0028.
-  if (!env.DB) return env.DATA_MODE === "production" ? "production" : "demo";
-  const row = await env.DB.prepare("SELECT mode FROM game_catalog_control WHERE id=1").first<{ mode: string }>();
-  if (!row || (row.mode !== "demo" && row.mode !== "production"))
-    throw new HttpError(503, "Controllo catalogo non inizializzato: applicare la migrazione 0028");
-  return row.mode;
-}
+/** A published library image as the game sees it (docs/libreria-immagini.v1.1.0.md). The game keeps its
+ * REAL/AI vocabulary; r2_key is the approved game copy, served from the game bucket. */
 export interface ImageRow {
   id: string;
   type: "REAL" | "AI";
   title: string;
   description: string;
+  caption: string;
   author: string;
   explanation: string;
   r2_key: string;
-  demo: number;
+  sha256: string;
+  status: string;
   source_url?: string;
   license_name?: string;
   license_url?: string;
 }
-export async function catalog(env: Env, mode?: GameCatalogMode) {
-  const selectedMode = mode ?? await currentGameMode(env);
-  return (
-    await env.DB.prepare(
-      "SELECT i.* FROM images i JOIN published_images p ON p.image_id=i.id WHERE i.status='approved' AND i.demo=?",
-    )
-      .bind(selectedMode === "demo" ? 1 : 0)
-      .all<ImageRow & { status: string; sha256: string; perceptual_hash: string | null }>()
-  ).results;
-}
-export function demoSvg(key: string) {
-  const hue =
-    (Array.from(key).reduce((sum, c) => sum + c.charCodeAt(0), 0) % 50) + 175;
-  const pattern = Array.from(
-    { length: 9 },
-    (_, i) =>
-      `<path d="M ${i * 110 - 180} 600 L ${i * 110 + 80} ${100 + (i % 3) * 90} L ${i * 110 + 240} 600 Z" fill="hsl(${hue + i * 3} 28% ${22 + i * 3}%)"/>`,
-  ).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><defs><linearGradient id="s" x2="0" y2="1"><stop stop-color="hsl(${hue} 30% 70%)"/><stop offset="1" stop-color="#e6d6af"/></linearGradient></defs><path fill="url(#s)" d="M0 0h1200v800H0z"/><circle cx="880" cy="170" r="66" fill="#f4ddaa"/>${pattern}<path fill="#152f36" d="M0 560 Q200 460 450 590 T1200 510v290H0z"/><path fill="#43727b" d="M0 650Q250 550 570 670T1200 610v190H0z"/><path d="M510 640L700 800H350z" fill="#b3c6bd" opacity=".6"/></svg>`;
+export const GAME_IMAGE = `SELECT id,CASE origin WHEN 'SLOP' THEN 'AI' ELSE 'REAL' END AS type,title,description,caption,author,
+  explanation,copy_key AS r2_key,copy_sha256 AS sha256,status,source_url,license_name,license_url FROM images`;
+/** Published images with their game copy. The sampler's "approved" means eligible for play. */
+export async function catalog(env: Env) {
+  return (await env.DB.prepare(GAME_IMAGE + " WHERE status='published' AND copy_key IS NOT NULL").all<ImageRow>()).results
+    .map(row => ({ ...row, status: "approved" }));
 }

@@ -1,45 +1,11 @@
-import { demoSvg, type Env, type ImageRow, HttpError } from "./core";
+import { type Env, type ImageRow, HttpError } from "./core";
 import { cleanImage } from "../shared/media-clean.v1.0.0";
-export interface ObjectStore {
-  get(key: string): Promise<Response | null>;
-}
-export class R2Store implements ObjectStore {
-  constructor(private bucket: R2Bucket) {}
-  async get(key: string) {
-    const value = await this.bucket.get(key);
-    if (!value) return null;
-    return new Response(value.body, {
-      headers: {
-        "Content-Type": value.httpMetadata?.contentType || "image/webp",
-        "X-Content-Type-Options": "nosniff",
-      },
-    });
-  }
-}
-export class DemoStore implements ObjectStore {
-  async get(key: string) {
-    return new Response(demoSvg(key), {
-      headers: {
-        "Content-Type": "image/svg+xml",
-        "Cache-Control": "no-store",
-        "Content-Security-Policy":
-          "default-src 'none'; style-src 'unsafe-inline'",
-      },
-    });
-  }
-}
-export async function media(env: Env, image: ImageRow) {
-  const store =
-    image.demo === 1
-      ? new DemoStore()
-      : env.IMAGES
-        ? new R2Store(env.IMAGES)
-        : null;
-  if (!store) throw new HttpError(503, "Storage immagini non configurato");
-  const response = await store.get(image.r2_key);
-  if (!response) throw new HttpError(404, "Immagine non disponibile");
-  if (image.demo === 1) return response;
-  return gameCopy(response);
+/** The approved game copy of a published image, from the game bucket. */
+export async function media(env: Env, image: Pick<ImageRow, "r2_key">) {
+  if (!env.IMAGES) throw new HttpError(503, "Storage immagini non configurato");
+  const value = await env.IMAGES.get(image.r2_key);
+  if (!value) throw new HttpError(404, "Immagine non disponibile");
+  return gameCopy(new Response(value.body));
 }
 
 /** Game files carry no identifying metadata (spec 1.6.2, 6.4); originals in R2 stay untouched.

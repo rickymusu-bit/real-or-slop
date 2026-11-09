@@ -1,10 +1,9 @@
 import { setupGame, stopPlay } from "./play";
-import { showAdmin } from "./admin";
-import { showEditorialV2 } from "./editorial-v2";
-import { showSimilarity } from "./similarity";
+import { showLibrary } from "./library.v1.0.0";
 import "./style.css";
 const root = document.querySelector<HTMLDivElement>("#app")!;
-export let publicDemo = true;
+/** The demo catalog is gone with the clean database: every published image is a real library image. */
+export const publicDemo = false;
 export { escape } from "../shared/html";
 export async function api<T = Record<string, unknown>>(
   path: string,
@@ -65,11 +64,6 @@ function credits() {
 
 export async function render() {
   stopPlay();
-  try {
-    publicDemo = (await api<{ demo: boolean }>("/health")).demo;
-  } catch {
-    publicDemo = true; // Fail closed: do not advertise production if the catalog state is unknown.
-  }
   shell();
   if (location.pathname === "/") home();
   else if (location.pathname === "/informazioni") info();
@@ -77,10 +71,7 @@ export async function render() {
   else if (location.pathname === "/allenamento") await setupGame("training");
   else if (location.pathname === "/tempo") await setupGame("timed");
   else if (location.pathname === "/pvp") content().innerHTML = '<section class="page narrow"><h1>La sfida tra amici torna più avanti.</h1><p>Il PvP è temporaneamente sospeso.</p><a class="button" href="/tempo">Gioca a tempo</a></section>';
-  else if (location.pathname === "/admin") await showAdmin();
-  else if (location.pathname === "/admin/similarity") await showSimilarity();
-  else if (location.pathname === "/admin/slop") { history.replaceState({}, "", "/admin"); await showAdmin(); }
-  else if (location.pathname === "/admin/editorial-v2") await showEditorialV2();
+  else if (location.pathname === "/admin") await showLibrary();
   else
     content().innerHTML =
       '<section class="page"><h1>Pagina non trovata.</h1><a href="/">Torna all’inizio</a></section>';
