@@ -44,6 +44,30 @@ assert call('review-inbox/'+row['id'],remove,method='DELETE')[0]==409  # pending
 assert call('review-inbox/'+row['id']+'/image',auth='wrong')[0]==401
 assert call('review-inbox/'+row['id']+'/image')[1]==raw
 payload=dict(decision='approved',sha256=sha,revision=row['revision'],note='Approved individually; rights remain unresolved.')
+# Tags (spec lotti 1.4.2, section 4): a photo with only the `untagged` placeholder cannot be approved.
+assert row['tags']==[]
+assert row['id'] in [x['id'] for x in call('review-inbox?state=untagged')[1]['images']]
+status,result=call('review-inbox/'+row['id']+'/decision',payload)
+assert status==409 and 'untagged' in result['error'],(status,result)
+tags='review-inbox/'+row['id']+'/tags'
+assert call(tags,{'add':['steam-locomotive']},auth='wrong')[0]==401
+for bad in (['Burning car'],['untagged'],['ai-generated'],['real'],['made-with-midjourney'],['x'*41],'flat',[1]):
+    assert call(tags,{'add':bad})[0]==400,bad
+status,result=call(tags,{'add':['Burning car']});assert 'burning-car' in result['error'],result
+assert call(tags,{'add':['a'],'remove':['a']})[0]==400
+assert call(tags,{})[0]==400
+status,result=call(tags,{'add':['steam-locomotive','place-de-la-république','steam-locomotive']})
+assert status==200 and result['tags']==['place-de-la-république','steam-locomotive'] and result['untagged'] is False,result
+assert call(tags)[1]['tags']==['place-de-la-république','steam-locomotive']
+assert call(tags,{'add':['steam-locomotive']})[1]['tags']==['place-de-la-république','steam-locomotive']  # idempotent
+assert row['id'] not in [x['id'] for x in call('review-inbox?state=untagged')[1]['images']]
+listed=next(x for x in call('review-inbox')[1]['images'] if x['id']==row['id'])
+assert listed['tags']==['place-de-la-république','steam-locomotive'],listed
+vocabulary={t['label']:t for t in call('tags')[1]['tags']}
+assert vocabulary['steam-locomotive']['photos']==1 and vocabulary['steam-locomotive']['source']=='owner'
+assert call('tags',{'label':'Bad Label'})[0]==400
+status,created=call('tags',{'label':'night'});assert status==201 and created['created'] is True
+assert call('tags',{'label':'night'})[0]==200
 assert call('review-inbox/'+row['id']+'/decision',{**payload,'sha256':'f'*64})[0]==409
 with concurrent.futures.ThreadPoolExecutor(2) as pool:
     results=list(pool.map(lambda _:call('review-inbox/'+row['id']+'/decision',payload),range(2)))
@@ -53,6 +77,22 @@ assert row['id'] not in [x['id'] for x in call('review-inbox')[1]['images']]
 assert next(x for x in call('images?status=in-review')[1] if x['id']==image_id)['status']=='in-review'
 approved=next(x for x in call('review-inbox?state=approved')[1]['images'] if x['id']==row['id'])
 assert approved['revision']==1
+# Removing tags from the vocabulary: impact first, then an exact confirmation; history is kept.
+place=vocabulary['place-de-la-république']['id'];locomotive=vocabulary['steam-locomotive']['id']
+impact=call('tags/'+place+'/impact')[1]
+assert impact['photos']==1 and impact['untagged_published']==0 and impact['untagged_unpublished']==0,impact
+assert call('tags/'+place+'/retire',{'label':'other','expected_photos':1})[0]==400
+assert call('tags/'+place+'/retire',{'label':'place-de-la-république','expected_photos':2})[0]==409
+assert call('tags/'+place+'/retire',{'label':'place-de-la-république','expected_photos':1})[1]['retired'] is True
+assert call('tags/'+place+'/impact')[0]==404
+impact=call('tags/'+locomotive+'/impact')[1]
+assert impact['untagged_unpublished']==1,impact   # its last tag: the approved photo would become untagged
+assert call('tags/'+locomotive+'/retire',{'label':'steam-locomotive','expected_photos':1})[0]==200
+assert call(tags)[1]['tags']==[]
+assert row['id'] in [x['id'] for x in call('review-inbox?state=untagged')[1]['images']]  # approved, now untagged
+assert call('tags')[1]['untagged']['photos']>=1
+status,result=call(tags,{'add':['steam-locomotive']});assert status==200 and result['tags']==['steam-locomotive'],result  # label reusable after removal
+assert len([t for t in call('tags')[1]['tags'] if t['label']=='steam-locomotive'])==1
 assert call('review-inbox/'+row['id'],{**remove,'revision':1},method='DELETE')[0]==409  # approved
 status,result=call('review-inbox/'+row['id']+'/decision',{**payload,'revision':1,'decision':'rejected','note':'Reconsidered.'})
 assert status==200,result

@@ -23,6 +23,7 @@ import { editorialCycle } from "./editorial-cycle";
 import { editorialWorkspace } from "./editorial-workspace";
 import { editorialIntelligence } from "./editorial-intelligence.v1.0.0";
 import { gameCatalogModeAdmin } from "./game-catalog-mode.v1.0.0";
+import { tagsAdmin } from "./tags.v1.0.0";
 function text(data: Record<string, unknown>, key: string, max = 4000) {
   const v = data[key];
   if (typeof v !== "string" || !v.trim() || v.length > max)
@@ -39,6 +40,7 @@ function referencePhoto(row: Record<string, unknown>) {
 }
 export async function moderation(request: Request, env: Env, path: string) {
   if (path === "/api/admin/game-catalog-mode") return gameCatalogModeAdmin(request, env);
+  if (path === "/api/admin/tags" || path.startsWith("/api/admin/tags/")) return tagsAdmin(request, env, path);
   if (path === "/api/admin/editorial/intelligence" || path.startsWith("/api/admin/editorial/intelligence/")) return editorialIntelligence(request, env, path);
   if (path === "/api/admin/editorial/workspace" || path.startsWith("/api/admin/editorial/workspace/")) return editorialWorkspace(request, env, path);
   if (path === "/api/admin/editorial/cycle" || path.startsWith("/api/admin/editorial/cycle/")) return editorialCycle(request, env, path);

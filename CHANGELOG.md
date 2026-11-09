@@ -1,3 +1,13 @@
+## 0.28.0 — 2026-11-09T05:00:00Z (proposta, non pubblicata)
+
+Tag per foto (`docs/lotti-editoriali.v1.5.0.md`, sezione 4). Tag solo manuali: nessuna proposta da modelli e nessuna chiamata a pagamento, per decisione dell'owner.
+
+- Revisione: tag per foto REAL e SLOP, con aggiunta (anche con Invio) e rimozione. Il formato viene controllato mentre scrivi e la forma corretta proposta (`Burning car` → `burning-car`); i tag che rivelerebbero l'origine REAL/SLOP sono rifiutati.
+- Segnaposto `untagged`, derivato: le foto senza tag non si approvano, non si ammettono e non entrano nella pubblicazione del ciclo; le già pubblicate restano nel gioco e compaiono nel nuovo filtro «Senza tag (N)».
+- Vocabolario dei tag in Revisione: conteggi per tag e rimozione con anteprima dell'impatto (foto che resterebbero senza tag, pubblicate e non) e conferma esatta.
+- Storico append-only di ogni aggiunta e rimozione, con l'hash dei pixel del momento. Migrazione additiva 0031.
+- I test che approvano foto assegnano ora un tag prima dell'approvazione.
+
 ## 0.27.0 — 2026-11-09T04:10:00Z (proposta, non pubblicata)
 
 - Esplora Commons: pulsante «Rivedi selezione (N)» e pannello con le foto selezionate prima di qualsiasi aggiunta o acquisizione: miniatura, titolo, autore, licenza, dimensioni, anteprima grande, «Rimuovi», «Svuota selezione», «Aggiungi al lotto corrente» e «Crea un lotto con queste».
