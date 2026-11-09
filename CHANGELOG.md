@@ -1,3 +1,9 @@
+## 1.3.1 — 2026-11-09T22:06:27Z (non pubblicata)
+
+- Wizard REAL v1.2.0: il dialogo «Genera tag e didascalie con IA» preseleziona solo le immagini mai generate; quelle già generate o con esito incerto restano deselezionate e marcate, e la conferma del costo avverte se vengono incluse. Prima ogni clic su «Genera» ripagava anche le immagini già elaborate e poteva reinviare un esito incerto senza avviso.
+- Il focus resta sul controllo attivo dopo ogni aggiornamento della schermata (prima tornava al documento), utile da tastiera e con lettori di schermo.
+- Specifica `docs/dashboard-admin-wizard-real.v1.1.1.md`; test browser `tests/real_wizard.v1.2.0.integration.py`. Vecchie versioni conservate.
+
 ## 1.3.0 — 2026-11-09T21:32:51.460Z (proposta, non pubblicata)
 
 - Wizard REAL semplificato: un solo pulsante «Genera tag e didascalie con IA» e una chiamata per immagine. Rimangono selezione multipla, stima e conferma del costo, modifica dei campi e ripristino gratuito.

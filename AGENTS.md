@@ -1,11 +1,11 @@
-# Istruzioni Codex — versione canonica 17.4.0
+# Istruzioni Codex — versione canonica 17.4.1
 
-Snapshot: `docs/AGENTS.v17.4.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-09T21:33:20.616Z. Precedente: `docs/AGENTS.v17.3.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.4.1.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-09T22:06:27Z. Precedente: `docs/AGENTS.v17.4.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
-Specifiche vigenti: `docs/libreria-immagini.v1.3.0.md` e `docs/dashboard-admin-wizard-real.v1.1.0.md`. Restano valide `docs/copie-di-gioco.v2.0.0.md`
+Specifiche vigenti: `docs/libreria-immagini.v1.3.0.md` e `docs/dashboard-admin-wizard-real.v1.1.1.md`. Restano valide `docs/copie-di-gioco.v2.0.0.md`
 e, per persone, personaggi storici, marchi, marchio «RS» e metadati, le sezioni 6.2–6.4 di
 `docs/lotti-editoriali.v1.6.2.md`. Ogni altro documento in `docs/` è storico.
 
