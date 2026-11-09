@@ -32,7 +32,8 @@ const TEXT_FIELDS: Record<string, number> = { title: 200, description: 1000, cap
 function text(value: unknown, field: string, required = false): string {
   if (value === undefined || value === null) { if (required) throw new HttpError(400, "Campo obbligatorio: " + field); return ""; }
   if (typeof value !== "string") throw new HttpError(400, "Campo non valido: " + field);
-  const clean = value.normalize("NFC").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").trim();
+  // Control characters out, except tab and line breaks.
+  const clean = [...value.normalize("NFC")].filter(ch => { const c = ch.charCodeAt(0); return c === 9 || c === 10 || c === 13 || (c >= 32 && c !== 127); }).join("").trim();
   if (clean.length > TEXT_FIELDS[field]) throw new HttpError(400, `Campo «${field}» oltre ${TEXT_FIELDS[field]} caratteri`);
   if (required && !clean) throw new HttpError(400, "Campo obbligatorio: " + field);
   if ((field === "source_url" || field === "license_url") && clean && !/^https:\/\/[^\s]+$/.test(clean))

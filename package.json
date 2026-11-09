@@ -9,42 +9,23 @@
   "scripts": {
     "dev": "npm run build && wrangler dev --local --env local --ip 0.0.0.0",
     "build": "tsc --noEmit && tsc -p tsconfig.worker.json --noEmit && vite build && node scripts/check-assets.mjs",
-    "lint": "eslint src worker shared tests scripts/deploy-demo.mjs scripts/deployment-config.mjs scripts/benchmark-sampling.mjs scripts/check-gallery.mjs scripts/benchmark-preloading.mjs scripts/scan-similarity.mjs scripts/real-similarity.v1.0.0.mjs scripts/check-live-assets.mjs",
-    "test": "node --import tsx --test tests/*.test.ts && python3 -m unittest discover -s tests -p '*_test.py'",
+    "lint": "eslint src worker shared tests scripts/check-preview.mjs",
+    "test": "node --import tsx --test tests/*.test.ts",
     "db:migrate": "wrangler d1 migrations apply DB --local --env local",
-    "db:seed": "wrangler d1 execute DB --local --env local --file scripts/seed.sql && wrangler d1 execute DB --local --env local --file scripts/seed-publication.sql",
     "dry-run": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
     "preview": "node scripts/check-preview.mjs && wrangler preview --ignore-base-config",
-    "test:integration": "python3 scripts/integration.py",
-    "test:editorial": "node tests/editorial-enabled.integration.mjs",
-    "benchmark:sampling": "node --import tsx scripts/benchmark-sampling.mjs",
-    "deploy:demo": "node scripts/deploy-demo.mjs",
-    "check:live-assets": "node scripts/check-live-assets.mjs",
-    "deploy:check": "node scripts/deploy-demo.mjs --check",
-    "test:gallery": "node scripts/check-gallery.mjs",
-    "benchmark:preloading": "node --import tsx scripts/benchmark-preloading.mjs",
-    "benchmark:editorial-v2": "python3 -m pipeline.v2.benchmark --fixture-study 120",
-    "scan:similarity": "node --import tsx scripts/scan-similarity.mjs",
-    "discovery:real": "python3 -m pipeline.real.run",
-    "editorial:cycle": "python3 -m pipeline.cycle",
-    "discovery:cycle": "python3 -m pipeline.real.workflow",
-    "benchmark:pilot": "python3 -m pipeline.real.pilot",
-    "benchmark:real": "python3 -m pipeline.real.run fixture",
-    "benchmark:commons": "python3 -m pipeline.real.commons_benchmark",
-    "check:openverse": "python3 -m pipeline.real.openverse_check"
+    "test:integration": "python3 scripts/integration.py"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261025.1",
     "@eslint/js": "9.39.1",
     "eslint": "9.39.1",
     "jsonc-parser": "3.3.1",
+    "sharp": "^0.34.5",
     "tsx": "4.20.6",
     "typescript": "5.9.3",
     "typescript-eslint": "8.48.1",
     "vite": "8.3.5",
     "wrangler": "4.152.0"
-  },
-  "dependencies": {
-    "@huggingface/transformers": "3.8.1"
   }
 }

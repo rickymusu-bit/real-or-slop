@@ -15,9 +15,8 @@ export type TagCheck = { ok: true; tag: string } | { ok: false; reason: string; 
 
 /** Conforming form of free text: "Place de la République" -> "place-de-la-republique". Only a proposal. */
 export function suggestTag(input: string): string {
-  return input.normalize("NFKD").replace(/\p{M}+/gu, "").replace(/ß/g, "ss").replace(/[æ]/g, "ae").replace(/[œ]/g, "oe")
-    .replace(/[ø]/g, "o").replace(/[đð]/g, "d").replace(/[ł]/g, "l").replace(/[þ]/g, "th")
-    .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, TAG_MAX).replace(/-+$/, "");
+  return input.normalize("NFKD").replace(/\p{M}+/gu, "").toLowerCase().replace(/ß/g, "ss").replace(/æ/g, "ae").replace(/œ/g, "oe")
+    .replace(/ø/g, "o").replace(/[đð]/g, "d").replace(/ł/g, "l").replace(/þ/g, "th").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, TAG_MAX).replace(/-+$/, "");
 }
 export function checkTag(input: unknown): TagCheck {
   const raw = typeof input === "string" ? input.trim() : "";

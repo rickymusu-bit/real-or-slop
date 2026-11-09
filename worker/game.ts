@@ -78,7 +78,7 @@ export const reveal = (i: ImageRow) => ({
   title: i.title,
   author: i.author,
   source: i.source_url || null,
-  license: i.license_name || "Fixture originale",
+  license: i.license_name || "",
   licenseUrl: i.license_url || null,
   caption: i.caption || null,
 });
