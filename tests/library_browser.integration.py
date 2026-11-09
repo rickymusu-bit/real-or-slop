@@ -1,6 +1,7 @@
-"""v1.0.0, 2026-11-09T16:30:00Z: the library dashboard in a real browser, desktop and mobile
-(docs/libreria-immagini.v1.1.0.md): upload, game copy made by the browser, in-place editing, tags, approval,
-publication, multi-selection, trash, delete for good, and the caption under the image in a round."""
+"""v1.2.0, 2026-11-09T21:30:00Z: the library dashboard in a real browser, desktop and mobile
+(docs/libreria-immagini.v1.3.0.md): upload, game copy made by the browser, analysis by the (fake) model after an explicit
+cost confirmation, in-place editing, tags, approval, publication, multi-selection, trash, delete for good, and the caption
+under the image in a round."""
 import io
 import os
 import shutil
@@ -26,23 +27,42 @@ with sync_playwright() as p:
         page = context.new_page()
         errors = []
         page.on('pageerror', lambda error: errors.append(str(error)))
+        # Cost confirmations: the two REAL photos are analysed (fake model), the SLOP is not.
+        confirms = []
+        def answer(dialog):
+            confirms.append(dialog.message)
+            dialog.accept() if dialog.message.startswith('Analizzare 2 immagini') else dialog.dismiss()
+        page.on('dialog', answer)
         page.goto(base + '/admin')
         expect(page.get_by_role('heading', name='Libreria')).to_be_visible()
         # Upload: two REAL photos, then one SLOP.
         page.locator('#library-files').set_input_files([picture(f'{name}-rivoli.jpg', (180, 40, 30), (320, 200)),
                                                          picture(f'{name}-spare.jpg', (30, 160, 40), (200, 320))])
-        expect(page.locator('#library-message')).to_contain_text('2 di 2 aggiunte', timeout=30000)
+        expect(page.locator('#library-message')).to_contain_text('2 di 2 analizzate', timeout=30000)
+        assert 'Costo massimo 0.036 $' in confirms[0], confirms
+        expect(page.locator('.library-card', has_text=f'{name}-rivoli')).to_contain_text('crowd · street')
         page.locator('#library-upload-origin').select_option('SLOP')
         page.locator('#library-files').set_input_files([picture(f'{name}-street.jpg', (40, 40, 190), (300, 300))])
         expect(page.locator('#library-message')).to_contain_text('1 di 1 aggiunte', timeout=30000)
+        for _ in range(50):  # the confirmation follows the upload message
+            if len(confirms) == 2: break
+            page.wait_for_timeout(200)
+        assert len(confirms) == 2 and confirms[1].startswith('Analizzare 1 immagine'), confirms
         expect(page.locator('.library-card', has_text=f'{name}-rivoli')).to_be_visible()
         expect(page.locator('.badge-warn')).to_have_count(0)  # every image has its game copy
         page.screenshot(path=str(folder / f'{name}-grid.png'))
+        # One budget for every paid call: the owner changes the cap from the dashboard.
+        page.locator('#library-budget summary').click()
+        page.locator('#library-budget-form input[name=cap]').fill('4')
+        page.get_by_role('button', name='Salva il tetto').click()
+        expect(page.locator('#library-message')).to_contain_text('Tetto salvato')
+        expect(page.locator('#library-budget-state')).to_contain_text('su 4 $')
 
         def edit_and_publish(title, caption, tags, real):
             page.get_by_role('button', name=f'Apri {title}').click()
             dialog = page.locator('#library-detail')
             expect(dialog).to_contain_text('copia di gioco WebP')
+            if real: expect(dialog.locator('.library-analysis')).to_contain_text('Analizzata')
             field = dialog.locator('[data-field=caption]')
             field.fill(caption); field.blur()
             expect(dialog.locator('#library-detail-message')).to_contain_text('Salvato')

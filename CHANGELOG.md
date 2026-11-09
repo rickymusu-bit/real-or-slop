@@ -1,3 +1,12 @@
+## 1.1.0 — 2026-11-09T21:30:00Z (proposta, non pubblicata)
+
+Fase 2 della libreria (`docs/libreria-immagini.v1.3.0.md`, sezione 10).
+
+- Analisi con il modello con visione: dalla copia di gioco, dal titolo, dalla descrizione o dal prompt, senza l'origine REAL/SLOP, una chiamata propone 5–15 tag e una didascalia. I tag sono resi ASCII, ripuliti dalle parole sull'origine, risolti per alias e aggiunti a quelli presenti; la didascalia riempie solo un campo vuoto.
+- Un solo budget per tutte le chiamate a pagamento: 5 $ iniziali, modificabile e rinnovabile dalla dashboard (il rinnovo azzera il conteggio, il registro resta). Costo di ogni chiamata calcolato dai token e dal prezzo di listino del modello; prima dell'invio si riserva e si conferma il costo massimo (0,018 $ con `gpt-6.1-terra`). Esiti incerti contati e mai ripetuti; limite o credito OpenAI esauriti segnalati senza addebito, con arresto delle analisi in blocco. Analisi attiva solo con `OPENAI_API_KEY`.
+- Vocabolario: alias dei tag, «Unisci» un tag in un altro, i tag spariscono con la loro ultima immagine.
+- Migrazione additiva 0034. Test d'integrazione con un OpenAI finto locale, anche nel browser.
+
 ## 1.0.1 — 2026-11-09T18:30:00Z
 
 - Ripristinato lo script `deploy:demo`, che il comando di deploy di Cloudflare Workers Builds richiama: ora esegue solo `wrangler deploy` (alias di `deploy`), senza migrazioni né seed. Senza lo script la build di produzione della 1.0.0 compilava ma non pubblicava.

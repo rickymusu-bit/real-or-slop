@@ -6,6 +6,10 @@ export interface Env {
   QUARANTINE?: R2Bucket;
   ADMIN_TOKEN?: string;
   ROOMS?: DurableObjectNamespace;
+  /** Paid image analysis (docs/libreria-immagini.v1.2.0.md): all required, otherwise analysis stays off. */
+  OPENAI_API_KEY?: string;
+  OPENAI_BASE_URL?: string;
+  ANALYSIS_MODEL?: string;
 }
 export class HttpError extends Error {
   constructor(

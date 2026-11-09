@@ -1,4 +1,4 @@
-/** Image library (docs/libreria-immagini.v1.1.0.md). v1.0.0, 2026-11-09T16:30:00Z.
+/** Image library (docs/libreria-immagini.v1.3.0.md). v1.1.0, 2026-11-09T20:30:00Z: vocabulary, aliases and analysis (phase 2).
  * One flat collection of REAL and SLOP images, handled like a file system: add (device or Commons), edit in place,
  * approve, publish, withdraw, move to the trash, restore, delete for good. Deleting removes every row about the
  * image (cascade) and every file: no register, no snapshot (owner decision of 2026-11-09). No paid calls here. */
@@ -10,18 +10,20 @@ import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
 import { cleanImage } from "../shared/media-clean.v1.0.0";
 import { GAME_COPY, gameCopyDimensions } from "../shared/game-copy.v1.0.0";
 import { checkTag } from "../shared/tags.v2.0.0";
+import { analysisStatus, analyze, budgetRoute } from "./analysis.v1.0.0";
 
 const base = "/api/admin/library";
 const MAX_PIXELS = 32_000_000;
 type Origin = "REAL" | "SLOP";
 type Status = "new" | "approved" | "published" | "trash";
-interface Row {
+export interface Row {
   id: string; origin: Origin; status: Status; trashed_from: Status | null; title: string; description: string; caption: string;
   explanation: string; source_url: string; author: string; license_name: string; license_url: string; prompt: string; model: string;
   original_key: string; original_sha256: string; original_mime: string; width: number; height: number;
   copy_key: string | null; copy_sha256: string | null; copy_width: number | null; copy_height: number | null; copy_bytes: number | null;
   rights_confirmed: number; revision: number; created_at: string; updated_at: string; approved_at: string | null;
   published_at: string | null; trashed_at: string | null;
+  analysis_status: "none" | "running" | "done" | "uncertain" | "failed"; analysis_error: string; analyzed_at: string | null;
 }
 const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
@@ -48,12 +50,12 @@ function imageId(value: string): string {
   if (!/^[\w-]{1,64}$/.test(value)) throw new HttpError(400, "Immagine non valida");
   return value;
 }
-async function find(env: Env, imageIdValue: string): Promise<Row> {
+export async function find(env: Env, imageIdValue: string): Promise<Row> {
   const row = await env.DB.prepare("SELECT * FROM images WHERE id=?").bind(imageIdValue).first<Row>();
   if (!row) throw new HttpError(404, "Immagine non trovata");
   return row;
 }
-async function tagsOf(env: Env, ids: readonly string[]): Promise<Map<string, string[]>> {
+export async function tagsOf(env: Env, ids: readonly string[]): Promise<Map<string, string[]>> {
   const out = new Map<string, string[]>();
   for (let i = 0; i < ids.length; i += 90) {
     const chunk = ids.slice(i, i + 90);
@@ -74,14 +76,15 @@ function view(row: Row, tags: string[]) {
     rights_confirmed: row.rights_confirmed === 1, revision: row.revision, tags,
     created_at: row.created_at, updated_at: row.updated_at, approved_at: row.approved_at, published_at: row.published_at,
     trashed_at: row.trashed_at,
+    analysis: { status: row.analysis_status, error: row.analysis_error, at: row.analyzed_at },
     file: `${base}/${row.id}/file?v=${v}`, original: `${base}/${row.id}/original`,
   };
 }
-async function viewOf(env: Env, imageIdValue: string) {
+export async function viewOf(env: Env, imageIdValue: string) {
   const row = await find(env, imageIdValue);
   return view(row, (await tagsOf(env, [row.id])).get(row.id) || []);
 }
-function labels(value: unknown): string[] {
+export function labels(value: unknown): string[] {
   if (!Array.isArray(value) || value.length > 40) throw new HttpError(400, "Elenco di tag non valido (massimo 40)");
   const out = new Set<string>();
   for (const item of value) {
@@ -91,8 +94,16 @@ function labels(value: unknown): string[] {
   }
   return [...out];
 }
+/** Aliases resolve to their tag before anything is stored (docs/libreria-immagini.v1.3.0.md). */
+export async function resolveAliases(env: Env, wanted: string[]): Promise<string[]> {
+  if (!wanted.length) return wanted;
+  const rows = (await env.DB.prepare(`SELECT a.alias,t.label FROM tag_aliases a JOIN tags t ON t.id=a.tag_id
+    WHERE a.alias IN (SELECT value FROM json_each(?))`).bind(JSON.stringify(wanted)).all<{ alias: string; label: string }>()).results;
+  const map = new Map(rows.map(r => [r.alias, r.label]));
+  return [...new Set(wanted.map(label => map.get(label) || label))];
+}
 /** Statements that make the image's tags exactly `wanted`; tags rows are created on first use. */
-function tagStatements(env: Env, imageIdValue: string, wanted: string[], guard: { sql: string; values: unknown[] }) {
+export function tagStatements(env: Env, imageIdValue: string, wanted: string[], guard: { sql: string; values: unknown[] }) {
   const stamp = now();
   return [
     ...wanted.map(label => env.DB.prepare(`INSERT INTO tags(id,label,created_at) SELECT ?,?,? WHERE ${guard.sql}
@@ -167,7 +178,7 @@ async function edit(env: Env, row: Row, data: Record<string, unknown>) {
   if (row.status === "trash") throw new HttpError(409, "Immagine nel cestino: ripristinala per modificarla");
   const fields = Object.keys(TEXT_FIELDS).filter(key => key in data);
   const values = fields.map(key => text(data[key], key, key === "title"));
-  const wanted = data.tags === undefined ? null : labels(data.tags);
+  const wanted = data.tags === undefined ? null : await resolveAliases(env, labels(data.tags));
   // Approval covers what the player sees: any change brings the image back to «new».
   const result = await env.DB.batch([
     env.DB.prepare(`UPDATE images SET ${fields.map(key => key + "=?").join(",")}${fields.length ? "," : ""}
@@ -250,9 +261,10 @@ async function list(env: Env, url: URL) {
 export async function library(request: Request, env: Env, path: string): Promise<Response> {
   const url = new URL(request.url);
   if (path === base && request.method === "GET") return list(env, url);
-  if (path === base + "/tags" && request.method === "GET")
-    return json({ tags: (await env.DB.prepare(`SELECT t.label,count(it.image_id) AS images FROM tags t LEFT JOIN image_tags it ON it.tag_id=t.id
-      GROUP BY t.id ORDER BY t.label`).all()).results });
+  if (path === base + "/tags" || path.startsWith(base + "/tags/")) return vocabulary(request, env, path);
+  if (path === base + "/analysis" && request.method === "GET") return json(await analysisStatus(env));
+  if (path === base + "/budget" && request.method === "PUT") return json(await budgetRoute(env, await body(request, 200), false));
+  if (path === base + "/budget/renew" && request.method === "POST") return json(await budgetRoute(env, await body(request, 200), true));
   if (path === base + "/upload" && request.method === "POST") {
     const params = url.searchParams;
     return json(await create(env, { origin: origin(params.get("origin")), title: params.get("title") || "", bytes: await request.arrayBuffer(),
@@ -285,7 +297,7 @@ export async function library(request: Request, env: Env, path: string): Promise
       try {
         const row = await find(env, target);
         if (action === "tag-add" || action === "tag-remove") {
-          const current = (await tagsOf(env, [row.id])).get(row.id) || [], change = labels(data.tags);
+          const current = (await tagsOf(env, [row.id])).get(row.id) || [], change = await resolveAliases(env, labels(data.tags));
           const wanted = action === "tag-add" ? [...new Set([...current, ...change])] : current.filter(t => !change.includes(t));
           await edit(env, row, { revision: row.revision, tags: wanted });
         } else await transition(env, row, action, data);
@@ -294,7 +306,7 @@ export async function library(request: Request, env: Env, path: string): Promise
     }
     return json({ done: done.length, failed });
   }
-  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore))?$/);
+  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|analyze))?$/);
   if (!match) throw new HttpError(404, "API della libreria inesistente");
   const row = await find(env, match[1]);
   if (match[2] === "file" || match[2] === "original") {
@@ -303,6 +315,10 @@ export async function library(request: Request, env: Env, path: string): Promise
     const file = await env.QUARANTINE?.get(key);
     if (!file) throw new HttpError(404, "File non disponibile");
     return new Response(file.body, { headers: { "Content-Type": file.httpMetadata?.contentType || "image/webp", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
+  }
+  if (match[2] === "analyze") {
+    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    return json(await analyze(env, row, await body(request, 1000)));
   }
   if (match[2] === "copy") {
     if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
@@ -320,4 +336,47 @@ export async function library(request: Request, env: Env, path: string): Promise
     return json({ deleted: await destroy(env, [row.id]) });
   }
   throw new HttpError(405, "Metodo non consentito");
+}
+
+/** /tags: vocabulary with counts and aliases; merge a tag into another; add or remove an alias. No paid calls. */
+async function vocabulary(request: Request, env: Env, path: string): Promise<Response> {
+  if (path === base + "/tags" && request.method === "GET") {
+    const tags = (await env.DB.prepare(`SELECT t.id,t.label,count(it.image_id) AS images,
+      (SELECT json_group_array(alias) FROM (SELECT alias FROM tag_aliases WHERE tag_id=t.id ORDER BY alias)) AS aliases
+      FROM tags t LEFT JOIN image_tags it ON it.tag_id=t.id GROUP BY t.id ORDER BY t.label`).all<{ id: string; label: string; images: number; aliases: string }>()).results;
+    return json({ tags: tags.map(t => ({ label: t.label, images: t.images, aliases: JSON.parse(t.aliases) as string[] })) });
+  }
+  if (request.method !== "POST" && request.method !== "DELETE") throw new HttpError(405, "Metodo non consentito");
+  const data = await body(request, 2000);
+  const tag = async (label: string) => env.DB.prepare("SELECT id,label FROM tags WHERE label=?").bind(label).first<{ id: string; label: string }>();
+  if (path === base + "/tags/merge" && request.method === "POST") {
+    const [from] = labels([data.from]), [into] = labels([data.into]);
+    if (from === into) throw new HttpError(400, "Scegli due tag diversi");
+    const [source, target] = await Promise.all([tag(from), tag(into)]);
+    if (!source || !target) throw new HttpError(404, "Tag inesistente");
+    // Images move to the remaining tag; the merged label becomes its alias, with the aliases it had.
+    await env.DB.batch([
+      env.DB.prepare("INSERT OR IGNORE INTO image_tags(image_id,tag_id) SELECT image_id,? FROM image_tags WHERE tag_id=?").bind(target.id, source.id),
+      env.DB.prepare("UPDATE tag_aliases SET tag_id=? WHERE tag_id=?").bind(target.id, source.id),
+      env.DB.prepare("DELETE FROM image_tags WHERE tag_id=?").bind(source.id),
+      env.DB.prepare("DELETE FROM tags WHERE id=?").bind(source.id),
+      env.DB.prepare("INSERT INTO tag_aliases(alias,tag_id,created_at) VALUES(?,?,?)").bind(from, target.id, now()),
+    ]);
+    return json({ merged: from, into });
+  }
+  if (path === base + "/tags/alias" && request.method === "POST") {
+    const [alias] = labels([data.alias]), [into] = labels([data.into]);
+    const target = await tag(into);
+    if (!target) throw new HttpError(404, "Tag inesistente");
+    if (await tag(alias)) throw new HttpError(409, `«${alias}» è un tag: usa «Unisci» per farlo diventare alias di «${into}»`);
+    try { await env.DB.prepare("INSERT INTO tag_aliases(alias,tag_id,created_at) VALUES(?,?,?)").bind(alias, target.id, now()).run(); }
+    catch { throw new HttpError(409, `«${alias}» è già un alias`); }
+    return json({ alias, into }, 201);
+  }
+  if (path === base + "/tags/alias" && request.method === "DELETE") {
+    const [alias] = labels([data.alias]);
+    await env.DB.prepare("DELETE FROM tag_aliases WHERE alias=?").bind(alias).run();
+    return json({ removed: alias });
+  }
+  throw new HttpError(404, "API dei tag inesistente");
 }

@@ -1,4 +1,4 @@
-/** Admin image library, a file-system-like view (docs/libreria-immagini.v1.1.0.md). v1.0.0, 2026-11-09T16:30:00Z.
+/** Admin image library, a file-system-like view (docs/libreria-immagini.v1.3.0.md). v1.1.0, 2026-11-09T20:30:00Z: vocabulary, aliases and analysis (phase 2).
  * Add files (device or Commons), edit in place, multi-select, trash without confirmations, delete for good. */
 import "./library.v1.0.0.css";
 import { content, escape } from "./main";
@@ -12,7 +12,10 @@ interface Item {
   caption: string; explanation: string; source_url: string; author: string; license_name: string; license_url: string;
   prompt: string; model: string; width: number; height: number; copy: { width: number; height: number; bytes: number } | null;
   rights_confirmed: boolean; revision: number; tags: string[]; file: string; updated_at: string;
+  analysis: { status: "none" | "running" | "done" | "uncertain" | "failed"; error: string; at: string | null };
 }
+interface Analysis { enabled: boolean; reason: string; model: string; call_usd: number; cap_usd: number; since: string; spent_usd: number; remaining_usd: number }
+interface Tag { label: string; images: number; aliases: string[] }
 interface CommonsHit { title: string; page_url: string; thumb_url: string; width: number; height: number }
 const API = "/api/admin/library";
 const STATUS_LABEL: Record<string, string> = { library: "Tutte", new: "Nuove", approved: "Approvate", published: "Pubblicate", trash: "Cestino" };
@@ -37,8 +40,9 @@ const fileTitle = (name: string) => name.replace(/\.[a-z0-9]+$/i, "").replace(/[
 export async function showLibrary() {
   let items: Item[] = [], selected = new Set<string>(), open: Item | null = null, busy = false;
   const filter = { status: "library", origin: "all", tag: "", q: "" };
+  let analysis: Analysis | null = null;
   content().innerHTML = `<section class="library page" aria-labelledby="library-title">
-    <div class="library-head"><h1 id="library-title">Libreria</h1><p id="library-counts" aria-live="polite"></p></div>
+    <div class="library-head"><h1 id="library-title">Libreria</h1><p id="library-counts" aria-live="polite"></p><p id="library-analysis" class="hint"></p></div>
     <div class="library-toolbar">
       <nav class="library-views" aria-label="Viste">${Object.entries(STATUS_LABEL).map(([key, label]) =>
         `<button type="button" data-view="${key}" aria-pressed="${key === "library"}">${label}</button>`).join("")}</nav>
@@ -65,6 +69,15 @@ export async function showLibrary() {
     <div id="library-selection" class="library-selection" hidden></div>
     <p id="library-message" role="status" aria-live="polite"></p>
     <ul id="library-grid" class="library-grid" aria-label="Immagini"></ul>
+    <details id="library-vocabulary" class="library-vocabulary"><summary>Vocabolario dei tag</summary>
+      <p class="hint">Un tag sparisce con la sua ultima immagine. «Unisci» sposta le immagini sul tag che resta e trasforma l'altro in alias: chi scrive l'alias ottiene il tag.</p>
+      <form id="library-merge" class="library-inline"><label>Unisci<input name="from" list="library-tag-list" required autocapitalize="none"></label><label>in<input name="into" list="library-tag-list" required autocapitalize="none"></label><button>Unisci</button></form>
+      <form id="library-alias" class="library-inline"><label>Nuovo alias<input name="alias" required autocapitalize="none"></label><label>del tag<input name="into" list="library-tag-list" required autocapitalize="none"></label><button>Aggiungi alias</button></form>
+      <ul id="library-vocabulary-list"></ul></details>
+    <details id="library-budget" class="library-vocabulary"><summary>Budget delle chiamate a pagamento</summary>
+      <p class="hint">Un solo tetto per tutte le chiamate API. «Rinnova» apre un nuovo periodo da zero; il registro conserva ogni chiamata. Il conteggio usa i prezzi di listino: imposta anche un limite di spesa su platform.openai.com, che è quello che OpenAI applica davvero.</p>
+      <p id="library-budget-state"></p>
+      <form id="library-budget-form" class="library-inline"><label>Tetto in $<input name="cap" type="number" min="0.01" max="1000" step="0.01" required></label><button>Salva il tetto</button><button type="button" id="library-budget-renew">Rinnova</button></form></details>
     <dialog id="library-detail" class="library-detail" aria-labelledby="library-detail-title"></dialog>
   </section>`;
   const page = content().querySelector<HTMLElement>(".library")!;
@@ -73,8 +86,36 @@ export async function showLibrary() {
   const progress = (text: string) => { $("#library-progress").textContent = text; };
 
   const refreshTags = async () => {
-    const { tags } = await call<{ tags: { label: string; images: number }[] }>("/tags");
+    const { tags } = await call<{ tags: Tag[] }>("/tags");
     $("#library-tag-list").innerHTML = tags.map(t => `<option value="${escape(t.label)}">${escape(t.label)} (${t.images})</option>`).join("");
+    $("#library-vocabulary summary").textContent = `Vocabolario dei tag (${tags.length})`;
+    $("#library-vocabulary-list").innerHTML = tags.map(t => `<li><strong>${escape(t.label)}</strong> · ${t.images} ${t.images === 1 ? "immagine" : "immagini"}${t.aliases.length
+      ? " · alias: " + t.aliases.map(a => `${escape(a)} <button type="button" data-alias-remove="${escape(a)}" aria-label="Togli l'alias ${escape(a)}">×</button>`).join(" ") : ""}</li>`).join("") || "<li>Nessun tag.</li>";
+  };
+  const refreshAnalysis = async () => {
+    analysis = await call<Analysis>("/analysis");
+    const since = new Date(analysis.since).toLocaleDateString("it-IT");
+    const budget = `Budget API: spesi ${analysis.spent_usd} $ su ${analysis.cap_usd} $ dal ${since}, restano ${analysis.remaining_usd} $.`;
+    $("#library-analysis").textContent = (analysis.enabled
+      ? `Analisi IA (${analysis.model}): al massimo ${analysis.call_usd} $ per immagine. ` : `Analisi IA non disponibile: ${analysis.reason}. `) + budget;
+    $("#library-budget-state").textContent = budget;
+    const cap = $<HTMLInputElement>("#library-budget-form input[name=cap]");
+    if (document.activeElement !== cap) cap.value = String(analysis.cap_usd);
+  };
+  /** Analyses images one by one after an explicit confirmation of the total estimate. */
+  const analyzeMany = async (ids: string[]) => {
+    if (!analysis?.enabled || !ids.length) return;
+    const estimate = Math.round(ids.length * analysis.call_usd * 1e4) / 1e4;
+    if (!window.confirm(`Analizzare ${ids.length} ${ids.length === 1 ? "immagine" : "immagini"} con ${analysis.model}? Costo massimo ${estimate} $ (restano ${analysis.remaining_usd} $ di budget).`)) return;
+    let done = 0; const errors: string[] = [];
+    for (const [index, imageId] of ids.entries()) {
+      progress(`Analisi ${index + 1} di ${ids.length}`);
+      try { await call(`/${encodeURIComponent(imageId)}/analyze`, { method: "POST", body: JSON.stringify({ confirm_usd: analysis.call_usd }) }); done++; }
+      catch (error) { errors.push(error instanceof Error ? error.message : String(error)); if (/Tetto di spesa|OpenAI:/.test(String(error))) break; }
+    }
+    progress("");
+    message(`${done} di ${ids.length} analizzate.` + (errors.length ? " " + [...new Set(errors)].join(" · ") : ""));
+    await Promise.all([load(), refreshTags(), refreshAnalysis()]);
   };
   const load = async () => {
     const params = new URLSearchParams(filter);
@@ -100,7 +141,7 @@ export async function showLibrary() {
     const trash = filter.status === "trash";
     bar.innerHTML = `<strong>${n} selezionate</strong>` + (trash
       ? '<button data-bulk="restore">Ripristina</button><button data-bulk="delete" class="danger">Elimina definitivamente</button>'
-      : '<button data-bulk="trash">Sposta nel cestino</button><label><input type="checkbox" id="library-bulk-rights"> Diritti delle REAL verificati</label><button data-bulk="approve">Approva</button><button data-bulk="publish">Pubblica</button><button data-bulk="withdraw">Ritira dal gioco</button>' +
+      : '<button data-bulk="trash">Sposta nel cestino</button><label><input type="checkbox" id="library-bulk-rights"> Diritti delle REAL verificati</label><button data-bulk="analyze">Analizza con IA</button><button data-bulk="approve">Approva</button><button data-bulk="publish">Pubblica</button><button data-bulk="withdraw">Ritira dal gioco</button>' +
         '<label>Tag<input id="library-bulk-tag" autocomplete="off" autocapitalize="none" spellcheck="false"></label><button data-bulk="tag-add">Aggiungi tag</button><button data-bulk="tag-remove">Togli tag</button>') +
       '<button data-bulk="none">Deseleziona</button>';
   };
@@ -112,34 +153,36 @@ export async function showLibrary() {
   // Adding images: upload, then the game copy from the same file, without downloading it again.
   const addFiles = async (files: File[]) => {
     const origin = $<HTMLSelectElement>("#library-upload-origin").value;
-    let done = 0; const errors: string[] = [];
+    let done = 0; const errors: string[] = [], added: string[] = [];
     for (const [index, file] of files.entries()) {
       progress(`Carico ${index + 1} di ${files.length}: ${file.name}`);
       try {
         const item = await call<Item>(`/upload?${new URLSearchParams({ origin, title: fileTitle(file.name) })}`,
           { method: "POST", body: file, headers: { "Content-Type": file.type || "application/octet-stream" } });
         progress(`Copia di gioco ${index + 1} di ${files.length}`);
-        await prepareLibraryCopy<Item>(item.id, file).catch(error => errors.push(file.name + ": copia non pronta (" + (error instanceof Error ? error.message : error) + ")"));
+        await prepareLibraryCopy<Item>(item.id, file).then(() => added.push(item.id)).catch(error => errors.push(file.name + ": copia non pronta (" + (error instanceof Error ? error.message : error) + ")"));
         done++;
       } catch (error) { errors.push(file.name + ": " + (error instanceof Error ? error.message : String(error))); }
     }
     progress("");
     message(`${done} di ${files.length} aggiunte.` + (errors.length ? " " + errors.join(" · ") : ""));
     await Promise.all([load(), refreshTags()]);
+    await analyzeMany(added);
   };
   const addCommons = async (links: string[]) => {
-    let done = 0; const errors: string[] = [];
+    let done = 0; const errors: string[] = [], added: string[] = [];
     for (const [index, url] of links.entries()) {
       progress(`Commons ${index + 1} di ${links.length}`);
       try {
         const item = await call<Item>("/commons", { method: "POST", body: JSON.stringify({ url }) });
-        await prepareLibraryCopy<Item>(item.id).catch(error => errors.push(item.title + ": copia non pronta (" + (error instanceof Error ? error.message : error) + ")"));
+        await prepareLibraryCopy<Item>(item.id).then(() => added.push(item.id)).catch(error => errors.push(item.title + ": copia non pronta (" + (error instanceof Error ? error.message : error) + ")"));
         done++;
       } catch (error) { errors.push(url.replace(/^https:\/\/commons\.wikimedia\.org\/wiki\//, "") + ": " + (error instanceof Error ? error.message : String(error))); }
     }
     progress("");
     message(`${done} di ${links.length} aggiunte da Commons.` + (errors.length ? " " + errors.join(" · ") : ""));
     await load();
+    await analyzeMany(added);
   };
 
   // Detail: every change is saved at once; tags too.
@@ -149,6 +192,9 @@ export async function showLibrary() {
     items = items.map(i => i.id === updated.id ? updated : i);
     return updated;
   };
+  const analysisLine = (item: Item) => ({ none: "Non ancora analizzata.", running: "Analisi in corso…",
+    done: "Analizzata: tag e didascalia proposti dal modello, da rivedere prima di approvare.",
+    uncertain: "Esito incerto: " + item.analysis.error, failed: "Analisi non riuscita: " + item.analysis.error })[item.analysis.status];
   const showDetail = (item: Item) => {
     open = item;
     const editable = item.status === "new" || item.status === "approved";
@@ -163,6 +209,8 @@ export async function showLibrary() {
         : `<input data-field="${key}" maxlength="${max}" value="${escape(item[key])}" ${editable ? "" : "readonly"}>`}</label>`).join("")}
       <div class="library-tags"><span>Tag</span><ul>${item.tags.map(t => `<li>${escape(t)}${editable ? ` <button type="button" data-tag-remove="${escape(t)}" aria-label="Togli ${escape(t)}">×</button>` : ""}</li>`).join("") || "<li>nessuno</li>"}</ul>
         ${editable ? '<input id="library-tag-input" list="library-tag-list" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="nuovo tag, Invio"><p id="library-tag-hint" class="hint">Minuscole senza accenti, trattini tra le parole; inglese per i nomi comuni.</p>' : ""}</div>
+      ${item.status === "new" && item.copy ? `<p class="library-analysis">${analysisLine(item)} ${analysis?.enabled && item.analysis.status !== "running"
+        ? `<button type="button" id="library-analyze">${item.analysis.status === "none" ? "Analizza con IA" : "Rianalizza"} (${analysis.call_usd} $)</button>` : ""}</p>` : ""}
       <div class="library-actions">${item.status === "new" ? `${item.origin === "REAL" ? `<label><input type="checkbox" id="library-rights" ${item.rights_confirmed ? "checked" : ""}> Ho verificato diritti e licenza</label>` : ""}<button type="button" data-action="approve" class="primary">Approva</button>` : ""}
         ${item.status === "approved" ? '<button type="button" data-action="publish" class="primary">Pubblica nel gioco</button>' : ""}
         ${item.status === "published" ? '<button type="button" data-action="withdraw">Ritira dal gioco</button>' : ""}
@@ -191,11 +239,18 @@ export async function showLibrary() {
   });
   detail.addEventListener("click", async event => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
-    if (!button || !open || busy || !(button.dataset.tagRemove || button.dataset.action || button.id === "library-copy")) return;
+    if (!button || !open || busy || !(button.dataset.tagRemove || button.dataset.action || button.id === "library-copy" || button.id === "library-analyze")) return;
     busy = true;
     try {
       if (button.dataset.tagRemove) open = await save(open, { tags: open.tags.filter(t => t !== button.dataset.tagRemove) });
       else if (button.id === "library-copy") { detailMessage("Preparo la copia di gioco…"); open = await prepareLibraryCopy<Item>(open.id); }
+      else if (button.id === "library-analyze" && analysis) {
+        const repeat = open.analysis.status === "uncertain" ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
+        if (!window.confirm(`Analizzare «${open.title}» con ${analysis.model}? Costo massimo ${analysis.call_usd} $.${repeat}`)) return;
+        detailMessage("Analisi in corso…");
+        open = await call<Item>(`/${encodeURIComponent(open.id)}/analyze`, { method: "POST", body: JSON.stringify({ confirm_usd: analysis.call_usd }) });
+        void Promise.all([refreshTags(), refreshAnalysis()]);
+      }
       else if (button.dataset.action === "delete") { await call("/" + encodeURIComponent(open.id), { method: "DELETE" }); detail.close(); open = null; }
       else if (button.dataset.action) open = await call<Item>(`/${encodeURIComponent(open.id)}/${button.dataset.action}`, { method: "POST",
         body: JSON.stringify(button.dataset.action === "approve" ? { rights_confirmed: Boolean(detail.querySelector<HTMLInputElement>("#library-rights")?.checked) } : {}) });
@@ -231,6 +286,11 @@ export async function showLibrary() {
       } else if (button.dataset.bulk) {
         const action = button.dataset.bulk;
         if (action === "none") { selected.clear(); render(); return; }
+        if (action === "analyze") {
+          const ids = items.filter(i => selected.has(i.id) && i.status === "new" && i.copy && i.analysis.status !== "running").map(i => i.id);
+          if (!ids.length) { message("Nessuna immagine nuova con copia di gioco tra le selezionate."); return; }
+          await analyzeMany(ids); return;
+        }
         const tag = $<HTMLInputElement>("#library-bulk-tag")?.value.trim();
         if ((action === "tag-add" || action === "tag-remove")) {
           const checked = checkTag(tag || "");
@@ -279,5 +339,34 @@ export async function showLibrary() {
     event.preventDefault(); drop.classList.remove("is-over");
     void addFiles([...event.dataTransfer.files].filter(f => /^image\/(jpeg|png|webp)$/.test(f.type)));
   });
-  await Promise.all([load(), refreshTags()]).catch(error => message(String(error instanceof Error ? error.message : error)));
+  const tagForm = (selector: string, path: string, fields: string[], done: string) =>
+    $(selector).addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.target as HTMLFormElement, data = new FormData(form);
+      try {
+        await call(path, { method: "POST", body: JSON.stringify(Object.fromEntries(fields.map(f => [f, String(data.get(f) || "").trim()]))) });
+        message(done); form.reset(); await Promise.all([load(), refreshTags()]);
+      } catch (error) { message(String(error instanceof Error ? error.message : error)); }
+    });
+  tagForm("#library-merge", "/tags/merge", ["from", "into"], "Tag uniti.");
+  tagForm("#library-alias", "/tags/alias", ["alias", "into"], "Alias aggiunto.");
+  $("#library-budget-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const cap = Number(new FormData(event.target as HTMLFormElement).get("cap"));
+    try { await call("/budget", { method: "PUT", body: JSON.stringify({ cap_usd: cap }) }); message("Tetto salvato."); await refreshAnalysis(); }
+    catch (error) { message(String(error instanceof Error ? error.message : error)); }
+  });
+  $("#library-budget-renew").addEventListener("click", async () => {
+    const cap = Number($<HTMLInputElement>("#library-budget-form input[name=cap]").value);
+    if (!window.confirm(`Rinnovare il budget? Il conteggio riparte da zero con un tetto di ${cap} $; il registro delle chiamate resta.`)) return;
+    try { await call("/budget/renew", { method: "POST", body: JSON.stringify({ cap_usd: cap }) }); message("Budget rinnovato."); await refreshAnalysis(); }
+    catch (error) { message(String(error instanceof Error ? error.message : error)); }
+  });
+  $("#library-vocabulary-list").addEventListener("click", async event => {
+    const alias = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-alias-remove]")?.dataset.aliasRemove;
+    if (!alias) return;
+    try { await call("/tags/alias", { method: "DELETE", body: JSON.stringify({ alias }) }); message("Alias tolto."); await refreshTags(); }
+    catch (error) { message(String(error instanceof Error ? error.message : error)); }
+  });
+  await Promise.all([load(), refreshTags(), refreshAnalysis()]).catch(error => message(String(error instanceof Error ? error.message : error)));
 }
