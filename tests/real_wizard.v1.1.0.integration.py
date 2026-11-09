@@ -89,7 +89,7 @@ with sync_playwright() as p:
         expect(page.locator('#rw-generation-dialog')).to_be_visible()
         page.locator('#rw-generation-dialog button[data-rw=run-gen]').click()
         expect(page.locator('.rw-message')).to_contain_text('1 immagine elaborata', timeout=30000)
-        assert len([text for text in confirmations if 'Costo massimo' in text]) == 1, confirmations
+        assert len([text for text in confirmations if text.startswith('Confermi ') and 'tag e didascalie insieme' in text]) == 1, confirmations
         expect(page.locator('.rw-pill', has_text='crowd')).to_have_count(1)
         expect(page.locator('[data-rw-caption]')).to_have_value('Una strada affollata.')
         page.locator('[data-rw-caption]').fill('Didascalia rivista manualmente.')
