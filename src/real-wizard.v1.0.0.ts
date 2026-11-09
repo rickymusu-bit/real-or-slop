@@ -48,7 +48,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   const captionDrafts = new Map<string, string>();
   const staged = () => images.filter(i => i.origin === "REAL" && (i.status === "new" || i.status === "approved"));
   const persist = () => {
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ids: staged().map(i => i.id), stage })); } catch { /* private browsing */ }
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ids: staged().map(i => i.id), stage, generated: [...generated.entries()] })); } catch { /* private browsing */ }
   };
   const replace = (updated: Image) => { images = images.map(i => i.id === updated.id ? updated : i); persist(); };
   const update = async (image: Image, changes: Record<string, unknown>) => {
@@ -194,11 +194,9 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         notice = "Acquisizione privata " + (done + failures.length + 1) + " di " + pending.size + "…";
         render();
         const item = await api<Image>("/commons", { method: "POST", body: JSON.stringify({ url }) });
-        images.push(item); persist();
-        const copied = await prepareLibraryCopy<Image>(item.id);
-        replace(copied);
-        pending.delete(url);
-        done++;
+        images.push(item); pending.delete(url); persist(); done++;
+        try { const copied = await prepareLibraryCopy<Image>(item.id); replace(copied); }
+        catch (copyError) { failures.push(short(item.title, 40) + ": WebP non pronto (" + errorText(copyError) + ")"); }
       } catch (error) { failures.push(short(url, 40) + ": " + errorText(error)); }
     }
     stage = staged().length ? 2 : 1;
@@ -225,7 +223,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         replace(result);
         const previous = generated.get(id) || {};
         generated.set(id, target === "tags" ? { ...previous, tags: [...result.tags] } : { ...previous, caption: result.caption });
-        done++;
+        persist(); done++;
       } catch (error) {
         failures.push(short(item.title, 35) + ": " + errorText(error));
         if (/OpenAI:|Tetto di spesa/.test(errorText(error))) break;
@@ -344,7 +342,8 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         const text = root.querySelector<HTMLInputElement>('[data-rw-new-tag="' + id + '"]')!.value.trim();
         const checked = checkTag(text);
         if (!checked.ok) notice = checked.reason + (checked.suggestion ? ". Prova «" + checked.suggestion + "»" : "");
-        else { await flushCaptions(); replace(await update(item, { tags: [...new Set([...item.tags, checked.tag])] })); notice = "Tag salvato."; }
+        else { await flushCaptions(); const latest = images.find(i => i.id === id)!;
+          await update(latest, { tags: [...new Set([...latest.tags, checked.tag])] }); notice = "Tag salvato."; }
         render();
       } else if (action === "remove-tag") {
         await flushCaptions();
@@ -371,13 +370,16 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
     if (raw) {
-      const draft = JSON.parse(raw) as { ids?: string[]; stage?: Stage };
+      const draft = JSON.parse(raw) as { ids?: string[]; stage?: Stage; generated?: [string, { tags?: string[]; caption?: string }][] };
       const ids = Array.isArray(draft.ids) ? draft.ids.filter(x => typeof x === "string").slice(0, 100) : [];
       for (const id of ids) {
         try {
           const item = await api<Image>("/" + encodeURIComponent(id));
           if (item.origin === "REAL" && (item.status === "new" || item.status === "approved")) images.push(item);
         } catch { /* inaccessible draft */ }
+      }
+      if (Array.isArray(draft.generated)) for (const [id, snapshot] of draft.generated) {
+        if (images.some(i => i.id === id) && snapshot && typeof snapshot === "object") generated.set(id, snapshot);
       }
       stage = images.length && (draft.stage === 2 || draft.stage === 3) ? draft.stage : 1;
     }
