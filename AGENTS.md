@@ -1,8 +1,16 @@
-# Istruzioni Codex — versione canonica 16.0.0
+# Istruzioni Codex — versione canonica 16.1.0
 
-Snapshot: `docs/AGENTS.v16.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-09T12:00:00Z. Base main `9c4aa39`.
+Snapshot: `docs/AGENTS.v16.1.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-09T13:00:00Z. Base main `9c4aa39`.
 Le sezioni precedenti rimangono contesto per ambiti non sostituiti.
+
+## Spazio dei file (16.1.0)
+
+Aggiornato: 2026-11-09T13:00:00Z. Specifica: `docs/spazio-file.v1.0.0.md`. Originali conservati, una
+sola copia per file: l'ammissione non duplica originale e file approvato in quarantena, ma copia solo il
+file approvato nel catalogo. L'eliminazione definitiva di foto rifiutate, decisa dall'owner, cancella
+anche i loro file creati dalla dashboard (upload, Commons, generazioni, copie di gioco) se nessun'altra
+riga li usa. Gli archivi storici conservano i loro file. Nessuna pulizia retroattiva senza autorizzazione.
 
 ## Si approva la copia di gioco (16.0.0)
 

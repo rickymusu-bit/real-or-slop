@@ -132,6 +132,12 @@ with tempfile.TemporaryDirectory() as folder:
     assert status==200 and replayed['already_admitted'] and replayed['published'],(status,replayed)
     admitted=replayed['image_id'];assert admitted==published['image_id']
     assert call('/api/admin/originals/'+admitted)[1]==Path(images[published_index]['file']).read_bytes()
+    # No duplicates in quarantine: the admin routes read the original and the approved copy from the queue.
+    for key in ('originals/'+admitted,'editorial-cycle/'+images[published_index]['origin']+'/'+images[published_index]['sha256']):
+        with tempfile.TemporaryDirectory() as folder:
+            got=subprocess.run(['npx','wrangler','r2','object','get','real-or-slop-quarantine-local/'+key,'--file',str(Path(folder)/'f'),
+                '--local','--env','local','--persist-to',os.environ['ROS_TEST_STATE']],capture_output=True)
+            assert not (Path(folder)/'f').exists() or (Path(folder)/'f').stat().st_size==0,key
     # The game asset is the approved WebP copy; the original is kept separately.
     served=call('/api/admin/assets/'+admitted)[1]
     assert served[:4]==b'RIFF' and served[8:12]==b'WEBP' and hashlib.sha256(served).hexdigest()==images[published_index]['sha256']

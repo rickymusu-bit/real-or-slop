@@ -1,6 +1,7 @@
 import { body, hash, HttpError, id, json, type Env } from "./core";
 import { hasTags, photoTags, tagsFor, TAGGED } from "./tags.v1.0.0";
 import { bulkRejectedDeletion } from "./review-bulk-delete";
+import { queueFiles, releaseFiles } from "./review-files.v1.0.0";
 import { cleanImage } from "../shared/media-clean.v1.0.0";
 import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
 import { imageGeometry } from "../shared/image-geometry.v1.0.0";
@@ -102,6 +103,7 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
     if (Object.keys(data).some(key => !["confirm_delete", "revision", "sha256"].includes(key)) ||
         data.confirm_delete !== true || data.revision !== row.revision || data.sha256 !== row.sha256 || row.status !== "rejected")
       throw new HttpError(409, "Puoi eliminare soltanto un'immagine rifiutata: verifica lo stato e conferma");
+    const files = await queueFiles(env, [row.id]);
     const result = await env.DB.batch([
       env.DB.prepare(`INSERT INTO editorial_review_deleted_images
         SELECT id,origin,source_sha256,revision,?,? FROM editorial_review_effective_images WHERE id=? AND revision=? AND sha256=? AND status='rejected'`)
@@ -112,7 +114,8 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
         .bind(row.id, row.revision),
     ]);
     if (!result[1].meta.changes) throw new HttpError(409, "Immagine aggiornata: ricaricare prima di eliminarla");
-    return json({ deleted: true, history_preserved: true, published: false });
+    const released = await releaseFiles(env, files);
+    return json({ deleted: true, history_preserved: true, published: false, files_deleted: released.length });
   }
   if (match[2] === "image" && request.method === "GET") {
     const file = await env.QUARANTINE?.get(row.media_key);
