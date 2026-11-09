@@ -1,5 +1,5 @@
 import { setupGame, stopPlay } from "./play";
-import { showLibrary } from "./library.v1.0.0";
+import { showLibrary } from "./library.v1.2.0";
 import "./style.css";
 const root = document.querySelector<HTMLDivElement>("#app")!;
 /** The demo catalog is gone with the clean database: every published image is a real library image. */
