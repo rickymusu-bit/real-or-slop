@@ -41,7 +41,7 @@ const short = (value: string, count = 90) => value.length > count ? value.slice(
 export async function mountRealWizard(root: HTMLElement, onPublished: () => Promise<void>): Promise<void> {
   let stage: Stage = 1, images: Image[] = [], notice = "", busy = false, query = "", sort = "relevance";
   let searchResults: Hit[] = [], next: string | null = null, searched = false, generating: Target = "tags";
-  let selectedHits = new Set<string>(), searchCategories: string[] = [], vocabulary: string[] = [];
+  const selectedHits = new Set<string>(); let searchCategories: string[] = [], vocabulary: string[] = [];
   let analysis: Analysis | null = null;
   const pending = new Map<string, Hit | null>();
   const generated = new Map<string, { tags?: string[]; caption?: string }>();
@@ -338,7 +338,6 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         else { stage = 3; notice = ""; persist(); }
         render();
       } else if (action === "add-tag") {
-        const item = images.find(i => i.id === id)!;
         const text = root.querySelector<HTMLInputElement>('[data-rw-new-tag="' + id + '"]')!.value.trim();
         const checked = checkTag(text);
         if (!checked.ok) notice = checked.reason + (checked.suggestion ? ". Prova «" + checked.suggestion + "»" : "");
