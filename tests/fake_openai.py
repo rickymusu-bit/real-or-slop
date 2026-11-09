@@ -1,7 +1,8 @@
-"""v1.0.0, 2026-11-09T20:30:00Z: a fake OpenAI Responses API for the LOCAL integration tests. Nothing is sent to OpenAI.
+"""v1.1.0, 2026-11-09T21:30:00Z: a fake OpenAI Responses API for the LOCAL integration tests. Nothing is sent to OpenAI.
 POST /v1/responses answers with the next queued behaviour (default: valid tags and caption) and records the request.
 POST /control {"queue": [...]} sets the behaviours and clears the log; GET /control returns the log.
-Behaviours: {"tags": [...], "caption": "..."}, {"status": 500}, {"status": 400}, {"garbage": true}."""
+Behaviours: {"tags": [...], "caption": "..."}, {"status": 500}, {"status": 429, "code": "insufficient_quota"},
+{"garbage": true}; each may set "usage": {"input_tokens": n, "output_tokens": n} (default 1200 and 60)."""
 import json
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -24,10 +25,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != '/v1/responses': return self.reply(404, {})
         log.append({'authorization': self.headers.get('Authorization'), 'body': data})
         behaviour = queue.pop(0) if queue else DEFAULT
-        if 'status' in behaviour: return self.reply(behaviour['status'], {'error': {'message': 'fake'}})
+        if 'status' in behaviour:
+            return self.reply(behaviour['status'], {'error': {'message': 'fake', 'type': 'fake', 'code': behaviour.get('code')}})
         text = 'not json' if behaviour.get('garbage') else json.dumps({'tags': behaviour['tags'], 'caption': behaviour['caption']})
         self.reply(200, {'output': [{'type': 'message', 'content': [{'type': 'output_text', 'text': text}]}],
-                         'usage': {'input_tokens': 1200, 'output_tokens': 60}})
+                         'usage': behaviour.get('usage', {'input_tokens': 1200, 'output_tokens': 60})})
     def log_message(self, *args): pass
 
 if __name__ == '__main__':

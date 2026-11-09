@@ -1,5 +1,5 @@
-"""v1.1.0, 2026-11-09T20:30:00Z: the library dashboard in a real browser, desktop and mobile
-(docs/libreria-immagini.v1.2.0.md): upload, game copy made by the browser, analysis by the (fake) model after an explicit
+"""v1.2.0, 2026-11-09T21:30:00Z: the library dashboard in a real browser, desktop and mobile
+(docs/libreria-immagini.v1.3.0.md): upload, game copy made by the browser, analysis by the (fake) model after an explicit
 cost confirmation, in-place editing, tags, approval, publication, multi-selection, trash, delete for good, and the caption
 under the image in a round."""
 import io
@@ -39,7 +39,7 @@ with sync_playwright() as p:
         page.locator('#library-files').set_input_files([picture(f'{name}-rivoli.jpg', (180, 40, 30), (320, 200)),
                                                          picture(f'{name}-spare.jpg', (30, 160, 40), (200, 320))])
         expect(page.locator('#library-message')).to_contain_text('2 di 2 analizzate', timeout=30000)
-        assert 'Costo stimato 0.02 $' in confirms[0], confirms
+        assert 'Costo massimo 0.036 $' in confirms[0], confirms
         expect(page.locator('.library-card', has_text=f'{name}-rivoli')).to_contain_text('crowd · street')
         page.locator('#library-upload-origin').select_option('SLOP')
         page.locator('#library-files').set_input_files([picture(f'{name}-street.jpg', (40, 40, 190), (300, 300))])
@@ -51,6 +51,12 @@ with sync_playwright() as p:
         expect(page.locator('.library-card', has_text=f'{name}-rivoli')).to_be_visible()
         expect(page.locator('.badge-warn')).to_have_count(0)  # every image has its game copy
         page.screenshot(path=str(folder / f'{name}-grid.png'))
+        # One budget for every paid call: the owner changes the cap from the dashboard.
+        page.locator('#library-budget summary').click()
+        page.locator('#library-budget-form input[name=cap]').fill('4')
+        page.get_by_role('button', name='Salva il tetto').click()
+        expect(page.locator('#library-message')).to_contain_text('Tetto salvato')
+        expect(page.locator('#library-budget-state')).to_contain_text('su 4 $')
 
         def edit_and_publish(title, caption, tags, real):
             page.get_by_role('button', name=f'Apri {title}').click()

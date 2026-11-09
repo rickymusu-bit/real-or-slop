@@ -1,7 +1,8 @@
-"""v1.0.0, 2026-11-09T20:30:00Z: phase 2 of docs/libreria-immagini.v1.2.0.md against a LOCAL Worker and the fake
-OpenAI of tests/fake_openai.py (never the real one): cost confirmation, spend register and total cap, uncertain outcomes
-not resent, tags cleaned and resolved through aliases, caption only when empty, merge, aliases, tags removed with their
-last image. Expects the Worker configured by scripts/integration.py: 0.01 $ per call, 0.05 $ in total."""
+"""v1.1.0, 2026-11-09T21:30:00Z: phase 2 of docs/libreria-immagini.v1.3.0.md against a LOCAL Worker and the fake
+OpenAI of tests/fake_openai.py (never the real one): confirmation of the maximum cost, one budget (default 5 $, changed,
+renewed), cost from the tokens, uncertain outcomes not resent, OpenAI's own spend limit, tags cleaned and resolved through
+aliases, caption only when empty, merge, aliases, tags removed with their last image. Model gpt-6.1-terra at 1 $ and 5 $
+per million tokens: at most 0.018 $ per call (8000 input and 2000 output tokens), 0.0015 $ for 1200 and 60 tokens."""
 import io
 import json
 import os
@@ -39,24 +40,26 @@ def image(color, title, description=''):
     status, item = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': 'REAL', 'title': title, 'description': description}),
                         raw=source.getvalue(), mime='image/jpeg'); assert status == 201, item
     return item, copy.getvalue()
-def analyze(item, confirm=0.01):
+def analyze(item, confirm=0.018):
     return call(f'{API}/{item["id"]}/analyze', {'confirm_usd': confirm} if confirm is not None else {})
 def patch(item, change):
     status, result = call(f'{API}/{item["id"]}', {'revision': item['revision'], **change}, method='PATCH'); assert status == 200, result
     return result
-def spend(): return sql('SELECT status,reserved_usd,input_tokens,output_tokens FROM spend ORDER BY created_at,rowid')
+def spend(): return sql('SELECT status,reserved_usd,cost_usd,input_tokens,output_tokens FROM spend ORDER BY created_at,rowid')
+def budget(): return call(f'{API}/analysis')[1]
 def labels(): return {t['label']: t for t in call(f'{API}/tags')[1]['tags']}
 
-status, info = call(f'{API}/analysis')
-assert info['enabled'] and info['model'] == 'gpt-test' and info['call_usd'] == 0.01 and info['total_usd'] == 0.05 and info['spent_usd'] == 0, info
+info = budget()
+assert info['enabled'] and info['model'] == 'gpt-6.1-terra' and info['call_usd'] == 0.018 and info['price'] == {'input': 1, 'output': 5}, info
+assert info['cap_usd'] == 5 and info['spent_usd'] == 0 and info['remaining_usd'] == 5, info  # the default budget
 # No call without the game copy, nor without the exact cost confirmation.
 place, place_copy = image(170, 'Place de la République, 1968', 'Manifestanti e polizia in place de la République.')
 openai([])
 status, result = analyze(place); assert status == 409 and 'copia' in result['error'], result
 status, place = call(f'{API}/{place["id"]}/copy', raw=place_copy, mime='image/webp'); assert status == 201, place
-for confirm in (None, 0.02, '0.01'):
-    status, result = analyze(place, confirm); assert status == 400 and '0.01' in result['error'], result
-assert call(f'{API}/{place["id"]}/analyze', {'confirm_usd': 0.01, 'model': 'other'})[0] == 400
+for confirm in (None, 0.01, '0.018'):
+    status, result = analyze(place, confirm); assert status == 400 and '0.018' in result['error'], result
+assert call(f'{API}/{place["id"]}/analyze', {'confirm_usd': 0.018, 'model': 'other'})[0] == 400
 assert openai() == [] and spend() == []
 # Aliases: an alias resolves to its tag; a tag cannot become an alias this way.
 place = patch(place, {'tags': ['barricade']})
@@ -71,16 +74,20 @@ assert place['tags'] == ['barricade', 'place-de-la-republique', 'police-car', 'r
 assert sorted(place['proposed_tags']) == ['barricade', 'place-de-la-republique', 'police-car', 'riot'], place
 assert place['caption'] == 'Parigi, maggio 1968. Scontri in place de la Republique.' and place['analysis']['status'] == 'done', place
 [sent] = openai()
-assert sent['authorization'] == 'Bearer test-openai-key' and sent['body']['model'] == 'gpt-test', sent['authorization']
+assert sent['authorization'] == 'Bearer test-openai-key' and sent['body']['model'] == 'gpt-6.1-terra' and sent['body']['max_output_tokens'] == 2000, sent['authorization']
 text, picture = sent['body']['input'][0]['content'][0]['text'], sent['body']['input'][0]['content'][1]['image_url']
 assert 'barricade' in text and 'riot' in text and 'Title: Place de la République, 1968' in text, text
 assert picture.startswith('data:image/webp;base64,UklGR'), picture[:40]  # the game copy, as the player will see it
 assert not any(word in json.dumps(sent['body']) for word in ('REAL', 'SLOP', '"AI"')), 'the model must not know the origin'
-assert spend() == [{'status': 'completed', 'reserved_usd': 0.01, 'input_tokens': 1200, 'output_tokens': 60}], spend()
+assert spend() == [{'status': 'completed', 'reserved_usd': 0.018, 'cost_usd': 0.0015, 'input_tokens': 1200, 'output_tokens': 60}], spend()
 # Again: the caption already there is never replaced; tags are only added.
 openai([{'tags': ['crowd'], 'caption': 'Altro testo.'}])
 status, place = analyze(place); assert status == 200 and place['caption'].startswith('Parigi') and 'crowd' in place['tags'], place
-# Server error or no answer: uncertain, counted, never resent. Client error: failed, not counted.
+# The owner changes the one budget; invalid caps are refused.
+for cap in (0, -1, 'x', 5000, None): assert call(f'{API}/budget', {'cap_usd': cap} if cap is not None else {}, method='PUT')[0] == 400
+status, info = call(f'{API}/budget', {'cap_usd': 0.04}, method='PUT')
+assert status == 200 and info['cap_usd'] == 0.04 and info['spent_usd'] == 0.003 and info['remaining_usd'] == 0.037, info
+# Server error or no answer: uncertain, the maximum stays counted, never resent. Client error: failed, not counted.
 openai([{'status': 500}])
 status, result = analyze(place); assert status == 502, result
 assert len(openai()) == 1
@@ -88,23 +95,28 @@ status, place = call(f'{API}/{place["id"]}'); assert place['analysis']['status']
 openai([{'status': 400}])
 assert analyze(place)[0] == 502
 status, place = call(f'{API}/{place["id"]}'); assert place['analysis']['status'] == 'failed', place
-# An answer that cannot be read was paid all the same.
+# OpenAI's own spend limit or credit reached first: refused there, nothing charged, a message the dashboard stops on.
+openai([{'status': 429, 'code': 'insufficient_quota'}])
+status, result = analyze(place); assert status == 502 and result['error'].startswith('OpenAI: limite di spesa'), result
+# An answer that cannot be read was paid all the same, at the cost of its tokens.
 openai([{'garbage': True}])
 assert analyze(place)[0] == 502
-assert [row['status'] for row in spend()] == ['completed', 'completed', 'uncertain', 'failed', 'completed'], spend()
-status, info = call(f'{API}/analysis'); assert info['spent_usd'] == 0.04 and info['remaining_usd'] == 0.01, info
-# The total cap: the fifth counted call is allowed, the sixth is refused before anything is sent.
+assert [(row['status'], row['cost_usd']) for row in spend()] == [('completed', 0.0015), ('completed', 0.0015), ('uncertain', None),
+                                                                  ('failed', 0), ('failed', 0), ('completed', 0.0015)], spend()
+info = budget(); assert info['spent_usd'] == 0.0225 and info['remaining_usd'] == 0.0175, info
+# Less than the maximum of one call left: refused before anything is sent.
 openai([])
-assert analyze(place)[0] == 200
 status, result = analyze(place); assert status == 409 and 'Tetto' in result['error'], result
-assert len(openai()) == 1 and len(spend()) == 6
-status, info = call(f'{API}/analysis'); assert info['spent_usd'] == 0.05 and info['remaining_usd'] == 0, info
+assert openai() == [] and len(spend()) == 6
 # One call at a time per image; a «running» mark left by a Worker that died stops blocking after ten minutes.
 sql(f"UPDATE images SET analysis_status='running' WHERE id='{place['id']}'")
 status, result = analyze(place); assert status == 409 and 'in corso' in result['error'], result
 sql(f"UPDATE images SET updated_at='2000-01-01T00:00:00.000Z' WHERE id='{place['id']}'")
 status, result = analyze(place); assert status == 409 and 'Tetto' in result['error'], result
 sql(f"UPDATE images SET analysis_status='done' WHERE id='{place['id']}'")
+# Renewing starts a new period from zero; the register keeps every call.
+status, info = call(f'{API}/budget/renew', {}); assert status == 200 and info['spent_usd'] == 0 and info['cap_usd'] == 0.04, info
+assert analyze(place)[0] == 200 and len(spend()) == 7
 # Only new images are analysed.
 status, place = call(f'{API}/{place["id"]}'); status, place = call(f'{API}/{place["id"]}/approve', {'rights_confirmed': True})
 assert place['status'] == 'approved', place
@@ -121,8 +133,8 @@ assert call(f'{API}/{place["id"]}', method='DELETE')[1]['deleted'] == 1
 vocabulary = labels()
 assert not {'barricade', 'place-de-la-republique', 'crowd'} & set(vocabulary) and 'riot' in vocabulary, vocabulary
 assert sql("SELECT count(*) AS n FROM tag_aliases WHERE alias='barricades'")[0]['n'] == 0
-assert len(spend()) == 6
+assert len(spend()) == 7
 assert call(f'{API}/tags/alias', {'alias': 'police-car'}, method='DELETE') == (200, {'removed': 'police-car'})
 assert labels()['riot']['aliases'] == []
-sql('DELETE FROM spend')  # a fresh budget for the browser checks; only in this disposable local database
-print('Analysis integration passed: cost confirmation, spend register and cap, uncertain not resent, ASCII tags, aliases, caption kept, merge, tags removed with their last image.')
+assert call(f'{API}/budget/renew', {'cap_usd': 5})[1]['remaining_usd'] == 5  # a fresh budget for the browser checks
+print('Analysis integration passed: cost confirmation, one budget changed and renewed, cost from tokens, uncertain not resent, OpenAI limit, ASCII tags, aliases, caption kept, merge, tags removed with their last image.')

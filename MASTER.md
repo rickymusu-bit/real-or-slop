@@ -1,7 +1,7 @@
-# Mappa canonica — versione canonica 17.1.0
+# Mappa canonica — versione canonica 17.2.0
 
-Snapshot: `docs/MASTER.v17.1.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-09T20:30:00Z. Precedente: `docs/MASTER.v17.0.0.md` (storico).
+Snapshot: `docs/MASTER.v17.2.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-09T21:30:00Z. Precedente: `docs/MASTER.v17.1.0.md` (storico).
 
 ## Architettura
 
@@ -13,12 +13,12 @@ Aggiornato: 2026-11-09T20:30:00Z. Precedente: `docs/MASTER.v17.0.0.md` (storico)
   PvP (`room.ts`, Durable Object), file del gioco senza metadati (`storage.ts`).
 - **Codice condiviso** in `shared/`: tag (`tags.v2.0.0.ts`), ricetta della copia (`game-copy.v1.0.0.ts`),
   pulizia dei metadati (`media-clean.v1.0.0.ts`), formati e geometria delle immagini.
-- **Dati:** D1, schema `0033_clean_slate.v1.0.0.sql` (immagini, tag, gioco) più `0034_tag_aliases_analysis.v1.0.0.sql`
-  (alias, rimozione dei tag orfani, stato dell'analisi, registro di spesa). R2: quarantena privata
+- **Dati:** D1, schema `0033_clean_slate.v1.0.0.sql` (immagini, tag, gioco) più `0034_tag_aliases_analysis.v1.1.0.sql`
+  (alias, rimozione dei tag orfani, stato dell'analisi, registro di spesa, budget unico). R2: quarantena privata
   (`library/<id>/` originale e copia) e bucket del gioco (copie pubblicate).
 
 ## Stato e fasi
 
 Fase 1 rilasciata (app 1.0.1). Fase 2 in revisione (app 1.1.0): alias, tag e didascalie dal modello con
-visione, registro di spesa. Fase 3: consulente SLOP e generazione. Più avanti: Topic Discovery sulle
-embedding dei tag. Dettagli in `docs/libreria-immagini.v1.2.0.md`.
+visione, budget unico e registro di spesa. Fase 3: consulente SLOP e generazione. Più avanti: Topic Discovery sulle
+embedding dei tag. Dettagli in `docs/libreria-immagini.v1.3.0.md`.

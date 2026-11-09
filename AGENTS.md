@@ -1,11 +1,11 @@
-# Istruzioni Codex — versione canonica 17.1.0
+# Istruzioni Codex — versione canonica 17.2.0
 
-Snapshot: `docs/AGENTS.v17.1.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-09T20:30:00Z. Precedente: `docs/AGENTS.v17.0.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.2.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-09T21:30:00Z. Precedente: `docs/AGENTS.v17.1.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
-Specifica vigente: `docs/libreria-immagini.v1.2.0.md`. Restano valide `docs/copie-di-gioco.v2.0.0.md`
+Specifica vigente: `docs/libreria-immagini.v1.3.0.md`. Restano valide `docs/copie-di-gioco.v2.0.0.md`
 e, per persone, personaggi storici, marchi, marchio «RS» e metadati, le sezioni 6.2–6.4 di
 `docs/lotti-editoriali.v1.6.2.md`. Ogni altro documento in `docs/` è storico.
 
@@ -17,7 +17,8 @@ e, per persone, personaggi storici, marchi, marchio «RS» e metadati, le sezion
   i nomi propri; vietati i tag che rivelano l'origine. Approvare richiede almeno un tag.
   Il vocabolario contiene solo tag in uso; gli **alias** rimandano a un tag e si risolvono prima di salvare.
 - **Analisi** (fase 2): tag e didascalia dal modello con visione sulla copia di gioco, senza l'origine;
-  conferma del costo, tetto totale, registro `spend`, esiti incerti mai ripetuti. Spenta senza configurazione.
+  conferma del costo massimo, **un solo budget** per tutte le chiamate a pagamento (5 $ iniziali, modificabile e
+  rinnovabile), costo dai token, registro `spend`, esiti incerti mai ripetuti. Spenta senza `OPENAI_API_KEY`.
 - **Didascalia** in italiano, ≤160 caratteri, mostrata con l'immagine durante il round, stesso
   procedimento per REAL e SLOP (fase 2). Si approva insieme alla copia.
 - **Cestino:** svuotarlo cancella ogni riga e ogni file dell'immagine. Nessun registro delle

@@ -1,4 +1,4 @@
-/** Admin image library, a file-system-like view (docs/libreria-immagini.v1.2.0.md). v1.1.0, 2026-11-09T20:30:00Z: vocabulary, aliases and analysis (phase 2).
+/** Admin image library, a file-system-like view (docs/libreria-immagini.v1.3.0.md). v1.1.0, 2026-11-09T20:30:00Z: vocabulary, aliases and analysis (phase 2).
  * Add files (device or Commons), edit in place, multi-select, trash without confirmations, delete for good. */
 import "./library.v1.0.0.css";
 import { content, escape } from "./main";
@@ -14,7 +14,7 @@ interface Item {
   rights_confirmed: boolean; revision: number; tags: string[]; file: string; updated_at: string;
   analysis: { status: "none" | "running" | "done" | "uncertain" | "failed"; error: string; at: string | null };
 }
-interface Analysis { enabled: boolean; reason: string; model: string; call_usd: number; total_usd: number; spent_usd: number; remaining_usd: number }
+interface Analysis { enabled: boolean; reason: string; model: string; call_usd: number; cap_usd: number; since: string; spent_usd: number; remaining_usd: number }
 interface Tag { label: string; images: number; aliases: string[] }
 interface CommonsHit { title: string; page_url: string; thumb_url: string; width: number; height: number }
 const API = "/api/admin/library";
@@ -74,6 +74,10 @@ export async function showLibrary() {
       <form id="library-merge" class="library-inline"><label>Unisci<input name="from" list="library-tag-list" required autocapitalize="none"></label><label>in<input name="into" list="library-tag-list" required autocapitalize="none"></label><button>Unisci</button></form>
       <form id="library-alias" class="library-inline"><label>Nuovo alias<input name="alias" required autocapitalize="none"></label><label>del tag<input name="into" list="library-tag-list" required autocapitalize="none"></label><button>Aggiungi alias</button></form>
       <ul id="library-vocabulary-list"></ul></details>
+    <details id="library-budget" class="library-vocabulary"><summary>Budget delle chiamate a pagamento</summary>
+      <p class="hint">Un solo tetto per tutte le chiamate API. «Rinnova» apre un nuovo periodo da zero; il registro conserva ogni chiamata. Il conteggio usa i prezzi di listino: imposta anche un limite di spesa su platform.openai.com, che è quello che OpenAI applica davvero.</p>
+      <p id="library-budget-state"></p>
+      <form id="library-budget-form" class="library-inline"><label>Tetto in $<input name="cap" type="number" min="0.01" max="1000" step="0.01" required></label><button>Salva il tetto</button><button type="button" id="library-budget-renew">Rinnova</button></form></details>
     <dialog id="library-detail" class="library-detail" aria-labelledby="library-detail-title"></dialog>
   </section>`;
   const page = content().querySelector<HTMLElement>(".library")!;
@@ -90,20 +94,24 @@ export async function showLibrary() {
   };
   const refreshAnalysis = async () => {
     analysis = await call<Analysis>("/analysis");
-    $("#library-analysis").textContent = analysis.enabled
-      ? `Analisi IA (${analysis.model}): ${analysis.call_usd} $ per immagine · spesi ${analysis.spent_usd} $ su ${analysis.total_usd} $, restano ${analysis.remaining_usd} $ (stime prudenziali).`
-      : `Analisi IA non disponibile: ${analysis.reason}.`;
+    const since = new Date(analysis.since).toLocaleDateString("it-IT");
+    const budget = `Budget API: spesi ${analysis.spent_usd} $ su ${analysis.cap_usd} $ dal ${since}, restano ${analysis.remaining_usd} $.`;
+    $("#library-analysis").textContent = (analysis.enabled
+      ? `Analisi IA (${analysis.model}): al massimo ${analysis.call_usd} $ per immagine. ` : `Analisi IA non disponibile: ${analysis.reason}. `) + budget;
+    $("#library-budget-state").textContent = budget;
+    const cap = $<HTMLInputElement>("#library-budget-form input[name=cap]");
+    if (document.activeElement !== cap) cap.value = String(analysis.cap_usd);
   };
   /** Analyses images one by one after an explicit confirmation of the total estimate. */
   const analyzeMany = async (ids: string[]) => {
     if (!analysis?.enabled || !ids.length) return;
     const estimate = Math.round(ids.length * analysis.call_usd * 1e4) / 1e4;
-    if (!window.confirm(`Analizzare ${ids.length} ${ids.length === 1 ? "immagine" : "immagini"} con ${analysis.model}? Costo stimato ${estimate} $ (restano ${analysis.remaining_usd} $).`)) return;
+    if (!window.confirm(`Analizzare ${ids.length} ${ids.length === 1 ? "immagine" : "immagini"} con ${analysis.model}? Costo massimo ${estimate} $ (restano ${analysis.remaining_usd} $ di budget).`)) return;
     let done = 0; const errors: string[] = [];
     for (const [index, imageId] of ids.entries()) {
       progress(`Analisi ${index + 1} di ${ids.length}`);
       try { await call(`/${encodeURIComponent(imageId)}/analyze`, { method: "POST", body: JSON.stringify({ confirm_usd: analysis.call_usd }) }); done++; }
-      catch (error) { errors.push(error instanceof Error ? error.message : String(error)); if (/Tetto di spesa/.test(String(error))) break; }
+      catch (error) { errors.push(error instanceof Error ? error.message : String(error)); if (/Tetto di spesa|OpenAI:/.test(String(error))) break; }
     }
     progress("");
     message(`${done} di ${ids.length} analizzate.` + (errors.length ? " " + [...new Set(errors)].join(" · ") : ""));
@@ -238,7 +246,7 @@ export async function showLibrary() {
       else if (button.id === "library-copy") { detailMessage("Preparo la copia di gioco…"); open = await prepareLibraryCopy<Item>(open.id); }
       else if (button.id === "library-analyze" && analysis) {
         const repeat = open.analysis.status === "uncertain" ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
-        if (!window.confirm(`Analizzare «${open.title}» con ${analysis.model}? Costo stimato ${analysis.call_usd} $.${repeat}`)) return;
+        if (!window.confirm(`Analizzare «${open.title}» con ${analysis.model}? Costo massimo ${analysis.call_usd} $.${repeat}`)) return;
         detailMessage("Analisi in corso…");
         open = await call<Item>(`/${encodeURIComponent(open.id)}/analyze`, { method: "POST", body: JSON.stringify({ confirm_usd: analysis.call_usd }) });
         void Promise.all([refreshTags(), refreshAnalysis()]);
@@ -342,6 +350,18 @@ export async function showLibrary() {
     });
   tagForm("#library-merge", "/tags/merge", ["from", "into"], "Tag uniti.");
   tagForm("#library-alias", "/tags/alias", ["alias", "into"], "Alias aggiunto.");
+  $("#library-budget-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const cap = Number(new FormData(event.target as HTMLFormElement).get("cap"));
+    try { await call("/budget", { method: "PUT", body: JSON.stringify({ cap_usd: cap }) }); message("Tetto salvato."); await refreshAnalysis(); }
+    catch (error) { message(String(error instanceof Error ? error.message : error)); }
+  });
+  $("#library-budget-renew").addEventListener("click", async () => {
+    const cap = Number($<HTMLInputElement>("#library-budget-form input[name=cap]").value);
+    if (!window.confirm(`Rinnovare il budget? Il conteggio riparte da zero con un tetto di ${cap} $; il registro delle chiamate resta.`)) return;
+    try { await call("/budget/renew", { method: "POST", body: JSON.stringify({ cap_usd: cap }) }); message("Budget rinnovato."); await refreshAnalysis(); }
+    catch (error) { message(String(error instanceof Error ? error.message : error)); }
+  });
   $("#library-vocabulary-list").addEventListener("click", async event => {
     const alias = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-alias-remove]")?.dataset.aliasRemove;
     if (!alias) return;

@@ -1,4 +1,4 @@
-"""v2.1.0, 2026-11-09T20:30:00Z. Start an isolated LOCAL Worker (real local D1 and R2) wired to a fake OpenAI
+"""v2.2.0, 2026-11-09T21:30:00Z. Start an isolated LOCAL Worker (real local D1 and R2) wired to a fake OpenAI
 (tests/fake_openai.py), run the HTTP and, with ROS_TEST_BROWSER=1, browser checks, then stop both.
 Never touches remote resources and never calls OpenAI."""
 import os
@@ -21,9 +21,8 @@ try:
                    check=True, env=env, stdout=subprocess.DEVNULL)
     Path('artifacts').mkdir(exist_ok=True)
     with Path('artifacts/integration-worker.log').open('w') as log:
-        # Analysis on, against the fake model: 0.01 $ per call, 0.05 $ in total (tests/analysis.integration.py).
-        analysis = {'ANALYSIS_ENABLED': 'true', 'ANALYSIS_MODEL': 'gpt-test', 'ANALYSIS_CALL_USD': '0.01', 'ANALYSIS_TOTAL_USD': '0.05',
-                    'OPENAI_API_KEY': 'test-openai-key', 'OPENAI_BASE_URL': fake + '/v1/'}
+        # Analysis on, against the fake model (tests/analysis.integration.py); the budget lives in the local D1.
+        analysis = {'OPENAI_API_KEY': 'test-openai-key', 'OPENAI_BASE_URL': fake + '/v1/'}
         model = subprocess.Popen(['python3', 'tests/fake_openai.py', fake.rsplit(':', 1)[1]], stdout=log, stderr=log)
         proc = subprocess.Popen(['npx', 'wrangler', 'dev', '--local', '--port', '8788', '--persist-to', str(state), '--env', 'local',
                                  *[arg for key, value in analysis.items() for arg in ('--var', f'{key}:{value}')]],

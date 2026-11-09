@@ -9,10 +9,7 @@ export interface Env {
   /** Paid image analysis (docs/libreria-immagini.v1.2.0.md): all required, otherwise analysis stays off. */
   OPENAI_API_KEY?: string;
   OPENAI_BASE_URL?: string;
-  ANALYSIS_ENABLED?: string;
   ANALYSIS_MODEL?: string;
-  ANALYSIS_CALL_USD?: string;
-  ANALYSIS_TOTAL_USD?: string;
 }
 export class HttpError extends Error {
   constructor(

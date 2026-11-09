@@ -1,4 +1,4 @@
-/** Image library (docs/libreria-immagini.v1.2.0.md). v1.1.0, 2026-11-09T20:30:00Z: vocabulary, aliases and analysis (phase 2).
+/** Image library (docs/libreria-immagini.v1.3.0.md). v1.1.0, 2026-11-09T20:30:00Z: vocabulary, aliases and analysis (phase 2).
  * One flat collection of REAL and SLOP images, handled like a file system: add (device or Commons), edit in place,
  * approve, publish, withdraw, move to the trash, restore, delete for good. Deleting removes every row about the
  * image (cascade) and every file: no register, no snapshot (owner decision of 2026-11-09). No paid calls here. */
@@ -10,7 +10,7 @@ import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
 import { cleanImage } from "../shared/media-clean.v1.0.0";
 import { GAME_COPY, gameCopyDimensions } from "../shared/game-copy.v1.0.0";
 import { checkTag } from "../shared/tags.v2.0.0";
-import { analysisStatus, analyze } from "./analysis.v1.0.0";
+import { analysisStatus, analyze, budgetRoute } from "./analysis.v1.0.0";
 
 const base = "/api/admin/library";
 const MAX_PIXELS = 32_000_000;
@@ -94,7 +94,7 @@ export function labels(value: unknown): string[] {
   }
   return [...out];
 }
-/** Aliases resolve to their tag before anything is stored (docs/libreria-immagini.v1.2.0.md). */
+/** Aliases resolve to their tag before anything is stored (docs/libreria-immagini.v1.3.0.md). */
 export async function resolveAliases(env: Env, wanted: string[]): Promise<string[]> {
   if (!wanted.length) return wanted;
   const rows = (await env.DB.prepare(`SELECT a.alias,t.label FROM tag_aliases a JOIN tags t ON t.id=a.tag_id
@@ -263,6 +263,8 @@ export async function library(request: Request, env: Env, path: string): Promise
   if (path === base && request.method === "GET") return list(env, url);
   if (path === base + "/tags" || path.startsWith(base + "/tags/")) return vocabulary(request, env, path);
   if (path === base + "/analysis" && request.method === "GET") return json(await analysisStatus(env));
+  if (path === base + "/budget" && request.method === "PUT") return json(await budgetRoute(env, await body(request, 200), false));
+  if (path === base + "/budget/renew" && request.method === "POST") return json(await budgetRoute(env, await body(request, 200), true));
   if (path === base + "/upload" && request.method === "POST") {
     const params = url.searchParams;
     return json(await create(env, { origin: origin(params.get("origin")), title: params.get("title") || "", bytes: await request.arrayBuffer(),

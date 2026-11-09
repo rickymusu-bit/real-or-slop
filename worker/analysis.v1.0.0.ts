@@ -1,27 +1,49 @@
-/** Image analysis by the vision model: tags and caption (docs/libreria-immagini.v1.2.0.md, phase 2).
- * v1.0.0, 2026-11-09T19:30:00Z. Paid: the owner confirms the configured cost, the call is reserved against the total
- * cap before it is sent, and an uncertain outcome is never resent automatically. Same instructions for REAL and SLOP:
+/** Image analysis by the vision model: tags and caption (docs/libreria-immagini.v1.3.0.md, section 10).
+ * v1.1.0, 2026-11-09T21:30:00Z. Paid: one total budget for every paid call, changed or renewed by the owner; the maximum
+ * cost of a call is held against it before sending, then replaced by the cost of the tokens reported. The owner confirms
+ * that maximum; an uncertain outcome keeps it and is never resent automatically. Same instructions for REAL and SLOP:
  * the model is never told the origin, so the style of the caption cannot become a clue. */
 import { HttpError, id, type Env } from "./core";
 import { find, resolveAliases, tagsOf, tagStatements, viewOf, type Row } from "./library.v1.0.0";
 import { checkTag, suggestTag } from "../shared/tags.v2.0.0";
 
 const VOCABULARY = 300, MAX_TAGS = 40, TIMEOUT_MS = 60_000, STALE_MS = 10 * 60_000;
-interface Config { enabled: boolean; model: string; callUsd: number; totalUsd: number; reason: string }
+/** List prices in USD per million tokens (standard tier), as read on 2026-11-09 from secondary sources: OpenAI's own
+ * page could not be reached. Check them against platform.openai.com; a model missing here cannot be used. */
+const PRICES: Record<string, { input: number; output: number }> = { "gpt-6.1-terra": { input: 1, output: 5 } };
+/** Bounds for the reservation: the image (long side ≤2048 px), instructions, 300 tags and context stay well below
+ * MAX_INPUT_TOKENS; the request caps the output, reasoning included, at MAX_OUTPUT_TOKENS. */
+const MAX_INPUT_TOKENS = 8000, MAX_OUTPUT_TOKENS = 2000, DEFAULT_MODEL = "gpt-6.1-terra", MAX_CAP_USD = 1000;
+const usd = (value: number) => Math.round(value * 1e6) / 1e6;
+
+interface Config { enabled: boolean; model: string; price: { input: number; output: number } | undefined; callUsd: number; reason: string }
 function config(env: Env): Config {
-  const callUsd = Number(env.ANALYSIS_CALL_USD), totalUsd = Number(env.ANALYSIS_TOTAL_USD), model = env.ANALYSIS_MODEL || "";
-  const reason = env.ANALYSIS_ENABLED !== "true" ? "Analisi non attivata" : !env.OPENAI_API_KEY ? "Chiave OpenAI mancante"
-    : !model ? "Modello non configurato" : !(callUsd > 0) || !(totalUsd > 0) ? "Costo per analisi o tetto di spesa non configurati" : "";
-  return { enabled: !reason, model, callUsd, totalUsd, reason };
+  const model = env.ANALYSIS_MODEL || DEFAULT_MODEL, price = PRICES[model];
+  const reason = !env.OPENAI_API_KEY ? "Chiave OpenAI mancante" : !price ? `Prezzo di ${model} non registrato` : "";
+  // Rounded up to 0.0001 $, computed in hundreds of micro-dollars to avoid binary rounding.
+  const callUsd = price ? Math.ceil((MAX_INPUT_TOKENS * price.input + MAX_OUTPUT_TOKENS * price.output) / 100 - 1e-9) / 1e4 : 0;
+  return { enabled: !reason, model, price, callUsd, reason };
 }
-async function spent(env: Env): Promise<number> {
-  return (await env.DB.prepare("SELECT coalesce(sum(reserved_usd),0) AS usd FROM spend WHERE status<>'failed'").first<{ usd: number }>())?.usd || 0;
-}
+/** Spend of the current budget period: actual cost when known, otherwise the amount held. Failed calls are not paid. */
+const PERIOD_SPENT = "SELECT coalesce(sum(coalesce(cost_usd,reserved_usd)),0) FROM spend WHERE status<>'failed' AND created_at>=(SELECT since FROM budget WHERE id=1)";
 export async function analysisStatus(env: Env) {
-  const c = config(env), used = await spent(env);
-  return { enabled: c.enabled, reason: c.reason, model: c.model, call_usd: c.callUsd || 0, total_usd: c.totalUsd || 0,
-    spent_usd: Math.round(used * 1e6) / 1e6, remaining_usd: Math.max(0, Math.round(((c.totalUsd || 0) - used) * 1e6) / 1e6),
-    note: "Importi riservati per chiamata secondo la configurazione: stime prudenziali, non fatturazione verificata." };
+  const c = config(env);
+  const b = await env.DB.prepare(`SELECT cap_usd,since,(${PERIOD_SPENT}) AS spent FROM budget WHERE id=1`).first<{ cap_usd: number; since: string; spent: number }>();
+  if (!b) throw new HttpError(500, "Budget non inizializzato");
+  return { enabled: c.enabled, reason: c.reason, model: c.model, price: c.price ?? null, call_usd: c.callUsd,
+    cap_usd: b.cap_usd, since: b.since, spent_usd: usd(b.spent), remaining_usd: Math.max(0, usd(b.cap_usd - b.spent)),
+    note: "Costi calcolati dai token dichiarati e dai prezzi di listino: stime, non la fattura di OpenAI." };
+}
+/** PUT /budget {cap_usd}: changes the cap of the current period. POST /budget/renew {cap_usd?}: starts a new period. */
+export async function budgetRoute(env: Env, data: Record<string, unknown>, renew: boolean) {
+  const cap = data.cap_usd;
+  if (cap !== undefined && (typeof cap !== "number" || !(cap > 0) || cap > MAX_CAP_USD))
+    throw new HttpError(400, `Tetto non valido: tra 0 e ${MAX_CAP_USD} $`);
+  if (!renew && cap === undefined) throw new HttpError(400, "Indica il nuovo tetto");
+  const now = new Date().toISOString();
+  await env.DB.prepare(`UPDATE budget SET cap_usd=coalesce(?,cap_usd),since=${renew ? "?" : "since"},updated_at=? WHERE id=1`)
+    .bind(...(renew ? [cap ?? null, now, now] : [cap, now])).run();
+  return analysisStatus(env);
 }
 
 const INSTRUCTIONS = `You describe one image for a photo library.
@@ -63,7 +85,8 @@ async function cleanTags(env: Env, raw: unknown[]): Promise<string[]> {
 
 export async function analyze(env: Env, row: Row, data: Record<string, unknown>) {
   const c = config(env);
-  if (!c.enabled) throw new HttpError(503, c.reason);
+  if (!c.enabled || !c.price) throw new HttpError(503, c.reason);
+  const price = c.price;
   if (Object.keys(data).some(key => key !== "confirm_usd") || data.confirm_usd !== c.callUsd)
     throw new HttpError(400, `Conferma il costo dell'analisi: ${c.callUsd} $`);
   if (row.status !== "new") throw new HttpError(409, "Si analizzano solo immagini nuove");
@@ -75,15 +98,15 @@ export async function analyze(env: Env, row: Row, data: Record<string, unknown>)
   if (!copy) throw new HttpError(409, "Copia di gioco non disponibile");
   const image = await copy.arrayBuffer();
   const spendId = id(), stamp = new Date().toISOString();
-  // Reservation against the total cap and the «running» mark are one atomic write: no call without both.
+  // Reservation against the budget and the «running» mark are one atomic write: no call without both.
   const reserved = await env.DB.batch([
     env.DB.prepare(`INSERT INTO spend(id,kind,model,reserved_usd,status,created_at,updated_at)
-      SELECT ?,'analysis',?,?,'reserved',?,? WHERE (SELECT coalesce(sum(reserved_usd),0) FROM spend WHERE status<>'failed')+?<=?+1e-9`)
-      .bind(spendId, c.model, c.callUsd, stamp, stamp, c.callUsd, c.totalUsd),
+      SELECT ?,'analysis',?,?,'reserved',?,? WHERE (${PERIOD_SPENT})+?<=(SELECT cap_usd FROM budget WHERE id=1)+1e-9`)
+      .bind(spendId, c.model, c.callUsd, stamp, stamp, c.callUsd),
     env.DB.prepare(`UPDATE images SET analysis_status='running',analysis_error='',updated_at=? WHERE id=? AND status='new'
       AND (analysis_status<>'running' OR updated_at<=?) AND EXISTS(SELECT 1 FROM spend WHERE id=?)`).bind(stamp, row.id, staleBefore, spendId),
   ]);
-  if (!reserved[0].meta.changes) throw new HttpError(409, "Tetto di spesa raggiunto: nessuna chiamata inviata");
+  if (!reserved[0].meta.changes) throw new HttpError(409, "Tetto di spesa raggiunto: nessuna chiamata inviata. Alza il tetto o rinnova il budget");
   if (!reserved[1].meta.changes) {
     await env.DB.prepare("UPDATE spend SET status='failed',updated_at=? WHERE id=?").bind(new Date().toISOString(), spendId).run();
     throw new HttpError(409, "Immagine cambiata o già in analisi: nessuna chiamata inviata");
@@ -92,11 +115,14 @@ export async function analyze(env: Env, row: Row, data: Record<string, unknown>)
     ORDER BY count(*) DESC,t.label LIMIT ?`).bind(VOCABULARY).all<{ label: string }>()).results.map(r => r.label);
   const context = [row.title && "Title: " + row.title, row.description && "Description: " + row.description,
     row.prompt && "Description: " + row.prompt].filter(Boolean).join("\n");
+  // Cost from the tokens reported; without them, the amount held stays as the cost of a paid call.
   const settle = async (spend: "completed" | "uncertain" | "failed", analysis: "done" | "uncertain" | "failed", error = "", tokens?: { input?: number; output?: number }) => {
     const now = new Date().toISOString();
+    const cost = spend === "failed" ? 0 : typeof tokens?.input === "number" && typeof tokens.output === "number"
+      ? usd((tokens.input * price.input + tokens.output * price.output) / 1e6) : null;
     await env.DB.batch([
-      env.DB.prepare("UPDATE spend SET status=?,input_tokens=?,output_tokens=?,updated_at=? WHERE id=?")
-        .bind(spend, tokens?.input ?? null, tokens?.output ?? null, now, spendId),
+      env.DB.prepare("UPDATE spend SET status=?,cost_usd=?,input_tokens=?,output_tokens=?,updated_at=? WHERE id=?")
+        .bind(spend, cost, tokens?.input ?? null, tokens?.output ?? null, now, spendId),
       env.DB.prepare("UPDATE images SET analysis_status=?,analysis_error=?,analyzed_at=?,revision=revision+1,updated_at=? WHERE id=?")
         .bind(analysis, error.slice(0, 300), now, now, row.id),
     ]);
@@ -106,7 +132,7 @@ export async function analyze(env: Env, row: Row, data: Record<string, unknown>)
     response = await fetch((env.OPENAI_BASE_URL || "https://api.openai.com/v1/") + "responses", {
       method: "POST", redirect: "manual", signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: { Authorization: "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: c.model, instructions: INSTRUCTIONS, text: { format: FORMAT }, input: [{ role: "user", content: [
+      body: JSON.stringify({ model: c.model, instructions: INSTRUCTIONS, text: { format: FORMAT }, max_output_tokens: MAX_OUTPUT_TOKENS, input: [{ role: "user", content: [
         { type: "input_text", text: `Existing vocabulary: ${vocabulary.join(", ") || "(empty)"}\n${context || "No context."}` },
         { type: "input_image", image_url: "data:image/webp;base64," + base64(image) },
       ] }] }),
@@ -117,10 +143,19 @@ export async function analyze(env: Env, row: Row, data: Record<string, unknown>)
     throw new HttpError(502, "Esito incerto dell'analisi: non ripetuta automaticamente");
   }
   if (!response.ok) {
+    // 4xx: refused before any work, not charged. Account problems (key, spend limit or credit on OpenAI, rate limit)
+    // start with «OpenAI:» so that the dashboard stops a batch. 5xx: uncertain, kept as spent.
+    const detail = await response.json().catch(() => ({})) as { error?: { code?: string; type?: string } };
+    const code = String(detail.error?.code || detail.error?.type || "");
     const failed = response.status >= 400 && response.status < 500;
-    await settle(failed ? "failed" : "uncertain", failed ? "failed" : "uncertain", `Il modello ha risposto ${response.status}` +
-      (failed ? ": nessun addebito previsto." : ": esito incerto, la chiamata potrebbe essere stata addebitata. Non è stata ripetuta."));
-    throw new HttpError(502, `Analisi non riuscita (HTTP ${response.status})`);
+    const message = response.status === 401 || response.status === 403 ? "OpenAI: chiave rifiutata, nessun addebito"
+      : response.status === 429 && /quota|spend_limit|billing/.test(code)
+        ? "OpenAI: limite di spesa o credito esaurito sull'account OpenAI, nessun addebito. Controlla platform.openai.com"
+        : response.status === 429 ? "OpenAI: troppe richieste, nessun addebito. Riprova fra qualche minuto"
+          : failed ? `Il modello ha risposto ${response.status}${code ? " (" + code + ")" : ""}: nessun addebito previsto`
+            : `Il modello ha risposto ${response.status}: esito incerto, la chiamata potrebbe essere stata addebitata. Non è stata ripetuta`;
+    await settle(failed ? "failed" : "uncertain", failed ? "failed" : "uncertain", message);
+    throw new HttpError(502, message);
   }
   let result: { tags?: unknown; caption?: unknown }, usage: { input_tokens?: number; output_tokens?: number } = {};
   try {
@@ -128,7 +163,7 @@ export async function analyze(env: Env, row: Row, data: Record<string, unknown>)
     usage = (payload.usage || {}) as typeof usage;
     result = JSON.parse(outputText(payload)) as typeof result;
   } catch {
-    await settle("completed", "failed", "Risposta del modello non leggibile");
+    await settle("completed", "failed", "Risposta del modello non leggibile", { input: usage.input_tokens, output: usage.output_tokens });
     throw new HttpError(502, "Risposta del modello non leggibile");
   }
   const tokens = { input: usage.input_tokens, output: usage.output_tokens };

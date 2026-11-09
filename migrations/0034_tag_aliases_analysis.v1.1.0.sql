@@ -1,5 +1,6 @@
--- v1.0.0, 2026-11-09T19:30:00Z: phase 2 of docs/libreria-immagini.v1.2.0.md. Additive.
--- Tag aliases, automatic removal of tags left without images, image analysis state and a spend register.
+-- v1.1.0, 2026-11-09T21:30:00Z: phase 2 of docs/libreria-immagini.v1.3.0.md. Additive. Replaces v1.0.0 of the same
+-- migration, never applied remotely. Tag aliases, automatic removal of tags left without images, image analysis state,
+-- a register of paid API calls and one total budget for all of them.
 
 -- An alias is an alternative label that always resolves to one tag; it is never attached to an image.
 CREATE TABLE tag_aliases (
@@ -26,16 +27,29 @@ ALTER TABLE images ADD COLUMN analysis_status TEXT NOT NULL DEFAULT 'none'
 ALTER TABLE images ADD COLUMN analysis_error TEXT NOT NULL DEFAULT '';
 ALTER TABLE images ADD COLUMN analyzed_at TEXT;
 
--- Paid calls. Money spent stays recorded; no link to images, which leave no records when deleted.
+-- Paid API calls. Money spent stays recorded; no link to images, which leave no records when deleted.
+-- reserved_usd: maximum cost held before the call; cost_usd: cost from the tokens reported, once known.
 CREATE TABLE spend (
  id TEXT PRIMARY KEY,
- kind TEXT NOT NULL CHECK(kind IN ('analysis')),
+ kind TEXT NOT NULL CHECK(kind IN ('analysis','generation')),
  model TEXT NOT NULL,
  reserved_usd REAL NOT NULL CHECK(reserved_usd > 0),
+ cost_usd REAL CHECK(cost_usd >= 0),
  status TEXT NOT NULL CHECK(status IN ('reserved','completed','uncertain','failed')),
  input_tokens INTEGER,
  output_tokens INTEGER,
  created_at TEXT NOT NULL,
  updated_at TEXT NOT NULL
 );
-CREATE INDEX spend_kind ON spend(kind, status);
+CREATE INDEX spend_period ON spend(created_at, status);
+
+-- One budget for every paid call. The owner changes the cap or renews it: a renewal starts a new period from
+-- «since», and the register keeps every call.
+CREATE TABLE budget (
+ id INTEGER PRIMARY KEY CHECK(id = 1),
+ cap_usd REAL NOT NULL CHECK(cap_usd > 0),
+ since TEXT NOT NULL,
+ updated_at TEXT NOT NULL
+);
+INSERT INTO budget(id, cap_usd, since, updated_at)
+ VALUES(1, 5, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
