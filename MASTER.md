@@ -1,8 +1,33 @@
-# Mappa canonica — versione canonica 14.1.0
+# Mappa canonica — versione canonica 15.0.0
 
-Snapshot: `docs/MASTER.v14.1.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-08T21:00:00Z. Base main `5113292`.
+Snapshot: `docs/MASTER.v15.0.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-09T09:45:00Z. Base main `9c4aa39`.
 Le sezioni precedenti rimangono vigenti per gli ambiti non modificati.
+
+## Bozze, SLOP scollegate e trasparenza (15.0.0)
+
+Aggiornato: 2026-11-09T09:45:00Z. Specifica: `docs/lotti-editoriali.v1.6.2.md` (approvata).
+Base main `9c4aa39`: app 0.28.1, schema 0031 in produzione (0029 lotti e scarti, 0030
+istantanee di rimozione, 0031 tag per foto). Nel catalogo di produzione restano solo le
+24 immagini demo; le 6 rifiutate degli esperimenti storici sono state eliminate.
+
+Stato effettivo: lotti, Esplora Commons (`worker/commons-editorial.v1.0.0.ts`, originali
+fino a 12 MB o 32 Mpx, altrimenti miniatura), tag manuali (`worker/tags.v1.0.0.ts`,
+`shared/tags.v1.0.0.ts`, segnaposto `untagged` derivato, gate su approvazione, ammissione e
+pubblicazione). Nessuna proposta di tag a pagamento.
+
+Fasi successive, ciascuna in una PR:
+1. bozze REAL in D1 (nuova migrazione additiva, tabella mutabile), conferma atomica che
+   cancella la bozza, ripresa dell'acquisizione; in parallelo una piccola PR per il gioco:
+   file serviti senza metadati identificativi, marchio «RS» sovrapposto, blocco di tasto
+   destro, trascinamento e pressione prolungata;
+2. bozze SLOP e prompt dal modello linguistico, con budget e conferma;
+3. generazione delle immagini, tag proposti dalle SLOP, copertura dei temi.
+
+Limite noto: il formato del file (JPEG per le REAL, WebP/PNG per le SLOP) resta un indizio
+finché le immagini del gioco non vengono ricodificate in modo uniforme.
+Rinviati (specifica, sezione 14): ricontrollo delle fonti Commons, alias dei tag,
+anteprime con D1/R2 separati, Topic Discovery.
 
 ## Lotti editoriali (14.0.0)
 

@@ -1,8 +1,36 @@
-# Istruzioni Codex — versione canonica 14.1.0
+# Istruzioni Codex — versione canonica 15.0.0
 
-Snapshot: `docs/AGENTS.v14.1.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-08T21:00:00Z. Base main `5113292`.
+Snapshot: `docs/AGENTS.v15.0.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-09T09:45:00Z. Base main `9c4aa39`.
 Le sezioni precedenti rimangono contesto per ambiti non sostituiti.
+
+## Bozze, SLOP scollegate e trasparenza (15.0.0)
+
+Aggiornato: 2026-11-09T09:45:00Z. Specifica approvata: `docs/lotti-editoriali.v1.6.2.md`,
+che per lotti, tag e SLOP prevale sulla sezione 14.0.0 e sulle specifiche 1.4.x/1.5.x.
+
+Tutto ciò che precede la conferma è una bozza D1 modificabile, con revisione ottimistica;
+nessun'altra tabella viene scritta prima della conferma (salvo le ricevute di budget delle
+chiamate a pagamento SLOP). La conferma crea lotto, proposte e acquisizione in modo
+atomico e cancella la bozza con i suoi file R2 `drafts/<id>/`.
+
+La generazione SLOP è scollegata dai lotti REAL. Due passi: tema e tag scelti dall'owner,
+passati in blocco in ordine casuale e senza frequenze, a un modello linguistico che scrive
+i prompt (a pagamento, con stima e conferma); l'owner li rivede; il generatore di immagini
+riceve solo il testo. Mai foto, descrizioni, metadati o URL REAL. Regole dei prompt per tutto
+il sito: niente persone vive o morte da meno di 50 anni; personaggi storici ammessi, anche
+in eventi inventati, esclusi atrocità o crimini loro attribuiti, contenuti sessuali o
+degradanti, celebrazioni di regimi; marchi reali ammessi; la combinazione di nomi propri
+delle REAL non si ricopia (`chanel` + `vandalism` non dà un negozio Chanel assaltato).
+I tag restano manuali: quelli dei prompt sono solo proposte.
+
+Trasparenza nel gioco: marchio «RS» identico su tutte le immagini, sovrapposto in pagina in
+basso a destra dentro l'immagine (circa 5% del lato corto, bianco al 60–70% con contorno
+scuro); file serviti senza metadati identificativi, originali intatti nell'archivio;
+tasto destro, trascinamento e pressione prolungata bloccati. Nessuna licenza restrittiva:
+termini d'uso. Restano invariati gate, budget, nessuna chiamata a pagamento nei test,
+nessun reinvio di esiti incerti, migrazioni additive, PR con CI e approvazione, deploy e
+migrazioni remote solo su autorizzazione esplicita.
 
 ## Lotti editoriali, tag e SLOP dal lotto (14.0.0)
 
