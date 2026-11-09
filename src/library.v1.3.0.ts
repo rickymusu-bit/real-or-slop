@@ -1,4 +1,5 @@
-/** Admin image library and four-section dashboard. v1.3.0, 2026-11-09T22:06:27Z (wizard v1.2.0): vocabulary, aliases and analysis (phase 2).
+/** Admin image library and four-section dashboard. v1.3.0, 2026-11-09T22:50:37Z (wizard v1.2.0): vocabulary, aliases and analysis (phase 2).
+ * Analysis replaces tags and caption, once per image; «Ripristina i testi generati» restores them at no cost.
  * Add files (device or Commons), edit in place, multi-select, trash without confirmations, delete for good. */
 import "./library.v1.0.0.css";
 import "./admin-navigation.v1.0.0.css";
@@ -15,6 +16,7 @@ interface Item {
   prompt: string; model: string; width: number; height: number; copy: { width: number; height: number; bytes: number } | null;
   rights_confirmed: boolean; revision: number; tags: string[]; file: string; updated_at: string;
   analysis: { status: "none" | "running" | "done" | "uncertain" | "failed"; error: string; at: string | null };
+  generated: { tags: string[]; caption: string } | null;
 }
 interface Analysis { enabled: boolean; reason: string; model: string; call_usd: number; cap_usd: number; since: string; spent_usd: number; remaining_usd: number }
 interface Tag { label: string; images: number; aliases: string[] }
@@ -120,7 +122,7 @@ export async function showLibrary() {
   const analyzeMany = async (ids: string[]) => {
     if (!analysis?.enabled || !ids.length) return;
     const estimate = Math.round(ids.length * analysis.call_usd * 1e4) / 1e4;
-    if (!window.confirm(`Analizzare ${ids.length} ${ids.length === 1 ? "immagine" : "immagini"} con ${analysis.model}? Costo massimo ${estimate} $ (restano ${analysis.remaining_usd} $ di budget).`)) return;
+    if (!window.confirm(`Analizzare ${ids.length} ${ids.length === 1 ? "immagine" : "immagini"} con ${analysis.model}? Costo massimo ${estimate} $ (restano ${analysis.remaining_usd} $ di budget). Tag e didascalia attuali saranno sostituiti; ogni immagine si analizza una sola volta.`)) return;
     let done = 0; const errors: string[] = [];
     for (const [index, imageId] of ids.entries()) {
       progress(`Analisi ${index + 1} di ${ids.length}`);
@@ -207,7 +209,7 @@ export async function showLibrary() {
     return updated;
   };
   const analysisLine = (item: Item) => ({ none: "Non ancora analizzata.", running: "Analisi in corso…",
-    done: "Analizzata: tag e didascalia proposti dal modello, da rivedere prima di approvare.",
+    done: "Analizzata: tag e didascalia generati una volta sola, da rivedere prima di approvare.",
     uncertain: "Esito incerto: " + item.analysis.error, failed: "Analisi non riuscita: " + item.analysis.error })[item.analysis.status];
   const showDetail = (item: Item) => {
     open = item;
@@ -223,8 +225,9 @@ export async function showLibrary() {
         : `<input data-field="${key}" maxlength="${max}" value="${escape(item[key])}" ${editable ? "" : "readonly"}>`}</label>`).join("")}
       <div class="library-tags"><span>Tag</span><ul>${item.tags.map(t => `<li>${escape(t)}${editable ? ` <button type="button" data-tag-remove="${escape(t)}" aria-label="Togli ${escape(t)}">×</button>` : ""}</li>`).join("") || "<li>nessuno</li>"}</ul>
         ${editable ? '<input id="library-tag-input" list="library-tag-list" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="nuovo tag, Invio"><p id="library-tag-hint" class="hint">Minuscole senza accenti, trattini tra le parole; inglese per i nomi comuni.</p>' : ""}</div>
-      ${item.status === "new" && item.copy ? `<p class="library-analysis">${analysisLine(item)} ${analysis?.enabled && item.analysis.status !== "running"
-        ? `<button type="button" id="library-analyze">${item.analysis.status === "none" ? "Analizza con IA" : "Rianalizza"} (${analysis.call_usd} $)</button>` : ""}</p>` : ""}
+      ${item.status === "new" && item.copy ? `<p class="library-analysis">${analysisLine(item)} ${analysis?.enabled && item.analysis.status !== "running" && item.analysis.status !== "done"
+        ? `<button type="button" id="library-analyze">${item.analysis.status === "none" ? "Analizza con IA" : "Riprova l'analisi"} (${analysis.call_usd} $)</button>` : ""}</p>` : ""}
+      ${editable && item.generated ? '<p><button type="button" id="library-restore">Ripristina i testi generati</button></p>' : ""}
       <div class="library-actions">${item.status === "new" ? `${item.origin === "REAL" ? `<label><input type="checkbox" id="library-rights" ${item.rights_confirmed ? "checked" : ""}> Ho verificato diritti e licenza</label>` : ""}<button type="button" data-action="approve" class="primary">Approva</button>` : ""}
         ${item.status === "approved" ? '<button type="button" data-action="publish" class="primary">Pubblica nel gioco</button>' : ""}
         ${item.status === "published" ? '<button type="button" data-action="withdraw">Ritira dal gioco</button>' : ""}
@@ -253,17 +256,20 @@ export async function showLibrary() {
   });
   detail.addEventListener("click", async event => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
-    if (!button || !open || busy || !(button.dataset.tagRemove || button.dataset.action || button.id === "library-copy" || button.id === "library-analyze")) return;
+    if (!button || !open || busy || !(button.dataset.tagRemove || button.dataset.action || button.id === "library-copy" || button.id === "library-analyze" || button.id === "library-restore")) return;
     busy = true;
     try {
       if (button.dataset.tagRemove) open = await save(open, { tags: open.tags.filter(t => t !== button.dataset.tagRemove) });
       else if (button.id === "library-copy") { detailMessage("Preparo la copia di gioco…"); open = await prepareLibraryCopy<Item>(open.id); }
       else if (button.id === "library-analyze" && analysis) {
         const repeat = open.analysis.status === "uncertain" ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
-        if (!window.confirm(`Analizzare «${open.title}» con ${analysis.model}? Costo massimo ${analysis.call_usd} $.${repeat}`)) return;
+        if (!window.confirm(`Analizzare «${open.title}» con ${analysis.model}? Costo massimo ${analysis.call_usd} $. Tag e didascalia attuali saranno sostituiti.${repeat}`)) return;
         detailMessage("Analisi in corso…");
         open = await call<Item>(`/${encodeURIComponent(open.id)}/analyze`, { method: "POST", body: JSON.stringify({ confirm_usd: analysis.call_usd }) });
         void Promise.all([refreshTags(), refreshAnalysis()]);
+      }
+      else if (button.id === "library-restore" && open.generated) {
+        open = await save(open, { tags: open.generated.tags, caption: open.generated.caption }); void refreshTags();
       }
       else if (button.dataset.action === "delete") { await call("/" + encodeURIComponent(open.id), { method: "DELETE" }); detail.close(); open = null; }
       else if (button.dataset.action) open = await call<Item>(`/${encodeURIComponent(open.id)}/${button.dataset.action}`, { method: "POST",
@@ -309,8 +315,8 @@ export async function showLibrary() {
         const action = button.dataset.bulk;
         if (action === "none") { selected.clear(); render(); return; }
         if (action === "analyze") {
-          const ids = items.filter(i => selected.has(i.id) && i.status === "new" && i.copy && i.analysis.status !== "running").map(i => i.id);
-          if (!ids.length) { message("Nessuna immagine nuova con copia di gioco tra le selezionate."); return; }
+          const ids = items.filter(i => selected.has(i.id) && i.status === "new" && i.copy && i.analysis.status !== "running" && i.analysis.status !== "done").map(i => i.id);
+          if (!ids.length) { message("Nessuna immagine nuova, con copia di gioco e non ancora analizzata tra le selezionate."); return; }
           await analyzeMany(ids); return;
         }
         const tag = $<HTMLInputElement>("#library-bulk-tag")?.value.trim();

@@ -1,8 +1,9 @@
 /** Guided REAL ingestion, editing, paid generation and publishing. v1.2.0.
- * 2026-11-09T22:06:27Z. Draft items are private until approved and published.
- * v1.2.0: the generation dialog preselects only images never generated; images already generated or with an
- * uncertain outcome stay unchecked and the confirmation names them; an image being analysed cannot be chosen.
- * Focus survives re-rendering. */
+ * 2026-11-09T22:50:37Z. Draft items are private until approved and published.
+ * v1.2.0 (owner decision of 2026-11-09): generating replaces tags and caption of the chosen images and happens at most
+ * once per image; an image already generated cannot be chosen again. «Ripristina i testi generati» brings the chosen
+ * images back to their generated texts, kept on the server, at no cost. Images not chosen are never touched.
+ * An uncertain outcome is never preselected and is retried only on explicit choice. Focus survives re-rendering. */
 import "./real-wizard.v1.0.0.css";
 import { escape } from "../shared/html";
 import { checkTag } from "../shared/tags.v2.0.0";
@@ -17,6 +18,7 @@ interface Image {
   width: number; height: number; file: string;
   copy: { width: number; height: number; bytes: number } | null;
   analysis: { status: string; error: string };
+  generated: { tags: string[]; caption: string } | null;
 }
 interface Hit { title: string; page_url: string; thumb_url: string; width: number; height: number; date?: string; description?: string }
 interface Browse { files: Hit[]; next: string | null }
@@ -37,9 +39,9 @@ function commonsLink(value: string): string | null {
     return url.href;
   } catch { return null; }
 }
-/** Paid generation runs only on new images with a game copy and no analysis in progress. */
-const generable = (i: Image) => i.status === "new" && !!i.copy && i.analysis.status !== "running";
-/** Preselected: never generated, or refused without charge. «done» and «uncertain» would pay again. */
+/** Paid generation runs once, only on new images with a game copy and no analysis in progress. */
+const generable = (i: Image) => i.status === "new" && !!i.copy && i.analysis.status !== "running" && i.analysis.status !== "done";
+/** Preselected: never generated, or refused without charge. «uncertain» may already have been paid. */
 const freshForGeneration = (i: Image) => generable(i) && (i.analysis.status === "none" || i.analysis.status === "failed");
 const generationNote = (i: Image) => i.status !== "new" ? "approvata" : !i.copy ? "WebP non pronto"
   : ({ running: "in corso", done: "già generata", uncertain: "esito incerto, forse già addebitata", failed: "non riuscita" } as Record<string, string>)[i.analysis.status] || "";
@@ -52,12 +54,11 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   const selectedHits = new Set<string>(); let searchCategories: string[] = [], vocabulary: string[] = [];
   let analysis: Analysis | null = null;
   const pending = new Map<string, Hit | null>();
-  const generated = new Map<string, { tags?: string[]; caption?: string }>();
   const captionDrafts = new Map<string, string>();
   let captionSaving: Promise<void> = Promise.resolve();
   const staged = () => images.filter(i => i.origin === "REAL" && (i.status === "new" || i.status === "approved"));
   const persist = () => {
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ids: staged().map(i => i.id), stage, generated: [...generated.entries()] })); } catch { /* private browsing */ }
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ids: staged().map(i => i.id), stage })); } catch { /* private browsing */ }
   };
   const replace = (updated: Image) => { images = images.map(i => i.id === updated.id ? updated : i); persist(); };
   const update = async (image: Image, changes: Record<string, unknown>) => {
@@ -122,7 +123,8 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   const second = () => '<div class="rw-actions"><button type="button" data-rw="choose-generation" ' +
     (!analysis?.enabled ? "disabled" : "") + '>Genera tag e didascalie con IA</button><span class="hint">' +
     (analysis?.enabled ? 'Massimo ' + analysis.call_usd + ' $ per immagine, residuo ' + analysis.remaining_usd + ' $.' :
-      'Generazione non disponibile: ' + escape(analysis?.reason || "configurazione mancante")) + "</span></div>" +
+      'Generazione non disponibile: ' + escape(analysis?.reason || "configurazione mancante")) + "</span>" +
+    (staged().some(i => i.generated) ? '<button type="button" data-rw="choose-reset">Ripristina i testi generati</button>' : "") + "</div>" +
     '<datalist id="rw-existing-tags">' + vocabulary.map(t => '<option value="' + escape(t) + '"></option>').join("") + '</datalist>' +
     '<div class="rw-editor-grid">' + staged().map(item => '<article class="rw-editor" data-rw-image="' + escape(item.id) + '">' +
       '<div class="rw-image"><img src="' + escape(item.file) + '" alt="' + escape(item.title) + '" loading="lazy"></div>' +
@@ -138,19 +140,26 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
           '" list="rw-existing-tags" autocomplete="off" spellcheck="false" autocapitalize="none" placeholder="Nuovo tag">' +
           '<button type="button" data-rw="add-tag" data-id="' + escape(item.id) + '">Aggiungi</button></div></div>' +
       '<div class="rw-actions">' +
-      (generated.has(item.id) ? '<button type="button" data-rw="reset" data-id="' + escape(item.id) +
+      (item.generated ? '<button type="button" data-rw="reset" data-id="' + escape(item.id) +
         '">Ripristina i testi generati</button>' : "") +
       (item.copy ? "" : '<button type="button" data-rw="copy" data-id="' + escape(item.id) + '">Prepara WebP</button>') +
       '</div>' + metadata(item) + '</div></article>').join("") + '</div>' +
     '<div class="rw-actions rw-bottom"><button type="button" data-rw="back">Indietro</button>' +
     '<button type="button" data-rw="review" class="primary">Avanti: riepilogo</button></div>' +
-    '<dialog id="rw-generation-dialog" class="rw-dialog"><h3>Seleziona le immagini</h3><p>Seleziona le immagini per generare insieme tag e didascalie.</p>' +
+    '<dialog id="rw-generation-dialog" class="rw-dialog"><h3>Seleziona le immagini</h3><p>Seleziona le immagini per generare insieme tag e didascalie. ' +
+    'Tag e didascalia attuali delle immagini scelte saranno sostituiti; le altre non cambiano. Ogni immagine si genera una sola volta.</p>' +
     '<label><input type="checkbox" id="rw-generation-all"> Seleziona tutte</label>' +
     '<div class="rw-gen-list">' + staged().map(i => '<label><input type="checkbox" data-rw-gen="' +
       escape(i.id) + '" ' + (!generable(i) ? "disabled" : freshForGeneration(i) ? "checked" : "") + '> ' + escape(short(i.title)) +
       (generationNote(i) ? ' <small>(' + escape(generationNote(i)) + ')</small>' : "") +
       '</label>').join("") + '</div><div class="rw-actions"><button type="button" data-rw="close-gen">Annulla</button>' +
-      '<button type="button" class="primary" data-rw="run-gen">Genera</button></div></dialog>';
+      '<button type="button" class="primary" data-rw="run-gen">Genera</button></div></dialog>' +
+    '<dialog id="rw-reset-dialog" class="rw-dialog"><h3>Ripristina i testi generati</h3><p>Le immagini scelte tornano ai tag e alla ' +
+    'didascalia generati, senza costi; le tue modifiche su quelle immagini vanno perse. Le altre non cambiano.</p>' +
+    '<label><input type="checkbox" id="rw-reset-all"> Seleziona tutte</label>' +
+    '<div class="rw-gen-list">' + staged().filter(i => i.generated).map(i => '<label><input type="checkbox" data-rw-restore="' +
+      escape(i.id) + '"> ' + escape(short(i.title)) + '</label>').join("") + '</div><div class="rw-actions">' +
+    '<button type="button" data-rw="close-reset">Annulla</button><button type="button" class="primary" data-rw="run-reset">Ripristina</button></div></dialog>';
   const third = () => '<p class="hint">Anteprima della copia WebP effettivamente servita dal gioco. Il marchio RS è sovrapposto ' +
     'all’immagine, mentre la didascalia compare sotto: nessuno dei due viene incorporato nei pixel del WebP.</p>' +
     '<div class="rw-preview-grid">' + staged().map(i => '<article class="rw-final">' +
@@ -231,13 +240,12 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     const max = Math.round(ids.length * analysis.call_usd * 1e4) / 1e4;
     if (max > analysis.remaining_usd) { notice = "Budget insufficiente: occorrono fino a " + max + " $."; render(); return; }
     const chosen = images.filter(i => ids.includes(i.id));
-    const again = chosen.filter(i => i.analysis.status === "done").length, uncertain = chosen.filter(i => i.analysis.status === "uncertain").length;
-    const repeat = (again ? " " + again + (again === 1 ? " immagine ha" : " immagini hanno") + " già testi generati: verrà pagata una nuova chiamata." : "") +
-      (uncertain ? " " + uncertain + (uncertain === 1 ? " immagine ha" : " immagini hanno") + " un esito incerto che potrebbe essere già stato addebitato." : "");
+    const uncertain = chosen.filter(i => i.analysis.status === "uncertain").length;
+    const repeat = uncertain ? " " + uncertain + (uncertain === 1 ? " immagine ha" : " immagini hanno") + " un esito incerto che potrebbe essere già stato addebitato." : "";
     if (!window.confirm("Confermi " + ids.length + (ids.length === 1 ? " chiamata a " : " chiamate a ") + analysis.model +
       " per generare tag e didascalie insieme? Costo massimo " + max +
       " $; budget residuo " + analysis.remaining_usd +
-      " $. I tag presenti verranno conservati; le didascalie già compilate non saranno sovrascritte." + repeat)) return;
+      " $. Tag e didascalie attuali di queste immagini saranno sostituiti; ogni immagine si genera una sola volta." + repeat)) return;
     const failures: string[] = []; let done = 0;
     for (const id of ids) {
       const item = images.find(i => i.id === id);
@@ -247,9 +255,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         const result = await api<Image>("/" + encodeURIComponent(id) + "/analyze", {
           method: "POST", body: JSON.stringify({ confirm_usd: analysis.call_usd }),
         });
-        replace(result);
-        generated.set(id, { tags: [...result.tags], caption: result.caption });
-        persist(); done++;
+        replace(result); done++;
       } catch (error) {
         failures.push(short(item.title, 35) + ": " + errorText(error));
         if (/OpenAI:|Tetto di spesa/.test(errorText(error))) break;
@@ -257,6 +263,19 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     }
     try { await refreshMeta(); } catch { /* show per-image errors, if any */ }
     notice = done + (done === 1 ? " immagine elaborata." : " immagini elaborate.") + (failures.length ? " Problemi: " + failures.join(" | ") : "");
+    render();
+  };
+  /** Brings the chosen images back to their generated texts: a plain edit, no paid call. */
+  const restore = async (ids: string[]) => {
+    const failures: string[] = []; let done = 0;
+    for (const id of ids) {
+      const item = images.find(i => i.id === id);
+      if (!item?.generated) continue;
+      try { await update(item, { tags: item.generated.tags, caption: item.generated.caption }); done++; }
+      catch (error) { failures.push(short(item.title, 35) + ": " + errorText(error)); }
+    }
+    notice = (done ? done + (done === 1 ? " immagine riportata" : " immagini riportate") + " ai testi generati, senza costi." : "Nessuna immagine selezionata.") +
+      (failures.length ? " Problemi: " + failures.join(" | ") : "");
     render();
   };
   const publish = async () => {
@@ -283,7 +302,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     }
     await onPublished();
     stage = failures.length ? 3 : 1;
-    if (!failures.length) { images = []; pending.clear(); generated.clear(); captionDrafts.clear(); }
+    if (!failures.length) { images = []; pending.clear(); captionDrafts.clear(); }
     notice = done + (done === 1 ? " immagine pubblicata." : " immagini pubblicate.") + (failures.length ? " Errori da correggere: " + failures.join(" | ") : "");
     persist(); render();
   };
@@ -301,6 +320,9 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         c.checked = target.checked;
         if (c.checked) selectedHits.add(c.dataset.rwHit!); else selectedHits.delete(c.dataset.rwHit!);
       });
+    }
+    if (target.id === "rw-reset-all") {
+      root.querySelectorAll<HTMLInputElement>("[data-rw-restore]").forEach(c => { c.checked = target.checked; });
     }
     if (target.id === "rw-generation-all") {
       root.querySelectorAll<HTMLInputElement>("[data-rw-gen]:not(:disabled)").forEach(c => { c.checked = target.checked; });
@@ -333,6 +355,8 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-rw]");
     if (!button || busy) return;
     const action = button.dataset.rw!, id = button.dataset.id || "";
+    if (action === "close-reset") { root.querySelector<HTMLDialogElement>("#rw-reset-dialog")?.close(); return; }
+    if (action === "choose-reset") { root.querySelector<HTMLDialogElement>("#rw-reset-dialog")!.showModal(); return; }
     if (action === "close-gen") { root.querySelector<HTMLDialogElement>("#rw-generation-dialog")?.close(); return; }
     if (action === "choose-generation") {
       root.querySelector<HTMLDialogElement>("#rw-generation-dialog")!.showModal();
@@ -377,17 +401,18 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         await flushCaptions();
         const item = images.find(i => i.id === id)!;
         await update(item, { tags: item.tags.filter(t => t !== button.dataset.tag) }); notice = "Tag rimosso."; render();
-      } else if (action === "reset") {
+      } else if (action === "run-reset" || action === "reset") {
         await flushCaptions();
-        const item = images.find(i => i.id === id)!, snapshot = generated.get(id);
-        if (snapshot) { await update(item, { ...(snapshot.tags ? { tags: snapshot.tags } : {}),
-          ...(snapshot.caption !== undefined ? { caption: snapshot.caption } : {}) }); notice = "Testi generati ripristinati senza costi."; render(); }
+        const ids = action === "reset" ? [id]
+          : [...root.querySelectorAll<HTMLInputElement>("[data-rw-restore]:checked")].map(x => x.dataset.rwRestore!);
+        root.querySelector<HTMLDialogElement>("#rw-reset-dialog")?.close();
+        await restore(ids);
       } else if (action === "copy") {
         const copy = await prepareLibraryCopy<Image>(id);
         replace(copy); notice = "Copia WebP pronta."; render();
       } else if (action === "publish") await publish();
       else if (action === "new") {
-        images = []; pending.clear(); generated.clear(); captionDrafts.clear(); searchResults = [];
+        images = []; pending.clear(); captionDrafts.clear(); searchResults = [];
         searched = false; next = null; stage = 1;
         notice = "Nuovo caricamento. Le immagini non pubblicate restano nella libreria privata.";
         persist(); render();
@@ -398,16 +423,13 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
     if (raw) {
-      const draft = JSON.parse(raw) as { ids?: string[]; stage?: Stage; generated?: [string, { tags?: string[]; caption?: string }][] };
+      const draft = JSON.parse(raw) as { ids?: string[]; stage?: Stage };
       const ids = Array.isArray(draft.ids) ? draft.ids.filter(x => typeof x === "string").slice(0, 100) : [];
       for (const id of ids) {
         try {
           const item = await api<Image>("/" + encodeURIComponent(id));
           if (item.origin === "REAL" && (item.status === "new" || item.status === "approved")) images.push(item);
         } catch { /* inaccessible draft */ }
-      }
-      if (Array.isArray(draft.generated)) for (const [id, snapshot] of draft.generated) {
-        if (images.some(i => i.id === id) && snapshot && typeof snapshot === "object") generated.set(id, snapshot);
       }
       stage = images.length && (draft.stage === 2 || draft.stage === 3) ? draft.stage : 1;
     }

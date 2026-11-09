@@ -1,8 +1,13 @@
-## 1.3.1 — 2026-11-09T22:06:27Z (non pubblicata)
+## 1.4.0 — 2026-11-09T22:50:37Z (proposta, non pubblicata)
 
-- Wizard REAL v1.2.0: il dialogo «Genera tag e didascalie con IA» preseleziona solo le immagini mai generate; quelle già generate o con esito incerto restano deselezionate e marcate, e la conferma del costo avverte se vengono incluse. Prima ogni clic su «Genera» ripagava anche le immagini già elaborate e poteva reinviare un esito incerto senza avviso.
-- Il focus resta sul controllo attivo dopo ogni aggiornamento della schermata (prima tornava al documento), utile da tastiera e con lettori di schermo.
-- Specifica `docs/dashboard-admin-wizard-real.v1.1.1.md`; test browser `tests/real_wizard.v1.2.0.integration.py`. Vecchie versioni conservate.
+Decisione dell'owner del 2026-11-09 sulla generazione di tag e didascalie (`docs/libreria-immagini.v1.4.0.md`, sezione 10;
+`docs/dashboard-admin-wizard-real.v1.2.0.md`).
+
+- La generazione sostituisce tag e didascalia delle sole immagini scelte; prima aggiungeva tag e scriveva la didascalia solo se vuota.
+- Una generazione per immagine: il server rifiuta la seconda prima di riservare o inviare; nel wizard l'immagine già generata non è selezionabile, nella sezione Database sparisce «Rianalizza». Un esito incerto o non riuscito si può riprovare solo su scelta esplicita.
+- I testi generati sono conservati nel database (migrazione additiva `0035_generated_texts.v1.0.0.sql`). «Ripristina i testi generati» riporta a quei testi le immagini scelte, senza costi, anche dopo aver chiuso la scheda: dal dialogo di selezione e dalla singola scheda del wizard, e dal dettaglio nella sezione Database.
+- Nel dialogo di generazione sono preselezionate solo le immagini mai generate; la conferma avverte degli esiti incerti. Il focus resta sul controllo attivo dopo ogni aggiornamento del wizard.
+- Nuove versioni: `src/real-wizard.v1.2.0.ts`, `src/library.v1.3.0.ts`, `worker/library.v1.3.0.ts`, `worker/analysis.v1.3.0.ts`, test `tests/analysis.v1.1.0.integration.py` e `tests/real_wizard.v1.2.0.integration.py` (due immagini, una sola scelta). Vecchie versioni conservate.
 
 ## 1.3.0 — 2026-11-09T21:32:51.460Z (proposta, non pubblicata)
 

@@ -1,5 +1,6 @@
-"""REAL ingestion wizard E2E v1.2.0, 2026-11-09T22:06:27Z.
-v1.2.0: a generated image is not preselected again; focus survives re-rendering.
+"""REAL ingestion wizard E2E v1.2.0, 2026-11-09T22:50:37Z.
+v1.2.0: generation replaces the texts of the chosen images only, once per image; restoring touches the chosen
+images only; focus survives re-rendering.
 Browser exercises Commons search UI, combined paid generation, tag editing, no-cost reset,
 WebP preview, rights confirmation and publication, using the fake OpenAI server."""
 import io
@@ -64,63 +65,88 @@ with sync_playwright() as p:
         # Upload through the original database path: copy is WebP; bypass external Commons requests.
         page.get_by_role('button', name='Database immagini').click()
         title = 'wizard-' + name
-        page.locator('#library-files').set_input_files(image_file(title, 18 if name == 'desktop' else 28))
-        expect(page.locator('#library-message')).to_contain_text('1 di 1 aggiunte', timeout=30000)
+        seed = 18 if name == 'desktop' else 28
+        page.locator('#library-files').set_input_files([image_file(title + '-a', seed), image_file(title + '-b', seed + 40)])
+        expect(page.locator('#library-message')).to_contain_text('2 di 2 aggiunte', timeout=30000)
         response = page.request.get(base + '/api/admin/library?status=new&origin=REAL&q=' + title)
         assert response.ok, response.text()
-        candidates = response.json()['items']
-        item = next(i for i in candidates if i['title'] == title)
-        assert item['copy'] and item['copy']['width'] > 0 and item['status'] == 'new'
-
-        page.evaluate("""id => sessionStorage.setItem('ros-real-wizard-v1.0.0',
-            JSON.stringify({ids:[id],stage:2}))""", item['id'])
+        found = {i['title']: i for i in response.json()['items']}
+        first, second = found[title + '-a'], found[title + '-b']
+        assert first['copy'] and second['copy'] and first['analysis']['status'] == 'none', first
+        page.evaluate("""ids => sessionStorage.setItem('ros-real-wizard-v1.0.0',
+            JSON.stringify({ids, stage:2}))""", [first['id'], second['id']])
         page.reload()
-        expect(page.locator('.rw-editor')).to_have_count(1)
-        expect(page.locator('.rw-editor .rw-metadata')).to_have_count(1)
-        page.locator('.rw-metadata summary').click()
-        expect(page.locator('.rw-metadata')).to_contain_text(title)
-        expect(page.locator('[data-rw-caption]')).to_have_value('')
-        page.locator('[data-rw-new-tag]').fill('bridge')
-        page.locator('[data-rw-new-tag]').press('Enter')
-        expect(page.locator('.rw-pill', has_text='bridge')).to_have_count(1)
-        expect(page.locator('[data-rw-new-tag]')).to_be_focused()
-        expect(page.locator('[data-rw-gen]')).to_be_checked()
+        expect(page.locator('.rw-editor')).to_have_count(2)
+        a = page.locator('[data-rw-image="%s"]' % first['id'])
+        b = page.locator('[data-rw-image="%s"]' % second['id'])
+        a.locator('.rw-metadata summary').click()
+        expect(a.locator('.rw-metadata')).to_contain_text(title + '-a')
+        # The owner writes first; the generation will replace this on the chosen image only.
+        for card, tag, caption in ((a, 'bridge', 'Didascalia mia A.'), (b, 'tower', 'Didascalia mia B.')):
+            card.locator('[data-rw-caption]').fill(caption)
+            card.locator('[data-rw-caption]').blur()
+            card.locator('[data-rw-new-tag]').fill(tag)
+            card.locator('[data-rw-new-tag]').press('Enter')
+            expect(card.locator('.rw-pill', has_text=tag)).to_have_count(1)
+            expect(card.locator('[data-rw-new-tag]')).to_be_focused()
 
         expect(page.get_by_role('button', name='Genera tag e didascalie con IA')).to_have_count(1)
         expect(page.locator('[data-rw="choose-tags"], [data-rw="choose-caption"]')).to_have_count(0)
+        expect(page.locator('[data-rw=choose-reset]')).to_have_count(0)
         page.get_by_role('button', name='Genera tag e didascalie con IA').click()
         expect(page.locator('#rw-generation-dialog')).to_be_visible()
+        expect(page.locator('[data-rw-gen="%s"]' % first['id'])).to_be_checked()
+        page.locator('[data-rw-gen="%s"]' % second['id']).uncheck()
         page.locator('#rw-generation-dialog button[data-rw=run-gen]').click()
         expect(page.locator('.rw-message')).to_contain_text('1 immagine elaborata', timeout=30000)
-        assert len([text for text in confirmations if text.startswith('Confermi ') and 'tag e didascalie insieme' in text]) == 1, confirmations
-        expect(page.locator('.rw-pill', has_text='crowd')).to_have_count(1)
-        expect(page.locator('[data-rw-caption]')).to_have_value('Una strada affollata.')
-        # Already generated: offered again only on explicit choice, never preselected.
+        asked = [text for text in confirmations if text.startswith('Confermi ') and 'tag e didascalie insieme' in text]
+        assert len(asked) == 1 and 'saranno sostituiti' in asked[0], confirmations
+        # Chosen image: owner's texts replaced. The other: untouched.
+        expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(1)
+        expect(a.locator('.rw-pill', has_text='bridge')).to_have_count(0)
+        expect(a.locator('[data-rw-caption]')).to_have_value('Una strada affollata.')
+        expect(b.locator('.rw-pill', has_text='tower')).to_have_count(1)
+        expect(b.locator('.rw-pill', has_text='crowd')).to_have_count(0)
+        expect(b.locator('[data-rw-caption]')).to_have_value('Didascalia mia B.')
+        # Once per image: the generated one cannot be chosen again.
         page.get_by_role('button', name='Genera tag e didascalie con IA').click()
-        expect(page.locator('[data-rw-gen]')).not_to_be_checked()
-        expect(page.locator('.rw-gen-list')).to_contain_text('già generata')
+        expect(page.locator('[data-rw-gen="%s"]' % first['id'])).to_be_disabled()
+        expect(page.locator('.rw-gen-list').first).to_contain_text('già generata')
+        expect(page.locator('[data-rw-gen="%s"]' % second['id'])).to_be_checked()
         page.locator('#rw-generation-dialog button[data-rw=close-gen]').click()
-        page.locator('[data-rw-caption]').fill('Didascalia rivista manualmente.')
-        page.locator('[data-rw-caption]').blur()
-        page.locator('[data-rw=remove-tag][data-tag=crowd]').click()
-        expect(page.locator('.rw-pill', has_text='crowd')).to_have_count(0)
-        page.get_by_role('button', name='Ripristina i testi generati').click()
-        expect(page.locator('.rw-pill', has_text='crowd')).to_have_count(1)
-        expect(page.locator('[data-rw-caption]')).to_have_value('Una strada affollata.')
+        retry = page.request.post(base + '/api/admin/library/%s/analyze' % first['id'], data={'confirm_usd': 0.018}, headers={'Origin': base})
+        assert retry.status == 409 and 'già generati' in retry.json()['error'], retry.text()
+        # Owner edits, then restores the chosen image only, at no cost.
+        a.locator('[data-rw-caption]').fill('Didascalia rivista manualmente.')
+        a.locator('[data-rw-caption]').blur()
+        a.locator('[data-rw=remove-tag][data-tag=crowd]').click()
+        expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(0)
+        b.locator('[data-rw-caption]').fill('Didascalia mia B, rivista.')
+        b.locator('[data-rw-caption]').blur()
+        page.locator('[data-rw=choose-reset]').click()
+        expect(page.locator('[data-rw-restore]')).to_have_count(1)
+        page.locator('#rw-reset-all').check()
+        page.locator('#rw-reset-dialog button[data-rw=run-reset]').click()
+        expect(page.locator('.rw-message')).to_contain_text('1 immagine riportata')
+        expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(1)
+        expect(a.locator('[data-rw-caption]')).to_have_value('Una strada affollata.')
+        expect(b.locator('[data-rw-caption]')).to_have_value('Didascalia mia B, rivista.')
+        expect(b.locator('.rw-pill', has_text='tower')).to_have_count(1)
         page.screenshot(path=str(folder / (name + '-step2.png')), full_page=True)
 
         page.get_by_role('button', name='Avanti: riepilogo').click()
-        expect(page.locator('.rw-final img[data-game-media]')).to_be_visible()
-        expect(page.locator('.rw-final .rs-mark')).to_be_visible()
-        expect(page.locator('.rw-final .play-caption')).not_to_be_empty()
+        expect(page.locator('.rw-final img[data-game-media]')).to_have_count(2)
+        expect(page.locator('.rw-final img[data-game-media]').first).to_be_visible()
+        expect(page.locator('.rw-final .rs-mark').first).to_be_visible()
+        expect(page.locator('.rw-final .play-caption').first).not_to_be_empty()
         page.screenshot(path=str(folder / (name + '-step3.png')), full_page=True)
         page.get_by_role('button', name='Conferma e pubblica').click()
         expect(page.locator('.rw-message')).to_contain_text('Devi confermare')
         page.locator('#rw-rights').check()
         page.get_by_role('button', name='Conferma e pubblica').click()
-        expect(page.locator('.rw-message')).to_contain_text('1 immagine pubblicata', timeout=30000)
+        expect(page.locator('.rw-message')).to_contain_text('2 immagini pubblicate', timeout=30000)
         published = page.request.get(base + '/api/admin/library?status=published&origin=REAL&q=' + title)
-        assert published.ok and any(i['id'] == item['id'] for i in published.json()['items'])
+        assert published.ok and {first['id'], second['id']} <= {i['id'] for i in published.json()['items']}
         assert not errors, errors
         context.close()
         print('REAL wizard browser E2E passed:', name)
