@@ -2,6 +2,7 @@
 
 - Acquisizione Commons: gli originali con più di 32 milioni di pixel (per esempio 9504×6336) venivano rifiutati anche se il Worker avrebbe scaricato la copia proporzionale; ora si passa alla copia anche per numero di pixel, e i limiti si controllano sul file effettivamente scaricato, misurato di nuovo dai byte.
 - Messaggio più chiaro quando un titolo non esiste su Commons, con l'indicazione del caso tipico (trattini bassi persi copiando il link).
+- `.npmrc`: le build Cloudflare (anteprime e produzione) non scaricano più da GitHub i binari CUDA facoltativi di `onnxruntime-node`, come già la CI; un timeout di quel download aveva fatto fallire una build.
 - Nessuna migrazione.
 
 ## 0.28.0 — 2026-11-09T05:00:00Z (proposta, non pubblicata)
