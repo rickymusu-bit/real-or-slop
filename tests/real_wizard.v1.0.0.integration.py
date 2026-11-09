@@ -83,7 +83,7 @@ with sync_playwright() as p:
         expect(page.locator('[data-rw-caption]')).to_have_value('Didascalia manuale da conservare.')
         page.locator('[data-rw-new-tag]').fill('bridge')
         page.get_by_role('button', name='Aggiungi', exact=True).click()
-        expect(page.locator('.rw-pill')).to_contain_text('bridge')
+        expect(page.locator('.rw-pill', has_text='bridge')).to_have_count(1)
 
         page.get_by_role('button', name='Genera tag con IA').click()
         expect(page.locator('#rw-generation-dialog')).to_be_visible()
@@ -91,11 +91,11 @@ with sync_playwright() as p:
         expect(page.locator('.rw-message')).to_contain_text('1 immagini elaborate', timeout=30000)
         assert any('Costo massimo' in text for text in confirmations), confirmations
         expect(page.locator('[data-rw-caption]')).to_have_value('Didascalia manuale da conservare.')
-        expect(page.locator('.rw-pill')).to_contain_text('crowd')
+        expect(page.locator('.rw-pill', has_text='crowd')).to_have_count(1)
         page.locator('[data-rw=remove-tag][data-tag=crowd]').click()
-        expect(page.locator('.rw-pill')).not_to_contain_text('crowd')
+        expect(page.locator('.rw-pill', has_text='crowd')).to_have_count(0)
         page.get_by_role('button', name='Ripristina i testi generati').click()
-        expect(page.locator('.rw-pill')).to_contain_text('crowd')
+        expect(page.locator('.rw-pill', has_text='crowd')).to_have_count(1)
 
         page.get_by_role('button', name='Genera didascalie con IA').click()
         page.locator('#rw-generation-dialog button[data-rw=run-gen]').click()
