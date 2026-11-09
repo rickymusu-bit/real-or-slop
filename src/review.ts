@@ -1,9 +1,11 @@
-import { admissionForm, submitAdmission, publicationControls, cyclePublication, prepareMissingCopies, type CycleCard } from "./cycle-review";
+import { admissionForm, submitAdmission, publicationControls, cyclePublication, type CycleCard } from "./cycle-review";
 import { api, content, escape } from "./main";
 import { safeUrl } from "./admin";
 import { checkTag, UNTAGGED } from "../shared/tags.v1.0.0";
+import { prepareReviewCopy } from "./game-copy.v1.0.0";
 interface Partner { id: string; origin: string; image: string }
-interface Card extends CycleCard { id: string; sha256: string; revision: number; origin: string; status: string; tags: string[]; image: string; partner: Partner | null; note: string; rejection_reason?: string; details: { title?: string; author?: string; source_url?: string; license_url?: string; previous_decision?: string; previous_owner_note?: string; previous_assessment?: unknown; original_key?: string; cycle_id?: string } }
+interface GameCopy { sha256: string; width: number; height: number; bytes: number; recipe: string }
+interface Card extends CycleCard { id: string; sha256: string; source_sha256: string; revision: number; origin: string; status: string; tags: string[]; image: string; partner: Partner | null; note: string; rejection_reason?: string; details: { title?: string; author?: string; source_url?: string; license_url?: string; previous_decision?: string; previous_owner_note?: string; previous_assessment?: unknown; original_key?: string; cycle_id?: string; game_copy?: GameCopy } }
 interface Queue { images: Card[]; total: number; offset: number; limit: number; untagged?: number }
 interface Tag { id: string; label: string; photos: number }
 interface DeletionPreview { origin: string; count: number; snapshot_token: string }
@@ -29,7 +31,47 @@ export async function showVisualReview() {
   const categories = await api<{id:string;name:string}[]>("/categories");
   let items: Card[] = [], index = 0, offset = 0, total = 0, busy = false, loadRequest = 0;
   let deletionPreview: DeletionPreview | null = null;
-  const decisionAllowed = (button: HTMLButtonElement, image: Card | undefined) => button.dataset.visualDecision !== "approved" || Boolean(image?.tags.length);
+  // Approval needs a tag and the game copy: the owner approves exactly what players will see.
+  const decisionAllowed = (button: HTMLButtonElement, image: Card | undefined) => button.dataset.visualDecision !== "approved" || Boolean(image?.tags.length && image.details.game_copy);
+  const copyAttempts = new Set<string>();
+  const copyStatus = (image: Card) => {
+    const copy = image.details.game_copy;
+    if (copy) return `<p id="inbox-copy-status" class="hint">Stai valutando la copia di gioco: WebP ${copy.width}×${copy.height}, ${copy.bytes < 1024 ? copy.bytes + " byte" : Math.round(copy.bytes / 1024) + " kB"}. È ciò che vedranno i giocatori; l’originale resta in archivio.</p>`;
+    if (image.status === "rejected" || image.publication?.published) return "";
+    return `<p id="inbox-copy-status" class="hint" role="status">Preparo la copia di gioco WebP da approvare…</p>`;
+  };
+  const ensureCopy = async (image: Card) => {
+    if (image.details.game_copy || image.status === "rejected" || image.publication?.published) return;
+    // Only while the Review is on screen: a hidden module must not change a photo's identity under another panel.
+    if (!queue.checkVisibility()) {
+      const observer = new IntersectionObserver(entries => {
+        if (!entries.some(entry => entry.isIntersecting)) return;
+        observer.disconnect(); if (items[index] === image) void ensureCopy(image);
+      });
+      observer.observe(queue); return;
+    }
+    const key = image.id + ":" + image.source_sha256;
+    if (copyAttempts.has(key)) return;
+    copyAttempts.add(key);
+    try {
+      const copy = await prepareReviewCopy(image.id, image.source_sha256);
+      if (!page.isConnected) return;
+      if (copy.already_prepared || !copy.width || !copy.height || !copy.bytes) { if (!busy) await load(false); return; }
+      // Update the open card in place, so a tag being typed is not lost: the copy becomes the file under review.
+      image.sha256 = copy.sha256;
+      image.details.game_copy = { sha256: copy.sha256, width: copy.width, height: copy.height, bytes: copy.bytes, recipe: "" };
+      image.image = image.image.replace(/\?.*$/, "") + "?v=" + copy.sha256.slice(0, 16);
+      if (items[index] !== image) return;
+      queue.querySelector<HTMLElement>("#inbox-copy-status")?.replaceWith(Object.assign(document.createElement("div"), { innerHTML: copyStatus(image) }).firstElementChild!);
+      const preview = queue.querySelector<HTMLImageElement>(".inbox-selected-image");
+      if (preview) { preview.src = image.image; await preview.decode().catch(() => {}); }
+      if (!busy && !image.publication?.published) queue.querySelectorAll<HTMLButtonElement>("[data-visual-decision]").forEach(button => { button.disabled = !preview?.naturalWidth || !decisionAllowed(button, image); });
+    }
+    catch (error) {
+      const status = queue.querySelector<HTMLElement>("#inbox-copy-status");
+      if (status && items[index]?.id === image.id) status.innerHTML = `Copia di gioco non pronta: ${escape(error instanceof Error ? error.message : String(error))}. <button type="button" id="inbox-copy-retry">Riprova</button>`;
+    }
+  };
   const vocabulary = async () => {
     const data = await api<{ tags: Tag[] }>("/admin/tags");
     page.querySelector<HTMLElement>("#inbox-tag-vocabulary")!.innerHTML = data.tags.map(tag => `<option value="${escape(tag.label)}"></option>`).join("");
@@ -57,12 +99,13 @@ export async function showVisualReview() {
     const figure = (row: Partner, selected: boolean) => `<figure><figcaption>${label(row.origin)}${selected ? " · immagine da valutare" : " · stesso brief"}</figcaption><img class="review-image${selected ? ' inbox-selected-image' : ''}" src="${escape(row.image)}" alt="${selected ? 'Immagine candidata da valutare' : 'Corrispondente dello stesso brief'}"></figure>`;
     const current = { id: image.id, origin: image.origin, image: image.image };
     const comparison = image.partner ? (image.origin === "REAL" ? figure(current, true) + figure(image.partner, false) : figure(image.partner, false) + figure(current, true)) : figure(current, true);
-    queue.innerHTML = `<article class="visual-review-card"><p class="status">${offset + index + 1} di ${total} · ${label(image.origin)} · ${escape(stateLabel(image.status))}</p><h2>${escape(image.details.title || 'Immagine archiviata')}</h2><div class="inbox-comparison${image.partner ? ' has-partner' : ''}">${comparison}</div>${tagEditor(image)}<div class="review-actions"><button data-visual-decision="approved" class="primary" disabled>Approva</button><button data-visual-decision="rejected" class="secondary" disabled>Rifiuta</button></div><label>Motivo dell’eventuale rifiuto<select id="inbox-reason"><option value="editorial">Scelta editoriale</option><option value="generation">Difetto di generazione</option><option value="technical">Problema tecnico</option><option value="rights">Diritti o licenza incerti</option><option value="provenance">Autenticità o provenienza incerta</option></select></label><details><summary>Nota e giudizi precedenti</summary><label>La tua nota (facoltativa)<textarea id="inbox-note" maxlength="2000" rows="2">${escape(image.note)}</textarea></label>${image.details.previous_decision ? `<p>Stato nell’archivio precedente: ${escape(image.details.previous_decision)}. Conservato nello storico.</p>` : ''}${image.details.previous_owner_note ? `<p>${escape(image.details.previous_owner_note)}</p>` : ''}${image.details.previous_assessment ? `<pre class="curation-history">${escape(JSON.stringify(image.details.previous_assessment, null, 2))}</pre>` : ''}<button id="inbox-history">Mostra le tue revisioni</button><div id="inbox-history-list"></div></details><details><summary>Dettagli dell’immagine</summary><p>${escape(image.details.author || '')}</p>${image.details.source_url ? `<a href="${safeUrl(image.details.source_url)}" target="_blank" rel="noopener noreferrer">Fonte ↗</a>` : ''} ${image.details.license_url ? `<a href="${safeUrl(image.details.license_url)}" target="_blank" rel="noopener noreferrer">Licenza ↗</a>` : ''}<p>La selezione editoriale non pubblica l’immagine.</p></details>${admissionForm(image, categories)}<div class="studio-actions"><button id="inbox-skip">Vedi la prossima</button>${image.status !== "pending" ? '<button data-visual-decision="pending" disabled>Rimetti da rivedere</button>' : ''}${image.status === "rejected" ? '<button id="inbox-delete" class="delete-image">Elimina definitivamente</button>' : ''}</div></article>`;
+    queue.innerHTML = `<article class="visual-review-card"><p class="status">${offset + index + 1} di ${total} · ${label(image.origin)} · ${escape(stateLabel(image.status))}</p><h2>${escape(image.details.title || 'Immagine archiviata')}</h2><div class="inbox-comparison${image.partner ? ' has-partner' : ''}">${comparison}</div>${copyStatus(image)}${tagEditor(image)}<div class="review-actions"><button data-visual-decision="approved" class="primary" disabled>Approva</button><button data-visual-decision="rejected" class="secondary" disabled>Rifiuta</button></div><label>Motivo dell’eventuale rifiuto<select id="inbox-reason"><option value="editorial">Scelta editoriale</option><option value="generation">Difetto di generazione</option><option value="technical">Problema tecnico</option><option value="rights">Diritti o licenza incerti</option><option value="provenance">Autenticità o provenienza incerta</option></select></label><details><summary>Nota e giudizi precedenti</summary><label>La tua nota (facoltativa)<textarea id="inbox-note" maxlength="2000" rows="2">${escape(image.note)}</textarea></label>${image.details.previous_decision ? `<p>Stato nell’archivio precedente: ${escape(image.details.previous_decision)}. Conservato nello storico.</p>` : ''}${image.details.previous_owner_note ? `<p>${escape(image.details.previous_owner_note)}</p>` : ''}${image.details.previous_assessment ? `<pre class="curation-history">${escape(JSON.stringify(image.details.previous_assessment, null, 2))}</pre>` : ''}<button id="inbox-history">Mostra le tue revisioni</button><div id="inbox-history-list"></div></details><details><summary>Dettagli dell’immagine</summary><p>${escape(image.details.author || '')}</p>${image.details.source_url ? `<a href="${safeUrl(image.details.source_url)}" target="_blank" rel="noopener noreferrer">Fonte ↗</a>` : ''} ${image.details.license_url ? `<a href="${safeUrl(image.details.license_url)}" target="_blank" rel="noopener noreferrer">Licenza ↗</a>` : ''}<p>La selezione editoriale non pubblica l’immagine.</p></details>${admissionForm(image, categories)}<div class="studio-actions"><button id="inbox-skip">Vedi la prossima</button>${image.status !== "pending" ? '<button data-visual-decision="pending" disabled>Rimetti da rivedere</button>' : ''}${image.status === "rejected" ? '<button id="inbox-delete" class="delete-image">Elimina definitivamente</button>' : ''}</div></article>`;
     queue.querySelector<HTMLSelectElement>("#inbox-reason")!.value = image.rejection_reason || "editorial";
     const preview = queue.querySelector<HTMLImageElement>(".inbox-selected-image")!;
     const loaded = () => { if (preview.isConnected && !busy && preview.naturalWidth && !image.publication?.published) queue.querySelectorAll<HTMLButtonElement>("[data-visual-decision]").forEach(button => { button.disabled = !decisionAllowed(button, image); }); };
     preview.addEventListener("load", loaded); if (preview.complete) loaded();
     preview.addEventListener("error", () => { message.textContent = "Anteprima non disponibile. Riprova con Aggiorna o passa alla prossima immagine."; });
+    void ensureCopy(image);
   };
   const load = async (resetIndex = true) => {
     deletionPreview = null;
@@ -94,7 +137,9 @@ export async function showVisualReview() {
     busy = true; page.querySelectorAll<HTMLButtonElement>("button").forEach(button => { button.disabled = true; }); state.disabled = origin.disabled = true;
     try {
       const image = items[index];
-      if (target.id === "inbox-tag-add" && image) {
+      if (target.id === "inbox-copy-retry" && image) {
+        copyAttempts.delete(image.id + ":" + image.source_sha256); render();
+      } else if (target.id === "inbox-tag-add" && image) {
         const input = queue.querySelector<HTMLInputElement>("#inbox-tag-input")!, checked = checkTag(input.value.trim());
         if (!checked.ok) {
           message.textContent = checked.reason + (checked.suggestion ? `. Forma proposta: «${checked.suggestion}» (inserita nel campo, premi di nuovo Aggiungi).` : ".");
@@ -112,13 +157,10 @@ export async function showVisualReview() {
           await vocabulary(); await load(false);
         }
       } else if (target.id === "cycle-admit" && image) {
-        const outcome = await submitAdmission(queue.querySelector<HTMLFormElement>("#cycle-admission")!,image);
-        if (outcome) {
-          message.textContent = outcome === "admitted" ? "Ammessa, con la copia di gioco WebP. La pubblicazione attende un numero uguale di REAL e SLOP ammesse." : outcome;
+        if (await submitAdmission(queue.querySelector<HTMLFormElement>("#cycle-admission")!,image)) {
+          message.textContent = "Ammessa. La pubblicazione attende un numero uguale di REAL e SLOP ammesse.";
           await load(false);
         }
-      } else if (target.id === "cycle-copies") {
-        await prepareMissingCopies(page);
       } else if (target.id === "cycle-state" || target.id === "cycle-publish") {
         await cyclePublication(page,target.id === "cycle-publish"); await load(false);
       } else if (target.dataset.visualDecision && image) {

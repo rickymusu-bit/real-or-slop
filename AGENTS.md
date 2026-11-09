@@ -1,8 +1,19 @@
-# Istruzioni Codex — versione canonica 15.1.0
+# Istruzioni Codex — versione canonica 16.0.0
 
-Snapshot: `docs/AGENTS.v15.1.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-09T11:00:00Z. Base main `9c4aa39`.
+Snapshot: `docs/AGENTS.v16.0.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-09T12:00:00Z. Base main `9c4aa39`.
 Le sezioni precedenti rimangono contesto per ambiti non sostituiti.
+
+## Si approva la copia di gioco (16.0.0)
+
+Aggiornato: 2026-11-09T12:00:00Z. Specifica: `docs/copie-di-gioco.v2.0.0.md`; sostituisce la sezione
+15.1.0 e `docs/copie-di-gioco.v1.0.0.md`. Decisione dell'owner: si approva ciò che vedrà il giocatore.
+La copia WebP uniforme nasce nel browser appena la foto entra nella coda (upload, Commons,
+generazione SLOP) e prima del profilo visivo; diventa il file effettivo della Revisione, su cui si
+vota, che si ammette e che il gioco serve. L'originale resta in quarantena con il suo hash. Approvare
+e ammettere richiedono la copia; un voto sull'originale non vale. Non spostare la ricodifica nel
+Worker, non cambiare la ricetta senza una nuova versione, non creare copie da moduli nascosti.
+Migrazione 0032 additiva (tabella e vista con le stesse colonne), remota solo su autorizzazione.
 
 ## Copie di gioco uniformi (15.1.0)
 

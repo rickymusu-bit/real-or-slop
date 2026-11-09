@@ -1,8 +1,18 @@
-# Mappa canonica — versione canonica 15.1.0
+# Mappa canonica — versione canonica 16.0.0
 
-Snapshot: `docs/MASTER.v15.1.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-09T11:00:00Z. Base main `9c4aa39`.
+Snapshot: `docs/MASTER.v16.0.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-09T12:00:00Z. Base main `9c4aa39`.
 Le sezioni precedenti rimangono vigenti per gli ambiti non modificati.
+
+## Si approva la copia di gioco (16.0.0)
+
+Aggiornato: 2026-11-09T12:00:00Z. Specifica: `docs/copie-di-gioco.v2.0.0.md`, app 0.32.0, schema 0032
+(`editorial_review_game_copies`, vista `editorial_review_effective_images` ricreata con le stesse
+colonne). Moduli: `shared/game-copy.v1.0.0.ts` (ricetta), `src/game-copy.v1.0.0.ts` (codifica nel
+browser e `ensureReviewCopies` dopo upload, acquisizione e generazione), `worker/review-inbox.ts`
+(`/game-copy`, approvazione solo sulla copia), `worker/editorial-cycle.ts` (ammissione solo con copia),
+`src/review.ts` (scheda che mostra e prepara la copia). Sostituisce la sezione 15.1.0: nessuna copia
+all'ammissione, nessuna tabella `editorial_game_copies`.
 
 ## Copie di gioco uniformi (15.1.0)
 

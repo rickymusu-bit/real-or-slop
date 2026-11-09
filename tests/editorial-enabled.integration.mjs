@@ -7,6 +7,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {spawnSync,spawn} from 'node:child_process';
 import {build} from 'esbuild';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
+import sharp from 'sharp';
 
 const token='fixture-admin-token-never-used-remotely-000064';
 const calls=[];
@@ -397,6 +398,11 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  const upload=await fetch(new URL('/api/admin/'+ws+'/uploads?'+new URLSearchParams({topic_id:original.id,title:'OWNER_REAL_SECRET'}),base),{
   method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'image/webp'},body:photo('owner')});
  assert.equal(upload.status,201);const saved=await upload.json();
+ // Game copy first, as the review card does on opening: it becomes the file profiled and voted (docs/copie-di-gioco.v2.0.0.md).
+ const copyBytes=await sharp(photo('owner')).rotate().resize({width:2048,height:2048,fit:'inside',withoutEnlargement:true}).webp({quality:85}).toBuffer();
+ const copied=await fetch(new URL('/api/admin/review-inbox/'+saved.inbox_id+'/game-copy?source_sha256='+saved.sha256,base),{
+  method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'image/webp'},body:copyBytes});
+ assert.equal(copied.status,201);saved.sha256=(await copied.json()).sha256;
  const privatePhoto=await fetch(new URL('/api/admin/review-inbox/'+saved.inbox_id+'/image',base));assert.equal(privatePhoto.status,401);
  assert.equal((await api(intel+'?topic_id='+original.id)).ranked_real[0].id,saved.inbox_id);
  await api(intel+'/profile',{inbox_id:saved.inbox_id,sha256:saved.sha256});

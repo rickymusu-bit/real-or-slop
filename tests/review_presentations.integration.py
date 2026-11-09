@@ -11,6 +11,9 @@ import urllib.request
 import urllib.error
 import uuid
 from PIL import Image
+import sys
+sys.path.insert(0, str(Path(__file__).parent))
+import game_copy_helper
 base=os.environ['ROS_TEST_BASE'];assert base.startswith('http://127.0.0.1:')
 token=Path('.dev.vars').read_text().strip().split('=',1)[1]
 def call(path,data=None,method=None):
@@ -31,7 +34,8 @@ for kind in ('originals','assets'):
  with urllib.request.urlopen(req) as r:assert r.status==200
 row=next(r for r in call('review-inbox')[1]['images'] if r['details'].get('source_id')==source_id)
 assert call('review-inbox/'+row['id']+'/tags',dict(add=['fixture-subject']))[0]==200  # approval needs a tag (spec lotti 1.4.2)
-assert call('review-inbox/'+row['id']+'/decision',dict(decision='approved',revision=0,sha256=source_sha,note='Source approved'))[0]==200
+copy_sha=game_copy_helper.prepare(base,token,row['id'],source_sha,source)  # approval is given on the game copy
+assert call('review-inbox/'+row['id']+'/decision',dict(decision='approved',revision=0,sha256=copy_sha,note='Copy approved'))[0]==200
 stream=io.BytesIO();image.crop((30,0,130,100)).resize((1024,1024)).save(stream,'WEBP',quality=85);final=stream.getvalue();sha=hashlib.sha256(final).hexdigest()
 profile=json.loads(Path('tests/editorial-v2-contract.json').read_text())['profile']
 meta=dict(profile=profile,profile_image_sha256=sha,presentation=dict(width=1024,height=1024),normalization=dict(owner_requested=True,approved_source_sha256=source_sha,crop_decision=dict(preserves_context=True,needs_review=False)))
@@ -52,7 +56,7 @@ assert call('assets/'+source_id)[1]==source
 assert call('review-inbox/'+row['id']+'/decision',dict(decision='rejected',revision=1,sha256=source_sha,note='Stale frame'))[0]==409
 assert call('review-inbox/'+row['id']+'/decision',dict(decision='rejected',revision=1,sha256=sha,note='Final frame reviewed'))[0]==200
 history=call('review-inbox/'+row['id']+'/history')[1]['events']
-assert [r['image_sha256'] for r in history]==[source_sha,sha]
+assert [r['image_sha256'] for r in history]==[copy_sha,sha]
 assert call('review-inbox/'+row['id'],dict(confirm_delete=True,revision=2,sha256=sha),method='DELETE')[0]==200
 assert call('review-inbox/'+row['id']+'/image')[0]==404
 assert row['id'] not in [r['id'] for r in call('review-inbox?state=all')[1]['images']]

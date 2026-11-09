@@ -1,3 +1,4 @@
+import { ensureReviewCopies } from "./game-copy.v1.0.0";
 import "./editorial-workspace.v1.0.0.css";
 import { api, content as mainContent, escape } from "./main";
 import { imageMime } from "../shared/editorial-workspace.v1.0.0";
@@ -292,7 +293,7 @@ export async function mountEditorialWorkspace() {
   const addSelection=async(topicId:string)=>{
     const files=[...selected.values()];
     const acquire=explorer.querySelector<HTMLInputElement>("#workspace-commons-acquire")!.checked;
-    let saved=0,present=0,acquired=0,failed=0;
+    let saved=0,present=0,acquired=0,failed=0;const copyFailures:string[]=[];
     for(let i=0;i<files.length;i+=20){
       const result=await api<{saved:number;already_present:number}>("/admin/editorial/workspace/links/batch",{
         method:"POST",body:JSON.stringify({topic_id:topicId,source_urls:files.slice(i,i+20).map(f=>f.page_url)})});
@@ -304,15 +305,19 @@ export async function mountEditorialWorkspace() {
       const pending=workspace.proposals.filter(p=>p.topic_id===topicId && p.kind==="link" && !p.inbox_id && p.source_url && urls.has(p.source_url));
       for(const [index,proposal] of pending.entries()){
         explorerStatus.textContent="Acquisizione "+(index+1)+" di "+pending.length+"…";
-        try{await api("/admin/editorial/intelligence/acquire",{method:"POST",body:JSON.stringify({proposal_id:proposal.id})});acquired++;}
-        catch{failed++;}
+        try{
+          const result=await api<{inbox_id?:string;sha256?:string}>("/admin/editorial/intelligence/acquire",{method:"POST",body:JSON.stringify({proposal_id:proposal.id})});acquired++;
+          explorerStatus.textContent="Copia di gioco "+(index+1)+" di "+pending.length+"…";
+          copyFailures.push(...(await ensureReviewCopies([result])).failed);
+        }catch{failed++;}
       }
       await refresh(topicId);
       document.querySelector<HTMLButtonElement>("#refresh-review")?.click();
     }
     selected.clear();saveSelection();updateExplorerButtons();
     results.querySelectorAll<HTMLInputElement>("[data-commons-select]").forEach(box=>{box.checked=false;box.closest(".workspace-commons-file")?.classList.remove("is-selected");});
-    explorerStatus.textContent=saved+" link aggiunti, "+present+" già presenti"+(acquire?"; "+acquired+" fotografie acquisite"+(failed?", "+failed+" non acquisite (restano tra le proposte)":""):"")+".";
+    explorerStatus.textContent=saved+" link aggiunti, "+present+" già presenti"+(acquire?"; "+acquired+" fotografie acquisite"+(failed?", "+failed+" non acquisite (restano tra le proposte)":""):"")+"."+
+      (copyFailures.length?" Copie di gioco da completare in Revisione: "+[...new Set(copyFailures)].join("; ")+".":"");
     status.textContent=explorerStatus.textContent;
   };
   explorer.querySelector<HTMLButtonElement>("#workspace-commons-add")!.addEventListener("click",async()=>{
@@ -378,13 +383,16 @@ export async function mountEditorialWorkspace() {
     }
     setBusy(true);message.textContent="Acquisizione della fotografia in corso…";
     try{
-      const result=await api<{already_acquired?:boolean}>("/admin/editorial/intelligence/acquire",{
+      const result=await api<{already_acquired?:boolean;inbox_id?:string;sha256?:string}>("/admin/editorial/intelligence/acquire",{
         method:"POST",body:JSON.stringify({proposal_id:proposalId})
       });
+      message.textContent="Preparo la copia di gioco…";
+      const copies=await ensureReviewCopies([result]);
       await refresh(select.value);
       message.textContent=result.already_acquired?
         "Fotografia già acquisita: controlla la Revisione.":
-        "Fotografia acquisita in quarantena. Apri Revisione per valutarla.";
+        "Fotografia acquisita in quarantena, con la copia di gioco. Apri Revisione per valutarla.";
+      if(copies.failed.length)message.textContent+=" Copia di gioco non pronta: "+copies.failed[0]+".";
       document.querySelector<HTMLButtonElement>("#refresh-review")?.click();
     }catch(error){
       message.textContent="Acquisizione non riuscita: "+String(error)+
@@ -397,6 +405,7 @@ export async function mountEditorialWorkspace() {
     const files = [...(uploadForm.querySelector<HTMLInputElement>('input[type="file"]')?.files || [])];
     if (!files.length) return;
     const note = String(new FormData(uploadForm).get("note") || "");
+    const copyFailures: string[] = [];
     setBusy(true);
     try {
       for (let index = 0; index < files.length; index++) {
@@ -409,12 +418,15 @@ export async function mountEditorialWorkspace() {
         const response = await fetch("/api/admin/editorial/workspace/uploads?" + params, {
           method: "POST", headers: { "Content-Type": signature }, body: file,
         });
-        const result = await response.json() as { error?: string };
+        const result = await response.json() as { error?: string; inbox_id?: string; sha256?: string };
         if (!response.ok) throw new Error(result.error || "Caricamento non riuscito");
+        status.textContent = "Copia di gioco " + (index + 1) + " di " + files.length + "…";
+        copyFailures.push(...(await ensureReviewCopies([result])).failed);
       }
       await refresh(select.value);
       uploadForm.reset();
-      status.textContent = files.length + " fotografie consegnate alla coda privata, ancora da verificare.";
+      status.textContent = files.length + " fotografie consegnate alla coda privata, ancora da verificare." +
+        (copyFailures.length ? " Copie di gioco da completare in Revisione: " + [...new Set(copyFailures)].join("; ") + "." : "");
       document.querySelector<HTMLButtonElement>("#refresh-review")?.click();
     } catch (error) {
       await refresh(select.value);

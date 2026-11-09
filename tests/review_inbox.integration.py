@@ -9,6 +9,9 @@ import urllib.error
 import urllib.request
 import uuid
 from PIL import Image
+import sys
+sys.path.insert(0, str(Path(__file__).parent))
+import game_copy_helper
 
 base=os.environ['ROS_TEST_BASE']; assert base.startswith('http://127.0.0.1:')
 token=Path('.dev.vars').read_text().strip().split('=',1)[1]
@@ -58,6 +61,13 @@ assert call(tags,{'add':['a'],'remove':['a']})[0]==400
 assert call(tags,{})[0]==400
 status,result=call(tags,{'add':['steam-locomotive','place-de-la-république','steam-locomotive']})
 assert status==200 and result['tags']==['place-de-la-république','steam-locomotive'] and result['untagged'] is False,result
+# The owner approves the uniform WebP game copy, not the original (docs/copie-di-gioco.v2.0.0.md).
+status,result=call('review-inbox/'+row['id']+'/decision',payload)
+assert status==409 and 'copia di gioco' in result['error'],(status,result)
+copy_sha=game_copy_helper.prepare(base,token,row['id'],sha,raw)
+assert call('review-inbox/'+row['id']+'/image')[1]!=raw
+assert call('review-inbox/'+row['id']+'/decision',payload)[0]==409  # the original hash no longer matches
+sha=copy_sha;payload['sha256']=sha;remove['sha256']=sha
 assert call(tags)[1]['tags']==['place-de-la-république','steam-locomotive']
 assert call(tags,{'add':['steam-locomotive']})[1]['tags']==['place-de-la-république','steam-locomotive']  # idempotent
 assert row['id'] not in [x['id'] for x in call('review-inbox?state=untagged')[1]['images']]

@@ -1,6 +1,10 @@
 import { body, hash, HttpError, id, json, type Env } from "./core";
 import { hasTags, photoTags, tagsFor, TAGGED } from "./tags.v1.0.0";
 import { bulkRejectedDeletion } from "./review-bulk-delete";
+import { cleanImage } from "../shared/media-clean.v1.0.0";
+import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
+import { imageGeometry } from "../shared/image-geometry.v1.0.0";
+import { GAME_COPY, GAME_COPY_RECIPE, gameCopyDimensions } from "../shared/game-copy.v1.0.0";
 
 interface InboxRow {
   id: string; origin: string; sha256: string; source_sha256: string; media_key: string; metadata_json: string;
@@ -83,12 +87,13 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
     const tags = await tagsFor(env, rows.results.map(row => row.id));
     return json({ images: rows.results.map(row => ({ id: row.id, origin: row.origin, sha256: row.sha256, revision: row.revision, tags: tags.get(row.id) || [],
       status: row.status, details: JSON.parse(row.metadata_json) as unknown, note: ownerNote(row.note || "").note,
-      rejection_reason: ownerNote(row.note || "").reason, image: `${base}/${row.id}/image`,
+      rejection_reason: ownerNote(row.note || "").reason, image: `${base}/${row.id}/image?v=${row.sha256.slice(0, 16)}`,
+      source_sha256: row.source_sha256,
       publication: row.catalog_id ? { image_id:row.catalog_id, cycle_id:row.cycle_id, published:Boolean(row.cycle_published) } : null,
       partner: row.partner_id ? { id: row.partner_id, origin: row.partner_origin, image: `${base}/${row.partner_id}/image` } : null })),
       total: total?.count || 0, counts: counts.results, untagged: untagged?.count || 0, offset, limit: 50, publication_available: false });
   }
-  const match = path.match(/^\/api\/admin\/review-inbox\/([\w-]+)(?:\/(image|decision|history|tags))?$/);
+  const match = path.match(/^\/api\/admin\/review-inbox\/([\w-]+)(?:\/(image|decision|history|tags|game-copy))?$/);
   if (!match) throw new HttpError(404, "Coda di revisione inesistente");
   const row = await env.DB.prepare("SELECT * FROM editorial_review_effective_images WHERE id=?").bind(match[1]).first<InboxRow>();
   if (!row) throw new HttpError(404, "Immagine non trovata");
@@ -115,6 +120,7 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
     return new Response(file.body, { headers: { "Content-Type": file.httpMetadata?.contentType || "image/webp", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
   }
   if (match[2] === "tags") return photoTags(request, env, row);
+  if (match[2] === "game-copy") return reviewGameCopy(request, env, row);
   if (match[2] === "history" && request.method === "GET") return json({ previous: JSON.parse(row.metadata_json) as unknown,
     events: (await env.DB.prepare("SELECT decision,note,revision,image_sha256,created_at FROM editorial_review_inbox_events WHERE image_id=? ORDER BY revision").bind(row.id).all<{note:string}>()).results.map(e => ({...e,...ownerNote(e.note)})) });
   if (match[2] === "decision" && request.method === "POST") {
@@ -127,6 +133,8 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
         typeof data.note !== "string" || data.note.length > 2000) throw new HttpError(409, "Immagine o revisione aggiornata: ricaricare la coda");
     const untaggedError = "Aggiungi almeno un tag prima di approvare: una foto con il solo «untagged» non si approva";
     if (data.decision === "approved" && !(await hasTags(env, row.id))) throw new HttpError(409, untaggedError);
+    // The owner approves exactly what players will see: the uniform WebP game copy (docs/copie-di-gioco.v2.0.0.md).
+    if (data.decision === "approved" && !(await hasGameCopy(env, row))) throw new HttpError(409, GAME_COPY_MISSING);
     const file = await env.QUARANTINE?.get(row.media_key);
     if (!file || file.size > 12_000_000) throw new HttpError(409, "File non disponibile per la revisione");
     if ([...new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()))].map(x => x.toString(16).padStart(2, "0")).join("") !== row.sha256) throw new HttpError(409, "Il file è cambiato: revisione bloccata");
@@ -144,4 +152,48 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
     return json({ saved: true, status: data.decision, revision: row.revision + 1, published: false });
   }
   throw new HttpError(405, "Metodo non consentito");
+}
+
+export const GAME_COPY_MISSING = "Prepara la copia di gioco prima di approvare: si approva ciò che vedranno i giocatori";
+export async function hasGameCopy(env: Env, row: { id: string; source_sha256: string }): Promise<boolean> {
+  return Boolean(await env.DB.prepare("SELECT 1 FROM editorial_review_game_copies WHERE inbox_id=? AND source_sha256=?")
+    .bind(row.id, row.source_sha256).first());
+}
+/** POST /api/admin/review-inbox/:id/game-copy?source_sha256=: the WebP made in the owner's browser from the
+ * file under review becomes the file shown, voted, admitted and served. The original stays as it is. */
+async function reviewGameCopy(request: Request, env: Env, row: InboxRow): Promise<Response> {
+  if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+  if (!env.QUARANTINE) throw new HttpError(503, "Storage non configurato");
+  const asked = new URL(request.url).searchParams.get("source_sha256");
+  const existing = await env.DB.prepare("SELECT sha256 FROM editorial_review_game_copies WHERE inbox_id=? AND source_sha256=?")
+    .bind(row.id, row.source_sha256).first<{ sha256: string }>();
+  // Asking with the source hash or with the copy's own hash both confirm the existing copy.
+  if (existing && (asked === row.source_sha256 || asked === existing.sha256)) return json({ id: row.id, sha256: existing.sha256, already_prepared: true });
+  if (asked !== row.source_sha256) throw new HttpError(409, "Immagine aggiornata: ricaricare la coda");
+  if (row.status === "rejected") throw new HttpError(409, "Immagine rifiutata: nessuna copia di gioco");
+  if (Number(request.headers.get("content-length") || 0) > GAME_COPY.maxBytes) throw new HttpError(413, "Copia di gioco oltre 4 MB");
+  const upload = new Uint8Array(await request.arrayBuffer());
+  if (!upload.length || upload.length > GAME_COPY.maxBytes) throw new HttpError(413, "Copia di gioco vuota o oltre 4 MB");
+  let copy;
+  try { copy = cleanImage(upload); } catch { throw new HttpError(415, "Copia di gioco non leggibile"); }
+  if (copy.mime !== GAME_COPY.mime) throw new HttpError(415, "La copia di gioco deve essere WebP");
+  // Before the copy exists, the effective file is the one under review: the copy must have its displayed shape.
+  const source = await env.QUARANTINE.get(row.media_key);
+  if (!source) throw new HttpError(409, "File in revisione non disponibile");
+  const geometry = imageGeometry(new Uint8Array(await source.arrayBuffer()));
+  const shown = { width: geometry.width ?? geometry.encoded_width, height: geometry.height ?? geometry.encoded_height };
+  const expected = gameCopyDimensions(shown.width, shown.height), actual = imageDimensions(copy.bytes);
+  if (actual.width !== expected.width || actual.height !== expected.height)
+    throw new HttpError(409, `Dimensioni della copia ${actual.width}×${actual.height}, attese ${expected.width}×${expected.height}`);
+  const sha = [...new Uint8Array(await crypto.subtle.digest("SHA-256", copy.bytes))].map(x => x.toString(16).padStart(2, "0")).join("");
+  const key = "game-copies/" + row.id + "/" + sha + ".webp";
+  await env.QUARANTINE.put(key, copy.bytes, { httpMetadata: { contentType: GAME_COPY.mime }, customMetadata: { sha256: sha, source_sha256: row.source_sha256 } });
+  await env.DB.prepare(`INSERT INTO editorial_review_game_copies(inbox_id,source_sha256,sha256,media_key,mime,width,height,bytes,recipe,created_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING`)
+    .bind(row.id, row.source_sha256, sha, key, GAME_COPY.mime, actual.width, actual.height, copy.bytes.length, GAME_COPY_RECIPE, new Date().toISOString()).run();
+  const stored = await env.DB.prepare("SELECT sha256 FROM editorial_review_game_copies WHERE inbox_id=? AND source_sha256=?")
+    .bind(row.id, row.source_sha256).first<{ sha256: string }>();
+  if (!stored) throw new HttpError(409, "Copia di gioco non registrata: ricaricare la coda");
+  return json({ id: row.id, sha256: stored.sha256, width: actual.width, height: actual.height, bytes: copy.bytes.length,
+    already_prepared: stored.sha256 !== sha }, stored.sha256 === sha ? 201 : 200);
 }

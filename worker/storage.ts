@@ -29,12 +29,6 @@ export class DemoStore implements ObjectStore {
   }
 }
 export async function media(env: Env, image: ImageRow) {
-  // Uniform WebP game copy of the admitted file, when one was prepared (docs/copie-di-gioco.v1.0.0.md).
-  // Before migration 0032 the table is absent: the game keeps serving the cleaned admitted file.
-  const copy = image.demo === 1 || !env.IMAGES ? null : await env.DB.prepare(
-    `SELECT g.r2_key FROM editorial_game_copies g JOIN images i ON i.id=g.image_id AND i.sha256=g.source_sha256
-     WHERE g.image_id=?`).bind(image.id).first<{ r2_key: string }>()
-    .catch((error: unknown) => { if (String(error).includes("no such table")) return null; throw error; });
   const store =
     image.demo === 1
       ? new DemoStore()
@@ -42,7 +36,7 @@ export async function media(env: Env, image: ImageRow) {
         ? new R2Store(env.IMAGES)
         : null;
   if (!store) throw new HttpError(503, "Storage immagini non configurato");
-  const response = await store.get(copy?.r2_key || image.r2_key);
+  const response = await store.get(image.r2_key);
   if (!response) throw new HttpError(404, "Immagine non disponibile");
   if (image.demo === 1) return response;
   return gameCopy(response);

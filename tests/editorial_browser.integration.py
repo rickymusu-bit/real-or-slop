@@ -227,6 +227,10 @@ with sync_playwright() as p:
             expect(page.locator('#inbox-tag-list li')).to_have_count(1)
             page.locator('.inbox-tags').screenshot(path=str(folder/(name+'-tags.png')))
             expect(page.locator('[data-visual-decision=approved]')).to_be_enabled()
+            # The owner approves the WebP game copy, i.e. what players will see (docs/copie-di-gioco.v2.0.0.md).
+            expect(page.locator('#inbox-copy-status')).to_contain_text('Stai valutando la copia di gioco: WebP')
+            page.locator('.inbox-comparison').screenshot(path=str(folder/(name+'-game-copy.png')))
+            page.locator('#inbox-copy-status').screenshot(path=str(folder/(name+'-game-copy-status.png')))
             page.locator('[data-visual-decision=approved]').click()
             expect(page.locator('#review-message')).to_contain_text('Approvata')
             page.get_by_role('button',name='Produzione immagini',exact=True).click()
@@ -278,8 +282,7 @@ with sync_playwright() as p:
                 admission.locator('select').select_option('fixture')
                 for checkbox in admission.locator('input[type=checkbox]').all():checkbox.check()
                 admission.locator('#cycle-admit').click()
-                # The browser encodes and registers the uniform WebP game copy right after admission.
-                expect(page.locator('#review-message')).to_contain_text('Ammessa, con la copia di gioco WebP')
+                expect(page.locator('#review-message')).to_contain_text('Ammessa')
             admit(voted_title,'REAL')
             page.locator('#inbox-origin').select_option('AI')
             page.locator('#inbox-state').select_option('pending')
@@ -290,6 +293,8 @@ with sync_playwright() as p:
             page.locator('#inbox-tag-add').click()
             expect(page.locator('#inbox-tag-list')).to_contain_text('coastal-work')
             expect(page.locator('[data-visual-decision=approved]')).to_be_enabled()
+            # The owner approves the WebP game copy, i.e. what players will see (docs/copie-di-gioco.v2.0.0.md).
+            expect(page.locator('#inbox-copy-status')).to_contain_text('Stai valutando la copia di gioco: WebP')
             page.locator('[data-visual-decision=approved]').click()
             expect(page.locator('#review-message')).to_contain_text('Approvata')
             admit(slop_title,'AI')
