@@ -14,7 +14,7 @@ let searchMode='success',embeddingMode='success',descriptionMode='success',sugge
 const images=JSON.parse(spawnSync('python3',['-c',`import io,json,base64
 from PIL import Image
 out={}
-for name,size,color in [('owner',(240,360),'blue'),('owner-link',(240,360),'cyan'),('owner-link-mobile',(240,360),'magenta'),('commons',(480,320),'red'),('lot-canal',(300,200),'teal'),('big-canal',(960,640),'navy'),('1536x1024',(1536,1024),'green'),('1024x1536',(1024,1536),'yellow'),('1024x1024',(1024,1024),'purple')]:
+for name,size,color in [('owner',(240,360),'blue'),('owner-link',(240,360),'cyan'),('owner-link-mobile',(240,360),'magenta'),('commons',(480,320),'red'),('lot-canal',(300,200),'teal'),('big-canal',(960,640),'navy'),('huge-canal',(1024,682),'olive'),('1536x1024',(1536,1024),'green'),('1024x1536',(1024,1536),'yellow'),('1024x1024',(1024,1024),'purple')]:
  b=io.BytesIO();Image.new('RGB',size,color).save(b,'WEBP');out[name]=base64.b64encode(b.getvalue()).decode()
 for name,orientation,color in [('geometry-probe',6,'orange'),('legacy-desktop',6,'pink'),('legacy-mobile',8,'cyan'),('geometry-invalid',9,'gray')]:
  b=io.BytesIO();exif=Image.Exif();exif[274]=orientation;Image.new('RGB',(240,120),color).save(b,'JPEG',exif=exif);out[name]=base64.b64encode(b.getvalue()).decode()
@@ -129,6 +129,13 @@ b=io.BytesIO();Image.new('RGB',(${w},${h}),(${imageSequence*61%255},${imageSeque
     return globalThis.Response.json({query:{search:[{title:'Category:Canals of Venice'},{title:'File:Not a category.jpg'}]}});
    if(list==='categorymembers' && url.searchParams.get('cmtype')==='subcat')
     return globalThis.Response.json({query:{categorymembers:[{title:'Category:Canal Grande'}]}});
+   if(url.searchParams.get('titles')==='File:Missing canal.jpg')return globalThis.Response.json({query:{pages:[{title:'File:Missing canal.jpg',missing:true}]}});
+   if(url.searchParams.get('titles')==='File:Huge canal.jpg'){
+    // 60 Mpx but light: pixels alone force the proportional thumbnail; limits apply to the copy downloaded.
+    return globalThis.Response.json({query:{pages:[{title:'File:Huge canal.jpg',imageinfo:[{url:'https://upload.wikimedia.org/wikipedia/commons/c/cc/Huge_canal.jpg',
+     thumburl:'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cc/Huge_canal.jpg/2048px-Huge_canal.jpg?utm_source=commons.wikimedia.org',
+     width:9504,height:6336,size:5000000,thumbwidth:2048,thumbheight:1365,extmetadata:{Artist:{value:'Fixture author'},LicenseUrl:{value:'https://creativecommons.org/licenses/by-sa/4.0/'}}}]}]}});
+   }
    if(url.searchParams.get('titles')==='File:Big canal.jpg'){
     // Originals over 12 MB are fetched as a proportional thumbnail from thumb.wikimedia.org.
     return globalThis.Response.json({query:{pages:[{title:'File:Big canal.jpg',imageinfo:[{url:'https://upload.wikimedia.org/wikipedia/commons/c/cc/Big_canal.jpg',
@@ -151,6 +158,7 @@ b=io.BytesIO();Image.new('RGB',(${w},${h}),(${imageSequence*61%255},${imageSeque
     width:ownerLink?240:480,height:ownerLink?360:320,size:photo(ownerMobile?'owner-link-mobile':ownerLink?'owner-link':'commons').length,
     extmetadata:{Artist:{value:'Fixture author'},LicenseUrl:{value:'https://creativecommons.org/licenses/by/4.0/'}}}]}]}});
   }
+  if(url.hostname==='thumb.wikimedia.org' && url.pathname.endsWith('/2048px-Huge_canal.jpg'))return new globalThis.Response(photo('huge-canal'),{headers:{'Content-Type':'image/webp'}});
   if(url.hostname==='thumb.wikimedia.org' && url.pathname.endsWith('/1920px-Big_canal.jpg')){
    assert.equal(url.search,'','tracking parameters are dropped before download');
    return new globalThis.Response(photo('big-canal'),{headers:{'Content-Type':'image/webp'}});
@@ -228,6 +236,14 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  const bigMeta=JSON.parse((await db.prepare('SELECT metadata_json FROM editorial_review_inbox WHERE id=?').bind(big.inbox_id).first()).metadata_json);
  assert.equal(bigMeta.provenance.original_is_preview,true);
  assert.equal(bigMeta.provenance.original_url,'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cc/Big_canal.jpg/1920px-Big_canal.jpg');
+ await api(ws+'/links/batch',{topic_id:lot.id,source_urls:['https://commons.wikimedia.org/wiki/File:Huge_canal.jpg','https://commons.wikimedia.org/wiki/File:Missing_canal.jpg']},201);
+ const lotLinks=(await api(ws)).proposals.filter(p=>p.topic_id===lot.id);
+ const huge=await api(intel+'/acquire',{proposal_id:lotLinks.find(p=>p.source_url.endsWith('Huge_canal.jpg')).id},[200,201]);
+ const hugeMeta=JSON.parse((await db.prepare('SELECT metadata_json FROM editorial_review_inbox WHERE id=?').bind(huge.inbox_id).first()).metadata_json);
+ assert.equal(hugeMeta.provenance.original_is_preview,true,'60 Mpx originals are acquired as a proportional thumbnail');
+ assert.equal(hugeMeta.provenance.width,9504);
+ const missing=await api(intel+'/acquire',{proposal_id:lotLinks.find(p=>p.source_url.endsWith('Missing_canal.jpg')).id},404);
+ assert.match(missing.error,/non esiste su Commons/);
  assert.ok(calls.slice(lotCalls).every(c=>/^https:\/\/(commons|upload|thumb)\.wikimedia\.org\//.test(c.url)),'Browsing and acquiring Commons must not call a model');
  const originalCalls=calls.length;
  const original=await api(ws+'/topics',{title:'Brussels agricultural protests in 2024',description:'Agricultural workers demonstrating in Brussels during 2024.'},201);

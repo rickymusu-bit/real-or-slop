@@ -99,7 +99,9 @@ async function bounded(url: string, max = MAX_IMAGE_BYTES): Promise<{bytes:Array
   for (const chunk of chunks) { all.set(chunk,offset); offset += chunk.length; }
   const mime = imageMime(all);
   if (!mime) throw new HttpError(415,"Il file Commons non è una fotografia JPEG/PNG/WebP");
-  try { imageDimensions(all); } catch { throw new HttpError(415,"Intestazione o dimensioni del file Commons non valide"); }
+  let pixels: { width: number; height: number };
+  try { pixels = imageDimensions(all); } catch { throw new HttpError(415,"Intestazione o dimensioni del file Commons non valide"); }
+  if (pixels.width * pixels.height > MAX_IMAGE_PIXELS) throw new HttpError(413,"File Commons oltre il limite di pixel");
   return {bytes:all.buffer,mime};
 }
 export async function commonsFile(value: string): Promise<CommonsFile> {
@@ -107,16 +109,20 @@ export async function commonsFile(value: string): Promise<CommonsFile> {
   const response = await fetch(commonsApiUrl(title),{redirect:"manual",headers:{...COMMONS_HEADERS,"Accept":"application/json"}});
   if (response.status !== 200) throw commonsUnavailable("API Commons non disponibile", response.status);
   const info = await response.json() as { query?: { pages?: Array<{title?:string;imageinfo?:Array<{
-    url?:string;thumburl?:string;width?:number;height?:number;size?:number;
+    url?:string;thumburl?:string;width?:number;height?:number;size?:number;thumbwidth?:number;thumbheight?:number;
     extmetadata?:Record<string,{value?:string}>
   }>}>} };
   const page = info.query?.pages?.[0], image = page?.imageinfo?.[0];
-  if (!image || !image.url) throw new HttpError(404,"File Commons non trovato");
-  if (!Number.isSafeInteger(image.width) || !Number.isSafeInteger(image.height) ||
-      (image.width || 0)<1 || (image.height || 0)<1 ||
-      (image.width || 0)*(image.height || 0)>MAX_IMAGE_PIXELS)
-    throw new HttpError(413,"Dimensioni dell'originale fuori limite");
-  const chooseThumb = (image.size || 0)>MAX_IMAGE_BYTES;
+  if (!image || !image.url) throw new HttpError(404,"File Commons non trovato: «"+title.slice(5,165)+"» non esiste su Commons. "+
+    "Controlla il link: copiandolo, i trattini bassi attorno ai trattini («_-_») a volte spariscono.");
+  if (!Number.isSafeInteger(image.width) || !Number.isSafeInteger(image.height) || (image.width || 0)<1 || (image.height || 0)<1)
+    throw new HttpError(413,"Dimensioni dell'originale non valide");
+  // v1.5.0 (2026-11-09T07:00:00Z): an original too heavy OR with too many pixels is fetched as Commons' proportional
+  // thumbnail (no cropping); the limits apply to the copy actually downloaded, not to the original.
+  const chooseThumb = (image.size || 0)>MAX_IMAGE_BYTES || (image.width || 0)*(image.height || 0)>MAX_IMAGE_PIXELS;
+  // Declared thumbnail size is a cheap early check; the downloaded bytes are always measured again in bounded().
+  if (chooseThumb && (image.thumbwidth || 0)*(image.thumbheight || 0)>MAX_IMAGE_PIXELS)
+    throw new HttpError(413,"Nessuna copia proporzionale entro i limiti");
   const download = commonsMediaUrl(chooseThumb ? image.thumburl : image.url);
   if (!download) throw new HttpError(413,"Nessuna copia proporzionale disponibile");
   const file = await bounded(download);
