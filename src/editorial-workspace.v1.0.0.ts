@@ -35,6 +35,7 @@ export async function mountEditorialWorkspace() {
     '<button type="button" id="workspace-commons-more" hidden>Altri risultati</button>'+
     '<details id="workspace-commons-category-box" hidden><summary>Categorie collegate</summary><div id="workspace-commons-categories"></div></details>'+
     '<div class="workspace-commons-actions"><p id="workspace-commons-status" role="status" aria-live="polite">Nessuna fotografia selezionata.</p>'+
+    '<button type="button" id="workspace-commons-review" disabled>Rivedi selezione (0)</button>'+
     '<label class="workspace-inline"><input type="checkbox" id="workspace-commons-acquire" checked> Acquisisci subito le foto aggiunte</label>'+
     '<button type="button" id="workspace-commons-add" disabled>Aggiungi le selezionate al lotto corrente</button>'+
     '<button type="button" id="workspace-commons-new-lot" disabled>Crea un lotto con le selezionate</button></div>'+
@@ -42,7 +43,13 @@ export async function mountEditorialWorkspace() {
     '<div class="workspace-commons-preview-text"><h3 id="workspace-commons-preview-title"></h3><p data-preview="meta"></p><p data-preview="description"></p></div>'+
     '<div class="workspace-commons-preview-actions"><button type="button" data-preview="previous">‹ Precedente</button><button type="button" data-preview="toggle">Seleziona</button>'+
     '<button type="button" data-preview="next">Successiva ›</button><a data-preview="page" target="_blank" rel="noopener noreferrer">Apri su Commons</a>'+
-    '<button type="button" data-preview="close">Chiudi</button></div></dialog></section>' +
+    '<button type="button" data-preview="close">Chiudi</button></div></dialog>'+
+    '<dialog id="workspace-commons-selection" aria-labelledby="workspace-commons-selection-title"><div class="workspace-commons-selection-head">'+
+    '<h3 id="workspace-commons-selection-title">Foto selezionate</h3><button type="button" data-selection="close">Chiudi</button></div>'+
+    '<p class="workspace-hint">Controlla le foto prima di aggiungerle: tocca una miniatura per l’anteprima, «Rimuovi» per toglierla. Niente viene acquisito finché non premi «Aggiungi».</p>'+
+    '<div id="workspace-commons-selection-list"></div><div class="workspace-commons-preview-actions">'+
+    '<button type="button" data-selection="clear">Svuota selezione</button><button type="button" data-selection="add">Aggiungi al lotto corrente</button>'+
+    '<button type="button" data-selection="new-lot">Crea un lotto con queste</button></div></dialog></section>' +
     '<div class="workspace-columns"><form id="workspace-link-form"><h2>Proponi fotografie tramite link</h2><label>URL HTTPS, uno per riga (massimo 20)<textarea name="source_urls" rows="6" required placeholder="https://commons.wikimedia.org/wiki/File:...&#10;https://commons.wikimedia.org/wiki/File:..."></textarea></label><label>Nota comune facoltativa<textarea name="note" maxlength="1000" rows="2"></textarea></label><button type="submit">Registra i link</button><p class="workspace-hint">I duplicati vengono saltati. Anteprime, file originali e link del visualizzatore di Commons vengono ricondotti alla pagina File:. Registrare un link non significa acquisire o approvare la fotografia.</p><p id="workspace-link-feedback" role="status" aria-live="polite"></p></form>' +
     '<form id="workspace-upload-form"><h2>Proponi fotografie dal dispositivo</h2><label>Fotografie originali<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required></label><label>Nota facoltativa<textarea name="note" maxlength="1000" rows="2"></textarea></label><button type="submit">Carica nella coda privata</button><p class="workspace-hint">Solo per l’amministratore. Nessun ritaglio: ogni file conserva proporzioni e pixel originali. Limite di 12 MB per file.</p></form></div>' +
     '<h2>Le tue proposte</h2><p id="workspace-acquire-status" role="status" aria-live="polite"></p><div id="workspace-proposals"><p>Caricamento…</p></div>' +
@@ -58,11 +65,25 @@ export async function mountEditorialWorkspace() {
   const status = section.querySelector<HTMLElement>("#workspace-status")!;
   const reportTopic=(message:string)=>{status.textContent=message;section.querySelector<HTMLElement>('#workspace-topic-status')!.textContent=message;};
   let workspace: Workspace = { topics: [], proposals: [] };
+  // The selection survives new searches and page reloads in this tab (sessionStorage), until it is added or cleared.
+  const SELECTION_KEY="ros-commons-selection-v1";
   const selected=new Map<string,CommonsFile>();
+  try{
+    const saved=JSON.parse(sessionStorage.getItem(SELECTION_KEY) || "[]") as CommonsFile[];
+    for(const file of Array.isArray(saved)?saved.slice(0,200):[])
+      if(file && typeof file.page_url==="string" && file.page_url.startsWith("https://commons.wikimedia.org/wiki/File:") &&
+        typeof file.thumb_url==="string" && typeof file.title==="string")selected.set(file.page_url,file);
+  }catch{ /* an unreadable saved selection is simply ignored */ }
+  const saveSelection=()=>{try{sessionStorage.setItem(SELECTION_KEY,JSON.stringify([...selected.values()]));}catch{ /* storage full or disabled */ }};
   let busy = false;
   const updateExplorerButtons=()=>{
     section.querySelector<HTMLButtonElement>('#workspace-commons-add')!.disabled=busy || !selected.size || !select.value;
     section.querySelector<HTMLButtonElement>('#workspace-commons-new-lot')!.disabled=busy || !selected.size;
+    const review=section.querySelector<HTMLButtonElement>('#workspace-commons-review')!;
+    review.textContent="Rivedi selezione ("+selected.size+")";review.disabled=busy || !selected.size;
+    section.querySelector<HTMLButtonElement>('[data-selection=add]')!.disabled=busy || !selected.size || !select.value;
+    section.querySelector<HTMLButtonElement>('[data-selection=new-lot]')!.disabled=busy || !selected.size;
+    section.querySelector<HTMLButtonElement>('[data-selection=clear]')!.disabled=busy || !selected.size;
   };
   const setBusy = (enabled: boolean) => {
     busy = enabled;
@@ -152,9 +173,23 @@ export async function mountEditorialWorkspace() {
   const shown=new Map<string,CommonsFile>();
   let previewed="";
   const selectionText=()=>selected.size?selected.size+(selected.size===1?" fotografia selezionata.":" fotografie selezionate."):"Nessuna fotografia selezionata.";
+  const selectionDialog=explorer.querySelector<HTMLDialogElement>("#workspace-commons-selection")!;
+  const renderSelection=()=>{
+    const list=selectionDialog.querySelector<HTMLElement>("#workspace-commons-selection-list")!;
+    selectionDialog.querySelector<HTMLElement>("h3")!.textContent="Foto selezionate ("+selected.size+")";
+    list.innerHTML=selected.size?[...selected.values()].map(file=>{
+      const name=file.title.replace(/^File:/,"");
+      return '<article class="workspace-commons-chosen"><button type="button" class="workspace-commons-thumb" data-commons-preview="'+escape(file.page_url)+'" aria-label="Anteprima: '+escape(name)+'">'+
+        '<img src="'+escape(file.thumb_url)+'" alt="" loading="lazy" referrerpolicy="no-referrer"></button><div><strong>'+escape(name)+'</strong>'+
+        '<small>'+escape([file.author,file.license,file.width&&file.height?file.width+"×"+file.height+" px":""].filter(Boolean).join(" · "))+'</small>'+
+        '<button type="button" data-selection-remove="'+escape(file.page_url)+'">Rimuovi</button></div></article>';
+    }).join(""):'<p>Nessuna foto selezionata.</p>';
+  };
   const setSelected=(url:string,on:boolean)=>{
-    const file=shown.get(url);
+    const file=shown.get(url) || selected.get(url);
     if(on && file)selected.set(url,file);else selected.delete(url);
+    saveSelection();
+    if(selectionDialog.open)renderSelection();
     results.querySelectorAll<HTMLInputElement>("[data-commons-select]").forEach(box=>{
       if(box.dataset.commonsSelect===url){box.checked=selected.has(url);box.closest(".workspace-commons-file")?.classList.toggle("is-selected",box.checked);}
     });
@@ -162,7 +197,7 @@ export async function mountEditorialWorkspace() {
     updateExplorerButtons();
   };
   const showPreview=(url:string)=>{
-    const file=shown.get(url);if(!file)return;
+    const file=shown.get(url) || selected.get(url);if(!file)return;
     previewed=url;
     const image=preview.querySelector<HTMLImageElement>("img")!;
     image.src=file.preview_url;image.alt=file.title.replace(/^File:/,"");
@@ -171,7 +206,7 @@ export async function mountEditorialWorkspace() {
     preview.querySelector<HTMLElement>('[data-preview=description]')!.textContent=file.description;
     preview.querySelector<HTMLAnchorElement>('[data-preview=page]')!.href=file.page_url;
     preview.querySelector<HTMLButtonElement>('[data-preview=toggle]')!.textContent=selected.has(url)?"Deseleziona":"Seleziona";
-    const keys=[...shown.keys()],index=keys.indexOf(url);
+    const keys=selectionDialog.open?[...selected.keys()]:[...shown.keys()],index=keys.indexOf(url);
     preview.querySelector<HTMLButtonElement>('[data-preview=previous]')!.disabled=index<=0;
     preview.querySelector<HTMLButtonElement>('[data-preview=next]')!.disabled=index<0 || index>=keys.length-1;
     if(!preview.open)preview.showModal();
@@ -228,8 +263,26 @@ export async function mountEditorialWorkspace() {
     if(action==="close")preview.close();
     else if(action==="toggle"){setSelected(previewed,!selected.has(previewed));showPreview(previewed);}
     else if(action==="previous" || action==="next"){
-      const keys=[...shown.keys()],index=keys.indexOf(previewed)+(action==="next"?1:-1);
+      const keys=selectionDialog.open?[...selected.keys()]:[...shown.keys()],index=keys.indexOf(previewed)+(action==="next"?1:-1);
       if(keys[index])showPreview(keys[index]);
+    }
+  });
+  explorerStatus.textContent=selectionText();
+  explorer.querySelector<HTMLButtonElement>("#workspace-commons-review")!.addEventListener("click",()=>{
+    renderSelection();if(!selectionDialog.open)selectionDialog.showModal();
+  });
+  selectionDialog.addEventListener("click",event=>{
+    const target=event.target as HTMLElement;
+    const remove=target.closest<HTMLButtonElement>("[data-selection-remove]");
+    if(remove){setSelected(remove.dataset.selectionRemove || "",false);return;}
+    const action=target.closest<HTMLElement>("[data-selection]")?.dataset.selection;
+    if(action==="close")selectionDialog.close();
+    else if(action==="clear"){
+      if(!window.confirm("Togliere tutte le "+selected.size+" foto dalla selezione? Nessuna foto è stata ancora aggiunta."))return;
+      for(const url of [...selected.keys()])setSelected(url,false);
+    }else if(action==="add" || action==="new-lot"){
+      selectionDialog.close();
+      explorer.querySelector<HTMLButtonElement>(action==="add"?"#workspace-commons-add":"#workspace-commons-new-lot")!.click();
     }
   });
   explorer.addEventListener("change",event=>{
@@ -257,7 +310,7 @@ export async function mountEditorialWorkspace() {
       await refresh(topicId);
       document.querySelector<HTMLButtonElement>("#refresh-review")?.click();
     }
-    selected.clear();
+    selected.clear();saveSelection();updateExplorerButtons();
     results.querySelectorAll<HTMLInputElement>("[data-commons-select]").forEach(box=>{box.checked=false;box.closest(".workspace-commons-file")?.classList.remove("is-selected");});
     explorerStatus.textContent=saved+" link aggiunti, "+present+" già presenti"+(acquire?"; "+acquired+" fotografie acquisite"+(failed?", "+failed+" non acquisite (restano tra le proposte)":""):"")+".";
     status.textContent=explorerStatus.textContent;

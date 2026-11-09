@@ -1,3 +1,9 @@
+## 0.27.0 — 2026-11-09T04:10:00Z (proposta, non pubblicata)
+
+- Esplora Commons: pulsante «Rivedi selezione (N)» e pannello con le foto selezionate prima di qualsiasi aggiunta o acquisizione: miniatura, titolo, autore, licenza, dimensioni, anteprima grande, «Rimuovi», «Svuota selezione», «Aggiungi al lotto corrente» e «Crea un lotto con queste».
+- La selezione resta tra ricerche diverse e dopo il ricaricamento della pagina nella stessa scheda (sessionStorage), finché non viene aggiunta o svuotata.
+- Nessuna modifica al Worker né migrazioni.
+
 ## 0.26.1 — 2026-11-08T23:10:00Z (proposta, non pubblicata)
 
 - Esplora Commons: le miniature servite da `thumb.wikimedia.org` (forma attuale dell'API) erano scartate perché era ammesso solo `upload.wikimedia.org`; ora entrambi gli host, limitati a `/wikipedia/commons/`, con i parametri `utm_*` rimossi. Verificato sulla risposta reale per «Paris protest»: 30 foto su 30.
