@@ -1,3 +1,7 @@
+## 1.0.1 — 2026-11-09T18:30:00Z
+
+- Ripristinato lo script `deploy:demo`, che il comando di deploy di Cloudflare Workers Builds richiama: ora esegue solo `wrangler deploy` (alias di `deploy`), senza migrazioni né seed. Senza lo script la build di produzione della 1.0.0 compilava ma non pubblicava.
+
 ## 1.0.0 — 2026-11-09T16:30:00Z (proposta, non pubblicata)
 
 Libreria immagini e database in ordine (`docs/libreria-immagini.v1.1.0.md`), per decisione dell'owner.
