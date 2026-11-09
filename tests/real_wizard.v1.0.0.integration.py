@@ -57,7 +57,7 @@ with sync_playwright() as p:
         page.locator('[data-rw-hit]').check()
         page.get_by_role('button', name='Aggiungi le selezionate').click()
         expect(page.locator('.rw-pick')).to_have_count(1)
-        page.screenshot(path=str(folder / (name + '-step1.png')))
+        page.screenshot(path=str(folder / (name + '-step1.png')), full_page=True)
         page.get_by_role('button', name='Inizia un nuovo caricamento').click()
 
         # Upload through the original database path: copy is WebP; bypass external Commons requests.
@@ -88,7 +88,7 @@ with sync_playwright() as p:
         page.get_by_role('button', name='Genera tag con IA').click()
         expect(page.locator('#rw-generation-dialog')).to_be_visible()
         page.locator('#rw-generation-dialog button[data-rw=run-gen]').click()
-        expect(page.locator('.rw-message')).to_contain_text('1 immagini elaborate', timeout=30000)
+        expect(page.locator('.rw-message')).to_contain_text('1 immagine elaborata', timeout=30000)
         assert any('Costo massimo' in text for text in confirmations), confirmations
         expect(page.locator('[data-rw-caption]')).to_have_value('Didascalia manuale da conservare.')
         expect(page.locator('.rw-pill', has_text='crowd')).to_have_count(1)
@@ -101,18 +101,18 @@ with sync_playwright() as p:
         page.locator('#rw-generation-dialog button[data-rw=run-gen]').click()
         expect(page.locator('.rw-message')).to_contain_text('1 immagini elaborate', timeout=30000)
         expect(page.locator('[data-rw-caption]')).not_to_have_value('Didascalia manuale da conservare.')
-        page.screenshot(path=str(folder / (name + '-step2.png')))
+        page.screenshot(path=str(folder / (name + '-step2.png')), full_page=True)
 
         page.get_by_role('button', name='Avanti: riepilogo').click()
         expect(page.locator('.rw-final img[data-game-media]')).to_be_visible()
         expect(page.locator('.rw-final .rs-mark')).to_be_visible()
         expect(page.locator('.rw-final .play-caption')).not_to_be_empty()
-        page.screenshot(path=str(folder / (name + '-step3.png')))
+        page.screenshot(path=str(folder / (name + '-step3.png')), full_page=True)
         page.get_by_role('button', name='Conferma e pubblica').click()
         expect(page.locator('.rw-message')).to_contain_text('Devi confermare')
         page.locator('#rw-rights').check()
         page.get_by_role('button', name='Conferma e pubblica').click()
-        expect(page.locator('.rw-message')).to_contain_text('1 immagini pubblicate', timeout=30000)
+        expect(page.locator('.rw-message')).to_contain_text('1 immagine pubblicata', timeout=30000)
         published = page.request.get(base + '/api/admin/library?status=published&origin=REAL&q=' + title)
         assert published.ok and any(i['id'] == item['id'] for i in published.json()['items'])
         assert not errors, errors
