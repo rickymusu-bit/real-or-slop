@@ -349,3 +349,18 @@ dialog button { margin-bottom: 12px; }
 .game-catalog-mode small { display: block; color: var(--muted); line-height: 1.45; }
 .game-catalog-mode button { margin-right: 8px; margin-bottom: 6px; }
 .game-catalog-mode button:disabled { opacity: .52; cursor: not-allowed; }
+
+/* v1.1.0 (2026-11-09T05:00:00Z): per-photo tags in the review queue. */
+.inbox-tags { margin: 18px 0 4px; }
+.inbox-tags h3 { margin: 0 0 8px; font-size: 15px; }
+#inbox-tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; padding: 0; list-style: none; }
+#inbox-tag-list li { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border: 1px solid var(--hairline); border-radius: 999px; font-size: 14px; overflow-wrap: anywhere; }
+#inbox-tag-list li button { min-width: 30px; min-height: 30px; padding: 0 6px; border: 0; background: transparent; font-size: 18px; line-height: 1; cursor: pointer; }
+#inbox-tag-list .inbox-tag-placeholder { padding-right: 10px; border-style: dashed; color: var(--muted); font-style: italic; }
+.inbox-tag-warning { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+.inbox-tag-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.inbox-tag-add input { min-width: 0; }
+#inbox-tag-hint { margin: 6px 0 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.tag-vocabulary-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; margin: 6px 0; overflow-wrap: anywhere; }
+.tag-vocabulary-row small { color: var(--muted); }
+@media (max-width: 700px) { .inbox-tag-add { grid-template-columns: 1fr; } }

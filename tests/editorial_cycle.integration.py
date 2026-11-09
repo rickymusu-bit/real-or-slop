@@ -67,6 +67,8 @@ with tempfile.TemporaryDirectory() as folder:
             **(dict(owner_declaration=True) if image['origin']=='AI' else {}))
     def vote(index,decision,revision=0,**kwargs):
         image=images[index]
+        if decision=='approved':  # approval needs at least one tag (spec lotti 1.4.2)
+            assert call('/api/admin/review-inbox/'+image['id']+'/tags',dict(add=['fixture-scene']))[0]==200
         return call('/api/admin/review-inbox/'+image['id']+'/decision',dict(decision=decision,sha256=image['sha256'],revision=revision,note='LOCAL fixture vote',**kwargs))
 
     assert call(route+'/admit',admission(0))[0]==409  # No owner approval.

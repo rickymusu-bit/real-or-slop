@@ -1,4 +1,5 @@
 import { body, hash, HttpError, id, json, type Env } from "./core";
+import { hasTags, photoTags, tagsFor, TAGGED } from "./tags.v1.0.0";
 import { bulkRejectedDeletion } from "./review-bulk-delete";
 
 interface InboxRow {
@@ -62,9 +63,11 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
     await syncReviewInbox(env);
     const state = url.searchParams.get("state") || "pending", origin = url.searchParams.get("origin") || "all";
     const offset = Number(url.searchParams.get("offset") || 0);
-    if (!["pending", "approved", "rejected", "all"].includes(state) || !["REAL", "AI", "all"].includes(origin) || !Number.isSafeInteger(offset) || offset < 0 || offset > 100_000) throw new HttpError(400, "Filtro della coda non valido");
-    const where = "(?='all' OR q.status=?) AND (?='all' OR q.origin=?)", args = [state, state, origin, origin];
-    const [rows, counts, total] = await Promise.all([
+    if (!["pending", "approved", "rejected", "all", "untagged"].includes(state) || !["REAL", "AI", "all"].includes(origin) || !Number.isSafeInteger(offset) || offset < 0 || offset > 100_000) throw new HttpError(400, "Filtro della coda non valido");
+    // "untagged": every non-rejected photo without an active tag, published ones included (spec lotti 1.4.2, 4.3).
+    const where = state === "untagged" ? `q.status<>'rejected' AND NOT ${TAGGED} AND ? IS NOT NULL AND ? IS NOT NULL AND (?='all' OR q.origin=?)`
+      : "(?='all' OR q.status=?) AND (?='all' OR q.origin=?)", args = [state, state, origin, origin];
+    const [rows, counts, untagged, total] = await Promise.all([
       env.DB.prepare(`SELECT q.*,p.id AS partner_id,p.origin AS partner_origin,
         a.cycle_id,a.image_id AS catalog_id,EXISTS(SELECT 1 FROM published_images pub WHERE pub.image_id=a.image_id) AS cycle_published,
         (SELECT note FROM editorial_review_inbox_events e WHERE e.image_id=q.id ORDER BY revision DESC LIMIT 1) AS note
@@ -74,16 +77,18 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
           SELECT id FROM editorial_review_effective_images WHERE pair_key=q.pair_key AND origin<>q.origin ORDER BY created_at,id LIMIT 1)
         WHERE ${where} ORDER BY q.created_at DESC,q.id LIMIT 50 OFFSET ?`).bind(...args, offset).all<InboxRow>(),
       env.DB.prepare("SELECT status,origin,count(*) AS count FROM editorial_review_inbox GROUP BY status,origin").all(),
+      env.DB.prepare(`SELECT count(*) AS count FROM editorial_review_inbox q WHERE q.status<>'rejected' AND NOT ${TAGGED}`).first<{ count: number }>(),
       env.DB.prepare(`SELECT count(*) AS count FROM editorial_review_inbox q WHERE ${where}`).bind(...args).first<{ count: number }>(),
     ]);
-    return json({ images: rows.results.map(row => ({ id: row.id, origin: row.origin, sha256: row.sha256, revision: row.revision,
+    const tags = await tagsFor(env, rows.results.map(row => row.id));
+    return json({ images: rows.results.map(row => ({ id: row.id, origin: row.origin, sha256: row.sha256, revision: row.revision, tags: tags.get(row.id) || [],
       status: row.status, details: JSON.parse(row.metadata_json) as unknown, note: ownerNote(row.note || "").note,
       rejection_reason: ownerNote(row.note || "").reason, image: `${base}/${row.id}/image`,
       publication: row.catalog_id ? { image_id:row.catalog_id, cycle_id:row.cycle_id, published:Boolean(row.cycle_published) } : null,
       partner: row.partner_id ? { id: row.partner_id, origin: row.partner_origin, image: `${base}/${row.partner_id}/image` } : null })),
-      total: total?.count || 0, counts: counts.results, offset, limit: 50, publication_available: false });
+      total: total?.count || 0, counts: counts.results, untagged: untagged?.count || 0, offset, limit: 50, publication_available: false });
   }
-  const match = path.match(/^\/api\/admin\/review-inbox\/([\w-]+)(?:\/(image|decision|history))?$/);
+  const match = path.match(/^\/api\/admin\/review-inbox\/([\w-]+)(?:\/(image|decision|history|tags))?$/);
   if (!match) throw new HttpError(404, "Coda di revisione inesistente");
   const row = await env.DB.prepare("SELECT * FROM editorial_review_effective_images WHERE id=?").bind(match[1]).first<InboxRow>();
   if (!row) throw new HttpError(404, "Immagine non trovata");
@@ -109,6 +114,7 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
     if (!file) throw new HttpError(404, "File archiviato non disponibile");
     return new Response(file.body, { headers: { "Content-Type": file.httpMetadata?.contentType || "image/webp", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
   }
+  if (match[2] === "tags") return photoTags(request, env, row);
   if (match[2] === "history" && request.method === "GET") return json({ previous: JSON.parse(row.metadata_json) as unknown,
     events: (await env.DB.prepare("SELECT decision,note,revision,image_sha256,created_at FROM editorial_review_inbox_events WHERE image_id=? ORDER BY revision").bind(row.id).all<{note:string}>()).results.map(e => ({...e,...ownerNote(e.note)})) });
   if (match[2] === "decision" && request.method === "POST") {
@@ -119,18 +125,22 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
         !["approved", "rejected", "pending"].includes(String(data.decision)) || data.revision !== row.revision || data.sha256 !== row.sha256 ||
         (data.reason !== undefined && !["editorial","generation","technical","rights","provenance"].includes(String(data.reason))) ||
         typeof data.note !== "string" || data.note.length > 2000) throw new HttpError(409, "Immagine o revisione aggiornata: ricaricare la coda");
+    const untaggedError = "Aggiungi almeno un tag prima di approvare: una foto con il solo «untagged» non si approva";
+    if (data.decision === "approved" && !(await hasTags(env, row.id))) throw new HttpError(409, untaggedError);
     const file = await env.QUARANTINE?.get(row.media_key);
     if (!file || file.size > 12_000_000) throw new HttpError(409, "File non disponibile per la revisione");
     if ([...new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()))].map(x => x.toString(16).padStart(2, "0")).join("") !== row.sha256) throw new HttpError(409, "Il file è cambiato: revisione bloccata");
     const event = id(), now = new Date().toISOString();
     const result = await env.DB.batch([
-      env.DB.prepare(`INSERT INTO editorial_review_inbox_events SELECT ?,id,revision+1,?,?,?,?,? FROM editorial_review_effective_images WHERE id=? AND revision=? AND sha256=?`)
+      // The tag requirement is repeated inside the write, so a tag removed concurrently cannot slip through.
+      env.DB.prepare(`INSERT INTO editorial_review_inbox_events SELECT ?,q.id,q.revision+1,?,?,?,?,? FROM editorial_review_effective_images q
+        WHERE q.id=? AND q.revision=? AND q.sha256=? AND (?<>'approved' OR ${TAGGED})`)
         .bind(event, (await hash(env.ADMIN_TOKEN!)).slice(0, 12), data.decision, row.sha256,
-          data.reason === undefined ? data.note : JSON.stringify({note:data.note,reason:data.reason}), now, row.id, row.revision, row.sha256),
+          data.reason === undefined ? data.note : JSON.stringify({note:data.note,reason:data.reason}), now, row.id, row.revision, row.sha256, data.decision),
       env.DB.prepare("UPDATE editorial_review_inbox SET status=?,revision=revision+1 WHERE id=? AND revision=? AND EXISTS(SELECT 1 FROM editorial_review_inbox_events WHERE id=?)")
         .bind(data.decision, row.id, row.revision, event),
     ]);
-    if (!result[1].meta.changes) throw new HttpError(409, "Decisione già aggiornata: ricaricare");
+    if (!result[1].meta.changes) throw new HttpError(409, data.decision === "approved" && !(await hasTags(env, row.id)) ? untaggedError : "Decisione già aggiornata: ricaricare");
     return json({ saved: true, status: data.decision, revision: row.revision + 1, published: false });
   }
   throw new HttpError(405, "Metodo non consentito");

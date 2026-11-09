@@ -167,6 +167,7 @@ current=call(prefix+"?topic_id="+uid)[1]
 unrelated=call(prefix+"?topic_id="+other["id"])[1]
 assert any(item["id"]==inbox for item in current["ranked_real"])
 assert all(item["id"]!=inbox for item in unrelated["ranked_real"])
+assert call("/api/admin/review-inbox/"+inbox+"/tags",{"add":["owner-photo"]})[0]==200  # approval needs a tag
 code,vote=call("/api/admin/review-inbox/"+inbox+"/decision",{
     "decision":"approved","revision":card["revision"],"sha256":saved["sha256"],
     "note":"Owner-selected photograph, rights and origin still unverified","reason":"editorial"

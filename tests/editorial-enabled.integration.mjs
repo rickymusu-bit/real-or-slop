@@ -388,6 +388,8 @@ print(json.dumps(out))`],{encoding:'utf8'}).stdout);
  assert.equal((await api(intel+'?topic_id='+original.id)).ranked_real[0].relevance.match,'mismatch');
  const queue=await api('review-inbox?state=pending&origin=REAL');
  const card=queue.images.find(i=>i.id===saved.inbox_id);
+ await api('review-inbox/'+saved.inbox_id+'/decision',{decision:'approved',revision:card.revision,sha256:saved.sha256,reason:'editorial',note:''},409);
+ await api('review-inbox/'+saved.inbox_id+'/tags',{add:['blue-facade']});  // approval needs a tag (spec lotti 1.4.2)
  await api('review-inbox/'+saved.inbox_id+'/decision',{decision:'approved',revision:card.revision,sha256:saved.sha256,reason:'editorial',note:''});
  assert.equal((await api(intel)).preferences.real.observations,1);
  // Persisted states reproduce their inputs and never duplicate on concurrent reads.

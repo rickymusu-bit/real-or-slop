@@ -1,6 +1,7 @@
 import { body, hash, HttpError, id, json, type Env } from "./core";
 import { prepareImport, importText } from "./import";
 import { recognizedLicense } from "../shared/licenses";
+import { hasTags } from "./tags.v1.0.0";
 
 const base = "/api/admin/editorial/cycle";
 interface Review { id: string; origin: string; sha256: string; media_key: string; metadata_json: string; revision: number; status: string }
@@ -39,6 +40,8 @@ export async function editorialCycle(request: Request, env: Env, path: string): 
       SELECT r.image_id,r.type,row_number() OVER(PARTITION BY r.type ORDER BY r.created_at,r.image_id) AS n
       FROM editorial_cycle_ready_images r WHERE r.cycle_id=?
       AND NOT EXISTS(SELECT 1 FROM published_images p WHERE p.image_id=r.image_id)
+      AND EXISTS(SELECT 1 FROM editorial_cycle_admissions a JOIN editorial_image_tags it ON it.inbox_id=a.inbox_id
+        JOIN editorial_tags t ON t.id=it.tag_id AND t.retired_at IS NULL WHERE a.image_id=r.image_id)
     ), capacity AS (SELECT min(sum(type='REAL'),sum(type='AI')) AS cap FROM waiting)
     INSERT INTO publication_batches SELECT ?,json_group_array(w.image_id),?,? FROM waiting w,capacity c
       WHERE w.n<=c.cap HAVING count(*)>0`).bind(cycle,uid,(await hash(env.ADMIN_TOKEN!)).slice(0,12),stamp).run();
@@ -58,6 +61,7 @@ export async function editorialCycle(request: Request, env: Env, path: string): 
   const event = await env.DB.prepare("SELECT id FROM editorial_review_inbox_events WHERE image_id=? AND revision=? AND image_sha256=? AND decision='approved'")
     .bind(row.id,row.revision,row.sha256).first<{id:string}>();
   if (!event) throw new HttpError(409, "Approvare personalmente questi pixel nella coda del sito");
+  if (!(await hasTags(env, row.id))) throw new HttpError(409, "Aggiungi almeno un tag prima dell'ammissione: una foto con il solo «untagged» non si pubblica");
   const metadata = JSON.parse(row.metadata_json) as Record<string,unknown>;
   if (metadata.cycle_id && metadata.cycle_id !== cycle) throw new HttpError(409, "Usare il ciclo di provenienza dell'immagine");
   if (typeof metadata.original_key !== "string" || typeof metadata.original_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(metadata.original_sha256))

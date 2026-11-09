@@ -30,6 +30,7 @@ for kind in ('originals','assets'):
  req=urllib.request.Request(base+'/api/admin/'+kind+'/'+source_id,data=source,method='PUT',headers={'Authorization':'Bearer '+token})
  with urllib.request.urlopen(req) as r:assert r.status==200
 row=next(r for r in call('review-inbox')[1]['images'] if r['details'].get('source_id')==source_id)
+assert call('review-inbox/'+row['id']+'/tags',dict(add=['fixture-subject']))[0]==200  # approval needs a tag (spec lotti 1.4.2)
 assert call('review-inbox/'+row['id']+'/decision',dict(decision='approved',revision=0,sha256=source_sha,note='Source approved'))[0]==200
 stream=io.BytesIO();image.crop((30,0,130,100)).resize((1024,1024)).save(stream,'WEBP',quality=85);final=stream.getvalue();sha=hashlib.sha256(final).hexdigest()
 profile=json.loads(Path('tests/editorial-v2-contract.json').read_text())['profile']
