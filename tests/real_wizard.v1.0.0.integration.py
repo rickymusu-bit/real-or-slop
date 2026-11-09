@@ -99,7 +99,7 @@ with sync_playwright() as p:
 
         page.get_by_role('button', name='Genera didascalie con IA').click()
         page.locator('#rw-generation-dialog button[data-rw=run-gen]').click()
-        expect(page.locator('.rw-message')).to_contain_text('1 immagini elaborate', timeout=30000)
+        expect(page.locator('.rw-message')).to_contain_text('1 immagine elaborata', timeout=30000)
         expect(page.locator('[data-rw-caption]')).not_to_have_value('Didascalia manuale da conservare.')
         page.screenshot(path=str(folder / (name + '-step2.png')), full_page=True)
 
