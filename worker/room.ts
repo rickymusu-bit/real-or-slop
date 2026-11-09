@@ -10,6 +10,7 @@ import {
   type ImageRow,
 } from "./core";
 import { curatedSample, filteredCatalog, reveal, settings } from "./game";
+import { GAME_IMAGE } from "./core";
 import { media, privateMedia } from "./storage";
 import { mediaProtocol, roomPreparationTtlMs } from "../shared/preloading";
 interface Player {
@@ -171,7 +172,7 @@ export class GameRoom {
       phase: r.phase,
       round: r.round + 1,
       total: r.images.length,
-      demo: r.images[0]?.demo === 1,
+      demo: false,
       serverNow: this.now(),
       deadline: r.deadline,
       protocolVersion: r.protocolVersion || 1,
@@ -192,6 +193,7 @@ export class GameRoom {
           ? {
               image: "/api/rooms/" + r.code + "/media?key=" + (r.mediaKey || String(r.round + 1)),
               alt: "Immagine del round condiviso",
+              caption: r.images[r.round]?.caption || "",
             }
           : null,
       reveal:
@@ -389,7 +391,7 @@ export class GameRoom {
       const selected = sample.images;
       if (!selected.length)
         throw new HttpError(409, "Catalogo approvato insufficiente per garantire questa sfida");
-      const full = (await this.env.DB.prepare(`SELECT i.*,s.page_url AS source_url,l.name AS license_name,l.url AS license_url FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id WHERE i.id IN (${selected.map(() => "?").join(",")})`)
+      const full = (await this.env.DB.prepare(`${GAME_IMAGE} WHERE id IN (${selected.map(() => "?").join(",")})`)
         .bind(...selected.map(image => image.id)).all<ImageRow>()).results;
       const byId = new Map(full.map(image => [image.id, image]));
       if (selected.some(image => !byId.has(image.id))) throw new HttpError(409, "Catalogo modificato durante l'assegnazione: riprovare");
@@ -438,7 +440,6 @@ export class GameRoom {
           JSON.stringify({
             ...config,
             roundSeconds: seconds,
-            demo: selected[0]?.demo === 1,
           }),
         ),
         this.env.DB.prepare(

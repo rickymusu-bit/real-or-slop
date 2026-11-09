@@ -1,7 +1,7 @@
 /** v1.0.0. Header dimension guard for JPEG/PNG/WebP before private storage.
  * This is an anti-bomb and format check, not a complete decoder/authenticity check.
  */
-import { imageMime } from "./editorial-workspace.v1.0.0";
+import { imageMime } from "./image-format.v1.0.0";
 export interface Dimensions {width:number;height:number;mime:"image/jpeg"|"image/png"|"image/webp"}
 export function imageDimensions(bytes:Uint8Array):Dimensions {
   const mime=imageMime(bytes);

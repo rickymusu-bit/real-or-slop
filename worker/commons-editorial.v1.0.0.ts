@@ -1,14 +1,14 @@
 /** Only Wikimedia Commons URLs. Never fetch an arbitrary submitted host. */
-import { imageMime } from "../shared/editorial-workspace.v1.0.0";
+import { imageMime } from "../shared/image-format.v1.0.0";
 import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
 import { HttpError } from "./core";
 export const MAX_IMAGE_BYTES = 12_000_000;
 export const MAX_IMAGE_PIXELS = 32_000_000;
 export interface CommonsFile {
   title: string; source_url: string; download_url: string; author: string;
-  license_url: string; description: string; width: number; height: number;
+  license_url: string; license_name: string; description: string; width: number; height: number;
   bytes: ArrayBuffer; mime: string; original_is_preview: boolean;
-  /** Selected context for the future lot planner (spec lotti 1.3.1, section 5.2); unverified claims. */
+  /** Commons context, unverified claims. */
   categories: string[]; date: string;
 }
 /** Wikimedia rejects automated requests without an identifying User-Agent; Workers send none by default.
@@ -132,7 +132,7 @@ export async function commonsFile(value: string): Promise<CommonsFile> {
   const categories = typeof ext.Categories?.value === "string" ? ext.Categories.value.split("|")
     .map(c => c.trim()).filter(c => c && c.length <= 200).slice(0, 40) : [];
   return {title:page?.title || title,source_url:"https://commons.wikimedia.org/wiki/"+encodeURIComponent(page?.title || title).replace(/%3A/ig,":"),
-    download_url:download,author:meta("Artist"),license_url:license,description:meta("ImageDescription"),
+    download_url:download,author:meta("Artist"),license_url:license,license_name:meta("LicenseShortName").slice(0,200),description:meta("ImageDescription"),
     width:image.width!,height:image.height!,bytes:file.bytes,mime:file.mime,original_is_preview:chooseThumb,
     categories,date:meta("DateTimeOriginal").slice(0,100) || meta("DateTime").slice(0,100)};
 }

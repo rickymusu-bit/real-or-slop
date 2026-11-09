@@ -4,7 +4,7 @@
  * the end of the image (multi-picture previews, motion photos). Kept: what the decoder needs, plus a minimal EXIF
  * with the orientation alone when the original asks for a rotation, so the photo is shown as before.
  * Malformed files throw: the caller must not fall back to the original bytes. */
-import { imageMime } from "./editorial-workspace.v1.0.0";
+import { imageMime } from "./image-format.v1.0.0";
 import { imageGeometry } from "./image-geometry.v1.0.0";
 
 export type CleanMime = "image/jpeg" | "image/png" | "image/webp";

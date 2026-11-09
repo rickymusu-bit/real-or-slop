@@ -1,7 +1,7 @@
 import {
   body,
   catalog,
-  currentGameMode,
+  GAME_IMAGE,
   hash,
   HttpError,
   id,
@@ -13,7 +13,6 @@ import {
 import { media, privateMedia } from "./storage";
 import { mediaProtocol, preparationTtlMs } from "../shared/preloading";
 import { curatedSample } from "./sampling";
-import { sceneGroups } from "../shared/similarity";
 export { curatedSample } from "./sampling";
 export function settings(data: Record<string, unknown>) {
   const mode = data.mode;
@@ -35,38 +34,14 @@ export function settings(data: Record<string, unknown>) {
     categories,
   };
 }
-export async function filteredCatalog(
-  env: Env,
-  filters: { categories: string[] },
-) {
-  const selectedMode = await currentGameMode(env);
-  let rows = await catalog(env, selectedMode);
-  const demo = selectedMode === "demo" ? 1 : 0;
-  const [assignments, metadata] = await Promise.all([
-    env.DB.prepare("SELECT ic.image_id,ic.category_id FROM image_categories ic JOIN images i ON i.id=ic.image_id WHERE i.id IN (SELECT image_id FROM published_images) AND i.demo=?")
-      .bind(demo).all<{ image_id: string; category_id: string }>(),
-    env.DB.prepare("SELECT c.image_id,c.subject_kind,c.image_medium,c.composition,c.period_bucket,c.country_or_region,c.perceived_plausibility FROM image_curation c JOIN images i ON i.id=c.image_id WHERE i.id IN (SELECT image_id FROM published_images) AND i.demo=?")
-      .bind(demo).all<{ image_id: string; subject_kind: string | null; image_medium: string | null; composition: string | null; period_bucket: string | null; country_or_region: string | null; perceived_plausibility: string | null }>(),
-  ]);
-  const categories = new Map<string, string[]>();
-  for (const assignment of assignments.results) {
-    const list = categories.get(assignment.image_id) || [];
-    list.push(assignment.category_id);
-    categories.set(assignment.image_id, list);
-  }
-  if (filters.categories.length)
-    rows = rows.filter((row) => categories.get(row.id)?.some((category) => filters.categories.includes(category)));
-  const tags = new Map(metadata.results.map((row) => [row.image_id, row]));
-  const edges = (await env.DB.prepare(`SELECT p.a,p.b,p.decision,a.sha256 AS a_sha256,b.sha256 AS b_sha256 FROM similarity_current_pairs p
-    JOIN similarity_assets a ON a.id=p.a JOIN similarity_assets b ON b.id=p.b
-    WHERE a.origin=b.origin AND p.decision IN ('same_scene','prefer_a','prefer_b','different')`).all<{ a: string; b: string; decision: string; a_sha256: string; b_sha256: string }>()).results;
-  // Bind through content hashes, including a private source's published alias.
-  const groups = sceneGroups(edges.map(e => ({ a: e.a_sha256, b: e.b_sha256, decision: e.decision })));
-  const preferred = new Set(edges.filter(e => e.decision.startsWith("prefer_")).map(e => e.decision === "prefer_a" ? e.a_sha256 : e.b_sha256));
-  const distinct = new Map<string, string[]>();
-  for (const e of edges.filter(e => e.decision === "different")) for (const [a, b] of [[e.a_sha256, e.b_sha256], [e.b_sha256, e.a_sha256]]) distinct.set(a, [...distinct.get(a) || [], b]);
-  return rows.map((row) => ({ ...row, categories: categories.get(row.id) || [], curation: tags.get(row.id) || null,
-    scene_group: groups.get(row.sha256) || null, scene_preferred: preferred.has(row.sha256), perceptual_distinct: distinct.get(row.sha256) }));
+/** Published library images. Categories are gone with the old catalog; the filter is kept for the API shape
+ * and matches tags when given (docs/libreria-immagini.v1.1.0.md). */
+export async function filteredCatalog(env: Env, filters: { categories: string[] }) {
+  const rows = await catalog(env);
+  if (!filters.categories.length) return rows;
+  const tagged = new Set((await env.DB.prepare(`SELECT it.image_id FROM image_tags it JOIN tags t ON t.id=it.tag_id
+    WHERE t.label IN (SELECT value FROM json_each(?))`).bind(JSON.stringify(filters.categories)).all<{ image_id: string }>()).results.map(r => r.image_id));
+  return rows.filter(row => tagged.has(row.id));
 }
 function cookie(request: Request) {
   return request.headers
@@ -105,10 +80,8 @@ export const reveal = (i: ImageRow) => ({
   source: i.source_url || null,
   license: i.license_name || "Fixture originale",
   licenseUrl: i.license_url || null,
-  demo: !!i.demo,
+  caption: i.caption || null,
 });
-const joinedImage =
-  "SELECT i.*,s.page_url AS source_url,l.name AS license_name,l.url AS license_url FROM images i LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id";
 async function refresh(env: Env, s: Session) {
   return (await env.DB.prepare("SELECT * FROM game_sessions WHERE id=?").bind(s.id).first<Session>())!;
 }
@@ -137,9 +110,10 @@ async function settleSession(env: Env, s: Session) {
   }
   return s;
 }
-const neutralRound = (sid: string, round: { id: string; position: number }) => ({
+/** The round as the player sees it: the image and its caption, never the origin. */
+const neutralRound = (sid: string, round: { id: string; position: number; caption?: string | null }) => ({
   id: round.id, number: round.position + 1, image: `/api/sessions/${sid}/media/${round.id}`,
-  alt: "Immagine da osservare per rispondere alla domanda",
+  alt: "Immagine da osservare per rispondere alla domanda", caption: round.caption || "",
 });
 async function state(env: Env, s: Session) {
   const now = Date.now();
@@ -156,8 +130,8 @@ async function state(env: Env, s: Session) {
   let question = null;
   let roundExpiresAt: number | null = null;
   if (s.phase === "active") {
-    const round = await env.DB.prepare("SELECT r.id,r.position,r.presented_at,r.expires_at FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position LIMIT 1")
-      .bind(s.id).first<{ id: string; position: number; presented_at: number | null; expires_at: number | null }>();
+    const round = await env.DB.prepare("SELECT r.id,r.position,r.presented_at,r.expires_at,i.caption FROM game_rounds r JOIN images i ON i.id=r.image_id LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position LIMIT 1")
+      .bind(s.id).first<{ id: string; position: number; presented_at: number | null; expires_at: number | null; caption: string }>();
     if (round) {
       // Legacy assignments keep their original presentation/timing semantics.
       if (s.protocol_version === 1) await env.DB.prepare("UPDATE game_rounds SET presented_at=COALESCE(presented_at,?) WHERE id=?").bind(now, round.id).run();
@@ -165,10 +139,10 @@ async function state(env: Env, s: Session) {
       roundExpiresAt = round.expires_at;
     }
   }
-  const credits = s.phase === "completed" ? (await env.DB.prepare("SELECT i.*,s.page_url AS source_url,l.name AS license_name,l.url AS license_url,COALESCE(a.correct,0) AS correct,r.timed_out FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id JOIN images i ON i.id=r.image_id LEFT JOIN sources s ON s.id=i.source_id LEFT JOIN licenses l ON l.id=i.license_id WHERE r.session_id=? AND (a.round_id IS NOT NULL OR r.timed_out=1) ORDER BY r.position")
+  const credits = s.phase === "completed" ? (await env.DB.prepare(`SELECT i.*,COALESCE(a.correct,0) AS correct,r.timed_out FROM game_rounds r
+    LEFT JOIN answers a ON a.round_id=r.id JOIN (${GAME_IMAGE}) i ON i.id=r.image_id WHERE r.session_id=? ORDER BY r.position`)
     .bind(s.id).all<ImageRow & { correct: number; timed_out: number }>()).results.map(image => ({ ...reveal(image), correct: !!image.correct, timedOut: !!image.timed_out })) : [];
-  const assignedOrigin = await env.DB.prepare("SELECT i.demo FROM game_rounds r JOIN images i ON i.id=r.image_id WHERE r.session_id=? ORDER BY r.position LIMIT 1").bind(s.id).first<{ demo: number }>();
-  return json({ id: s.id, mode: s.mode, demo: assignedOrigin?.demo === 1, protocolVersion: s.protocol_version,
+  return json({ id: s.id, mode: s.mode, demo: false, protocolVersion: s.protocol_version,
     phase: s.phase, invalidReason: s.invalid_reason, preparationExpiresAt: s.preparation_expires_at,
     serverNow: Date.now(), expiresAt: s.timing_mode === "per-image" ? roundExpiresAt : s.expires_at, startedAt: s.started_at, done, total,
     timingMode: s.timing_mode, roundSeconds: s.round_seconds, timedOut: timeouts,
@@ -198,7 +172,7 @@ export async function game(request: Request, env: Env, path: string) {
   let s = await settleSession(env, await owned(request, env, match[1]));
   if (!match[2] && request.method === "GET") return state(env, s);
   if (match[2] === "manifest" && request.method === "GET") {
-    const rows = s.phase === "preparing" || s.phase === "active" ? (await env.DB.prepare(`SELECT r.id,r.position FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position ${s.timing_mode === "per-image" ? "LIMIT 1" : s.mode === "training" || s.protocol_version === 1 ? "LIMIT 3" : "LIMIT 50"}`).bind(s.id).all<{ id: string; position: number }>()).results : [];
+    const rows = s.phase === "preparing" || s.phase === "active" ? (await env.DB.prepare(`SELECT r.id,r.position,i.caption FROM game_rounds r JOIN images i ON i.id=r.image_id LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position ${s.timing_mode === "per-image" ? "LIMIT 1" : s.mode === "training" || s.protocol_version === 1 ? "LIMIT 3" : "LIMIT 50"}`).bind(s.id).all<{ id: string; position: number }>()).results : [];
     return json({ id: s.id, phase: s.phase, images: rows.map(r => neutralRound(s.id, r)) });
   }
   if (match[2] === "start" && request.method === "POST") {
@@ -255,7 +229,7 @@ export async function game(request: Request, env: Env, path: string) {
         if (!next.some(r => r.id === round.id)) throw new HttpError(404, "Immagine fuori dalla finestra assegnata");
       }
     }
-    const image = await env.DB.prepare("SELECT * FROM images WHERE id=? AND status='approved'").bind(round.image_id).first<ImageRow>();
+    const image = await env.DB.prepare(GAME_IMAGE + " WHERE id=? AND status='published' AND copy_key IS NOT NULL").bind(round.image_id).first<ImageRow>();
     if (!image) throw new HttpError(404, "Immagine non disponibile");
     return privateMedia(await media(env, image), "Cookie");
   }
@@ -265,7 +239,7 @@ export async function game(request: Request, env: Env, path: string) {
     const rid = String(data.roundId);
     const round = await env.DB.prepare("SELECT image_id,position,presented_at,expires_at,timed_out FROM game_rounds WHERE id=? AND session_id=?").bind(rid, s.id).first<{ image_id: string; position: number; presented_at: number | null; expires_at: number | null; timed_out: number }>();
     if (!round?.presented_at) throw new HttpError(409, "Domanda non attiva: preparare prima l'immagine");
-    const image = await env.DB.prepare(`${joinedImage} WHERE i.id=?`).bind(round.image_id).first<ImageRow>();
+    const image = await env.DB.prepare(GAME_IMAGE + " WHERE id=?").bind(round.image_id).first<ImageRow>();
     if (!image) throw new HttpError(404, "Immagine non disponibile");
     const previous = await env.DB.prepare("SELECT choice,correct FROM answers WHERE round_id=?").bind(rid).first<{ choice: string; correct: number }>();
     if (previous) {
@@ -289,9 +263,4 @@ export async function game(request: Request, env: Env, path: string) {
     return json({ ...reveal(image), correct: !!saved.correct, serverNow: Date.now(), expiresAt: s.expires_at });
   }
   throw new HttpError(405, "Metodo non consentito");
-}
-export async function stats(env: Env) {
-  const images = (await env.DB.prepare("SELECT i.id,COUNT(*) AS valid_answers,SUM(1-a.correct) AS incorrect_answers FROM images i JOIN image_answer_statistics a ON a.image_id=i.id GROUP BY i.id").all()).results;
-  const categories = (await env.DB.prepare("SELECT c.id,c.name,COUNT(*) AS valid_answers,SUM(1-a.correct) AS incorrect_answers FROM categories c JOIN image_categories ic ON ic.category_id=c.id JOIN image_answer_statistics a ON a.image_id=ic.image_id GROUP BY c.id").all()).results;
-  return json({ images, categories, note: "Conteggi descrittivi: nessun livello o classificazione. Il futuro error_rate richiederà controllo di numerosità, incertezza e risposte ripetute." });
 }

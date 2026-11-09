@@ -1,32 +1,19 @@
 export { GameRoom } from "./room";
-import { game, stats } from "./game";
-import { moderation } from "./moderation";
-import { admin, currentGameMode, HttpError, json, sameOrigin, type Env } from "./core";
+import { game } from "./game";
+import { library } from "./library.v1.0.0";
+import { admin, HttpError, json, sameOrigin, type Env } from "./core";
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     try {
       const url = new URL(request.url);
       if (request.method !== "GET") sameOrigin(request);
-      if (url.pathname === "/api/health")
-        return json({ name: "Real or Slop", demo: (await currentGameMode(env)) === "demo" });
-      if (url.pathname === "/api/categories")
-        return json(
-          (
-            await env.DB.prepare(
-              "SELECT * FROM categories ORDER BY rowid",
-            ).all()
-          ).results,
-        );
-      if (
-        url.pathname.startsWith("/api/admin") ||
-        url.pathname.startsWith("/admin")
-      ) {
+      if (url.pathname === "/api/health") return json({ name: "Real or Slop" });
+      if (url.pathname.startsWith("/api/admin") || url.pathname.startsWith("/admin")) {
         await admin(request, env);
-        if (url.pathname === "/admin/slop") return Response.redirect(new URL("/admin", url).href, 302);
-        if (url.pathname === "/api/admin/stats") return await stats(env);
-        if (url.pathname.startsWith("/api/admin/"))
-          return await moderation(request, env, url.pathname);
+        if (url.pathname === "/api/admin/library" || url.pathname.startsWith("/api/admin/library/"))
+          return await library(request, env, url.pathname);
         if (url.pathname === "/api/admin") return json({ configured: true });
+        if (url.pathname.startsWith("/api/admin/")) throw new HttpError(404, "API inesistente");
       }
       if (
         url.pathname === "/api/rooms" ||
