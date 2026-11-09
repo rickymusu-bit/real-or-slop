@@ -172,7 +172,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       else invalid.push(source);
     }
     notice = invalid.length ? "Link non validi oppure limite di 100 superato: " + invalid.map(s => short(s, 80)).join("; ") :
-      pending.size + " immagini nella selezione.";
+      pending.size + (pending.size === 1 ? " immagine" : " immagini") + " nella selezione.";
     render();
   };
   const browse = async (append: boolean) => {
@@ -183,7 +183,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     next = result.next;
     searchCategories = append ? searchCategories : result.categories || [];
     searched = true;
-    notice = result.files.length + " risultati " + (append ? "aggiunti." : "trovati.");
+    notice = result.files.length + (result.files.length === 1 ? " risultato " : " risultati ") + (append ? (result.files.length === 1 ? "aggiunto." : "aggiunti.") : (result.files.length === 1 ? "trovato." : "trovati."));
     render();
   };
   const acquire = async () => {
@@ -201,7 +201,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       } catch (error) { failures.push(short(url, 40) + ": " + errorText(error)); }
     }
     stage = staged().length ? 2 : 1;
-    notice = done + " immagini acquisite e preparate in WebP." + (failures.length ? " Errori: " + failures.join(" | ") : "");
+    notice = done + (done === 1 ? " immagine acquisita e preparata" : " immagini acquisite e preparate") + " in WebP." + (failures.length ? " Errori: " + failures.join(" | ") : "");
     persist(); render();
   };
   const generate = async (target: Target, ids: string[]) => {
@@ -231,7 +231,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       }
     }
     try { await refreshMeta(); } catch { /* show per-image errors, if any */ }
-    notice = done + " immagini elaborate." + (failures.length ? " Problemi: " + failures.join(" | ") : "");
+    notice = done + (done === 1 ? " immagine elaborata." : " immagini elaborate.") + (failures.length ? " Problemi: " + failures.join(" | ") : "");
     render();
   };
   const publish = async () => {
@@ -259,7 +259,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     await onPublished();
     stage = failures.length ? 3 : 1;
     if (!failures.length) { images = []; pending.clear(); generated.clear(); captionDrafts.clear(); }
-    notice = done + " immagini pubblicate." + (failures.length ? " Errori da correggere: " + failures.join(" | ") : "");
+    notice = done + (done === 1 ? " immagine pubblicata." : " immagini pubblicate.") + (failures.length ? " Errori da correggere: " + failures.join(" | ") : "");
     persist(); render();
   };
   root.addEventListener("input", event => {
@@ -371,7 +371,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         persist(); render();
       }
     } catch (error) { notice = errorText(error); render(); }
-    finally { busy = false; }
+    finally { busy = false; render(); }
   });
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
