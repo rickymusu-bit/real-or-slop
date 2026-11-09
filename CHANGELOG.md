@@ -1,3 +1,11 @@
+## 1.2.0 — 2026-11-09T21:08:00Z (proposta, non pubblicata)
+
+- Dashboard amministrativa organizzata in Caricamento REAL, Generazione SLOP (segnaposto), Database immagini e Impostazioni.
+- Wizard REAL: link multipli e ricerca Wikimedia Commons con ordinamento per pertinenza o caricamento recente; editor per immagine con tag suggeriti dal vocabolario, didascalia, metadati espandibili, generazione selettiva a pagamento confermata e ripristino gratuito degli ultimi testi generati.
+- Riepilogo con copia WebP di gioco, marchio RS in sovrapposizione e didascalia sotto l'immagine. Conferma esplicita dei diritti e pubblicazione. Draft privati recuperabili nella sessione.
+- Conservate le versioni precedenti di libreria e analisi; nessuna migrazione, nessun deploy automatico.
+- Specifica: `docs/dashboard-admin-wizard-real.v1.0.0.md`; verifica browser desktop/mobile in CI con anteprime scaricabili.
+
 ## 1.1.0 — 2026-11-09T21:30:00Z (proposta, non pubblicata)
 
 Fase 2 della libreria (`docs/libreria-immagini.v1.3.0.md`, sezione 10).
