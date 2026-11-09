@@ -1,3 +1,12 @@
+## 1.1.0 — 2026-11-09T20:30:00Z (proposta, non pubblicata)
+
+Fase 2 della libreria (`docs/libreria-immagini.v1.2.0.md`, sezione 10).
+
+- Analisi con il modello con visione: dalla copia di gioco, dal titolo, dalla descrizione o dal prompt, senza l'origine REAL/SLOP, una chiamata propone 5–15 tag e una didascalia. I tag sono resi ASCII, ripuliti dalle parole sull'origine, risolti per alias e aggiunti a quelli presenti; la didascalia riempie solo un campo vuoto.
+- Costi: conferma del costo prima di ogni invio (anche per gruppi, con il totale), tetto di spesa complessivo controllato in modo atomico, registro `spend` con i token, esiti incerti contati e mai ripetuti automaticamente. Analisi spenta finché l'owner non configura modello, costo per chiamata e tetto.
+- Vocabolario: alias dei tag, «Unisci» un tag in un altro, i tag spariscono con la loro ultima immagine.
+- Migrazione additiva 0034. Test d'integrazione con un OpenAI finto locale, anche nel browser.
+
 ## 1.0.1 — 2026-11-09T18:30:00Z
 
 - Ripristinato lo script `deploy:demo`, che il comando di deploy di Cloudflare Workers Builds richiama: ora esegue solo `wrangler deploy` (alias di `deploy`), senza migrazioni né seed. Senza lo script la build di produzione della 1.0.0 compilava ma non pubblicava.
