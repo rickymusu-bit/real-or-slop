@@ -1,4 +1,4 @@
-import { admissionForm, submitAdmission, publicationControls, cyclePublication, type CycleCard } from "./cycle-review";
+import { admissionForm, submitAdmission, publicationControls, cyclePublication, prepareMissingCopies, type CycleCard } from "./cycle-review";
 import { api, content, escape } from "./main";
 import { safeUrl } from "./admin";
 import { checkTag, UNTAGGED } from "../shared/tags.v1.0.0";
@@ -112,10 +112,13 @@ export async function showVisualReview() {
           await vocabulary(); await load(false);
         }
       } else if (target.id === "cycle-admit" && image) {
-        if (await submitAdmission(queue.querySelector<HTMLFormElement>("#cycle-admission")!,image)) {
-          message.textContent = "Ammessa. La pubblicazione attende un numero uguale di REAL e SLOP ammesse.";
+        const outcome = await submitAdmission(queue.querySelector<HTMLFormElement>("#cycle-admission")!,image);
+        if (outcome) {
+          message.textContent = outcome === "admitted" ? "Ammessa, con la copia di gioco WebP. La pubblicazione attende un numero uguale di REAL e SLOP ammesse." : outcome;
           await load(false);
         }
+      } else if (target.id === "cycle-copies") {
+        await prepareMissingCopies(page);
       } else if (target.id === "cycle-state" || target.id === "cycle-publish") {
         await cyclePublication(page,target.id === "cycle-publish"); await load(false);
       } else if (target.dataset.visualDecision && image) {

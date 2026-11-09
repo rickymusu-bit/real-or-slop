@@ -1,8 +1,17 @@
-# Mappa canonica — versione canonica 15.0.0
+# Mappa canonica — versione canonica 15.1.0
 
-Snapshot: `docs/MASTER.v15.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-09T09:45:00Z. Base main `9c4aa39`.
+Snapshot: `docs/MASTER.v15.1.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-09T11:00:00Z. Base main `9c4aa39`.
 Le sezioni precedenti rimangono vigenti per gli ambiti non modificati.
+
+## Copie di gioco uniformi (15.1.0)
+
+Aggiornato: 2026-11-09T11:00:00Z. Specifica: `docs/copie-di-gioco.v1.0.0.md`, app 0.31.0,
+schema 0032 (`editorial_game_copies`, una copia immutabile per immagine). Moduli:
+`shared/game-copy.v1.0.0.ts` (ricetta), `src/game-copy.v1.0.0.ts` (codifica nel browser),
+`worker/editorial-cycle.ts` (`/game-copy`, gate di pubblicazione), `worker/storage.ts` (serve la
+copia, altrimenti il file ammesso ripulito da `shared/media-clean.v1.0.0.ts`). Supera il limite
+sul formato dei file indicato nella sezione 15.0.0.
 
 ## Bozze, SLOP scollegate e trasparenza (15.0.0)
 

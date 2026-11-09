@@ -74,6 +74,25 @@ with tempfile.TemporaryDirectory() as folder:
     assert call(route+'/admit',admission(0))[0]==409  # No owner approval.
     for i in range(5):assert vote(i,'approved')[0]==200
     assert vote(5,'rejected',reason='generation')[0]==200
+    def upload_copy(image_id,raw,mime='image/webp'):
+        req=urllib.request.Request(base+route+'/game-copy?image_id='+image_id,data=raw,method='POST',
+            headers={'Authorization':'Bearer '+token,'Content-Type':mime})
+        try:
+            with urllib.request.urlopen(req) as r:return r.status,json.loads(r.read())
+        except urllib.error.HTTPError as e:return e.code,json.loads(e.read())
+    def encoded(index,size=None,fmt='WEBP'):
+        # Stand-in for the browser encoder (src/game-copy.v1.0.0.ts): same recipe, fixture-sized.
+        from io import BytesIO
+        from PIL import Image
+        picture_=Image.open(images[index]['file']).convert('RGB')
+        if size:picture_=picture_.resize(size)
+        out=BytesIO();picture_.save(out,fmt,quality=85);return out.getvalue()
+    def prepare_missing():
+        missing=call(route+'?cycle_id='+cycle)[1]['missing_game_copies']
+        for item in missing:
+            index=next(i for i,image in enumerate(images) if image['id']==item['inbox_id'])
+            status,data=upload_copy(item['image_id'],encoded(index));assert status==201,(status,data)
+        return missing
     assert call(route+'/admit',{**admission(0),'rights_confirmed':False})[0]==400
     assert call(route+'/admit',{**admission(0),'categories':['missing']})[0]==400
     assert call(route+'/admit',{**admission(0),'sha256':'f'*64})[0]==409
@@ -90,6 +109,22 @@ with tempfile.TemporaryDirectory() as folder:
     assert vote(4,'rejected',revision=1)[0]==200
     state=call(route+'?cycle_id='+cycle)[1]
     assert {r['type']:r['count'] for r in state['ready']}=={'AI':1,'REAL':3},state
+    # Publication waits for the uniform WebP game copies (docs/copie-di-gioco.v1.0.0.md).
+    assert len(state['missing_game_copies'])==4,state
+    assert call(route+'/publish',dict(cycle_id=cycle,confirm=True))[1]['published'] is False
+    first=state['missing_game_copies'][0]
+    first_index=next(i for i,image in enumerate(images) if image['id']==first['inbox_id'])
+    assert upload_copy(first['image_id'],encoded(first_index,(40,48)))[0]==409  # dimensions differ from the admitted file
+    assert upload_copy(first['image_id'],encoded(first_index,fmt='PNG'),'image/png')[0]==415
+    assert upload_copy(first['image_id'],b'not an image')[0]==415
+    assert upload_copy('missing-image',encoded(first_index))[0]==404
+    assert upload_copy(first['image_id'],b'x'*4_000_001)[0]==413
+    assert len(prepare_missing())==4
+    assert call(route+'?cycle_id='+cycle)[1]['missing_game_copies']==[]
+    repeat=upload_copy(first['image_id'],encoded(first_index))
+    assert repeat[0]==200 and repeat[1]['already_prepared'] is True,repeat
+    copies=sql("SELECT image_id,mime,width,height,recipe FROM editorial_game_copies")
+    assert all(c['mime']=='image/webp' and (c['width'],c['height'])==(48,48) and c['recipe'].startswith('webp-q0.85') for c in copies),copies
     with concurrent.futures.ThreadPoolExecutor(2) as pool:
         publications=list(pool.map(lambda _:call(route+'/publish',dict(cycle_id=cycle,confirm=True)),range(2)))
     assert all(x[0]==200 for x in publications),publications
@@ -100,6 +135,7 @@ with tempfile.TemporaryDirectory() as folder:
     # Approving again requires a fresh documentary admission of the new vote.
     assert vote(4,'approved',revision=2)[0]==200
     assert call(route+'/admit',admission(4,3))[0]==201
+    prepare_missing()
     assert call(route+'/publish',dict(cycle_id=cycle,confirm=True))[1]['per_origin']==1
     assert call(route+'/publish',dict(cycle_id=cycle,confirm=True))[1]['published'] is False
     assert sql("SELECT count(*) AS n FROM editorial_cycle_ready_images r WHERE r.cycle_id="+literal(cycle)+" AND NOT EXISTS(SELECT 1 FROM published_images p WHERE p.image_id=r.image_id)")[0]['n']==1

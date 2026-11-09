@@ -1,8 +1,17 @@
-# Istruzioni Codex — versione canonica 15.0.0
+# Istruzioni Codex — versione canonica 15.1.0
 
-Snapshot: `docs/AGENTS.v15.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-09T09:45:00Z. Base main `9c4aa39`.
+Snapshot: `docs/AGENTS.v15.1.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-09T11:00:00Z. Base main `9c4aa39`.
 Le sezioni precedenti rimangono contesto per ambiti non sostituiti.
+
+## Copie di gioco uniformi (15.1.0)
+
+Aggiornato: 2026-11-09T11:00:00Z. Specifica: `docs/copie-di-gioco.v1.0.0.md`. Il gioco serve per
+REAL e SLOP una copia WebP con la stessa ricetta (qualità 0,85, lato lungo ≤2048 px, sRGB, senza
+metadati), codificata nel browser dell'owner all'ammissione e verificata dal Worker. Il file
+approvato e il suo hash restano invariati: i voti non cambiano. La pubblicazione del ciclo richiede
+la copia. Non spostare la ricodifica nel Worker (limite di CPU) e non cambiare la ricetta senza una
+nuova versione registrata nelle copie. Migrazione 0032 additiva, remota solo su autorizzazione.
 
 ## Bozze, SLOP scollegate e trasparenza (15.0.0)
 

@@ -2,6 +2,10 @@ import { body, hash, HttpError, id, json, type Env } from "./core";
 import { prepareImport, importText } from "./import";
 import { recognizedLicense } from "../shared/licenses";
 import { hasTags } from "./tags.v1.0.0";
+import { cleanImage } from "../shared/media-clean.v1.0.0";
+import { imageDimensions } from "../shared/image-dimensions.v1.0.0";
+import { imageGeometry } from "../shared/image-geometry.v1.0.0";
+import { GAME_COPY, GAME_COPY_RECIPE, gameCopyDimensions } from "../shared/game-copy.v1.0.0";
 
 const base = "/api/admin/editorial/cycle";
 interface Review { id: string; origin: string; sha256: string; media_key: string; metadata_json: string; revision: number; status: string }
@@ -17,7 +21,49 @@ async function bytes(env: Env, key: string, expected: string) {
   if (sha !== expected) throw new HttpError(409, "Pixel diversi dalla revisione");
   return { buffer, httpMetadata: file.httpMetadata };
 }
+/** Admitted images of a cycle that still lack the uniform game copy: publication waits for them. */
+const MISSING_COPY = "NOT EXISTS(SELECT 1 FROM editorial_game_copies g JOIN images gi ON gi.id=g.image_id AND gi.sha256=g.source_sha256 WHERE g.image_id=r.image_id)";
+/** POST /game-copy?image_id=: WebP made in the owner's browser from the admitted file (docs/copie-di-gioco.v1.0.0.md). */
+async function gameCopy(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+  if (!env.IMAGES) throw new HttpError(503, "Storage non configurato");
+  const imageId = new URL(request.url).searchParams.get("image_id") || "";
+  if (!/^[\w-]{1,160}$/.test(imageId)) throw new HttpError(400, "Immagine non valida");
+  if (Number(request.headers.get("content-length") || 0) > GAME_COPY.maxBytes) throw new HttpError(413, "Copia di gioco oltre 4 MB");
+  const image = await env.DB.prepare(`SELECT i.id,i.sha256,i.r2_key FROM images i WHERE i.id=?
+    AND EXISTS(SELECT 1 FROM editorial_cycle_admissions a WHERE a.image_id=i.id AND a.image_sha256=i.sha256)`).bind(imageId).first<{id:string;sha256:string;r2_key:string}>();
+  if (!image) throw new HttpError(404, "Immagine non ammessa");
+  const upload = new Uint8Array(await request.arrayBuffer());
+  if (!upload.length || upload.length > GAME_COPY.maxBytes) throw new HttpError(413, "Copia di gioco vuota o oltre 4 MB");
+  let copy;
+  try { copy = cleanImage(upload); } catch { throw new HttpError(415, "Copia di gioco non leggibile"); }
+  if (copy.mime !== GAME_COPY.mime) throw new HttpError(415, "La copia di gioco deve essere WebP");
+  const source = await env.IMAGES.get(image.r2_key);
+  if (!source) throw new HttpError(409, "File ammesso non disponibile");
+  const geometry = imageGeometry(new Uint8Array(await source.arrayBuffer()));
+  // Browsers orient from EXIF; when the orientation is unreadable they show the encoded size.
+  const shown = { width: geometry.width ?? geometry.encoded_width, height: geometry.height ?? geometry.encoded_height };
+  const expected = gameCopyDimensions(shown.width, shown.height), actual = imageDimensions(copy.bytes);
+  if (actual.width !== expected.width || actual.height !== expected.height)
+    throw new HttpError(409, `Dimensioni della copia ${actual.width}×${actual.height}, attese ${expected.width}×${expected.height}`);
+  const sha = [...new Uint8Array(await crypto.subtle.digest("SHA-256", copy.bytes))].map(x => x.toString(16).padStart(2, "0")).join("");
+  const previous = await env.DB.prepare("SELECT sha256,source_sha256 FROM editorial_game_copies WHERE image_id=?").bind(image.id).first<{sha256:string;source_sha256:string}>();
+  if (previous) {
+    if (previous.source_sha256 !== image.sha256) throw new HttpError(409, "Copia di gioco registrata da un file diverso");
+    return json({ image_id: image.id, sha256: previous.sha256, already_prepared: true });
+  }
+  const key = "game-copies/" + image.id + "/" + sha + ".webp";
+  await env.IMAGES.put(key, copy.bytes, { httpMetadata: { contentType: GAME_COPY.mime }, customMetadata: { sha256: sha, source_sha256: image.sha256 } });
+  await env.DB.prepare(`INSERT INTO editorial_game_copies(image_id,source_sha256,r2_key,sha256,mime,width,height,bytes,recipe,created_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(image_id) DO NOTHING`)
+    .bind(image.id, image.sha256, key, sha, GAME_COPY.mime, actual.width, actual.height, copy.bytes.length, GAME_COPY_RECIPE, new Date().toISOString()).run();
+  const stored = await env.DB.prepare("SELECT sha256 FROM editorial_game_copies WHERE image_id=?").bind(image.id).first<{sha256:string}>();
+  return json({ image_id: image.id, sha256: stored?.sha256 || sha, width: actual.width, height: actual.height, bytes: copy.bytes.length,
+    already_prepared: stored?.sha256 !== sha }, stored?.sha256 === sha ? 201 : 200);
+}
+
 export async function editorialCycle(request: Request, env: Env, path: string): Promise<Response> {
+  if (path === base + "/game-copy") return gameCopy(request, env);
   if (path === base && request.method === "GET") {
     const cycle = cycleId(new URL(request.url).searchParams.get("cycle_id"));
     const rows = (await env.DB.prepare(`SELECT q.origin,q.status,count(*) AS count FROM editorial_review_effective_images q
@@ -27,7 +73,10 @@ export async function editorialCycle(request: Request, env: Env, path: string): 
       WHERE r.cycle_id=? AND NOT EXISTS(SELECT 1 FROM published_images p WHERE p.image_id=r.image_id) GROUP BY r.type`).bind(cycle).all()).results;
     const published = (await env.DB.prepare(`SELECT i.type,count(DISTINCT p.image_id) AS count FROM editorial_cycle_admissions a
       JOIN published_images p ON p.image_id=a.image_id JOIN images i ON i.id=p.image_id WHERE a.cycle_id=? GROUP BY i.type`).bind(cycle).all()).results;
-    return json({ cycle_id:cycle, reviews:rows, ready, published });
+    const missing = (await env.DB.prepare(`SELECT r.image_id,r.type,(SELECT a.inbox_id FROM editorial_cycle_admissions a WHERE a.image_id=r.image_id
+      ORDER BY a.created_at DESC LIMIT 1) AS inbox_id FROM editorial_cycle_ready_images r WHERE r.cycle_id=?
+      AND NOT EXISTS(SELECT 1 FROM published_images p WHERE p.image_id=r.image_id) AND ${MISSING_COPY} ORDER BY r.created_at,r.image_id`).bind(cycle).all()).results;
+    return json({ cycle_id:cycle, reviews:rows, ready, published, missing_game_copies:missing });
   }
   if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
   const data = await body(request, 24000), cycle = cycleId(data.cycle_id);
@@ -42,6 +91,7 @@ export async function editorialCycle(request: Request, env: Env, path: string): 
       AND NOT EXISTS(SELECT 1 FROM published_images p WHERE p.image_id=r.image_id)
       AND EXISTS(SELECT 1 FROM editorial_cycle_admissions a JOIN editorial_image_tags it ON it.inbox_id=a.inbox_id
         JOIN editorial_tags t ON t.id=it.tag_id AND t.retired_at IS NULL WHERE a.image_id=r.image_id)
+      AND NOT ${MISSING_COPY}
     ), capacity AS (SELECT min(sum(type='REAL'),sum(type='AI')) AS cap FROM waiting)
     INSERT INTO publication_batches SELECT ?,json_group_array(w.image_id),?,? FROM waiting w,capacity c
       WHERE w.n<=c.cap HAVING count(*)>0`).bind(cycle,uid,(await hash(env.ADMIN_TOKEN!)).slice(0,12),stamp).run();

@@ -68,11 +68,22 @@ try:
     assert clean.getexif().get(0x0112) == 6 and len(clean.getexif()) == 1, dict(clean.getexif())
     assert 'icc_profile' not in clean.info and 'comment' not in clean.info
     assert clean.tobytes() == reference.tobytes(), 'pixels must be identical'
+    # Once a uniform game copy exists for the admitted file, the game serves it instead (docs/copie-di-gioco.v1.0.0.md).
+    webp = io.BytesIO(); reference.transpose(Image.Transpose.ROTATE_270).save(webp, 'WEBP', quality=85); webp = webp.getvalue()
+    with tempfile.TemporaryDirectory() as folder:
+        path = Path(folder) / 'copy.webp'; path.write_bytes(webp)
+        wrangler('r2', 'object', 'put', f'real-or-slop-approved-local/game-copies/{prefix}_REAL/copy.webp', '--file', str(path), '--content-type', 'image/webp')
+    sql(f"INSERT INTO editorial_game_copies(image_id,source_sha256,r2_key,sha256,mime,width,height,bytes,recipe,created_at) VALUES('{prefix}_REAL',"
+        f"'{hashlib.sha256(original + b'REAL').hexdigest()}','game-copies/{prefix}_REAL/copy.webp','{hashlib.sha256(webp).hexdigest()}','image/webp',32,48,{len(webp)},'fixture','2026-11-09T11:00:00Z');")
+    with client.open(base+view['question']['image']) as response:
+        assert response.headers['Content-Type'] == 'image/webp'
+        assert response.read() == webp
     # The private R2 original is untouched.
     with tempfile.TemporaryDirectory() as folder:
         copy = Path(folder) / 'copy.jpg'
         wrangler('r2', 'object', 'get', 'real-or-slop-approved-local/'+keys['REAL'], '--file', str(copy))
         assert copy.read_bytes() == original
 finally:
-    sql(f"DELETE FROM answers WHERE round_id IN (SELECT id FROM game_rounds WHERE session_id='{session}'); DELETE FROM game_rounds WHERE session_id='{session}'; DELETE FROM game_sessions WHERE id='{session}'; DELETE FROM images WHERE id LIKE '{prefix}_%';")
+    sql(f"DELETE FROM answers WHERE round_id IN (SELECT id FROM game_rounds WHERE session_id='{session}'); DELETE FROM game_rounds WHERE session_id='{session}'; DELETE FROM game_sessions WHERE id='{session}';")
+    # Image rows stay: a game copy is immutable and references them. They are never published, so no game draws them.
 print('Game media served without identifying metadata; pixels, orientation and R2 original unchanged.')

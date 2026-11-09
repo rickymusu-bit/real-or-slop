@@ -278,7 +278,8 @@ with sync_playwright() as p:
                 admission.locator('select').select_option('fixture')
                 for checkbox in admission.locator('input[type=checkbox]').all():checkbox.check()
                 admission.locator('#cycle-admit').click()
-                expect(page.locator('#review-message')).to_contain_text('Ammessa')
+                # The browser encodes and registers the uniform WebP game copy right after admission.
+                expect(page.locator('#review-message')).to_contain_text('Ammessa, con la copia di gioco WebP')
             admit(voted_title,'REAL')
             page.locator('#inbox-origin').select_option('AI')
             page.locator('#inbox-state').select_option('pending')
