@@ -1,6 +1,6 @@
 ## 0.28.0 — 2026-11-09T05:00:00Z (proposta, non pubblicata)
 
-Fase 2a dei tag per foto (`docs/lotti-editoriali.v1.4.2.md`, sezione 4). Nessuna chiamata a pagamento.
+Tag per foto (`docs/lotti-editoriali.v1.5.0.md`, sezione 4). Tag solo manuali: nessuna proposta da modelli e nessuna chiamata a pagamento, per decisione dell'owner.
 
 - Revisione: tag per foto REAL e SLOP, con aggiunta (anche con Invio) e rimozione. Il formato viene controllato mentre scrivi e la forma corretta proposta (`Burning car` → `burning-car`); i tag che rivelerebbero l'origine REAL/SLOP sono rifiutati.
 - Segnaposto `untagged`, derivato: le foto senza tag non si approvano, non si ammettono e non entrano nella pubblicazione del ciclo; le già pubblicate restano nel gioco e compaiono nel nuovo filtro «Senza tag (N)».

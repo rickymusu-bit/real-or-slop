@@ -1,4 +1,4 @@
-/** Per-photo tags, phase 2a of docs/lotti-editoriali.v1.4.2.md. v1.0.0, 2026-11-09T05:00:00Z.
+/** Per-photo tags, docs/lotti-editoriali.v1.5.0.md (manual only, no paid calls). v1.0.0, 2026-11-09T05:00:00Z.
  * No model calls. Tags belong to the photo (inbox id) and survive approval, admission and publication.
  * Every assignment or removal is an append-only event; `untagged` is derived, never stored. */
 import { body, HttpError, id, json, type Env } from "./core";

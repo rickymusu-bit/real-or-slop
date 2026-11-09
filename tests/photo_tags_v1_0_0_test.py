@@ -22,6 +22,8 @@ class PhotoTagSchemaTest(unittest.TestCase):
                 db.execute("INSERT INTO editorial_tags VALUES('t2',?,'owner','now',NULL)", (label,))
         with self.assertRaises(sqlite3.IntegrityError):
             db.execute("INSERT INTO editorial_tags VALUES('t2','burning-car','owner','now',NULL)")
+        with self.assertRaises(sqlite3.IntegrityError):  # no model-assigned tags (spec 1.5.0)
+            db.execute("INSERT INTO editorial_tags VALUES('t3','night','model','now',NULL)")
         db.execute("UPDATE editorial_tags SET retired_at='later' WHERE id='t1'")
         db.execute("INSERT INTO editorial_tags VALUES('t2','burning-car','owner','now',NULL)")  # label reusable after retirement
 

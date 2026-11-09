@@ -1,11 +1,12 @@
 -- v1.0.0, 2026-11-09T05:00:00Z: per-photo tags, phase 2a of docs/lotti-editoriali.v1.4.2.md (section 4).
--- Additive only. The `untagged` placeholder is derived (a photo without active tags) and never stored.
+-- Additive only. Tags are assigned by the owner only, never by a model (spec 1.5.0: no paid calls for tags).
+-- The `untagged` placeholder is derived (a photo without active tags) and never stored.
 -- Tags follow the photo identity (inbox id) through approval, admission and publication; every change
 -- is an append-only event carrying the pixel hash seen at that moment.
 CREATE TABLE editorial_tags (
  id TEXT PRIMARY KEY,
  label TEXT NOT NULL CHECK(length(label) BETWEEN 1 AND 40 AND label=lower(label) AND instr(label,' ')=0 AND label<>'untagged'),
- source TEXT NOT NULL CHECK(source IN ('owner','model')),
+ source TEXT NOT NULL CHECK(source='owner'),
  created_at TEXT NOT NULL,
  retired_at TEXT
 );
@@ -21,7 +22,7 @@ CREATE TRIGGER editorial_tags_no_delete BEFORE DELETE ON editorial_tags
 CREATE TABLE editorial_image_tags (
  inbox_id TEXT NOT NULL,
  tag_id TEXT NOT NULL REFERENCES editorial_tags(id),
- source TEXT NOT NULL CHECK(source IN ('owner','model')),
+ source TEXT NOT NULL CHECK(source='owner'),
  added_at TEXT NOT NULL,
  PRIMARY KEY(inbox_id,tag_id)
 );
@@ -35,7 +36,7 @@ CREATE TABLE editorial_image_tag_events (
  tag_id TEXT NOT NULL REFERENCES editorial_tags(id),
  action TEXT NOT NULL CHECK(action IN ('add','remove')),
  image_sha256 TEXT,
- source TEXT NOT NULL CHECK(source IN ('owner','model','retirement')),
+ source TEXT NOT NULL CHECK(source IN ('owner','retirement')),
  created_at TEXT NOT NULL
 );
 CREATE INDEX editorial_image_tag_events_image ON editorial_image_tag_events(inbox_id,created_at);
