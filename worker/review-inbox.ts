@@ -108,12 +108,16 @@ export async function reviewInbox(request: Request, env: Env, path: string): Pro
       env.DB.prepare(`INSERT INTO editorial_review_deleted_images
         SELECT id,origin,source_sha256,revision,?,? FROM editorial_review_effective_images WHERE id=? AND revision=? AND sha256=? AND status='rejected'`)
         .bind((await hash(env.ADMIN_TOKEN!)).slice(0, 12), new Date().toISOString(), row.id, row.revision, row.sha256),
+      // A Commons acquisition links its proposal to this photo with a foreign key: the link goes with the photo.
+      env.DB.prepare(`DELETE FROM editorial_workspace_acquisitions WHERE inbox_id=? AND EXISTS(SELECT 1 FROM editorial_review_inbox q
+        JOIN editorial_review_deleted_images d ON d.image_id=q.id AND d.revision=q.revision AND d.sha256=q.sha256
+        WHERE q.id=editorial_workspace_acquisitions.inbox_id AND q.revision=? AND q.status='rejected')`).bind(row.id, row.revision),
       env.DB.prepare(`DELETE FROM editorial_review_inbox WHERE id=? AND revision=? AND status='rejected'
         AND EXISTS(SELECT 1 FROM editorial_review_deleted_images d WHERE d.image_id=editorial_review_inbox.id
           AND d.revision=editorial_review_inbox.revision AND d.sha256=editorial_review_inbox.sha256)`)
         .bind(row.id, row.revision),
     ]);
-    if (!result[1].meta.changes) throw new HttpError(409, "Immagine aggiornata: ricaricare prima di eliminarla");
+    if (!result[2].meta.changes) throw new HttpError(409, "Immagine aggiornata: ricaricare prima di eliminarla");
     const released = await releaseFiles(env, files);
     return json({ deleted: true, history_preserved: true, published: false, files_deleted: released.length });
   }

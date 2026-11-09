@@ -50,6 +50,16 @@ for n in range(3):
     assert stored(keys['original']) and stored(keys['copy'])
     photos.append(dict(id=saved['inbox_id'], sha=copy_sha, **keys))
 
+# Photos 0 and 1 are also linked to a Commons acquisition, as photos acquired from Commons are in production:
+# its foreign key must not block the definitive deletion (regression of 2026-11-09).
+for n in (0, 1):
+    status, link = call('/api/admin/editorial/workspace/links', {'topic_id': topic['id'],
+        'source_url': f'https://commons.wikimedia.org/wiki/File:Spazio_{uuid.uuid4().hex}.jpg'})
+    assert status == 201, (status, link)
+    sql(f"INSERT INTO editorial_workspace_acquisitions(proposal_id,inbox_id,source_json,created_at) VALUES('{link['id']}','{photos[n]['id']}','{{}}','d')")
+def acquired(photo): return sql(f"SELECT count(*) AS n FROM editorial_workspace_acquisitions WHERE inbox_id='{photo['id']}'")[0]['n']
+assert acquired(photos[0]) == 1 and acquired(photos[1]) == 1
+
 def reject(photo):
     status, result = call('/api/admin/review-inbox/'+photo['id']+'/decision',
                           {'decision': 'rejected', 'revision': 0, 'sha256': photo['sha'], 'note': 'space test', 'reason': 'editorial'})
@@ -60,6 +70,7 @@ reject(photos[0])
 status, result = call('/api/admin/review-inbox/'+photos[0]['id'], {'confirm_delete': True, 'revision': 1, 'sha256': photos[0]['sha']}, method='DELETE')
 assert status == 200 and result['files_deleted'] == 2, (status, result)
 assert not stored(photos[0]['original']) and not stored(photos[0]['copy'])
+assert acquired(photos[0]) == 0
 # A photo still in the queue keeps its files.
 assert stored(photos[2]['original']) and stored(photos[2]['copy'])
 # Bulk deletion of the rejected: only the rejected photo's files go.
@@ -69,5 +80,6 @@ assert status == 200 and snapshot['count'] >= 1, snapshot
 status, result = call('/api/admin/review-inbox/delete-rejected', {'origin': 'REAL', 'snapshot_token': snapshot['snapshot_token'], 'confirm_delete': True}, method='DELETE')
 assert status == 200 and result['files_deleted'] >= 2, (status, result)
 assert not stored(photos[1]['original']) and not stored(photos[1]['copy'])
+assert acquired(photos[1]) == 0
 assert stored(photos[2]['original']) and stored(photos[2]['copy'])
-print('R2 space passed: definitive deletions (single and bulk) remove owner-first originals and game copies; photos in the queue keep theirs.')
+print('R2 space passed: definitive deletions (single and bulk) remove owner-first originals and game copies and Commons acquisition links; photos in the queue keep theirs.')
