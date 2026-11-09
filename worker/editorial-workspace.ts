@@ -183,12 +183,13 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
     try { geometry=imageGeometry(new Uint8Array(bytes)); } catch { throw new HttpError(415, "Immagine non valida o oltre 32 megapixel"); }
     const sha256 = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
       .map(x => x.toString(16).padStart(2, "0")).join("");
-    const [existing, rejected, published] = await Promise.all([
+    // A photo deleted definitively can be uploaded again, e.g. into the right lot (docs/spazio-file.v1.2.0.md).
+    const [existing, published] = await Promise.all([
       env.DB.prepare("SELECT id FROM editorial_review_inbox WHERE origin='REAL' AND sha256=?").bind(sha256).first(),
-      env.DB.prepare("SELECT image_id FROM editorial_review_deleted_images WHERE origin='REAL' AND sha256=?").bind(sha256).first(),
       env.DB.prepare("SELECT id FROM images WHERE sha256=?").bind(sha256).first(),
     ]);
-    if (existing || rejected || published) throw new HttpError(409, "Fotografia già presente o precedentemente eliminata");
+    if (existing) throw new HttpError(409, "Fotografia già presente nella coda di revisione");
+    if (published) throw new HttpError(409, "Fotografia già nel catalogo");
     const inboxId = "owner-" + id(), proposalId = id(), key = "owner-proposals/" + inboxId;
     const created = new Date().toISOString();
     const metadata = JSON.stringify({ source_kind: "owner-upload", title, topic_id: topicId, author: "",

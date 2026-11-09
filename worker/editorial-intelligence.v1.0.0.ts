@@ -41,7 +41,10 @@ async function saveCommons(env:Env,t:Topic,photo:CommonsFile,kind:"gpt-commons"|
     env.DB.prepare("SELECT image_id FROM editorial_review_deleted_images WHERE origin='REAL' AND sha256=?").bind(sha).first(),
     env.DB.prepare("SELECT id FROM images WHERE sha256=?").bind(sha).first()
   ]);
-  if(old || removed || catalog)throw new HttpError(409,"Fotografia già presente o scartata");
+  // The owner may acquire again a photo deleted definitively; automatic searches do not bring it back.
+  if(old)throw new HttpError(409,"Fotografia già presente nella coda di revisione");
+  if(catalog)throw new HttpError(409,"Fotografia già nel catalogo");
+  if(removed && kind==="gpt-commons")throw new HttpError(409,"Fotografia eliminata in precedenza");
   const inbox="commons-"+id(),mediaKey="editorial-intelligence/"+inbox;
   const metadata=JSON.stringify({source_kind:kind,topic_id:t.id,title:photo.title,
     author:photo.author,source_url:photo.source_url,license_url:photo.license_url,

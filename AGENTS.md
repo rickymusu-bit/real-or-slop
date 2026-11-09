@@ -1,8 +1,16 @@
-# Istruzioni Codex — versione canonica 16.2.0
+# Istruzioni Codex — versione canonica 16.3.0
 
-Snapshot: `docs/AGENTS.v16.2.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-09T14:30:00Z. Base main `9c4aa39`.
+Snapshot: `docs/AGENTS.v16.3.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-09T15:00:00Z. Base main `9c4aa39`.
 Le sezioni precedenti rimangono contesto per ambiti non sostituiti.
+
+## Foto eliminate: si possono ricaricare (16.3.0)
+
+Aggiornato: 2026-11-09T15:00:00Z. Specifica: `docs/spazio-file.v1.2.0.md`. Decisione dell'owner: una foto
+eliminata definitivamente si può ricaricare o riacquisire. Il registro delle eliminazioni resta come storico,
+autorizzazione delle cancellazioni e blocco dei reimport automatici degli archivi storici, ma non blocca
+caricamenti, acquisizioni Commons e generazioni dell'owner (trigger ridefinito nella 0033). La ricerca
+automatica a pagamento non ripropone foto eliminate. Il controllo dei duplicati nella coda e nel catalogo resta.
 
 ## Foto eliminate e proposte (16.2.0)
 

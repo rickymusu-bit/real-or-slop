@@ -38,4 +38,16 @@ class DeletedPhotoProposalsSchemaTest(unittest.TestCase):
         with self.assertRaisesRegex(sqlite3.IntegrityError, 'immutable'): self.db.execute("DELETE FROM editorial_deleted_photo_proposals")
         with self.assertRaisesRegex(sqlite3.IntegrityError, 'immutable'): self.db.execute("UPDATE editorial_deleted_photo_proposals SET note='x'")
 
+    def test_owner_may_bring_a_deleted_photo_back_but_archives_stay_deleted(self):
+        x = self.db.execute  # a photo really rejected and deleted, as the Worker does it
+        x("INSERT INTO editorial_review_inbox(id,origin,sha256,media_key,metadata_json,status,revision,created_at) VALUES('old','REAL',?,'k0','{}','rejected',1,'d')", ('b'*64,))
+        x("INSERT INTO editorial_review_deleted_images VALUES('old','REAL',?,1,'owner','d')", ('b'*64,))
+        x("DELETE FROM editorial_review_inbox WHERE id='old'")
+        insert = "INSERT INTO editorial_review_inbox(id,origin,sha256,media_key,metadata_json,created_at) VALUES(?,'REAL',?,?,'{}','d')"
+        count = lambda: self.db.execute("SELECT count(*) FROM editorial_review_inbox WHERE sha256=?", ('b'*64,)).fetchone()[0]
+        self.db.execute(insert, ('attempt-legacy', 'b'*64, 'k1')); self.assertEqual(count(), 0)  # automatic sync: ignored
+        self.db.execute(insert, ('old', 'c'*64, 'k2'))  # same id as a deleted one: ignored
+        self.assertEqual(self.db.execute("SELECT count(*) FROM editorial_review_inbox WHERE id='old'").fetchone()[0], 0)
+        self.db.execute(insert, ('owner-again', 'b'*64, 'k3')); self.assertEqual(count(), 1)  # owner upload: allowed
+
 if __name__ == '__main__': unittest.main()
