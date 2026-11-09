@@ -9,6 +9,16 @@ import { hash } from "./core";
 import { approveDescription, cancelDescription, descriptionDraft, proposeDescription, publicDraft } from "./topic-description.v1.0.0";
 
 const base = "/api/admin/editorial/workspace";
+// v1.1.0 (2026-11-09T07:50:00Z, migration 0032): a link proposal is hidden when its latest visibility event is
+// 'dismiss' or, with no event yet, when it carries a 0029 dismissal. Registering it again restores it.
+const LATEST_VISIBILITY = "COALESCE((SELECT v.action FROM editorial_workspace_proposal_visibility v WHERE v.proposal_id=p.id ORDER BY v.seq DESC LIMIT 1)," +
+  "CASE WHEN EXISTS(SELECT 1 FROM editorial_workspace_proposal_dismissals d WHERE d.proposal_id=p.id) THEN 'dismiss' END,'restore')";
+const VISIBLE = LATEST_VISIBILITY + "<>'dismiss'";
+async function proposalVisibility(env: Env, proposalId: string, action: "dismiss" | "restore", reason: string) {
+  await env.DB.prepare(`INSERT INTO editorial_workspace_proposal_visibility(id,proposal_id,action,reason,seq,created_at)
+    SELECT ?,?,?,?,COALESCE((SELECT max(seq) FROM editorial_workspace_proposal_visibility WHERE proposal_id=?),0)+1,?`)
+    .bind(id(), proposalId, action, reason, proposalId, new Date().toISOString()).run();
+}
 type TopicRow = { id: string; title: string; normalized_key: string; created_at: string; description: string | null; embedding_status: string | null;
   notes: string; lot_status: string; lot_revision: number };
 type ProposalRow = {
@@ -37,7 +47,7 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
   if (path === base && request.method === "GET") {
     const [topics, proposals,drafts] = await Promise.all([
       env.DB.prepare("SELECT t.id,t.title,t.normalized_key,t.created_at,s.description,s.embedding_status,s.input_sha256,s.error_code,COALESCE(l.notes,s.description,'') AS notes,COALESCE(l.status,'open') AS lot_status,COALESCE(l.revision,0) AS lot_revision FROM editorial_workspace_topics t LEFT JOIN editorial_topic_semantics s ON s.topic_id=t.id LEFT JOIN editorial_lots l ON l.topic_id=t.id ORDER BY t.created_at DESC,t.id DESC").all<TopicRow>(),
-      env.DB.prepare("SELECT p.id,p.topic_id,p.kind,p.source_url,COALESCE(p.inbox_id,a.inbox_id) AS inbox_id,p.note,p.created_at,i.status AS review_status FROM editorial_workspace_proposals p LEFT JOIN editorial_workspace_acquisitions a ON a.proposal_id=p.id LEFT JOIN editorial_review_inbox i ON i.id=COALESCE(p.inbox_id,a.inbox_id) WHERE NOT EXISTS(SELECT 1 FROM editorial_workspace_proposal_dismissals d WHERE d.proposal_id=p.id) ORDER BY p.created_at DESC,p.id DESC LIMIT 1000").all<ProposalRow>(),
+      env.DB.prepare("SELECT p.id,p.topic_id,p.kind,p.source_url,COALESCE(p.inbox_id,a.inbox_id) AS inbox_id,p.note,p.created_at,i.status AS review_status FROM editorial_workspace_proposals p LEFT JOIN editorial_workspace_acquisitions a ON a.proposal_id=p.id LEFT JOIN editorial_review_inbox i ON i.id=COALESCE(p.inbox_id,a.inbox_id) WHERE "+VISIBLE+" ORDER BY p.created_at DESC,p.id DESC LIMIT 1000").all<ProposalRow>(),
       env.DB.prepare("SELECT id,title,status,description,ambiguity,proposal_sha256 FROM editorial_topic_description_drafts WHERE status IN ('ready','preparing','uncertain','failed') ORDER BY created_at DESC LIMIT 30").all(),
     ]);
     let embeddingReady=false;
@@ -147,7 +157,15 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
       env.DB.prepare("INSERT OR IGNORE INTO editorial_workspace_proposals(id,topic_id,kind,source_url,inbox_id,note,created_at) VALUES(?,?,'link',?,NULL,?,?)")
         .bind(id(), topicId, url, note, stamp)));
     const saved = results.filter(result => result.meta.changes === 1).length;
-    return json({submitted: urls.length, saved, already_present: urls.length - saved,
+    // A dismissed link registered again is restored, never left hidden and impossible to re-add.
+    let restored = 0;
+    for (const [index, url] of urls.entries()) {
+      if (results[index].meta.changes === 1) continue;
+      const hidden = await env.DB.prepare(`SELECT p.id FROM editorial_workspace_proposals p WHERE p.topic_id=? AND p.source_url=? AND NOT (${VISIBLE})`)
+        .bind(topicId, url).first<{ id: string }>();
+      if (hidden) { await proposalVisibility(env, hidden.id, "restore", ""); restored++; }
+    }
+    return json({submitted: urls.length, saved, restored, already_present: urls.length - saved - restored,
       status: "awaiting_acquisition"}, 201);
   }
   if (path === base + "/links" && request.method === "POST") {
@@ -162,7 +180,13 @@ export async function editorialWorkspace(request: Request, env: Env, path: strin
     try {
       await env.DB.prepare("INSERT INTO editorial_workspace_proposals(id,topic_id,kind,source_url,inbox_id,note,created_at) VALUES(?,?,'link',?,NULL,?,?)")
         .bind(proposal.id, proposal.topic_id, proposal.source_url, proposal.note, proposal.created_at).run();
-    } catch { throw new HttpError(409, "URL già proposto per questo argomento"); }
+    } catch {
+      const hidden = await env.DB.prepare(`SELECT p.id FROM editorial_workspace_proposals p WHERE p.topic_id=? AND p.source_url=? AND NOT (${VISIBLE})`)
+        .bind(proposal.topic_id, proposal.source_url).first<{ id: string }>();
+      if (!hidden) throw new HttpError(409, "URL già proposto per questo argomento");
+      await proposalVisibility(env, hidden.id, "restore", "");
+      return json({ id: hidden.id, source_url: proposal.source_url, restored: true, status: "awaiting_acquisition" });
+    }
     // A URL alone is NOT a verified original and must not enter the image review inbox.
     return json({ ...proposal, status: "awaiting_acquisition" }, 201);
   }
@@ -243,7 +267,9 @@ export async function removeUnusedTopic(env:Env,topicId:string,data:Record<strin
       'notes',(SELECT notes FROM editorial_lots WHERE topic_id=t.id),
       'semantic_description',(SELECT description FROM editorial_topic_semantics WHERE topic_id=t.id),
       'proposals',json((SELECT json_group_array(json_object('id',p.id,'source_url',p.source_url,'note',p.note,'created_at',p.created_at,
-        'dismissed_at',d.created_at,'dismiss_reason',d.reason)) FROM editorial_workspace_proposals p
+        'dismissed_at',d.created_at,'dismiss_reason',d.reason,
+        'visibility',json((SELECT json_group_array(json_object('action',v.action,'reason',v.reason,'created_at',v.created_at))
+          FROM editorial_workspace_proposal_visibility v WHERE v.proposal_id=p.id)))) FROM editorial_workspace_proposals p
         LEFT JOIN editorial_workspace_proposal_dismissals d ON d.proposal_id=p.id WHERE p.topic_id=t.id)),
       'note_events',json((SELECT json_group_array(json_object('revision',e.revision,'value',e.value,'created_at',e.created_at))
         FROM editorial_lot_events e WHERE e.topic_id=t.id))),?2
@@ -255,6 +281,7 @@ export async function removeUnusedTopic(env:Env,topicId:string,data:Record<strin
     guarded("DELETE FROM editorial_topic_semantics WHERE topic_id=?1"),
     guarded("DELETE FROM editorial_topic_slop_seed WHERE topic_id=?1"),
     guarded("DELETE FROM editorial_workspace_manual_stage WHERE topic_id=?1"),
+    guarded("DELETE FROM editorial_workspace_proposal_visibility WHERE proposal_id IN (SELECT id FROM editorial_workspace_proposals WHERE topic_id=?1)"),
     guarded("DELETE FROM editorial_workspace_proposal_dismissals WHERE proposal_id IN (SELECT id FROM editorial_workspace_proposals WHERE topic_id=?1)"),
     guarded("DELETE FROM editorial_workspace_proposals WHERE topic_id=?1"),
     guarded("DELETE FROM editorial_lot_events WHERE topic_id=?1"),
@@ -332,19 +359,17 @@ async function editorialLots(request:Request,env:Env,path:string):Promise<Respon
     if(Object.keys(data).some(key=>key!=="reason"))throw new HttpError(400,"Campi dello scarto non previsti");
     const reason=data.reason===undefined?"":String(data.reason).normalize("NFKC").trim();
     if(typeof data.reason!=="undefined" && typeof data.reason!=="string" || reason.length>300)throw new HttpError(400,"Motivo dello scarto non valido");
-    const proposal=await env.DB.prepare("SELECT p.id,p.kind,p.inbox_id,a.inbox_id AS acquired,d.proposal_id AS dismissed FROM editorial_workspace_proposals p LEFT JOIN editorial_workspace_acquisitions a ON a.proposal_id=p.id LEFT JOIN editorial_workspace_proposal_dismissals d ON d.proposal_id=p.id WHERE p.id=?")
-      .bind(dismissPath[1]).first<{id:string;kind:string;inbox_id:string|null;acquired:string|null;dismissed:string|null}>();
+    const proposal=await env.DB.prepare("SELECT p.id,p.kind,p.inbox_id,a.inbox_id AS acquired,NOT ("+VISIBLE+") AS dismissed FROM editorial_workspace_proposals p LEFT JOIN editorial_workspace_acquisitions a ON a.proposal_id=p.id WHERE p.id=?")
+      .bind(dismissPath[1]).first<{id:string;kind:string;inbox_id:string|null;acquired:string|null;dismissed:number}>();
     if(!proposal)throw new HttpError(404,"Proposta non trovata");
     if(proposal.dismissed)return json({id:proposal.id,dismissed:true,already_dismissed:true});
     if(proposal.kind!=="link" || proposal.inbox_id || proposal.acquired)
       throw new HttpError(409,"Si possono scartare solo link mai acquisiti: le fotografie seguono la revisione");
-    try{
-      await env.DB.prepare("INSERT INTO editorial_workspace_proposal_dismissals(proposal_id,reason,created_at) VALUES(?,?,?)")
-        .bind(proposal.id,reason,new Date().toISOString()).run();
-    }catch{
-      const again=await env.DB.prepare("SELECT 1 FROM editorial_workspace_proposal_dismissals WHERE proposal_id=?").bind(proposal.id).first();
-      if(again)return json({id:proposal.id,dismissed:true,already_dismissed:true});
-      throw new HttpError(409,"Proposta acquisita nel frattempo: non scartata");
+    try{ await proposalVisibility(env,proposal.id,"dismiss",reason); }
+    catch{
+      const again=await env.DB.prepare("SELECT NOT ("+VISIBLE+") AS dismissed FROM editorial_workspace_proposals p WHERE p.id=?").bind(proposal.id).first<{dismissed:number}>();
+      if(again?.dismissed)return json({id:proposal.id,dismissed:true,already_dismissed:true});
+      throw new HttpError(409,"Proposta acquisita o modificata nel frattempo: non scartata");
     }
     return json({id:proposal.id,dismissed:true,already_dismissed:false});
   }

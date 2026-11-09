@@ -1,3 +1,9 @@
+## 0.29.0 — 2026-11-09T07:50:00Z (proposta, non pubblicata)
+
+- Scarto reversibile dei link: registrare di nuovo un link scartato (a mano o da Esplora Commons) lo ripristina e torna visibile; prima rispondeva «già presente» lasciandolo invisibile e impossibile da riaggiungere. Il messaggio indica quanti link sono stati ripristinati.
+- Storico append-only di scarti e ripristini, vale l'ultimo evento; gli scarti precedenti restano validi finché non arriva un ripristino. La rimozione di un lotto include questo storico nella sua istantanea.
+- Migrazione additiva 0032. Specifica `docs/lotti-editoriali.v1.5.2.md`.
+
 ## 0.28.1 — 2026-11-09T07:00:00Z (proposta, non pubblicata)
 
 - Acquisizione Commons: gli originali con più di 32 milioni di pixel (per esempio 9504×6336) venivano rifiutati anche se il Worker avrebbe scaricato la copia proporzionale; ora si passa alla copia anche per numero di pixel, e i limiti si controllano sul file effettivamente scaricato, misurato di nuovo dai byte.

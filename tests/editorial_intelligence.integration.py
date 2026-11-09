@@ -125,6 +125,19 @@ code,gone=call(dismiss,{"reason":"Wrong framing"})
 assert code==200 and gone["dismissed"] is True and gone["already_dismissed"] is False,(code,gone)
 assert call(dismiss,{})[1]["already_dismissed"] is True
 assert all(p["topic_id"]!=lot["id"] for p in call("/api/admin/editorial/workspace")[1]["proposals"])
+# Registering a dismissed link again restores it (migration 0032); it can then be dismissed again.
+code,again=call("/api/admin/editorial/workspace/links/batch",{"topic_id":lot["id"],"source_urls":["https://commons.wikimedia.org/wiki/File:Canal_Grande_1.jpg"]})
+assert code==201 and again["saved"]==0 and again["restored"]==1 and again["already_present"]==0,(code,again)
+visible=[p for p in call("/api/admin/editorial/workspace")[1]["proposals"] if p["topic_id"]==lot["id"]]
+assert [p["id"] for p in visible]==[proposals[0]["id"]],visible
+code,again=call("/api/admin/editorial/workspace/links/batch",{"topic_id":lot["id"],"source_urls":["https://commons.wikimedia.org/wiki/File:Canal_Grande_1.jpg"]})
+assert again["restored"]==0 and again["already_present"]==1,again
+code,redismissed=call(dismiss,{"reason":"Second thoughts"})
+assert code==200 and redismissed["already_dismissed"] is False,(code,redismissed)
+code,single=call("/api/admin/editorial/workspace/links",{"topic_id":lot["id"],"source_url":"https://upload.wikimedia.org/wikipedia/commons/a/a3/Canal_Grande_1.jpg"})
+assert code==200 and single["restored"] is True and single["id"]==proposals[0]["id"],(code,single)
+assert call(dismiss,{})[1]["already_dismissed"] is False
+assert call(dismiss,{})[1]["already_dismissed"] is True
 # A lot with only unacquired links (dismissed or not) can be removed; a snapshot keeps them (spec 1.4.0).
 assert call("/api/admin/editorial/workspace/links/batch",{"topic_id":lot["id"],"source_urls":["https://commons.wikimedia.org/wiki/File:Canal_Grande_2.jpg"]})[0]==201
 code,removed=call("/api/admin/editorial/workspace/topics/"+lot["id"]+"/remove",{"title":lot_title})
