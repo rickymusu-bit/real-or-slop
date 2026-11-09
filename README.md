@@ -9,7 +9,7 @@ Un gioco: un'immagine con la sua didascalia, due possibilità. REAL (fotografia 
 La dashboard privata (`/admin`) ha quattro sezioni: **Caricamento REAL** (wizard Commons → tag e
 didascalie → riepilogo e pubblicazione), **Generazione SLOP** (in preparazione), **Database immagini** e
 **Impostazioni**. La libreria mantiene la gestione dei file, la revisione, l'approvazione e il cestino.
-Specifiche del nuovo flusso: [wizard REAL v1.0.0](docs/dashboard-admin-wizard-real.v1.0.0.md).
+Specifiche del nuovo flusso: [wizard REAL v1.1.0](docs/dashboard-admin-wizard-real.v1.1.0.md).
 Le altre specifiche in `docs/` sono storiche, salvo le eccezioni richiamate in `AGENTS.md`.
 
 ## Sviluppo
