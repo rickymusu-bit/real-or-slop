@@ -205,7 +205,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     if (!analysis?.enabled || !ids.length) { notice = "Nessuna immagine selezionata o generazione non disponibile."; render(); return; }
     const max = Math.round(ids.length * analysis.call_usd * 1e4) / 1e4;
     if (max > analysis.remaining_usd) { notice = "Budget insufficiente: occorrono fino a " + max + " $."; render(); return; }
-    if (!window.confirm("Confermi " + ids.length + " chiamate a " + analysis.model +
+    if (!window.confirm("Confermi " + ids.length + (ids.length === 1 ? " chiamata a " : " chiamate a ") + analysis.model +
       " per generare tag e didascalie insieme? Costo massimo " + max +
       " $; budget residuo " + analysis.remaining_usd +
       " $. I tag presenti verranno conservati; le didascalie già compilate non saranno sovrascritte.")) return;
