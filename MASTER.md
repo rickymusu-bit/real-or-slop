@@ -1,8 +1,15 @@
-# Mappa canonica — versione canonica 16.1.1
+# Mappa canonica — versione canonica 16.2.0
 
-Snapshot: `docs/MASTER.v16.1.1.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-09T14:00:00Z. Base main `9c4aa39`.
+Snapshot: `docs/MASTER.v16.2.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-09T14:30:00Z. Base main `9c4aa39`.
 Le sezioni precedenti rimangono vigenti per gli ambiti non modificati.
+
+## Foto eliminate e proposte (16.2.0)
+
+Aggiornato: 2026-11-09T14:30:00Z. Specifica: `docs/spazio-file.v1.1.0.md`, app 0.34.0, schema 0033
+(`editorial_deleted_photo_proposals` e guardia di cancellazione delle proposte estesa). Eliminazione
+singola in `worker/review-inbox.ts`, in blocco in `worker/review-bulk-delete.ts`; istantanea e condizioni
+condivise in `worker/review-files.v1.0.0.ts`.
 
 ## Spazio dei file (16.1.0)
 
