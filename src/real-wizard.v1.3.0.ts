@@ -1,6 +1,6 @@
 /** Guided REAL ingestion, editing, paid generation and publishing. v1.3.0, 2026-11-10T06:23:49Z: caption counter with a soft limit of
  * 160 characters (a warning, never a block) and a ceiling of 256; the summary flags long captions. Typed tags with a
- * wrong form are converted and saved, saying so (shared/tag-input.v1.0.0.ts).
+ * wrong form are converted and saved silently (shared/tag-input.v1.0.0.ts).
  * v1.2.0, 2026-11-09T22:50:37Z. Draft items are private until approved and published.
  * v1.2.0 (owner decision of 2026-11-09): generating replaces tags and caption of the chosen images and happens at most
  * once per image; an image already generated cannot be chosen again. «Ripristina i testi generati» brings the chosen
@@ -10,7 +10,7 @@ import "./real-wizard.v1.0.0.css";
 import "./caption-count.v1.0.0.css";
 import { CAPTION_MAX, captionCount } from "../shared/caption.v1.0.0";
 import { escape } from "../shared/html";
-import { savedNotice, tagFromInput } from "../shared/tag-input.v1.0.0";
+import { tagFromInput } from "../shared/tag-input.v1.0.0";
 import { prepareLibraryCopy } from "./game-copy.v1.0.0";
 import { markGameMedia } from "./media-mark.v1.0.0";
 
@@ -416,7 +416,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         const checked = tagFromInput(text);
         if (!checked.ok) notice = checked.reason;
         else { await flushCaptions(); const latest = images.find(i => i.id === id)!;
-          await update(latest, { tags: [...new Set([...latest.tags, checked.tag])] }); notice = savedNotice(checked); }
+          await update(latest, { tags: [...new Set([...latest.tags, checked.tag])] }); notice = "Tag salvato."; }
         render();
       } else if (action === "remove-tag") {
         await flushCaptions();

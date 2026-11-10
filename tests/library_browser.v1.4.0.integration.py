@@ -1,4 +1,4 @@
-"""v1.4.0, 2026-11-10T07:10:00Z: typed tags with a wrong form are converted and saved; origin words refused.
+"""v1.4.0, 2026-11-10T07:10:00Z: typed tags with a wrong form are converted and saved silently; origin words refused.
 v1.3.0, 2026-11-09T20:48:00Z: the library dashboard in a real browser, desktop and mobile
 (docs/libreria-immagini.v1.3.0.md): upload, game copy made by the browser, analysis by the (fake) model after an explicit
 cost confirmation, in-place editing, tags, approval, publication, multi-selection, trash, delete for good, and the caption
@@ -73,10 +73,10 @@ with sync_playwright() as p:
             for tag in tags:
                 dialog.locator('#library-tag-input').fill(tag); dialog.locator('#library-tag-input').press('Enter')
                 expect(dialog.locator('.library-tags')).to_contain_text(tag)
-            # A wrong form is converted and saved, saying so; an origin word is refused.
+            # A wrong form is converted and saved, without a notice; an origin word is refused.
             dialog.locator('#library-tag-input').fill('São Paulo'); dialog.locator('#library-tag-input').press('Enter')
-            expect(dialog.locator('#library-detail-message')).to_have_text('Tag salvato come «sao-paulo».')
             expect(dialog.locator('[data-tag-remove=sao-paulo]')).to_have_count(1)
+            expect(dialog.locator('#library-detail-message')).not_to_contain_text('sao-paulo')
             dialog.locator('[data-tag-remove=sao-paulo]').click()
             expect(dialog.locator('[data-tag-remove=sao-paulo]')).to_have_count(0)
             dialog.locator('#library-tag-input').fill('AI'); dialog.locator('#library-tag-input').press('Enter')

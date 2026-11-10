@@ -1,7 +1,7 @@
 # Libreria immagini, tag, didascalie e consulente SLOP — specifica 1.5.0
 
 Stato: **approvata dall'owner il 2026-11-09**, vigente. Creata: 2026-11-09T15:30:00Z.
-Aggiornata: 2026-11-10T07:10:00Z (1.5.0: didascalia con limite morbido di 160 caratteri e tetto di 256, sezione 4; tag scritti
+Aggiornata: 2026-11-10T07:25:00Z (1.5.0: didascalia con limite morbido di 160 caratteri e tetto di 256, sezione 4; tag scritti
 a mano con forma errata convertiti, sezione 3;
 precedente: `docs/libreria-immagini.v1.4.0.md`).
 Base: main `ca44dbe` (app 0.33.0, schema 0032). La PR rickymusu-bit/real-or-slop#99 è stata chiusa senza merge.
@@ -27,7 +27,7 @@ persone, personaggi storici e marchi (`docs/lotti-editoriali.v1.6.2.md`, 6.2–6
    può sempre modificarli e ripristinare i testi generati (decisione del 2026-11-09, sezione 10).
 7. La didascalia ha un limite morbido di 160 caratteri e un tetto tecnico di 256 (decisione del 2026-11-10, sezione 4).
    Per le SLOP la didascalia è plausibile ma descrive una scena inventata: è il senso di «disinformativo».
-8. I tag scritti a mano con forma errata vengono convertiti e salvati, con avviso (decisione del 2026-11-10, sezione 3).
+8. I tag scritti a mano con forma errata vengono convertiti e salvati senza avviso (decisione del 2026-11-10, sezione 3).
 
 ## 2. Libreria
 
@@ -61,8 +61,8 @@ Una pubblicata non si cestina direttamente: prima si ritira dal gioco (passaggio
   (`place-de-la-republique`, `munchen`, `sao-paulo`). Restano vietati i tag che rivelano l'origine e il
   segnaposto `untagged`.
 - **Tag scritti dall'owner** (decisione del 2026-11-10): se l'unico errore è la forma (maiuscole, accenti, spazi,
-  punteggiatura), il tag viene convertito e salvato con l'avviso «Tag salvato come «sao-paulo»», come già accade per
-  i tag del modello. Un tag che rivela l'origine o che non ha una forma valida viene rifiutato con il motivo. Il server
+  punteggiatura), il tag viene convertito e salvato direttamente, senza avvisi (decisione del 2026-11-10: «non c'è
+  bisogno di un avviso quando viene convertito direttamente»), come già accade per i tag del modello. Un tag che rivela l'origine o che non ha una forma valida viene rifiutato con il motivo. Il server
   resta rigido: accetta solo tag già conformi. Regole in `shared/tag-input.v1.0.0.ts`. Un tag entra nel vocabolario
   quando viene salvato su un'immagine e ne esce con l'ultima immagine che lo usa (sezione 10).
 - Nessun tag esistente da convertire: il database riparte vuoto (sezione 9).

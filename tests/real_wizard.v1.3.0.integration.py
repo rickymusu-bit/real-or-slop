@@ -83,14 +83,14 @@ with sync_playwright() as p:
         a.locator('.rw-metadata summary').click()
         expect(a.locator('.rw-metadata')).to_contain_text(title + '-a')
         # The owner writes first; the generation will replace this on the chosen image only.
-        # «Tower» has a wrong form: converted to «tower» and saved, saying so.
+        # «Tower» has a wrong form: converted to «tower» and saved, without a notice.
         for card, tag, caption in ((a, 'bridge', 'Didascalia mia A.'), (b, 'Tower', 'Didascalia mia B.')):
             card.locator('[data-rw-caption]').fill(caption)
             card.locator('[data-rw-caption]').blur()
             card.locator('[data-rw-new-tag]').fill(tag)
             card.locator('[data-rw-new-tag]').press('Enter')
             expect(card.locator('.rw-pill', has_text=tag.lower())).to_have_count(1)
-            expect(page.locator('.rw-message')).to_have_text('Tag salvato come «tower».' if tag == 'Tower' else 'Tag salvato.')
+            expect(page.locator('.rw-message')).to_have_text('Tag salvato.')
             expect(card.locator('[data-rw-new-tag]')).to_be_focused()
 
         expect(page.get_by_role('button', name='Genera tag e didascalie con IA')).to_have_count(1)

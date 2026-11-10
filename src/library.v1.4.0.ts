@@ -1,5 +1,5 @@
 /** Admin image library and four-section dashboard. v1.4.0, 2026-11-10T06:23:49Z (wizard v1.3.0): caption counter, soft limit 160, ceiling 256;
- * typed tags with a wrong form are converted and saved (shared/tag-input.v1.0.0.ts).
+ * typed tags with a wrong form are converted and saved silently (shared/tag-input.v1.0.0.ts).
  * v1.3.0, 2026-11-09T22:50:37Z: vocabulary, aliases and analysis (phase 2).
  * Analysis replaces tags and caption, once per image; «Ripristina i testi generati» restores them at no cost.
  * Add files (device or Commons), edit in place, multi-select, trash without confirmations, delete for good. */
@@ -11,7 +11,7 @@ import { mountRealWizard } from "./real-wizard.v1.3.0";
 import { content, escape } from "./main";
 import { prepareLibraryCopy } from "./game-copy.v1.0.0";
 import { markGameMedia } from "./media-mark.v1.0.0";
-import { savedNotice, tagFromInput } from "../shared/tag-input.v1.0.0";
+import { tagFromInput } from "../shared/tag-input.v1.0.0";
 
 type Status = "new" | "approved" | "published" | "trash";
 interface Item {
@@ -265,8 +265,7 @@ export async function showLibrary() {
     event.preventDefault();
     const checked = tagFromInput(input.value);
     if (!checked.ok) { detail.querySelector("#library-tag-hint")!.textContent = checked.reason; return; }
-    try { open = await save(open, { tags: [...new Set([...open.tags, checked.tag])] }); showDetail(open); render(); void refreshTags(); detail.querySelector<HTMLInputElement>("#library-tag-input")?.focus();
-      detailMessage(savedNotice(checked)); }
+    try { open = await save(open, { tags: [...new Set([...open.tags, checked.tag])] }); showDetail(open); render(); void refreshTags(); detail.querySelector<HTMLInputElement>("#library-tag-input")?.focus(); }
     catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
   });
   detail.addEventListener("click", async event => {
@@ -335,16 +334,15 @@ export async function showLibrary() {
           await analyzeMany(ids); return;
         }
         let tag = $<HTMLInputElement>("#library-bulk-tag")?.value.trim();
-        let converted = "";
         if ((action === "tag-add" || action === "tag-remove")) {
           const checked = tagFromInput(tag || "");
           if (!checked.ok) { message(checked.reason); return; }
-          tag = checked.tag; converted = checked.converted ? ` Tag usato: «${checked.tag}».` : "";
+          tag = checked.tag;
         }
         const result = await call<{ done?: number; deleted?: number; failed?: { error: string }[] }>("/bulk", { method: "POST",
           body: JSON.stringify({ action, ids: [...selected], tags: tag ? [tag] : [], rights_confirmed: action === "approve" && Boolean($<HTMLInputElement>("#library-bulk-rights")?.checked) }) });
         message(result.deleted !== undefined ? `${result.deleted} eliminate definitivamente.` :
-          `${result.done} aggiornate.${converted}` + (result.failed?.length ? ` ${result.failed.length} non aggiornate: ${[...new Set(result.failed.map(f => f.error))].join("; ")}.` : ""));
+          `${result.done} aggiornate.` + (result.failed?.length ? ` ${result.failed.length} non aggiornate: ${[...new Set(result.failed.map(f => f.error))].join("; ")}.` : ""));
         if (action !== "tag-add" && action !== "tag-remove") selected.clear();
         await Promise.all([load(), refreshTags()]);
       }
