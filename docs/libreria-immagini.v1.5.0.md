@@ -1,14 +1,15 @@
 # Libreria immagini, tag, didascalie e consulente SLOP — specifica 1.5.0
 
 Stato: **approvata dall'owner il 2026-11-09**, vigente. Creata: 2026-11-09T15:30:00Z.
-Aggiornata: 2026-11-10T07:25:00Z (1.5.0: didascalia con limite morbido di 160 caratteri e tetto di 256, sezione 4; tag scritti
-a mano con forma errata convertiti, sezione 3;
+Aggiornata: 2026-11-10T08:05:00Z (1.5.0: didascalia con limite morbido di 160 caratteri e tetto di 256, sezione 4; tag scritti
+a mano con forma errata convertiti, sezione 3; regole di contenuto e trasparenza riunite nella sezione 11;
 precedente: `docs/libreria-immagini.v1.4.0.md`).
 Base: main `ca44dbe` (app 0.33.0, schema 0032). La PR rickymusu-bit/real-or-slop#99 è stata chiusa senza merge.
 Sostituisce, una volta approvata: lotti e bozze di `docs/lotti-editoriali.v1.6.2.md` (sezioni 2–5 e 7)
 e le regole sui tag della sezione 14.0.0 di `AGENTS.md`. Restano valide: `docs/copie-di-gioco.v2.0.0.md`,
-`docs/spazio-file.v1.2.0.md`, marchio «RS», file senza metadati, blocco del salvataggio, regole su
-persone, personaggi storici e marchi (`docs/lotti-editoriali.v1.6.2.md`, 6.2–6.4).
+`docs/spazio-file.v1.2.0.md`. Le regole su persone, personaggi storici, marchi, regimi, nudità, marchio «RS», metadati
+e salvataggio, prima nelle sezioni 6.2–6.4 di `docs/lotti-editoriali.v1.6.2.md`, sono ora nella sezione 11:
+quel documento è interamente storico.
 
 ## 1. Decisioni dell'owner (2026-11-09)
 
@@ -28,6 +29,8 @@ persone, personaggi storici e marchi (`docs/lotti-editoriali.v1.6.2.md`, 6.2–6
 7. La didascalia ha un limite morbido di 160 caratteri e un tetto tecnico di 256 (decisione del 2026-11-10, sezione 4).
    Per le SLOP la didascalia è plausibile ma descrive una scena inventata: è il senso di «disinformativo».
 8. I tag scritti a mano con forma errata vengono convertiti e salvati senza avviso (decisione del 2026-11-10, sezione 3).
+9. Regole di contenuto per le SLOP: niente immagini che celebrano regimi o ideologie, niente nudità umana tranne
+   nelle opere d'arte; tolta la regola sul non ricopiare le combinazioni REAL (decisioni del 2026-11-10, sezione 11).
 
 ## 2. Libreria
 
@@ -108,8 +111,10 @@ Calcoli deterministici sul database, senza modelli e senza costi.
   REAL, ordinati per probabilità condizionata P(B|A), solo se la coppia compare in **almeno 3 immagini
   distinte**. Con pochi dati non emerge la combinazione di una singola foto; con molti dati la soglia
   non pesa.
-- La generazione resta quella approvata (`docs/lotti-editoriali.v1.6.2.md`, 6.1–6.3): l'owner sceglie
-  tema e tag, un modello linguistico scrive i prompt, l'owner li rivede, il generatore riceve solo testo.
+- **Generazione (fase 3, da ridefinire).** Il metodo con cui si scelgono i tag da cui nascono le SLOP è da
+  definire (decisione dell'owner del 2026-11-10): non vale più la regola «non ricopiare la combinazione delle foto
+  REAL» del vecchio sistema a lotti. Restano fermi: un modello linguistico scrive i prompt rispettando la sezione 11,
+  l'owner li rivede, il generatore riceve solo testo, ogni chiamata è a pagamento con conferma e registro di spesa.
   Le SLOP generate entrano nella libreria e passano dall'analisi della sezione 3.
 
 ## 6. Pubblicazione
@@ -236,3 +241,49 @@ eliminerebbe a cascata.
 d'integrazione coprono conferma, budget modificato e rinnovato, costo dai token, esiti incerti non ripetuti,
 limite di OpenAI raggiunto, alias, unione, testi sostituiti, generazione unica, ripristino
 e rimozione dei tag orfani, anche nel browser su desktop e mobile.
+
+## 11. Regole di contenuto e trasparenza (1.5.0)
+
+Riunisce le regole ancora valide delle sezioni 6.2–6.4 di `docs/lotti-editoriali.v1.6.2.md`, aggiornate con le
+decisioni dell'owner del 2026-11-10. Valgono per ogni modello che produce contenuti del sito: chi scrive i prompt
+delle SLOP, il generatore di immagini, chi scrive tag e didascalie. Il contesto fisso dei modelli le riprende.
+
+**11.1 Che cosa può comparire in una SLOP**
+- **Persone vive o morte da meno di 50 anni:** escluse. Solo figure plausibili ma non riconoscibili.
+- **Personaggi storici** (morti da almeno 50 anni): ammessi, anche in eventi mai accaduti, perché riconoscere un
+  falso storico richiede conoscenza ed è parte del gioco. Esclusi atrocità e crimini attribuiti a loro e ogni scena
+  degradante.
+- **Marchi reali:** ammessi.
+- **Regimi e ideologie** (decisione del 2026-11-10): documentare sì, celebrare no. Ammesse scene storiche in cui
+  manifesti, bandiere, simboli o propaganda compaiono come parte del contesto (una strada di Mosca nel 1965 con i
+  manifesti alle pareti). Esclusa ogni immagine costruita per esaltare un regime, un leader o un'ideologia, compresi
+  manifesti di propaganda generati ex novo: per esempio un nuovo manifesto di arruolamento nelle SS. Una volta fuori
+  dal gioco sarebbe indistinguibile da propaganda autentica; in Italia valgono le norme sull'apologia del fascismo,
+  in altri paesi il divieto dei simboli nazisti. Le riproduzioni di manifesti storici autentici sono immagini REAL
+  e le valuta l'owner in revisione.
+- **Nudità** (decisione del 2026-11-10): vietata ogni nudità umana, tranne nelle opere d'arte (statue, dipinti,
+  affreschi) che compaiono nella scena. Mai contenuti sessuali; mai nudità che riguardi minori, nemmeno nelle opere.
+- **Stile:** fotografico e plausibile per l'epoca e il luogo, senza riferimenti a fotografi, agenzie o archivi.
+- Il generatore di immagini applica anche le proprie regole d'uso e può rifiutare richieste ammesse qui. I casi dubbi
+  li decide l'owner in revisione.
+
+**11.2 Didascalie e persone.** Il modello non inventa nomi di persone: usa solo quelli del contesto. Per le REAL il
+contesto è il titolo e la descrizione di Commons, che possono nominare persone vive: è ammesso, perché la foto è
+autentica. Per le SLOP il contesto è il prompt, che già rispetta 11.1: la didascalia eredita quelle regole. La
+didascalia di una SLOP è plausibile ma descrive una scena inventata (sezione 4).
+
+**11.3 Trasparenza e protezioni**
+- **Deepfake:** per l'AI Act (art. 50) quasi ogni SLOP fotorealistica che richiama luoghi, marchi, eventi o persone
+  esistenti è un deepfake, anche senza personaggi famosi. La risposta è la trasparenza: il sito dichiara che molte
+  immagini sono generate dall'IA, ogni round rivela l'origine e le immagini portano un marchio visibile.
+- **Marchio «RS»:** identico su tutte le immagini del gioco, REAL e SLOP, sovrapposto in pagina e non inciso nei file
+  (le REAL restano intatte, anche con licenze ND). In basso a destra dentro l'immagine, lato circa il 5% del lato
+  corto con un minimo leggibile su telefono, lettere bianche al 60–70% di opacità con contorno scuro sottile, uguale
+  nel round e nella risposta. Un marchio solo su alcune immagini rivelerebbe la risposta. Non è una protezione
+  tecnica: serve come attrito alla diffusione fuori contesto e come prova della diligenza del sito.
+- **Salvataggio scoraggiato:** nel gioco sono bloccati tasto destro, trascinamento e pressione prolungata sulle
+  immagini. Non è un blocco assoluto.
+- **Metadati:** il gioco serve solo le copie WebP senza metadati (`docs/copie-di-gioco.v2.0.0.md`), uguali per REAL
+  e SLOP; gli originali con i loro metadati restano nella quarantena privata.
+- **Licenze:** nessuna licenza restrittiva sulle SLOP, che in genere non sono protette da diritto d'autore; valgono i
+  termini d'uso del sito (divieto di diffusione fuori contesto), da far verificare a un legale.

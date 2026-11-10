@@ -6,8 +6,8 @@ Aggiornato: 2026-11-10T07:25:00Z Precedente: `docs/AGENTS.v17.5.0.md` (storico, 
 ## Sistema corrente
 
 Specifiche vigenti: `docs/libreria-immagini.v1.5.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`. Restano valide `docs/copie-di-gioco.v2.0.0.md`
-e, per persone, personaggi storici, marchi, marchio «RS» e metadati, le sezioni 6.2–6.4 di
-`docs/lotti-editoriali.v1.6.2.md`. Ogni altro documento in `docs/` è storico.
+e `docs/spazio-file.v1.2.0.md`. Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
+le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.5.0.md`.
 
 - Dashboard `/admin` in quattro sezioni. Caricamento REAL in wizard di tre passi: selezione Commons, tag e didascalie, riepilogo e pubblicazione. Le altre sezioni verranno completate progressivamente.
 - Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: caricamento multiplo,
@@ -28,7 +28,11 @@ e, per persone, personaggi storici, marchi, marchio «RS» e metadati, le sezion
 - **Cestino:** svuotarlo cancella ogni riga e ogni file dell'immagine. Nessun registro delle
   eliminazioni, nessuna istantanea, nessuna esportazione automatica: decisione esplicita dell'owner.
 - **Consulente SLOP** (fase 3): distribuzione dei tag REAL/SLOP e tag correlati con supporto minimo di 3
-  immagini, calcolati sul database senza modelli. Il generatore di immagini riceve solo testo.
+  immagini, calcolati sul database senza modelli. Il metodo di scelta dei tag per la generazione è da definire.
+  Il generatore di immagini riceve solo testo.
+- **Contenuti delle SLOP:** niente persone vive o morte da meno di 50 anni; personaggi storici ammessi senza crimini
+  attribuiti né scene degradanti; marchi ammessi; regimi documentati ma mai celebrati; nessuna nudità umana tranne
+  nelle opere d'arte.
 - Restano: gioco singolo e PvP, file serviti senza metadati, marchio «RS», blocco del salvataggio.
 
 ## Regole di lavoro
