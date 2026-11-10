@@ -5,8 +5,8 @@ Aggiornato: 2026-11-10T07:25:00Z Precedente: `docs/AGENTS.v17.5.0.md` (storico, 
 
 ## Sistema corrente
 
-Specifiche vigenti: `docs/libreria-immagini.v1.5.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`. Restano valide `docs/copie-di-gioco.v2.0.0.md`
-e `docs/spazio-file.v1.2.0.md`. Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
+Specifiche vigenti: `docs/libreria-immagini.v1.5.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`. Resta valida `docs/copie-di-gioco.v2.0.0.md`.
+Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.5.0.md`.
 
 - Dashboard `/admin` in quattro sezioni. Caricamento REAL in wizard di tre passi: selezione Commons, tag e didascalie, riepilogo e pubblicazione. Le altre sezioni verranno completate progressivamente.

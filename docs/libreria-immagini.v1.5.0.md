@@ -7,7 +7,8 @@ precedente: `docs/libreria-immagini.v1.4.0.md`).
 Base: main `ca44dbe` (app 0.33.0, schema 0032). La PR rickymusu-bit/real-or-slop#99 è stata chiusa senza merge.
 Sostituisce, una volta approvata: lotti e bozze di `docs/lotti-editoriali.v1.6.2.md` (sezioni 2–5 e 7)
 e le regole sui tag della sezione 14.0.0 di `AGENTS.md`. Restano valide: `docs/copie-di-gioco.v2.0.0.md`,
-`docs/spazio-file.v1.2.0.md`. Le regole su persone, personaggi storici, marchi, regimi, nudità, marchio «RS», metadati
+`docs/spazio-file.v1.2.0.md` (citato qui fin dalla prima versione, ma assente dal repository: nel repository c'è solo
+`docs/spazio-file.v1.0.0.md`, storico). Le regole su persone, personaggi storici, marchi, regimi, nudità, marchio «RS», metadati
 e salvataggio, prima nelle sezioni 6.2–6.4 di `docs/lotti-editoriali.v1.6.2.md`, sono ora nella sezione 11:
 quel documento è interamente storico.
 
