@@ -1,4 +1,24 @@
-## 1.4.0 — 2026-11-09T22:50:37Z (proposta, non pubblicata)
+## 1.6.0 — 2026-11-10T09:39:49Z (proposta, non pubblicata)
+
+Decisione dell'owner del 2026-11-10: contesto fisso del modello linguistico modificabile dalle Impostazioni (`docs/libreria-immagini.v1.6.0.md`, sezione 12).
+
+- Impostazioni → «Contesto dei modelli»: tre testi (base comune, tag e didascalie, prompt per le SLOP) con contatore, salvataggio come nuova versione, storico con data e numero di immagini che l'hanno usata, ripristino. Prima versione: i testi approvati dall'owner.
+- La generazione di tag e didascalie usa base e compito attuali più una riga fissa sul formato JSON, e registra le versioni usate. Formato, limiti della didascalia e filtri dei tag restano nel codice.
+- I messaggi delle Impostazioni (tetto, rinnovo, unioni, alias, contesto) compaiono ora nelle Impostazioni: prima finivano nella sezione Database, nascosta.
+- Migrazione additiva `0037_model_contexts.v1.0.0.sql`. Nuove versioni: `worker/model-context.v1.0.0.ts`, `worker/analysis.v1.5.0.ts`, `worker/library.v1.5.0.ts`, `src/library.v1.5.0.ts`, `src/model-context.v1.0.0.css`; test `tests/analysis.v1.3.0.integration.py` e `tests/library_browser.v1.5.0.integration.py`.
+
+## 1.5.0 — 2026-11-10T07:10:00Z (proposta, non pubblicata)
+
+Decisioni dell'owner del 2026-11-10 sulla lunghezza della didascalia e sui tag scritti a mano (`docs/libreria-immagini.v1.5.0.md`, sezioni 3 e 4).
+
+- Tolto il taglio netto a 160 caratteri, che troncava anche a metà parola senza avvisare. 160 è ora un limite morbido: il modello mira a 120–150 caratteri e mai oltre 160; una didascalia più lunga si conserva intera, con il contatore «N/160» evidenziato nell'editor del wizard e della sezione Database e un avviso nel riepilogo, senza bloccare la pubblicazione.
+- Tetto tecnico di 256 caratteri nel server e nello schema. Solo una didascalia del modello oltre 256 viene accorciata, alla fine dell'ultima frase o parola intera, con un avviso.
+- Migrazione `0036_caption_soft_limit.v1.0.0.sql`: ricostruisce la tabella `images` (un vincolo CHECK non si modifica in SQLite) conservando tag, alias, round, risposte e sfide collegati. Verificata in locale su un database popolato.
+- Tag scritti a mano nel wizard, nel dettaglio e nelle azioni in blocco della sezione Database: se l'unico errore è la forma (maiuscole, accenti, spazi, punteggiatura) il tag viene convertito e salvato direttamente, senza avvisi; restano rifiutati i tag che rivelano l'origine. Il server continua ad accettare solo tag conformi.
+- Regole di contenuto e trasparenza riunite nella sezione 11 di `docs/libreria-immagini.v1.5.0.md`; `docs/lotti-editoriali.v1.6.2.md` diventa interamente storico. Tolta la regola «non ricopiare la combinazione delle foto REAL» (il metodo di scelta dei tag per la generazione è da definire). Precisate due regole sulle SLOP: regimi e ideologie si documentano ma non si celebrano (nessun manifesto di propaganda generato ex novo); nessuna nudità umana tranne nelle opere d'arte. Aggiornato lo stato dei metadati: il gioco serve già solo copie senza metadati.
+- Nuove versioni: `shared/caption.v1.0.0.ts` e `shared/tag-input.v1.0.0.ts` (con test unitari), `worker/analysis.v1.4.0.ts`, `worker/library.v1.4.0.ts`, `src/library.v1.4.0.ts`, `src/real-wizard.v1.3.0.ts`, `src/caption-count.v1.0.0.css`; test `tests/library.v1.1.0.integration.py`, `tests/analysis.v1.2.0.integration.py`, `tests/real_wizard.v1.3.0.integration.py`, `tests/library_browser.v1.4.0.integration.py`. Vecchie versioni conservate.
+
+## 1.4.0 — 2026-11-09T22:50:37Z (pubblicata il 2026-11-10)
 
 Decisione dell'owner del 2026-11-09 sulla generazione di tag e didascalie (`docs/libreria-immagini.v1.4.0.md`, sezione 10;
 `docs/dashboard-admin-wizard-real.v1.2.0.md`).
