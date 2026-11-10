@@ -1,0 +1,153 @@
+"""REAL ingestion wizard E2E v1.2.0, 2026-11-09T22:50:37Z.
+v1.2.0: generation replaces the texts of the chosen images only, once per image; restoring touches the chosen
+images only; focus survives re-rendering.
+Browser exercises Commons search UI, combined paid generation, tag editing, no-cost reset,
+WebP preview, rights confirmation and publication, using the fake OpenAI server."""
+import io
+import os
+import shutil
+from pathlib import Path
+
+from PIL import Image
+from playwright.sync_api import expect, sync_playwright
+
+base = os.environ['ROS_TEST_BASE']
+token = Path('.dev.vars').read_text().strip().split('=', 1)[1]
+folder = Path('artifacts/wizard-browser')
+folder.mkdir(parents=True, exist_ok=True)
+
+def image_file(name, seed):
+    picture = Image.new('RGB', (420, 280), (60 + seed, 100, 180))
+    for x in range(0, 420, 5):
+        picture.putpixel((x, x % 280), (255, seed, x % 200))
+    buffer = io.BytesIO()
+    picture.save(buffer, format='JPEG', quality=89)
+    return {'name': name + '.jpg', 'mimeType': 'image/jpeg', 'buffer': buffer.getvalue()}
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(executable_path=os.environ.get('ROS_CHROMIUM_PATH') or shutil.which('chromium'), args=['--no-sandbox'])
+    for name, options in (('desktop', {'viewport': {'width': 1280, 'height': 900}}),
+                          ('mobile', {**p.devices['Pixel 7']})):
+        context = browser.new_context(**options, http_credentials={'username': 'owner', 'password': token})
+        page = context.new_page()
+        errors = []
+        confirmations = []
+        page.on('pageerror', lambda error: errors.append(str(error)))
+        def handle(dialog):
+            confirmations.append(dialog.message)
+            if dialog.message.startswith('Analizzare '):
+                dialog.dismiss()  # Do not analyse when uploading from the old file input
+            else:
+                dialog.accept()
+        page.on('dialog', handle)
+        page.goto(base + '/admin')
+        expect(page.get_by_role('heading', name='Caricamento REAL')).to_be_visible()
+        expect(page.get_by_role('button', name='Generazione SLOP')).to_be_visible()
+        expect(page.get_by_role('button', name='Impostazioni')).to_be_visible()
+
+        def mock_search(route):
+            route.fulfill(status=200, content_type='application/json', body=(
+                '{"files":[{"title":"File:Bridge.jpg","page_url":"https://commons.wikimedia.org/wiki/File:Bridge.jpg",'
+                '"thumb_url":"https://upload.wikimedia.org/wikipedia/commons/a/aa/Bridge.jpg","width":640,"height":480}],'
+                '"categories":[],"next":null}'))
+        page.route('**/api/admin/library/commons/search?*', mock_search)
+        search = page.locator('#rw-search')
+        search.locator('[name=q]').fill('bridge')
+        search.locator('[name=sort]').select_option('recent')
+        search.get_by_role('button', name='Cerca').click()
+        expect(page.locator('.rw-hit')).to_have_count(1)
+        page.locator('[data-rw-hit]').check()
+        page.get_by_role('button', name='Aggiungi le selezionate').click()
+        expect(page.locator('.rw-pick')).to_have_count(1)
+        page.screenshot(path=str(folder / (name + '-step1.png')), full_page=True)
+        page.get_by_role('button', name='Inizia un nuovo caricamento').click()
+
+        # Upload through the original database path: copy is WebP; bypass external Commons requests.
+        page.get_by_role('button', name='Database immagini').click()
+        title = 'wizard-' + name
+        seed = 18 if name == 'desktop' else 28
+        page.locator('#library-files').set_input_files([image_file(title + '-a', seed), image_file(title + '-b', seed + 40)])
+        expect(page.locator('#library-message')).to_contain_text('2 di 2 aggiunte', timeout=30000)
+        response = page.request.get(base + '/api/admin/library?status=new&origin=REAL&q=' + title)
+        assert response.ok, response.text()
+        found = {i['title']: i for i in response.json()['items']}
+        first, second = found[title + '-a'], found[title + '-b']
+        assert first['copy'] and second['copy'] and first['analysis']['status'] == 'none', first
+        page.evaluate("""ids => sessionStorage.setItem('ros-real-wizard-v1.0.0',
+            JSON.stringify({ids, stage:2}))""", [first['id'], second['id']])
+        page.reload()
+        expect(page.locator('.rw-editor')).to_have_count(2)
+        a = page.locator('[data-rw-image="%s"]' % first['id'])
+        b = page.locator('[data-rw-image="%s"]' % second['id'])
+        a.locator('.rw-metadata summary').click()
+        expect(a.locator('.rw-metadata')).to_contain_text(title + '-a')
+        # The owner writes first; the generation will replace this on the chosen image only.
+        for card, tag, caption in ((a, 'bridge', 'Didascalia mia A.'), (b, 'tower', 'Didascalia mia B.')):
+            card.locator('[data-rw-caption]').fill(caption)
+            card.locator('[data-rw-caption]').blur()
+            card.locator('[data-rw-new-tag]').fill(tag)
+            card.locator('[data-rw-new-tag]').press('Enter')
+            expect(card.locator('.rw-pill', has_text=tag)).to_have_count(1)
+            expect(card.locator('[data-rw-new-tag]')).to_be_focused()
+
+        expect(page.get_by_role('button', name='Genera tag e didascalie con IA')).to_have_count(1)
+        expect(page.locator('[data-rw="choose-tags"], [data-rw="choose-caption"]')).to_have_count(0)
+        expect(page.locator('[data-rw=choose-reset]')).to_have_count(0)
+        page.get_by_role('button', name='Genera tag e didascalie con IA').click()
+        expect(page.locator('#rw-generation-dialog')).to_be_visible()
+        expect(page.locator('[data-rw-gen="%s"]' % first['id'])).to_be_checked()
+        page.locator('[data-rw-gen="%s"]' % second['id']).uncheck()
+        page.locator('#rw-generation-dialog button[data-rw=run-gen]').click()
+        expect(page.locator('.rw-message')).to_contain_text('1 immagine elaborata', timeout=30000)
+        asked = [text for text in confirmations if text.startswith('Confermi ') and 'tag e didascalie insieme' in text]
+        assert len(asked) == 1 and 'saranno sostituiti' in asked[0], confirmations
+        # Chosen image: owner's texts replaced. The other: untouched.
+        expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(1)
+        expect(a.locator('.rw-pill', has_text='bridge')).to_have_count(0)
+        expect(a.locator('[data-rw-caption]')).to_have_value('Una strada affollata.')
+        expect(b.locator('.rw-pill', has_text='tower')).to_have_count(1)
+        expect(b.locator('.rw-pill', has_text='crowd')).to_have_count(0)
+        expect(b.locator('[data-rw-caption]')).to_have_value('Didascalia mia B.')
+        # Once per image: the generated one cannot be chosen again.
+        page.get_by_role('button', name='Genera tag e didascalie con IA').click()
+        expect(page.locator('[data-rw-gen="%s"]' % first['id'])).to_be_disabled()
+        expect(page.locator('.rw-gen-list').first).to_contain_text('già generata')
+        expect(page.locator('[data-rw-gen="%s"]' % second['id'])).to_be_checked()
+        page.locator('#rw-generation-dialog button[data-rw=close-gen]').click()
+        retry = page.request.post(base + '/api/admin/library/%s/analyze' % first['id'], data={'confirm_usd': 0.018}, headers={'Origin': base})
+        assert retry.status == 409 and 'già generati' in retry.json()['error'], retry.text()
+        # Owner edits, then restores the chosen image only, at no cost.
+        a.locator('[data-rw-caption]').fill('Didascalia rivista manualmente.')
+        a.locator('[data-rw-caption]').blur()
+        a.locator('[data-rw=remove-tag][data-tag=crowd]').click()
+        expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(0)
+        b.locator('[data-rw-caption]').fill('Didascalia mia B, rivista.')
+        b.locator('[data-rw-caption]').blur()
+        page.locator('[data-rw=choose-reset]').click()
+        expect(page.locator('[data-rw-restore]')).to_have_count(1)
+        page.locator('#rw-reset-all').check()
+        page.locator('#rw-reset-dialog button[data-rw=run-reset]').click()
+        expect(page.locator('.rw-message')).to_contain_text('1 immagine riportata')
+        expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(1)
+        expect(a.locator('[data-rw-caption]')).to_have_value('Una strada affollata.')
+        expect(b.locator('[data-rw-caption]')).to_have_value('Didascalia mia B, rivista.')
+        expect(b.locator('.rw-pill', has_text='tower')).to_have_count(1)
+        page.screenshot(path=str(folder / (name + '-step2.png')), full_page=True)
+
+        page.get_by_role('button', name='Avanti: riepilogo').click()
+        expect(page.locator('.rw-final img[data-game-media]')).to_have_count(2)
+        expect(page.locator('.rw-final img[data-game-media]').first).to_be_visible()
+        expect(page.locator('.rw-final .rs-mark').first).to_be_visible()
+        expect(page.locator('.rw-final .play-caption').first).not_to_be_empty()
+        page.screenshot(path=str(folder / (name + '-step3.png')), full_page=True)
+        page.get_by_role('button', name='Conferma e pubblica').click()
+        expect(page.locator('.rw-message')).to_contain_text('Devi confermare')
+        page.locator('#rw-rights').check()
+        page.get_by_role('button', name='Conferma e pubblica').click()
+        expect(page.locator('.rw-message')).to_contain_text('2 immagini pubblicate', timeout=30000)
+        published = page.request.get(base + '/api/admin/library?status=published&origin=REAL&q=' + title)
+        assert published.ok and {first['id'], second['id']} <= {i['id'] for i in published.json()['items']}
+        assert not errors, errors
+        context.close()
+        print('REAL wizard browser E2E passed:', name)
+    browser.close()
