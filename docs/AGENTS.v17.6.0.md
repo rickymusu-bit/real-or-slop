@@ -1,7 +1,7 @@
 # Istruzioni Codex — versione canonica 17.6.0
 
 Snapshot: `docs/AGENTS.v17.6.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-10T07:25:00Z Precedente: `docs/AGENTS.v17.5.0.md` (storico, non più vigente).
+Aggiornato: 2026-11-10T08:05:00Z. Precedente: `docs/AGENTS.v17.5.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 

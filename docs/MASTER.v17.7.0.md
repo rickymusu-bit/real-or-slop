@@ -1,7 +1,7 @@
 # Mappa canonica — versione canonica 17.7.0
 
 Snapshot: `docs/MASTER.v17.7.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-10T07:25:00Z Precedente: `docs/MASTER.v17.6.0.md` (storico).
+Aggiornato: 2026-11-10T09:39:49Z. Precedente: `docs/MASTER.v17.6.0.md` (storico).
 
 ## Architettura
 
