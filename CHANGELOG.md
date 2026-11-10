@@ -1,13 +1,4 @@
-## 1.8.0 — 2026-11-10T17:15:02Z (proposta, non pubblicata)
-
-Decisione dell'owner del 2026-11-10: «Un'immagine approvata va subito pubblicata. Non ci deve proprio essere una denominazione del genere».
-
-- Stati delle immagini: nuova, pubblicata, cestino. «Approva e pubblica» copia la copia di gioco nel bucket del gioco e pubblica in un solo passo; tolti lo stato «approvata», la vista «Approvate», l'azione «Pubblica» (anche in blocco) e la rotta `/publish`. «Ritira dal gioco» e il ripristino dal cestino riportano a «nuova». Una seconda approvazione simultanea (doppio clic) non cancella il file pubblicato dalla prima.
-- Il wizard REAL pubblica con una sola richiesta per immagine.
-- Migrazione `0039_no_approved_state.v1.0.0.sql`: ricostruisce `images` senza `approved_at` e `trashed_from`, con lo stato limitato a nuova, pubblicata, cestino; le immagini ancora «approvate» tornano «nuove» (in produzione nessuna). Conserva tag, categorie, alias, round e risposte; verificata in locale su un database popolato.
-- Nuove versioni: `worker/library.v1.7.0.ts`, `worker/analysis.v1.7.0.ts`, `src/library.v1.7.0.ts`, `src/real-wizard.v1.5.0.ts`; test `library.v1.2.0`, `analysis.v1.5.0`, `library_browser.v1.7.0`, `real_wizard.v1.5.0`. Specifiche `libreria-immagini.v1.8.0.md` e `dashboard-admin-wizard-real.v1.3.1.md`; `AGENTS.md`/`MASTER.md` 17.9.0.
-
-## 1.7.0 — 2026-11-10T16:16:00Z (pubblicata il 2026-11-10)
+## 1.7.0 — 2026-11-10T16:16:00Z (proposta, non pubblicata)
 
 Categorie dei tag (`docs/categorie-tag.v1.1.0.md`, decisioni dell'owner del 2026-11-10).
 

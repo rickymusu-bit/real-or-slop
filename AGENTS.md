@@ -1,13 +1,13 @@
-# Istruzioni Codex — versione canonica 17.9.0
+# Istruzioni Codex — versione canonica 17.8.0
 
-Snapshot: `docs/AGENTS.v17.9.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-10T17:15:02Z. Precedente: `docs/AGENTS.v17.8.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.8.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-10T16:16:00Z. Precedente: `docs/AGENTS.v17.7.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
-Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md` e `docs/dashboard-admin-wizard-real.v1.3.1.md`. Resta valida `docs/copie-di-gioco.v2.0.0.md`.
+Specifiche vigenti: `docs/libreria-immagini.v1.7.0.md`, `docs/categorie-tag.v1.1.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`. Resta valida `docs/copie-di-gioco.v2.0.0.md`.
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
-le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
+le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.7.0.md`.
 
 - Dashboard `/admin` in quattro sezioni. Caricamento REAL in wizard di tre passi: selezione Commons, tag e didascalie, riepilogo e pubblicazione. Le altre sezioni verranno completate progressivamente.
 - Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: caricamento multiplo,
@@ -38,8 +38,6 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
 - **Contenuti delle SLOP:** niente persone vive o morte da meno di 50 anni; personaggi storici ammessi senza crimini
   attribuiti né scene degradanti; marchi ammessi; regimi documentati ma mai celebrati; nessuna nudità umana tranne
   nelle opere d'arte.
-- **Stati delle immagini:** nuova, pubblicata, cestino. Approvare pubblica subito; non esiste lo stato «approvata».
-  Ritirare dal gioco e ripristinare dal cestino riportano a «nuova».
 - Restano: gioco singolo e PvP, file serviti senza metadati, marchio «RS», blocco del salvataggio.
 
 ## Regole di lavoro
