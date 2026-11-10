@@ -1,13 +1,13 @@
-# Istruzioni Codex — versione canonica 17.7.0
+# Istruzioni Codex — versione canonica 17.8.0
 
-Snapshot: `docs/AGENTS.v17.7.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-10T09:39:49Z. Precedente: `docs/AGENTS.v17.6.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.8.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-10T16:16:00Z. Precedente: `docs/AGENTS.v17.7.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
-Specifiche vigenti: `docs/libreria-immagini.v1.6.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`. Resta valida `docs/copie-di-gioco.v2.0.0.md`.
+Specifiche vigenti: `docs/libreria-immagini.v1.7.0.md`, `docs/categorie-tag.v1.1.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`. Resta valida `docs/copie-di-gioco.v2.0.0.md`.
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
-le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.6.0.md`.
+le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.7.0.md`.
 
 - Dashboard `/admin` in quattro sezioni. Caricamento REAL in wizard di tre passi: selezione Commons, tag e didascalie, riepilogo e pubblicazione. Le altre sezioni verranno completate progressivamente.
 - Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: caricamento multiplo,
@@ -18,6 +18,9 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   i nomi propri; vietati i tag che rivelano l'origine. Approvare richiede almeno un tag.
   Il vocabolario contiene solo tag in uso; gli **alias** rimandano a un tag e si risolvono prima di salvare.
   Un tag scritto a mano con forma errata (maiuscole, accenti, spazi) viene convertito e salvato senza avviso; il server resta rigido.
+  **Categorie:** una per tag tra Tempo (solo decenni), Formato, Luogo, Ambiente, Evento, Persone, Oggetti e strutture, Altro;
+  al massimo un tag di Tempo e uno di Formato per immagine; vietato solo il tag sull'origine; parole specifiche, suffisso
+  di categoria come ultima risorsa.
 - **Analisi** (fase 2): tag e didascalia dal modello con visione sulla copia di gioco, senza l'origine. Una sola chiamata per immagine
   genera insieme tag e didascalia, che **sostituiscono** quelli presenti nelle sole immagini scelte; **una generazione per immagine**;
   i testi generati restano nel database e l'owner può sempre ripristinarli senza costi;

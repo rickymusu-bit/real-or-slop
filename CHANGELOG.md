@@ -1,4 +1,14 @@
-## 1.6.0 — 2026-11-10T09:39:49Z (proposta, non pubblicata)
+## 1.7.0 — 2026-11-10T16:16:00Z (proposta, non pubblicata)
+
+Categorie dei tag (`docs/categorie-tag.v1.1.0.md`, decisioni dell'owner del 2026-11-10).
+
+- Ogni tag ha una categoria: Tempo, Formato, Luogo, Ambiente, Evento, Persone, Oggetti e strutture, Altro. Tempo accetta solo decenni (`1970s`) e un decennio è sempre Tempo; al massimo un tag di Tempo e uno di Formato per immagine. Migrazione additiva `0038_tag_categories.v1.0.0.sql`: i tag esistenti diventano «Altro».
+- Il modello riceve il vocabolario diviso per categoria e risponde con un elenco per categoria, nella stessa chiamata. Un tag già esistente conserva la sua categoria; una proposta diversa viene segnalata come conflitto nel wizard.
+- Wizard e sezione Database: pillole colorate e ordinate per categoria, legenda, selettore della categoria per i tag nuovi (si imposta da solo per i tag esistenti e per i decenni), conferma per spostare un tag esistente in un'altra categoria, avviso non bloccante per le REAL senza tag di Tempo. Azioni in blocco con categoria. Vocabolario nelle Impostazioni diviso per categoria, con cambio di categoria; «Unisci» rifiuta i casi che lascerebbero due tag di Tempo o di Formato sulla stessa immagine.
+- Impostazioni → «Contesto dei modelli»: «Carica nel campo» per i testi proposti con le categorie e con il divieto limitato all'origine; diventano una versione solo se l'owner li salva.
+- Nuove versioni: `shared/tag-categories.v1.0.0.ts` (con test unitari), `worker/library.v1.6.0.ts`, `worker/analysis.v1.6.0.ts`, `worker/model-context.v1.1.0.ts`, `src/library.v1.6.0.ts`, `src/real-wizard.v1.4.0.ts`, `src/tag-ui.v1.0.0.ts`, `src/tag-categories.v1.0.0.css`; test `tests/analysis.v1.4.0.integration.py`, `tests/library_browser.v1.6.0.integration.py`, `tests/real_wizard.v1.4.0.integration.py`. Specifiche `libreria-immagini.v1.7.0.md` e `categorie-tag.v1.1.0.md`; `AGENTS.md`/`MASTER.md` 17.8.0.
+
+## 1.6.0 — 2026-11-10T09:39:49Z (pubblicata il 2026-11-10)
 
 Decisione dell'owner del 2026-11-10: contesto fisso del modello linguistico modificabile dalle Impostazioni (`docs/libreria-immagini.v1.6.0.md`, sezione 12).
 
@@ -7,7 +17,7 @@ Decisione dell'owner del 2026-11-10: contesto fisso del modello linguistico modi
 - I messaggi delle Impostazioni (tetto, rinnovo, unioni, alias, contesto) compaiono ora nelle Impostazioni: prima finivano nella sezione Database, nascosta.
 - Migrazione additiva `0037_model_contexts.v1.0.0.sql`. Nuove versioni: `worker/model-context.v1.0.0.ts`, `worker/analysis.v1.5.0.ts`, `worker/library.v1.5.0.ts`, `src/library.v1.5.0.ts`, `src/model-context.v1.0.0.css`; test `tests/analysis.v1.3.0.integration.py` e `tests/library_browser.v1.5.0.integration.py`.
 
-## 1.5.0 — 2026-11-10T07:10:00Z (proposta, non pubblicata)
+## 1.5.0 — 2026-11-10T07:10:00Z (pubblicata il 2026-11-10)
 
 Decisioni dell'owner del 2026-11-10 sulla lunghezza della didascalia e sui tag scritti a mano (`docs/libreria-immagini.v1.5.0.md`, sezioni 3 e 4).
 
