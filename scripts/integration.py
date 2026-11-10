@@ -34,8 +34,8 @@ try:
                         if r.status == 200: break
                 except OSError: time.sleep(.4)
             else: raise RuntimeError('Worker locale non pronto; vedere artifacts/integration-worker.log')
-            scripts = ['tests/library.v1.1.0.integration.py', 'tests/analysis.v1.4.0.integration.py']
-            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.v1.6.0.integration.py', 'tests/real_wizard.v1.4.0.integration.py'])
+            scripts = ['tests/library.v1.2.0.integration.py', 'tests/analysis.v1.5.0.integration.py']
+            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.v1.7.0.integration.py', 'tests/real_wizard.v1.5.0.integration.py'])
             for script in scripts: subprocess.run(['python3', script], env=env, check=True)
         finally:
             os.killpg(proc.pid, 15)
