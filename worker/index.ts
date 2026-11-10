@@ -1,6 +1,6 @@
 export { GameRoom } from "./room";
 import { game } from "./game";
-import { library } from "./library.v1.5.0";
+import { library } from "./library.v1.6.0";
 import { admin, HttpError, json, sameOrigin, type Env } from "./core";
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {

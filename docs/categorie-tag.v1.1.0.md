@@ -1,6 +1,6 @@
 # Categorie dei tag — specifica 1.1.0
 
-Stato: **proposta, da approvare dall'owner**. Creata: 2026-11-10T15:34:11Z. Aggiornata: 2026-11-10T16:13:10Z
+Stato: **approvata dall'owner il 2026-11-10**, vigente; realizzata nell'app 1.7.0 (migrazione 0038). Creata: 2026-11-10T15:34:11Z. Aggiornata: 2026-11-10T16:13:10Z
 (1.1.0: categoria Formato e divieto limitato ai tag sull'origine; precedente: `docs/categorie-tag.v1.0.0.md`).
 Estende `docs/libreria-immagini.v1.6.0.md` (sezioni 3, 5, 10 e 12). Nessun codice scritto prima dell'approvazione.
 
