@@ -1,5 +1,5 @@
 """REAL ingestion wizard E2E v1.3.0, 2026-11-10T06:23:49Z.
-v1.3.0: caption counter, soft limit 160 (warning, publication allowed), ceiling 256.
+v1.3.0: caption counter, soft limit 160 (warning, publication allowed), ceiling 256; typed tags converted.
 v1.2.0: generation replaces the texts of the chosen images only, once per image; restoring touches the chosen
 images only; focus survives re-rendering.
 Browser exercises Commons search UI, combined paid generation, tag editing, no-cost reset,
@@ -83,12 +83,14 @@ with sync_playwright() as p:
         a.locator('.rw-metadata summary').click()
         expect(a.locator('.rw-metadata')).to_contain_text(title + '-a')
         # The owner writes first; the generation will replace this on the chosen image only.
-        for card, tag, caption in ((a, 'bridge', 'Didascalia mia A.'), (b, 'tower', 'Didascalia mia B.')):
+        # «Tower» has a wrong form: converted to «tower» and saved, saying so.
+        for card, tag, caption in ((a, 'bridge', 'Didascalia mia A.'), (b, 'Tower', 'Didascalia mia B.')):
             card.locator('[data-rw-caption]').fill(caption)
             card.locator('[data-rw-caption]').blur()
             card.locator('[data-rw-new-tag]').fill(tag)
             card.locator('[data-rw-new-tag]').press('Enter')
-            expect(card.locator('.rw-pill', has_text=tag)).to_have_count(1)
+            expect(card.locator('.rw-pill', has_text=tag.lower())).to_have_count(1)
+            expect(page.locator('.rw-message')).to_have_text('Tag salvato come «tower».' if tag == 'Tower' else 'Tag salvato.')
             expect(card.locator('[data-rw-new-tag]')).to_be_focused()
 
         expect(page.get_by_role('button', name='Genera tag e didascalie con IA')).to_have_count(1)

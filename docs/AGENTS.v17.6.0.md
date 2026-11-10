@@ -1,7 +1,7 @@
 # Istruzioni Codex — versione canonica 17.6.0
 
 Snapshot: `docs/AGENTS.v17.6.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-10T06:23:49Z. Precedente: `docs/AGENTS.v17.5.0.md` (storico, non più vigente).
+Aggiornato: 2026-11-10T07:10:00Z. Precedente: `docs/AGENTS.v17.5.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
@@ -17,6 +17,7 @@ e, per persone, personaggi storici, marchi, marchio «RS» e metadati, le sezion
 - **Tag** ASCII: minuscoli, cifre, trattini; inglese per i nomi comuni, lingua originale traslitterata per
   i nomi propri; vietati i tag che rivelano l'origine. Approvare richiede almeno un tag.
   Il vocabolario contiene solo tag in uso; gli **alias** rimandano a un tag e si risolvono prima di salvare.
+  Un tag scritto a mano con forma errata (maiuscole, accenti, spazi) viene convertito e salvato con avviso; il server resta rigido.
 - **Analisi** (fase 2): tag e didascalia dal modello con visione sulla copia di gioco, senza l'origine. Una sola chiamata per immagine
   genera insieme tag e didascalia, che **sostituiscono** quelli presenti nelle sole immagini scelte; **una generazione per immagine**;
   i testi generati restano nel database e l'owner può sempre ripristinarli senza costi;
