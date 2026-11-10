@@ -1,13 +1,14 @@
-# Istruzioni Codex — versione canonica 17.8.0
+# Istruzioni Codex — versione canonica 17.10.0
 
-Snapshot: `docs/AGENTS.v17.8.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-10T16:16:00Z. Precedente: `docs/AGENTS.v17.7.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.10.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-10T22:11:48Z. Precedente: `docs/AGENTS.v17.8.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
-Specifiche vigenti: `docs/libreria-immagini.v1.7.0.md`, `docs/categorie-tag.v1.1.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`. Resta valida `docs/copie-di-gioco.v2.0.0.md`.
+Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`
+e `docs/wizard-slop.v1.4.0.md`. Resta valida `docs/copie-di-gioco.v2.0.0.md`.
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
-le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.7.0.md`.
+le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
 
 - Dashboard `/admin` in quattro sezioni. Caricamento REAL in wizard di tre passi: selezione Commons, tag e didascalie, riepilogo e pubblicazione. Le altre sezioni verranno completate progressivamente.
 - Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: caricamento multiplo,
@@ -24,17 +25,19 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
 - **Analisi** (fase 2): tag e didascalia dal modello con visione sulla copia di gioco, senza l'origine. Una sola chiamata per immagine
   genera insieme tag e didascalia, che **sostituiscono** quelli presenti nelle sole immagini scelte; **una generazione per immagine**;
   i testi generati restano nel database e l'owner può sempre ripristinarli senza costi;
-  conferma del costo massimo, **un solo budget** per tutte le chiamate a pagamento (5 $ iniziali, modificabile e
-  rinnovabile), costo dai token, registro `spend`, esiti incerti mai ripetuti. Spenta senza `OPENAI_API_KEY`.
+  ogni chiamata a pagamento si **conferma** esplicitamente, senza importi; **niente prezzi né budget**; registro `paid_calls`
+  (modello, token, esito); esiti incerti mai ripetuti; il limite di spesa è quello del progetto OpenAI. Spenta senza `OPENAI_API_KEY`.
+- **Modelli:** modello di testo (tag, didascalie, prompt SLOP) e modello di immagini scelti nelle Impostazioni, tra i modelli
+  OpenAI elencati nel codice e disponibili nel progetto.
 - **Contesto dei modelli:** testi fissi (base comune, tag e didascalie, prompt SLOP) modificabili dalle Impostazioni,
   con versioni e ripristino; ogni generazione registra le versioni usate. Formato JSON, limiti e filtri restano nel codice.
 - **Didascalia** in italiano, limite morbido di 160 caratteri (avviso, mai taglio) e tetto di 256, mostrata con l'immagine durante il round, stesso
   procedimento per REAL e SLOP (fase 2). Si approva insieme alla copia.
 - **Cestino:** svuotarlo cancella ogni riga e ogni file dell'immagine. Nessun registro delle
   eliminazioni, nessuna istantanea, nessuna esportazione automatica: decisione esplicita dell'owner.
-- **Consulente SLOP** (fase 3): distribuzione dei tag REAL/SLOP e tag correlati con supporto minimo di 3
-  immagini, calcolati sul database senza modelli. Il metodo di scelta dei tag per la generazione è da definire.
-  Il generatore di immagini riceve solo testo.
+- **Studio SLOP** (fase 3, `docs/wizard-slop.v1.4.0.md`): spread di ogni tag (REAL − SLOP tra approvate e pubblicate), tema
+  obbligatorio in tutti i prompt, slot estratti dalle REAL con peso dello spread e modificabili; si apre con 50 REAL, un tema
+  richiede 10 REAL. Prompt in inglese; i tag finali delle SLOP sono quelli dell'analisi. Il generatore riceve solo testo.
 - **Contenuti delle SLOP:** niente persone vive o morte da meno di 50 anni; personaggi storici ammessi senza crimini
   attribuiti né scene degradanti; marchi ammessi; regimi documentati ma mai celebrati; nessuna nudità umana tranne
   nelle opere d'arte.
@@ -47,7 +50,7 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
    davvero mancanti.
 2. Le istruzioni esplicite dell'owner prevalgono. Deploy, merge, migrazioni remote e chiamate a pagamento
    solo con la sua autorizzazione nella sessione. Non stampare credenziali.
-3. Chiamate a pagamento: stima prima dell'invio, conferma, registro di spesa, nessun reinvio di esiti
+3. Chiamate a pagamento: conferma esplicita prima dell'invio, registro delle chiamate, nessun reinvio di esiti
    incerti, provider fittizi nei test.
 4. Versioni: documenti `nome.vMAJOR.MINOR.PATCH.md` con timestamp ISO 8601; `AGENTS.md` e `MASTER.md`
    dichiarano la versione e hanno snapshot in `docs/`. App, schema e documenti hanno numeri indipendenti.
