@@ -1,4 +1,13 @@
-## 1.4.0 — 2026-11-09T22:50:37Z (proposta, non pubblicata)
+## 1.5.0 — 2026-11-10T06:23:49Z (proposta, non pubblicata)
+
+Decisione dell'owner del 2026-11-10 sulla lunghezza della didascalia (`docs/libreria-immagini.v1.5.0.md`, sezione 4).
+
+- Tolto il taglio netto a 160 caratteri, che troncava anche a metà parola senza avvisare. 160 è ora un limite morbido: il modello mira a 120–150 caratteri e mai oltre 160; una didascalia più lunga si conserva intera, con il contatore «N/160» evidenziato nell'editor del wizard e della sezione Database e un avviso nel riepilogo, senza bloccare la pubblicazione.
+- Tetto tecnico di 256 caratteri nel server e nello schema. Solo una didascalia del modello oltre 256 viene accorciata, alla fine dell'ultima frase o parola intera, con un avviso.
+- Migrazione `0036_caption_soft_limit.v1.0.0.sql`: ricostruisce la tabella `images` (un vincolo CHECK non si modifica in SQLite) conservando tag, alias, round, risposte e sfide collegati. Verificata in locale su un database popolato.
+- Nuove versioni: `shared/caption.v1.0.0.ts` (con test unitari), `worker/analysis.v1.4.0.ts`, `worker/library.v1.4.0.ts`, `src/library.v1.4.0.ts`, `src/real-wizard.v1.3.0.ts`, `src/caption-count.v1.0.0.css`; test `tests/library.v1.1.0.integration.py`, `tests/analysis.v1.2.0.integration.py`, `tests/real_wizard.v1.3.0.integration.py`. Vecchie versioni conservate.
+
+## 1.4.0 — 2026-11-09T22:50:37Z (pubblicata il 2026-11-10)
 
 Decisione dell'owner del 2026-11-09 sulla generazione di tag e didascalie (`docs/libreria-immagini.v1.4.0.md`, sezione 10;
 `docs/dashboard-admin-wizard-real.v1.2.0.md`).
