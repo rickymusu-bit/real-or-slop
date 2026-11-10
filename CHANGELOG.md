@@ -1,3 +1,12 @@
+## 1.6.0 — 2026-11-10T09:39:49Z (proposta, non pubblicata)
+
+Decisione dell'owner del 2026-11-10: contesto fisso del modello linguistico modificabile dalle Impostazioni (`docs/libreria-immagini.v1.6.0.md`, sezione 12).
+
+- Impostazioni → «Contesto dei modelli»: tre testi (base comune, tag e didascalie, prompt per le SLOP) con contatore, salvataggio come nuova versione, storico con data e numero di immagini che l'hanno usata, ripristino. Prima versione: i testi approvati dall'owner.
+- La generazione di tag e didascalie usa base e compito attuali più una riga fissa sul formato JSON, e registra le versioni usate. Formato, limiti della didascalia e filtri dei tag restano nel codice.
+- I messaggi delle Impostazioni (tetto, rinnovo, unioni, alias, contesto) compaiono ora nelle Impostazioni: prima finivano nella sezione Database, nascosta.
+- Migrazione additiva `0037_model_contexts.v1.0.0.sql`. Nuove versioni: `worker/model-context.v1.0.0.ts`, `worker/analysis.v1.5.0.ts`, `worker/library.v1.5.0.ts`, `src/library.v1.5.0.ts`, `src/model-context.v1.0.0.css`; test `tests/analysis.v1.3.0.integration.py` e `tests/library_browser.v1.5.0.integration.py`.
+
 ## 1.5.0 — 2026-11-10T07:10:00Z (proposta, non pubblicata)
 
 Decisioni dell'owner del 2026-11-10 sulla lunghezza della didascalia e sui tag scritti a mano (`docs/libreria-immagini.v1.5.0.md`, sezioni 3 e 4).

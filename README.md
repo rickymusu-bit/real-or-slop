@@ -3,7 +3,7 @@
 Un gioco: un'immagine con la sua didascalia, due possibilità. REAL (fotografia reale) o SLOP (generata con IA)?
 
 - [Istruzioni per gli agenti](AGENTS.md) · [Mappa del sistema](MASTER.md)
-- Specifica vigente: [libreria immagini, tag, didascalie e consulente SLOP](docs/libreria-immagini.v1.5.0.md)
+- Specifica vigente: [libreria immagini, tag, didascalie e consulente SLOP](docs/libreria-immagini.v1.6.0.md)
 - [Copie di gioco WebP](docs/copie-di-gioco.v2.0.0.md)
 
 La dashboard privata (`/admin`) ha quattro sezioni: **Caricamento REAL** (wizard Commons → tag e

@@ -1,13 +1,13 @@
-# Istruzioni Codex — versione canonica 17.6.0
+# Istruzioni Codex — versione canonica 17.7.0
 
-Snapshot: `docs/AGENTS.v17.6.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-10T07:25:00Z Precedente: `docs/AGENTS.v17.5.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.7.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-10T07:25:00Z Precedente: `docs/AGENTS.v17.6.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
-Specifiche vigenti: `docs/libreria-immagini.v1.5.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`. Resta valida `docs/copie-di-gioco.v2.0.0.md`.
+Specifiche vigenti: `docs/libreria-immagini.v1.6.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`. Resta valida `docs/copie-di-gioco.v2.0.0.md`.
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
-le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.5.0.md`.
+le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.6.0.md`.
 
 - Dashboard `/admin` in quattro sezioni. Caricamento REAL in wizard di tre passi: selezione Commons, tag e didascalie, riepilogo e pubblicazione. Le altre sezioni verranno completate progressivamente.
 - Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: caricamento multiplo,
@@ -23,6 +23,8 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   i testi generati restano nel database e l'owner può sempre ripristinarli senza costi;
   conferma del costo massimo, **un solo budget** per tutte le chiamate a pagamento (5 $ iniziali, modificabile e
   rinnovabile), costo dai token, registro `spend`, esiti incerti mai ripetuti. Spenta senza `OPENAI_API_KEY`.
+- **Contesto dei modelli:** testi fissi (base comune, tag e didascalie, prompt SLOP) modificabili dalle Impostazioni,
+  con versioni e ripristino; ogni generazione registra le versioni usate. Formato JSON, limiti e filtri restano nel codice.
 - **Didascalia** in italiano, limite morbido di 160 caratteri (avviso, mai taglio) e tetto di 256, mostrata con l'immagine durante il round, stesso
   procedimento per REAL e SLOP (fase 2). Si approva insieme alla copia.
 - **Cestino:** svuotarlo cancella ogni riga e ogni file dell'immagine. Nessun registro delle
