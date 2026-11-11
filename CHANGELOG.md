@@ -1,3 +1,13 @@
+## 1.10.0 — 2026-11-11T09:30:00Z (proposta, non pubblicata)
+
+Sezione Database della dashboard (`docs/database-immagini.v1.0.0.md`, richiesta dell'owner del 2026-11-11).
+
+- **Immagini:** filtro per uno o più tag («con tutti» o «con almeno uno»), per REAL, SLOP o entrambe; ogni scheda mostra miniatura, tutti i tag colorati per categoria, visualizzazioni e classificazioni corrette (gioco singolo e PvP, solo sulla copia attuale) e le partite in corso che la includono.
+- **Modifica:** «Modifica» su una pubblicata la ritira subito; le partite già avviate conservano didascalia e copia di gioco con cui sono iniziate (nuove colonne dei round, immagini delle sfide), e la copia resta nel bucket del gioco finché servono (al massimo 24 ore). Una modifica a un'immagine approvata la lascia approvata (prima tornava nuova). «Elimina» ritira e sposta nel cestino; l'eliminazione definitiva aspetta la fine delle partite in corso.
+- **Rigenerazione delle SLOP** dal prompt modificato: chiamata a pagamento con conferma (immagine e analisi insieme), stesso orientamento, l'immagine torna nuova con una nuova analisi e statistiche azzerate.
+- **Distribuzione:** REAL e SLOP nel complesso e per tag, barre impilate pubblicate (piene) e approvate (tratteggiate) ai due lati dello zero, spread, filtri per categoria, ordinamento, ricerca, suggerimento e vista a tabella.
+- Migrazione additiva `0041_database_section.v1.0.0.sql`. Nuove versioni: `worker/in-play.v1.0.0.ts`, `worker/library.v1.10.0.ts`, `worker/analysis.v1.10.0.ts`, `worker/slop-generation.v1.1.0.ts`, `worker/slop.v1.2.0.ts`, `src/library.v1.10.0.ts`, `src/database-chart.v1.0.0.ts`, `src/database.v1.0.0.css`; modificati `worker/game.ts`, `worker/room.ts`. Test `library.v1.2.0`, `database.v1.0.0`, `library_browser.v1.9.0`, `database_browser.v1.0.0`; `scripts/integration.py` 2.3.0. `AGENTS.md`/`MASTER.md` 17.12.0.
+
 ## 1.9.0 — 2026-11-11T05:40:53Z (proposta, non pubblicata)
 
 Studio SLOP, parte a pagamento (`docs/wizard-slop.v1.4.1.md`, sezioni 5–9 e 13).

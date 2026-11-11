@@ -263,7 +263,7 @@ export class GameRoom {
       await this.env.DB.batch([
         ...answers.map((a) =>
           this.env.DB.prepare(
-            "INSERT INTO challenge_answers(challenge_id,player_id,round,image_id,choice,correct,elapsed_ms) VALUES(?,?,?,?,?,?,?) ON CONFLICT(challenge_id,player_id,round) DO NOTHING",
+            "INSERT INTO challenge_answers(challenge_id,player_id,round,image_id,choice,correct,elapsed_ms,copy_key) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(challenge_id,player_id,round) DO NOTHING",
           ).bind(
             next.challengeId,
             a.playerId,
@@ -272,6 +272,7 @@ export class GameRoom {
             a.choice,
             a.correct ? 1 : 0,
             a.elapsedMs,
+            image.r2_key,
           ),
         ),
         ...next.players.map((p) =>
@@ -445,6 +446,10 @@ export class GameRoom {
         this.env.DB.prepare(
           "INSERT INTO challenge_players(challenge_id,player_id) VALUES(?,?)",
         ).bind(this.room.challengeId, player.id),
+        // The room keeps caption and copy of its images; the game bucket keeps the copies while the challenge is active.
+        this.env.DB.prepare(
+          "INSERT OR IGNORE INTO challenge_images(challenge_id,image_id,copy_key) SELECT ?,json_extract(value,'$.id'),json_extract(value,'$.key') FROM json_each(?)",
+        ).bind(this.room.challengeId, JSON.stringify(images.map(image => ({ id: image.id, key: image.r2_key })))),
       ]);
       await this.save();
       await this.ctx.storage.setAlarm(this.room.expiresAt);

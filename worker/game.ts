@@ -130,7 +130,7 @@ async function state(env: Env, s: Session) {
   let question = null;
   let roundExpiresAt: number | null = null;
   if (s.phase === "active") {
-    const round = await env.DB.prepare("SELECT r.id,r.position,r.presented_at,r.expires_at,i.caption FROM game_rounds r JOIN images i ON i.id=r.image_id LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position LIMIT 1")
+    const round = await env.DB.prepare("SELECT r.id,r.position,r.presented_at,r.expires_at,COALESCE(r.caption,i.caption) AS caption FROM game_rounds r JOIN images i ON i.id=r.image_id LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position LIMIT 1")
       .bind(s.id).first<{ id: string; position: number; presented_at: number | null; expires_at: number | null; caption: string }>();
     if (round) {
       // Legacy assignments keep their original presentation/timing semantics.
@@ -139,9 +139,9 @@ async function state(env: Env, s: Session) {
       roundExpiresAt = round.expires_at;
     }
   }
-  const credits = s.phase === "completed" ? (await env.DB.prepare(`SELECT i.*,COALESCE(a.correct,0) AS correct,r.timed_out FROM game_rounds r
+  const credits = s.phase === "completed" ? (await env.DB.prepare(`SELECT i.*,COALESCE(r.caption,i.caption) AS round_caption,COALESCE(a.correct,0) AS correct,r.timed_out FROM game_rounds r
     LEFT JOIN answers a ON a.round_id=r.id JOIN (${GAME_IMAGE}) i ON i.id=r.image_id WHERE r.session_id=? ORDER BY r.position`)
-    .bind(s.id).all<ImageRow & { correct: number; timed_out: number }>()).results.map(image => ({ ...reveal(image), correct: !!image.correct, timedOut: !!image.timed_out })) : [];
+    .bind(s.id).all<ImageRow & { round_caption: string; correct: number; timed_out: number }>()).results.map(image => ({ ...reveal({ ...image, caption: image.round_caption }), correct: !!image.correct, timedOut: !!image.timed_out })) : [];
   return json({ id: s.id, mode: s.mode, demo: false, protocolVersion: s.protocol_version,
     phase: s.phase, invalidReason: s.invalid_reason, preparationExpiresAt: s.preparation_expires_at,
     serverNow: Date.now(), expiresAt: s.timing_mode === "per-image" ? roundExpiresAt : s.expires_at, startedAt: s.started_at, done, total,
@@ -160,8 +160,9 @@ export async function game(request: Request, env: Env, path: string) {
     await env.DB.batch([
       env.DB.prepare("INSERT INTO game_sessions(id,mode,created_at,expires_at,owner_hash,protocol_version,phase,duration_seconds,preparation_expires_at,timing_mode,round_seconds) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
         .bind(sid, config.mode, now, null, key, protocol, config.mode === "timed" ? "preparing" : "active", null, config.mode === "timed" ? now + preparationTtlMs : null, config.mode === "timed" ? "per-image" : "unlimited", config.mode === "timed" ? config.roundSeconds : null),
-      env.DB.prepare("INSERT INTO game_rounds(id,session_id,image_id,position) SELECT json_extract(value,'$.id'),?,json_extract(value,'$.imageId'),json_extract(value,'$.position') FROM json_each(?)")
-        .bind(sid, JSON.stringify(sample.images.map((image, position) => ({ id: id(), imageId: image.id, position })))),
+      // Each round keeps the caption and the copy it serves: later edits to the image never reach a game already started.
+      env.DB.prepare("INSERT INTO game_rounds(id,session_id,image_id,position,caption,copy_key) SELECT json_extract(value,'$.id'),?,json_extract(value,'$.imageId'),json_extract(value,'$.position'),json_extract(value,'$.caption'),json_extract(value,'$.copyKey') FROM json_each(?)")
+        .bind(sid, JSON.stringify(sample.images.map((image, position) => ({ id: id(), imageId: image.id, position, caption: image.caption, copyKey: image.r2_key })))),
     ]);
     const response = json({ id: sid, warnings: sample.warnings }, 201);
     response.headers.set("Set-Cookie", `ros_owner=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${new URL(request.url).protocol === "https:" ? "; Secure" : ""}`);
@@ -172,7 +173,7 @@ export async function game(request: Request, env: Env, path: string) {
   let s = await settleSession(env, await owned(request, env, match[1]));
   if (!match[2] && request.method === "GET") return state(env, s);
   if (match[2] === "manifest" && request.method === "GET") {
-    const rows = s.phase === "preparing" || s.phase === "active" ? (await env.DB.prepare(`SELECT r.id,r.position,i.caption FROM game_rounds r JOIN images i ON i.id=r.image_id LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position ${s.timing_mode === "per-image" ? "LIMIT 1" : s.mode === "training" || s.protocol_version === 1 ? "LIMIT 3" : "LIMIT 50"}`).bind(s.id).all<{ id: string; position: number }>()).results : [];
+    const rows = s.phase === "preparing" || s.phase === "active" ? (await env.DB.prepare(`SELECT r.id,r.position,COALESCE(r.caption,i.caption) AS caption FROM game_rounds r JOIN images i ON i.id=r.image_id LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position ${s.timing_mode === "per-image" ? "LIMIT 1" : s.mode === "training" || s.protocol_version === 1 ? "LIMIT 3" : "LIMIT 50"}`).bind(s.id).all<{ id: string; position: number }>()).results : [];
     return json({ id: s.id, phase: s.phase, images: rows.map(r => neutralRound(s.id, r)) });
   }
   if (match[2] === "start" && request.method === "POST") {
@@ -216,7 +217,7 @@ export async function game(request: Request, env: Env, path: string) {
     return state(env, await refresh(env, s));
   }
   if (match[2] === "media" && request.method === "GET") {
-    const round = await env.DB.prepare("SELECT r.id,r.position,r.image_id,r.presented_at FROM game_rounds r WHERE r.id=? AND r.session_id=?").bind(match[3], s.id).first<{ id: string; position: number; image_id: string; presented_at: number | null }>();
+    const round = await env.DB.prepare("SELECT r.id,r.position,r.image_id,r.presented_at,r.copy_key FROM game_rounds r WHERE r.id=? AND r.session_id=?").bind(match[3], s.id).first<{ id: string; position: number; image_id: string; presented_at: number | null; copy_key: string | null }>();
     if (!round) throw new HttpError(404, "Immagine non assegnata");
     if (s.timing_mode === "per-image" && !round.presented_at) {
       const current = await env.DB.prepare("SELECT r.id FROM game_rounds r LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? AND a.round_id IS NULL AND r.timed_out=0 ORDER BY r.position LIMIT 1").bind(s.id).first<{ id: string }>();
@@ -229,6 +230,8 @@ export async function game(request: Request, env: Env, path: string) {
         if (!next.some(r => r.id === round.id)) throw new HttpError(404, "Immagine fuori dalla finestra assegnata");
       }
     }
+    // The copy recorded when the game started, kept in the game bucket while the game is in progress (worker/in-play.v1.0.0.ts).
+    if (round.copy_key) return privateMedia(await media(env, { r2_key: round.copy_key }), "Cookie");
     const image = await env.DB.prepare(GAME_IMAGE + " WHERE id=? AND status='published' AND copy_key IS NOT NULL").bind(round.image_id).first<ImageRow>();
     if (!image) throw new HttpError(404, "Immagine non disponibile");
     return privateMedia(await media(env, image), "Cookie");
@@ -237,10 +240,11 @@ export async function game(request: Request, env: Env, path: string) {
     const data = await body(request);
     if (!["REAL", "AI"].includes(String(data.choice))) throw new HttpError(400, "Risposta non valida");
     const rid = String(data.roundId);
-    const round = await env.DB.prepare("SELECT image_id,position,presented_at,expires_at,timed_out FROM game_rounds WHERE id=? AND session_id=?").bind(rid, s.id).first<{ image_id: string; position: number; presented_at: number | null; expires_at: number | null; timed_out: number }>();
+    const round = await env.DB.prepare("SELECT image_id,position,presented_at,expires_at,timed_out,caption FROM game_rounds WHERE id=? AND session_id=?").bind(rid, s.id).first<{ image_id: string; position: number; presented_at: number | null; expires_at: number | null; timed_out: number; caption: string | null }>();
     if (!round?.presented_at) throw new HttpError(409, "Domanda non attiva: preparare prima l'immagine");
-    const image = await env.DB.prepare(GAME_IMAGE + " WHERE id=?").bind(round.image_id).first<ImageRow>();
-    if (!image) throw new HttpError(404, "Immagine non disponibile");
+    const current = await env.DB.prepare(GAME_IMAGE + " WHERE id=?").bind(round.image_id).first<ImageRow>();
+    if (!current) throw new HttpError(404, "Immagine non disponibile");
+    const image = { ...current, caption: round.caption ?? current.caption };
     const previous = await env.DB.prepare("SELECT choice,correct FROM answers WHERE round_id=?").bind(rid).first<{ choice: string; correct: number }>();
     if (previous) {
       if (previous.choice !== data.choice) throw new HttpError(409, "Risposta già consegnata");

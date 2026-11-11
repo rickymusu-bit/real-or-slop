@@ -1,12 +1,12 @@
-# Istruzioni Codex — versione canonica 17.11.0
+# Istruzioni Codex — versione canonica 17.12.0
 
-Snapshot: `docs/AGENTS.v17.11.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-11T05:40:53Z. Precedente: `docs/AGENTS.v17.10.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.12.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-11T09:30:00Z. Precedente: `docs/AGENTS.v17.11.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
-Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`
-e `docs/wizard-slop.v1.4.1.md`. Resta valida `docs/copie-di-gioco.v2.0.0.md`.
+Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`,
+`docs/wizard-slop.v1.4.1.md` e, proposta con l'app 1.10.0, `docs/database-immagini.v1.0.0.md`. Resta valida `docs/copie-di-gioco.v2.0.0.md`.
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
 
@@ -42,6 +42,11 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
 - **Contenuti delle SLOP:** niente persone vive o morte da meno di 50 anni; personaggi storici ammessi senza crimini
   attribuiti né scene degradanti; marchi ammessi; regimi documentati ma mai celebrati; nessuna nudità umana tranne
   nelle opere d'arte.
+- **Sezione Database** (`docs/database-immagini.v1.0.0.md`): filtri per uno o più tag e per origine; ogni foto con tutti i tag,
+  visualizzazioni e classificazioni corrette (solo sulla copia attuale). «Modifica» ritira subito una pubblicata; le partite in corso
+  conservano didascalia e copia con cui sono iniziate (24 ore al massimo); una modifica lascia approvata un'immagine approvata.
+  Una SLOP si rigenera dal prompt (a pagamento, con conferma; torna nuova, nuova analisi, statistiche azzerate). Scheda
+  «Distribuzione»: REAL e SLOP, approvate e pubblicate impilate, per tag, con lo spread.
 - Restano: gioco singolo e PvP, file serviti senza metadati, marchio «RS», blocco del salvataggio.
 
 ## Regole di lavoro
