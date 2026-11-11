@@ -2,7 +2,7 @@
  * The choice is stored in D1 (table «settings», migration 0039). A model is selectable when it is in the list of the
  * code and in the list of the OpenAI project (GET /v1/models, free), kept for an hour. No prices. */
 import { HttpError, type Env } from "./core";
-import { DEFAULT_IMAGE_MODEL, DEFAULT_TEXT_MODEL, IMAGE_MODELS, isImageModel, isTextModel, TEXT_MODELS, type ModelKind } from "../shared/models.v1.0.0";
+import { DEFAULT_IMAGE_MODEL, DEFAULT_TEXT_MODEL, IMAGE_MODELS, isImageModel, isTextModel, SHUTDOWN, TEXT_MODELS, type ModelKind } from "../shared/models.v1.0.0";
 
 const CACHE_MS = 60 * 60_000;
 let projectModels: { at: number; ids: Set<string> | null; error: string } | null = null;
@@ -32,7 +32,7 @@ export async function chosenModel(env: Env, kind: ModelKind): Promise<string> {
 
 async function state(env: Env) {
   const { ids, error } = await available(env);
-  const option = (id: string) => ({ id, available: ids ? ids.has(id) : null });
+  const option = (id: string) => ({ id, available: ids ? ids.has(id) : null, shutdown: SHUTDOWN[id] || null });
   return {
     text_model: await chosenModel(env, "text_model"), image_model: await chosenModel(env, "image_model"),
     text_models: TEXT_MODELS.map(option), image_models: Object.keys(IMAGE_MODELS).map(id => ({ ...option(id), qualities: IMAGE_MODELS[id] })),

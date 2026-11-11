@@ -233,15 +233,16 @@ for item in (x, y):
     call(f'{API}/{item["id"]}/trash', {}); assert call(f'{API}/{item["id"]}', method='DELETE')[1]['deleted'] == 1
 assert 'bicycle' not in labels() and 'black-and-white' not in labels()
 # Model selectors in Settings: lists from the code, availability from the OpenAI project; the analysis uses the text model.
-code, models = call(f'{API}/models'); assert code == 200 and models['text_model'] == 'gpt-6.1-terra' and models['image_model'] == 'gpt-image-2', models
+code, models = call(f'{API}/models'); assert code == 200 and models['text_model'] == 'gpt-6.1-terra' and models['image_model'] == 'gpt-image-2.5-flare', models
 available = {m['id']: m['available'] for m in models['image_models']}
 assert available['gpt-image-2'] is True and available['gpt-image-2.5-flare'] is True and available['gpt-image-2.6-flare'] is False, available
 assert len(models['text_models']) == 27 and all(m['available'] for m in models['text_models'])
 assert dict((m['id'], m['qualities']) for m in models['image_models'])['gpt-image-2.5-flare'][-1] == 'max'
+assert {m['id']: m['shutdown'] for m in models['image_models']}['gpt-image-2'] == '2027-02-10'
 for change, code_wanted in (({'image_model': 'gpt-image-2.6-flare'}, 409), ({'text_model': 'gpt-9'}, 400), ({'image_model': 'dall-e-3'}, 400), ({}, 400), ({'other': 'x'}, 400)):
     assert call(f'{API}/models', change, method='PUT')[0] == code_wanted, change
-code, models = call(f'{API}/models', {'image_model': 'gpt-image-2.5-flare', 'text_model': 'gpt-5-mini'}, method='PUT')
-assert code == 200 and models['image_model'] == 'gpt-image-2.5-flare' and models['text_model'] == 'gpt-5-mini', models
+code, models = call(f'{API}/models', {'image_model': 'gpt-image-2', 'text_model': 'gpt-5-mini'}, method='PUT')
+assert code == 200 and models['image_model'] == 'gpt-image-2' and models['text_model'] == 'gpt-5-mini', models
 z, z_copy = image(150, 'Modello scelto')
 code, z = call(f'{API}/{z["id"]}/copy', raw=z_copy, mime='image/webp'); assert code == 201, z
 openai([])
@@ -249,5 +250,5 @@ assert analyze(z)[0] == 200
 [sent] = openai(); assert sent['body']['model'] == 'gpt-5-mini', sent['body']['model']
 assert spend()[-1]['model'] == 'gpt-5-mini' and analysis_state()["model"] == 'gpt-5-mini'
 call(f'{API}/{z["id"]}/trash', {}); call(f'{API}/{z["id"]}', method='DELETE')
-assert call(f'{API}/models', {'text_model': 'gpt-6.1-terra', 'image_model': 'gpt-image-2'}, method='PUT')[0] == 200
+assert call(f'{API}/models', {'text_model': 'gpt-6.1-terra', 'image_model': 'gpt-image-2.5-flare'}, method='PUT')[0] == 200
 print('Analysis integration passed: confirmation of each paid call, register of calls, model selectors, uncertain not resent, OpenAI limit, ASCII tags, aliases, texts replaced once and restorable, caption soft limit and ceiling, editable model context, tag categories, merge, tags removed with their last image.')

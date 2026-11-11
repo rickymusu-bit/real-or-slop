@@ -156,7 +156,8 @@ modello; per ora solo OpenAI; **nessun prezzo e nessun calcolo dei costi**.
   `gpt-6.1-terra`, `gpt-6-luna`, `gpt-6-sol`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.5-pro`,
   `gpt-5.4`, `gpt-5.4-pro`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.2`, `gpt-5.2-pro`, `gpt-5.1`, `gpt-5`, `gpt-5-mini`,
   `gpt-5-nano`, `gpt-5-pro`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4o`, `gpt-4o-mini`, `o3-pro`, `o3`.
-- **Modello di immagini**, predefinito `gpt-image-2`: `gpt-image-2.6-flare`, `gpt-image-2.6-sunburst`,
+- **Modello di immagini**, predefinito `gpt-image-2.5-flare` (OpenAI dismette `gpt-image-2` il 10 febbraio 2027:
+  avviso all'owner del 2026-11-11; il menù mostra la data accanto al modello): `gpt-image-2.6-flare`, `gpt-image-2.6-sunburst`,
   `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst` (qualità `low`, `medium`, `high`, `xhigh`, `max`); `gpt-image-2`,
   `gpt-image-1.5`, `gpt-image-1-mini`, `chatgpt-image-latest` (qualità `low`, `medium`, `high`). Per generare scene da
   testo la guida OpenAI indica Flare.

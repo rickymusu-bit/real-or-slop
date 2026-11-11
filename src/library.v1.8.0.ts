@@ -34,7 +34,7 @@ interface Item {
   categories: Record<string, string>;
 }
 interface Analysis { enabled: boolean; reason: string; model: string; calls_30_days: { total: number; uncertain: number; input_tokens: number; output_tokens: number }; note: string }
-interface ModelOption { id: string; available: boolean | null; qualities?: string[] }
+interface ModelOption { id: string; available: boolean | null; qualities?: string[]; shutdown?: string | null }
 interface Models { text_model: string; image_model: string; text_models: ModelOption[]; image_models: ModelOption[]; note: string }
 interface ContextVersion { id: string; body: string; created_at: string; used: number }
 interface ContextState { max: number; parts: { part: string; current: { id: string; body: string }; history: ContextVersion[]; proposed?: string | null }[] }
@@ -448,7 +448,7 @@ export async function showLibrary() {
   tagForm("#library-alias", "/tags/alias", ["alias", "into"], "Alias aggiunto.");
   // Model selectors: a model missing from the OpenAI project is shown but cannot be chosen.
   const renderModels = (m: Models) => {
-    const options = (list: ModelOption[], chosen: string) => list.map(o => `<option value="${escape(o.id)}"${o.id === chosen ? " selected" : ""}${o.available === false && o.id !== chosen ? " disabled" : ""}>${escape(o.id)}${o.available === false ? " (non disponibile nel progetto)" : ""}</option>`).join("");
+    const options = (list: ModelOption[], chosen: string) => list.map(o => `<option value="${escape(o.id)}"${o.id === chosen ? " selected" : ""}${o.available === false && o.id !== chosen ? " disabled" : ""}>${escape(o.id)}${o.shutdown ? ` (dismesso da OpenAI il ${new Date(o.shutdown).toLocaleDateString("it-IT")})` : ""}${o.available === false ? " (non disponibile nel progetto)" : ""}</option>`).join("");
     $("#library-models-form [name=text_model]").innerHTML = options(m.text_models, m.text_model);
     $("#library-models-form [name=image_model]").innerHTML = options(m.image_models, m.image_model);
     $("#library-models-note").textContent = m.note;
