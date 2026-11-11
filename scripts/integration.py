@@ -21,9 +21,9 @@ try:
                    check=True, env=env, stdout=subprocess.DEVNULL)
     Path('artifacts').mkdir(exist_ok=True)
     with Path('artifacts/integration-worker.log').open('w') as log:
-        # Analysis on, against the fake model (tests/analysis.integration.py); the budget lives in the local D1.
+        # Paid calls on, against the fake model (tests/fake_openai.v1.2.0.py); everything lives in the local D1.
         analysis = {'OPENAI_API_KEY': 'test-openai-key', 'OPENAI_BASE_URL': fake + '/v1/'}
-        model = subprocess.Popen(['python3', 'tests/fake_openai.py', fake.rsplit(':', 1)[1]], stdout=log, stderr=log)
+        model = subprocess.Popen(['python3', 'tests/fake_openai.v1.2.0.py', fake.rsplit(':', 1)[1]], stdout=log, stderr=log)
         proc = subprocess.Popen(['npx', 'wrangler', 'dev', '--local', '--port', '8788', '--persist-to', str(state), '--env', 'local',
                                  *[arg for key, value in analysis.items() for arg in ('--var', f'{key}:{value}')]],
                                 env=env, stdout=log, stderr=log, start_new_session=True)
@@ -34,8 +34,8 @@ try:
                         if r.status == 200: break
                 except OSError: time.sleep(.4)
             else: raise RuntimeError('Worker locale non pronto; vedere artifacts/integration-worker.log')
-            scripts = ['tests/library.v1.1.0.integration.py', 'tests/analysis.v1.4.0.integration.py']
-            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.v1.6.0.integration.py', 'tests/real_wizard.v1.4.0.integration.py'])
+            scripts = ['tests/library.v1.1.0.integration.py', 'tests/analysis.v1.6.0.integration.py', 'tests/slop.v1.0.0.integration.py']
+            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.v1.8.0.integration.py', 'tests/real_wizard.v1.6.0.integration.py', 'tests/slop_browser.v1.0.0.integration.py'])
             for script in scripts: subprocess.run(['python3', script], env=env, check=True)
         finally:
             os.killpg(proc.pid, 15)

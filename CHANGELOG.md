@@ -1,4 +1,15 @@
-## 1.7.0 — 2026-11-10T16:16:00Z (proposta, non pubblicata)
+## 1.8.0 — 2026-11-10T22:11:48Z (proposta, non pubblicata)
+
+Decisioni dell'owner del 2026-11-10 (`docs/wizard-slop.v1.4.0.md`, `docs/libreria-immagini.v1.8.0.md`).
+
+- **Niente prezzi né budget.** Ogni chiamata a pagamento chiede una conferma esplicita, senza importo; il registro `paid_calls` conserva tipo, modello, token ed esito; gli esiti incerti non si ripetono; il limite di spesa è quello del progetto OpenAI. Tolti il tetto in dollari, il rinnovo, la riserva e il calcolo del costo.
+- **Modelli nelle Impostazioni:** modello di testo (27 modelli OpenAI, predefinito `gpt-6.1-terra`) e modello di immagini (8 modelli, predefinito `gpt-image-2.5-flare`, perché OpenAI dismette `gpt-image-2` il 10 febbraio 2027; il menù mostra la data). Un modello non disponibile nel progetto OpenAI (`GET /v1/models`) si vede ma non si sceglie. L'analisi usa il modello di testo scelto. Le Impostazioni mostrano le chiamate a pagamento degli ultimi 30 giorni.
+- **Studio SLOP, parte gratuita:** grafico dello spread (REAL − SLOP tra approvate e pubblicate) con filtri per categoria, vista compatta dei primi *n* tag, vista completa con ricerca, suggerimento con i conteggi, clic per aggiungere al tema; tema obbligatorio con conteggio dal vivo delle REAL; soglie di 50 REAL e 10 REAL per tema; slot estratti dalle REAL con restringimento per epoca, peso dello spread e varietà, modificabili e ripescabili, conservati nella scheda. «Genera prompt» arriva con la parte a pagamento.
+- Colori delle categorie verificati con il validatore della palette (i precedenti non superavano i controlli di luminosità, saturazione e distinguibilità).
+- Migrazione `0039_calls_and_models.v1.0.0.sql`: `paid_calls` al posto di `spend` (dati copiati), via `budget`, nuova tabella `settings`.
+- Nuove versioni: `shared/models.v1.0.0.ts`, `shared/slot-extraction.v1.0.0.ts` (con test unitari), `worker/models.v1.0.0.ts`, `worker/slop.v1.0.0.ts`, `worker/analysis.v1.8.0.ts`, `worker/library.v1.8.0.ts`, `src/slop-studio.v1.0.0.ts`, `src/library.v1.8.0.ts`, `src/real-wizard.v1.6.0.ts`, `src/tag-ui.v1.1.0.ts`, CSS relativi; test `analysis.v1.6.0`, `slop.v1.0.0`, `library_browser.v1.8.0`, `real_wizard.v1.6.0`, `slop_browser.v1.0.0`, `fake_openai.v1.2.0`. Specifiche `libreria-immagini.v1.8.0.md` e `wizard-slop.v1.4.0.md` (approvata); `AGENTS.md`/`MASTER.md` 17.10.0.
+
+## 1.7.0 — 2026-11-10T16:16:00Z (pubblicata il 2026-11-10)
 
 Categorie dei tag (`docs/categorie-tag.v1.1.0.md`, decisioni dell'owner del 2026-11-10).
 
