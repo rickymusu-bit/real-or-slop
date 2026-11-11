@@ -1,12 +1,12 @@
-# Istruzioni Codex — versione canonica 17.10.0
+# Istruzioni Codex — versione canonica 17.11.0
 
-Snapshot: `docs/AGENTS.v17.10.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-10T22:11:48Z. Precedente: `docs/AGENTS.v17.8.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.11.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-11T05:40:53Z. Precedente: `docs/AGENTS.v17.10.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
 Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`
-e `docs/wizard-slop.v1.4.0.md`. Resta valida `docs/copie-di-gioco.v2.0.0.md`.
+e `docs/wizard-slop.v1.4.1.md`. Resta valida `docs/copie-di-gioco.v2.0.0.md`.
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
 
@@ -35,9 +35,10 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   procedimento per REAL e SLOP (fase 2). Si approva insieme alla copia.
 - **Cestino:** svuotarlo cancella ogni riga e ogni file dell'immagine. Nessun registro delle
   eliminazioni, nessuna istantanea, nessuna esportazione automatica: decisione esplicita dell'owner.
-- **Studio SLOP** (fase 3, `docs/wizard-slop.v1.4.0.md`): spread di ogni tag (REAL − SLOP tra approvate e pubblicate), tema
+- **Studio SLOP** (fase 3, `docs/wizard-slop.v1.4.1.md`): spread di ogni tag (REAL − SLOP tra approvate e pubblicate), tema
   obbligatorio in tutti i prompt, slot estratti dalle REAL con peso dello spread e modificabili; si apre con 50 REAL, un tema
-  richiede 10 REAL. Prompt in inglese; i tag finali delle SLOP sono quelli dell'analisi. Il generatore riceve solo testo.
+  richiede 10 REAL. Prompt in inglese scritti dal modello di testo; immagini dal modello di immagini, poi la stessa analisi
+  delle REAL: i tag finali delle SLOP sono quelli dell'analisi. Il generatore riceve solo il testo del prompt.
 - **Contenuti delle SLOP:** niente persone vive o morte da meno di 50 anni; personaggi storici ammessi senza crimini
   attribuiti né scene degradanti; marchi ammessi; regimi documentati ma mai celebrati; nessuna nudità umana tranne
   nelle opere d'arte.

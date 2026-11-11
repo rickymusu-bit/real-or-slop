@@ -1,3 +1,13 @@
+## 1.9.0 — 2026-11-11T05:40:53Z (proposta, non pubblicata)
+
+Studio SLOP, parte a pagamento (`docs/wizard-slop.v1.4.1.md`, sezioni 5–9 e 13).
+
+- **Prompt:** «Genera prompt» scrive in una chiamata un prompt in inglese per slot, con il modello di testo e il contesto «Prompt per le SLOP»; ogni prompt si modifica a mano o si fa riscrivere (chiamata a pagamento, con conferma).
+- **Immagini e analisi:** una conferma per il gruppo; per ogni slot il generatore riceve solo il testo del prompt, l'immagine entra come SLOP nuova con gruppo, slot e qualità, il browser ne prepara la copia di gioco e l'analisi scrive tag e didascalia come per le REAL. Formati quadrato, verticale e orizzontale a rotazione; qualità a scelta tra quelle del modello di immagini.
+- **Revisione:** marchio «RS», didascalia, tag per categoria, «Previsti ma non rilevati» rispetto allo slot, Approva, Pubblica, Cestino, Rigenera.
+- Rifiuti del generatore (regole d'uso) senza addebito; esiti incerti registrati e mai ripetuti; problemi dell'account OpenAI fermano la serie.
+- Migrazione additiva `0040_slop_batches.v1.0.0.sql`. Nuove versioni: `worker/slop-generation.v1.0.0.ts`, `worker/slop.v1.1.0.ts`, `worker/library.v1.9.0.ts`, `worker/analysis.v1.9.0.ts`, `src/slop-studio.v1.1.0.ts`, `src/library.v1.9.0.ts`; test `slop.v1.1.0`, `slop_browser.v1.1.0`, `fake_openai.v1.3.0`. `AGENTS.md`/`MASTER.md` 17.11.0.
+
 ## 1.8.0 — 2026-11-10T22:11:48Z (proposta, non pubblicata)
 
 Decisioni dell'owner del 2026-11-10 (`docs/wizard-slop.v1.4.0.md`, `docs/libreria-immagini.v1.8.0.md`).
