@@ -1,0 +1,66 @@
+# Istruzioni Codex — versione canonica 17.12.1
+
+Snapshot: `docs/AGENTS.v17.12.1.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-11T13:40:54Z. Precedente: `docs/AGENTS.v17.12.0.md` (storico, non più vigente).
+
+## Sistema corrente
+
+Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`,
+`docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Resta valida `docs/copie-di-gioco.v2.0.0.md`.
+Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
+le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
+
+- Dashboard `/admin` in quattro sezioni. Caricamento REAL in wizard di tre passi: selezione Commons, tag e didascalie, riepilogo e pubblicazione. Le altre sezioni verranno completate progressivamente.
+- Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: caricamento multiplo,
+  Commons diretto, modifica in linea, cestino; niente lotti, proposte, cicli o archivi storici.
+- **Copia di gioco WebP** uniforme (qualità 0,85, lato lungo ≤2048 px, sRGB, senza metadati), creata nel
+  browser dell'owner appena l'immagine entra; è il file che l'owner approva e che il gioco serve.
+- **Tag** ASCII: minuscoli, cifre, trattini; inglese per i nomi comuni, lingua originale traslitterata per
+  i nomi propri; vietati i tag che rivelano l'origine. Approvare richiede almeno un tag.
+  Il vocabolario contiene solo tag in uso; gli **alias** rimandano a un tag e si risolvono prima di salvare.
+  Un tag scritto a mano con forma errata (maiuscole, accenti, spazi) viene convertito e salvato senza avviso; il server resta rigido.
+  **Categorie:** una per tag tra Tempo (solo decenni), Formato, Luogo, Ambiente, Evento, Persone, Oggetti e strutture, Altro;
+  al massimo un tag di Tempo e uno di Formato per immagine; vietato solo il tag sull'origine; parole specifiche, suffisso
+  di categoria come ultima risorsa.
+- **Analisi** (fase 2): tag e didascalia dal modello con visione sulla copia di gioco, senza l'origine. Una sola chiamata per immagine
+  genera insieme tag e didascalia, che **sostituiscono** quelli presenti nelle sole immagini scelte; **una generazione per immagine**;
+  i testi generati restano nel database e l'owner può sempre ripristinarli senza costi;
+  ogni chiamata a pagamento si **conferma** esplicitamente, senza importi; **niente prezzi né budget**; registro `paid_calls`
+  (modello, token, esito); esiti incerti mai ripetuti; il limite di spesa è quello del progetto OpenAI. Spenta senza `OPENAI_API_KEY`.
+- **Modelli:** modello di testo (tag, didascalie, prompt SLOP) e modello di immagini scelti nelle Impostazioni, tra i modelli
+  OpenAI elencati nel codice e disponibili nel progetto.
+- **Contesto dei modelli:** testi fissi (base comune, tag e didascalie, prompt SLOP) modificabili dalle Impostazioni,
+  con versioni e ripristino; ogni generazione registra le versioni usate. Formato JSON, limiti e filtri restano nel codice.
+- **Didascalia** in italiano, limite morbido di 160 caratteri (avviso, mai taglio) e tetto di 256, mostrata con l'immagine durante il round, stesso
+  procedimento per REAL e SLOP (fase 2). Si approva insieme alla copia.
+- **Cestino:** svuotarlo cancella ogni riga e ogni file dell'immagine. Nessun registro delle
+  eliminazioni, nessuna istantanea, nessuna esportazione automatica: decisione esplicita dell'owner.
+- **Studio SLOP** (fase 3, `docs/wizard-slop.v1.4.1.md`): spread di ogni tag (REAL − SLOP tra approvate e pubblicate), tema
+  obbligatorio in tutti i prompt, slot estratti dalle REAL con peso dello spread e modificabili; si apre con 50 REAL, un tema
+  richiede 10 REAL. Prompt in inglese scritti dal modello di testo; immagini dal modello di immagini, poi la stessa analisi
+  delle REAL: i tag finali delle SLOP sono quelli dell'analisi. Il generatore riceve solo il testo del prompt.
+- **Contenuti delle SLOP:** niente persone vive o morte da meno di 50 anni; personaggi storici ammessi senza crimini
+  attribuiti né scene degradanti; marchi ammessi; regimi documentati ma mai celebrati; nessuna nudità umana tranne
+  nelle opere d'arte.
+- **Sezione Database** (`docs/database-immagini.v1.0.1.md`): filtri per uno o più tag e per origine; ogni foto con tutti i tag,
+  visualizzazioni e classificazioni corrette (solo sulla copia attuale). «Modifica» ritira subito una pubblicata; le partite in corso
+  conservano didascalia e copia con cui sono iniziate (24 ore al massimo); una modifica lascia approvata un'immagine approvata.
+  Una SLOP si rigenera dal prompt (a pagamento, con conferma; torna nuova, nuova analisi, statistiche azzerate). Scheda
+  «Distribuzione»: REAL e SLOP, approvate e pubblicate impilate, per tag, con lo spread.
+- Restano: gioco singolo e PvP, file serviti senza metadati, marchio «RS», blocco del salvataggio.
+
+## Regole di lavoro
+
+1. Prima di modificare: `git status --short --branch`, `origin/main` aggiornato, stato delle PR.
+   Leggere `MASTER.md` e la specifica vigente. Registrare le contraddizioni e chiedere solo le decisioni
+   davvero mancanti.
+2. Le istruzioni esplicite dell'owner prevalgono. Deploy, merge, migrazioni remote e chiamate a pagamento
+   solo con la sua autorizzazione nella sessione. Non stampare credenziali.
+3. Chiamate a pagamento: conferma esplicita prima dell'invio, registro delle chiamate, nessun reinvio di esiti
+   incerti, provider fittizi nei test.
+4. Versioni: documenti `nome.vMAJOR.MINOR.PATCH.md` con timestamp ISO 8601; `AGENTS.md` e `MASTER.md`
+   dichiarano la versione e hanno snapshot in `docs/`. App, schema e documenti hanno numeri indipendenti.
+5. Verifica prima della consegna: `npm run lint`, `npm test`, `npm run build`, `npm run dry-run`,
+   `npm run test:integration` e, per la dashboard, `ROS_TEST_BROWSER=1 npm run test:integration` su
+   desktop e mobile. Ogni fase in una PR con anteprima e CI verde.
+6. Resoconto finale: cosa è cambiato, verifiche ed esiti, rischi, azioni non eseguite.

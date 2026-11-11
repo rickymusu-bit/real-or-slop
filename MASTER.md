@@ -1,7 +1,7 @@
-# Mappa canonica — versione canonica 17.12.0
+# Mappa canonica — versione canonica 17.12.1
 
-Snapshot: `docs/MASTER.v17.12.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-11T09:30:00Z. Precedente: `docs/MASTER.v17.11.0.md` (storico).
+Snapshot: `docs/MASTER.v17.12.1.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-11T13:40:54Z. Precedente: `docs/MASTER.v17.12.0.md` (storico).
 
 ## Architettura
 
@@ -23,4 +23,4 @@ Aggiornato: 2026-11-11T09:30:00Z. Precedente: `docs/MASTER.v17.11.0.md` (storico
 
 Fase 1 rilasciata (app 1.0.1). Fase 2 unita in `main` (app 1.1.0): alias, tag e didascalie dal modello con
 visione, budget unico e registro di spesa. Fase 3: consulente SLOP e generazione. Più avanti: Topic Discovery sulle
-embedding dei tag. In produzione app 1.4.0 (PR 103 e 104, migrazioni fino alla 0035): dashboard a quattro sezioni, wizard REAL in tre schede, generazione congiunta di tag e didascalia che sostituisce i testi delle sole immagini scelte, una volta per immagine, con ripristino senza costi. Proposta app 1.5.0: didascalia con limite morbido di 160 caratteri e tetto di 256 (migrazione 0036), tag scritti a mano convertiti senza avviso; regole di contenuto e trasparenza riunite nella sezione 11 della specifica. In produzione app 1.7.0 (migrazioni fino alla 0038): contesto dei modelli e categorie dei tag. Proposta app 1.8.0 (migrazione 0039): niente prezzi né budget, modelli scelti nelle Impostazioni, studio SLOP parte gratuita (tema con spread, slot), `docs/wizard-slop.v1.4.1.md`; proposta app 1.9.0 (migrazione 0040): parte a pagamento (prompt, immagini, analisi, revisione). Proposta app 1.10.0 (migrazione 0041): sezione Database, `docs/database-immagini.v1.0.0.md`. Specifiche `docs/libreria-immagini.v1.8.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`.
+embedding dei tag. In produzione app 1.4.0 (PR 103 e 104, migrazioni fino alla 0035): dashboard a quattro sezioni, wizard REAL in tre schede, generazione congiunta di tag e didascalia che sostituisce i testi delle sole immagini scelte, una volta per immagine, con ripristino senza costi. Proposta app 1.5.0: didascalia con limite morbido di 160 caratteri e tetto di 256 (migrazione 0036), tag scritti a mano convertiti senza avviso; regole di contenuto e trasparenza riunite nella sezione 11 della specifica. In produzione app 1.7.0 (migrazioni fino alla 0038): contesto dei modelli e categorie dei tag. Proposta app 1.8.0 (migrazione 0039): niente prezzi né budget, modelli scelti nelle Impostazioni, studio SLOP parte gratuita (tema con spread, slot), `docs/wizard-slop.v1.4.1.md`; proposta app 1.9.0 (migrazione 0040): parte a pagamento (prompt, immagini, analisi, revisione). In produzione app 1.10.0 (PR 109, migrazioni fino alla 0041, pubblicata il 2026-11-11): sezione Database, `docs/database-immagini.v1.0.1.md`, approvata dall'owner. Specifiche `docs/libreria-immagini.v1.8.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`.

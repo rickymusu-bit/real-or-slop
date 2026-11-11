@@ -1,4 +1,6 @@
-## 1.10.0 — 2026-11-11T09:30:00Z (proposta, non pubblicata)
+## 1.10.0 — 2026-11-11T09:30:00Z (pubblicata il 2026-11-11)
+
+Scelte della specifica approvate dall'owner il 2026-11-11 (`docs/database-immagini.v1.0.1.md`).
 
 Sezione Database della dashboard (`docs/database-immagini.v1.0.0.md`, richiesta dell'owner del 2026-11-11).
 
