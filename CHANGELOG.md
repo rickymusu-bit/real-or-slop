@@ -1,3 +1,13 @@
+## 1.14.0 — 2026-11-12T19:00:00Z (proposta, non pubblicata)
+
+Privacy e note legali (`docs/privacy-note-legali.v1.0.0.md`, decisioni dell'owner del 2026-11-12). Bozza da far verificare a un legale.
+
+- Pagine **Privacy e cookie** (`/privacy`) e **Termini d'uso** (`/termini`), con i dati realmente trattati; collegamenti nel piè di pagina. Titolare e contatti da completare in `shared/legal.v1.0.0.ts` prima del rilascio: finché mancano, le pagine lo dichiarano.
+- **Conservazione:** manutenzione giornaliera (Cron Trigger alle 03:17 UTC) che cancella le partite più vecchie di 12 mesi, i limiti di richieste scaduti e le copie ritirate non più usate.
+- **Classifica:** dichiarazione obbligatoria «almeno 14 anni o permesso di un genitore» (anche lato server) e avviso a non usare nome e cognome; nelle Impostazioni «Cancella» elimina per sempre una voce, anche dal risultato della verifica di un codice.
+- **Licenze:** i crediti delle REAL indicano le modifiche (ritaglio 4:5, riduzione, ricompressione) e la stessa licenza dell'originale; la pagina «Fonti e crediti» lo spiega.
+- Nuove versioni: `shared/legal.v1.0.0.ts`, `worker/maintenance.v1.0.0.ts`, `worker/game.v2.1.0.ts`, `worker/leaderboard.v1.1.0.ts`, `src/legal.v1.0.0.ts`, `src/play.v2.1.0.ts`, `src/library.v1.14.0.ts`. Test `game.v2.1.0`, `game_browser.v1.1.0`; `scripts/integration.py` 2.7.0. `AGENTS.md`/`MASTER.md` 17.17.0.
+
 ## 1.13.1 — 2026-11-12T13:30:00Z (proposta, non pubblicata)
 
 Anteprime separate dalla produzione (richiesta dell'owner del 2026-11-12).
