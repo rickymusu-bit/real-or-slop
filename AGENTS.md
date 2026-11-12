@@ -1,14 +1,15 @@
-# Istruzioni Codex — versione canonica 17.17.0
+# Istruzioni Codex — versione canonica 17.18.0
 
-Snapshot: `docs/AGENTS.v17.17.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-12T19:00:00Z. Precedente: `docs/AGENTS.v17.16.2.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.18.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-12T20:37:27Z. Precedente: `docs/AGENTS.v17.17.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
 Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`,
 `docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v3.0.1.md` (4:5, approvata il 2026-11-12, in produzione con l'app 1.12.0), che sostituisce la 2.0.0. Gioco:
 `docs/gioco-a-livelli.v1.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.12.0). Statistiche e Impostazioni: `docs/statistiche-impostazioni.v1.0.1.md`
-(approvata il 2026-11-12, in produzione con l'app 1.13.0).
+(approvata il 2026-11-12, in produzione con l'app 1.13.0). Generazione automatica delle SLOP su proposta:
+`docs/proposta-generazione-slop.v2.0.0.md` (in attesa di approvazione).
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
 
@@ -44,6 +45,9 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   obbligatorio in tutti i prompt, slot estratti dalle REAL con peso dello spread e modificabili; si apre con 50 REAL, un tema
   richiede 10 REAL (soglie modificabili nelle Impostazioni). Prompt in inglese scritti dal modello di testo; immagini dal modello di immagini, poi la stessa analisi
   delle REAL: i tag finali delle SLOP sono quelli dell'analisi. Il generatore riceve solo il testo del prompt.
+  Proposto (`docs/proposta-generazione-slop.v2.0.0.md`): nessun timer né prefiltro; se 100 × (n_real − n_slop) / n_real ≥ 33% (SLOP
+  approvate e pubblicate, almeno 10 REAL) una notifica nella dashboard chiede di approvare un batch automatico di min(N, 10) SLOP per
+  quel tag, con N = n_real − n_slop − n_slop_nuove; un solo batch aperto alla volta, nessuna nuova proposta finché ogni sua foto non è decisa.
 - **Contenuti delle SLOP:** niente persone vive o morte da meno di 50 anni; personaggi storici ammessi senza crimini
   attribuiti né scene degradanti; marchi ammessi; regimi documentati ma mai celebrati; nessuna nudità umana tranne
   nelle opere d'arte.
