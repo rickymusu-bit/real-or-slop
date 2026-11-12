@@ -1,7 +1,7 @@
-# Istruzioni Codex — versione canonica 17.16.0
+# Istruzioni Codex — versione canonica 17.16.1
 
-Snapshot: `docs/AGENTS.v17.16.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-12T13:30:00Z. Precedente: `docs/AGENTS.v17.15.1.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.16.1.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-12T14:20:00Z. Precedente: `docs/AGENTS.v17.16.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
@@ -73,8 +73,8 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
 5. Verifica prima della consegna: `npm run lint`, `npm test`, `npm run build`, `npm run dry-run`,
    `npm run test:integration` e, per la dashboard, `ROS_TEST_BROWSER=1 npm run test:integration` su
    desktop e mobile. Ogni fase in una PR con anteprima e CI verde.
+6. Resoconto finale: cosa è cambiato, verifiche ed esiti, rischi, azioni non eseguite.
 7. Rilascio: il merge su `main` avvia da solo build, migrazioni remote e deploy (Workers Builds, comando
    `npx wrangler d1 migrations apply DB --remote && npm run deploy`): il merge è l'autorizzazione dell'owner a entrambi.
    Le anteprime delle PR usano solo il database `real-or-slop-preview` e i bucket `real-or-slop-preview-*`
    (blocco `previews`, ambiente `preview` per le migrazioni), mai quelli di produzione.
-6. Resoconto finale: cosa è cambiato, verifiche ed esiti, rischi, azioni non eseguite.
