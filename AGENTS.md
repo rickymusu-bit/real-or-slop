@@ -1,12 +1,13 @@
-# Istruzioni Codex — versione canonica 17.13.0
+# Istruzioni Codex — versione canonica 17.14.0
 
-Snapshot: `docs/AGENTS.v17.13.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-12T08:00:00Z. Precedente: `docs/AGENTS.v17.12.1.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.14.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-12T09:00:00Z. Precedente: `docs/AGENTS.v17.13.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
 Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`,
-`docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v3.0.0.md` (4:5, proposta con l'app 1.11.0), che sostituisce la 2.0.0.
+`docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v3.0.0.md` (4:5, proposta con l'app 1.11.0), che sostituisce la 2.0.0. Gioco:
+`docs/gioco-a-livelli.v1.0.0.md` (proposta con l'app 1.12.0).
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
 
@@ -48,7 +49,12 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   conservano didascalia e copia con cui sono iniziate (24 ore al massimo); una modifica lascia approvata un'immagine approvata.
   Una SLOP si rigenera dal prompt (a pagamento, con conferma; torna nuova, nuova analisi, statistiche azzerate). Scheda
   «Distribuzione»: REAL e SLOP, approvate e pubblicate impilate, per tag, con lo spread.
-- Restano: gioco singolo e PvP, file serviti senza metadati, marchio «RS», blocco del salvataggio.
+- **Gioco** (`docs/gioco-a-livelli.v1.0.0.md`): una sola modalità, una foto alla volta con il suo tempo; livelli nel codice (Facile 10×20 s,
+  Medio 15×15 s, Difficile 20×10 s, Esperto 25×5 s); esito immediato dal server; tempo scaduto = foto non riconosciuta; punteggio
+  foto × (2 × accuratezza bilanciata − 1) solo per partite concluse; swipe su telefono, R e S su computer; lista finale con fonti e
+  prompt. Classifica nella home (7 giorni e sempre, migliore per giocatore) con soprannome controllato e codice partita (solo
+  l'impronta nel database). PvP e allenamento eliminati.
+- Restano: file serviti senza metadati, marchio «RS», blocco del salvataggio.
 
 ## Regole di lavoro
 

@@ -1,10 +1,13 @@
-import { setupGame, stopPlay } from "./play";
-import { showLibrary } from "./library.v1.11.0";
+/** App shell. 2026-11-12T09:00:00Z: one game mode with levels at /gioca, leaderboard on the home page; training, timed and PvP
+ * pages are gone (old addresses lead to /gioca) (docs/gioco-a-livelli.v1.0.0.md). */
+import { setupGame, stopPlay } from "./play.v2.0.0";
+import { showLibrary } from "./library.v1.12.0";
 import "./style.css";
 const root = document.querySelector<HTMLDivElement>("#app")!;
 /** The demo catalog is gone with the clean database: every published image is a real library image. */
 export const publicDemo = false;
-export { escape } from "../shared/html";
+import { escape } from "../shared/html";
+export { escape };
 export async function api<T = Record<string, unknown>>(
   path: string,
   options: RequestInit = {},
@@ -18,10 +21,7 @@ export async function api<T = Record<string, unknown>>(
     throw new Error(data.error || "Connessione non disponibile");
   return data;
 }
-const links = [
-  ["/allenamento", "Allenamento"],
-  ["/tempo", "A tempo"],
-];
+const links = [["/gioca", "Gioca"]];
 export const content = () => document.querySelector<HTMLElement>("#content")!;
 function shell() {
   root.innerHTML = `<a class="skip-link" href="#content">Salta al contenuto</a><header><a class="brand" href="/" aria-label="REAL or SLOP, inizio"><span class="brand-real">REAL</span><span class="brand-or">or</span><span class="brand-slop">SLOP</span></a><nav aria-label="Principale">${links.map(([url, label]) => `<a href="${url}" ${location.pathname === url ? 'aria-current="page"' : ""}>${label}</a>`).join("")}<a href="/informazioni" class="nav-info" aria-label="Informazioni">?</a></nav></header><main id="content" tabindex="-1"></main><footer><span>Guarda meglio. Metti tutto in dubbio.</span><div><a href="/informazioni">Come funziona & privacy</a><a href="/crediti">Fonti e crediti</a><span class="demo-dot">${publicDemo ? "Demo sintetica" : "Catalogo verificato"}</span></div></footer>`;
@@ -29,37 +29,20 @@ function shell() {
 const arrow = '<svg class="arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 16 16 4M4 4h12v12"/></svg>';
 const mosaic = () => `<figure class="gallery-preview"><figcaption><span>STUDI SINTETICI</span><span>001 — 002</span></figcaption><div class="diptych" aria-hidden="true"><div class="art art-one"><span class="sun"></span><div class="ridge r1"></div><div class="ridge r2"></div><div class="ridge r3"></div></div><div class="art art-two"><div class="orb"></div></div></div><p>${publicDemo ? "Illustrazioni originali della demo. Nessuna fotografia verificata." : "Studi decorativi: non sono immagini del catalogo."}</p></figure>`;
 function home() {
-  content().innerHTML = `<section class="hero"><div class="hero-copy"><div class="eyebrow">ESPERIMENTO VISIVO${publicDemo ? " · DEMO" : ""}</div><h1>Guarda.<br>Dubita.<br><em>Decidi.</em></h1><p class="lead">Un’immagine. Due possibilità. Osserva i dettagli, scegli REAL o SLOP e scopri la storia dopo la risposta.</p><a class="button primary" href="/allenamento">${publicDemo ? "Esplora la demo" : "Inizia a giocare"} <span>${arrow}</span></a><div class="hero-meta"><span>Nessun account</span><span>Due modi di osservare</span></div></div>${mosaic()}</section><section class="modes"><div class="section-line"><div><span class="eyebrow">SCEGLI COME GIOCARE</span><h2>Il tuo sguardo, le tue regole.</h2></div><p>Inizia con calma. Poi alza la posta.</p></div><div class="cards">${[
-    [
-      "01",
-      "◎",
-      "Allenamento",
-      "Prenditi il tuo tempo. Osserva, scegli e scopri la storia dietro ogni immagine.",
-      "/allenamento",
-      "Allena lo sguardo",
-    ],
-    [
-      "02",
-      "◷",
-      "Contro il tempo",
-      "Un conto alla rovescia per ogni immagine. Scegli prima che il tempo scada.",
-      "/tempo",
-      "Accetta la sfida",
-    ],
-  ]
-    .map(
-      ([n, icon, title, desc, url, cta]) =>
-        `<a class="mode-card" href="${url}"><div class="card-top"><span class="mode-icon">${icon}</span><span>${n}</span></div><h3>${title}</h3><p>${desc}</p><div class="card-link">${cta}<span>${arrow}</span></div></a>`,
-    )
-    .join(
-      "",
-    )}</div></section>${publicDemo ? '<aside class="demo-banner">◈ <span><strong>Demo.</strong> Le illustrazioni sono sintetiche e le etichette simulate: non misurano il riconoscimento delle immagini IA.</span></aside>' : '<aside class="demo-banner">◈ <span>Le immagini delle partite provengono dal catalogo REAL/SLOP approvato e pubblicato.</span></aside>'}`;
+  content().innerHTML = `<section class="hero"><div class="hero-copy"><div class="eyebrow">ESPERIMENTO VISIVO</div><h1>Guarda.<br>Dubita.<br><em>Decidi.</em></h1><p class="lead">Una foto alla volta, col tempo che scorre. È una fotografia vera o l’ha generata un’intelligenza artificiale? Scegli REAL o SLOP.</p><a class="button primary" href="/gioca">Inizia a giocare <span>${arrow}</span></a><div class="hero-meta"><span>Nessun account</span><span>Quattro livelli</span></div></div>${mosaic()}</section><section class="modes"><div class="section-line"><div><span class="eyebrow">CLASSIFICA</span><h2>Chi guarda meglio.</h2></div><p>Il miglior punteggio di ogni giocatore. Contano le foto e l’accuratezza: rispondere a caso vale zero.</p></div><div id="leaderboards" class="leaderboards"><p class="hint">Caricamento…</p></div></section>`;
+  const table = (caption: string, rows: { rank: number; nickname: string; level_label: string; score: number }[]) =>
+    `<div class="leaderboard"><table><caption>${caption}</caption><thead><tr><th scope="col">#</th><th scope="col">Giocatore</th><th scope="col">Livello</th><th scope="col">Punti</th></tr></thead><tbody>${rows.length
+      ? rows.map(r => `<tr><td>${r.rank}</td><td>${escape(r.nickname)}</td><td>${escape(r.level_label)}</td><td>${r.score.toLocaleString("it-IT", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td></tr>`).join("")
+      : '<tr><td colspan="4">Ancora nessuna partita in classifica.</td></tr>'}</tbody></table></div>`;
+  void api<{ week: Parameters<typeof table>[1]; all: Parameters<typeof table>[1] }>("/leaderboard")
+    .then(data => { const box = document.querySelector("#leaderboards"); if (box) box.innerHTML = table("Ultimi 7 giorni", data.week) + table("Di sempre", data.all); })
+    .catch(() => { const box = document.querySelector("#leaderboards"); if (box) box.innerHTML = '<p class="hint">Classifica non disponibile.</p>'; });
 }
 function info() {
-  content().innerHTML = `<section class="page narrow"><div class="eyebrow">UNO SGUARDO PIÙ CONSAPEVOLE</div><h1>Come funziona.</h1><p class="lead">Scegli REAL (reale) oppure SLOP (generata con IA). Dopo ogni risposta scopri spiegazione, provenienza e licenza.</p>${publicDemo ? '<h2>Una demo dichiarata</h2><p>Le illustrazioni attuali sono create in codice. Le etichette sono simulate e non costituiscono un test di riconoscimento delle immagini IA.</p>' : '<h2>Il catalogo giocabile</h2><p>Le immagini in partita provengono dal catalogo REAL/SLOP pubblicato, dopo approvazione e verifiche editoriali. Le immagini ancora in revisione non entrano nelle partite.</p>'}<h2 id="origine">Le regole del catalogo verificato</h2><p>REAL indica fotografie autentiche verificate e SLOP immagini generate integralmente con intelligenza artificiale. Le SLOP del nuovo protocollo nascono da idee originali, senza fotografie di riferimento. Escludiamo le fotografie modificate solo in parte con strumenti generativi: richiedono un diverso tipo di verifica.</p><p>Stranezza, bellezza, ordinarietà e imperfezioni non provano l’origine di un’immagine. Nella vita reale possono servire informazioni sulla fonte e sul contesto: i soli pixel non consentono sempre una risposta affidabile. L’origine sintetica, la veridicità della scena e l’intento di ingannare sono aspetti distinti. La parola Slop nel titolo non esprime un giudizio morale o automatico sulla qualità.</p><h2>Privacy</h2><p>Nessun account richiesto, nessun analytics o cookie pubblicitario. Un cookie tecnico conserva la sessione anonima. Il server registra risposte e tempi per il funzionamento e le statistiche. Il rilevamento della pagina nascosta oscura le immagini soltanto nel browser: non registra la tua navigazione e non applica penalità. Prima del lancio pubblico saranno definiti titolare, contatti e conservazione. Puoi eliminare il cookie dalle impostazioni del browser.</p><h2>Tempo e immagini</h2><p>In Allenamento il tempo di osservazione è misurato e mostrato nel riepilogo, senza modificare i punti. A tempo ogni immagine ha un countdown: cambiare scheda non lo sospende. Quando la pagina diventa nascosta, l’immagine viene coperta; al ritorno puoi mostrarla di nuovo se il round è ancora aperto. I comandi diretti di salvataggio sono limitati sulle immagini di gioco, ma screenshot e copie restano tecnicamente possibili.</p><h2>Comandi</h2><p>Durante una domanda: R per REAL, I per SLOP (generata con IA). Tocca l’immagine per ingrandirla, oppure usa Invio o Spazio quando ha il focus. Chiudi con Escape. Ogni funzione è disponibile con tastiera e touch.</p></section>`;
+  content().innerHTML = `<section class="page narrow"><div class="eyebrow">UNO SGUARDO PIÙ CONSAPEVOLE</div><h1>Come funziona.</h1><p class="lead">Per ogni foto scegli REAL (una fotografia vera) oppure SLOP (generata con l’intelligenza artificiale). Alla fine vedi tutte le foto della partita, con le fonti delle REAL e il prompt delle SLOP.</p><h2>Livelli e tempo</h2><p>Facile: 10 foto, 20 secondi per foto. Medio: 15 foto, 15 secondi. Difficile: 20 foto, 10 secondi. Esperto: 25 foto, 5 secondi. Il tempo di una foto parte quando la foto compare e si ferma quando rispondi; se scade, la foto conta come non riconosciuta e si passa alla successiva. Se lasci la pagina, foto e didascalia si oscurano ma il tempo continua.</p><h2>Punteggio</h2><p>Punteggio = foto × (2 × accuratezza bilanciata − 1). L’accuratezza bilanciata è la media tra la quota di REAL riconosciute e quella di SLOP riconosciute: chi risponde a caso, o sempre allo stesso modo, fa zero; chi non sbaglia mai fa tanti punti quante sono le foto del livello. Conta solo una partita giocata fino all’ultima foto.</p><h2>Comandi</h2><p>Sul telefono scorri la foto: verso destra REAL, verso sinistra SLOP. Sul computer usa i pulsanti sotto la foto oppure i tasti R (REAL) e S (SLOP).</p><h2 id="origine">Le regole del catalogo</h2><p>REAL indica fotografie autentiche verificate, SLOP immagini generate integralmente con intelligenza artificiale. Tutte le foto sono mostrate nello stesso formato 4:5, senza metadati, con il marchio RS. Stranezza, bellezza, ordinarietà e imperfezioni non provano l’origine di un’immagine: i soli pixel non consentono sempre una risposta affidabile.</p><h2>Classifica e privacy</h2><p>Nessun account. Un cookie tecnico conserva la sessione anonima e serve anche a mostrare in classifica solo il miglior punteggio di ogni giocatore. Se entri in classifica, il soprannome che scegli è pubblico; ricevi un codice partita, mostrato una sola volta, che dimostra che la partita è tua: il sito conserva solo un’impronta del codice. Il server registra risposte e tempi per il funzionamento e le statistiche. Prima del lancio pubblico saranno definiti titolare, contatti e conservazione.</p></section>`;
 }
 function credits() {
-  content().innerHTML = `<section class="page narrow"><div class="eyebrow">TRASPARENZA, PRIMA DI TUTTO</div><h1>Fonti e crediti.</h1><p class="lead">${publicDemo ? "La demo contiene illustrazioni geometriche originali Real or Slop." : "Il gioco usa il catalogo REAL e SLOP approvato e pubblicato."}</p><p>${publicDemo ? "Le illustrazioni dimostrative non contengono materiale di terzi. " : ""}L’interfaccia usa Space Grotesk Bold e Inter distribuiti localmente con licenza SIL Open Font License 1.1: <a href="/fonts/OFL-space-grotesk.txt" target="_blank" rel="noopener noreferrer">licenza Space Grotesk</a> e <a href="/fonts/OFL-inter.txt" target="_blank" rel="noopener noreferrer">licenza Inter</a>. Nel catalogo definitivo, fonte, autore, licenza, obblighi di attribuzione e prove saranno mostrati dopo la risposta. Le immagini in revisione rimangono private.</p><a class="button" href="/allenamento">${publicDemo ? "Esplora la demo" : "Inizia a giocare"}</a></section>`;
+  content().innerHTML = `<section class="page narrow"><div class="eyebrow">TRASPARENZA, PRIMA DI TUTTO</div><h1>Fonti e crediti.</h1><p class="lead">${publicDemo ? "La demo contiene illustrazioni geometriche originali Real or Slop." : "Il gioco usa il catalogo REAL e SLOP approvato e pubblicato."}</p><p>${publicDemo ? "Le illustrazioni dimostrative non contengono materiale di terzi. " : ""}L’interfaccia usa Space Grotesk Bold e Inter distribuiti localmente con licenza SIL Open Font License 1.1: <a href="/fonts/OFL-space-grotesk.txt" target="_blank" rel="noopener noreferrer">licenza Space Grotesk</a> e <a href="/fonts/OFL-inter.txt" target="_blank" rel="noopener noreferrer">licenza Inter</a>. Nel catalogo definitivo, fonte, autore, licenza, obblighi di attribuzione e prove saranno mostrati dopo la risposta. Le immagini in revisione rimangono private.</p><a class="button" href="/gioca">Inizia a giocare</a></section>`;
 }
 
 export async function render() {
@@ -68,9 +51,8 @@ export async function render() {
   if (location.pathname === "/") home();
   else if (location.pathname === "/informazioni") info();
   else if (location.pathname === "/crediti") credits();
-  else if (location.pathname === "/allenamento") await setupGame("training");
-  else if (location.pathname === "/tempo") await setupGame("timed");
-  else if (location.pathname === "/pvp") content().innerHTML = '<section class="page narrow"><h1>La sfida tra amici torna più avanti.</h1><p>Il PvP è temporaneamente sospeso.</p><a class="button" href="/tempo">Gioca a tempo</a></section>';
+  else if (location.pathname === "/gioca") await setupGame();
+  else if (["/allenamento", "/tempo", "/pvp"].includes(location.pathname)) { history.replaceState({}, "", "/gioca"); await setupGame(); }
   else if (location.pathname === "/admin") await showLibrary();
   else
     content().innerHTML =

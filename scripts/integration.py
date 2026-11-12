@@ -1,4 +1,5 @@
-"""v2.4.0, 2026-11-12T08:00:00Z: 4:5 game copies (docs/copie-di-gioco.v3.0.0.md), new versions of the checks.
+"""v2.5.0, 2026-11-12T09:00:00Z: level game and leaderboard (docs/gioco-a-livelli.v1.0.0.md).
+v2.4.0, 2026-11-12T08:00:00Z: 4:5 game copies (docs/copie-di-gioco.v3.0.0.md), new versions of the checks.
 v2.3.0, 2026-11-11T09:30:00Z: library 1.2.0 and database checks (docs/database-immagini.v1.0.0.md).
 v2.2.0, 2026-11-09T21:30:00Z. Start an isolated LOCAL Worker (real local D1 and R2) wired to a fake OpenAI
 (tests/fake_openai.py), run the HTTP and, with ROS_TEST_BROWSER=1, browser checks, then stop both.
@@ -36,8 +37,8 @@ try:
                         if r.status == 200: break
                 except OSError: time.sleep(.4)
             else: raise RuntimeError('Worker locale non pronto; vedere artifacts/integration-worker.log')
-            scripts = ['tests/library.v1.3.0.integration.py', 'tests/analysis.v1.7.0.integration.py', 'tests/slop.v1.2.0.integration.py', 'tests/database.v1.1.0.integration.py']
-            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.v1.9.0.integration.py', 'tests/real_wizard.v1.6.0.integration.py', 'tests/slop_browser.v1.1.0.integration.py', 'tests/database_browser.v1.1.0.integration.py'])
+            scripts = ['tests/library.v1.4.0.integration.py', 'tests/analysis.v1.7.0.integration.py', 'tests/slop.v1.2.0.integration.py', 'tests/database.v1.2.0.integration.py', 'tests/game.v2.0.0.integration.py']
+            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.v1.10.0.integration.py', 'tests/real_wizard.v1.6.0.integration.py', 'tests/slop_browser.v1.1.0.integration.py', 'tests/database_browser.v1.1.0.integration.py', 'tests/game_browser.v1.0.0.integration.py'])
             for script in scripts: subprocess.run(['python3', script], env=env, check=True)
         finally:
             os.killpg(proc.pid, 15)

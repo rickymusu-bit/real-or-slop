@@ -1,4 +1,5 @@
-/** v2.0.0, 2026-11-09T16:30:00Z: Worker routing on the clean schema (docs/libreria-immagini.v1.1.0.md). */
+/** v2.1.0, 2026-11-12T09:00:00Z: PvP removed, its API is gone (docs/gioco-a-livelli.v1.0.0.md).
+ * v2.0.0, 2026-11-09T16:30:00Z: Worker routing on the clean schema (docs/libreria-immagini.v1.1.0.md). */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import worker from "../worker/index.ts";
@@ -28,7 +29,7 @@ test("cross-origin mutations denied", async () => {
   const r = await worker.fetch(new Request("https://test/api/admin", { method: "POST", headers: { Origin: "https://other" } }), env);
   assert.equal(r.status, 403);
 });
-test("suspended PvP API cannot create, join, or reconnect public rooms", async () => {
+test("the removed PvP API does not exist", async () => {
   for (const path of ["/api/rooms", "/api/rooms/ABCDEFGHJKLM/join", "/api/rooms/ABCDEFGHJKLM/ws", "/api/rooms/ABCDEFGHJKLM/state"])
-    assert.equal((await worker.fetch(new Request("https://test" + path), env)).status, 503);
+    assert.equal((await worker.fetch(new Request("https://test" + path), env)).status, 404);
 });
