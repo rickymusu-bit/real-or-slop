@@ -1,20 +1,21 @@
-# Istruzioni Codex — versione canonica 17.12.1
+# Istruzioni Codex — versione canonica 17.13.0
 
-Snapshot: `docs/AGENTS.v17.12.1.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-11T13:40:54Z. Precedente: `docs/AGENTS.v17.12.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.13.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-12T08:00:00Z. Precedente: `docs/AGENTS.v17.12.1.md` (storico, non più vigente).
 
 ## Sistema corrente
 
 Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`,
-`docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Resta valida `docs/copie-di-gioco.v2.0.0.md`.
+`docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v3.0.0.md` (4:5, proposta con l'app 1.11.0), che sostituisce la 2.0.0.
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
 
 - Dashboard `/admin` in quattro sezioni. Caricamento REAL in wizard di tre passi: selezione Commons, tag e didascalie, riepilogo e pubblicazione. Le altre sezioni verranno completate progressivamente.
 - Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: caricamento multiplo,
   Commons diretto, modifica in linea, cestino; niente lotti, proposte, cicli o archivi storici.
-- **Copia di gioco WebP** uniforme (qualità 0,85, lato lungo ≤2048 px, sRGB, senza metadati), creata nel
-  browser dell'owner appena l'immagine entra; è il file che l'owner approva e che il gioco serve.
+- **Copia di gioco WebP 4:5** uniforme (qualità 0,85, altezza ≤2048 px, sRGB, senza metadati), ritagliata con un'inquadratura
+  scelta dall'owner (centrata all'inizio) e creata nel browser appena l'immagine entra; è il file che l'owner approva e che il gioco
+  serve. Le SLOP si generano in 4:5 dove il modello lo consente. Foto con licenza ND escluse dal gioco.
 - **Tag** ASCII: minuscoli, cifre, trattini; inglese per i nomi comuni, lingua originale traslitterata per
   i nomi propri; vietati i tag che rivelano l'origine. Approvare richiede almeno un tag.
   Il vocabolario contiene solo tag in uso; gli **alias** rimandano a un tag e si risolvono prima di salvare.

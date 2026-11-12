@@ -1,3 +1,13 @@
+## 1.11.0 — 2026-11-12T08:00:00Z (proposta, non pubblicata)
+
+Copie di gioco 4:5 (`docs/copie-di-gioco.v3.0.0.md`, decisioni dell'owner del 2026-11-11).
+
+- Ogni copia di gioco è 4:5 verticale, al massimo 1638 × 2048, ritagliata dall'originale orientato lungo un'inquadratura: centrata all'inizio, modificabile con «Inquadratura» nel wizard REAL e nella sezione Database (trascinamento, frecce, dimensione). Cambiare inquadratura rifà la copia e ne azzera le statistiche; lo stato dell'immagine resta.
+- Approvare e pubblicare richiedono una copia 4:5; le copie precedenti sono segnalate «da rifare in 4:5».
+- Foto con licenza senza opere derivate (ND) rifiutate da Commons e non approvabili.
+- SLOP generate in 1024 × 1280 con i modelli GPT Image 2.5 e 2.6, in 1024 × 1536 da ritagliare con gli altri; niente più rotazione di formati.
+- Migrazione additiva `0042_game_copy_crop.v1.0.0.sql`. Nuove versioni: `shared/game-copy.v2.0.0.ts`, `shared/licenses.v1.0.0.ts`, `shared/image-size.v1.0.0.ts`, `src/game-copy.v2.0.0.ts`, `src/crop-editor.v1.0.0.ts`, `src/real-wizard.v1.7.0.ts`, `src/slop-studio.v1.2.0.ts`, `src/library.v1.11.0.ts`, `worker/library.v1.11.0.ts`, `worker/analysis.v1.11.0.ts`, `worker/slop.v1.3.0.ts`, `worker/slop-generation.v1.2.0.ts`. Test `game-copy.v2.0.0`, `library.v1.3.0`, `analysis.v1.7.0`, `slop.v1.2.0`, `database.v1.1.0`, `database_browser.v1.1.0`, encoder di prova `game_copy_v2_0_0.py`. `AGENTS.md`/`MASTER.md` 17.13.0.
+
 ## 1.10.0 — 2026-11-11T09:30:00Z (pubblicata il 2026-11-11)
 
 Scelte della specifica approvate dall'owner il 2026-11-11 (`docs/database-immagini.v1.0.1.md`).
