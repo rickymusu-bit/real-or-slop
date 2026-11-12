@@ -1,7 +1,7 @@
-# Mappa canonica — versione canonica 17.16.2
+# Mappa canonica — versione canonica 17.17.0
 
-Snapshot: `docs/MASTER.v17.16.2.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-12T18:00:00Z. Precedente: `docs/MASTER.v17.16.0.md` (storico).
+Snapshot: `docs/MASTER.v17.17.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-12T19:00:00Z. Precedente: `docs/MASTER.v17.16.2.md` (storico).
 
 ## Architettura
 
@@ -20,6 +20,7 @@ Aggiornato: 2026-11-12T18:00:00Z. Precedente: `docs/MASTER.v17.16.0.md` (storico
 
 ## Rilascio e anteprime
 
+- Manutenzione giornaliera (Cron Trigger 03:17 UTC, `worker/maintenance.v1.0.0.ts`): partite oltre 12 mesi, limiti scaduti, copie ritirate.
 - Merge su `main` → Workers Builds: `npm run build`, poi migrazioni remote e `npm run deploy` sulle risorse di produzione
   (D1 `real-or-slop-local`, R2 `real-or-slop-quarantine` e `real-or-slop-approved`).
 - Anteprime delle PR: migrazioni con `--env preview`, poi `npm run preview` (controllo `scripts/check-preview.mjs` e
@@ -30,4 +31,4 @@ Aggiornato: 2026-11-12T18:00:00Z. Precedente: `docs/MASTER.v17.16.0.md` (storico
 
 Fase 1 rilasciata (app 1.0.1). Fase 2 unita in `main` (app 1.1.0): alias, tag e didascalie dal modello con
 visione, budget unico e registro di spesa. Fase 3: consulente SLOP e generazione. Più avanti: Topic Discovery sulle
-embedding dei tag. In produzione app 1.4.0 (PR 103 e 104, migrazioni fino alla 0035): dashboard a quattro sezioni, wizard REAL in tre schede, generazione congiunta di tag e didascalia che sostituisce i testi delle sole immagini scelte, una volta per immagine, con ripristino senza costi. Proposta app 1.5.0: didascalia con limite morbido di 160 caratteri e tetto di 256 (migrazione 0036), tag scritti a mano convertiti senza avviso; regole di contenuto e trasparenza riunite nella sezione 11 della specifica. In produzione app 1.7.0 (migrazioni fino alla 0038): contesto dei modelli e categorie dei tag. Proposta app 1.8.0 (migrazione 0039): niente prezzi né budget, modelli scelti nelle Impostazioni, studio SLOP parte gratuita (tema con spread, slot), `docs/wizard-slop.v1.4.1.md`; proposta app 1.9.0 (migrazione 0040): parte a pagamento (prompt, immagini, analisi, revisione). In produzione app 1.10.0 (PR 109, migrazioni fino alla 0041, pubblicata il 2026-11-11): sezione Database, `docs/database-immagini.v1.0.1.md`, approvata dall'owner. In produzione app 1.12.0 (PR 110, migrazioni fino alla 0043, pubblicata il 2026-11-12): copie di gioco 4:5 con inquadratura ed esclusione delle ND (`docs/copie-di-gioco.v3.0.1.md`), partita a livelli con classifica e codice partita, via PvP e allenamento (`docs/gioco-a-livelli.v1.0.1.md`). In produzione app 1.13.0 (PR 111, migrazioni fino alla 0044, pubblicata il 2026-11-12): schede Statistiche e Impostazioni, `docs/statistiche-impostazioni.v1.0.1.md`. Specifiche `docs/libreria-immagini.v1.8.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`.
+embedding dei tag. In produzione app 1.4.0 (PR 103 e 104, migrazioni fino alla 0035): dashboard a quattro sezioni, wizard REAL in tre schede, generazione congiunta di tag e didascalia che sostituisce i testi delle sole immagini scelte, una volta per immagine, con ripristino senza costi. Proposta app 1.5.0: didascalia con limite morbido di 160 caratteri e tetto di 256 (migrazione 0036), tag scritti a mano convertiti senza avviso; regole di contenuto e trasparenza riunite nella sezione 11 della specifica. In produzione app 1.7.0 (migrazioni fino alla 0038): contesto dei modelli e categorie dei tag. Proposta app 1.8.0 (migrazione 0039): niente prezzi né budget, modelli scelti nelle Impostazioni, studio SLOP parte gratuita (tema con spread, slot), `docs/wizard-slop.v1.4.1.md`; proposta app 1.9.0 (migrazione 0040): parte a pagamento (prompt, immagini, analisi, revisione). In produzione app 1.10.0 (PR 109, migrazioni fino alla 0041, pubblicata il 2026-11-11): sezione Database, `docs/database-immagini.v1.0.1.md`, approvata dall'owner. In produzione app 1.12.0 (PR 110, migrazioni fino alla 0043, pubblicata il 2026-11-12): copie di gioco 4:5 con inquadratura ed esclusione delle ND (`docs/copie-di-gioco.v3.0.1.md`), partita a livelli con classifica e codice partita, via PvP e allenamento (`docs/gioco-a-livelli.v1.0.1.md`). Proposta app 1.14.0: privacy e note legali, `docs/privacy-note-legali.v1.0.0.md`. In produzione app 1.13.0 (PR 111, migrazioni fino alla 0044, pubblicata il 2026-11-12): schede Statistiche e Impostazioni, `docs/statistiche-impostazioni.v1.0.1.md`. Specifiche `docs/libreria-immagini.v1.8.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`.

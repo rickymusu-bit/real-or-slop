@@ -1,4 +1,5 @@
-"""v2.6.0, 2026-11-12T11:00:00Z: Statistiche and Settings (docs/statistiche-impostazioni.v1.0.0.md).
+"""v2.7.0, 2026-11-12T19:00:00Z: privacy notes; the local Worker accepts the scheduled handler (--test-scheduled).
+v2.6.0, 2026-11-12T11:00:00Z: Statistiche and Settings (docs/statistiche-impostazioni.v1.0.0.md).
 v2.5.0, 2026-11-12T09:00:00Z: level game and leaderboard (docs/gioco-a-livelli.v1.0.0.md).
 v2.4.0, 2026-11-12T08:00:00Z: 4:5 game copies (docs/copie-di-gioco.v3.0.0.md), new versions of the checks.
 v2.3.0, 2026-11-11T09:30:00Z: library 1.2.0 and database checks (docs/database-immagini.v1.0.0.md).
@@ -28,7 +29,7 @@ try:
         # Paid calls on, against the fake model (tests/fake_openai.v1.2.0.py); everything lives in the local D1.
         analysis = {'OPENAI_API_KEY': 'test-openai-key', 'OPENAI_BASE_URL': fake + '/v1/'}
         model = subprocess.Popen(['python3', 'tests/fake_openai.v1.3.0.py', fake.rsplit(':', 1)[1]], stdout=log, stderr=log)
-        proc = subprocess.Popen(['npx', 'wrangler', 'dev', '--local', '--port', '8788', '--persist-to', str(state), '--env', 'local',
+        proc = subprocess.Popen(['npx', 'wrangler', 'dev', '--local', '--port', '8788', '--test-scheduled', '--persist-to', str(state), '--env', 'local',
                                  *[arg for key, value in analysis.items() for arg in ('--var', f'{key}:{value}')]],
                                 env=env, stdout=log, stderr=log, start_new_session=True)
         try:
@@ -38,8 +39,8 @@ try:
                         if r.status == 200: break
                 except OSError: time.sleep(.4)
             else: raise RuntimeError('Worker locale non pronto; vedere artifacts/integration-worker.log')
-            scripts = ['tests/library.v1.4.0.integration.py', 'tests/analysis.v1.7.0.integration.py', 'tests/slop.v1.2.0.integration.py', 'tests/database.v1.2.0.integration.py', 'tests/game.v2.0.0.integration.py', 'tests/stats.v1.0.0.integration.py']
-            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.v1.11.0.integration.py', 'tests/real_wizard.v1.6.0.integration.py', 'tests/slop_browser.v1.2.0.integration.py', 'tests/database_browser.v1.2.0.integration.py', 'tests/game_browser.v1.0.0.integration.py'])
+            scripts = ['tests/library.v1.4.0.integration.py', 'tests/analysis.v1.7.0.integration.py', 'tests/slop.v1.2.0.integration.py', 'tests/database.v1.2.0.integration.py', 'tests/game.v2.1.0.integration.py', 'tests/stats.v1.0.0.integration.py']
+            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.v1.11.0.integration.py', 'tests/real_wizard.v1.6.0.integration.py', 'tests/slop_browser.v1.2.0.integration.py', 'tests/database_browser.v1.2.0.integration.py', 'tests/game_browser.v1.1.0.integration.py'])
             for script in scripts: subprocess.run(['python3', script], env=env, check=True)
         finally:
             os.killpg(proc.pid, 15)
