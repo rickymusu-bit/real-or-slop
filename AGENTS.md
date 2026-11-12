@@ -1,7 +1,7 @@
-# Istruzioni Codex — versione canonica 17.19.0
+# Istruzioni Codex — versione canonica 17.19.1
 
-Snapshot: `docs/AGENTS.v17.19.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-12T22:00:00Z. Precedente: `docs/AGENTS.v17.18.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.19.1.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-12T22:30:00Z. Precedente: `docs/AGENTS.v17.19.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
@@ -9,7 +9,7 @@ Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1
 `docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v3.0.1.md` (4:5, approvata il 2026-11-12, in produzione con l'app 1.12.0), che sostituisce la 2.0.0. Gioco:
 `docs/gioco-a-livelli.v1.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.12.0). Statistiche e Impostazioni: `docs/statistiche-impostazioni.v1.0.1.md`
 (approvata il 2026-11-12, in produzione con l'app 1.13.0). Generazione automatica delle SLOP su proposta:
-`docs/proposta-generazione-slop.v2.0.1.md` (approvata il 2026-11-12, proposta con l'app 1.15.0).
+`docs/proposta-generazione-slop.v2.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.15.0).
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
 
@@ -61,7 +61,7 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   foto × (2 × accuratezza bilanciata − 1) solo per partite concluse; swipe su telefono, R e S su computer; lista finale con fonti e
   prompt. Classifica nella home (7 giorni e sempre, migliore per giocatore) con soprannome controllato e codice partita (solo
   l'impronta nel database). PvP e allenamento eliminati.
-- **Privacy e note legali** (`docs/privacy-note-legali.v1.0.0.md`, proposta con l'app 1.14.0): progetto personale non commerciale; pagine
+- **Privacy e note legali** (`docs/privacy-note-legali.v1.0.0.md`, in produzione con l'app 1.14.0): progetto personale non commerciale; pagine
   `/privacy` e `/termini`; partite cancellate dopo 12 mesi (manutenzione giornaliera); classifica con dichiarazione «almeno 14 anni o
   permesso di un genitore» e cancellazione su richiesta; crediti delle REAL con le modifiche (ritaglio 4:5). Titolare in
   `shared/legal.v1.0.0.ts`; testi da far verificare a un legale.

@@ -1,4 +1,4 @@
-## 1.15.0 — 2026-11-12T22:00:00Z (proposta, non pubblicata)
+## 1.15.0 — 2026-11-12T22:00:00Z (pubblicata il 2026-11-12, PR 118)
 
 Generazione automatica delle SLOP su proposta (`docs/proposta-generazione-slop.v2.0.1.md`, approvata dall'owner il 2026-11-12).
 
@@ -9,7 +9,7 @@ Generazione automatica delle SLOP su proposta (`docs/proposta-generazione-slop.v
 - **Database:** il cambio di vista (Tutte, Nuove, Cestino…) non viene più ignorato mentre un'azione ricarica l'elenco, e una risposta più vecchia dell'elenco non sovrascrive più una più recente (il clic perso faceva fallire la CI).
 - Migrazione `0045_slop_auto_batches.v1.0.0.sql` (colonne in `slop_batches`, un solo batch automatico aperto, `slop_proposal_ignored`, due chiavi in `app_settings`). Nuove versioni: `shared/slop-auto.v1.0.0.ts`, `worker/slop-auto.v1.0.0.ts`, `worker/slop.v1.6.0.ts`, `worker/slop-generation.v1.5.0.ts`, `worker/analysis.v1.14.0.ts`, `worker/library.v1.14.0.ts`, `worker/app-settings.v1.1.0.ts`, `src/slop-auto.v1.0.0.ts`, `src/library.v1.15.0.ts`. Test `slop-auto.v1.0.0`, `slop_auto.v1.0.0`, `slop_auto_browser.v1.0.0`, `stats.v1.1.0`; `scripts/integration.py` 2.8.0. `AGENTS.md`/`MASTER.md` 17.19.0.
 
-## 1.14.0 — 2026-11-12T19:00:00Z (proposta, non pubblicata)
+## 1.14.0 — 2026-11-12T19:00:00Z (pubblicata il 2026-11-12, PR 117; in produzione anche con la 1.15.0)
 
 Privacy e note legali (`docs/privacy-note-legali.v1.0.0.md`, decisioni dell'owner del 2026-11-12). Bozza da far verificare a un legale.
 
