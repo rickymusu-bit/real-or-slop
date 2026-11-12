@@ -6,8 +6,8 @@ pubblico** (come già indicato in `docs/libreria-immagini.v1.8.0.md`, sezione 11
 
 ## 1. Decisioni dell'owner (2026-11-12)
 
-- Progetto **personale e non commerciale**; titolare del trattamento l'owner come persona fisica. Nome e indirizzo di contatto vanno
-  inseriti in `shared/legal.v1.0.0.ts` (`CONTROLLER`, `CONTROLLER_READY`) prima del rilascio: finché mancano, le pagine lo dichiarano.
+- Progetto **personale e non commerciale**; titolare del trattamento l'owner come persona fisica, Riccardo Musumarra, contatto
+  rickymusu@proton.me (indicati dall'owner il 2026-11-12, in `shared/legal.v1.0.0.ts`).
 - Partite conservate **12 mesi**.
 - Per entrare in classifica il giocatore dichiara di avere **almeno 14 anni o il permesso di un genitore** (art. 2-quinquies del Codice
   privacy per i servizi online ai minori di 14 anni).
@@ -64,6 +64,5 @@ Worker locale `--test-scheduled`), `tests/game_browser.v1.1.0.integration.py` (m
 
 ## 8. Da fare prima del lancio
 
-- Inserire nome e indirizzo del titolare e porre `CONTROLLER_READY` a `true`.
 - Revisione legale dei testi di Privacy e Termini.
 - Valutare se la verifica dell'età per dichiarazione basta per l'uso previsto (per esempio in classe).
