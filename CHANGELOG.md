@@ -1,4 +1,4 @@
-## 1.13.0 — 2026-11-12T11:00:00Z (proposta, non pubblicata)
+## 1.13.0 — 2026-11-12T11:00:00Z (pubblicata il 2026-11-12)
 
 Schede Statistiche e Impostazioni (`docs/statistiche-impostazioni.v1.0.0.md`, decisioni dell'owner del 2026-11-11 e del 2026-11-12).
 
