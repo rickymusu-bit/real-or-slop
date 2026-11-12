@@ -1,3 +1,11 @@
+## 1.13.1 — 2026-11-12T13:30:00Z (proposta, non pubblicata)
+
+Anteprime separate dalla produzione (richiesta dell'owner del 2026-11-12).
+
+- Le anteprime delle PR usano un proprio database D1 (`real-or-slop-preview`) e propri bucket R2 (`real-or-slop-preview-quarantine`, `real-or-slop-preview-approved`), creati dall'owner; prima usavano quelli di produzione.
+- Ambiente `preview` di Wrangler solo per applicare le migrazioni al database delle anteprime; il deploy di `main` resta sulle risorse di produzione.
+- Test `tests/wrangler-config.v1.0.0.test.ts`: la produzione non punta mai alle risorse delle anteprime e viceversa. `AGENTS.md`/`MASTER.md` 17.16.0 (rilascio e anteprime).
+
 ## 1.13.0 — 2026-11-12T11:00:00Z (pubblicata il 2026-11-12)
 
 Schede Statistiche e Impostazioni (`docs/statistiche-impostazioni.v1.0.0.md`, decisioni dell'owner del 2026-11-11 e del 2026-11-12).
