@@ -9,8 +9,10 @@ pubblico** (come già indicato in `docs/libreria-immagini.v1.8.0.md`, sezione 11
 - Progetto **personale e non commerciale**; titolare del trattamento l'owner come persona fisica, Riccardo Musumarra, contatto
   rickymusu@proton.me (indicati dall'owner il 2026-11-12, in `shared/legal.v1.0.0.ts`).
 - Partite conservate **12 mesi**.
-- Per entrare in classifica il giocatore dichiara di avere **almeno 14 anni o il permesso di un genitore** (art. 2-quinquies del Codice
-  privacy per i servizi online ai minori di 14 anni).
+- Per entrare in classifica il giocatore dichiara di avere **almeno 14 anni o il permesso di un genitore**; la casella compare solo lì,
+  il gioco senza classifica non chiede nulla (conferma dell'owner del 2026-11-12). È una **cautela**, non un obbligo: la soglia dei 14 anni
+  (art. 8 GDPR, art. 2-quinquies del Codice privacy) riguarda i trattamenti basati sul consenso, mentre qui la base è il servizio richiesto
+  e il legittimo interesse. Protegge l'unico dato pubblico, il soprannome; non verifica l'età.
 - Il GDPR si applica anche a un progetto personale, perché il sito è pubblico: l'esenzione per le attività domestiche non copre i siti
   aperti a tutti.
 
@@ -65,4 +67,4 @@ Worker locale `--test-scheduled`), `tests/game_browser.v1.1.0.integration.py` (m
 ## 8. Da fare prima del lancio
 
 - Revisione legale dei testi di Privacy e Termini.
-- Valutare se la verifica dell'età per dichiarazione basta per l'uso previsto (per esempio in classe).
+- Se il gioco verrà usato in classe con alunni sotto i 14 anni, sentire un legale o il responsabile della protezione dei dati della scuola.
