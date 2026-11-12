@@ -30,28 +30,17 @@
       "bucket_name": "real-or-slop-approved",
     },
   ],
-  "previews": {
-    "durable_objects": {
-      "bindings": [
-        {
-          "name": "ROOMS",
-          "class_name": "GameRoom",
-        },
-      ],
-    },
-  },
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "ROOMS",
-        "class_name": "GameRoom",
-      },
-    ],
-  },
+  // Cloudflare preview builds (npx wrangler preview) need this block, even empty: bindings come from the top level.
+  "previews": {},
+  // PvP removed on 2026-11-12 (docs/gioco-a-livelli.v1.0.0.md): the GameRoom Durable Object class is deleted with its storage.
   "migrations": [
     {
       "tag": "v1",
       "new_sqlite_classes": ["GameRoom"],
+    },
+    {
+      "tag": "v2",
+      "deleted_classes": ["GameRoom"],
     },
   ],
   "env": {
@@ -72,15 +61,7 @@
           "binding": "QUARANTINE",
           "bucket_name": "real-or-slop-quarantine-local",
         },
-      ],
-      "durable_objects": {
-        "bindings": [
-          {
-            "name": "ROOMS",
-            "class_name": "GameRoom",
-          },
-        ],
-      },
+      ]
     },
   },
   "account_id": "89bb1f60467dcfd2147871748f0f9645",
