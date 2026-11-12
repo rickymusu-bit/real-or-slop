@@ -1,7 +1,8 @@
 /** Admin image library and five-section dashboard. v1.15.0, 2026-11-12T21:00:00Z: automatic SLOP batches on proposal
  * (docs/proposta-generazione-slop.v2.0.0.md): the box at the top of every section (src/slop-auto.v1.0.0.ts), the number of proposals
  * on «Generazione SLOP», the Database filter «Batch automatico in corso» and, in Settings «Studio SLOP», proposals on or off and
- * their threshold in percent of spread. v1.14.0, 2026-11-12T19:00:00Z: Settings «Classifica» deletes an entry for good, on the
+ * their threshold in percent of spread. Changing view («Tutte», «Nuove», «Cestino»…) is no longer dropped while an action reloads the
+ * list, and an older answer of the list never overwrites a newer one. v1.14.0, 2026-11-12T19:00:00Z: Settings «Classifica» deletes an entry for good, on the
  * player's request (docs/privacy-note-legali.v1.0.0.md); the code check offers the same command.
  * v1.13.0, 2026-11-12T11:00:00Z (docs/statistiche-impostazioni.v1.0.0.md): section
  * «Statistiche» (src/stats.v1.0.0.ts); Settings hold only commands: models with the default image quality, thresholds of the SLOP
@@ -218,10 +219,14 @@ export async function showLibrary() {
     message(`${done} di ${ids.length} analizzate.` + (errors.length ? " " + [...new Set(errors)].join(" · ") : ""));
     await Promise.all([load(), refreshTags(), refreshAnalysis()]);
   };
+  // The list of the last request wins: a slower, older answer never overwrites a newer one.
+  let loadSeq = 0;
   const load = async () => {
+    const seq = ++loadSeq;
     const params = new URLSearchParams({ status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q, batch: filter.batch });
     $("#library-batch-filter").hidden = !filter.batch;
     const data = await call<{ items: Item[]; counts: { status: string; origin: string; n: number }[] }>("?" + params);
+    if (seq !== loadSeq) return;
     items = data.items;
     selected = new Set([...selected].filter(id => items.some(item => item.id === id)));
     const count = (status: string) => data.counts.filter(c => c.status === status).reduce((n, c) => n + c.n, 0);
@@ -471,14 +476,17 @@ export async function showLibrary() {
     }
     const opener = target.closest<HTMLElement>("[data-open]");
     if (opener) { const item = items.find(i => i.id === opener.dataset.open); if (item) showDetail(item); return; }
+    // Changing view is never blocked by an action still reloading the list (the click used to be dropped).
+    if (button?.dataset.view) {
+      filter.status = button.dataset.view; selected.clear();
+      page.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b === button)));
+      try { await load(); } catch (error) { message(String(error instanceof Error ? error.message : error)); }
+      return;
+    }
     if (!button || busy) return;
     busy = true;
     try {
-      if (button.dataset.view) {
-        filter.status = button.dataset.view; selected.clear();
-        page.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b === button)));
-        await load();
-      } else if (button.id === "library-commons-toggle") {
+      if (button.id === "library-commons-toggle") {
         const panel = $("#library-commons"); panel.hidden = !panel.hidden; button.setAttribute("aria-expanded", String(!panel.hidden));
       } else if (button.id === "library-commons-add") {
         const links = $<HTMLTextAreaElement>("#library-commons-links").value.split(/\s+/).map(s => s.trim()).filter(Boolean);
