@@ -1,7 +1,7 @@
 /** Router. 2026-11-12T09:00:00Z: one game mode with levels and a leaderboard (docs/gioco-a-livelli.v1.0.0.md); PvP removed. */
 import { game } from "./game.v2.0.0";
 import { adminLeaderboard, publicLeaderboard } from "./leaderboard.v1.0.0";
-import { library } from "./library.v1.12.0";
+import { library } from "./library.v1.13.0";
 import { admin, body, HttpError, json, sameOrigin, type Env } from "./core";
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {

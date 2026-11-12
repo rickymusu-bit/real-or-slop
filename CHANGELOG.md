@@ -1,4 +1,12 @@
-## 1.12.0 — 2026-11-12T09:00:00Z (proposta, non pubblicata)
+## 1.13.0 — 2026-11-12T11:00:00Z (proposta, non pubblicata)
+
+Schede Statistiche e Impostazioni (`docs/statistiche-impostazioni.v1.0.0.md`, decisioni dell'owner del 2026-11-11 e del 2026-11-12).
+
+- **Statistiche**, quinta sezione della dashboard, solo visualizzazione: partite in corso adesso (attività negli ultimi 5 minuti) e partite aperte; partite del periodo per livello (iniziate, concluse, non concluse, scadute, punteggio medio); risposte delle partite concluse (REAL e SLOP riconosciute, accuratezza bilanciata, scadute) e voci in classifica; chiamate a pagamento per tipo con token, esiti incerti evidenziati e tabella filtrabile; equilibrio del catalogo con la fascia 40–60% e i livelli giocabili. Periodo 7, 30 giorni o sempre.
+- **Impostazioni** solo comandi: qualità delle immagini accanto ai modelli (usata dallo studio SLOP e dalla rigenerazione, lì in sola lettura); soglie dello studio SLOP; durata massima di una partita aperta. Il conteggio delle chiamate passa alle Statistiche.
+- Migrazione additiva `0044_app_settings.v1.0.0.sql`. Nuove versioni: `worker/app-settings.v1.0.0.ts`, `worker/stats.v1.0.0.ts`, `worker/models.v1.1.0.ts`, `worker/in-play.v1.2.0.ts`, `worker/slop.v1.5.0.ts`, `worker/slop-generation.v1.4.0.ts`, `worker/analysis.v1.13.0.ts`, `worker/library.v1.13.0.ts`, `src/stats.v1.0.0.ts`, `src/library.v1.13.0.ts`, `src/slop-studio.v1.3.0.ts`. Test `stats.v1.0.0`, `library_browser.v1.11.0`, `slop_browser.v1.2.0`, `database_browser.v1.2.0`. `AGENTS.md`/`MASTER.md` 17.15.0.
+
+## 1.12.0 — 2026-11-12T09:00:00Z (pubblicata il 2026-11-12, insieme alla 1.11.0)
 
 Partita a livelli e classifica (`docs/gioco-a-livelli.v1.0.0.md`, decisioni dell'owner del 2026-11-11 e del 2026-11-12).
 
@@ -10,7 +18,7 @@ Partita a livelli e classifica (`docs/gioco-a-livelli.v1.0.0.md`, decisioni dell
 - Corretto: la home usava per errore la funzione globale `escape` del browser (codifica URL) al posto di quella HTML del progetto.
 - Migrazione `0043_levels_leaderboard.v1.0.0.sql`, migrazione `v2` di Wrangler. Nuove versioni: `shared/levels.v1.0.0.ts`, `worker/game.v2.0.0.ts`, `worker/leaderboard.v1.0.0.ts`, `worker/in-play.v1.1.0.ts`, `worker/library.v1.12.0.ts`, `worker/analysis.v1.12.0.ts`, `worker/slop.v1.4.0.ts`, `worker/slop-generation.v1.3.0.ts`, `src/play.v2.0.0.ts`, `src/library.v1.12.0.ts`. Test `levels.v1.0.0`, `game.v2.0.0`, `game_browser.v1.0.0`, `library.v1.4.0`, `database.v1.2.0`, `library_browser.v1.10.0`, catalogo di prova `catalog_v1_0_0.py`. `AGENTS.md`/`MASTER.md` 17.14.0.
 
-## 1.11.0 — 2026-11-12T08:00:00Z (proposta, non pubblicata)
+## 1.11.0 — 2026-11-12T08:00:00Z (pubblicata il 2026-11-12 con la 1.12.0)
 
 Copie di gioco 4:5 (`docs/copie-di-gioco.v3.0.0.md`, decisioni dell'owner del 2026-11-11).
 

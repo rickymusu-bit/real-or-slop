@@ -1,17 +1,20 @@
-# Istruzioni Codex — versione canonica 17.14.0
+# Istruzioni Codex — versione canonica 17.15.0
 
-Snapshot: `docs/AGENTS.v17.14.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-12T09:00:00Z. Precedente: `docs/AGENTS.v17.13.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.15.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-12T11:00:00Z. Precedente: `docs/AGENTS.v17.14.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
 Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`,
-`docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v3.0.0.md` (4:5, proposta con l'app 1.11.0), che sostituisce la 2.0.0. Gioco:
-`docs/gioco-a-livelli.v1.0.0.md` (proposta con l'app 1.12.0).
+`docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v3.0.0.md` (4:5, in produzione con l'app 1.12.0), che sostituisce la 2.0.0. Gioco:
+`docs/gioco-a-livelli.v1.0.0.md` (in produzione con l'app 1.12.0). Statistiche e Impostazioni: `docs/statistiche-impostazioni.v1.0.0.md`
+(proposta con l'app 1.13.0).
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
 
-- Dashboard `/admin` in quattro sezioni. Caricamento REAL in wizard di tre passi: selezione Commons, tag e didascalie, riepilogo e pubblicazione. Le altre sezioni verranno completate progressivamente.
+- Dashboard `/admin` in cinque sezioni: Caricamento REAL (wizard di tre passi), Generazione SLOP, Database immagini, Statistiche
+  (solo visualizzazione: partite adesso e aperte, partite e risposte, chiamate a pagamento, equilibrio del catalogo), Impostazioni (solo
+  comandi: modelli e qualità delle immagini, contesto, vocabolario, classifica, soglie dello studio SLOP, durata di una partita aperta).
 - Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: caricamento multiplo,
   Commons diretto, modifica in linea, cestino; niente lotti, proposte, cicli o archivi storici.
 - **Copia di gioco WebP 4:5** uniforme (qualità 0,85, altezza ≤2048 px, sRGB, senza metadati), ritagliata con un'inquadratura
@@ -29,7 +32,7 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   i testi generati restano nel database e l'owner può sempre ripristinarli senza costi;
   ogni chiamata a pagamento si **conferma** esplicitamente, senza importi; **niente prezzi né budget**; registro `paid_calls`
   (modello, token, esito); esiti incerti mai ripetuti; il limite di spesa è quello del progetto OpenAI. Spenta senza `OPENAI_API_KEY`.
-- **Modelli:** modello di testo (tag, didascalie, prompt SLOP) e modello di immagini scelti nelle Impostazioni, tra i modelli
+- **Modelli:** modello di testo (tag, didascalie, prompt SLOP), modello di immagini e sua qualità scelti nelle Impostazioni, tra i modelli
   OpenAI elencati nel codice e disponibili nel progetto.
 - **Contesto dei modelli:** testi fissi (base comune, tag e didascalie, prompt SLOP) modificabili dalle Impostazioni,
   con versioni e ripristino; ogni generazione registra le versioni usate. Formato JSON, limiti e filtri restano nel codice.
@@ -39,7 +42,7 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   eliminazioni, nessuna istantanea, nessuna esportazione automatica: decisione esplicita dell'owner.
 - **Studio SLOP** (fase 3, `docs/wizard-slop.v1.4.1.md`): spread di ogni tag (REAL − SLOP tra approvate e pubblicate), tema
   obbligatorio in tutti i prompt, slot estratti dalle REAL con peso dello spread e modificabili; si apre con 50 REAL, un tema
-  richiede 10 REAL. Prompt in inglese scritti dal modello di testo; immagini dal modello di immagini, poi la stessa analisi
+  richiede 10 REAL (soglie modificabili nelle Impostazioni). Prompt in inglese scritti dal modello di testo; immagini dal modello di immagini, poi la stessa analisi
   delle REAL: i tag finali delle SLOP sono quelli dell'analisi. Il generatore riceve solo il testo del prompt.
 - **Contenuti delle SLOP:** niente persone vive o morte da meno di 50 anni; personaggi storici ammessi senza crimini
   attribuiti né scene degradanti; marchi ammessi; regimi documentati ma mai celebrati; nessuna nudità umana tranne
