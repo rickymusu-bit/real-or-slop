@@ -30,6 +30,8 @@
       "bucket_name": "real-or-slop-approved",
     },
   ],
+  // Cloudflare preview builds (npx wrangler preview) need this block, even empty: bindings come from the top level.
+  "previews": {},
   // PvP removed on 2026-11-12 (docs/gioco-a-livelli.v1.0.0.md): the GameRoom Durable Object class is deleted with its storage.
   "migrations": [
     {
