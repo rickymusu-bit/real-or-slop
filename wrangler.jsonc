@@ -30,6 +30,7 @@
       "bucket_name": "real-or-slop-approved",
     },
   ],
+  // Cloudflare Workers Builds, non-production branches: npx wrangler d1 migrations apply DB --remote --env preview && npm run preview.
   // Previews of the pull requests (npm run preview = scripts/check-preview.mjs, then wrangler preview --ignore-base-config) use only
   // these bindings: their own D1 database and R2 buckets, never the production ones above (2026-11-12, owner request).
   "previews": {
