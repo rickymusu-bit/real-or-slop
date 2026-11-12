@@ -1,3 +1,13 @@
+## 1.15.0 — 2026-11-12T22:00:00Z (proposta, non pubblicata)
+
+Generazione automatica delle SLOP su proposta (`docs/proposta-generazione-slop.v2.0.1.md`, approvata dall'owner il 2026-11-12).
+
+- **Proposta:** quando 100 × (REAL − SLOP) / REAL di un tag, tra approvate e pubblicate, raggiunge la soglia (33%, cioè 1,5 REAL per SLOP) e il tag ha almeno 10 REAL, un riquadro in cima alla dashboard propone un batch di min(N, 10) SLOP, con N = REAL − SLOP − SLOP nuove. Un solo tag alla volta (spread percentuale più alto); «Ignora» lo rimanda finché non sale di 10 punti; «Chiudi» lo nasconde fino alla prossima apertura. Numero delle proposte sul pulsante «Generazione SLOP».
+- **Batch automatico:** «Genera» conferma tutte le chiamate a pagamento del batch (prompt, immagini, analisi); slot estratti e prompt scritti senza revisione; il batch gira nel browser e riprende dopo la chiusura della scheda senza mai ripetere una chiamata; «Interrompi». Finché una sua immagine resta da decidere, nessuna nuova proposta.
+- **Revisione:** «Rivedi nel Database» apre le sole immagini del batch (filtro «Batch automatico in corso»).
+- **Impostazioni**, «Studio SLOP»: proposte automatiche attive o spente, soglia di proposta in percentuale.
+- Migrazione `0045_slop_auto_batches.v1.0.0.sql` (colonne in `slop_batches`, un solo batch automatico aperto, `slop_proposal_ignored`, due chiavi in `app_settings`). Nuove versioni: `shared/slop-auto.v1.0.0.ts`, `worker/slop-auto.v1.0.0.ts`, `worker/slop.v1.6.0.ts`, `worker/slop-generation.v1.5.0.ts`, `worker/analysis.v1.14.0.ts`, `worker/library.v1.14.0.ts`, `worker/app-settings.v1.1.0.ts`, `src/slop-auto.v1.0.0.ts`, `src/library.v1.15.0.ts`. Test `slop-auto.v1.0.0`, `slop_auto.v1.0.0`, `slop_auto_browser.v1.0.0`, `stats.v1.1.0`; `scripts/integration.py` 2.8.0. `AGENTS.md`/`MASTER.md` 17.19.0.
+
 ## 1.14.0 — 2026-11-12T19:00:00Z (proposta, non pubblicata)
 
 Privacy e note legali (`docs/privacy-note-legali.v1.0.0.md`, decisioni dell'owner del 2026-11-12). Bozza da far verificare a un legale.
