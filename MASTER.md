@@ -1,7 +1,7 @@
-# Mappa canonica — versione canonica 17.15.1
+# Mappa canonica — versione canonica 17.16.0
 
-Snapshot: `docs/MASTER.v17.15.1.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-12T12:00:00Z. Precedente: `docs/MASTER.v17.15.0.md` (storico).
+Snapshot: `docs/MASTER.v17.16.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-12T13:30:00Z. Precedente: `docs/MASTER.v17.15.1.md` (storico).
 
 ## Architettura
 
@@ -17,6 +17,14 @@ Aggiornato: 2026-11-12T12:00:00Z. Precedente: `docs/MASTER.v17.15.0.md` (storico
 - **Dati:** D1, schema `0033_clean_slate.v1.0.0.sql` (immagini, tag, gioco) più `0034_tag_aliases_analysis.v1.1.0.sql`
   (alias, rimozione dei tag orfani, stato dell'analisi, registro di spesa, budget unico) `0035_generated_texts.v1.0.0.sql` (testi generati, ripristinabili) `0036_caption_soft_limit.v1.0.0.sql` (didascalia fino a 256 caratteri) `0037_model_contexts.v1.0.0.sql` (contesto dei modelli con versioni) `0038_tag_categories.v1.0.0.sql` (categoria dei tag) `0039_calls_and_models.v1.0.0.sql` (registro delle chiamate senza importi, niente budget, impostazioni dei modelli) `0040_slop_batches.v1.0.0.sql` (gruppi di generazione SLOP) `0041_database_section.v1.0.0.sql` (didascalia e copia di ogni round, immagini delle sfide, copie ritirate in attesa) `0042_game_copy_crop.v1.0.0.sql` (inquadratura della copia 4:5) `0043_levels_leaderboard.v1.0.0.sql` (partite a livelli, classifica, via le tabelle del PvP) e `0044_app_settings.v1.0.0.sql` (qualità, soglie, durata delle partite aperte). R2: quarantena privata
   (`library/<id>/` originale e copia) e bucket del gioco (copie pubblicate).
+
+## Rilascio e anteprime
+
+- Merge su `main` → Workers Builds: `npm run build`, poi migrazioni remote e `npm run deploy` sulle risorse di produzione
+  (D1 `real-or-slop-local`, R2 `real-or-slop-quarantine` e `real-or-slop-approved`).
+- Anteprime delle PR: migrazioni con `--env preview`, poi `npm run preview` (controllo `scripts/check-preview.mjs` e
+  `wrangler preview --ignore-base-config`) su D1 `real-or-slop-preview` e R2 `real-or-slop-preview-quarantine` e
+  `real-or-slop-preview-approved`, inizialmente vuoti. Test `tests/wrangler-config.v1.0.0.test.ts`.
 
 ## Stato e fasi
 

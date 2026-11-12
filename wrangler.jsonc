@@ -30,8 +30,28 @@
       "bucket_name": "real-or-slop-approved",
     },
   ],
-  // Cloudflare preview builds (npx wrangler preview) need this block, even empty: bindings come from the top level.
-  "previews": {},
+  // Previews of the pull requests (npm run preview = scripts/check-preview.mjs, then wrangler preview --ignore-base-config) use only
+  // these bindings: their own D1 database and R2 buckets, never the production ones above (2026-11-12, owner request).
+  "previews": {
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "real-or-slop-preview",
+        "migrations_dir": "migrations",
+        "database_id": "50944190-1b11-4504-af54-bbbc62b971a6",
+      },
+    ],
+    "r2_buckets": [
+      {
+        "binding": "QUARANTINE",
+        "bucket_name": "real-or-slop-preview-quarantine",
+      },
+      {
+        "binding": "IMAGES",
+        "bucket_name": "real-or-slop-preview-approved",
+      },
+    ],
+  },
   // PvP removed on 2026-11-12 (docs/gioco-a-livelli.v1.0.0.md): the GameRoom Durable Object class is deleted with its storage.
   "migrations": [
     {
@@ -62,6 +82,28 @@
           "bucket_name": "real-or-slop-quarantine-local",
         },
       ]
+    },
+    // Only to apply the migrations to the preview database before each preview build:
+    // npx wrangler d1 migrations apply DB --remote --env preview. Never deployed.
+    "preview": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "real-or-slop-preview",
+          "migrations_dir": "migrations",
+          "database_id": "50944190-1b11-4504-af54-bbbc62b971a6",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "QUARANTINE",
+          "bucket_name": "real-or-slop-preview-quarantine",
+        },
+        {
+          "binding": "IMAGES",
+          "bucket_name": "real-or-slop-preview-approved",
+        },
+      ],
     },
   },
   "account_id": "89bb1f60467dcfd2147871748f0f9645",
