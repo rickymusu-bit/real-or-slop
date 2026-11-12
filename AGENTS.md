@@ -1,15 +1,15 @@
-# Istruzioni Codex — versione canonica 17.17.0
+# Istruzioni Codex — versione canonica 17.18.0
 
-Snapshot: `docs/AGENTS.v17.17.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-12T18:32:55Z. Precedente: `docs/AGENTS.v17.16.2.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.18.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-12T19:05:00Z. Precedente: `docs/AGENTS.v17.17.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
 Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`,
 `docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v3.0.1.md` (4:5, approvata il 2026-11-12, in produzione con l'app 1.12.0), che sostituisce la 2.0.0. Gioco:
 `docs/gioco-a-livelli.v1.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.12.0). Statistiche e Impostazioni: `docs/statistiche-impostazioni.v1.0.1.md`
-(approvata il 2026-11-12, in produzione con l'app 1.13.0). Proposta di generazione e prefiltro delle SLOP:
-`docs/proposta-e-prefiltro-slop.v1.0.0.md` (proposta, in attesa di approvazione).
+(approvata il 2026-11-12, in produzione con l'app 1.13.0). Proposta di generazione delle SLOP:
+`docs/proposta-generazione-slop.v1.0.0.md` (in attesa di approvazione; sostituisce `docs/proposta-e-prefiltro-slop.v1.0.0.md`).
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
 
@@ -45,9 +45,8 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   obbligatorio in tutti i prompt, slot estratti dalle REAL con peso dello spread e modificabili; si apre con 50 REAL, un tema
   richiede 10 REAL (soglie modificabili nelle Impostazioni). Prompt in inglese scritti dal modello di testo; immagini dal modello di immagini, poi la stessa analisi
   delle REAL: i tag finali delle SLOP sono quelli dell'analisi. Il generatore riceve solo il testo del prompt.
-  Proposto (`docs/proposta-e-prefiltro-slop.v1.0.0.md`): nessun timer; lo studio propone una generazione quando lo spread netto
-  (meno le SLOP nuove) di un tag supera una soglia, e un prefiltro a pagamento stima l'ingannabilità di ogni SLOP e scarta nel cestino
-  quelle troppo ovvie.
+  Proposto (`docs/proposta-generazione-slop.v1.0.0.md`): nessun timer né prefiltro; lo studio propone una generazione quando lo
+  spread netto (meno le SLOP nuove) di un tag supera una soglia, e l'owner decide con le conferme di sempre.
 - **Contenuti delle SLOP:** niente persone vive o morte da meno di 50 anni; personaggi storici ammessi senza crimini
   attribuiti né scene degradanti; marchi ammessi; regimi documentati ma mai celebrati; nessuna nudità umana tranne
   nelle opere d'arte.
