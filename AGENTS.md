@@ -1,14 +1,14 @@
-# Istruzioni Codex — versione canonica 17.15.0
+# Istruzioni Codex — versione canonica 17.15.1
 
-Snapshot: `docs/AGENTS.v17.15.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-12T11:00:00Z. Precedente: `docs/AGENTS.v17.14.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.15.1.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-12T12:00:00Z. Precedente: `docs/AGENTS.v17.15.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
 Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`,
 `docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v3.0.0.md` (4:5, in produzione con l'app 1.12.0), che sostituisce la 2.0.0. Gioco:
 `docs/gioco-a-livelli.v1.0.0.md` (in produzione con l'app 1.12.0). Statistiche e Impostazioni: `docs/statistiche-impostazioni.v1.0.0.md`
-(proposta con l'app 1.13.0).
+(in produzione con l'app 1.13.0).
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
 
