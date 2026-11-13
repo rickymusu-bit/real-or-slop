@@ -1,0 +1,12 @@
+/* REAL wizard v1.16.0 (docs/didascalie-wizard.v1.0.0.md). v1.6.0, 2026-11-13T22:00:00Z: added to real-wizard.v1.5.0.css.
+   The Commons search field ends with a button that clears it (the browser's own clear mark is hidden, since phones lack it);
+   the «Inquadratura» step shows each copy with its format and the buttons under it. */
+.rw-search-field { position: relative; display: flex; align-items: stretch; }
+.rw-search-field input { flex: 1; min-width: 0; padding-right: 44px; }
+.rw-search-field input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
+.rw-search-clear { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); min-width: 36px; min-height: 36px; padding: 0;
+  border: 0; background: none; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
+.rw-search-clear:hover, .rw-search-clear:focus-visible { color: var(--text); }
+.rw-search-clear[hidden] { display: none; }
+.rw-crop h3 { margin: 8px 0 2px; font-size: 15px; }
+.rw-crop .rw-actions { flex-wrap: wrap; }
