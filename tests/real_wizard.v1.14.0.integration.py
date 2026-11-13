@@ -80,7 +80,7 @@ with sync_playwright() as p:
             route.fulfill(status=200, content_type='application/json', body=body)
         page.route('**/api/admin/library/commons/search?*', mock_search)
         search = page.locator('#rw-search')
-        expect(page.locator('.rw-steps li')).to_have_count(4)
+        expect(page.locator('#real-wizard .rw-steps li')).to_have_count(4)
         clear = search.locator('[data-rw-clear-search]')
         expect(clear).to_be_hidden()
         search.locator('[name=q]').fill('bridge')
@@ -229,7 +229,7 @@ with sync_playwright() as p:
         # Step 3, «Inquadratura»: each copy with its format; the owner changes one to 1:1.
         page.get_by_role('button', name='Avanti: inquadratura').click()
         expect(page.locator('.rw-message')).to_contain_text('2 immagini non hanno un tag di Tempo')
-        expect(page.locator('.rw-steps li[aria-current=step]')).to_contain_text('Inquadratura')
+        expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Inquadratura')
         crop_a = page.locator('[data-rw-crop-image="%s"]' % first['id'])
         expect(page.locator('.rw-crop')).to_have_count(2)
         expect(crop_a).to_contain_text('3:2 orizzontale')
@@ -248,7 +248,7 @@ with sync_playwright() as p:
         page.get_by_role('button', name='Avanti: inquadratura').click()
         # Step 4: the summary.
         page.get_by_role('button', name='Avanti: riepilogo').click()
-        expect(page.locator('.rw-steps li[aria-current=step]')).to_contain_text('Riepilogo')
+        expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Riepilogo')
         expect(page.locator('.rw-final img[data-game-media]')).to_have_count(2)
         expect(page.locator('.rw-final img[data-game-media]').first).to_be_visible()
         expect(page.locator('.rw-final .rs-mark').first).to_be_visible()
