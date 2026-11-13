@@ -1,12 +1,12 @@
-# Istruzioni Codex — versione canonica 17.21.0
+# Istruzioni Codex — versione canonica 17.22.0
 
-Snapshot: `docs/AGENTS.v17.21.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-13T12:00:00Z. Precedente: `docs/AGENTS.v17.20.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.22.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-13T17:30:00Z. Precedente: `docs/AGENTS.v17.21.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
 Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`,
-`docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v4.0.1.md` (formato della foto ed esplorazione nella partita, approvata il 2026-11-13, app 1.19.0,
+`docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v4.0.2.md` (formato della foto ed esplorazione nella partita, approvata il 2026-11-13, app 1.19.0,
 migrazione 0046), che sostituisce la 3.0.1 (4:5) e modifica la foto e lo swipe della specifica del gioco. Gioco:
 `docs/gioco-a-livelli.v1.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.12.0). Statistiche e Impostazioni: `docs/statistiche-impostazioni.v1.0.1.md`
 (approvata il 2026-11-12, in produzione con l'app 1.13.0). Generazione automatica delle SLOP su proposta:
@@ -17,13 +17,14 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
 - Dashboard `/admin` in cinque sezioni: Caricamento REAL (wizard di tre passi), Generazione SLOP, Database immagini, Statistiche
   (solo visualizzazione: partite adesso e aperte, partite e risposte, chiamate a pagamento, equilibrio del catalogo con i formati), Impostazioni (solo
   comandi: modelli e qualità delle immagini, contesto, vocabolario, classifica, soglie dello studio SLOP e delle proposte automatiche, durata di una partita aperta).
-- Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: caricamento multiplo,
-  Commons diretto, modifica in linea, cestino; niente lotti, proposte, cicli o archivi storici.
+- Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: le REAL entrano dal wizard (Commons), le SLOP dallo
+  studio; modifica in linea, cestino; niente lotti, proposte, cicli o archivi storici. La sezione Database non carica file né cerca
+  su Commons (decisione dell'owner del 2026-11-13).
 - **Copia di gioco WebP nel formato della foto**: ritagliata al più vicino dei formati comuni (3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 1:1),
   qualità 0,85, lato lungo ≤1536 px per tutte, sRGB, senza metadati, con una **vista iniziale 4:5** per gli schermi verticali; ritaglio,
   formato e vista scelti dall'owner con «Inquadratura» (centrati all'inizio), copia creata nel browser appena l'immagine entra; è il file
   che l'owner approva e che il gioco serve. Le SLOP si generano nel formato che il modello di testo sceglie per il soggetto (l'owner lo
-  può cambiare). Le copie 4:5 precedenti restano giocabili finché non si rifanno («Copia: da rifare», «Rifai le copie»). Foto con
+  può cambiare). Le copie 4:5 precedenti sono state rifatte (comunicazione dell'owner del 2026-11-13): niente più filtro né comando per rifarle. Foto con
   licenza ND escluse dal gioco.
 - **Tag** ASCII: minuscoli, cifre, trattini; inglese per i nomi comuni, lingua originale traslitterata per
   i nomi propri; vietati i tag che rivelano l'origine. Approvare richiede almeno un tag.
@@ -56,7 +57,8 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
 - **Contenuti delle SLOP:** niente persone vive o morte da meno di 50 anni; personaggi storici ammessi senza crimini
   attribuiti né scene degradanti; marchi ammessi; regimi documentati ma mai celebrati; nessuna nudità umana tranne
   nelle opere d'arte.
-- **Sezione Database** (`docs/database-immagini.v1.0.1.md`): filtri per uno o più tag e per origine; ogni foto con tutti i tag,
+- **Sezione Database** (`docs/database-immagini.v1.0.1.md`): filtri per uno o più tag e per origine; ordinamento per data di aggiunta,
+  visualizzazioni o accuratezza, crescente o decrescente; la scheda mostra solo miniatura, origine e stato, il dettaglio tutti i tag,
   visualizzazioni e classificazioni corrette (solo sulla copia attuale). «Modifica» ritira subito una pubblicata; le partite in corso
   conservano didascalia e copia con cui sono iniziate (24 ore al massimo); una modifica lascia approvata un'immagine approvata.
   Una SLOP si rigenera dal prompt (a pagamento, con conferma; torna nuova, nuova analisi, statistiche azzerate). Scheda
