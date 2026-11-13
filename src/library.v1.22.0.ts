@@ -681,6 +681,8 @@ export async function showLibrary() {
     catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
   $("#library-leaderboard").addEventListener("toggle", () => { if (($("#library-leaderboard") as HTMLDetailsElement).open) void refreshEntries().catch(error => settingsMessage(String(error))); });
+  // Opened while the dashboard was still loading: the toggle came before this listener, so load the entries now.
+  if (($("#library-leaderboard") as HTMLDetailsElement).open) void refreshEntries().catch(error => settingsMessage(String(error)));
   distribution = mountDistribution($<HTMLElement>("#db-distribution"), () => call<Distribution>("/distribution"));
   tagPills();
   slopStudio = await mountSlopStudio($<HTMLElement>("#slop-studio"));
