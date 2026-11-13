@@ -42,7 +42,7 @@ try:
                 except OSError: time.sleep(.4)
             else: raise RuntimeError('Worker locale non pronto; vedere artifacts/integration-worker.log')
             scripts = ['tests/library.v1.6.0.integration.py', 'tests/analysis.v1.8.0.integration.py', 'tests/slop.v1.3.0.integration.py', 'tests/database.v1.3.0.integration.py', 'tests/game.v2.2.0.integration.py', 'tests/stats.v1.2.0.integration.py']
-            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.v1.12.0.integration.py', 'tests/real_wizard.v1.11.0.integration.py', 'tests/slop_browser.v1.2.0.integration.py', 'tests/database_browser.v1.3.0.integration.py', 'tests/game_browser.v1.2.0.integration.py'])
+            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.v1.13.0.integration.py', 'tests/real_wizard.v1.12.0.integration.py', 'tests/slop_browser.v1.2.0.integration.py', 'tests/database_browser.v1.3.0.integration.py', 'tests/game_browser.v1.2.0.integration.py'])
             scripts.append('tests/slop_auto.v1.0.0.integration.py')
             if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.append('tests/slop_auto_browser.v1.0.0.integration.py')
             for script in scripts: subprocess.run(['python3', script], env=env, check=True)
