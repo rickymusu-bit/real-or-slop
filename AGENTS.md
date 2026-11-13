@@ -1,13 +1,13 @@
-# Istruzioni Codex — versione canonica 17.22.0
+# Istruzioni Codex — versione canonica 17.23.0
 
-Snapshot: `docs/AGENTS.v17.22.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-13T17:30:00Z. Precedente: `docs/AGENTS.v17.21.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.23.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-13T19:00:00Z. Precedente: `docs/AGENTS.v17.22.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
 Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`,
-`docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v4.0.2.md` (formato della foto ed esplorazione nella partita, approvata il 2026-11-13, app 1.19.0,
-migrazione 0046), che sostituisce la 3.0.1 (4:5) e modifica la foto e lo swipe della specifica del gioco. Gioco:
+`docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v5.0.0.md` (formato della foto, foto intera su ogni schermo, niente vista iniziale; decisione
+dell'owner del 2026-11-13, app 1.22.0, senza migrazioni), che sostituisce la 4.0.2 (app 1.19.0, migrazione 0046) e modifica la foto e lo swipe della specifica del gioco. Gioco:
 `docs/gioco-a-livelli.v1.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.12.0). Statistiche e Impostazioni: `docs/statistiche-impostazioni.v1.0.1.md`
 (approvata il 2026-11-12, in produzione con l'app 1.13.0). Generazione automatica delle SLOP su proposta:
 `docs/proposta-generazione-slop.v2.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.15.0).
@@ -21,8 +21,8 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   studio; modifica in linea, cestino; niente lotti, proposte, cicli o archivi storici. La sezione Database non carica file né cerca
   su Commons (decisione dell'owner del 2026-11-13).
 - **Copia di gioco WebP nel formato della foto**: ritagliata al più vicino dei formati comuni (3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 1:1),
-  qualità 0,85, lato lungo ≤1536 px per tutte, sRGB, senza metadati, con una **vista iniziale 4:5** per gli schermi verticali; ritaglio,
-  formato e vista scelti dall'owner con «Inquadratura» (centrati all'inizio), copia creata nel browser appena l'immagine entra; è il file
+  qualità 0,85, lato lungo ≤1536 px per tutte, sRGB, senza metadati, mostrata **intera su ogni schermo** (niente vista iniziale 4:5, decisione dell'owner del 2026-11-13); ritaglio
+  e formato scelti dall'owner con «Inquadratura» (centrati all'inizio), copia creata nel browser appena l'immagine entra; è il file
   che l'owner approva e che il gioco serve. Le SLOP si generano nel formato che il modello di testo sceglie per il soggetto (l'owner lo
   può cambiare). Le copie 4:5 precedenti sono state rifatte (comunicazione dell'owner del 2026-11-13): niente più filtro né comando per rifarle. Foto con
   licenza ND escluse dal gioco.
@@ -65,8 +65,8 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   «Distribuzione»: REAL e SLOP, approvate e pubblicate impilate, per tag, con lo spread.
 - **Gioco** (`docs/gioco-a-livelli.v1.0.1.md`): una sola modalità, una foto alla volta con il suo tempo; livelli nel codice (Facile 10×20 s,
   Medio 15×15 s, Difficile 20×10 s, Esperto 25×5 s); esito immediato dal server; tempo scaduto = foto non riconosciuta; punteggio
-  foto × (2 × accuratezza bilanciata − 1) solo per partite concluse; foto esplorabile (trascinare, zoom con due dita o rotella, «Vista
-  iniziale»), riquadro 4:5 sugli schermi verticali e formato della foto su quelli orizzontali; pulsanti REAL e SLOP sempre visibili, R e S
+  foto × (2 × accuratezza bilanciata − 1) solo per partite concluse; foto intera nel suo formato su ogni schermo, esplorabile (trascinare, zoom con
+  due dita, rotella o doppio tocco, «Foto intera»); pulsanti REAL e SLOP sempre visibili, R e S
   su computer, niente swipe; lista finale con fonti e
   prompt. Classifica nella home (7 giorni e sempre, migliore per giocatore) con soprannome controllato e codice partita (solo
   l'impronta nel database). PvP e allenamento eliminati.
