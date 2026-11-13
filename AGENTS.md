@@ -1,7 +1,7 @@
-# Istruzioni Codex — versione canonica 17.19.2
+# Istruzioni Codex — versione canonica 17.19.3
 
-Snapshot: `docs/AGENTS.v17.19.2.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-13T03:17:29Z. Precedente: `docs/AGENTS.v17.19.1.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.19.3.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-13T03:19:29Z. Precedente: `docs/AGENTS.v17.19.2.md` (storico, non più vigente).
 
 ## Sistema corrente
 
@@ -61,7 +61,7 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   foto × (2 × accuratezza bilanciata − 1) solo per partite concluse; swipe su telefono, R e S su computer; lista finale con fonti e
   prompt. Classifica nella home (7 giorni e sempre, migliore per giocatore) con soprannome controllato e codice partita (solo
   l'impronta nel database). PvP e allenamento eliminati.
-- **Privacy e note legali** (`docs/privacy-note-legali.v1.0.1.md`, in produzione con l'app 1.14.0): progetto personale non commerciale; pagine
+- **Privacy e note legali** (`docs/privacy-note-legali.v1.0.2.md`, in produzione con l'app 1.14.0): progetto personale non commerciale; pagine
   `/privacy` e `/termini`; partite cancellate dopo 12 mesi (manutenzione giornaliera); classifica con dichiarazione «almeno 14 anni o
   permesso di un genitore» e cancellazione su richiesta; crediti delle REAL con le modifiche (ritaglio 4:5). Titolare in
   `shared/legal.v1.0.0.ts`; testi verificati da un legale (comunicazione dell'owner del 2026-11-13).
