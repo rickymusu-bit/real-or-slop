@@ -1,7 +1,8 @@
 /** Admin image library and five-section dashboard. v1.18.0, 2026-11-13T16:00:00Z: owner decision of 2026-11-13: the Database
  * section loses the filter «Copia», the title search, the upload of files (with the drop zone) and «Da Commons»; photos are added
  * with the REAL wizard and the SLOP studio. A new menu sorts the photos by date added, views or accuracy, descending or ascending,
- * remembered in this browser; photos never seen go last for accuracy. v1.17.0, 2026-11-13T12:00:00Z: moving to the trash, alone or in bulk, also
+ * remembered in this browser; photos never seen go last for accuracy. No copy of the 4:5 recipe is left (owner, 2026-11-13): the badge
+ * «copia da rifare», its note and the bulk command «Rifai le copie» are gone. v1.17.0, 2026-11-13T12:00:00Z: moving to the trash, alone or in bulk, also
  * withdraws a published photo (worker/library.v1.16.0.ts); REAL wizard v1.13.0. v1.16.0, 2026-11-13T10:00:00Z: game copies in the photo's format
  * (docs/copie-di-gioco.v4.0.0.md): «Inquadratura» chooses format, crop and 4:5 initial view (src/crop-editor.v2.0.0.ts), a change of
  * view alone keeps the copy and its statistics; the badge and the filter «Copia: da rifare» mark the 4:5 copies of the previous
@@ -62,7 +63,7 @@ type Status = "new" | "approved" | "published" | "trash";
 interface Item {
   id: string; origin: "REAL" | "SLOP"; status: Status; trashed_from: Status | null; title: string; description: string;
   caption: string; explanation: string; source_url: string; author: string; license_name: string; license_url: string;
-  prompt: string; model: string; width: number; height: number; copy: { width: number; height: number; bytes: number; crop: Crop | null; view: View | null; redo: boolean } | null;
+  prompt: string; model: string; width: number; height: number; copy: { width: number; height: number; bytes: number; crop: Crop | null; view: View | null } | null;
   rights_confirmed: boolean; revision: number; tags: string[]; file: string; updated_at: string; created_at: string;
   analysis: { status: "none" | "running" | "done" | "uncertain" | "failed"; error: string; at: string | null };
   generated: { tags: string[]; caption: string } | null;
@@ -104,7 +105,7 @@ export async function showLibrary() {
   try { const saved = JSON.parse(localStorage.getItem(SORT_KEY) || "null") as typeof sort | null;
     if (saved && ["added", "views", "accuracy"].includes(saved.by) && ["asc", "desc"].includes(saved.order)) sort = saved; } catch { /* private browsing */ }
   let slopStudio: { refresh: () => Promise<void> } = { refresh: async () => {} };
-  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "", copy: "" };
+  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "" };
   let autoBox: { refresh: () => Promise<void> } = { refresh: async () => {} };
   let models: Models | null = null;
   let statsView: { refresh: () => Promise<void> } = { refresh: async () => {} };
@@ -220,7 +221,7 @@ export async function showLibrary() {
   let loadSeq = 0;
   const load = async () => {
     const seq = ++loadSeq;
-    const params = new URLSearchParams({ status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q, batch: filter.batch, copy: filter.copy });
+    const params = new URLSearchParams({ status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q, batch: filter.batch });
     $("#library-batch-filter").hidden = !filter.batch;
     const data = await call<{ items: Item[]; counts: { status: string; origin: string; n: number }[] }>("?" + params);
     if (seq !== loadSeq) return;
@@ -242,7 +243,7 @@ export async function showLibrary() {
     <label class="library-check"><input type="checkbox" data-select="${escape(item.id)}" ${selected.has(item.id) ? "checked" : ""} aria-label="Seleziona ${escape(item.title)}"></label>
     <button type="button" class="library-open" data-open="${escape(item.id)}" aria-label="Apri ${escape(item.title)}">
       <img src="${escape(item.file)}" alt="" loading="lazy"><span class="library-badges"><span class="badge badge-${item.origin.toLowerCase()}">${item.origin}</span>
-      <span class="badge badge-status">${STATE_LABEL[item.status]}</span>${item.copy ? item.copy.crop ? "" : '<span class="badge badge-warn">copia da rifare</span>' : '<span class="badge badge-warn">senza copia</span>'}${item.no_derivatives ? '<span class="badge badge-warn">licenza ND: esclusa</span>' : ""}</span>
+      <span class="badge badge-status">${STATE_LABEL[item.status]}</span>${item.copy ? "" : '<span class="badge badge-warn">senza copia</span>'}${item.no_derivatives ? '<span class="badge badge-warn">licenza ND: esclusa</span>' : ""}</span>
       ${item.in_play ? `<span class="library-badges"><span class="badge badge-play">in ${item.in_play} ${item.in_play === 1 ? "partita" : "partite"} in corso</span></span>` : ""}
       <span class="library-card-title">${escape(item.title)}</span><span class="library-card-tags db-tags">${item.tags.length ? sortByCategory(item.tags, item.categories).map(t => pill(t, categoryOf(item.categories, t), "db-tag")).join("") : "nessun tag"}</span>
       ${statsLine(item)}
@@ -254,7 +255,7 @@ export async function showLibrary() {
     const trash = filter.status === "trash";
     bar.innerHTML = `<strong>${n} selezionate</strong>` + (trash
       ? '<button data-bulk="restore">Ripristina</button><button data-bulk="delete" class="danger">Elimina definitivamente</button>'
-      : '<button data-bulk="trash">Sposta nel cestino</button><label><input type="checkbox" id="library-bulk-rights"> Diritti delle REAL verificati</label><button data-bulk="analyze">Analizza con IA</button><button data-bulk="approve">Approva</button><button data-bulk="publish">Pubblica</button><button data-bulk="withdraw">Ritira dal gioco</button><button data-bulk="redo-copies">Rifai le copie</button>' +
+      : '<button data-bulk="trash">Sposta nel cestino</button><label><input type="checkbox" id="library-bulk-rights"> Diritti delle REAL verificati</label><button data-bulk="analyze">Analizza con IA</button><button data-bulk="approve">Approva</button><button data-bulk="publish">Pubblica</button><button data-bulk="withdraw">Ritira dal gioco</button>' +
         '<label>Tag<input id="library-bulk-tag" autocomplete="off" autocapitalize="none" spellcheck="false"></label>' + categorySelect('id="library-bulk-category"') + '<button data-bulk="tag-add">Aggiungi tag</button><button data-bulk="tag-remove">Togli tag</button>') +
       '<button data-bulk="none">Deseleziona</button>';
   };
@@ -297,7 +298,6 @@ export async function showLibrary() {
       ${item.status === "published" ? '<p class="db-edit-note">Pubblicata: per modificarla avvia la modifica. La foto esce subito dalla pubblicazione, quindi non entra in nuove partite; quelle in corso finiscono con la versione attuale. Finita la modifica resta approvata: la ripubblichi quando vuoi.</p>' : ""}
       ${item.status === "approved" ? '<p class="hint">Le modifiche si salvano subito e la foto resta approvata. Pubblicala quando hai finito.</p>' : ""}
       ${item.no_derivatives ? '<p class="db-edit-note">Licenza senza opere derivate (ND): la foto è esclusa dal gioco, perché la copia di gioco la ritaglia.</p>' : ""}
-      ${item.copy && !item.copy.crop ? '<p class="db-edit-note">Copia 4:5 della ricetta precedente: se è pubblicata resta in gioco così; per approvarla o pubblicarla di nuovo rifalla con «Inquadratura» o con «Rifai le copie».</p>' : ""}
       ${!item.copy && item.status === "new" ? '<p><button type="button" id="library-copy">Prepara la copia di gioco</button></p>' : ""}
       ${editable ? '<p><button type="button" id="library-crop">Inquadratura</button></p>' : ""}
       ${fields.map(([key, label, max, area]) => `<label>${label}${area
@@ -467,27 +467,6 @@ export async function showLibrary() {
         if (action === "trash") {
           const published = items.filter(i => selected.has(i.id) && i.status === "published").length;
           if (published && !window.confirm(`${published} ${published === 1 ? "immagine è pubblicata: esce" : "immagini sono pubblicate: escono"} subito dal gioco e ${published === 1 ? "va" : "vanno"} nel cestino; le partite in corso finiscono con la versione attuale. Continuare?`)) return;
-        }
-        if (action === "redo-copies") {
-          // Copies of the previous recipe (or chosen on purpose): nearest format, centred crop and view. A published photo must leave
-          // the game first (owner decision of 2026-11-11 on edits): it stays approved and is published again when the owner wants.
-          const chosen = items.filter(i => selected.has(i.id) && i.status !== "trash");
-          if (!chosen.length) { message("Nessuna immagine selezionata fuori dal cestino."); return; }
-          const published = chosen.filter(i => i.status === "published").length;
-          if (!window.confirm(`Rifare la copia di gioco di ${chosen.length} ${chosen.length === 1 ? "immagine" : "immagini"} nel formato più vicino, con ritaglio e vista centrati? Le statistiche ripartono da zero.` +
-            (published ? ` ${published} ${published === 1 ? "è pubblicata ed esce" : "sono pubblicate ed escono"} dal gioco finché non le ripubblichi; le partite in corso finiscono con la copia attuale.` : ""))) return;
-          const errors: string[] = [];
-          let done = 0;
-          for (const item of chosen) {
-            message(`Copia ${done + errors.length + 1} di ${chosen.length}…`);
-            try {
-              if (item.status === "published") await call(`/${encodeURIComponent(item.id)}/withdraw`, { method: "POST", body: "{}" });
-              await prepareLibraryCopy<Item>(item.id); done++;
-            } catch (error) { errors.push(item.title + ": " + (error instanceof Error ? error.message : error)); }
-          }
-          selected.clear(); await load();
-          message(`${done} copie rifatte.` + (published ? " Controllale e ripubblica le immagini ritirate." : "") + (errors.length ? " Non riuscite: " + errors.join("; ") : ""));
-          return;
         }
         if (action === "analyze") {
           const ids = items.filter(i => selected.has(i.id) && i.status === "new" && i.copy && i.analysis.status !== "running" && i.analysis.status !== "done").map(i => i.id);
