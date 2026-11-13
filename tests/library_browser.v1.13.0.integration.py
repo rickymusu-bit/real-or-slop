@@ -1,5 +1,6 @@
-"""v1.13.0, 2026-11-13T16:00:00Z: the Database section without upload, title search, copy filter and «Da Commons» (photos added
-through the API); sorting by date added, views and accuracy, ascending or descending, remembered.
+"""v1.13.0, 2026-11-13T17:30:00Z: cards with only thumbnail, origin and state (tags and views in the detail); the Database section
+without upload, title search, copy filter and «Da Commons» (photos added through the API); sorting by date added, views and accuracy,
+ascending or descending, remembered.
 v1.12.0, 2026-11-13T12:00:00Z: bulk trash with a published photo (out of the game at once, after a confirmation), restore as approved.
 v1.11.0, 2026-11-12T11:00:00Z: Settings with commands only (quality beside the models, thresholds of the SLOP studio, hours of an open
 game) and the section «Statistiche» (games, paid calls, balance) (docs/statistiche-impostazioni.v1.0.0.md).
@@ -76,15 +77,22 @@ with sync_playwright() as p:
         expect(page.locator('#library-message')).to_contain_text('2 di 2 analizzate', timeout=30000)
         page.locator('[data-view=library]').click()
         assert 'chiamate a pagamento' in confirms[0] and '$' not in confirms[0], confirms
-        rivoli_card = page.locator('.library-card', has_text=f'{name}-rivoli')
-        # Pills in category order: on mobile «street» is already in Ambiente (moved during the desktop run), so it comes first.
-        expect(rivoli_card.locator('.db-tag')).to_have_text(['crowd', 'street'] if name == 'desktop' else ['street', 'crowd'])
-        expect(rivoli_card.locator('[data-stats]')).to_have_text('Vista 0 volte · classificata correttamente 0')
+        rivoli_card = page.locator(f'.library-card:has([aria-label="Apri {name}-rivoli"])')
+        # A card shows only thumbnail, origin and state; tags and views are in the detail.
+        expect(rivoli_card.locator('.badge')).to_have_text(['REAL', 'nuova'])
+        for hidden in ('.db-tag', '.library-card-title', '[data-stats]'): expect(rivoli_card.locator(hidden)).to_have_count(0)
+        rivoli_card.locator('.library-open').click()
+        detail = page.locator('#library-detail')
+        # Tags in category order: on mobile «street» is already in Ambiente (moved during the desktop run), so it comes first.
+        expect(detail.locator('.library-tags li.tag-cat').first).to_contain_text('crowd' if name == 'desktop' else 'street')
+        expect(detail.locator('.library-tags li.tag-cat')).to_have_count(2)
+        expect(detail.locator('[data-stats]')).to_have_text('Vista 0 volte · classificata correttamente 0')
+        detail.locator('.library-detail-close button').click()
         add(page, picture(f'{name}-street.jpg', (40, 40, 190), (300, 300)), 'SLOP')
         page.locator('[data-view=library]').click()  # reload the list
-        expect(page.locator('.library-card-title', has_text=f'{name}-')).to_have_count(3)
+        expect(page.locator(f'.library-open[aria-label^="Apri {name}-"]')).to_have_count(3)
         # Sorting: date added, newest first by default; ascending puts the oldest first; views all 0 keep the newest first.
-        titles = lambda: [t for t in page.locator('.library-card-title').all_inner_texts() if t.startswith(name + '-')]
+        titles = lambda: [l[5:] for l in page.locator('.library-open').evaluate_all("bs => bs.map(b => b.getAttribute('aria-label'))") if l.startswith(f'Apri {name}-')]
         expect(page.locator('#library-sort')).to_have_value('added'); expect(page.locator('#library-order')).to_have_value('desc')
         assert titles()[:3] == [f'{name}-street', f'{name}-spare', f'{name}-rivoli'], titles()
         page.locator('#library-order').select_option('asc')
@@ -219,7 +227,7 @@ with sync_playwright() as p:
         expect(page.locator('#library-message')).to_contain_text('1 eliminate definitivamente')
         expect(page.locator('.library-empty')).to_contain_text('cestino è vuoto')
         page.locator('[data-view=approved]').click()
-        expect(page.locator('.library-card', has_text=f'{name}-street')).to_have_count(1)
+        expect(page.locator(f'.library-card:has([aria-label="Apri {name}-street"])')).to_have_count(1)
         page.get_by_role('checkbox', name=f'Seleziona {name}-street').check()
         page.locator('[data-bulk=publish]').click()
         expect(page.locator('#library-message')).to_contain_text('1 aggiornate')
@@ -228,7 +236,7 @@ with sync_playwright() as p:
         for title in (f'{name}-rivoli', f'{name}-street'): page.get_by_role('checkbox', name=f'Seleziona {title}').check()
         page.locator('[data-bulk=withdraw]').click()
         expect(page.locator('#library-message')).to_contain_text('2 aggiornate')
-        expect(page.locator('.library-card', has_text=f'{name}-rivoli')).to_have_count(0)
+        expect(page.locator(f'.library-card:has([aria-label="Apri {name}-rivoli"])')).to_have_count(0)
         assert not errors, errors
         context.close()
         print('Library browser E2E 1.13.0 passed (no upload in the Database, sorting, trash of a published photo):', name)

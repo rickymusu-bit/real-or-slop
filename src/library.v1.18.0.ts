@@ -2,7 +2,8 @@
  * section loses the filter «Copia», the title search, the upload of files (with the drop zone) and «Da Commons»; photos are added
  * with the REAL wizard and the SLOP studio. A new menu sorts the photos by date added, views or accuracy, descending or ascending,
  * remembered in this browser; photos never seen go last for accuracy. No copy of the 4:5 recipe is left (owner, 2026-11-13): the badge
- * «copia da rifare», its note and the bulk command «Rifai le copie» are gone. v1.17.0, 2026-11-13T12:00:00Z: moving to the trash, alone or in bulk, also
+ * «copia da rifare», its note and the bulk command «Rifai le copie» are gone. A card shows only the thumbnail, origin and state (and the rare
+ * warnings «senza copia» and «licenza ND»): title, tags, views and games in progress are in the detail. v1.17.0, 2026-11-13T12:00:00Z: moving to the trash, alone or in bulk, also
  * withdraws a published photo (worker/library.v1.16.0.ts); REAL wizard v1.13.0. v1.16.0, 2026-11-13T10:00:00Z: game copies in the photo's format
  * (docs/copie-di-gioco.v4.0.0.md): «Inquadratura» chooses format, crop and 4:5 initial view (src/crop-editor.v2.0.0.ts), a change of
  * view alone keeps the copy and its statistics; the badge and the filter «Copia: da rifare» mark the 4:5 copies of the previous
@@ -244,9 +245,6 @@ export async function showLibrary() {
     <button type="button" class="library-open" data-open="${escape(item.id)}" aria-label="Apri ${escape(item.title)}">
       <img src="${escape(item.file)}" alt="" loading="lazy"><span class="library-badges"><span class="badge badge-${item.origin.toLowerCase()}">${item.origin}</span>
       <span class="badge badge-status">${STATE_LABEL[item.status]}</span>${item.copy ? "" : '<span class="badge badge-warn">senza copia</span>'}${item.no_derivatives ? '<span class="badge badge-warn">licenza ND: esclusa</span>' : ""}</span>
-      ${item.in_play ? `<span class="library-badges"><span class="badge badge-play">in ${item.in_play} ${item.in_play === 1 ? "partita" : "partite"} in corso</span></span>` : ""}
-      <span class="library-card-title">${escape(item.title)}</span><span class="library-card-tags db-tags">${item.tags.length ? sortByCategory(item.tags, item.categories).map(t => pill(t, categoryOf(item.categories, t), "db-tag")).join("") : "nessun tag"}</span>
-      ${statsLine(item)}
     </button></li>`;
   const selectionBar = () => {
     const bar = $("#library-selection"), n = selected.size;
