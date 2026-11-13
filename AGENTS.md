@@ -1,7 +1,7 @@
-# Istruzioni Codex — versione canonica 17.20.0
+# Istruzioni Codex — versione canonica 17.21.0
 
-Snapshot: `docs/AGENTS.v17.20.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-13T11:00:00Z. Precedente: `docs/AGENTS.v17.19.3.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.21.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-13T12:00:00Z. Precedente: `docs/AGENTS.v17.20.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
@@ -43,7 +43,8 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   con versioni e ripristino; ogni generazione registra le versioni usate. Formato JSON, limiti e filtri restano nel codice.
 - **Didascalia** in italiano, apre con luogo e data seguiti da un punto (proposta del contesto, decisione dell'owner del 2026-11-13), limite morbido di 160 caratteri (avviso, mai taglio) e tetto di 256, mostrata con l'immagine durante il round, stesso
   procedimento per REAL e SLOP (fase 2). Si approva insieme alla copia.
-- **Cestino:** svuotarlo cancella ogni riga e ogni file dell'immagine. Nessun registro delle
+- **Cestino:** spostarci una pubblicata, da sola o in gruppo, la ritira subito dal gioco (le partite in corso finiscono con la sua copia;
+  ripristinata torna approvata; decisione dell'owner del 2026-11-13). Svuotarlo cancella ogni riga e ogni file dell'immagine. Nessun registro delle
   eliminazioni, nessuna istantanea, nessuna esportazione automatica: decisione esplicita dell'owner.
 - **Studio SLOP** (fase 3, `docs/wizard-slop.v1.4.1.md`): spread di ogni tag (REAL − SLOP tra approvate e pubblicate), tema
   obbligatorio in tutti i prompt, slot estratti dalle REAL con peso dello spread e modificabili; si apre con 50 REAL, un tema
