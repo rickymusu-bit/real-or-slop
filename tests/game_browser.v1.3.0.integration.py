@@ -154,7 +154,7 @@ try:
             page.locator('#library-entries li', has_text=f'Browser {name}').get_by_role('button', name='Cancella').click()
             expect(page.locator('#library-entries li', has_text=f'Browser {name}')).to_have_count(0)
             admin.close()
-            print('Game browser E2E 1.2.0 passed (explorable photo, buttons on the phone):', name)
+            print('Game browser E2E 1.3.0 passed (whole photo on every screen, double tap, buttons on the phone):', name)
         browser.close()
 finally:
     sql("DELETE FROM leaderboard WHERE nickname LIKE 'Browser%'")
