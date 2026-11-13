@@ -1,7 +1,7 @@
-# Istruzioni Codex — versione canonica 17.23.0
+# Istruzioni Codex — versione canonica 17.24.0
 
-Snapshot: `docs/AGENTS.v17.23.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-13T19:00:00Z. Precedente: `docs/AGENTS.v17.22.1.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.24.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-13T20:30:00Z. Precedente: `docs/AGENTS.v17.23.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
@@ -18,7 +18,8 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   (solo visualizzazione: partite adesso e aperte, partite e risposte, chiamate a pagamento, equilibrio del catalogo con i formati), Impostazioni (solo
   comandi: modelli e qualità delle immagini, contesto, vocabolario, classifica, soglie dello studio SLOP e delle proposte automatiche, durata di una partita aperta).
 - Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: le REAL entrano dal wizard (Commons), le SLOP dallo
-  studio; modifica in linea, cestino; niente lotti, proposte, cicli o archivi storici. La sezione Database non carica file né cerca
+  studio; modifica in linea, cestino; niente lotti, proposte, cicli o archivi storici. Nel passo 2 del wizard «Togli dal caricamento» sposta una
+  foto nel cestino; una foto spostata nel cestino o eliminata altrove esce dal wizard al ritorno nella sezione (app 1.22.0). La sezione Database non carica file né cerca
   su Commons (decisione dell'owner del 2026-11-13).
 - **Copia di gioco WebP nel formato della foto**: ritagliata al più vicino dei formati comuni (3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 1:1),
   qualità 0,85, lato lungo ≤1536 px per tutte, sRGB, senza metadati, mostrata **intera su ogni schermo** (niente vista iniziale 4:5, decisione dell'owner del 2026-11-13); ritaglio
