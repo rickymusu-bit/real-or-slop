@@ -1,0 +1,148 @@
+/** Game copies in the photo's own format (docs/copie-di-gioco.v4.0.0.md). v3.0.0, 2026-11-13T10:00:00Z.
+ * Owner decisions of 2026-11-13: the copy is the photo cropped to the nearest of the common photographic formats, the same
+ * set for REAL and SLOP, so that neither the shape nor the composition tells them apart; the longest side is at most 1536 px
+ * for every copy, so that zooming in the game does not reveal a difference in resolution. Inside the copy a 4:5 «view» is
+ * what a vertical screen shows first; the player can then move and zoom over the whole copy.
+ * A crop is { x, y, width, height, format } in pixels of the oriented original; width = round(height × w / h) of the format.
+ * A view is { x, y, height } in pixels of the copy; its width is round(height × 4 / 5).
+ * v2.0.0 (shared/game-copy.v2.0.0.ts): every copy 4:5, at most 2048 px high; a v2 crop has no «format» and marks a copy
+ * to be made again. */
+export const FORMATS = ["3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "1:1"] as const;
+export type Format = typeof FORMATS[number];
+export const FORMAT_LABELS: Record<Format, string> = {
+  "3:2": "3:2 orizzontale", "2:3": "2:3 verticale", "4:3": "4:3 orizzontale", "3:4": "3:4 verticale",
+  "16:9": "16:9 orizzontale", "9:16": "9:16 verticale", "1:1": "1:1 quadrato",
+};
+export const GAME_COPY = { mime: "image/webp", maxSide: 1536, quality: 0.85, maxBytes: 4_000_000, minSide: 64, viewRatio: 4 / 5 } as const;
+export const GAME_COPY_RECIPE = `webp-q${GAME_COPY.quality}-format-max${GAME_COPY.maxSide}-srgb-v3`;
+export interface Crop { x: number; y: number; width: number; height: number; format: Format }
+export interface View { x: number; y: number; height: number }
+
+export const isFormat = (value: unknown): value is Format => typeof value === "string" && (FORMATS as readonly string[]).includes(value);
+/** Width over height of a format. */
+export function ratioOf(format: Format): number {
+  const [w, h] = format.split(":").map(Number);
+  return w / h;
+}
+/** Width of a frame of the format with the given height. */
+export const formatWidth = (format: Format, height: number) => Math.round(height * ratioOf(format));
+
+/** The format closest to the proportions of an image (distance on the logarithm of the ratio). */
+export function nearestFormat(width: number, height: number, allowed: readonly Format[] = FORMATS): Format {
+  if (!(width > 0) || !(height > 0)) throw Error("Dimensioni non valide");
+  const target = Math.log(width / height);
+  let best = allowed[0];
+  for (const format of allowed) if (Math.abs(Math.log(ratioOf(format)) - target) < Math.abs(Math.log(ratioOf(best)) - target)) best = format;
+  return best;
+}
+
+/** Largest frame of a format that fits in width × height. */
+function largest(format: Format, width: number, height: number): { width: number; height: number } {
+  let h = Math.min(height, Math.floor(width / ratioOf(format)));
+  while (h > 1 && formatWidth(format, h) > width) h--;
+  return { width: formatWidth(format, Math.max(h, 1)), height: Math.max(h, 1) };
+}
+
+/** The largest crop of `format` (the nearest one without it) centred in the image: the default before the owner moves it. */
+export function centredCrop(width: number, height: number, format?: Format): Crop {
+  if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1) throw Error("Dimensioni non valide");
+  const f = format || nearestFormat(width, height), size = largest(f, width, height);
+  if (size.width > width || size.height > height) throw Error("Immagine troppo piccola per il formato " + f);
+  return { x: Math.floor((width - size.width) / 2), y: Math.floor((height - size.height) / 2), width: size.width, height: size.height, format: f };
+}
+
+/** Smallest height a crop of `format` may have in an image of these dimensions. */
+export const minimumCropHeight = (format: Format, width: number, height: number) =>
+  Math.min(Math.ceil(GAME_COPY.minSide / Math.min(1, ratioOf(format))), largest(format, width, height).height);
+
+/** Why a crop is not acceptable for an image of these dimensions, or "" if it is. */
+export function cropError(width: number, height: number, crop: unknown): string {
+  if (!crop || typeof crop !== "object") return "Inquadratura mancante";
+  const c = crop as Record<string, unknown>;
+  if (!isFormat(c.format)) return "Formato non previsto";
+  if (![c.x, c.y, c.width, c.height].every(v => typeof v === "number" && Number.isSafeInteger(v))) return "Inquadratura non valida";
+  const { x, y, width: w, height: h, format } = crop as Crop;
+  if (w !== formatWidth(format, h)) return "Inquadratura non nel formato " + format;
+  if (x < 0 || y < 0 || h < minimumCropHeight(format, width, height)) return "Inquadratura troppo piccola o fuori dall'immagine";
+  if (x + w > width || y + h > height) return "Inquadratura fuori dall'immagine";
+  return "";
+}
+
+/** Dimensions of the copy made from a crop: the crop's format, longest side at most 1536 px, never enlarged. */
+export function copyDimensions(crop: Pick<Crop, "width" | "height" | "format">): { width: number; height: number } {
+  const ratio = ratioOf(crop.format);
+  if (ratio >= 1) { const width = Math.min(crop.width, GAME_COPY.maxSide); return { width, height: Math.max(1, Math.round(width / ratio)) }; }
+  const height = Math.min(crop.height, GAME_COPY.maxSide);
+  return { width: Math.max(1, Math.round(height * ratio)), height };
+}
+
+/** Width of a 4:5 view of the given height. */
+export const viewWidth = (height: number) => Math.round(height * GAME_COPY.viewRatio);
+/** The largest 4:5 view centred in a copy of these dimensions. */
+export function centredView(width: number, height: number): View {
+  let h = Math.min(height, Math.floor(width / GAME_COPY.viewRatio));
+  while (h > 1 && viewWidth(h) > width) h--;
+  h = Math.max(h, 1);
+  return { x: Math.floor((width - viewWidth(h)) / 2), y: Math.floor((height - h) / 2), height: h };
+}
+/** Why a view is not acceptable for a copy of these dimensions, or "" if it is. */
+export function viewError(width: number, height: number, view: unknown): string {
+  if (!view || typeof view !== "object") return "Vista iniziale mancante";
+  const v = view as Record<string, unknown>;
+  if (![v.x, v.y, v.height].every(n => typeof n === "number" && Number.isSafeInteger(n))) return "Vista iniziale non valida";
+  const { x, y, height: h } = view as View;
+  if (x < 0 || y < 0 || h < Math.min(GAME_COPY.minSide, centredView(width, height).height)) return "Vista iniziale troppo piccola o fuori dalla copia";
+  if (x + viewWidth(h) > width || y + h > height) return "Vista iniziale fuori dalla copia";
+  return "";
+}
+/** The view if it still fits a copy of these dimensions, otherwise the centred one. */
+export function fitView(view: View | null, width: number, height: number): View {
+  return view && !viewError(width, height, view) ? view : centredView(width, height);
+}
+
+/** Parses «x,y,width,height,format» (query string form). */
+export function parseCrop(value: string | null): Crop | null {
+  const match = value ? /^(\d{1,6}),(\d{1,6}),(\d{1,6}),(\d{1,6}),(\d{1,2}:\d{1,2})$/.exec(value) : null;
+  if (!match || !isFormat(match[5])) return null;
+  return { x: Number(match[1]), y: Number(match[2]), width: Number(match[3]), height: Number(match[4]), format: match[5] };
+}
+/** Parses «x,y,height» (query string form). */
+export function parseView(value: string | null): View | null {
+  if (!value || !/^\d{1,5},\d{1,5},\d{1,5}$/.test(value)) return null;
+  const [x, y, height] = value.split(",").map(Number);
+  return { x, y, height };
+}
+export const cropQuery = (c: Crop) => [c.x, c.y, c.width, c.height, c.format].join(",");
+export const viewQuery = (v: View) => [v.x, v.y, v.height].join(",");
+
+/** A stored crop of the current recipe, or null (absent, unreadable, or a 4:5 crop of shared/game-copy.v2.0.0.ts). */
+export function storedCrop(value: string | null): Crop | null {
+  try { const crop = value ? JSON.parse(value) as Crop : null; return crop && isFormat(crop.format) && typeof crop.width === "number" ? crop : null; }
+  catch { return null; }
+}
+export function storedView(value: string | null): View | null {
+  try { const view = value ? JSON.parse(value) as View : null; return view && typeof view.height === "number" ? view : null; } catch { return null; }
+}
+
+/** The initial view as fractions of the copy, as the game sends it: the whole copy when there is no view (4:5 copies of v2). */
+export function viewFractions(view: View | null, width: number | null, height: number | null) {
+  if (!view || !width || !height) return { x: 0, y: 0, width: 1, height: 1 };
+  const round = (n: number) => Math.round(n * 1e4) / 1e4;
+  return { x: round(view.x / width), y: round(view.y / height), width: round(viewWidth(view.height) / width), height: round(view.height / height) };
+}
+
+/** Sizes asked to the image generator, per format (docs/copie-di-gioco.v4.0.0.md, section 2): multiples of 16, between 655,360
+ * and 8,294,400 pixels, long side 1536. GPT Image 2, 2.5 and 2.6 accept custom sizes; the other models only the three standard
+ * ones, so they are offered only 1:1, 3:2 and 2:3. */
+export const GENERATION_SIZES: Record<Format, string> = {
+  "3:2": "1536x1024", "2:3": "1024x1536", "4:3": "1536x1152", "3:4": "1152x1536", "16:9": "1536x864", "9:16": "864x1536", "1:1": "1536x1536",
+};
+const STANDARD: Partial<Record<Format, string>> = { "1:1": "1024x1024", "3:2": "1536x1024", "2:3": "1024x1536" };
+export const customSizes = (model: string) => /^gpt-image-2(\.[56]-[a-z]+)?$/.test(model);
+/** Formats a model can produce directly. */
+export const formatsFor = (model: string): Format[] => customSizes(model) ? [...FORMATS] : ["3:2", "2:3", "1:1"];
+/** Size to ask for a format: the format itself, or the nearest standard size where the model has only those. */
+export function generationSize(model: string, format: Format): string {
+  if (customSizes(model)) return GENERATION_SIZES[format];
+  return STANDARD[format] || STANDARD[nearestFormat(ratioOf(format), 1, ["1:1", "3:2", "2:3"])]!;
+}

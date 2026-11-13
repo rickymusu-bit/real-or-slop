@@ -99,9 +99,13 @@ export interface ImageRow {
   source_url?: string;
   license_name?: string;
   license_url?: string;
+  /** Game copy size and 4:5 initial view (migration 0046; null for the 4:5 copies made before it). */
+  copy_width?: number | null;
+  copy_height?: number | null;
+  copy_view?: string | null;
 }
 export const GAME_IMAGE = `SELECT id,CASE origin WHEN 'SLOP' THEN 'AI' ELSE 'REAL' END AS type,title,description,caption,author,
-  explanation,copy_key AS r2_key,copy_sha256 AS sha256,status,source_url,license_name,license_url FROM images`;
+  explanation,copy_key AS r2_key,copy_sha256 AS sha256,status,source_url,license_name,license_url,copy_width,copy_height,copy_view FROM images`;
 /** Published images with their game copy. The sampler's "approved" means eligible for play. */
 export async function catalog(env: Env) {
   return (await env.DB.prepare(GAME_IMAGE + " WHERE status='published' AND copy_key IS NOT NULL").all<ImageRow>()).results
