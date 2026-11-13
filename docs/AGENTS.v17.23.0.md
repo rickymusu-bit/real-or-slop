@@ -1,7 +1,7 @@
 # Istruzioni Codex — versione canonica 17.23.0
 
 Snapshot: `docs/AGENTS.v17.23.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-13T19:00:00Z. Precedente: `docs/AGENTS.v17.22.0.md` (storico, non più vigente).
+Aggiornato: 2026-11-13T19:00:00Z. Precedente: `docs/AGENTS.v17.22.1.md` (storico, non più vigente).
 
 ## Sistema corrente
 
@@ -58,7 +58,7 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   attribuiti né scene degradanti; marchi ammessi; regimi documentati ma mai celebrati; nessuna nudità umana tranne
   nelle opere d'arte.
 - **Sezione Database** (`docs/database-immagini.v1.0.1.md`): filtri per uno o più tag e per origine; ordinamento per data di aggiunta,
-  visualizzazioni o accuratezza, crescente o decrescente; la scheda mostra solo miniatura, origine e stato, il dettaglio tutti i tag,
+  visualizzazioni o accuratezza, crescente o decrescente; la scheda mostra solo miniatura, origine e stato (senza avvisi), il dettaglio tutti i tag e gli avvisi,
   visualizzazioni e classificazioni corrette (solo sulla copia attuale). «Modifica» ritira subito una pubblicata; le partite in corso
   conservano didascalia e copia con cui sono iniziate (24 ore al massimo); una modifica lascia approvata un'immagine approvata.
   Una SLOP si rigenera dal prompt (a pagamento, con conferma; torna nuova, nuova analisi, statistiche azzerate). Scheda

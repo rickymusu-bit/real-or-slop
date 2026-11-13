@@ -136,6 +136,6 @@ finale, pulsanti sul telefono).
 ## 10. Codice
 
 `src/photo-viewer.v2.0.0.ts` (foto intera, zoom, doppio tocco), `src/play.v2.3.0.ts` e `src/play.v2.3.0.css`,
-`src/crop-editor.v3.0.0.ts` (solo ritaglio), `src/game-copy.v3.1.0.ts` (salvataggio dell'inquadratura), `src/library.v1.19.0.ts`,
+`src/crop-editor.v3.0.0.ts` (solo ritaglio), `src/game-copy.v3.1.0.ts` (salvataggio dell'inquadratura), `src/library.v1.20.0.ts`,
 `src/real-wizard.v1.14.0.ts`; nel Worker `worker/library.v1.18.0.ts` e `worker/game.v2.3.0.ts`, con `analysis.v1.18.0`,
 `slop-generation.v1.9.0` e `slop.v1.10.0` invariati salvo l'import della libreria.

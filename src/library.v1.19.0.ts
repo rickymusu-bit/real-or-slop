@@ -1,6 +1,6 @@
-/** Admin image library and five-section dashboard. v1.19.0, 2026-11-13T19:00:00Z: «Inquadratura» chooses only format and crop
- * (src/crop-editor.v3.0.0.ts, docs/copie-di-gioco.v5.0.0.md): no 4:5 initial view; an unchanged crop sends nothing. REAL wizard v1.14.0.
- * v1.18.0, 2026-11-13T16:00:00Z: owner decision of 2026-11-13: the Database
+/** Admin image library and five-section dashboard. v1.19.0, 2026-11-13T18:40:00Z: owner decision of 2026-11-13: the warnings «senza
+ * copia» and «licenza ND» leave the cards too, which show only thumbnail, origin and state; the detail keeps them (note on the ND
+ * licence, missing copy with «Prepara la copia di gioco»). v1.18.0, 2026-11-13T16:00:00Z: owner decision of 2026-11-13: the Database
  * section loses the filter «Copia», the title search, the upload of files (with the drop zone) and «Da Commons»; photos are added
  * with the REAL wizard and the SLOP studio. A new menu sorts the photos by date added, views or accuracy, descending or ascending,
  * remembered in this browser; photos never seen go last for accuracy. No copy of the 4:5 recipe is left (owner, 2026-11-13): the badge
@@ -54,11 +54,11 @@ import { mountDistribution, type Distribution } from "./database-chart.v1.0.0";
 import "./database.v1.0.0.css";
 import { CATEGORIES, CATEGORY_LABELS, isCategory, type Category } from "../shared/tag-categories.v1.0.0";
 import { categoryOf, categorySelect, legend, pill, sortByCategory, suggestedCategory } from "./tag-ui.v1.1.0";
-import { mountRealWizard } from "./real-wizard.v1.14.0";
+import { mountRealWizard } from "./real-wizard.v1.13.0";
 import { content, escape } from "./main";
-import { prepareLibraryCopy, saveFrame } from "./game-copy.v3.1.0";
-import { chooseFrame } from "./crop-editor.v3.0.0";
-import { FORMAT_LABELS, type Crop } from "../shared/game-copy.v3.0.0";
+import { prepareLibraryCopy, saveFrame } from "./game-copy.v3.0.0";
+import { chooseFrame } from "./crop-editor.v2.0.0";
+import { FORMAT_LABELS, type Crop, type View } from "../shared/game-copy.v3.0.0";
 import { markGameMedia } from "./media-mark.v1.0.0";
 import { tagFromInput } from "../shared/tag-input.v1.0.0";
 
@@ -66,7 +66,7 @@ type Status = "new" | "approved" | "published" | "trash";
 interface Item {
   id: string; origin: "REAL" | "SLOP"; status: Status; trashed_from: Status | null; title: string; description: string;
   caption: string; explanation: string; source_url: string; author: string; license_name: string; license_url: string;
-  prompt: string; model: string; width: number; height: number; copy: { width: number; height: number; bytes: number; crop: Crop | null } | null;
+  prompt: string; model: string; width: number; height: number; copy: { width: number; height: number; bytes: number; crop: Crop | null; view: View | null } | null;
   rights_confirmed: boolean; revision: number; tags: string[]; file: string; updated_at: string; created_at: string;
   analysis: { status: "none" | "running" | "done" | "uncertain" | "failed"; error: string; at: string | null };
   generated: { tags: string[]; caption: string } | null;
@@ -246,7 +246,7 @@ export async function showLibrary() {
     <label class="library-check"><input type="checkbox" data-select="${escape(item.id)}" ${selected.has(item.id) ? "checked" : ""} aria-label="Seleziona ${escape(item.title)}"></label>
     <button type="button" class="library-open" data-open="${escape(item.id)}" aria-label="Apri ${escape(item.title)}">
       <img src="${escape(item.file)}" alt="" loading="lazy"><span class="library-badges"><span class="badge badge-${item.origin.toLowerCase()}">${item.origin}</span>
-      <span class="badge badge-status">${STATE_LABEL[item.status]}</span>${item.copy ? "" : '<span class="badge badge-warn">senza copia</span>'}${item.no_derivatives ? '<span class="badge badge-warn">licenza ND: esclusa</span>' : ""}</span>
+      <span class="badge badge-status">${STATE_LABEL[item.status]}</span></span>
     </button></li>`;
   const selectionBar = () => {
     const bar = $("#library-selection"), n = selected.size;
@@ -372,7 +372,7 @@ export async function showLibrary() {
       if (button.dataset.tagRemove) open = await save(open, { tags: open.tags.filter(t => t !== button.dataset.tagRemove) });
       else if (button.id === "library-copy") { detailMessage("Preparo la copia di gioco…"); open = await prepareLibraryCopy<Item>(open.id); }
       else if (button.id === "library-crop") {
-        const choice = await chooseFrame(open.id, open.width, open.height, open.copy ? { crop: open.copy.crop } : null, open.title);
+        const choice = await chooseFrame(open.id, open.width, open.height, open.copy ? { crop: open.copy.crop, view: open.copy.view } : null, open.title);
         if (!choice) return;
         detailMessage("Salvo l'inquadratura…");
         open = await saveFrame<Item>(open, choice);
