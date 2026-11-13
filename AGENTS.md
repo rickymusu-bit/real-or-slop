@@ -1,12 +1,13 @@
-# Istruzioni Codex — versione canonica 17.19.3
+# Istruzioni Codex — versione canonica 17.20.0
 
-Snapshot: `docs/AGENTS.v17.19.3.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-13T03:19:29Z. Precedente: `docs/AGENTS.v17.19.2.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.20.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-13T11:00:00Z. Precedente: `docs/AGENTS.v17.19.3.md` (storico, non più vigente).
 
 ## Sistema corrente
 
 Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1.0.md`, `docs/dashboard-admin-wizard-real.v1.3.0.md`,
-`docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v3.0.1.md` (4:5, approvata il 2026-11-12, in produzione con l'app 1.12.0), che sostituisce la 2.0.0. Gioco:
+`docs/wizard-slop.v1.4.1.md` e `docs/database-immagini.v1.0.1.md` (approvata il 2026-11-11). Copie di gioco: `docs/copie-di-gioco.v4.0.1.md` (formato della foto ed esplorazione nella partita, approvata il 2026-11-13, app 1.19.0,
+migrazione 0046), che sostituisce la 3.0.1 (4:5) e modifica la foto e lo swipe della specifica del gioco. Gioco:
 `docs/gioco-a-livelli.v1.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.12.0). Statistiche e Impostazioni: `docs/statistiche-impostazioni.v1.0.1.md`
 (approvata il 2026-11-12, in produzione con l'app 1.13.0). Generazione automatica delle SLOP su proposta:
 `docs/proposta-generazione-slop.v2.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.15.0).
@@ -14,13 +15,16 @@ Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
 
 - Dashboard `/admin` in cinque sezioni: Caricamento REAL (wizard di tre passi), Generazione SLOP, Database immagini, Statistiche
-  (solo visualizzazione: partite adesso e aperte, partite e risposte, chiamate a pagamento, equilibrio del catalogo), Impostazioni (solo
+  (solo visualizzazione: partite adesso e aperte, partite e risposte, chiamate a pagamento, equilibrio del catalogo con i formati), Impostazioni (solo
   comandi: modelli e qualità delle immagini, contesto, vocabolario, classifica, soglie dello studio SLOP e delle proposte automatiche, durata di una partita aperta).
 - Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: caricamento multiplo,
   Commons diretto, modifica in linea, cestino; niente lotti, proposte, cicli o archivi storici.
-- **Copia di gioco WebP 4:5** uniforme (qualità 0,85, altezza ≤2048 px, sRGB, senza metadati), ritagliata con un'inquadratura
-  scelta dall'owner (centrata all'inizio) e creata nel browser appena l'immagine entra; è il file che l'owner approva e che il gioco
-  serve. Le SLOP si generano in 4:5 dove il modello lo consente. Foto con licenza ND escluse dal gioco.
+- **Copia di gioco WebP nel formato della foto**: ritagliata al più vicino dei formati comuni (3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 1:1),
+  qualità 0,85, lato lungo ≤1536 px per tutte, sRGB, senza metadati, con una **vista iniziale 4:5** per gli schermi verticali; ritaglio,
+  formato e vista scelti dall'owner con «Inquadratura» (centrati all'inizio), copia creata nel browser appena l'immagine entra; è il file
+  che l'owner approva e che il gioco serve. Le SLOP si generano nel formato che il modello di testo sceglie per il soggetto (l'owner lo
+  può cambiare). Le copie 4:5 precedenti restano giocabili finché non si rifanno («Copia: da rifare», «Rifai le copie»). Foto con
+  licenza ND escluse dal gioco.
 - **Tag** ASCII: minuscoli, cifre, trattini; inglese per i nomi comuni, lingua originale traslitterata per
   i nomi propri; vietati i tag che rivelano l'origine. Approvare richiede almeno un tag.
   Il vocabolario contiene solo tag in uso; gli **alias** rimandano a un tag e si risolvono prima di salvare.
@@ -37,7 +41,7 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   OpenAI elencati nel codice e disponibili nel progetto.
 - **Contesto dei modelli:** testi fissi (base comune, tag e didascalie, prompt SLOP) modificabili dalle Impostazioni,
   con versioni e ripristino; ogni generazione registra le versioni usate. Formato JSON, limiti e filtri restano nel codice.
-- **Didascalia** in italiano, limite morbido di 160 caratteri (avviso, mai taglio) e tetto di 256, mostrata con l'immagine durante il round, stesso
+- **Didascalia** in italiano, apre con luogo e data seguiti da un punto (proposta del contesto, decisione dell'owner del 2026-11-13), limite morbido di 160 caratteri (avviso, mai taglio) e tetto di 256, mostrata con l'immagine durante il round, stesso
   procedimento per REAL e SLOP (fase 2). Si approva insieme alla copia.
 - **Cestino:** svuotarlo cancella ogni riga e ogni file dell'immagine. Nessun registro delle
   eliminazioni, nessuna istantanea, nessuna esportazione automatica: decisione esplicita dell'owner.
@@ -58,12 +62,14 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   «Distribuzione»: REAL e SLOP, approvate e pubblicate impilate, per tag, con lo spread.
 - **Gioco** (`docs/gioco-a-livelli.v1.0.1.md`): una sola modalità, una foto alla volta con il suo tempo; livelli nel codice (Facile 10×20 s,
   Medio 15×15 s, Difficile 20×10 s, Esperto 25×5 s); esito immediato dal server; tempo scaduto = foto non riconosciuta; punteggio
-  foto × (2 × accuratezza bilanciata − 1) solo per partite concluse; swipe su telefono, R e S su computer; lista finale con fonti e
+  foto × (2 × accuratezza bilanciata − 1) solo per partite concluse; foto esplorabile (trascinare, zoom con due dita o rotella, «Vista
+  iniziale»), riquadro 4:5 sugli schermi verticali e formato della foto su quelli orizzontali; pulsanti REAL e SLOP sempre visibili, R e S
+  su computer, niente swipe; lista finale con fonti e
   prompt. Classifica nella home (7 giorni e sempre, migliore per giocatore) con soprannome controllato e codice partita (solo
   l'impronta nel database). PvP e allenamento eliminati.
 - **Privacy e note legali** (`docs/privacy-note-legali.v1.0.2.md`, in produzione con l'app 1.14.0): progetto personale non commerciale; pagine
   `/privacy` e `/termini`; partite cancellate dopo 12 mesi (manutenzione giornaliera); classifica con dichiarazione «almeno 14 anni o
-  permesso di un genitore» e cancellazione su richiesta; crediti delle REAL con le modifiche (ritaglio 4:5). Titolare in
+  permesso di un genitore» e cancellazione su richiesta; crediti delle REAL con le modifiche (ritaglio, riduzione, ricompressione). Titolare in
   `shared/legal.v1.0.0.ts`; testi verificati da un legale (comunicazione dell'owner del 2026-11-13).
 - Restano: file serviti senza metadati, marchio «RS», blocco del salvataggio.
 
