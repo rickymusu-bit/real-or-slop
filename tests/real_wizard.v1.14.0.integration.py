@@ -91,7 +91,7 @@ with sync_playwright() as p:
         expect(clear).to_be_hidden()
         search.locator('[name=q]').fill('bridge')
         search.locator('[name=sort]').select_option('recent')
-        search.get_by_role('button', name='Cerca').click()
+        search.get_by_role('button', name='Cerca', exact=True).click()
         expect(page.locator('.rw-hit')).to_have_count(1)
         expect(page.locator('.rw-hit span')).to_have_count(0)
         expect(page.locator('.rw-categories')).not_to_have_attribute('open', '')
