@@ -41,7 +41,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: admin-preview-v1.21.0
+          name: admin-preview-v1.21.1
           path: |
             artifacts/library-browser/*.png
             artifacts/wizard-browser/*.png
