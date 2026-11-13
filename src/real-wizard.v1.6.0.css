@@ -10,3 +10,6 @@
 .rw-search-clear[hidden] { display: none; }
 .rw-crop h3 { margin: 8px 0 2px; font-size: 15px; }
 .rw-crop .rw-actions { flex-wrap: wrap; }
+/* Four steps: four columns, labels under the numbers on narrow screens (the SLOP studio keeps its own steps). */
+#real-wizard .rw-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 640px) { #real-wizard .rw-steps li { padding: 10px 4px; gap: 6px; } }
