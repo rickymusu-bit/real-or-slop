@@ -137,6 +137,8 @@ try:
             page.screenshot(path=str(folder / f'{name}-privacy.png'), full_page=True)
             page.locator('footer a', has_text='Termini d’uso').click()
             expect(page.get_by_role('heading', name='Termini d’uso.')).to_be_visible()
+            expect(page.locator('.legal')).not_to_contain_text('didascal')  # no captions any more
+            expect(page.locator('.legal .eyebrow')).to_have_text('AGGIORNATI IL 13 NOVEMBRE 2026')
             assert not errors, errors
             context.close()
             # The owner checks the code in Settings and hides the entry.
