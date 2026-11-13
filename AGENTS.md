@@ -1,7 +1,7 @@
-# Istruzioni Codex — versione canonica 17.24.0
+# Istruzioni Codex — versione canonica 17.26.0
 
-Snapshot: `docs/AGENTS.v17.24.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-13T20:30:00Z. Precedente: `docs/AGENTS.v17.23.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.26.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-13T22:30:00Z. Precedente: `docs/AGENTS.v17.25.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
@@ -10,11 +10,13 @@ Specifiche vigenti: `docs/libreria-immagini.v1.8.0.md`, `docs/categorie-tag.v1.1
 dell'owner del 2026-11-13, app 1.22.0, senza migrazioni), che sostituisce la 4.0.2 (app 1.19.0, migrazione 0046) e modifica la foto e lo swipe della specifica del gioco. Gioco:
 `docs/gioco-a-livelli.v1.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.12.0). Statistiche e Impostazioni: `docs/statistiche-impostazioni.v1.0.1.md`
 (approvata il 2026-11-12, in produzione con l'app 1.13.0). Generazione automatica delle SLOP su proposta:
-`docs/proposta-generazione-slop.v2.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.15.0).
+`docs/proposta-generazione-slop.v2.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.15.0). Didascalie tolte, inquadratura come
+passo del wizard, caricamento della dashboard: `docs/didascalie-wizard.v1.0.0.md` (decisioni dell'owner del 2026-11-13, app 1.23.0,
+migrazione 0047), che prevale sulle specifiche precedenti dove parlano di didascalie e dei passi del wizard.
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
 
-- Dashboard `/admin` in cinque sezioni: Caricamento REAL (wizard di tre passi), Generazione SLOP, Database immagini, Statistiche
+- Dashboard `/admin` in cinque sezioni: Caricamento REAL (wizard di quattro passi: selezione, tag, inquadratura, riepilogo), Generazione SLOP, Database immagini, Statistiche
   (solo visualizzazione: partite adesso e aperte, partite e risposte, chiamate a pagamento, equilibrio del catalogo con i formati), Impostazioni (solo
   comandi: modelli e qualità delle immagini, contesto, vocabolario, classifica, soglie dello studio SLOP e delle proposte automatiche, durata di una partita aperta).
 - Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: le REAL entrano dal wizard (Commons), le SLOP dallo
@@ -34,17 +36,17 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   **Categorie:** una per tag tra Tempo (solo decenni), Formato, Luogo, Ambiente, Evento, Persone, Oggetti e strutture, Altro;
   al massimo un tag di Tempo e uno di Formato per immagine; vietato solo il tag sull'origine; parole specifiche, suffisso
   di categoria come ultima risorsa.
-- **Analisi** (fase 2): tag e didascalia dal modello con visione sulla copia di gioco, senza l'origine. Una sola chiamata per immagine
-  genera insieme tag e didascalia, che **sostituiscono** quelli presenti nelle sole immagini scelte; **una generazione per immagine**;
+- **Analisi** (fase 2): tag dal modello con visione sulla copia di gioco, senza l'origine. Una sola chiamata per immagine
+  genera i tag, che **sostituiscono** quelli presenti nelle sole immagini scelte; **una generazione per immagine**;
   i testi generati restano nel database e l'owner può sempre ripristinarli senza costi;
   ogni chiamata a pagamento si **conferma** esplicitamente, senza importi; **niente prezzi né budget**; registro `paid_calls`
   (modello, token, esito); esiti incerti mai ripetuti; il limite di spesa è quello del progetto OpenAI. Spenta senza `OPENAI_API_KEY`.
-- **Modelli:** modello di testo (tag, didascalie, prompt SLOP), modello di immagini e sua qualità scelti nelle Impostazioni, tra i modelli
+- **Modelli:** modello di testo (tag, prompt SLOP), modello di immagini e sua qualità scelti nelle Impostazioni, tra i modelli
   OpenAI elencati nel codice e disponibili nel progetto.
-- **Contesto dei modelli:** testi fissi (base comune, tag e didascalie, prompt SLOP) modificabili dalle Impostazioni,
+- **Contesto dei modelli:** testi fissi (base comune, tag, prompt SLOP) modificabili dalle Impostazioni,
   con versioni e ripristino; ogni generazione registra le versioni usate. Formato JSON, limiti e filtri restano nel codice.
-- **Didascalia** in italiano, apre con luogo e data seguiti da un punto (proposta del contesto, decisione dell'owner del 2026-11-13), limite morbido di 160 caratteri (avviso, mai taglio) e tetto di 256, mostrata con l'immagine durante il round, stesso
-  procedimento per REAL e SLOP (fase 2). Si approva insieme alla copia.
+- **Niente didascalie** (decisione dell'owner del 2026-11-13, `docs/didascalie-wizard.v1.0.0.md`): né nella partita né nella dashboard;
+  quelle scritte finora sono state cancellate (migrazione 0047). Le colonne restano, inutilizzate.
 - **Cestino:** spostarci una pubblicata, da sola o in gruppo, la ritira subito dal gioco (le partite in corso finiscono con la sua copia;
   ripristinata torna approvata; decisione dell'owner del 2026-11-13). Svuotarlo cancella ogni riga e ogni file dell'immagine. Nessun registro delle
   eliminazioni, nessuna istantanea, nessuna esportazione automatica: decisione esplicita dell'owner.
@@ -61,7 +63,7 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
 - **Sezione Database** (`docs/database-immagini.v1.0.1.md`): filtri per uno o più tag e per origine; ordinamento per data di aggiunta,
   visualizzazioni o accuratezza, crescente o decrescente; la scheda mostra solo miniatura, origine e stato (senza avvisi), il dettaglio tutti i tag e gli avvisi,
   visualizzazioni e classificazioni corrette (solo sulla copia attuale). «Modifica» ritira subito una pubblicata; le partite in corso
-  conservano didascalia e copia con cui sono iniziate (24 ore al massimo); una modifica lascia approvata un'immagine approvata.
+  conservano la copia con cui sono iniziate (24 ore al massimo); una modifica lascia approvata un'immagine approvata.
   Una SLOP si rigenera dal prompt (a pagamento, con conferma; torna nuova, nuova analisi, statistiche azzerate). Scheda
   «Distribuzione»: REAL e SLOP, approvate e pubblicate impilate, per tag, con lo spread.
 - **Gioco** (`docs/gioco-a-livelli.v1.0.1.md`): una sola modalità, una foto alla volta con il suo tempo; livelli nel codice (Facile 10×20 s,
@@ -71,7 +73,8 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   su computer, niente swipe; lista finale con fonti e
   prompt. Classifica nella home (7 giorni e sempre, migliore per giocatore) con soprannome controllato e codice partita (solo
   l'impronta nel database). PvP e allenamento eliminati.
-- **Privacy e note legali** (`docs/privacy-note-legali.v1.0.2.md`, in produzione con l'app 1.14.0): progetto personale non commerciale; pagine
+- **Privacy e note legali** (`docs/privacy-note-legali.v1.0.3.md`; la 1.0.2 in produzione con l'app 1.14.0; nella 1.0.3 i termini non parlano più di didascalie,
+  due frasi da far verificare di nuovo al legale): progetto personale non commerciale; pagine
   `/privacy` e `/termini`; partite cancellate dopo 12 mesi (manutenzione giornaliera); classifica con dichiarazione «almeno 14 anni o
   permesso di un genitore» e cancellazione su richiesta; crediti delle REAL con le modifiche (ritaglio, riduzione, ricompressione). Titolare in
   `shared/legal.v1.0.0.ts`; testi verificati da un legale (comunicazione dell'owner del 2026-11-13).
