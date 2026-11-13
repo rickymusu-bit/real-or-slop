@@ -1,8 +1,8 @@
 /** App shell. 2026-11-12T09:00:00Z: one game mode with levels at /gioca, leaderboard on the home page; training, timed and PvP
  * pages are gone (old addresses lead to /gioca) (docs/gioco-a-livelli.v1.0.0.md). */
-import { setupGame, stopPlay } from "./play.v2.2.0";
+import { setupGame, stopPlay } from "./play.v2.3.0";
 import { privacyPage, termsPage } from "./legal.v1.0.0";
-import { showLibrary } from "./library.v1.19.0";
+import { showLibrary } from "./library.v1.21.0";
 import "./style.css";
 const root = document.querySelector<HTMLDivElement>("#app")!;
 /** The demo catalog is gone with the clean database: every published image is a real library image. */
