@@ -42,7 +42,7 @@ import { mountDistribution, type Distribution } from "./database-chart.v1.0.0";
 import "./database.v1.0.0.css";
 import { CATEGORIES, CATEGORY_LABELS, isCategory, type Category } from "../shared/tag-categories.v1.0.0";
 import { categoryOf, categorySelect, legend, pill, sortByCategory, suggestedCategory } from "./tag-ui.v1.1.0";
-import { mountRealWizard } from "./real-wizard.v1.9.0";
+import { mountRealWizard } from "./real-wizard.v1.10.0";
 import { content, escape } from "./main";
 import { prepareLibraryCopy } from "./game-copy.v2.0.0";
 import { chooseCrop } from "./crop-editor.v1.0.0";

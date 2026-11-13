@@ -1,4 +1,5 @@
-/** Guided REAL ingestion, editing, paid generation and publishing. v1.9.0, 2026-11-13T05:00:00Z: pressing and holding a
+/** WITHDRAWN 2026-11-13 (owner decision): the press-and-hold preview was not useful; replaced by v1.10.0, built on v1.8.0. Kept as history.
+ * Guided REAL ingestion, editing, paid generation and publishing. v1.9.0, 2026-11-13T05:00:00Z: pressing and holding a
  * Commons thumbnail (finger or mouse) opens a large preview that closes when the press ends; the press does not tick
  * the photo, a short tap still does. v1.8.0, 2026-11-13T04:40:00Z: Commons search shows
  * thumbnails only (the title stays as alt text), related categories in a collapsible list, and pages of results behind
