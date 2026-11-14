@@ -1,13 +1,14 @@
 ## 1.24.0 — 2026-11-14T09:00:00Z (proposta, senza migrazioni)
 
-Anteprima a pressione prolungata, selezione immediata, descrizione delle REAL, tag di partenza delle SLOP (`docs/anteprima-descrizione.v1.0.0.md`, decisioni dell'owner del 2026-11-14).
+Anteprima a pressione prolungata, selezione immediata, descrizione delle REAL, tag di partenza delle SLOP (`docs/anteprima-descrizione.v1.1.0.md`, decisioni dell'owner del 2026-11-14).
 
 - **Ricerca su Commons:** il tasto «×» è una casella a sé dopo il campo, sempre presente e disattivato a campo vuoto; non copre più il testo.
 - **Selezione:** un tocco su un risultato lo spunta e lo mette subito tra le «Immagini selezionate»; un secondo tocco o «×» lo toglie. Tolto «Aggiungi le selezionate». La selezione resta con una nuova ricerca (prima spariva).
 - **Anteprima:** una pressione prolungata (500 ms) su una miniatura del wizard, del Database o della revisione dello studio SLOP apre l'immagine grande con titolo, descrizione e collegamento a Commons (REAL) o prompt e tag (SLOP); resta aperta fino a «×». Anche con il tasto destro o Maiusc+F10.
 - **Descrizione:** modificabile nel passo 2 del wizard, mostrata nel riepilogo e, per ogni REAL, nella lista finale della partita.
 - **Tag di partenza** (tema e slot del prompt) delle SLOP generate nel dettaglio del Database e nelle anteprime.
-- Nuove versioni: `src/image-preview.v1.0.0.ts`, `src/real-wizard.v1.17.0.ts`, `src/library.v1.23.0.ts`, `src/slop-studio.v1.6.0.ts`, `src/play.v2.5.0.ts`, `worker/game.v2.5.0.ts`. Test `game.v2.5.0`, `real_wizard.v1.15.0`, `database_browser.v1.7.0`, `slop_browser.v1.4.0`, `slop_auto_browser.v1.1.0`, `game_browser.v1.5.0`; `scripts/integration.py` 2.9.0. `AGENTS.md`/`MASTER.md` 17.28.0.
+- **Prompt SLOP, testo proposto** (`worker/model-context.v1.5.0.ts`): persone inventate con volti visibili e naturali, mai somiglianti a persone reali; «mai nudità che riguardi minori» al posto di «mai minori». Prima il modello nascondeva tutti i volti e scriveva solo adulti. Vale quando l'owner lo salva dalle Impostazioni.
+- Nuove versioni: `worker/model-context.v1.5.0.ts` con `worker/library.v1.21.0.ts`, `worker/analysis.v1.21.0.ts`, `worker/slop.v1.13.0.ts`, `worker/slop-generation.v1.12.0.ts` (solo l'import), `src/image-preview.v1.0.0.ts`, `src/real-wizard.v1.17.0.ts`, `src/library.v1.23.0.ts`, `src/slop-studio.v1.6.0.ts`, `src/play.v2.5.0.ts`, `worker/game.v2.5.0.ts`. Test `game.v2.5.0`, `real_wizard.v1.15.0`, `database_browser.v1.7.0`, `slop_browser.v1.4.0`, `slop_auto_browser.v1.1.0`, `game_browser.v1.5.0`; `scripts/integration.py` 2.9.0. `AGENTS.md`/`MASTER.md` 17.29.0.
 
 ## 1.15.0 — 2026-11-12T22:00:00Z (pubblicata il 2026-11-12, PR 118)
 
