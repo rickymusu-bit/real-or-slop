@@ -1,0 +1,46 @@
+/** Proposal of an automatic SLOP batch (spec `generazione-slop`, section 8): counts per tag, spread percent, the missing
+ * number, the single candidate and the batch size. Pure. */
+export const AUTO_MAX_BATCH = 10, IGNORE_MARGIN = 10, AUTO_DEFAULT_THRESHOLD = 33;
+
+export interface TagCount { label: string; real: number; slop: number; fresh: number }
+export interface AutoInput {
+  tags: readonly TagCount[];
+  realTotal: number;
+  sectionMin: number;
+  themeMin: number;
+  thresholdPercent: number;
+  enabled: boolean;
+  openBatch: boolean;
+  ignored: ReadonlyMap<string, number>;
+}
+export interface Proposal { tag: string; n_real: number; n_slop: number; n_new: number; spread: number; spread_percent: number; missing: number; size: number }
+export type NoProposal = "disabled" | "batch_open" | "studio_closed" | "none";
+
+/** spread_percent with the sign: 100 without SLOP, 0 at parity, negative when the SLOP exceed the REAL; null without REAL. */
+export function spreadPercent(real: number, slop: number): number | null {
+  return real > 0 ? 100 * (real - slop) / real : null;
+}
+
+/** Exact comparison 100 × spread / n_real ≥ threshold, without rounding: 15 REAL and 10 SLOP reach 33%. */
+const reaches = (real: number, slop: number, threshold: number) => real > 0 && 100 * (real - slop) >= threshold * real;
+
+export function candidates(input: AutoInput): Proposal[] {
+  const out: Proposal[] = [];
+  for (const t of input.tags) {
+    if (t.real < input.themeMin || !reaches(t.real, t.slop, input.thresholdPercent)) continue;
+    const spread = t.real - t.slop, missing = spread - t.fresh, percent = spreadPercent(t.real, t.slop)!;
+    if (missing < 1) continue;
+    const ignoredAt = input.ignored.get(t.label);
+    if (ignoredAt !== undefined && percent < ignoredAt + IGNORE_MARGIN) continue;
+    out.push({ tag: t.label, n_real: t.real, n_slop: t.slop, n_new: t.fresh, spread, spread_percent: percent, missing, size: Math.min(missing, AUTO_MAX_BATCH) });
+  }
+  return out.sort((a, b) => b.spread_percent - a.spread_percent || b.missing - a.missing || (a.tag < b.tag ? -1 : a.tag > b.tag ? 1 : 0));
+}
+
+export function proposal(input: AutoInput): { proposal: Proposal | null; reason: NoProposal | null } {
+  if (!input.enabled) return { proposal: null, reason: "disabled" };
+  if (input.openBatch) return { proposal: null, reason: "batch_open" };
+  if (input.realTotal < input.sectionMin) return { proposal: null, reason: "studio_closed" };
+  const [first] = candidates(input);
+  return first ? { proposal: first, reason: null } : { proposal: null, reason: "none" };
+}

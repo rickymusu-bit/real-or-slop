@@ -1,11 +1,11 @@
-/** Router. 2026-11-12T09:00:00Z: one game mode with levels and a leaderboard (docs/gioco-a-livelli.v1.0.0.md); PvP removed. */
-import { game } from "./game.v2.5.0";
-import { adminLeaderboard, publicLeaderboard } from "./leaderboard.v1.1.0";
-import { library } from "./library.v1.22.0";
+/** Router of the Worker: game, leaderboard, admin library and the daily maintenance. */
+import { game } from "./game";
+import { adminLeaderboard, publicLeaderboard } from "./leaderboard";
+import { library } from "./library";
 import { admin, body, HttpError, json, sameOrigin, type Env } from "./core";
-import { maintenance } from "./maintenance.v1.0.0";
+import { maintenance } from "./maintenance";
 export default {
-  /** Daily Cron Trigger (wrangler.jsonc): games older than 12 months and other expired rows go (docs/privacy-note-legali.v1.0.0.md). */
+  /** Daily Cron Trigger (wrangler.jsonc): games older than 12 months and other expired rows go (spec `privacy-note-legali`). */
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(maintenance(env).then(result => console.log("maintenance", JSON.stringify(result))));
   },

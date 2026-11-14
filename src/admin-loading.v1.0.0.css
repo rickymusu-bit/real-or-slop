@@ -1,8 +1,0 @@
-/* Loading indicator of the admin dashboard (docs/didascalie-wizard.v1.0.0.md). v1.0.0, 2026-11-13T22:00:00Z.
-   While a section loads it says so, with a small spinner, instead of staying empty. */
-.admin-loading { display: flex; align-items: center; gap: 10px; color: var(--muted); margin: 18px 0; }
-.admin-loading::before { content: ""; width: 16px; height: 16px; flex: none; border-radius: 50%; border: 2px solid var(--hairline);
-  border-top-color: var(--text); animation: admin-spin .8s linear infinite; }
-@media (prefers-reduced-motion: reduce) { .admin-loading::before { animation: none; } }
-@keyframes admin-spin { to { transform: rotate(360deg); } }
-.library-head .admin-loading { margin: 0; font-size: 14px; }

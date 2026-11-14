@@ -1,4 +1,0 @@
-/* Game v2.5.0 (docs/anteprima-descrizione.v1.0.0.md). v2.4.0, 2026-11-14T09:00:00Z: added to play.v2.3.0.css.
-   The description of a REAL in the final list, above its credits. */
-.credit-text p.credit-description { margin: 4px 0 6px; font-size: 15px; color: var(--text); white-space: pre-line; overflow-wrap: anywhere; }
-.credit-text p.credit-source { color: var(--muted); }

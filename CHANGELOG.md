@@ -3,6 +3,19 @@
 Aggiornato: 2026-11-14T12:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
+## Nomi senza versione — 2026-11-14T15:00:00Z (nessun cambiamento di comportamento; `AGENTS.md` e `MASTER.md` 19.0.0)
+
+Decisione dell'owner del 2026-11-14: la versione esce dai nomi dei file; la storia è in git.
+
+- Codice, test e specifiche hanno nomi stabili (`src/library.ts`, `worker/game.ts`, `docs/gioco-a-livelli.md`): 84 file rinominati.
+  Le versioni parallele ancora importate sono state unite senza cambiare comportamento: il gioco e la classifica usati dalle
+  statistiche (funzioni identiche), le impostazioni (la 1.1.0 contiene la 1.0.0), le costanti legali, la copia di gioco nel browser e i
+  fogli di stile del wizard e del gioco, uniti nell'ordine in cui si applicavano.
+- Le intestazioni del codice e dei test descrivono lo scopo, non la cronologia; i commenti citano le specifiche per nome.
+- Tolte le snapshot di `AGENTS.md` e `MASTER.md`. Le specifiche, `AGENTS.md` e `MASTER.md` dichiarano la versione nell'intestazione.
+- Nuovo workflow `release-tag`: al merge su `main` crea il tag `vX.Y.Z` con la versione di `package.json`, se manca.
+- Le migrazioni conservano il nome: Wrangler le riconosce dal nome del file.
+
 ## Pulizia del codice — 2026-11-14T14:00:00Z (nessun cambiamento di comportamento; `MASTER.md` 18.2.0)
 
 - Richiesta dell'owner del 2026-11-14: tolto il codice che nessun punto d'ingresso (`src/main.ts`, `worker/index.ts`) importava, cioè le

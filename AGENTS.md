@@ -1,8 +1,7 @@
-# Istruzioni per gli agenti — versione canonica 18.1.0
+# Istruzioni per gli agenti
 
-Snapshot: `docs/AGENTS.v18.1.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-14T13:00:00Z. Precedente: 18.0.0, nella cronologia git (18.1.0: le versioni precedenti non si conservano più nel
-repository, decisione dell'owner del 2026-11-14).
+Versione 19.0.0, aggiornata il 2026-11-14T15:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
 ## Il progetto
@@ -36,16 +35,18 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
    dell'area. Registrare le contraddizioni tra richiesta, specifica e codice e chiedere solo le decisioni davvero mancanti.
 2. Le istruzioni esplicite dell'owner prevalgono. Deploy, merge, migrazioni remote e chiamate a pagamento solo con la sua autorizzazione
    nella sessione. Non stampare credenziali.
-3. **Versioni.** Codice e documenti hanno la versione nel nome (`nome.vMAJOR.MINOR.PATCH`) e un timestamp ISO 8601 nell'intestazione:
-   MAJOR per modifiche strutturali, MINOR per modifiche significative, PATCH per correzioni. Una nuova versione è un file nuovo che
-   sostituisce il precedente: il file della versione precedente si cancella nello stesso commit e resta nella cronologia git (decisione
-   dell'owner del 2026-11-14). App, schema e documenti hanno numeri indipendenti. `AGENTS.md` e `MASTER.md` dichiarano la versione e hanno
-   in `docs/` la snapshot della versione corrente.
-4. **Documenti.** Ogni area ha una sola specifica vigente, che descrive il comportamento attuale per intero: quando una decisione lo cambia,
-   si scrive una nuova versione della specifica dell'area, non un documento che «prevale dove dice altro». Le specifiche registrano le
-   decisioni dell'owner con la data e si citano tra loro per nome, senza versione (specifica `gioco-a-livelli`): il nome del file
-   corrente sta solo in `MASTER.md`, insieme ai nomi dei file di codice; la storia sta in `CHANGELOG.md`. A ogni modifica si
-   aggiornano la specifica dell'area, `MASTER.md` (file e stato) e `CHANGELOG.md`; `AGENTS.md` quando cambiano regole o principi.
+3. **Versioni** (decisione dell'owner del 2026-11-14). I file hanno nomi stabili, senza versione: la loro storia è in git
+   (`git log -p <file>`). L'app ha una sola versione, in `package.json` (MAJOR, MINOR, PATCH); al merge su `main` il workflow
+   `release-tag` crea il tag `vX.Y.Z`, quindi ogni file di un rilascio si legge con `git show vX.Y.Z:<file>`. Le specifiche,
+   `AGENTS.md` e `MASTER.md` dichiarano nell'intestazione una versione semantica (MAJOR per modifiche strutturali, MINOR per
+   modifiche significative, PATCH per correzioni) e il timestamp ISO 8601 dell'ultima modifica, aggiornati a ogni modifica, così si
+   possono citare («specifica `libreria-immagini` 2.0.0»). Le intestazioni del codice descrivono lo scopo del file, non la sua
+   cronologia. Eccezione: le migrazioni (`migrations/`) non si rinominano mai, perché Wrangler le riconosce dal nome del file.
+4. **Documenti.** Ogni area ha una sola specifica vigente, `docs/<area>.md`, che descrive il comportamento attuale per intero: quando una
+   decisione lo cambia, si aggiorna la specifica dell'area, non si aggiunge un documento che «prevale dove dice altro». Le specifiche
+   registrano le decisioni dell'owner con la data e si citano per nome (specifica `gioco-a-livelli`). I file di codice in uso sono
+   elencati in `MASTER.md`, la storia delle versioni dell'app in `CHANGELOG.md`. A ogni modifica si aggiornano la specifica dell'area,
+   `MASTER.md` (file e stato) e `CHANGELOG.md`; `AGENTS.md` quando cambiano regole o principi.
 5. **Verifica prima della consegna:** `npm run lint`, `npm test`, `npm run build`, `npm run dry-run`, `npm run test:integration` e, per la
    dashboard e il gioco, `ROS_TEST_BROWSER=1 npm run test:integration` su desktop e mobile. Ogni fase in una PR con anteprima e CI verde.
 6. **Resoconto finale:** cosa è cambiato, verifiche ed esiti, rischi, azioni non eseguite.

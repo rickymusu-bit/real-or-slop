@@ -1,0 +1,16 @@
+/* Tag categories: one colour each, as a left border, checked for colour blindness and contrast on the dark theme. */
+.tag-cat { border-left: 4px solid var(--tag-colour, var(--hairline)) !important; }
+.tag-cat-time { --tag-colour: #3987e5; }
+.tag-cat-format { --tag-colour: #d95926; }
+.tag-cat-place { --tag-colour: #199e70; }
+.tag-cat-setting { --tag-colour: #c98500; }
+.tag-cat-event { --tag-colour: #d55181; }
+.tag-cat-people { --tag-colour: #008300; }
+.tag-cat-object { --tag-colour: #9085e9; }
+.tag-cat-other { --tag-colour: #e66767; }
+.tag-legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.tag-legend-item { font-size: 12px; padding: 2px 8px; border: 1px solid var(--hairline); border-radius: 999px; color: var(--muted); }
+.tag-category-group { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.rw-tag-entry select, .library-tag-entry select { flex: 0 0 auto; max-width: 11em; }
+.rw-no-time { display: block; margin: 6px 0 0; color: var(--muted); }
+@media (max-width: 600px) { .rw-tag-entry { flex-wrap: wrap; } .rw-tag-entry input { flex: 1 1 100%; } }

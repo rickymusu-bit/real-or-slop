@@ -12,7 +12,7 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/admin", "/admin/*"],
   },
-  // Daily maintenance at 03:17 UTC: games older than 12 months are deleted (docs/privacy-note-legali.v1.0.0.md).
+  // Daily maintenance at 03:17 UTC: games older than 12 months are deleted (spec `privacy-note-legali`).
   "triggers": { "crons": ["17 3 * * *"] },
   "d1_databases": [
     {
@@ -55,7 +55,7 @@
       },
     ],
   },
-  // PvP removed on 2026-11-12 (docs/gioco-a-livelli.v1.0.0.md): the GameRoom Durable Object class is deleted with its storage.
+  // PvP removed on 2026-11-12 (spec `gioco-a-livelli`): the GameRoom Durable Object class is deleted with its storage.
   "migrations": [
     {
       "tag": "v1",

@@ -1,0 +1,14 @@
+/* Crop editor of the game copy. */
+.crop-dialog { width: min(820px, 96vw); max-height: 96svh; }
+.crop-dialog h2 { margin: 0 0 6px; }
+.crop-dialog h3 { margin: 14px 0 0; font-size: 15px; }
+.crop-format { display: flex; align-items: center; gap: 10px; }
+.crop-format select { width: auto; }
+.crop-stage { position: relative; display: block; width: fit-content; max-width: 100%; margin: 10px auto; overflow: hidden; touch-action: none; user-select: none; }
+.crop-stage img, .crop-stage canvas { display: block; max-width: none; }
+.crop-frame { position: absolute; box-sizing: border-box; border: 2px solid #fff; outline: 1px solid #000; cursor: move;
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 60%); touch-action: none; }
+.crop-frame:focus-visible { border-color: var(--real); outline: 1px solid #000; outline-offset: 0; }
+.crop-size { display: flex; align-items: center; gap: 10px; }
+.crop-size input { flex: 1; }
+.crop-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 10px; }

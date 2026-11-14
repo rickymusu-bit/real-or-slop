@@ -1,0 +1,4 @@
+/* Character counter of the model context texts in Settings. */
+.caption-count { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.caption-count.caption-over { color: var(--error); font-weight: 600; }
+.rw-final .caption-count { margin: 0 0 6px; }

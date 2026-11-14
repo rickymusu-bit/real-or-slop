@@ -5,7 +5,7 @@ export interface Env {
   IMAGES?: R2Bucket;
   QUARANTINE?: R2Bucket;
   ADMIN_TOKEN?: string;
-  /** Paid image analysis (docs/libreria-immagini.v1.2.0.md): all required, otherwise analysis stays off. */
+  /** Paid image analysis (spec `libreria-immagini`): all required, otherwise analysis stays off. */
   OPENAI_API_KEY?: string;
   OPENAI_BASE_URL?: string;
   ANALYSIS_MODEL?: string;
@@ -83,7 +83,7 @@ export async function rateLimit(env: Env, key: string, max = 30) {
   if (row && row.count > max)
     throw new HttpError(429, "Troppe richieste. Riprova tra un minuto.");
 }
-/** A published library image as the game sees it (docs/libreria-immagini.v1.1.0.md). The game keeps its
+/** A published library image as the game sees it (spec `libreria-immagini`). The game keeps its
  * REAL/AI vocabulary; r2_key is the approved game copy, served from the game bucket. */
 export interface ImageRow {
   id: string;

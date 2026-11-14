@@ -1,0 +1,7 @@
+/* Automatic SLOP batches: the box at the top of the dashboard. */
+.slop-auto { border: 1px solid var(--control-border); border-left: 4px solid var(--text); padding: 10px 12px; margin: 0 0 14px; background: var(--surface); }
+.slop-auto p { margin: 4px 0; }
+.slop-auto code { font-size: .95em; }
+.slop-auto-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.slop-auto-progress, .slop-auto-notice { color: var(--muted); }
+.library-batch-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }

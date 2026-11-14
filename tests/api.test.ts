@@ -1,5 +1,4 @@
-/** v2.1.0, 2026-11-12T09:00:00Z: PvP removed, its API is gone (docs/gioco-a-livelli.v1.0.0.md).
- * v2.0.0, 2026-11-09T16:30:00Z: Worker routing on the clean schema (docs/libreria-immagini.v1.1.0.md). */
+/** Worker routing on the current schema: unknown and removed APIs answer 404. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import worker from "../worker/index.ts";
