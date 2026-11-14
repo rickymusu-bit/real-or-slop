@@ -3,12 +3,13 @@
  * source is injected. */
 import type { Category } from "./tag-categories";
 
-export const SLOT_ORDER: readonly Category[] = ["time", "format", "place", "setting", "event", "people", "object"];
-export const MIN_SUPPORT = 3, SECTION_MIN_REAL = 50, THEME_MIN_REAL = 10, MAX_SLOTS = 10;
+export const SLOT_ORDER: readonly Category[] = ["color", "medium", "place", "setting", "event", "people", "object"];
+export const MIN_SUPPORT = 3, SECTION_MIN_REAL = 50, MAX_SLOTS = 10;
 const ATTEMPTS = 20;
 
-export interface TaggedImage { tags: Map<string, Category> }
-export type Slot = Partial<Record<Category, string>>;
+export interface TaggedImage { id?: string; tags: Map<string, Category> }
+/** Tags by category, and the id of the «REAL campione» of the treatment. */
+export type Slot = Partial<Record<Category, string>> & { sample?: string };
 export interface SlotInput {
   images: readonly TaggedImage[]; spread: ReadonlyMap<string, number>; theme: readonly string[];
   count: number; existing?: readonly Slot[]; random?: () => number;
@@ -64,6 +65,17 @@ export function extractSlots(input: SlotInput): { slots: Slot[]; reference: numb
     }
     remember(slot);
     slots.push(slot);
+  }
+  // «REAL campione»: one reference image with the slot's Color and Medium (any reference image if none), a different one for each
+  // slot while there are any. Only its measures and its Medium go to the treatment.
+  const sampled = new Set<string>();
+  for (const slot of slots) {
+    const fits = (image: TaggedImage) => !!image.id && (["color", "medium"] as const).every(c => !slot[c] || image.tags.has(slot[c]!));
+    const pool = reference.filter(fits).length ? reference.filter(fits) : reference.filter(image => !!image.id);
+    const fresh = pool.filter(image => !sampled.has(image.id!)), from = fresh.length ? fresh : pool;
+    if (!from.length) continue;
+    const chosen = from[Math.min(from.length - 1, Math.floor(random() * from.length))];
+    slot.sample = chosen.id; sampled.add(chosen.id!);
   }
   return { slots, reference: reference.length };
 }

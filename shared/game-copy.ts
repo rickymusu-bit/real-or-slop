@@ -61,11 +61,12 @@ export function cropError(width: number, height: number, crop: unknown): string 
   return "";
 }
 
-/** Dimensions of the copy made from a crop: the crop's format, longest side at most 1536 px, never enlarged. */
-export function copyDimensions(crop: Pick<Crop, "width" | "height" | "format">): { width: number; height: number } {
-  const ratio = ratioOf(crop.format);
-  if (ratio >= 1) { const width = Math.min(crop.width, GAME_COPY.maxSide); return { width, height: Math.max(1, Math.round(width / ratio)) }; }
-  const height = Math.min(crop.height, GAME_COPY.maxSide);
+/** Dimensions of the copy made from a crop: the crop's format, longest side at most 1536 px (or `maxSide`, smaller, for a treated
+ * SLOP), never enlarged. */
+export function copyDimensions(crop: Pick<Crop, "width" | "height" | "format">, maxSide: number = GAME_COPY.maxSide): { width: number; height: number } {
+  const ratio = ratioOf(crop.format), side = Math.min(maxSide, GAME_COPY.maxSide);
+  if (ratio >= 1) { const width = Math.min(crop.width, side); return { width, height: Math.max(1, Math.round(width / ratio)) }; }
+  const height = Math.min(crop.height, side);
   return { width: Math.max(1, Math.round(height * ratio)), height };
 }
 

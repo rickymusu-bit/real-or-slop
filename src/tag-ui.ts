@@ -1,7 +1,7 @@
 /** Tag pills, legend and category picker shared by the wizard and the dashboard (spec `libreria-immagini`, section 4). */
 import "./tag-categories.css";
 import { escape } from "../shared/html";
-import { CATEGORIES, CATEGORY_LABELS, isCategory, isDecade, type Category } from "../shared/tag-categories";
+import { CATEGORIES, CATEGORY_LABELS, forcedCategory, isCategory, type Category } from "../shared/tag-categories";
 
 /** Category of a tag on an image, «other» when unknown. */
 export const categoryOf = (categories: Record<string, string> | undefined, label: string): Category => {
@@ -19,8 +19,8 @@ export const pill = (label: string, category: Category, className: string, extra
 export const categorySelect = (attributes: string, selected = "") =>
   "<select " + attributes + ' aria-label="Categoria del tag"><option value="">Categoria…</option>' +
   CATEGORIES.map(c => '<option value="' + c + '"' + (c === selected ? " selected" : "") + ">" + escape(CATEGORY_LABELS[c]) + "</option>").join("") + "</select>";
-/** Category the picker should show for what is typed: the vocabulary's, Time for a decade, otherwise unchanged. */
+/** Category the picker should show for what is typed: the vocabulary's, the forced one (decade, closed lists), otherwise unchanged. */
 export const suggestedCategory = (label: string, vocabulary: Map<string, Category>): Category | "" =>
-  vocabulary.get(label) || (isDecade(label) ? "time" : "");
+  vocabulary.get(label) || forcedCategory(label) || "";
 /** Legend of the colours. */
 export const legend = () => '<p class="tag-legend">' + CATEGORIES.map(c => pill(CATEGORY_LABELS[c], c, "tag-legend-item")).join("") + "</p>";

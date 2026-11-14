@@ -1,24 +1,26 @@
-/** SLOP studio (spec `generazione-slop`, sections 3–7): theme with the spread chart, editable slots, prompts with their
- * format, images with their analysis, review with the expected tags not found and press-and-hold preview. Every paid call is
- * confirmed. */
+/** SLOP studio (spec `generazione-slop`, sections 3–7): group (genre and decade) with an optional theme, editable slots, prompts
+ * with their format, images with their treated copy and analysis, review with the expected tags not found and press-and-hold
+ * preview. Every paid call is confirmed. */
 import "./slop-studio.css";
-import { prepareLibraryCopy } from "./game-copy";
+import { prepareItemCopy, type TreatableItem } from "./game-copy";
 import { FORMAT_LABELS, FORMATS, isFormat, type Format } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
 import { onLongPress, openPreview } from "./image-preview";
 import { escape } from "../shared/html";
-import { CATEGORY_LABELS, isCategory, type Category } from "../shared/tag-categories";
+import { CATEGORY_LABELS, VISUAL, type Category } from "../shared/tag-categories";
 import { SLOT_ORDER, type Slot } from "../shared/slot-extraction";
 import { categoryOf as categoryOfImage, legend, pill, sortByCategory } from "./tag-ui";
 
 interface SpreadTag { label: string; category: Category; real: number; slop: number; spread: number }
-interface Spread { thresholds: { section: number; theme: number; max_slots: number }; real_total: number; slop_total: number; tags: SpreadTag[] }
-interface Slots { theme: string[]; reference: number; slots: Slot[] }
+interface SpreadGroup { key: string; genre: string; time: string; real: number; slop: number; fresh: number; spread: number; missing_real: number; room: number }
+interface Spread { thresholds: { section: number; group: number; max_slots: number }; real_total: number; slop_total: number; tags: SpreadTag[]; groups: SpreadGroup[] }
+interface Slots { group: string; theme: string[]; reference: number; slots: Slot[] }
 interface Image { id: string; status: string; revision: number; tags: string[]; categories: Record<string, string>; file: string;
-  copy: unknown; prompt: string; analysis: { status: string; error: string }; generation: { batch: string; slot: { index: number; theme: string[]; tags: Slot } } | null }
-interface Batch { id: string; theme: string[]; slots: Slot[]; prompts: { prompt: string; used: string[]; format?: Format }[]; prompts_status: string; prompts_error: string; images: Image[] }
+  copy: unknown; prompt: string; analysis: { status: string; error: string };
+  generation: { batch: string; slot: { index: number; group?: string | null; theme: string[]; tags: Slot } } | null }
+interface Batch { id: string; group: string | null; theme: string[]; slots: Slot[]; prompts: { prompt: string; used: string[]; format?: Format }[]; prompts_status: string; prompts_error: string; images: Image[] }
 interface Models { text_model: string; image_model: string; image_quality: string; image_models: { id: string; qualities: string[] }[] }
-const API = "/api/admin/library/slop/", LIBRARY = "/api/admin/library", DRAFT = "ros-slop-studio-v1.0.0";
+const API = "/api/admin/library/slop/", LIBRARY = "/api/admin/library", DRAFT = "ros-slop-studio-v2";
 
 async function call<T>(path: string, body?: unknown, method?: string, base = API): Promise<T> {
   const response = await fetch(base + path, { credentials: "same-origin", method: method || (body === undefined ? "GET" : "POST"),
@@ -33,10 +35,10 @@ const signed = (n: number) => (n > 0 ? "+" : "") + n;
 export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () => Promise<void> }> {
   let data: Spread | null = null, page = 1, notice = "", busy = false;
   let batch: Batch | null = null, batchId = "", models: Models | null = null, quality = "medium", progress = "";
-  let hidden = new Set<Category>(), expanded = false, topN = 10, search = "";
-  let theme: string[] = [], count = 5, reference: number | null = null, slots: Slot[] = [];
+  let group = "", theme: string[] = [], count = 5, reference: number | null = null, slots: Slot[] = [];
   try {
-    const draft = JSON.parse(sessionStorage.getItem(DRAFT) || "{}") as { theme?: string[]; count?: number; slots?: Slot[]; page?: number; batch?: string; quality?: string };
+    const draft = JSON.parse(sessionStorage.getItem(DRAFT) || "{}") as { group?: string; theme?: string[]; count?: number; slots?: Slot[]; page?: number; batch?: string; quality?: string };
+    group = typeof draft.group === "string" ? draft.group : "";
     batchId = typeof draft.batch === "string" ? draft.batch : "";
     quality = typeof draft.quality === "string" ? draft.quality : "medium";
     theme = Array.isArray(draft.theme) ? draft.theme.filter(t => typeof t === "string") : [];
@@ -44,71 +46,56 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () 
     slots = Array.isArray(draft.slots) ? draft.slots : [];
     page = typeof draft.page === "number" && draft.page >= 2 && draft.page <= 5 && slots.length ? (draft.page > 2 && !batchId ? 2 : draft.page) : 1;
   } catch { /* no draft */ }
-  const persist = () => { try { sessionStorage.setItem(DRAFT, JSON.stringify({ theme, count, slots, page, batch: batchId, quality })); } catch { /* private browsing */ } };
+  const persist = () => { try { sessionStorage.setItem(DRAFT, JSON.stringify({ group, theme, count, slots, page, batch: batchId, quality })); } catch { /* private browsing */ } };
+  const chosen = () => data?.groups.find(g => g.key === group) || null;
   const categoryOf = (label: string): Category => data?.tags.find(t => t.label === label)?.category || "other";
 
   const steps = () => '<ol class="rw-steps slop-steps" aria-label="Fasi della generazione">' +
-    ["Tema", "Slot", "Prompt", "Immagini", "Revisione"].map((label, i) =>
+    ["Gruppo", "Slot", "Prompt", "Immagini", "Revisione"].map((label, i) =>
       "<li " + (page === i + 1 ? 'aria-current="step"' : "") + "><span>" + (i + 1) + "</span>" + label + "</li>").join("") + "</ol>";
 
-  /** Rows shown: filtered by category; compact view = first n by spread, expanded = all, with search. */
-  const rows = () => {
-    const visible = (data?.tags || []).filter(t => !hidden.has(t.category) && (!expanded || !search || t.label.includes(search)));
-    return expanded ? visible : visible.slice(0, topN);
-  };
-  const chart = () => {
-    const list = rows();
-    const max = Math.max(1, ...list.map(t => Math.abs(t.spread)));
-    return '<div class="spread-chart' + (expanded ? " spread-expanded" : "") + '" role="list" aria-label="Spread dei tag: REAL meno SLOP">' +
-      (list.length ? list.map(t => {
-        const width = Math.abs(t.spread) / max * 100;
-        const text = t.label + ", " + CATEGORY_LABELS[t.category] + ": REAL " + t.real + ", SLOP " + t.slop + ", spread " + signed(t.spread);
-        return '<div class="spread-row" role="listitem"><button type="button" class="spread-hit" data-slop-tag="' + escape(t.label) +
-          '" aria-label="' + escape(text + ". Aggiungi al tema") + '" data-tip="' + escape(text) + '">' +
-          '<span class="spread-label">' + escape(t.label) + "</span>" +
-          '<span class="spread-track"><span class="spread-half spread-neg">' +
-          (t.spread < 0 ? '<span class="spread-bar tag-cat-' + t.category + '" style="width:' + width.toFixed(1) + '%"></span>' : "") +
-          '</span><span class="spread-half spread-pos">' +
-          (t.spread > 0 ? '<span class="spread-bar tag-cat-' + t.category + '" style="width:' + width.toFixed(1) + '%"></span>' : "") +
-          '</span></span><span class="spread-value">' + signed(t.spread) + "</span></button></div>";
-      }).join("") : '<p class="hint">Nessun tag da mostrare con questi filtri.</p>') +
-      '<div class="spread-tip" role="tooltip" hidden></div></div>';
+  const groupTable = () => {
+    if (!data?.groups.length) return '<p class="hint">Nessun gruppo: servono REAL approvate o pubblicate con un tag di Genere e uno di Tempo. ' +
+      "Completa Genere, Colore e Supporto dal Database.</p>";
+    return '<div class="slot-table-wrap"><table class="slot-table slop-groups"><thead><tr><th scope="col">Genere</th><th scope="col">Decennio</th>' +
+      '<th scope="col">REAL</th><th scope="col">SLOP</th><th scope="col">Nuove</th><th scope="col">Spread</th><th scope="col">Stato</th><th scope="col"></th></tr></thead><tbody>' +
+      data.groups.map(g => '<tr' + (g.key === group ? ' class="slop-group-chosen"' : "") + '><td class="tag-cat tag-cat-genre">' + escape(g.genre) +
+        '</td><td class="tag-cat tag-cat-time">' + escape(g.time) + "</td><td>" + g.real + "</td><td>" + g.slop + "</td><td>" + g.fresh + "</td><td>" +
+        signed(g.spread) + "</td><td>" + (g.missing_real ? "mancano " + g.missing_real + " REAL" : g.room ? g.room + " SLOP possibili" : "in equilibrio") +
+        '</td><td><button type="button" data-slop-group="' + escape(g.key) + '" aria-pressed="' + (g.key === group) + '"' +
+        (g.missing_real ? " disabled" : "") + ">Scegli</button></td></tr>").join("") + "</tbody></table></div>";
   };
   const first = () => {
     if (!data) return '<p class="hint">Caricamento…</p>';
-    const closed = data.real_total < data.thresholds.section;
+    const closed = data.real_total < data.thresholds.section, current = chosen();
     return '<p class="slop-totals">Immagini approvate o pubblicate: REAL <strong>' + data.real_total + "</strong>, SLOP <strong>" +
-      data.slop_total + "</strong>. Lo spread di un tag è il numero di REAL meno il numero di SLOP che lo portano: positivo dove mancano SLOP.</p>" +
+      data.slop_total + "</strong>. Un gruppo riunisce le REAL dello stesso genere e decennio; genera con almeno " + data.thresholds.group +
+      " REAL e al massimo tante SLOP quante sono le sue REAL. Lo spread è REAL meno SLOP.</p>" +
       (closed ? '<p class="slop-closed">REAL approvate o pubblicate: ' + data.real_total + " su " + data.thresholds.section +
         ". La generazione si apre da " + data.thresholds.section + " REAL.</p>" : "") +
-      '<div class="slop-filters" role="group" aria-label="Filtra per categoria">' +
-      SLOT_ORDER.concat(["other"]).map(c => '<button type="button" class="tag-legend-item tag-cat tag-cat-' + c + '" data-slop-cat="' + c +
-        '" aria-pressed="' + !hidden.has(c) + '">' + escape(CATEGORY_LABELS[c]) + "</button>").join("") +
-      '<button type="button" data-slop-cat="all">Tutte</button></div>' +
-      '<div class="slop-view library-inline">' + (expanded
-        ? '<label>Cerca<input type="search" data-slop-search value="' + escape(search) + '" autocomplete="off" autocapitalize="none" spellcheck="false"></label>' +
-          '<button type="button" data-slop="compact">Vista compatta</button>'
-        : '<label>Primi<select data-slop-top>' + [5, 10, 20, 30].map(n => '<option value="' + n + '"' + (n === topN ? " selected" : "") + ">" + n + "</option>").join("") +
-          '</select> tag</label><button type="button" data-slop="expand">Mostra tutti</button>') + "</div>" +
-      chart() +
-      '<section class="slop-theme"><h3>Tema</h3><p class="hint">I tag del tema compaiono in tutti i prompt. Clic su una barra per aggiungerlo.</p>' +
+      groupTable() +
+      '<section class="slop-theme"><h3>Tema (facoltativo)</h3><p class="hint">' + (current ? "Gruppo scelto: <strong>" + escape(current.genre) +
+        "</strong>, <strong>" + escape(current.time) + "</strong>. " : "Scegli prima un gruppo. ") +
+      "I tag del tema compaiono in tutti i prompt e restringono le REAL di riferimento a quelle che li hanno tutti.</p>" +
       '<div class="rw-pills">' + (theme.length ? theme.map(t => '<span class="rw-pill tag-cat tag-cat-' + categoryOf(t) + '">' + escape(t) +
         '<button type="button" data-slop-remove="' + escape(t) + '" aria-label="Togli ' + escape(t) + ' dal tema">×</button></span>').join("") : "<small>Nessun tag nel tema</small>") + "</div>" +
       '<div class="rw-tag-entry"><input data-slop-theme list="slop-tags" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Tag del tema">' +
       '<button type="button" data-slop="add">Aggiungi</button></div><datalist id="slop-tags">' +
       data.tags.map(t => '<option value="' + escape(t.label) + '"></option>').join("") + "</datalist>" +
-      (theme.length ? '<p class="slop-reference">' + (reference === null ? "…" : reference + " REAL contengono tutto il tema su " +
-        data.thresholds.theme + " necessarie") + "</p>" : "") +
+      (current ? '<p class="slop-reference">' + (reference === null ? "…" : reference + " REAL di riferimento su " + data.thresholds.group +
+        " necessarie") + "; SLOP ancora possibili nel gruppo: " + current.room + "</p>" : "") +
       '<label>Immagini da generare<select data-slop-count>' + Array.from({ length: data.thresholds.max_slots }, (_, i) => i + 1)
         .map(n => '<option value="' + n + '"' + (n === count ? " selected" : "") + ">" + n + "</option>").join("") + "</select></label>" +
+      (current && count > current.room ? '<p class="hint">Più SLOP di quante ne mancano al gruppo: il gruppo supererà le sue REAL.</p>' : "") +
       '<div class="rw-actions rw-bottom"><button type="button" class="primary" data-slop="slots"' +
-      (closed || !theme.length || (reference ?? 0) < data.thresholds.theme ? " disabled" : "") + ">Prepara gli slot</button></div></section>";
+      (closed || !current || (reference ?? 0) < data.thresholds.group ? " disabled" : "") + ">Prepara gli slot</button></div></section>";
   };
   const second = () => {
     const vocabulary = (c: Category) => (data?.tags || []).filter(t => t.category === c).map(t => t.label).sort();
     const covered = new Set(theme.map(categoryOf));
-    return '<p class="hint">Tema: <strong>' + theme.map(escape).join(", ") + "</strong>. Ogni riga è un'immagine: il tema più al massimo un tag per " +
-      "categoria, estratto dalle REAL che contengono il tema. Puoi cambiare ogni casella o ripescare.</p>" + legend() +
+    return '<p class="hint">Gruppo: <strong>' + escape(group) + "</strong>" + (theme.length ? ", tema: <strong>" + theme.map(escape).join(", ") + "</strong>" : "") +
+      ". Ogni riga è un'immagine: al massimo un tag per categoria, estratto dalle REAL del gruppo. Puoi cambiare ogni casella o ripescare; " +
+      "la REAL campione del trattamento della copia resta quella estratta.</p>" + legend() +
       '<div class="slot-table-wrap"><table class="slot-table"><thead><tr><th scope="col">#</th>' +
       SLOT_ORDER.map(c => '<th scope="col">' + escape(CATEGORY_LABELS[c]) + "</th>").join("") + "</tr></thead><tbody>" +
       // «Ripesca» sits by the number, so that it stays on screen when the table scrolls sideways on a phone.
@@ -126,7 +113,8 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () 
       '<button type="button" class="primary" data-slop="prompts">Genera prompt</button></div>' +
       '<p class="hint">«Genera prompt» è una chiamata a pagamento a ' + escape(models?.text_model || "modello di testo") + ", con conferma.</p>";
   };
-  const slotLine = (slot: Slot | undefined) => theme.concat(SLOT_ORDER.map(c => slot?.[c] || "").filter(Boolean))
+  const groupPills = () => { const [genre, time] = group.split("/"); return genre && time ? pill(genre, "genre", "rw-pill") + pill(time, "time", "rw-pill") : ""; };
+  const slotLine = (slot: Slot | undefined) => groupPills() + theme.concat(SLOT_ORDER.map(c => slot?.[c] || "").filter(Boolean))
     .map(t => pill(t, categoryOf(t), "rw-pill")).join("");
   const third = () => {
     const prompts = batch?.prompts || [];
@@ -144,20 +132,25 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () 
       '<button type="button" class="primary" data-slop="images"' + (prompts.length === slots.length && prompts.every(p => p.prompt) ? "" : " disabled") +
       ">Genera immagini e analizza</button></div>";
   };
-  const fourth = () => '<p class="hint">Per ogni immagine: generazione, copia di gioco WebP nel browser, analisi dei tag.</p>' +
+  const fourth = () => '<p class="hint">Per ogni immagine: generazione, trattamento e copia di gioco WebP nel browser, analisi dei tag.</p>' +
     '<p class="slop-progress" role="status">' + escape(progress) + "</p>" +
     '<div class="rw-actions rw-bottom"><button type="button" data-slop="to-review"' + (busy ? " disabled" : "") + ">Vai alla revisione</button></div>";
-  /** Expected tags (theme and slot) the analysis did not find on the image. */
+  /** Expected tags (group, theme and slot) the analysis did not find on the image, and those that make it miss its aim: the theme,
+   * the group, Color and Medium. */
   const missing = (image: Image) => {
     const slot = image.generation?.slot;
-    return slot ? slot.theme.concat(SLOT_ORDER.map(c => slot.tags?.[c] || "").filter(Boolean)).filter(t => !image.tags.includes(t)) : [];
+    if (!slot) return { lost: [], serious: [] };
+    const groupTags = (slot.group || "").split("/").filter(Boolean);
+    const lost = groupTags.concat(slot.theme, SLOT_ORDER.map(c => slot.tags?.[c] || "").filter(Boolean)).filter(t => !image.tags.includes(t));
+    const key = new Set([...groupTags, ...slot.theme, ...VISUAL.map(c => slot.tags?.[c] || "").filter(Boolean)]);
+    return { lost, serious: lost.filter(t => key.has(t)) };
   };
   const fifth = () => {
     const images = batch?.images || [];
     return '<p class="hint">I tag finali sono quelli dell\'analisi. «Previsti ma non rilevati» confronta lo slot con ciò che l\'analisi ha visto; ' +
-      "se manca un tag del tema l'immagine ha mancato l'obiettivo. Approvare non pubblica: la pubblicazione resta un passo separato.</p>" +
+      "se manca un tag del gruppo o del tema, o il Colore o il Supporto non sono quelli dello slot, l'immagine ha mancato l'obiettivo. Approvare non pubblica: la pubblicazione resta un passo separato.</p>" +
       (images.length ? '<div class="rw-preview-grid">' + images.map(image => {
-        const lost = missing(image), index = image.generation?.slot.index ?? 0, themeLost = lost.filter(t => image.generation?.slot.theme.includes(t));
+        const { lost, serious: themeLost } = missing(image), index = image.generation?.slot.index ?? 0;
         return '<article class="rw-final slop-review" data-image="' + escape(image.id) + '"><div class="game-media-surface rw-final-image" data-long-press data-slop-preview="' +
           escape(image.id) + '"><img data-game-media draggable="false" src="' +
           escape(image.file) + '" alt="Immagine ' + (index + 1) + '"></div>' +
@@ -183,8 +176,8 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () 
   };
   const refreshReference = async () => {
     reference = null;
-    if (!theme.length) return;
-    try { reference = (await call<{ reference: number }>("theme", { theme })).reference; } catch (error) { notice = errorText(error); }
+    if (!group) return;
+    try { reference = (await call<{ reference: number }>("reference", { group, theme })).reference; } catch (error) { notice = errorText(error); }
   };
   const loadBatch = async () => { if (batchId) batch = await call<Batch>("batches/" + encodeURIComponent(batchId)); };
   const refresh = async () => {
@@ -198,7 +191,7 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () 
   };
   /** Copy in the browser, then the paid analysis (already confirmed with the generation). */
   const finish = async (imageId: string) => {
-    await prepareLibraryCopy(imageId);
+    await prepareItemCopy(await call<TreatableItem>("/" + encodeURIComponent(imageId), undefined, "GET", LIBRARY));
     await call("/" + encodeURIComponent(imageId) + "/analyze", { confirm: true }, "POST", LIBRARY);
   };
   /** Generates, prepares and analyses the images of the given slots, one by one; an OpenAI account problem stops the run. */
@@ -226,14 +219,15 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () 
     if (!theme.includes(tag)) theme = [...theme, tag];
     notice = ""; persist(); await refreshReference(); render();
   };
-  const draw = async (n: number, existing: Slot[]) => (await call<Slots>("slots", { theme, count: n, existing })).slots;
+  const draw = async (n: number, existing: Slot[]) => (await call<Slots>("slots", { group, theme, count: n, existing })).slots;
 
   // Press and hold an image of the review: prompt, starting tags and tags of the analysis, large.
   onLongPress(root, "[data-slop-preview]", element => {
     const image = batch?.images.find(i => i.id === element.dataset.slopPreview);
     if (!image) return;
-    const slot = image.generation?.slot, theme = slot?.theme || [];
-    const start = slot ? theme.map(t => pill(t, categoryOf(t), "rw-pill", " <small>tema</small>")).join("") +
+    const slot = image.generation?.slot, theme = slot?.theme || [], [genre, time] = (slot?.group || "").split("/");
+    const start = slot ? (genre && time ? pill(genre, "genre", "rw-pill", " <small>gruppo</small>") + pill(time, "time", "rw-pill", " <small>gruppo</small>") : "") +
+      theme.map(t => pill(t, categoryOf(t), "rw-pill", " <small>tema</small>")).join("") +
       SLOT_ORDER.filter(c => slot.tags?.[c] && !theme.includes(slot.tags[c]!)).map(c => pill(slot.tags[c]!, c, "rw-pill")).join("") : "";
     const index = slot?.index ?? 0;
     openPreview({ src: image.file, alt: "Immagine " + (index + 1), title: "Immagine " + (index + 1),
@@ -244,21 +238,13 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () 
   });
   root.addEventListener("click", async event => {
     const target = event.target as HTMLElement;
-    const bar = target.closest<HTMLButtonElement>("[data-slop-tag]");
-    if (bar) { await addTheme(bar.dataset.slopTag!); return; }
-    const chip = target.closest<HTMLButtonElement>("[data-slop-cat]");
-    if (chip) {
-      const c = chip.dataset.slopCat!;
-      if (c === "all") hidden = new Set();
-      else if (isCategory(c)) { if (hidden.has(c)) hidden.delete(c); else hidden.add(c); }
-      render(); return;
-    }
+    const pick = target.closest<HTMLButtonElement>("[data-slop-group]");
+    if (pick && !busy) { group = pick.dataset.slopGroup!; theme = []; notice = ""; persist(); await refreshReference(); render(); return; }
     const remove = target.closest<HTMLButtonElement>("[data-slop-remove]");
     if (remove) { theme = theme.filter(t => t !== remove.dataset.slopRemove); persist(); await refreshReference(); render(); return; }
     const button = target.closest<HTMLButtonElement>("button[data-slop]");
     if (!button || busy) return;
     const action = button.dataset.slop!;
-    if (action === "expand" || action === "compact") { expanded = action === "expand"; render(); return; }
     if (action === "add") { await addTheme(root.querySelector<HTMLInputElement>("[data-slop-theme]")!.value); return; }
     if (action === "back") { page = 1; persist(); render(); return; }
     if (action === "to-slots") { page = 2; persist(); render(); return; }
@@ -280,7 +266,7 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () 
       if (action === "slots" || action === "reroll-all") { slots = await draw(count, []); page = 2; notice = ""; batchId = ""; batch = null; }
       else if (action === "prompts") {
         // A group per set of slots: created on the first prompts, its slots updated when the owner changed them.
-        batch = batchId ? await call<Batch>("batches/" + encodeURIComponent(batchId), { slots }, "PUT") : await call<Batch>("batches", { theme, slots });
+        batch = batchId ? await call<Batch>("batches/" + encodeURIComponent(batchId), { slots }, "PUT") : await call<Batch>("batches", { group, theme, slots });
         batchId = batch.id;
         batch = await call<Batch>("batches/" + encodeURIComponent(batchId) + "/prompts", { confirm: true });
         page = 3; notice = "Prompt scritti.";
@@ -308,8 +294,7 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () 
   });
   root.addEventListener("change", event => {
     const target = event.target as HTMLSelectElement;
-    if (target.matches("[data-slop-top]")) { topN = Number(target.value); render(); }
-    else if (target.matches("[data-slop-count]")) { count = Number(target.value); persist(); }
+    if (target.matches("[data-slop-count]")) { count = Number(target.value); persist(); render(); }
     else if (target.matches("[data-prompt]") && batch) {
       // Owner's edit of a prompt: free, saved at once.
       const texts = slots.map((_, i) => root.querySelector<HTMLTextAreaElement>('[data-prompt="' + i + '"]')?.value ?? batch!.prompts[i]?.prompt ?? "");
@@ -332,33 +317,6 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () 
       persist();
     }
   });
-  root.addEventListener("input", event => {
-    const target = event.target as HTMLInputElement;
-    if (!target.matches("[data-slop-search]")) return;
-    search = target.value.trim().toLowerCase();
-    const chartNode = root.querySelector(".spread-chart");
-    if (chartNode) chartNode.outerHTML = chart();
-  });
-  root.addEventListener("keydown", event => {
-    const target = event.target as HTMLInputElement;
-    if (target.matches("[data-slop-theme]") && event.key === "Enter") { event.preventDefault(); void addTheme(target.value); }
-  });
-  // Tooltip: counts of the bar under the pointer or with the focus.
-  const tip = (target: EventTarget | null, x?: number, y?: number) => {
-    const bar = (target as HTMLElement | null)?.closest?.<HTMLElement>("[data-tip]");
-    const box = root.querySelector<HTMLElement>(".spread-tip"), chartNode = root.querySelector<HTMLElement>(".spread-chart");
-    if (!box || !chartNode) return;
-    if (!bar) { box.hidden = true; return; }
-    box.textContent = bar.dataset.tip!;
-    box.hidden = false;
-    const area = chartNode.getBoundingClientRect(), rect = bar.getBoundingClientRect();
-    const left = (x ?? rect.left + rect.width / 2) - area.left, top = (y ?? rect.top) - area.top + chartNode.scrollTop;
-    box.style.left = Math.max(0, Math.min(left + 12, area.width - box.offsetWidth)) + "px";
-    box.style.top = (top - box.offsetHeight - 8 < chartNode.scrollTop ? top + 24 : top - box.offsetHeight - 8) + "px";
-  };
-  root.addEventListener("pointermove", event => tip(event.target, event.clientX, event.clientY));
-  root.addEventListener("pointerleave", () => tip(null));
-  root.addEventListener("focusin", event => tip(event.target));
   render();
   await refresh();
   return { refresh };
