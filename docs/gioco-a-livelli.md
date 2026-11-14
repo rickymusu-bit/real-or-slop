@@ -1,6 +1,7 @@
-# Partita a livelli e classifica — specifica 2.0.0
+# Partita a livelli e classifica — specifica 2.1.0
 
-Stato: vigente. Aggiornata: 2026-11-14T12:00:00Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
+Stato: vigente; la 2.1.0 è nell'app 1.26.0 (in revisione). Aggiornata: 2026-11-14T21:30:00Z. La 2.1.0 tiene fuori dalla stessa partita
+una SLOP e la REAL da cui è nata (sezione 3). La 2.0.0 è la versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `gioco-a-livelli.v1.0.1` e le parti sul gioco di `copie-di-gioco.v5.0.0`, `didascalie-wizard.v1.0.0`,
 `anteprima-descrizione.v1.2.0` e `privacy-note-legali.v1.0.4`, che restano nella cronologia git.
 
@@ -33,6 +34,10 @@ sono le sue foto, altrimenti resta disattivato con il motivo.
 ## 3. Partita
 
 1. Il giocatore sceglie il livello (`/gioca`); il server estrae il lotto e registra per ogni round la copia di gioco da servire.
+   **Gemelle** (decisione dell'owner del 2026-11-14, specifica `generazione-slop`): una SLOP e la REAL da cui è stata scritta non
+   compaiono nella stessa partita, perché vederle entrambe suggerirebbe la risposta. Se l'estrazione le contiene tutte e due, una
+   delle due, scelta a sorte, lascia il posto a un'altra foto pubblicata della stessa origine che non sia nella partita e la cui
+   gemella non lo sia: la sequenza delle origini estratta non cambia. Senza una sostituta la coppia resta (catalogo molto piccolo).
 2. Il browser scarica la prima foto; «Inizia» avvia la partita entro il tempo di preparazione.
 3. Il server consegna **una foto alla volta**, mai una successiva. Il tempo parte quando il browser la mostra e lo segnala.
 4. **Foto:** intera nel suo formato, esplorabile con dita, mouse, rotella o doppio tocco, «Foto intera» per tornare all'inizio

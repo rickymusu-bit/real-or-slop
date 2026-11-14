@@ -23,6 +23,14 @@ test("the noise measure follows the noise added to uniform areas", () => {
   assert.ok(noisy.sharpness > clean.sharpness);
   assert.equal(noisy.long, 256);
 });
+test("burnt-out areas are left out of the noise: a grainy image with a white sky is not measured as clean", () => {
+  const grainy = photo(256, 192, 6, 9, false);
+  // The upper third burnt to white, as the sky of an old print.
+  for (let i = 0; i < 256 * 64; i++) { grainy[4 * i] = grainy[4 * i + 1] = grainy[4 * i + 2] = 255; }
+  const m = measure(grainy, 256, 192);
+  assert.ok(m.noise > 4, "noise " + m.noise);
+  assert.equal(m.v, 2);
+});
 test("contrast, saturation and cast of a colour image; a grey image has no chroma", () => {
   const colour = measure(photo(200, 100), 200, 100), grey = measure(photo(200, 100, 0, 1, false), 200, 100);
   assert.ok(colour.contrast > 120 && colour.contrast < 200, String(colour.contrast));
@@ -59,10 +67,12 @@ test("long side of a treated copy: the sample's, within the crop and the recipe,
 test("the Worker accepts only well-formed measures and treatments", () => {
   const m: Metrics = { long: 700, noise: 3.2, sharpness: 12.5, contrast: 180, saturation: 0.2, cast: [1, 0, -1] };
   assert.deepEqual(validMetrics(m), m);
+  assert.deepEqual(validMetrics({ ...m, v: 2 }), { ...m, v: 2 });
   assert.equal(validMetrics({ ...m, saturation: 2 }), null);
   assert.equal(validMetrics({ ...m, cast: [1, 2] }), null);
   const t = { version: 1, off: false, seed: 5, long: 700, medium: "film-still", color: "color", sample: { id: "abc", metrics: m } };
   assert.ok(validTreatment(t));
-  assert.equal(validTreatment({ ...t, version: 2 }), null);
+  assert.ok(validTreatment({ ...t, version: 2 }), "the current version");
+  assert.equal(validTreatment({ ...t, version: 3 }), null);
   assert.equal(validTreatment({ ...t, sample: { id: "a b", metrics: m } }), null);
 });

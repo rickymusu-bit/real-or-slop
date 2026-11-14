@@ -1,6 +1,7 @@
-# Libreria delle immagini, tag e analisi — specifica 3.0.0
+# Libreria delle immagini, tag e analisi — specifica 3.1.0
 
-Stato: vigente, in produzione con l'app 1.25.0 e la migrazione 0048 (2026-11-14). Aggiornata: 2026-11-14T16:00:00Z.
+Stato: vigente; la 3.0.0 è in produzione con l'app 1.25.0, la 3.1.0 è nell'app 1.26.0 (in revisione). Aggiornata: 2026-11-14T21:30:00Z.
+La 3.1.0 registra la REAL di origine delle SLOP gemelle (migrazione 0049), il tetto di risposta dell'analisi e il contesto 1.8.0.
 La 3.0.0 sostituisce la categoria Formato con Genere, Colore e Supporto, giudicate solo dall'immagine, e aggiunge il completamento a
 pagamento di queste tre categorie per le immagini già analizzate (decisioni dell'owner del 2026-11-14, sezioni 4 e 5). La 2.0.0 è la
 versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
@@ -27,8 +28,8 @@ trasparenza: specifica `contenuti-e-trasparenza`. Copie di gioco: specifica `cop
   2026-11-13).
 - I tag descrivono anche che tipo di fotografia è un'immagine (**Genere**), il suo colore (**Colore**) e che cosa è materialmente
   (**Supporto**: stampa, pagina di giornale, fotogramma di pellicola, foto digitale…). Sostituiscono la categoria Formato, che ammetteva
-  un solo tag e lasciava posto a `color` o `black-and-white` e a nient'altro. Genere e decennio definiscono i gruppi del bilanciamento
-  (specifica `generazione-slop`) (2026-11-14).
+  un solo tag e lasciava posto a `color` o `black-and-white` e a nient'altro. Genere e decennio definiscono i gruppi con cui Database
+  e Statistiche confrontano REAL e SLOP (2026-11-14).
 - Genere, Colore e Supporto si giudicano **solo dall'immagine**, per tutte le immagini: l'analisi di una SLOP riceve il prompt, che
   dichiara ciò che si voleva e non ciò che il generatore ha prodotto (batch del 2026-11-14: «1960s» e `color` copiati dal prompt su
   immagini dall'aspetto digitale) (2026-11-14).
@@ -44,7 +45,7 @@ Una sola raccolta di immagini REAL e SLOP.
   la rotta `POST /upload`, usata dai test.
 - **Campi.** Origine, titolo (≤200 caratteri), descrizione (≤1000), spiegazione (≤2000, oggi non mostrata nel gioco), fonte, autore e
   licenza (REAL), prompt e modello (SLOP), tag con le categorie, stato, originale e copia di gioco, revisione per le modifiche
-  concorrenti. Per una SLOP generata anche gruppo, slot (tema e tag di partenza) e qualità della generazione.
+  concorrenti. Per una SLOP generata anche batch, REAL di origine, tag di partenza, REAL campione e qualità della generazione.
 - **Descrizione.** Per le REAL arriva da Commons (testo ripulito, al massimo 500 caratteri) e l'owner la corregge nel passo 2 del wizard
   o nella sezione Database. Il giocatore la legge nella lista di fine partita (specifica `gioco-a-livelli`). Entra anche nel
   contesto dell'analisi.
@@ -110,8 +111,7 @@ Una sola raccolta di immagini REAL e SLOP.
 - **Vocabolario:** contiene solo tag in uso; un tag esce con l'ultima immagine che lo usa, insieme ai suoi alias.
 - **Alias:** etichetta alternativa che rimanda a un tag e non si attacca mai a un'immagine; ogni tag, scritto o generato, passa per gli
   alias prima del salvataggio. «Unisci A in B» sposta immagini e alias di A su B, che conserva la sua categoria, e fa di A un alias.
-- **Avvisi** non bloccanti: una REAL senza tag di Tempo; un'immagine senza Genere, Colore o Supporto (fuori dai gruppi del
-  bilanciamento).
+- **Avvisi** non bloccanti: una REAL senza tag di Tempo; un'immagine senza Genere, Colore o Supporto (fuori dai gruppi).
 
 ## 5. Analisi a pagamento
 
@@ -123,6 +123,8 @@ Una sola raccolta di immagini REAL e SLOP.
   Supporto, questi ultimi due tra i valori della lista chiusa (enumerazione nello schema). I tag vengono resi conformi, risolti per alias
   e **sostituiscono** quelli presenti. Un tag proposto in una categoria diversa da quella del vocabolario mantiene la categoria del
   vocabolario e il conflitto viene segnalato all'owner.
+- **Tetto di risposta:** 8000 token (app 1.26.0). Con 2000, che comprendono il ragionamento del modello, un'analisi su dieci del primo
+  lotto automatico è tornata troncata («Risposta del modello non leggibile»): pagata e persa.
 - **Solo dall'immagine.** Una riga fissa nel codice, aggiunta alle istruzioni di ogni analisi, chiede di giudicare Genere, Colore e
   Supporto soltanto da ciò che si vede nell'immagine, mai da titolo, descrizione o altro testo. Vale per REAL e SLOP allo stesso modo e
   non parla di immagini generate.
@@ -159,9 +161,9 @@ Una sola raccolta di immagini REAL e SLOP.
   diverso; diventa una versione solo quando l'owner lo salva. Un database nuovo parte dalla proposta.
 - Restano nel codice, qualunque cosa dicano i testi: formato JSON e schema delle risposte, conversione e filtri dei tag, limiti, le
   liste chiuse di Colore e Supporto, la regola «solo dall'immagine» e la lunghezza chiesta ai prompt SLOP.
-- Con l'app 1.25.0 il codice propone una nuova base (categorie Genere, Colore e Supporto al posto di Formato) e un nuovo «Prompt per le
-  SLOP» (specifica `generazione-slop`, sezione 5). Finché l'owner non salva la base, la versione in vigore descrive ancora la
-  categoria Formato: lo schema nel codice prevale, ma il testo resta incoerente.
+- Proposte del codice: con l'app 1.25.0 la base e la parte «Tag» con Genere, Colore e Supporto (contesto 1.7.0, salvato in produzione
+  il 2026-11-14); con l'app 1.26.0 il «Prompt per le SLOP» delle gemelle (contesto 1.8.0, specifica `generazione-slop`, sezione 4),
+  da salvare dalle Impostazioni.
 
 ## 8. Dati
 
@@ -169,8 +171,8 @@ Una sola raccolta di immagini REAL e SLOP.
   `slop_proposal_ignored`, `retired_copies`, tabelle del gioco (`game_sessions`, `game_rounds`, `answers`, `media_events`,
   `leaderboard`, `rate_limits`). Elenco delle migrazioni in `MASTER.md`.
 - Migrazione 0048 (`images`): `categories_completed_at` (completamento delle tre categorie), `copy_metrics` (misure della copia di
-  gioco) e `copy_treatment` (trattamento di una SLOP), specifica `copie-di-gioco`, sezione 4; `generation_group` (genere e decennio
-  del gruppo da cui è nata una SLOP), specifica `generazione-slop`.
+  gioco) e `copy_treatment` (trattamento di una SLOP), specifica `copie-di-gioco`, sezione 4; `generation_group`, oggi inutilizzata.
+- Migrazione 0049 (`images`): `generation_source`, la REAL di cui una SLOP è la gemella (specifica `generazione-slop`).
 - Colonne inutilizzate, lasciate per non ricostruire le tabelle: `caption`, `generated_caption` (`images`), `caption` e `copy_view`
   (`game_rounds`), `copy_view` (`images`).
 - R2: quarantena privata (`library/<id>/`: originale e copia) e bucket del gioco (copie pubblicate).

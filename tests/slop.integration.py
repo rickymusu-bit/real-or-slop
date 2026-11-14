@@ -36,85 +36,73 @@ def sql(command):
                          capture_output=True, text=True, check=True)
     return json.loads(out.stdout)[-1]['results']
 
-code, spread = call('spread'); assert code == 200 and spread['thresholds'] == {'section': 50, 'group': 5, 'max_slots': 10}, spread
-G1, G2, G3 = 'st-press/1910s', 'st-press/1920s', 'st-portrait/1910s'
-if spread['real_total'] < 50:
-    code, result = call('slots', {'group': G1, 'count': 1}); assert code == 409 and 'almeno 50' in result['error'], result
+code, state_now = call('state'); assert code == 200 and state_now['thresholds'] == {'section': 50, 'max_batch': 10}, state_now
+if state_now['real_total'] < 50:
+    code, result = call('batches', {'sources': ['x']}); assert code == 409 and 'almeno 50' in result['error'], result
 
-# 60 REAL and 2 SLOP, approved, with tags in their categories. Groups: st-press/1910s (6 REAL, printed pages, trams and carts),
-# st-press/1920s (6 REAL, slides, buses and radios), st-portrait/1910s (4 REAL: below the threshold of 5); the others in no group.
+# 60 REAL approved, with tags in their categories: 6 printed pages of a riot in the 1910s (measured), 6 slides of the 1920s (one
+# measured), 4 portraits, the others with a filler tag. One SLOP is already the approved twin of slopt-1, one new twin of slopt-2.
 statements, tags = [], {'st-riot': 'event', '1910s': 'time', '1920s': 'time', 'st-press': 'genre', 'st-portrait': 'genre', 'st-carnival': 'event',
                         'st-newsprint': 'medium', 'st-slide': 'medium', 'st-bw': 'color', 'st-colour': 'color', 'st-paris': 'place', 'st-milano': 'place',
                         'st-tram': 'object', 'st-cart': 'object', 'st-bus': 'object', 'st-radio': 'object', 'st-filler': 'other'}
 statements.append('INSERT OR IGNORE INTO tags(id,label,category,created_at) VALUES ' + ','.join(f"('st-tag-{l}','{l}','{c}','x')" for l, c in tags.items()))
-def add(i, origin, labels, description=''):
+METRICS = json.dumps({'long': 700, 'noise': 4, 'sharpness': 10.2, 'contrast': 120, 'saturation': 0, 'cast': [0, 0, 0], 'v': 2})
+def add(i, origin, labels, description='', status='approved', source=None, measured=False):
     h = format(i, '064x')
-    statements.append(f"INSERT INTO images(id,origin,status,title,description,original_key,original_sha256,original_mime,width,height,copy_key,copy_sha256,created_at,updated_at) "
-                      f"VALUES('slopt-{i}','{origin}','approved','t{i}','{description}','slopt/{i}','{h}','image/jpeg',10,10,'slopt/c{i}','{h}','x','x')")
-    statements.append('INSERT INTO image_tags(image_id,tag_id) VALUES ' + ','.join(f"('slopt-{i}','st-tag-{l}')" for l in labels))
+    statements.append(f"INSERT INTO images(id,origin,status,title,description,original_key,original_sha256,original_mime,width,height,copy_key,copy_sha256,created_at,updated_at,generation_source,copy_metrics) "
+                      f"VALUES('slopt-{i}','{origin}','{status}','t{i}','{description}','slopt/{i}','{h}','image/jpeg',10,10,'slopt/c{i}','{h}','{i:04d}','x',{repr(source) if source else 'NULL'},{repr(METRICS) if measured else 'NULL'})")
+    if labels: statements.append('INSERT INTO image_tags(image_id,tag_id) VALUES ' + ','.join(f"('slopt-{i}','st-tag-{l}')" for l in labels))
 for i in range(60):
-    if i < 6: add(i, 'REAL', ['st-riot', 'st-press', '1910s', 'st-newsprint', 'st-bw', ['st-paris', 'st-milano'][i % 2], ['st-tram', 'st-cart'][i % 2]], f'Disordini in strada numero {i}')
-    elif i < 12: add(i, 'REAL', ['st-riot', 'st-press', '1920s', 'st-slide', 'st-colour', ['st-paris', 'st-milano'][i % 2], ['st-bus', 'st-radio'][i % 2]])
+    if i < 6: add(i, 'REAL', ['st-riot', 'st-press', '1910s', 'st-newsprint', 'st-bw', ['st-paris', 'st-milano'][i % 2], ['st-tram', 'st-cart'][i % 2]], f'Disordini in strada numero {i}', measured=True)
+    elif i < 12: add(i, 'REAL', ['st-riot', 'st-press', '1920s', 'st-slide', 'st-colour', ['st-paris', 'st-milano'][i % 2], ['st-bus', 'st-radio'][i % 2]], measured=i == 6)
     elif i < 16: add(i, 'REAL', ['st-carnival', 'st-portrait', '1910s'])
     else: add(i, 'REAL', ['st-filler'])
-add(1000, 'SLOP', ['st-riot', 'st-press', '1910s']); add(1001, 'SLOP', ['st-riot'])
+add(1000, 'SLOP', ['st-riot', 'st-press', '1910s'], source='slopt-1'); add(1001, 'SLOP', [], status='new', source='slopt-2')
+add(1002, 'SLOP', ['st-riot'], source='slopt-3')
+statements.append("UPDATE images SET status='trash',trashed_from='approved',trashed_at='x' WHERE id='slopt-1002'")  # a twin in the trash frees its REAL
 sql('; '.join(statements))
 try:
-    code, spread = call('spread'); assert code == 200 and spread['real_total'] >= 60 and spread['slop_total'] >= 2, spread
-    rows = {t['label']: t for t in spread['tags']}
-    assert rows['st-riot'] == {'label': 'st-riot', 'category': 'event', 'real': 12, 'slop': 2, 'spread': 10}, rows['st-riot']
-    groups = {g['key']: g for g in spread['groups']}
-    assert {k: (g['real'], g['slop'], g['fresh'], g['spread'], g['missing_real'], g['room']) for k, g in groups.items() if k.startswith('st-')} == {
-        G1: (6, 1, 0, 5, 0, 5), G2: (6, 0, 0, 6, 0, 6), G3: (4, 0, 0, 4, 1, 4)}, groups
-    assert call('reference', {'group': G1, 'theme': ['st-riot']})[1] == {'group': G1, 'theme': ['st-riot'], 'reference': 6, 'needed': 5, 'room': 5}
-    assert call('reference', {'group': G2})[1]['reference'] == 6 and call('reference', {'group': G3})[1]['reference'] == 4
-    assert call('reference', {'group': G1, 'theme': ['st-carnival']})[1]['reference'] == 0
-    code, result = call('slots', {'group': G3, 'count': 2}); assert code == 409 and 'ne servono 5' in result['error'], result
-    for wrong in ({'group': 'st-press', 'count': 1}, {'count': 1}, {'group': G1, 'count': 11}, {'group': G1, 'count': 0}, {'group': G1, 'theme': ['st-unknown'], 'count': 1},
-                  {'group': G1, 'count': 1, 'extra': 1}, {'group': G1, 'count': 1, 'existing': 'x'}):
-        assert call('slots', wrong)[0] == 400, wrong
-    code, result = call('slots', {'group': G1, 'theme': ['st-riot'], 'count': 6}); assert code == 200 and result['reference'] == 6 and len(result['slots']) == 6, result
-    samples = set()
-    for slot in result['slots']:
-        assert not {'event', 'time', 'genre'} & set(slot), slot  # the theme covers Event, the group Genre and Time
-        assert slot['place'] in ('st-paris', 'st-milano') and slot['object'] in ('st-tram', 'st-cart'), slot  # only the group's REAL
-        assert slot['medium'] == 'st-newsprint' and slot['color'] == 'st-bw', slot
-        assert slot['sample'] in {f'slopt-{i}' for i in range(6)}, slot; samples.add(slot['sample'])
-    assert len(samples) == 6, samples  # a different REAL campione per slot while there are any
-    # Two combinations exist in this group (each place with its object): both come out before any repetition.
-    assert len({json.dumps({k: v for k, v in s.items() if k != 'sample'}, sort_keys=True) for s in result['slots'][:2]}) == 2, result['slots']
-    code, other = call('slots', {'group': G2, 'count': 3}); assert code == 200 and all(s['object'] in ('st-bus', 'st-radio') and s['event'] == 'st-riot' for s in other['slots']), other
-    # Redrawing one slot with the others as existing: it avoids their combinations when it can.
-    others = result['slots'][:1]
-    code, again = call('slots', {'group': G1, 'theme': ['st-riot'], 'count': 1, 'existing': others}); assert code == 200, again
-    assert {k: v for k, v in again['slots'][0].items() if k != 'sample'} != {k: v for k, v in others[0].items() if k != 'sample'}, again
-    # --- Paid part: a batch of a group, its prompts, its images. ---
-    code, batch = call('batches', {'group': G1, 'theme': ['st-riot'], 'slots': result['slots'][:3]})
-    assert code == 200 and batch['group'] == G1 and batch['prompts'] == [] and batch['images'] == [], batch
-    assert all(s['sample'] == r['sample'] for s, r in zip(batch['slots'], result['slots'][:3])), batch['slots']  # the samples are kept
-    bid = batch['id']
-    assert call('batches', {'theme': ['st-riot'], 'slots': result['slots'][:1]})[0] == 400 and call('batches', {'group': G1, 'slots': []})[0] == 400
+    code, state_now = call('state'); assert code == 200 and state_now['real_total'] >= 60 and state_now['twinned'] == 1, state_now
+    waiting = [w['id'] for w in state_now['waiting'] if w['id'].startswith('slopt-')]
+    assert len(waiting) == 58 and 'slopt-1' not in waiting and 'slopt-2' not in waiting and waiting[0] == 'slopt-0' and 'slopt-3' in waiting, waiting[:5]
+    first_waiting = state_now['waiting'][[w['id'] for w in state_now['waiting']].index('slopt-0')]
+    assert first_waiting['measured'] and {'label': 'st-press', 'category': 'genre'} in first_waiting['tags'], first_waiting
+    for wrong in ({}, {'sources': []}, {'sources': ['slopt-%d' % i for i in range(20, 31)]}, {'sources': ['bad id']}, {'sources': ['slopt-0'], 'theme': ['x']}):
+        assert call('batches', wrong)[0] == 400, wrong
+    code, result = call('batches', {'sources': ['slopt-1']}); assert code == 409 and 'ha già una SLOP gemella' in result['error'], result
+    code, result = call('batches', {'sources': ['slopt-1000']}); assert code == 409 and 'non è più approvata' in result['error'], result
+    # --- A batch of three REAL: each item keeps the tags of its REAL and a «REAL campione» of the same colour, medium and decade. ---
+    code, batch = call('batches', {'sources': ['slopt-0', 'slopt-7', 'slopt-12']}); assert code == 200 and batch['prompts'] == [] and batch['images'] == [], batch
+    bid, items = batch['id'], batch['items']
+    assert [i['source'] for i in items] == ['slopt-0', 'slopt-7', 'slopt-12'] and items[0]['title'] == 't0', items
+    assert items[0]['sample'] in {f'slopt-{i}' for i in range(1, 6)}, items[0]  # another printed page of the 1910s
+    assert items[1]['sample'] == 'slopt-6', items[1]  # the only measured slide of the 1920s
+    assert items[2]['sample'] is None, items[2]  # no measured portrait: no treatment
+    assert {'label': 'st-tram', 'category': 'object'} in items[0]['tags'] and {'label': '1910s', 'category': 'time'} in items[0]['tags'], items[0]
     before = len(calls())
     openai([])
     for wrong in ({}, {'confirm': False}, {'confirm': True, 'index': 9}, {'confirm': True, 'other': 1}):
         assert call(f'batches/{bid}/prompts', wrong)[0] == 400, wrong
     assert openai() == [] and len(calls()) == before  # nothing sent, nothing recorded
     code, batch = call(f'batches/{bid}/prompts', {'confirm': True}); assert code == 200 and batch['prompts_status'] == 'done', batch
-    assert len(batch['prompts']) == 3 and all(p['prompt'].startswith('A documentary photograph: st-riot') for p in batch['prompts']), batch['prompts']
+    assert len(batch['prompts']) == 3 and batch['prompts'][0]['prompt'].startswith('A documentary photograph: 1910s, st-press, st-bw, st-newsprint, st-paris, st-riot'), batch['prompts']
     [sent] = openai()
     body = sent['body']; assert body['model'] == 'gpt-6.1-terra' and body['text']['format']['name'] == 'slop_prompts', body['model']
     assert body['instructions'].startswith('Lavori per un archivio') and 'Scrivi prompt per un generatore' in body['instructions']
-    assert 'Write every prompt in English, between 600 and 1000 characters' in body['instructions'] and 'names of people in the examples are never used' in body['instructions']
+    assert 'Write every prompt in English, between 600 and 1000 characters' in body['instructions'] and 'Write the prompt of ANOTHER photograph' in body['instructions']
     assert body['max_output_tokens'] == 16000, body['max_output_tokens']
     request = json.loads(body['input'][0]['content'][0]['text'])
-    assert request['theme'] == ['st-riot'] and request['group'] == {'genre': 'st-press', 'decade': '1910s'}, request
-    assert request['slots'] == [{k: v for k, v in s.items() if k != 'sample'} for s in result['slots'][:3]], request  # the REAL campione never reaches the model
-    assert len(request['examples']) == 6 and all(e['description'].startswith('Disordini in strada') and 'st-press' in e['tags'] for e in request['examples']), request['examples']
+    assert request['count'] == 3 and len(request['items']) == 3 and 'sample' not in json.dumps(request) and 'slopt-' not in json.dumps(request), request
+    first_item = request['items'][0]
+    assert first_item['description'] == 'Disordini in strada numero 0' and first_item['tags']['object'] == ['st-tram'] and first_item['tags']['time'] == ['1910s'], first_item
+    # Related: other REAL of the same decade sharing the event or the place, never the source itself, never another decade.
+    assert 1 <= len(first_item['related']) <= 3 and all(r.startswith('Disordini in strada numero') and not r.endswith(' 0') for r in first_item['related']), first_item
+    assert request['items'][2]['related'] == [], request['items'][2]
     assert calls()[-1] == {'kind': 'prompts', 'model': 'gpt-6.1-terra', 'status': 'completed'}
     # The owner edits a prompt (free); one prompt is rewritten (paid) and the others stay.
-    edited = [p['prompt'] for p in batch['prompts']]; edited[2] = 'Edited by the owner: a street with st-riot'
+    edited = [p['prompt'] for p in batch['prompts']]; edited[2] = 'Edited by the owner: a portrait at the carnival'
     code, batch = call(f'batches/{bid}', {'prompts': edited}, method='PUT'); assert code == 200 and batch['prompts'][2]['prompt'].startswith('Edited'), batch
-    assert call(f'batches/{bid}', {'prompts': edited[:2]}, method='PUT')[0] == 400
+    assert call(f'batches/{bid}', {'prompts': edited[:2]}, method='PUT')[0] == 400 and call(f'batches/{bid}', {'slots': []}, method='PUT')[0] == 400
     assert [p['format'] for p in batch['prompts']] == ['3:2', '2:3', '4:3'], batch['prompts']
     assert body['text']['format']['schema']['properties']['prompts']['items']['properties']['format']['enum'] == ['3:2', '2:3', '4:3', '3:4', '16:9', '9:16', '1:1']
     # The owner changes a format (free); a format outside the set is refused.
@@ -139,10 +127,9 @@ try:
     openai([])
     code, first = call(f'batches/{bid}/images', {'confirm': True, 'index': 0, 'quality': 'medium'}); assert code == 200, first
     assert first['origin'] == 'SLOP' and first['status'] == 'new' and first['model'] == 'gpt-image-2.5-flare' and first['prompt'] == batch['prompts'][0]['prompt'], first
-    tags0 = {k: v for k, v in result['slots'][0].items() if k != 'sample'}
-    assert first['generation'] == {'batch': bid, 'group': G1, 'quality': 'medium',
-                                   'slot': {'index': 0, 'group': G1, 'theme': ['st-riot'], 'tags': tags0, 'sample': result['slots'][0]['sample']}}, first['generation']
-    code, groups_now = call('spread'); assert {g['key']: g for g in groups_now['groups']}[G1]['fresh'] == 1  # a new SLOP counts in its group before the analysis
+    assert first['title'] == 'Gemella di t0' and first['generation'] == {'batch': bid, 'source': 'slopt-0', 'quality': 'medium',
+        'slot': {'index': 0, 'source': 'slopt-0', 'sample': items[0]['sample'], 'tags': items[0]['tags']}}, first['generation']
+    code, state_now = call('state'); assert 'slopt-0' not in [w['id'] for w in state_now['waiting']]  # a new twin takes its REAL out of the queue
     assert (first['width'], first['height']) == (96, 64)  # 3:2: 1536×1024 from the fake generator, scaled by 1/16
     code, second = call(f'batches/{bid}/images', {'confirm': True, 'index': 1, 'quality': 'max'}); assert code == 200 and (second['width'], second['height']) == (64, 96), second
     sent = openai(); assert [s['path'] for s in sent] == ['/v1/images/generations'] * 2
@@ -164,8 +151,8 @@ try:
     copy = game_copy(original)
     # Measures and treatment travel with the copy in headers; the server checks them (spec `copie-di-gioco`, section 4).
     metrics = {'long': 96, 'noise': 1.5, 'sharpness': 10.2, 'contrast': 120, 'saturation': 0.2, 'cast': [1, 0, -1]}
-    sample = {'id': result['slots'][0]['sample'], 'metrics': {**metrics, 'long': 700, 'noise': 4}}
-    treatment = {'version': 1, 'off': False, 'seed': 7, 'long': 96, 'medium': 'newspaper-print', 'color': 'black-and-white', 'sample': sample}
+    sample = {'id': items[0]['sample'], 'metrics': {**metrics, 'long': 700, 'noise': 4}}
+    treatment = {'version': 2, 'off': False, 'seed': 7, 'long': 96, 'medium': 'newspaper-print', 'color': 'black-and-white', 'sample': sample}
     def upload(headers):
         req = urllib.request.Request(LIBRARY + f'/{first["id"]}/copy', data=copy, method='POST',
                                      headers={'Content-Type': 'image/webp', 'Authorization': 'Bearer ' + token, **headers})
@@ -192,5 +179,5 @@ finally:
         call(f'/{row["id"]}/trash', {}, url=LIBRARY); call(f'/{row["id"]}', method='DELETE', url=LIBRARY)
     sql("DELETE FROM images WHERE id LIKE 'slopt-%'; DELETE FROM slop_batches")
     sql("DELETE FROM tags WHERE id LIKE 'st-tag-%' AND id NOT IN (SELECT tag_id FROM image_tags)")
-assert 'st-riot' not in {t['label'] for t in call('spread')[1]['tags']}
-print('SLOP studio integration passed: groups of genre and decade with threshold and room, reference, slots inside a group with a REAL campione each; batches of a group, prompts with examples (all and one), edits, images from the prompt only, refusals and uncertain outcomes, copy with measures and treatment, analysis of a generated SLOP.')
+assert not [w for w in call('state')[1]['waiting'] if w['id'].startswith('slopt-')]
+print('SLOP studio integration passed: REAL waiting for a twin, batches of REAL with a REAL campione each, prompts from the tags and the description of each REAL (all and one), edits, images from the prompt only, refusals and uncertain outcomes, copy with measures and treatment, analysis of a generated SLOP.')

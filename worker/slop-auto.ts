@@ -1,29 +1,20 @@
-/** Automatic SLOP batches on proposal (spec `generazione-slop`, section 8): GET /slop/auto (open batch or proposal of a group,
- * free), start (checks the proposal again, draws the slots in the group), ignore a group, stop and finish. guardBatch: on an automatic batch slots and prompts are
- * not edited, prompts are written once and each slot goes to the generator at most once, recorded before the call. */
+/** Automatic SLOP batches on proposal (spec `generazione-slop`, section 7): GET /slop/auto (open batch or proposal, free), start
+ * (checks the proposal again, draws the REAL to twin), ignore, stop and finish. guardBatch: on an automatic batch prompts are not
+ * edited, they are written once and each image goes to the generator at most once, recorded before the call. */
 import { HttpError, type Env } from "./core";
 import { numberSettings } from "./app-settings";
-import { AUTO_MAX_BATCH, proposal, spreadPercent, type Proposal } from "../shared/slop-auto";
-import { extractSlots, type Slot, type TaggedImage } from "../shared/slot-extraction";
-import type { GroupCount } from "../shared/slop-groups";
+import { IGNORE_KEY, MAX_BATCH, proposal, spreadPercent, type Proposal } from "../shared/twins";
 import { IMAGE_MODELS } from "../shared/models";
 import { chosenModel } from "./models";
+import { itemsOf } from "./slop-generation";
+import { realRows, twinCounts, twinItems } from "./twins";
 
-export interface AutoDeps {
-  realImages: (env: Env, group?: string) => Promise<TaggedImage[]>; groups: (env: Env) => Promise<GroupCount[]>;
-  spreadMap: (env: Env) => Promise<Map<string, number>>;
-}
 interface AutoRow {
-  id: string; theme: string; slots: string; prompts_status: string; prompts_error: string; auto_tag: string; auto_status: string;
+  id: string; slots: string; prompts_status: string; prompts_error: string; auto_status: string;
   auto_size: number; auto_snapshot: string; auto_attempted: string; created_at: string; updated_at: string;
 }
-const DONE = "status IN ('approved','published')";
 const parse = <T>(value: string | null, fallback: T): T => { try { return value ? JSON.parse(value) as T : fallback; } catch { return fallback; } };
 const now = () => new Date().toISOString();
-
-async function realTotal(env: Env) {
-  return (await env.DB.prepare(`SELECT count(*) AS n FROM images WHERE origin='REAL' AND ${DONE}`).first<{ n: number }>())?.n || 0;
-}
 
 /** The open automatic batch, after closing it if it is in review and every image has been decided. */
 async function openBatch(env: Env): Promise<AutoRow | null> {
@@ -38,96 +29,93 @@ async function openBatch(env: Env): Promise<AutoRow | null> {
 async function batchView(env: Env, row: AutoRow) {
   const images = (await env.DB.prepare(`SELECT id,status,generation_slot,copy_key,analysis_status FROM images WHERE generation_batch=?
     ORDER BY created_at,rowid`).bind(row.id).all<{ id: string; status: string; generation_slot: string | null; copy_key: string | null; analysis_status: string }>()).results;
-  return { id: row.id, group: row.auto_tag, size: row.auto_size, status: row.auto_status, prompts_status: row.prompts_status,
-    prompts_error: row.prompts_error, slots: parse<Slot[]>(row.slots, []).length, attempted: parse<number[]>(row.auto_attempted, []),
+  // A batch drawn before the twins holds slots of tags: its size is the one recorded at its start.
+  return { id: row.id, size: row.auto_size, status: row.auto_status, prompts_status: row.prompts_status,
+    prompts_error: row.prompts_error, slots: itemsOf(row).length || row.auto_size, attempted: parse<number[]>(row.auto_attempted, []),
     snapshot: parse<Proposal | null>(row.auto_snapshot, null), created_at: row.created_at, updated_at: row.updated_at,
     images: images.map(i => ({ id: i.id, status: i.status, index: parse<{ index?: number }>(i.generation_slot, {}).index ?? null,
       copy: !!i.copy_key, analysis: i.analysis_status })),
     undecided: images.filter(i => i.status === "new").length };
 }
 
-async function settings(env: Env) {
-  const v = await numberSettings(env);
-  return { enabled: v.slop_auto_enabled === 1, threshold: v.slop_auto_threshold_percent, section: v.slop_section_min_real, group: v.slop_group_min_real };
-}
-/** Ignored groups, with the spread percent of that moment (the column keeps its old name «tag»). */
-async function ignoredGroups(env: Env) {
-  const rows = (await env.DB.prepare("SELECT tag,spread_percent FROM slop_proposal_ignored").all<{ tag: string; spread_percent: number }>()).results;
-  return new Map(rows.map(r => [r.tag, r.spread_percent]));
-}
-async function current(env: Env, deps: AutoDeps) {
-  const [s, open, groups, total, ignored] = [await settings(env), await openBatch(env), await deps.groups(env), await realTotal(env), await ignoredGroups(env)];
-  const result = proposal({ groups, realTotal: total, sectionMin: s.section, groupMin: s.group, thresholdPercent: s.threshold,
-    enabled: s.enabled, openBatch: !!open, ignored });
-  return { s, open, groups, ...result };
+async function current(env: Env) {
+  const [v, open, counts] = [await numberSettings(env), await openBatch(env), await twinCounts(env)];
+  const ignored = await env.DB.prepare("SELECT spread_percent FROM slop_proposal_ignored WHERE tag=?").bind(IGNORE_KEY).first<{ spread_percent: number }>();
+  const result = proposal({ ...counts, sectionMin: v.slop_section_min_real, thresholdPercent: v.slop_auto_threshold_percent,
+    enabled: v.slop_auto_enabled === 1, openBatch: !!open, ignoredAt: ignored?.spread_percent ?? null });
+  return { v, open, counts, ...result };
 }
 
-export async function autoState(env: Env, deps: AutoDeps) {
-  const { s, open, proposal: next, reason } = await current(env, deps);
-  return { enabled: s.enabled, threshold_percent: s.threshold, max_batch: AUTO_MAX_BATCH, paid_calls: !!env.OPENAI_API_KEY,
+export async function autoState(env: Env) {
+  const { v, open, proposal: next, reason } = await current(env);
+  return { enabled: v.slop_auto_enabled === 1, threshold_percent: v.slop_auto_threshold_percent, max_batch: MAX_BATCH, paid_calls: !!env.OPENAI_API_KEY,
     batch: open ? await batchView(env, open) : null, proposal: next, reason };
 }
 
-async function start(env: Env, data: Record<string, unknown>, deps: AutoDeps) {
-  if (Object.keys(data).some(key => !["group", "size", "confirm"].includes(key))) throw new HttpError(400, "Campi non previsti");
+/** The REAL of a batch: among those waiting for a twin, at random, so that a batch does not follow the order of loading. */
+function draw<T>(list: T[], count: number): T[] {
+  const pool = [...list], out: T[] = [];
+  while (out.length < count && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  return out;
+}
+async function start(env: Env, data: Record<string, unknown>) {
+  if (Object.keys(data).some(key => !["size", "confirm"].includes(key))) throw new HttpError(400, "Campi non previsti");
   if (data.confirm !== true) throw new HttpError(400, "Conferma le chiamate a pagamento del batch");
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
-  const { open, proposal: next } = await current(env, deps);
+  const { open, proposal: next } = await current(env);
   if (open) throw new HttpError(409, "C'è già un batch automatico aperto: nessuna chiamata inviata");
-  if (!next || next.group !== data.group || next.size !== data.size)
+  if (!next || next.size !== data.size)
     throw new HttpError(409, "La proposta è cambiata nel frattempo: nessun batch avviato. Controlla la nuova proposta");
-  const { slots } = extractSlots({ images: await deps.realImages(env, next.group), spread: await deps.spreadMap(env), theme: [], count: next.size });
-  const stamp = now(), batchId = crypto.randomUUID();
+  const waiting = (await realRows(env)).filter(r => !r.twin).map(r => r.id);
+  const items = await twinItems(env, draw(waiting, next.size)), stamp = now(), batchId = crypto.randomUUID();
   try {
-    await env.DB.prepare(`INSERT INTO slop_batches(id,theme,slots,created_at,updated_at,origin,auto_tag,auto_status,auto_size,auto_snapshot,group_key)
-      VALUES(?,'[]',?,?,?,'auto',?,'running',?,?,?)`).bind(batchId, JSON.stringify(slots), stamp, stamp,
-      next.group, slots.length, JSON.stringify(next), next.group).run();
+    await env.DB.prepare(`INSERT INTO slop_batches(id,theme,slots,created_at,updated_at,origin,auto_tag,auto_status,auto_size,auto_snapshot)
+      VALUES(?,'[]',?,?,?,'auto',?,'running',?,?)`).bind(batchId, JSON.stringify(items), stamp, stamp, IGNORE_KEY, items.length, JSON.stringify(next)).run();
   } catch { throw new HttpError(409, "C'è già un batch automatico aperto: nessuna chiamata inviata"); }
-  return autoState(env, deps);
+  return autoState(env);
 }
 
-async function ignore(env: Env, data: Record<string, unknown>, deps: AutoDeps) {
-  if (Object.keys(data).some(key => key !== "group") || typeof data.group !== "string" || !data.group) throw new HttpError(400, "Indica il gruppo");
-  const row = (await deps.groups(env)).find(g => g.key === data.group);
-  const percent = row ? spreadPercent(row.real, row.slop) : null;
-  if (percent === null) throw new HttpError(404, "Gruppo senza REAL approvate o pubblicate");
+async function ignore(env: Env, data: Record<string, unknown>) {
+  if (Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
+  const counts = await twinCounts(env), percent = spreadPercent(counts.real, counts.twinned);
+  if (percent === null) throw new HttpError(404, "Nessuna REAL approvata o pubblicata");
   await env.DB.prepare(`INSERT INTO slop_proposal_ignored(tag,spread_percent,created_at) VALUES(?,?,?)
-    ON CONFLICT(tag) DO UPDATE SET spread_percent=excluded.spread_percent,created_at=excluded.created_at`).bind(data.group, percent, now()).run();
-  return autoState(env, deps);
+    ON CONFLICT(tag) DO UPDATE SET spread_percent=excluded.spread_percent,created_at=excluded.created_at`).bind(IGNORE_KEY, percent, now()).run();
+  return autoState(env);
 }
 
-/** Stop (owner) or finish (every slot sent): no more calls; the images wait for the owner's decisions. */
-async function settle(env: Env, deps: AutoDeps) {
+/** Stop (owner) or finish (every image sent): no more calls; the images wait for the owner's decisions. */
+async function settle(env: Env) {
   const result = await env.DB.prepare("UPDATE slop_batches SET auto_status='review',updated_at=? WHERE origin='auto' AND auto_status='running'").bind(now()).run();
   if (!result.meta.changes) throw new HttpError(409, "Nessun batch automatico in generazione");
-  return autoState(env, deps);
+  return autoState(env);
 }
 
-export async function autoRoute(env: Env, method: string, rest: string, data: Record<string, unknown>, deps: AutoDeps) {
-  if (rest === "" && method === "GET") return autoState(env, deps);
+export async function autoRoute(env: Env, method: string, rest: string, data: Record<string, unknown>) {
+  if (rest === "" && method === "GET") return autoState(env);
   if (method !== "POST") throw new HttpError(405, "Metodo non consentito");
-  if (rest === "start") return start(env, data, deps);
-  if (rest === "ignore") return ignore(env, data, deps);
+  if (rest === "start") return start(env, data);
+  if (rest === "ignore") return ignore(env, data);
   if (rest === "stop" || rest === "finish") {
     if (Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
-    return settle(env, deps);
+    return settle(env);
   }
   throw new HttpError(404, "API dei batch automatici inesistente");
 }
 
-/** Ids of the automatic batches, kept out of the studio's list of recent groups. */
+/** Ids of the automatic batches, kept out of the studio's list of recent batches. */
 export async function autoBatchIds(env: Env): Promise<Set<string>> {
   return new Set((await env.DB.prepare("SELECT id FROM slop_batches WHERE origin='auto'").all<{ id: string }>()).results.map(r => r.id));
 }
 
-/** Rules of the studio routes on an automatic batch; nothing to check on a group of the studio. */
+/** Rules of the studio routes on an automatic batch; nothing to check on a batch of the studio. */
 export async function guardBatch(env: Env, method: string, rest: string, data: Record<string, unknown>) {
   const [batchId, action] = rest.split("/");
   if (!batchId || !/^[\w-]{1,64}$/.test(batchId)) return;
   const row = await env.DB.prepare("SELECT origin,auto_status,prompts_status,slots FROM slop_batches WHERE id=?").bind(batchId)
     .first<{ origin: string; auto_status: string; prompts_status: string; slots: string }>();
   if (!row || row.origin !== "auto") return;
-  if (method === "PUT") throw new HttpError(409, "Slot e prompt di un batch automatico non si modificano");
+  if (method === "PUT") throw new HttpError(409, "I prompt di un batch automatico non si modificano");
   if (method !== "POST") return;
   if (row.auto_status !== "running") throw new HttpError(409, "Il batch automatico non è più in generazione: nessuna chiamata inviata");
   if (action === "prompts") {
@@ -136,9 +124,9 @@ export async function guardBatch(env: Env, method: string, rest: string, data: R
     return;
   }
   if (action === "images") {
-    const index = data.index, count = parse<Slot[]>(row.slots, []).length;
-    if (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= count) throw new HttpError(400, "Slot inesistente");
-    // Whatever the studio route would refuse is refused here first, so that a refused request never uses up the slot.
+    const index = data.index, count = itemsOf(row).length;
+    if (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= count) throw new HttpError(400, "Immagine inesistente");
+    // Whatever the studio route would refuse is refused here first, so that a refused request never uses up the image.
     if (data.confirm !== true || !env.OPENAI_API_KEY) return;
     if (row.prompts_status !== "done") throw new HttpError(409, "Prima i prompt del batch: nessuna chiamata inviata");
     const qualities = IMAGE_MODELS[await chosenModel(env, "image_model")] || [];
@@ -146,6 +134,6 @@ export async function guardBatch(env: Env, method: string, rest: string, data: R
     const marked = await env.DB.prepare(`UPDATE slop_batches SET auto_attempted=json_insert(auto_attempted,'$[#]',?1),updated_at=?2
       WHERE id=?3 AND auto_status='running' AND NOT EXISTS (SELECT 1 FROM json_each(slop_batches.auto_attempted) WHERE value=?1)`)
       .bind(index, now(), batchId).run();
-    if (!marked.meta.changes) throw new HttpError(409, "Questo slot è già stato inviato al generatore: nessuna chiamata ripetuta");
+    if (!marked.meta.changes) throw new HttpError(409, "Questa immagine è già stata chiesta al generatore: nessuna chiamata ripetuta");
   }
 }

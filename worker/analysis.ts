@@ -10,7 +10,10 @@ import { CATEGORIES, categoryError, COLORS, forcedCategory, MEDIA, SINGLE, VISUA
 import { checkTag, suggestTag } from "../shared/tags";
 import { currentContext } from "./model-context";
 
-const VOCABULARY = 300, MAX_TAGS = 40, TIMEOUT_MS = 60_000, STALE_MS = 10 * 60_000, MAX_OUTPUT_TOKENS = 2000;
+const VOCABULARY = 300, MAX_TAGS = 40, TIMEOUT_MS = 60_000, STALE_MS = 10 * 60_000;
+/** The cap covers the reasoning of the model too: 2000 tokens cut one answer in ten of the first automatic batch («Risposta del
+ * modello non leggibile», paid and lost). */
+const MAX_OUTPUT_TOKENS = 8000;
 
 export async function analysisStatus(env: Env) {
   const model = await chosenModel(env, "text_model");

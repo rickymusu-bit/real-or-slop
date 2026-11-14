@@ -1,26 +1,25 @@
-/** SLOP studio (spec `generazione-slop`, sections 3–7): group (genre and decade) with an optional theme, editable slots, prompts
- * with their format, images with their treated copy and analysis, review with the expected tags not found and press-and-hold
- * preview. Every paid call is confirmed. */
+/** SLOP studio (spec `generazione-slop`, sections 3–6): choice of the REAL to twin, prompts with their format, images with
+ * their treated copy and analysis, review with what the twin was meant to keep of its REAL and press-and-hold preview. Every paid
+ * call is confirmed. */
 import "./slop-studio.css";
 import { prepareItemCopy, type TreatableItem } from "./game-copy";
 import { FORMAT_LABELS, FORMATS, isFormat, type Format } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
 import { onLongPress, openPreview } from "./image-preview";
 import { escape } from "../shared/html";
-import { CATEGORY_LABELS, VISUAL, type Category } from "../shared/tag-categories";
-import { SLOT_ORDER, type Slot } from "../shared/slot-extraction";
-import { categoryOf as categoryOfImage, legend, pill, sortByCategory } from "./tag-ui";
+import { VISUAL, type Category } from "../shared/tag-categories";
+import type { TwinItem } from "../shared/twins";
+import { categoryOf as categoryOfImage, pill, sortByCategory, startPills, startTagList, type StartSlot } from "./tag-ui";
 
-interface SpreadTag { label: string; category: Category; real: number; slop: number; spread: number }
-interface SpreadGroup { key: string; genre: string; time: string; real: number; slop: number; fresh: number; spread: number; missing_real: number; room: number }
-interface Spread { thresholds: { section: number; group: number; max_slots: number }; real_total: number; slop_total: number; tags: SpreadTag[]; groups: SpreadGroup[] }
-interface Slots { group: string; theme: string[]; reference: number; slots: Slot[] }
+interface Waiting { id: string; title: string; tags: { label: string; category: Category }[]; measured: boolean; file: string }
+interface State { thresholds: { section: number; max_batch: number }; real_total: number; slop_total: number; twinned: number; waiting: Waiting[] }
 interface Image { id: string; status: string; revision: number; tags: string[]; categories: Record<string, string>; file: string;
-  copy: unknown; prompt: string; analysis: { status: string; error: string };
-  generation: { batch: string; slot: { index: number; group?: string | null; theme: string[]; tags: Slot } } | null }
-interface Batch { id: string; group: string | null; theme: string[]; slots: Slot[]; prompts: { prompt: string; used: string[]; format?: Format }[]; prompts_status: string; prompts_error: string; images: Image[] }
-interface Models { text_model: string; image_model: string; image_quality: string; image_models: { id: string; qualities: string[] }[] }
-const API = "/api/admin/library/slop/", LIBRARY = "/api/admin/library", DRAFT = "ros-slop-studio-v2";
+  copy: unknown; prompt: string; analysis: { status: string; error: string }; generation: { batch: string; slot: StartSlot | null } | null }
+interface Batch { id: string; items: TwinItem[]; prompts: { prompt: string; used: string[]; format?: Format }[]; prompts_status: string; prompts_error: string; images: Image[] }
+interface Models { text_model: string; image_model: string; image_quality: string }
+const API = "/api/admin/library/slop/", LIBRARY = "/api/admin/library", DRAFT = "ros-slop-studio-v3";
+/** What a twin must keep of its REAL: decade, genre, colour and medium (missing: the image missed its aim), event and place. */
+const KEPT: readonly Category[] = ["time", "genre", "color", "medium", "event", "place"], SERIOUS: readonly Category[] = ["time", ...VISUAL];
 
 async function call<T>(path: string, body?: unknown, method?: string, base = API): Promise<T> {
   const response = await fetch(base + path, { credentials: "same-origin", method: method || (body === undefined ? "GET" : "POST"),
@@ -30,171 +29,116 @@ async function call<T>(path: string, body?: unknown, method?: string, base = API
   return data;
 }
 const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
-const signed = (n: number) => (n > 0 ? "+" : "") + n;
 
 export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () => Promise<void> }> {
-  let data: Spread | null = null, page = 1, notice = "", busy = false;
+  let data: State | null = null, page = 1, notice = "", busy = false;
   let batch: Batch | null = null, batchId = "", models: Models | null = null, quality = "medium", progress = "";
-  let group = "", theme: string[] = [], count = 5, reference: number | null = null, slots: Slot[] = [];
+  let chosen: string[] = [];
   try {
-    const draft = JSON.parse(sessionStorage.getItem(DRAFT) || "{}") as { group?: string; theme?: string[]; count?: number; slots?: Slot[]; page?: number; batch?: string; quality?: string };
-    group = typeof draft.group === "string" ? draft.group : "";
+    const draft = JSON.parse(sessionStorage.getItem(DRAFT) || "{}") as { chosen?: string[]; page?: number; batch?: string };
     batchId = typeof draft.batch === "string" ? draft.batch : "";
-    quality = typeof draft.quality === "string" ? draft.quality : "medium";
-    theme = Array.isArray(draft.theme) ? draft.theme.filter(t => typeof t === "string") : [];
-    count = typeof draft.count === "number" ? Math.min(10, Math.max(1, draft.count)) : 5;
-    slots = Array.isArray(draft.slots) ? draft.slots : [];
-    page = typeof draft.page === "number" && draft.page >= 2 && draft.page <= 5 && slots.length ? (draft.page > 2 && !batchId ? 2 : draft.page) : 1;
+    chosen = Array.isArray(draft.chosen) ? draft.chosen.filter(t => typeof t === "string") : [];
+    page = typeof draft.page === "number" && draft.page >= 2 && draft.page <= 4 && batchId ? draft.page : 1;
   } catch { /* no draft */ }
-  const persist = () => { try { sessionStorage.setItem(DRAFT, JSON.stringify({ group, theme, count, slots, page, batch: batchId, quality })); } catch { /* private browsing */ } };
-  const chosen = () => data?.groups.find(g => g.key === group) || null;
-  const categoryOf = (label: string): Category => data?.tags.find(t => t.label === label)?.category || "other";
+  const persist = () => { try { sessionStorage.setItem(DRAFT, JSON.stringify({ chosen, page, batch: batchId })); } catch { /* private browsing */ } };
+  const count = () => batch?.items.length || 0;
 
   const steps = () => '<ol class="rw-steps slop-steps" aria-label="Fasi della generazione">' +
-    ["Gruppo", "Slot", "Prompt", "Immagini", "Revisione"].map((label, i) =>
+    ["REAL", "Prompt", "Immagini", "Revisione"].map((label, i) =>
       "<li " + (page === i + 1 ? 'aria-current="step"' : "") + "><span>" + (i + 1) + "</span>" + label + "</li>").join("") + "</ol>";
 
-  const groupTable = () => {
-    if (!data?.groups.length) return '<p class="hint">Nessun gruppo: servono REAL approvate o pubblicate con un tag di Genere e uno di Tempo. ' +
-      "Completa Genere, Colore e Supporto dal Database.</p>";
-    return '<div class="slot-table-wrap"><table class="slot-table slop-groups"><thead><tr><th scope="col">Genere</th><th scope="col">Decennio</th>' +
-      '<th scope="col">REAL</th><th scope="col">SLOP</th><th scope="col">Nuove</th><th scope="col">Spread</th><th scope="col">Stato</th><th scope="col"></th></tr></thead><tbody>' +
-      data.groups.map(g => '<tr' + (g.key === group ? ' class="slop-group-chosen"' : "") + '><td class="tag-cat tag-cat-genre">' + escape(g.genre) +
-        '</td><td class="tag-cat tag-cat-time">' + escape(g.time) + "</td><td>" + g.real + "</td><td>" + g.slop + "</td><td>" + g.fresh + "</td><td>" +
-        signed(g.spread) + "</td><td>" + (g.missing_real ? "mancano " + g.missing_real + " REAL" : g.room ? g.room + " SLOP possibili" : "in equilibrio") +
-        '</td><td><button type="button" data-slop-group="' + escape(g.key) + '" aria-pressed="' + (g.key === group) + '"' +
-        (g.missing_real ? " disabled" : "") + ">Scegli</button></td></tr>").join("") + "</tbody></table></div>";
-  };
   const first = () => {
     if (!data) return '<p class="hint">Caricamento…</p>';
-    const closed = data.real_total < data.thresholds.section, current = chosen();
-    return '<p class="slop-totals">Immagini approvate o pubblicate: REAL <strong>' + data.real_total + "</strong>, SLOP <strong>" +
-      data.slop_total + "</strong>. Un gruppo riunisce le REAL dello stesso genere e decennio; genera con almeno " + data.thresholds.group +
-      " REAL e al massimo tante SLOP quante sono le sue REAL. Lo spread è REAL meno SLOP.</p>" +
+    const closed = data.real_total < data.thresholds.section, max = data.thresholds.max_batch;
+    chosen = chosen.filter(id => data!.waiting.some(w => w.id === id));
+    return '<p class="slop-totals">Ogni SLOP è la gemella di una REAL: un\'altra fotografia dello stesso evento, scritta dai tag e dalla descrizione ' +
+      "di quella REAL. REAL approvate o pubblicate: <strong>" + data.real_total + "</strong>; con una gemella approvata o pubblicata: <strong>" +
+      data.twinned + "</strong>; in attesa di una gemella: <strong>" + data.waiting.length + "</strong>.</p>" +
       (closed ? '<p class="slop-closed">REAL approvate o pubblicate: ' + data.real_total + " su " + data.thresholds.section +
         ". La generazione si apre da " + data.thresholds.section + " REAL.</p>" : "") +
-      groupTable() +
-      '<section class="slop-theme"><h3>Tema (facoltativo)</h3><p class="hint">' + (current ? "Gruppo scelto: <strong>" + escape(current.genre) +
-        "</strong>, <strong>" + escape(current.time) + "</strong>. " : "Scegli prima un gruppo. ") +
-      "I tag del tema compaiono in tutti i prompt e restringono le REAL di riferimento a quelle che li hanno tutti.</p>" +
-      '<div class="rw-pills">' + (theme.length ? theme.map(t => '<span class="rw-pill tag-cat tag-cat-' + categoryOf(t) + '">' + escape(t) +
-        '<button type="button" data-slop-remove="' + escape(t) + '" aria-label="Togli ' + escape(t) + ' dal tema">×</button></span>').join("") : "<small>Nessun tag nel tema</small>") + "</div>" +
-      '<div class="rw-tag-entry"><input data-slop-theme list="slop-tags" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Tag del tema">' +
-      '<button type="button" data-slop="add">Aggiungi</button></div><datalist id="slop-tags">' +
-      data.tags.map(t => '<option value="' + escape(t.label) + '"></option>').join("") + "</datalist>" +
-      (current ? '<p class="slop-reference">' + (reference === null ? "…" : reference + " REAL di riferimento su " + data.thresholds.group +
-        " necessarie") + "; SLOP ancora possibili nel gruppo: " + current.room + "</p>" : "") +
-      '<label>Immagini da generare<select data-slop-count>' + Array.from({ length: data.thresholds.max_slots }, (_, i) => i + 1)
-        .map(n => '<option value="' + n + '"' + (n === count ? " selected" : "") + ">" + n + "</option>").join("") + "</select></label>" +
-      (current && count > current.room ? '<p class="hint">Più SLOP di quante ne mancano al gruppo: il gruppo supererà le sue REAL.</p>' : "") +
-      '<div class="rw-actions rw-bottom"><button type="button" class="primary" data-slop="slots"' +
-      (closed || !current || (reference ?? 0) < data.thresholds.group ? " disabled" : "") + ">Prepara gli slot</button></div></section>";
-  };
-  const second = () => {
-    const vocabulary = (c: Category) => (data?.tags || []).filter(t => t.category === c).map(t => t.label).sort();
-    const covered = new Set(theme.map(categoryOf));
-    return '<p class="hint">Gruppo: <strong>' + escape(group) + "</strong>" + (theme.length ? ", tema: <strong>" + theme.map(escape).join(", ") + "</strong>" : "") +
-      ". Ogni riga è un'immagine: al massimo un tag per categoria, estratto dalle REAL del gruppo. Puoi cambiare ogni casella o ripescare; " +
-      "la REAL campione del trattamento della copia resta quella estratta.</p>" + legend() +
-      '<div class="slot-table-wrap"><table class="slot-table"><thead><tr><th scope="col">#</th>' +
-      SLOT_ORDER.map(c => '<th scope="col">' + escape(CATEGORY_LABELS[c]) + "</th>").join("") + "</tr></thead><tbody>" +
-      // «Ripesca» sits by the number, so that it stays on screen when the table scrolls sideways on a phone.
-      slots.map((slot, i) => '<tr><th scope="row"><span>' + (i + 1) + '</span> <button type="button" data-slop="reroll" data-slot="' + i +
-        '" aria-label="Ripesca l\'immagine ' + (i + 1) + '">Ripesca</button></th>' + SLOT_ORDER.map(c => {
-        if (covered.has(c)) return '<td class="tag-cat tag-cat-' + c + '">' + escape(theme.filter(t => categoryOf(t) === c).join(", ")) + " <small>(tema)</small></td>";
-        const options = vocabulary(c);
-        return '<td><select class="tag-cat tag-cat-' + c + '" data-slot="' + i + '" data-slot-cat="' + c + '" aria-label="' +
-          escape(CATEGORY_LABELS[c] + ", immagine " + (i + 1)) + '"><option value="">—</option>' +
-          options.map(o => '<option value="' + escape(o) + '"' + (slot[c] === o ? " selected" : "") + ">" + escape(o) + "</option>").join("") + "</select></td>";
-      }).join("") + "</tr>").join("") +
-      "</tbody></table></div>" +
-      '<div class="rw-actions rw-bottom"><button type="button" data-slop="back">Indietro: tema</button>' +
-      '<button type="button" data-slop="reroll-all">Ripesca tutti</button>' +
-      '<button type="button" class="primary" data-slop="prompts">Genera prompt</button></div>' +
+      (data.waiting.length ? '<p class="hint">Scegli fino a ' + max + " REAL. La pressione prolungata apre l'anteprima.</p>" +
+        '<ul class="slop-waiting" aria-label="REAL in attesa di una gemella">' + data.waiting.map(w =>
+          '<li class="' + (chosen.includes(w.id) ? "is-chosen" : "") + '"><label><input type="checkbox" data-slop-pick="' + escape(w.id) + '"' +
+          (chosen.includes(w.id) ? " checked" : "") + (!chosen.includes(w.id) && chosen.length >= max ? " disabled" : "") + ">" +
+          '<img src="' + escape(w.file) + '" alt="" loading="lazy" draggable="false" data-long-press data-slop-waiting="' + escape(w.id) + '">' +
+          '<span class="slop-waiting-title">' + escape(w.title) + "</span></label></li>").join("") + "</ul>"
+        : '<p class="hint">Ogni REAL approvata o pubblicata ha già la sua gemella.</p>') +
+      '<div class="rw-actions rw-bottom"><button type="button" data-slop="first"' + (closed || !data.waiting.length ? " disabled" : "") +
+      ">Scegli le prime " + Math.min(max, data.waiting.length) + '</button><button type="button" class="primary" data-slop="prompts"' +
+      (closed || !chosen.length ? " disabled" : "") + ">Genera " + (chosen.length || "") + " prompt</button></div>" +
       '<p class="hint">«Genera prompt» è una chiamata a pagamento a ' + escape(models?.text_model || "modello di testo") + ", con conferma.</p>";
   };
-  const groupPills = () => { const [genre, time] = group.split("/"); return genre && time ? pill(genre, "genre", "rw-pill") + pill(time, "time", "rw-pill") : ""; };
-  const slotLine = (slot: Slot | undefined) => groupPills() + theme.concat(SLOT_ORDER.map(c => slot?.[c] || "").filter(Boolean))
-    .map(t => pill(t, categoryOf(t), "rw-pill")).join("");
-  const third = () => {
-    const prompts = batch?.prompts || [];
-    return '<p class="hint">Prompt in inglese, uno per immagine. Puoi modificarli: si salvano uscendo dal campo. «Riscrivi» chiede al modello ' +
-      "un nuovo prompt per quello slot (a pagamento).</p>" +
+  const second = () => {
+    const prompts = batch?.prompts || [], items = batch?.items || [];
+    return '<p class="hint">Prompt in inglese, uno per immagine, sotto i tag della sua REAL. Puoi modificarli: si salvano uscendo dal campo. ' +
+      "«Riscrivi» chiede al modello un nuovo prompt per quella REAL (a pagamento).</p>" +
       (batch?.prompts_status === "uncertain" || batch?.prompts_status === "failed" ? '<p class="slop-closed">' + escape(batch.prompts_error) + "</p>" : "") +
-      '<ol class="slop-prompts">' + slots.map((slot, i) => '<li><div class="rw-pills">' + slotLine(slot) + "</div>" +
-        '<textarea data-prompt="' + i + '" rows="4" maxlength="4000" aria-label="Prompt dell\'immagine ' + (i + 1) + '">' + escape(prompts[i]?.prompt || "") + "</textarea>" +
-        (prompts[i] ? '<label class="slop-format">Formato<select data-prompt-format="' + i + '">' + (prompts[i].format ? "" : '<option value="">3:4 (prompt senza formato)</option>') +
+      '<ol class="slop-prompts">' + items.map((item, i) => "<li><p><strong>" + escape(item.title) + '</strong></p><div class="rw-pills">' + startPills(item) + "</div>" +
+        '<textarea data-prompt="' + i + '" rows="6" maxlength="4000" aria-label="Prompt dell\'immagine ' + (i + 1) + '">' + escape(prompts[i]?.prompt || "") + "</textarea>" +
+        (prompts[i] ? '<p class="hint" data-prompt-length="' + i + '">' + prompts[i].prompt.length + " caratteri</p>" +
+          '<label class="slop-format">Formato<select data-prompt-format="' + i + '">' + (prompts[i].format ? "" : '<option value="">3:4 (prompt senza formato)</option>') +
           FORMATS.map(f => '<option value="' + f + '"' + (prompts[i].format === f ? " selected" : "") + ">" + FORMAT_LABELS[f] + "</option>").join("") + "</select></label>" : "") +
         '<button type="button" data-slop="rewrite" data-slot="' + i + '">Riscrivi</button></li>').join("") + "</ol>" +
       '<div class="slop-generate library-inline"><span>Modello di immagini: <strong>' + escape(models?.image_model || "") + "</strong></span>" +
       "<span>Qualità: <strong>" + escape(quality) + "</strong> (si cambia nelle Impostazioni)</span></div>" +
-      '<div class="rw-actions rw-bottom"><button type="button" data-slop="to-slots">Indietro: slot</button>' +
-      '<button type="button" class="primary" data-slop="images"' + (prompts.length === slots.length && prompts.every(p => p.prompt) ? "" : " disabled") +
+      '<div class="rw-actions rw-bottom"><button type="button" data-slop="new-batch">Abbandona il batch</button>' +
+      '<button type="button" class="primary" data-slop="images"' + (items.length && prompts.length === items.length && prompts.every(p => p.prompt) ? "" : " disabled") +
       ">Genera immagini e analizza</button></div>";
   };
-  const fourth = () => '<p class="hint">Per ogni immagine: generazione, trattamento e copia di gioco WebP nel browser, analisi dei tag.</p>' +
+  const third = () => '<p class="hint">Per ogni immagine: generazione, trattamento e copia di gioco WebP nel browser, analisi dei tag.</p>' +
     '<p class="slop-progress" role="status">' + escape(progress) + "</p>" +
     '<div class="rw-actions rw-bottom"><button type="button" data-slop="to-review"' + (busy ? " disabled" : "") + ">Vai alla revisione</button></div>";
-  /** Expected tags (group, theme and slot) the analysis did not find on the image, and those that make it miss its aim: the theme,
-   * the group, Color and Medium. */
+  /** Tags of the source REAL the twin was meant to keep and the analysis did not find; the serious ones make it miss its aim. */
   const missing = (image: Image) => {
-    const slot = image.generation?.slot;
-    if (!slot) return { lost: [], serious: [] };
-    const groupTags = (slot.group || "").split("/").filter(Boolean);
-    const lost = groupTags.concat(slot.theme, SLOT_ORDER.map(c => slot.tags?.[c] || "").filter(Boolean)).filter(t => !image.tags.includes(t));
-    const key = new Set([...groupTags, ...slot.theme, ...VISUAL.map(c => slot.tags?.[c] || "").filter(Boolean)]);
-    return { lost, serious: lost.filter(t => key.has(t)) };
+    const kept = startTagList(image.generation?.slot).filter(t => KEPT.includes(t.category) || t.note), lost = kept.filter(t => !image.tags.includes(t.label));
+    return { lost: lost.map(t => t.label), serious: lost.filter(t => SERIOUS.includes(t.category) || t.note).map(t => t.label) };
   };
-  const fifth = () => {
+  const fourth = () => {
     const images = batch?.images || [];
-    return '<p class="hint">I tag finali sono quelli dell\'analisi. «Previsti ma non rilevati» confronta lo slot con ciò che l\'analisi ha visto; ' +
-      "se manca un tag del gruppo o del tema, o il Colore o il Supporto non sono quelli dello slot, l'immagine ha mancato l'obiettivo. Approvare non pubblica: la pubblicazione resta un passo separato.</p>" +
+    return '<p class="hint">I tag finali sono quelli dell\'analisi. «Previsti ma non rilevati» confronta decennio, genere, colore, supporto, evento e luogo ' +
+      "della REAL di origine con ciò che l'analisi ha visto: se mancano decennio, genere, colore o supporto la gemella ha mancato l'obiettivo. " +
+      "Approvare non pubblica: la pubblicazione resta un passo separato.</p>" +
       (images.length ? '<div class="rw-preview-grid">' + images.map(image => {
-        const { lost, serious: themeLost } = missing(image), index = image.generation?.slot.index ?? 0;
+        const { lost, serious } = missing(image), index = image.generation?.slot?.index ?? 0;
         return '<article class="rw-final slop-review" data-image="' + escape(image.id) + '"><div class="game-media-surface rw-final-image" data-long-press data-slop-preview="' +
           escape(image.id) + '"><img data-game-media draggable="false" src="' +
           escape(image.file) + '" alt="Immagine ' + (index + 1) + '"></div>' +
           '<div class="rw-pills">' + sortByCategory(image.tags, image.categories).map(t => pill(t, categoryOfImage(image.categories, t), "rw-pill")).join("") + "</div>" +
-          (lost.length ? '<p class="' + (themeLost.length ? "slop-closed" : "hint") + '">Previsti ma non rilevati: ' + lost.map(escape).join(", ") + "</p>" : '<p class="hint">Tutti i tag previsti sono stati rilevati.</p>') +
+          (lost.length ? '<p class="' + (serious.length ? "slop-closed" : "hint") + '">Previsti ma non rilevati: ' + lost.map(escape).join(", ") + "</p>" : '<p class="hint">Tutti i tag previsti sono stati rilevati.</p>') +
           '<p class="hint">Immagine ' + (index + 1) + " · " + escape(image.status) + (image.analysis.status !== "done" ? " · analisi: " + escape(image.analysis.status) : "") + "</p>" +
           '<div class="rw-actions">' +
           (image.status === "new" && image.copy && image.analysis.status !== "done" ? '<button type="button" data-slop="analyze" data-id="' + escape(image.id) + '">Analizza</button>' : "") +
           (image.status === "new" ? '<button type="button" class="primary" data-slop="approve" data-id="' + escape(image.id) + '"' + (image.tags.length && image.copy ? "" : " disabled") + ">Approva</button>" : "") +
           (image.status === "approved" ? '<button type="button" class="primary" data-slop="publish" data-id="' + escape(image.id) + '">Pubblica</button>' : "") +
           (image.status === "new" || image.status === "approved" ? '<button type="button" data-slop="trash" data-id="' + escape(image.id) + '">Cestino</button>' : "") +
-          '<button type="button" data-slop="regenerate" data-slot="' + index + '">Rigenera</button></div></article>';
-      }).join("") + "</div>" : "<p>Nessuna immagine generata in questo gruppo.</p>") +
+          (count() ? '<button type="button" data-slop="regenerate" data-slot="' + index + '">Rigenera</button>' : "") + "</div></article>";
+      }).join("") + "</div>" : "<p>Nessuna immagine generata in questo batch.</p>") +
       '<div class="rw-actions rw-bottom"><button type="button" data-slop="to-prompts">Indietro: prompt</button>' +
-      '<button type="button" data-slop="new-batch">Nuovo gruppo</button></div>';
+      '<button type="button" data-slop="new-batch">Nuovo batch</button></div>';
   };
   const render = () => {
     root.innerHTML = '<div class="rw slop"><h2>Generazione SLOP</h2>' + steps() +
       '<p class="slop-message" role="status" aria-live="polite">' + escape(notice) + "</p>" +
       (busy ? '<p class="rw-busy" role="status">Operazione in corso…</p>' : "") +
-      [first, second, third, fourth, fifth][page - 1]() + "</div>";
-    if (page === 5) markGameMedia(root);
-  };
-  const refreshReference = async () => {
-    reference = null;
-    if (!group) return;
-    try { reference = (await call<{ reference: number }>("reference", { group, theme })).reference; } catch (error) { notice = errorText(error); }
+      [first, second, third, fourth][page - 1]() + "</div>";
+    if (page === 4) markGameMedia(root);
   };
   const loadBatch = async () => { if (batchId) batch = await call<Batch>("batches/" + encodeURIComponent(batchId)); };
   const refresh = async () => {
     try {
-      data = await call<Spread>("spread"); await refreshReference();
+      data = await call<State>("state");
       models = await call<Models>("/models", undefined, "GET", LIBRARY);
       quality = models.image_quality;
       await loadBatch();
     } catch (error) { notice = errorText(error); }
     render();
   };
-  /** Copy in the browser, then the paid analysis (already confirmed with the generation). */
+  /** Treated copy in the browser, then the paid analysis (already confirmed with the generation). */
   const finish = async (imageId: string) => {
     await prepareItemCopy(await call<TreatableItem>("/" + encodeURIComponent(imageId), undefined, "GET", LIBRARY));
     await call("/" + encodeURIComponent(imageId) + "/analyze", { confirm: true }, "POST", LIBRARY);
   };
-  /** Generates, prepares and analyses the images of the given slots, one by one; an OpenAI account problem stops the run. */
+  /** Generates, prepares and analyses the given images, one by one; an OpenAI account problem stops the run. */
   const produce = async (indexes: number[]) => {
     const failures: string[] = [];
     for (const [n, i] of indexes.entries()) {
@@ -212,92 +156,76 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () 
     progress = (indexes.length - failures.length) + " di " + indexes.length + " immagini pronte." + (failures.length ? " Problemi: " + failures.join(" | ") : "");
     notice = progress;
   };
-  const addTheme = async (label: string) => {
-    const tag = label.trim();
-    if (!tag) return;
-    if (!data?.tags.some(t => t.label === tag)) { notice = "«" + tag + "» non è tra i tag delle immagini approvate o pubblicate."; render(); return; }
-    if (!theme.includes(tag)) theme = [...theme, tag];
-    notice = ""; persist(); await refreshReference(); render();
-  };
-  const draw = async (n: number, existing: Slot[]) => (await call<Slots>("slots", { group, theme, count: n, existing })).slots;
 
-  // Press and hold an image of the review: prompt, starting tags and tags of the analysis, large.
+  // Press and hold: a waiting REAL large, or an image of the review with its prompt, starting tags and tags of the analysis.
+  onLongPress(root, "[data-slop-waiting]", element => {
+    const real = data?.waiting.find(w => w.id === element.dataset.slopWaiting);
+    if (real) openPreview({ src: real.file, alt: real.title, title: real.title,
+      extra: '<div class="image-preview-tags">' + real.tags.map(t => pill(t.label, t.category, "rw-pill")).join("") + "</div>" });
+  });
   onLongPress(root, "[data-slop-preview]", element => {
     const image = batch?.images.find(i => i.id === element.dataset.slopPreview);
     if (!image) return;
-    const slot = image.generation?.slot, theme = slot?.theme || [], [genre, time] = (slot?.group || "").split("/");
-    const start = slot ? (genre && time ? pill(genre, "genre", "rw-pill", " <small>gruppo</small>") + pill(time, "time", "rw-pill", " <small>gruppo</small>") : "") +
-      theme.map(t => pill(t, categoryOf(t), "rw-pill", " <small>tema</small>")).join("") +
-      SLOT_ORDER.filter(c => slot.tags?.[c] && !theme.includes(slot.tags[c]!)).map(c => pill(slot.tags[c]!, c, "rw-pill")).join("") : "";
-    const index = slot?.index ?? 0;
+    const start = startPills(image.generation?.slot), index = image.generation?.slot?.index ?? 0;
     openPreview({ src: image.file, alt: "Immagine " + (index + 1), title: "Immagine " + (index + 1),
       extra: (image.prompt ? '<p><span class="image-preview-label">Prompt</span><br><q lang="en">' + escape(image.prompt) + "</q></p>" : "") +
-        (start ? '<p class="image-preview-label">Tag di partenza</p><div class="image-preview-tags">' + start + "</div>" : "") +
+        (start ? '<p class="image-preview-label">Tag di partenza</p><div class="image-preview-tags" data-start-tags>' + start + "</div>" : "") +
         '<p class="image-preview-label">Tag dell\'analisi</p><div class="image-preview-tags">' +
         (sortByCategory(image.tags, image.categories).map(t => pill(t, categoryOfImage(image.categories, t), "rw-pill")).join("") || '<span class="hint">Nessuno.</span>') + "</div>" });
   });
   root.addEventListener("click", async event => {
-    const target = event.target as HTMLElement;
-    const pick = target.closest<HTMLButtonElement>("[data-slop-group]");
-    if (pick && !busy) { group = pick.dataset.slopGroup!; theme = []; notice = ""; persist(); await refreshReference(); render(); return; }
-    const remove = target.closest<HTMLButtonElement>("[data-slop-remove]");
-    if (remove) { theme = theme.filter(t => t !== remove.dataset.slopRemove); persist(); await refreshReference(); render(); return; }
-    const button = target.closest<HTMLButtonElement>("button[data-slop]");
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-slop]");
     if (!button || busy) return;
     const action = button.dataset.slop!;
-    if (action === "add") { await addTheme(root.querySelector<HTMLInputElement>("[data-slop-theme]")!.value); return; }
-    if (action === "back") { page = 1; persist(); render(); return; }
-    if (action === "to-slots") { page = 2; persist(); render(); return; }
-    if (action === "to-prompts") { page = 3; persist(); render(); return; }
-    if (action === "to-review") { page = 5; persist(); await loadBatch(); render(); return; }
-    if (action === "new-batch") { batchId = ""; batch = null; page = 1; notice = ""; persist(); render(); return; }
+    if (action === "first" && data) { chosen = data.waiting.slice(0, data.thresholds.max_batch).map(w => w.id); persist(); render(); return; }
+    if (action === "to-prompts") { page = 2; persist(); render(); return; }
+    if (action === "to-review") { page = 4; persist(); await loadBatch(); render(); return; }
+    if (action === "new-batch") { batchId = ""; batch = null; chosen = []; page = 1; notice = ""; persist(); await refresh(); return; }
+    const slot = Number(button.dataset.slot);
     const paid: Record<string, () => string> = {
-      prompts: () => "Scrivere " + slots.length + " prompt con " + (models?.text_model || "il modello di testo") + "? È una chiamata a pagamento.",
-      rewrite: () => "Riscrivere il prompt dell'immagine " + (Number(button.dataset.slot) + 1) + " con " + (models?.text_model || "il modello di testo") + "? È una chiamata a pagamento.",
-      images: () => "Generare " + slots.length + " immagini con " + (models?.image_model || "il modello di immagini") + " in qualità " + quality +
-        " e analizzarle con " + (models?.text_model || "il modello di testo") + "? Sono " + slots.length * 2 + " chiamate a pagamento.",
-      regenerate: () => "Generare un'altra immagine per lo slot " + (Number(button.dataset.slot) + 1) + " con " + (models?.image_model || "il modello di immagini") +
+      prompts: () => "Scrivere " + chosen.length + " prompt con " + (models?.text_model || "il modello di testo") + "? È una chiamata a pagamento.",
+      rewrite: () => "Riscrivere il prompt dell'immagine " + (slot + 1) + " con " + (models?.text_model || "il modello di testo") + "? È una chiamata a pagamento.",
+      images: () => "Generare " + count() + " immagini con " + (models?.image_model || "il modello di immagini") + " in qualità " + quality +
+        " e analizzarle con " + (models?.text_model || "il modello di testo") + "? Sono " + count() * 2 + " chiamate a pagamento.",
+      regenerate: () => "Generare un'altra immagine per la REAL " + (slot + 1) + " con " + (models?.image_model || "il modello di immagini") +
         " in qualità " + quality + " e analizzarla? Sono 2 chiamate a pagamento; l'immagine attuale resta, puoi spostarla nel cestino.",
       analyze: () => "Analizzare questa immagine con " + (models?.text_model || "il modello di testo") + "? È una chiamata a pagamento.",
     };
     if (paid[action] && !window.confirm(paid[action]())) return;
     busy = true; render();
     try {
-      if (action === "slots" || action === "reroll-all") { slots = await draw(count, []); page = 2; notice = ""; batchId = ""; batch = null; }
-      else if (action === "prompts") {
-        // A group per set of slots: created on the first prompts, its slots updated when the owner changed them.
-        batch = batchId ? await call<Batch>("batches/" + encodeURIComponent(batchId), { slots }, "PUT") : await call<Batch>("batches", { group, theme, slots });
-        batchId = batch.id;
+      if (action === "prompts") {
+        batch = await call<Batch>("batches", { sources: chosen });
+        batchId = batch.id; page = 2; persist();
         batch = await call<Batch>("batches/" + encodeURIComponent(batchId) + "/prompts", { confirm: true });
-        page = 3; notice = "Prompt scritti.";
+        notice = "Prompt scritti.";
       } else if (action === "rewrite") {
-        batch = await call<Batch>("batches/" + encodeURIComponent(batchId) + "/prompts", { confirm: true, index: Number(button.dataset.slot) });
-        notice = "Prompt dell'immagine " + (Number(button.dataset.slot) + 1) + " riscritto.";
+        batch = await call<Batch>("batches/" + encodeURIComponent(batchId) + "/prompts", { confirm: true, index: slot });
+        notice = "Prompt dell'immagine " + (slot + 1) + " riscritto.";
       } else if (action === "images") {
-        page = 4; persist(); await produce(slots.map((_, i) => i)); page = 5;
+        page = 3; persist(); await produce((batch?.items || []).map((_, i) => i)); page = 4;
       } else if (action === "regenerate") {
-        await produce([Number(button.dataset.slot)]);
+        await produce([slot]);
       } else if (action === "analyze") {
         await call("/" + encodeURIComponent(button.dataset.id!) + "/analyze", { confirm: true }, "POST", LIBRARY); await loadBatch(); notice = "Analisi completata.";
       } else if (action === "approve" || action === "publish" || action === "trash") {
         await call("/" + encodeURIComponent(button.dataset.id!) + "/" + action, {}, "POST", LIBRARY); await loadBatch();
         notice = { approve: "Immagine approvata.", publish: "Immagine pubblicata.", trash: "Immagine nel cestino." }[action];
       }
-      else if (action === "reroll") {
-        const i = Number(button.dataset.slot);
-        [slots[i]] = await draw(1, slots.filter((_, j) => j !== i));
-        notice = "Immagine " + (i + 1) + " ripescata.";
-      }
       persist();
     } catch (error) { notice = errorText(error); }
     finally { busy = false; render(); }
   });
   root.addEventListener("change", event => {
-    const target = event.target as HTMLSelectElement;
-    if (target.matches("[data-slop-count]")) { count = Number(target.value); persist(); render(); }
+    const target = event.target as HTMLSelectElement & HTMLInputElement;
+    if (target.matches("[data-slop-pick]")) {
+      const id = target.dataset.slopPick!;
+      chosen = target.checked ? [...new Set([...chosen, id])].slice(0, data?.thresholds.max_batch || 10) : chosen.filter(c => c !== id);
+      persist(); render();
+    }
     else if (target.matches("[data-prompt]") && batch) {
       // Owner's edit of a prompt: free, saved at once.
-      const texts = slots.map((_, i) => root.querySelector<HTMLTextAreaElement>('[data-prompt="' + i + '"]')?.value ?? batch!.prompts[i]?.prompt ?? "");
+      const texts = batch.items.map((_, i) => root.querySelector<HTMLTextAreaElement>('[data-prompt="' + i + '"]')?.value ?? batch!.prompts[i]?.prompt ?? "");
       void call<Batch>("batches/" + encodeURIComponent(batchId), { prompts: texts }, "PUT")
         .then(updated => { batch = updated; notice = "Prompt salvato."; const m = root.querySelector(".slop-message"); if (m) m.textContent = notice; })
         .catch(error => { notice = errorText(error); render(); });
@@ -310,16 +238,6 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () 
         .then(updated => { batch = updated; notice = "Formato salvato."; const m = root.querySelector(".slop-message"); if (m) m.textContent = notice; })
         .catch(error => { notice = errorText(error); render(); });
     }
-    else if (target.matches("[data-slot]")) {
-      const i = Number(target.dataset.slot), c = target.dataset.slotCat as Category;
-      slots[i] = { ...slots[i] };
-      if (target.value) slots[i][c] = target.value; else delete slots[i][c];
-      persist();
-    }
-  });
-  root.addEventListener("keydown", event => {
-    const target = event.target as HTMLInputElement;
-    if (target.matches("[data-slop-theme]") && event.key === "Enter") { event.preventDefault(); void addTheme(target.value); }
   });
   render();
   await refresh();

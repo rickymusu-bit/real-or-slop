@@ -13,13 +13,12 @@ import { mountStats, type Stats } from "./stats";
 import { mountDistribution, type Distribution } from "./database-chart";
 import "./database.css";
 import { CATEGORIES, CATEGORY_LABELS, isCategory, type Category } from "../shared/tag-categories";
-import { categoryOf, categorySelect, legend, pill, sortByCategory, suggestedCategory } from "./tag-ui";
+import { categoryOf, categorySelect, legend, pill, sortByCategory, startPills, suggestedCategory, type StartSlot } from "./tag-ui";
 import { mountRealWizard, type RealWizard } from "./real-wizard";
 import { onLongPress, openPreview } from "./image-preview";
-import { SLOT_ORDER, type Slot } from "../shared/slot-extraction";
 import { content, escape } from "./main";
 import { measureMissing, prepareItemCopy, saveFrame } from "./game-copy";
-import type { Metrics, Treatment } from "../shared/copy-treatment";
+import { METRICS_VERSION, type Metrics, type Treatment } from "../shared/copy-treatment";
 import { chooseFrame } from "./crop-editor";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
@@ -35,9 +34,8 @@ interface Item {
   generated: { tags: string[] } | null;
   categories: Record<string, string>;
   stats: { views: number; correct: number }; in_play: number; no_derivatives: boolean;
-  /** A generated SLOP: its batch, its group and the slot its prompt was written from (theme, one tag per category, REAL campione). */
-  generation?: { batch: string; slot: { index?: number; group?: string | null; theme?: string[]; tags?: Slot; sample?: string | null } | null;
-    quality: string | null; group?: string | null } | null;
+  /** A generated SLOP: its batch, the REAL it is the twin of and what its prompt was written from. */
+  generation?: { batch: string; slot: StartSlot | null; quality: string | null; source?: string | null } | null;
   group: { key: string; genre: string; time: string } | null; missing_categories: string[]; completable: boolean;
   metrics: Metrics | null; treatment: Treatment | null; copy_sha?: string;
 }
@@ -146,11 +144,10 @@ export async function showLibrary() {
       <p class="hint">La qualità vale per lo studio SLOP e per la rigenerazione nella sezione Database.</p></details>
     <details id="library-thresholds" class="library-vocabulary"><summary>Studio SLOP</summary>
       <form id="library-thresholds-form" class="library-inline"><label>REAL approvate o pubblicate per aprire lo studio<input type="number" name="slop_section_min_real" required></label>
-        <label>REAL di un gruppo per generare<input type="number" name="slop_group_min_real" required></label>
         <label>Proposte automatiche<select name="slop_auto_enabled"><option value="1">attive</option><option value="0">spente</option></select></label>
         <label>Soglia di proposta (% di spread)<input type="number" name="slop_auto_threshold_percent" required></label><button>Salva</button></form>
       <p class="hint">Stime da verificare sui primi temi reali. Una proposta di generazione compare quando
-        100 × (REAL − SLOP) / REAL di un gruppo (genere e decennio) raggiunge la soglia (33%: 1,5 REAL per ogni SLOP); spegnere le proposte non ferma un batch già avviato.</p></details>
+        100 × (REAL − SLOP gemelle approvate o pubblicate) / REAL raggiunge la soglia (33%: 1,5 REAL per ogni gemella); spegnere le proposte non ferma un batch già avviato.</p></details>
     <details id="library-games" class="library-vocabulary"><summary>Partite</summary>
       <form id="library-games-form" class="library-inline"><label>Durata massima di una partita aperta (ore)<input type="number" name="open_game_hours" required></label><button>Salva</button></form>
       <p class="hint">Oltre questo tempo una partita non conclusa non trattiene più le copie delle foto ritirate o modificate, e la sua foto può non essere più disponibile. I livelli del gioco sono fissi nel codice.</p></details></section>
@@ -201,7 +198,7 @@ export async function showLibrary() {
   };
   const refreshGroups = async () => {
     try {
-      const { groups } = await call<{ groups: { key: string; real: number; slop: number }[] }>("/slop/spread");
+      const { groups } = await call<{ groups: { key: string; real: number; slop: number }[] }>("/slop/state");
       const select = $<HTMLSelectElement>("#library-group");
       select.innerHTML = '<option value="">tutti</option>' + groups.map(g => `<option value="${escape(g.key)}"${g.key === filter.group ? " selected" : ""}>${escape(g.key)} (${g.real} REAL, ${g.slop} SLOP)</option>`).join("");
     } catch { /* the filter stays as it is */ }
@@ -240,7 +237,7 @@ export async function showLibrary() {
     $("#library-empty-trash").hidden = filter.status !== "trash" || !count("trash");
     render();
     // Copies made before the measures existed are measured in the background, one at a time (free).
-    if (!measuring && items.some(i => !i.metrics && i.copy)) {
+    if (!measuring && items.some(i => i.metrics?.v !== METRICS_VERSION && i.copy)) {
       measuring = true;
       void measureMissing(items.map(i => ({ id: i.id, metrics: i.metrics, copy: i.copy ? { sha256: i.copy.sha256 } : null }))).finally(() => { measuring = false; });
     }
@@ -252,19 +249,14 @@ export async function showLibrary() {
       `<button type="button" data-filter-remove="${escape(t)}" aria-label="Togli ${escape(t)} dal filtro">×</button>`)).join("") ||
       "<small>Nessun tag: tutte le immagini</small>";
   };
-  /** Starting tags of a generated SLOP: the theme, then the tags of the slot in the slot order. Empty for a REAL or an uploaded SLOP. */
+  /** Starting tags of a generated SLOP: the tags of the REAL it is the twin of. Empty for a REAL or an uploaded SLOP. */
   const startTags = (item: Item) => {
-    const slot = item.generation?.slot;
-    if (item.origin !== "SLOP" || !slot) return "";
-    const theme = Array.isArray(slot.theme) ? slot.theme.filter(t => typeof t === "string") : [];
-    const byCategory: Slot = slot.tags && typeof slot.tags === "object" ? slot.tags : {};
-    const tags = SLOT_ORDER.flatMap(c => { const t = byCategory[c]; return typeof t === "string" && !theme.includes(t) ? [[t, c] as const] : []; });
-    const [genre, time] = (slot.group || item.generation?.group || "").split("/");
-    const group = genre && time ? pill(genre, "genre", "rw-pill", " <small>gruppo</small>") + pill(time, "time", "rw-pill", " <small>gruppo</small>") : "";
-    if (!group && !theme.length && !tags.length) return "";
+    const pills = item.origin === "SLOP" ? startPills(item.generation?.slot) : "";
+    if (!pills) return "";
+    const source = item.generation?.source;
     return `<div class="library-start-tags" data-start-tags><span class="image-preview-label">Tag di partenza</span>
-      <p class="hint">Gruppo, tema e slot da cui è stato scritto il prompt; i tag dell'immagine sono quelli dell'analisi.</p>
-      <div class="image-preview-tags">${group}${theme.map(t => pill(t, tagCategories.get(t) || "other", "rw-pill", " <small>tema</small>")).join("")}${tags.map(([t, c]) => pill(t, c, "rw-pill")).join("")}</div></div>`;
+      <p class="hint">${source ? "Tag della REAL di cui questa SLOP è la gemella" : "Tag da cui è stato scritto il prompt"}; i tag dell'immagine sono quelli dell'analisi.</p>
+      <div class="image-preview-tags">${pills}</div>${source ? `<p><button type="button" data-open-source="${escape(source)}">Apri la REAL di origine</button></p>` : ""}</div>`;
   };
   const preview = (item: Item) => openPreview(item.origin === "REAL"
     ? { src: item.file, alt: item.title, title: item.title, description: item.description,
@@ -413,6 +405,10 @@ export async function showLibrary() {
   });
   detail.addEventListener("click", async event => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
+    if (button?.dataset.openSource && !busy) {
+      try { showDetail(await call<Item>("/" + encodeURIComponent(button.dataset.openSource))); } catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
+      return;
+    }
     if (!button || !open || busy || !(button.dataset.tagRemove || button.dataset.action || ["library-copy", "library-analyze", "library-restore", "library-regenerate",
       "library-crop", "library-complete", "library-treatment-change", "library-treatment-off", "library-treatment-on"].includes(button.id))) return;
     busy = true;
@@ -711,7 +707,7 @@ export async function showLibrary() {
       settingsMessage(done); await slopStudio.refresh(); await autoBox.refresh();
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
-  numbersForm("#library-thresholds-form", ["slop_section_min_real", "slop_group_min_real", "slop_auto_enabled", "slop_auto_threshold_percent"], "Soglie dello studio SLOP salvate.");
+  numbersForm("#library-thresholds-form", ["slop_section_min_real", "slop_auto_enabled", "slop_auto_threshold_percent"], "Soglie dello studio SLOP salvate.");
   numbersForm("#library-games-form", ["open_game_hours"], "Durata massima di una partita aperta salvata.");
   await call<Numbers>("/settings").then(renderNumbers).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   statsView = mountStats($<HTMLElement>("#stats-body"), period => call<Stats>("/stats?" + new URLSearchParams({ period })));

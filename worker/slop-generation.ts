@@ -1,54 +1,36 @@
-/** SLOP batches and paid generation (spec `generazione-slop`, sections 5–6): batches of a group with theme, slots, prompts and
- * their formats; one call writes the prompts (or rewrites one) with examples of the group; the image generator receives only the
- * prompt text and the size of its
- * format; the image enters the library as a new SLOP with prompt, model, group, slot and quality. Refusals (4xx) are not charged,
- * uncertain outcomes are recorded and never resent. */
+/** SLOP batches and paid generation (spec `generazione-slop`, sections 3–5): a batch is a list of REAL, each with the SLOP twin to
+ * write; one call writes the prompts (or rewrites one) from the tags and the description of each REAL; the image generator receives
+ * only the prompt text and the size of its format; the image enters the library as a new SLOP with prompt, model, batch, source
+ * and quality. Refusals (4xx) are not charged, uncertain outcomes are recorded and never resent. */
 import { HttpError, id, type Env } from "./core";
 import { create, viewOf } from "./library";
 import { chosenModel } from "./models";
 import { currentContext } from "./model-context";
 import { IMAGE_MODELS } from "../shared/models";
 import { formatsFor, generationSize, isFormat, type Format } from "../shared/game-copy";
-import { isCategory } from "../shared/tag-categories";
-import { MAX_SLOTS, SLOT_ORDER, type Slot } from "../shared/slot-extraction";
-import { parseGroup } from "../shared/slop-groups";
+import { MAX_BATCH, type TwinItem } from "../shared/twins";
+import { byCategory, twinItems } from "./twins";
 
-const TIMEOUT_MS = 120_000, STALE_MS = 10 * 60_000, PROMPT_MAX = 4000, MAX_OUTPUT_TOKENS = 16_000, EXAMPLES = 8;
-/** Lines fixed in the code (spec `generazione-slop`, section 5): language and schema, length, use of the examples. */
+const TIMEOUT_MS = 120_000, STALE_MS = 10 * 60_000, PROMPT_MAX = 4000, MAX_OUTPUT_TOKENS = 16_000, RELATED = 3;
+/** Lines fixed in the code (spec `generazione-slop`, section 4): language and schema, length, what a twin is. */
 const OUTPUT = "Write every prompt in English, between 600 and 1000 characters. Return JSON only, matching the schema: «prompts», one per " +
-  "slot in the same order, each with «prompt», the text for the image generator, «used_tags», the tags of its slot that the prompt uses, " +
+  "item in the same order, each with «prompt», the text for the image generator, «used_tags», the tags of its item that the prompt uses, " +
   "and «format», the photographic format (width:height) a photographer would choose for that subject, among those allowed by the schema.";
-const EXAMPLES_RULE = "The examples are real photographs of the same genre and decade: use them to understand the genre, the period, " +
-  "the medium and the way of photographing. No prompt may take up the scene, the framing or the people of an example, and the names " +
-  "of people in the examples are never used.";
-/** Format of prompts written before formats existed (v1.5.0): the closest to the 4:5 they were meant for. */
+const TWIN_RULE = "Each item is a real photograph, given as its tags and its description. Write the prompt of ANOTHER photograph that could " +
+  "sit beside it in the same archive: the same event or kind of scene, the same place, decade, genre, colour and medium, but a different " +
+  "moment, a different viewpoint and different people. Never describe the photograph of the item itself, and never use the names of people " +
+  "found in the descriptions. «related» holds descriptions of other photographs of the same event or place: context, never scenes to copy.";
+/** Format of prompts written before formats existed: the closest to the 4:5 they were meant for. */
 const LEGACY_FORMAT: Format = "3:4";
 const OPENAI = "https://api.openai.com/v1/";
 
-interface Batch { id: string; theme: string; slots: string; prompts: string; prompts_status: string; prompts_error: string; created_at: string; updated_at: string; group_key: string | null }
+interface Batch { id: string; slots: string; prompts: string; prompts_status: string; prompts_error: string; created_at: string; updated_at: string }
 export interface PromptEntry { prompt: string; used: string[]; format?: Format }
 
 const parse = <T>(value: string, fallback: T): T => { try { return JSON.parse(value) as T; } catch { return fallback; } };
-function slotsOf(value: unknown): Slot[] {
-  if (!Array.isArray(value) || !value.length || value.length > MAX_SLOTS) throw new HttpError(400, `Da 1 a ${MAX_SLOTS} slot`);
-  return value.map(item => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) throw new HttpError(400, "Slot non valido");
-    const slot: Slot = {};
-    for (const [category, label] of Object.entries(item as Record<string, unknown>))
-      if (isCategory(category) && SLOT_ORDER.includes(category) && typeof label === "string" && label) slot[category] = label.slice(0, 40);
-    const sample = (item as Record<string, unknown>).sample;
-    if (typeof sample === "string" && /^[\w-]{1,64}$/.test(sample)) slot.sample = sample;
-    return slot;
-  });
-}
-function themeOf(value: unknown): string[] {
-  if (value === undefined) return [];
-  const theme = Array.isArray(value) ? [...new Set(value.filter((t): t is string => typeof t === "string" && !!t))] : null;
-  if (!theme || theme.length > 10) throw new HttpError(400, "Il tema ha al massimo 10 tag");
-  return theme;
-}
-/** The tags of a slot, without its «REAL campione». */
-const tagsOf = (slot: Slot) => Object.fromEntries(Object.entries(slot).filter(([key]) => key !== "sample"));
+/** The items of a batch. A batch drawn before the twins (slots of tags) has none: it can only be reviewed. */
+export const itemsOf = (row: { slots: string }): TwinItem[] =>
+  parse<unknown[]>(row.slots, []).filter((i): i is TwinItem => !!i && typeof (i as TwinItem).source === "string" && Array.isArray((i as TwinItem).tags));
 const confirmOnly = (data: Record<string, unknown>, allowed: string[]) => {
   if (Object.keys(data).some(key => !["confirm", ...allowed].includes(key))) throw new HttpError(400, "Campi non previsti");
   if (data.confirm !== true) throw new HttpError(400, "Conferma la chiamata a pagamento");
@@ -56,13 +38,13 @@ const confirmOnly = (data: Record<string, unknown>, allowed: string[]) => {
 
 async function load(env: Env, batchId: string): Promise<Batch> {
   const row = await env.DB.prepare("SELECT * FROM slop_batches WHERE id=?").bind(batchId).first<Batch>();
-  if (!row) throw new HttpError(404, "Gruppo inesistente");
+  if (!row) throw new HttpError(404, "Batch inesistente");
   return row;
 }
 async function show(env: Env, batchId: string) {
   const row = await load(env, batchId);
   const ids = (await env.DB.prepare("SELECT id FROM images WHERE generation_batch=? ORDER BY created_at,rowid").bind(batchId).all<{ id: string }>()).results;
-  return { id: row.id, group: row.group_key, theme: parse<string[]>(row.theme, []), slots: parse<Slot[]>(row.slots, []), prompts: parse<PromptEntry[]>(row.prompts, []),
+  return { id: row.id, items: itemsOf(row), prompts: parse<PromptEntry[]>(row.prompts, []),
     prompts_status: row.prompts_status, prompts_error: row.prompts_error, created_at: row.created_at, updated_at: row.updated_at,
     images: await Promise.all(ids.map(r => viewOf(env, r.id))) };
 }
@@ -89,48 +71,47 @@ async function record(env: Env, kind: "prompts" | "images", model: string) {
       .bind(status, usage?.input_tokens ?? null, usage?.output_tokens ?? null, new Date().toISOString(), callId).run();
 }
 
-/** POST /slop/batches {group, theme, slots}: a new batch of a group, free. */
+/** POST /slop/batches {sources}: a new batch for 1 to 10 REAL without a twin, free. */
 async function createBatch(env: Env, data: Record<string, unknown>) {
-  if (Object.keys(data).some(key => !["group", "theme", "slots"].includes(key))) throw new HttpError(400, "Campi non previsti");
-  const group = parseGroup(data.group);
-  if (!group) throw new HttpError(400, "Scegli un gruppo (genere e decennio)");
-  const theme = themeOf(data.theme), slots = slotsOf(data.slots), batchId = id(), stamp = new Date().toISOString();
-  await env.DB.prepare("INSERT INTO slop_batches(id,theme,slots,created_at,updated_at,group_key) VALUES(?,?,?,?,?,?)")
-    .bind(batchId, JSON.stringify(theme), JSON.stringify(slots), stamp, stamp, group.key).run();
+  if (Object.keys(data).some(key => key !== "sources")) throw new HttpError(400, "Campi non previsti");
+  const sources = Array.isArray(data.sources) ? [...new Set(data.sources)] : [];
+  if (!sources.length || sources.length > MAX_BATCH || sources.some(s => typeof s !== "string" || !/^[\w-]{1,64}$/.test(s)))
+    throw new HttpError(400, `Scegli da 1 a ${MAX_BATCH} REAL`);
+  const items = await twinItems(env, sources as string[]), batchId = id(), stamp = new Date().toISOString();
+  await env.DB.prepare("INSERT INTO slop_batches(id,theme,slots,created_at,updated_at) VALUES(?,'[]',?,?,?)")
+    .bind(batchId, JSON.stringify(items), stamp, stamp).run();
   return show(env, batchId);
 }
-/** PUT /slop/batches/:id {slots?, prompts?, formats?}: the owner's edits, free. Prompts are plain texts, one per slot; formats one per
- * prompt. */
+/** PUT /slop/batches/:id {prompts?, formats?}: the owner's edits, free. Prompts are plain texts, one per item; formats one per prompt. */
 async function editBatch(env: Env, batchId: string, data: Record<string, unknown>) {
-  if (Object.keys(data).some(key => !["slots", "prompts", "formats"].includes(key)) || !Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
-  const row = await load(env, batchId);
-  const slots = data.slots === undefined ? parse<Slot[]>(row.slots, []) : slotsOf(data.slots);
+  if (Object.keys(data).some(key => !["prompts", "formats"].includes(key)) || !Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
+  const row = await load(env, batchId), items = itemsOf(row);
   let prompts = parse<PromptEntry[]>(row.prompts, []);
   if (data.prompts !== undefined) {
-    if (!Array.isArray(data.prompts) || data.prompts.length !== slots.length || data.prompts.some(p => typeof p !== "string" || p.length > PROMPT_MAX))
-      throw new HttpError(400, `Un prompt per slot, al massimo ${PROMPT_MAX} caratteri`);
+    if (!Array.isArray(data.prompts) || data.prompts.length !== items.length || data.prompts.some(p => typeof p !== "string" || p.length > PROMPT_MAX))
+      throw new HttpError(400, `Un prompt per immagine, al massimo ${PROMPT_MAX} caratteri`);
     prompts = (data.prompts as string[]).map((prompt, i) => ({ prompt: prompt.trim(), used: prompts[i]?.used || [], format: prompts[i]?.format }));
-  } else if (prompts.length && prompts.length !== slots.length) prompts = [];
+  }
   if (data.formats !== undefined) {
     if (!Array.isArray(data.formats) || data.formats.length !== prompts.length || !data.formats.every(isFormat)) throw new HttpError(400, "Formati non validi");
     prompts = prompts.map((entry, i) => ({ ...entry, format: (data.formats as Format[])[i] }));
   }
-  await env.DB.prepare("UPDATE slop_batches SET slots=?,prompts=?,updated_at=? WHERE id=?")
-    .bind(JSON.stringify(slots), JSON.stringify(prompts), new Date().toISOString(), batchId).run();
+  await env.DB.prepare("UPDATE slop_batches SET prompts=?,updated_at=? WHERE id=?").bind(JSON.stringify(prompts), new Date().toISOString(), batchId).run();
   return show(env, batchId);
 }
 
-/** Up to EXAMPLES approved or published REAL of the group with the whole theme, at random: description (500 characters at most) and
- * tags. They go to the text model as examples of the genre, never as scenes to copy. */
-async function examples(env: Env, group: string, theme: string[]) {
-  const parsed = parseGroup(group)!;
-  const rows = (await env.DB.prepare(`SELECT i.id,i.description,(SELECT json_group_array(t.label) FROM image_tags it JOIN tags t ON t.id=it.tag_id
-    WHERE it.image_id=i.id) AS tags FROM images i WHERE i.origin='REAL' AND i.status IN ('approved','published')
-    AND EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=i.id AND t.category='genre' AND t.label=?)
-    AND EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=i.id AND t.category='time' AND t.label=?)
-    ORDER BY random() LIMIT 200`).bind(parsed.genre, parsed.time).all<{ id: string; description: string; tags: string }>()).results;
-  return rows.map(r => ({ description: r.description.slice(0, 500), tags: parse<string[]>(r.tags, []) }))
-    .filter(r => theme.every(t => r.tags.includes(t))).slice(0, EXAMPLES);
+/** What the text model reads of one item: the tags and the description of its REAL as they are now, and the descriptions of up to
+ * RELATED other approved or published REAL of the same decade that share its event or its place. */
+async function briefOf(env: Env, item: TwinItem) {
+  const source = await env.DB.prepare("SELECT description FROM images WHERE id=? AND origin='REAL'").bind(item.source).first<{ description: string }>();
+  const decade = item.tags.find(t => t.category === "time")?.label || "";
+  const shared = item.tags.filter(t => t.category === "event" || t.category === "place").map(t => t.label);
+  const related = shared.length ? (await env.DB.prepare(`SELECT i.description FROM images i WHERE i.origin='REAL' AND i.status IN ('approved','published')
+    AND i.id<>?1 AND i.description<>'' AND EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=i.id
+      AND t.label IN (SELECT value FROM json_each(?2)))
+    AND (?3='' OR EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=i.id AND t.label=?3))
+    ORDER BY random() LIMIT ?4`).bind(item.source, JSON.stringify(shared), decade, RELATED).all<{ description: string }>()).results : [];
+  return { tags: byCategory(item.tags), description: (source?.description || "").slice(0, 500), related: related.map(r => r.description.slice(0, 300)) };
 }
 
 /** POST /slop/batches/:id/prompts {confirm, index?}: one paid call writes all the prompts, or rewrites one. */
@@ -138,10 +119,11 @@ async function writePrompts(env: Env, batchId: string, data: Record<string, unkn
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
   confirmOnly(data, ["index"]);
   const row = await load(env, batchId);
-  const theme = parse<string[]>(row.theme, []), slots = parse<Slot[]>(row.slots, []), current = parse<PromptEntry[]>(row.prompts, []);
+  const items = itemsOf(row), current = parse<PromptEntry[]>(row.prompts, []);
+  if (!items.length) throw new HttpError(409, "Batch estratto prima delle gemelle: si può solo rivedere");
   const index = data.index;
-  if (index !== undefined && (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= slots.length)) throw new HttpError(400, "Slot inesistente");
-  const wanted = index === undefined ? slots.map((slot, i) => ({ slot, i })) : [{ slot: slots[index as number], i: index as number }];
+  if (index !== undefined && (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= items.length)) throw new HttpError(400, "Immagine inesistente");
+  const wanted = index === undefined ? items.map((item, i) => ({ item, i })) : [{ item: items[index as number], i: index as number }];
   const model = await chosenModel(env, "text_model"), allowed = formatsFor(await chosenModel(env, "image_model"));
   const [baseContext, taskContext] = [await currentContext(env, "base"), await currentContext(env, "slop_prompt")];
   const stamp = new Date().toISOString(), staleBefore = new Date(Date.now() - STALE_MS).toISOString();
@@ -154,17 +136,15 @@ async function writePrompts(env: Env, batchId: string, data: Record<string, unkn
   const format = { type: "json_schema", name: "slop_prompts", strict: true, schema: { type: "object", additionalProperties: false, required: ["prompts"], properties: {
     prompts: { type: "array", minItems: wanted.length, maxItems: wanted.length, items: { type: "object", additionalProperties: false, required: ["prompt", "used_tags", "format"],
       properties: { prompt: { type: "string" }, used_tags: { type: "array", items: { type: "string" } }, format: { type: "string", enum: allowed } } } } } } };
-  const group = parseGroup(row.group_key);
-  const input = { group: group ? { genre: group.genre, decade: group.time } : null, theme, count: wanted.length,
-    note: "Every prompt is a photograph of the group's genre and decade. The theme tags must appear in every prompt. Make the prompts " +
-      "different from one another; keep each faithful to its slot." +
+  const input = { count: wanted.length,
+    note: "Make the prompts different from one another in framing, distance, light and action." +
       (index === undefined ? "" : " Other prompts of the batch, to stay different from: " + current.filter((_, i) => i !== index).map(p => p.prompt).join(" | ")),
-    slots: wanted.map(({ slot }) => tagsOf(slot)), examples: group ? await examples(env, group.key, theme) : [] };
+    items: await Promise.all(wanted.map(({ item }) => briefOf(env, item))) };
   let response: Response;
   try {
     response = await fetch((env.OPENAI_BASE_URL || OPENAI) + "responses", { method: "POST", redirect: "manual", signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: { Authorization: "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, instructions: baseContext.body + "\n\n" + taskContext.body + "\n\n" + OUTPUT + " " + EXAMPLES_RULE, text: { format },
+      body: JSON.stringify({ model, instructions: baseContext.body + "\n\n" + taskContext.body + "\n\n" + OUTPUT + " " + TWIN_RULE, text: { format },
         max_output_tokens: MAX_OUTPUT_TOKENS, input: [{ role: "user", content: [{ type: "input_text", text: JSON.stringify(input) }] }] }) });
   } catch {
     await settle("uncertain"); await finish("uncertain", "Esito incerto: la chiamata potrebbe essere stata addebitata. Non è stata ripetuta.");
@@ -190,7 +170,7 @@ async function writePrompts(env: Env, batchId: string, data: Record<string, unkn
     await settle("completed", usage); await finish("failed", "Risposta del modello non leggibile");
     throw new HttpError(502, "Risposta del modello non leggibile");
   }
-  const prompts = index === undefined ? written : slots.map((_, i) => i === index ? written[0] : current[i] || { prompt: "", used: [] });
+  const prompts = index === undefined ? written : items.map((_, i) => i === index ? written[0] : current[i] || { prompt: "", used: [] });
   await settle("completed", usage); await finish("done", "", prompts);
   return show(env, batchId);
 }
@@ -229,42 +209,39 @@ export async function requestImage(env: Env, model: string, prompt: string, size
   return bytes;
 }
 
-/** POST /slop/batches/:id/images {confirm, index, quality}: one paid call generates the image of one prompt. */
+/** POST /slop/batches/:id/images {confirm, index, quality}: one paid call generates the twin of one REAL. */
 async function generateImage(env: Env, batchId: string, data: Record<string, unknown>) {
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
   confirmOnly(data, ["index", "quality"]);
   const row = await load(env, batchId);
-  const theme = parse<string[]>(row.theme, []), slots = parse<Slot[]>(row.slots, []), prompts = parse<PromptEntry[]>(row.prompts, []);
+  const items = itemsOf(row), prompts = parse<PromptEntry[]>(row.prompts, []);
   const index = data.index;
-  if (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= slots.length) throw new HttpError(400, "Slot inesistente");
+  if (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= items.length) throw new HttpError(400, "Immagine inesistente");
   const prompt = prompts[index]?.prompt;
-  if (!prompt) throw new HttpError(409, "Scrivi prima il prompt di questo slot");
+  if (!prompt) throw new HttpError(409, "Scrivi prima il prompt di questa immagine");
   const model = await chosenModel(env, "image_model"), qualities = IMAGE_MODELS[model] || [];
   if (typeof data.quality !== "string" || !qualities.includes(data.quality)) throw new HttpError(400, `Qualità non ammessa da ${model}: ${qualities.join(", ")}`);
-  const quality = data.quality, size = generationSize(model, prompts[index]?.format || LEGACY_FORMAT);
+  const quality = data.quality, size = generationSize(model, prompts[index]?.format || LEGACY_FORMAT), item = items[index];
   const bytes = await requestImage(env, model, prompt, size, quality);
-  const view = await create(env, { origin: "SLOP", title: ([row.group_key, ...theme].filter(Boolean).join(", ") + " " + (index + 1)).slice(0, 200),
-    bytes: bytes.buffer as ArrayBuffer, prompt, model, generation: { batch: batchId, group: row.group_key,
-      slot: { index, group: row.group_key, theme, tags: tagsOf(slots[index]), sample: slots[index].sample ?? null }, quality } });
-  return view;
+  return create(env, { origin: "SLOP", title: ("Gemella di " + item.title).slice(0, 200), bytes: bytes.buffer as ArrayBuffer, prompt, model,
+    generation: { batch: batchId, source: item.source, slot: { index, source: item.source, sample: item.sample, tags: item.tags }, quality } });
 }
 
-/** GET /slop/batches: the last groups, to pick one up again. */
+/** GET /slop/batches: the last batches, to pick one up again. */
 async function recent(env: Env) {
-  const rows = (await env.DB.prepare(`SELECT b.id,b.theme,b.slots,b.group_key,b.prompts_status,b.updated_at,(SELECT count(*) FROM images i WHERE i.generation_batch=b.id) AS images
-    FROM slop_batches b ORDER BY b.updated_at DESC LIMIT 10`).all<{ id: string; theme: string; slots: string; group_key: string | null; prompts_status: string; updated_at: string; images: number }>()).results;
-  return { batches: rows.map(r => ({ id: r.id, group: r.group_key, theme: parse<string[]>(r.theme, []), count: parse<Slot[]>(r.slots, []).length,
-    prompts_status: r.prompts_status, images: r.images, updated_at: r.updated_at })) };
+  const rows = (await env.DB.prepare(`SELECT b.id,b.slots,b.prompts_status,b.updated_at,(SELECT count(*) FROM images i WHERE i.generation_batch=b.id) AS images
+    FROM slop_batches b ORDER BY b.updated_at DESC LIMIT 10`).all<{ id: string; slots: string; prompts_status: string; updated_at: string; images: number }>()).results;
+  return { batches: rows.map(r => ({ id: r.id, count: itemsOf(r).length, prompts_status: r.prompts_status, images: r.images, updated_at: r.updated_at })) };
 }
 
 export async function batchRoute(env: Env, method: string, rest: string, data: Record<string, unknown>) {
   if (rest === "" && method === "GET") return recent(env);
   if (rest === "" && method === "POST") return createBatch(env, data);
   const [batchId, action] = rest.split("/");
-  if (!/^[\w-]{1,64}$/.test(batchId)) throw new HttpError(404, "Gruppo inesistente");
+  if (!/^[\w-]{1,64}$/.test(batchId)) throw new HttpError(404, "Batch inesistente");
   if (!action && method === "GET") return show(env, batchId);
   if (!action && method === "PUT") return editBatch(env, batchId, data);
   if (action === "prompts" && method === "POST") return writePrompts(env, batchId, data);
   if (action === "images" && method === "POST") return generateImage(env, batchId, data);
-  throw new HttpError(404, "API dei gruppi SLOP inesistente");
+  throw new HttpError(404, "API dei batch SLOP inesistente");
 }

@@ -1,6 +1,8 @@
-# Copie di gioco — specifica 7.0.1
+# Copie di gioco — specifica 8.0.0
 
-Stato: vigente, in produzione con l'app 1.25.0 e la migrazione 0048 (2026-11-14). Aggiornata: 2026-11-14T16:30:00Z.
+Stato: approvata dall'owner il 2026-11-14, implementata nell'app 1.26.0 (in revisione). Aggiornata: 2026-11-14T21:30:00Z.
+La 8.0.0 toglie dal trattamento gli effetti disegnati per Supporto, corregge la misura del rumore (versione 2 delle misure), cambia la
+grana e lega la REAL campione alla gemella invece che allo slot (sezione 4).
 La 7.0.1 chiama «REAL campione» la foto da cui il trattamento prende le misure. La 7.0.0 aggiunge le misure di ogni copia e il trattamento delle SLOP, che ne avvicina l'aspetto a quello delle REAL del loro gruppo
 (sezione 4). La 6.0.0 era la versione consolidata (riordino della documentazione dell'owner del 2026-11-14) della 5.0.0,
 senza la storia del passaggio dalle copie 4:5, concluso; le versioni precedenti restano nella cronologia git. Principio invariato dalla
@@ -58,40 +60,50 @@ Le REAL d'epoca hanno l'aspetto che dà loro la strada percorsa: una pagina di g
 una piccola stampa scansionata a 272 px. Le SLOP escono dal generatore a 1536 px, nitide ovunque, con un istogramma pulito: nessuna
 fotografia d'epoca è così. Il 2026-11-14 12 REAL su 55 avevano il lato lungo sotto i 1536 px e nessuna SLOP: «piccola e morbida»
 voleva dire REAL. Chi fa disinformazione riduce, ricomprime e sporca le immagini generate; il gioco fa lo stesso, ma copiando le REAL
-del gruppo e senza superarle, perché «rovinata» non diventi il nuovo indizio.
+e senza superarle, perché «rovinata» non diventi il nuovo indizio.
 
 ### 4.2 Misure
 
 - Il browser misura **ogni copia di gioco**, REAL e SLOP, quando la crea, senza modelli e senza costi, e le salva in `copy_metrics`:
-  lato lungo in pixel; **rumore** (deviazione standard del residuo ad alta frequenza nelle zone uniformi); **nitidezza** (energia del
-  laplaciano sulla luminanza); **contrasto** (distanza tra i percentili 2 e 98 della luminanza); **saturazione** media; **dominante**
-  (scarto medio dei canali dal grigio nelle zone neutre).
-- Le copie esistenti si misurano all'apertura della dashboard, una alla volta, scaricando la copia dalla quarantena (gratuito).
-- Il codice delle misure è condiviso (`shared/`) e provato con immagini di prova nei test.
+  lato lungo in pixel; **rumore** (deviazione standard del residuo ad alta frequenza nelle zone più uniformi); **nitidezza** (energia
+  del laplaciano sulla luminanza); **contrasto** (distanza tra i percentili 2 e 98 della luminanza); **saturazione** media;
+  **dominante** (scarto medio dei canali dal grigio nelle zone neutre); versione dell'algoritmo.
+- **Versione 2 delle misure** (app 1.26.0): il rumore non conta le zone bruciate a bianco o a nero, che sono le più uniformi di tutte
+  e non hanno grana (con la versione 1 un cielo bianco dava rumore zero). Sulle 55 REAL del 2026-11-14 la mediana passa a 0,55 e
+  25 restano sotto 0,5: le copie di gioco delle REAL, ridotte da scansioni grandi e ricompresse, hanno davvero poca grana a questa
+  scala, e le SLOP del primo lotto misuravano valori simili. La differenza che l'occhio vede tra REAL e SLOP non sta quindi nel
+  rumore misurato così: è un limite noto di queste misure.
+- Le copie senza misure, o con misure di una versione precedente, si misurano all'apertura della dashboard, una alla volta, scaricando
+  la copia dalla quarantena (gratuito).
+- Il codice delle misure è condiviso (`shared/copy-treatment.ts`) e provato con immagini di prova nei test.
 
 ### 4.3 Trattamento
 
 - Si applica a ogni SLOP generata (studio, batch, rigenerazione) prima della copia di gioco: l'originale del generatore resta intatto
   nella quarantena.
-- **Obiettivo:** le misure della REAL campione dello slot (specifica `generazione-slop`, sezione 4); per una SLOP rigenerata
-  dal Database, la stessa REAL se esiste ancora, altrimenti una a caso del suo gruppo.
-- **Passi**, in quest'ordine, con un seme registrato perché il risultato sia ripetibile:
+- **Obiettivo:** le misure della REAL campione della gemella (specifica `generazione-slop`, sezione 2): un'altra REAL con lo stesso
+  Colore, Supporto e decennio della REAL di origine. Per una SLOP rigenerata dal Database, la stessa campione.
+- **Passi** (versione 2 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile:
   1. ritaglio dell'inquadratura;
-  2. riduzione al lato lungo della REAL campione (mai un ingrandimento);
-  3. effetti del **Supporto** dello slot: `newspaper-print` e `magazine-print` retino e contrasto da stampa; `photo-print` e `postcard`
-     carta, bordi morbidi e lieve ingiallimento; `film-still` e `slide` dominante e alone sulle alte luci; `instant-photo` colori
-     compressi; `digital-photo` e `phone-photo` nessun effetto oltre a quelli seguenti; gli altri supporti nessun effetto;
-  4. curva di tono verso contrasto e dominante dell'obiettivo; saturazione verso quella dell'obiettivo; bianco e nero o seppia se il
-     Colore dello slot lo è e l'immagine generata non lo è già;
-  5. sfocatura fino alla nitidezza dell'obiettivo;
-  6. grana di luminanza fino al rumore dell'obiettivo, con grana più grossa nelle immagini piccole;
-  7. una compressione JPEG intermedia, poi la ricetta della copia (sezione 3).
+  2. riduzione al lato lungo della REAL campione (mai un ingrandimento, mai sotto 160 px);
+  3. contrasto verso quello della campione;
+  4. bianco e nero o seppia, con la tinta della campione, se il Colore della REAL di origine lo è; altrimenti dominante e saturazione
+     verso quelle della campione;
+  5. sfocatura fino alla nitidezza della campione;
+  6. grana di luminanza fino al rumore della campione, ammorbidita nelle immagini grandi, mai a blocchi;
+  7. una compressione JPEG intermedia a qualità 0,85, come quella che una foto d'archivio ha già subito, poi la ricetta della copia
+     (sezione 3).
+- **Niente effetti disegnati.** Ogni passo segue una misura della campione: il trattamento non aggiunge nulla che le REAL non abbiano.
+  La versione 1 dipingeva anche effetti per Supporto (retino di stampa, vignettatura e ingiallimento, alone sulle alte luci): aspetti
+  inventati, in parte annullati subito dal passo successivo, e possibili indizi dell'origine. Tolti con la 1.26.0. Il Supporto resta
+  registrato e decide solo quale REAL può fare da campione.
 - Dopo il trattamento il browser misura la copia e registra lo scarto dall'obiettivo; il dettaglio del Database lo mostra.
 - **Registro** `copy_treatment`: REAL campione (identificativo e misure, che restano valide anche se la REAL viene eliminata),
-  Supporto e Colore applicati, parametri di ogni passo, seme, versione dell'algoritmo.
-- **Comandi** nel dettaglio di una SLOP nuova o approvata e nella revisione dello studio, gratuiti: «Altra REAL campione» (ne pesca
-  un'altra del gruppo e rifà la copia), «Senza trattamento» e «Con trattamento». Cambiare il trattamento rifà la copia come
-  «Inquadratura»: azzera le statistiche e, per una pubblicata, passa da «Modifica».
+  Supporto e Colore, parametri di ogni passo, seme, versione dell'algoritmo. Una copia fatta con una versione precedente si rifà con
+  quella corrente alla prossima «Inquadratura» o al prossimo comando del trattamento.
+- **Comandi** nel dettaglio del Database di una SLOP nuova o approvata, gratuiti: «Altra REAL campione» (ne pesca un'altra con lo
+  stesso Colore, Supporto e decennio e rifà la copia), «Senza trattamento» e «Con trattamento». Cambiare il trattamento rifà la copia
+  come «Inquadratura»: azzera le statistiche e, per una pubblicata, passa da «Modifica».
 - «Inquadratura» su una SLOP ritaglia l'originale e riapplica lo stesso trattamento.
 - Le REAL non hanno trattamento: la loro ricetta resta quella della sezione 3.
 
@@ -110,5 +122,5 @@ del gruppo e senza superarle, perché «rovinata» non diventi il nuovo indizio.
 - **Foto piccole sul telefono:** un 16:9 su un telefono verticale è basso e alcuni indizi si vedono solo ingrandendo; vale per REAL e
   SLOP allo stesso modo.
 - **Trattamento sbagliato:** un trattamento troppo forte o troppo debole crea un indizio opposto. Le Statistiche confrontano le misure
-  delle copie pubblicate di REAL e SLOP per gruppo, come fanno con i formati.
+  delle copie pubblicate di REAL e SLOP per gruppo di genere e decennio, come fanno con i formati.
 - **Costo:** le dimensioni dei formati hanno tra 1,3 e 2,4 milioni di pixel; il costo di un'immagine cambia con la dimensione.

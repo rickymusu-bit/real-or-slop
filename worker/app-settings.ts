@@ -1,13 +1,10 @@
 /** Numeric settings of the dashboard (spec `statistiche-impostazioni`, section 2): thresholds of the SLOP studio and of
  * the automatic proposals, hours of an open game. A missing row is the default of the code. */
 import { HttpError, type Env } from "./core";
-import { SECTION_MIN_REAL } from "../shared/slot-extraction";
-import { GROUP_MIN_REAL } from "../shared/slop-groups";
-import { AUTO_DEFAULT_THRESHOLD } from "../shared/slop-auto";
+import { AUTO_DEFAULT_THRESHOLD, SECTION_MIN_REAL } from "../shared/twins";
 
 export const LIMITS = {
   slop_section_min_real: { min: 1, max: 1000, default: SECTION_MIN_REAL },
-  slop_group_min_real: { min: 1, max: 200, default: GROUP_MIN_REAL },
   open_game_hours: { min: 1, max: 168, default: 24 },
   slop_auto_enabled: { min: 0, max: 1, default: 1 },
   slop_auto_threshold_percent: { min: 1, max: 100, default: AUTO_DEFAULT_THRESHOLD },
@@ -27,7 +24,7 @@ export async function numberSettings(env: Env): Promise<Record<NumberSetting, nu
 }
 export async function numberSetting(env: Env, key: NumberSetting) { return (await numberSettings(env))[key]; }
 
-/** GET /settings; PUT /settings {slop_section_min_real?, slop_group_min_real?, open_game_hours?, slop_auto_enabled?, slop_auto_threshold_percent?}. */
+/** GET /settings; PUT /settings {slop_section_min_real?, open_game_hours?, slop_auto_enabled?, slop_auto_threshold_percent?}. */
 export async function settingsRoute(env: Env, method: string, data: Record<string, unknown>) {
   const view = async () => ({ values: await numberSettings(env), limits: LIMITS });
   if (method === "GET") return view();
