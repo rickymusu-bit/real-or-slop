@@ -3,6 +3,14 @@
 Aggiornato: 2026-11-14T12:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
+## 1.24.1 — 2026-11-14T15:30:00Z (proposta, senza migrazioni)
+
+Uscirà con il riordino (PR rickymusu-bit/real-or-slop#132), che contiene anche le voci seguenti.
+
+- **Database:** dopo «Analizza con IA» in gruppo e dopo «Svuota cestino» il messaggio di esito compariva prima che l'elenco fosse
+  ricaricato: aprendo subito una scheda si vedevano i dati di prima, senza i tag nuovi. Ora il messaggio compare a elenco aggiornato.
+  La corsa faceva fallire a volte il test `library_browser` sul telefono.
+
 ## Nomi senza versione — 2026-11-14T15:00:00Z (nessun cambiamento di comportamento; `AGENTS.md` e `MASTER.md` 19.0.0)
 
 Decisione dell'owner del 2026-11-14: la versione esce dai nomi dei file; la storia è in git.

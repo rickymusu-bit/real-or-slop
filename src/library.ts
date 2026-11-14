@@ -179,9 +179,10 @@ export async function showLibrary() {
       try { await call(`/${encodeURIComponent(imageId)}/analyze`, { method: "POST", body: JSON.stringify({ confirm: true }) }); done++; }
       catch (error) { errors.push(error instanceof Error ? error.message : String(error)); if (/OpenAI:/.test(String(error))) break; }
     }
+    // The list is reloaded first: the message says the work is over only when the cards show the new tags.
+    await Promise.all([load(), refreshTags(), refreshAnalysis()]);
     progress("");
     message(`${done} di ${ids.length} analizzate.` + (errors.length ? " " + [...new Set(errors)].join(" · ") : ""));
-    await Promise.all([load(), refreshTags(), refreshAnalysis()]);
   };
   // The list of the last request wins: a slower, older answer never overwrites a newer one.
   let loadSeq = 0;
@@ -438,7 +439,8 @@ export async function showLibrary() {
     try {
       if (button.id === "library-empty-trash") {
         const result = await call<{ deleted: number; postponed: number }>("/trash/empty", { method: "POST", body: "{}" });
-        message(`${result.deleted} immagini eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} restano nel cestino finché le partite in corso che le usano non finiscono.` : "")); await Promise.all([load(), refreshTags()]);
+        await Promise.all([load(), refreshTags()]);
+        message(`${result.deleted} immagini eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} restano nel cestino finché le partite in corso che le usano non finiscono.` : ""));
       } else if (button.dataset.bulk) {
         const action = button.dataset.bulk;
         if (action === "none") { selected.clear(); render(); return; }

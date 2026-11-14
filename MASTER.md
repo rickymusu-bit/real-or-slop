@@ -9,13 +9,10 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **In produzione:** app 1.23.0 (PR 129, migrazioni fino alla 0047), con il contesto dei modelli salvato dall'owner il 2026-11-14.
-- **Proposta aperta:** app 1.24.0, PR rickymusu-bit/real-or-slop#131, senza migrazioni: anteprima a pressione prolungata, selezione
-  immediata su Commons, descrizione delle REAL nella lista finale, tag di partenza delle SLOP, proposta del testo dei prompt SLOP con
-  volti visibili (vale quando l'owner lo salva dalle Impostazioni), pagine «Come funziona» e «Fonti e crediti» corrette (parlavano ancora
-  di swipe e formato 4:5).
-- **Riordino** (PR rickymusu-bit/real-or-slop#132): specifiche consolidate senza strati, documenti storici e codice inutilizzato tolti,
-  nomi dei file senza versione, tag `vX.Y.Z` a ogni rilascio.
+- **In produzione:** app 1.24.0 (PR rickymusu-bit/real-or-slop#131, unita il 2026-11-14; migrazioni fino alla 0047). Il testo proposto dei
+  prompt SLOP vale quando l'owner lo salva dalle Impostazioni.
+- **Proposta aperta:** app 1.24.1, PR rickymusu-bit/real-or-slop#132: riordino (specifiche consolidate senza strati, documenti storici e codice inutilizzato tolti,
+  nomi dei file senza versione, tag `vX.Y.Z` a ogni rilascio) e la correzione del messaggio dopo l'analisi in gruppo.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
 
 ## Specifiche vigenti
