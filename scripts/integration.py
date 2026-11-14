@@ -1,15 +1,6 @@
-"""v2.9.0, 2026-11-14T09:00:00Z: press-and-hold preview, description of the REAL after the game, starting tags of the SLOP
-(docs/anteprima-descrizione.v1.0.0.md): new versions of the wizard, Database, game and automatic batch checks.
-v2.8.0, 2026-11-12T21:00:00Z: automatic SLOP batches on proposal (docs/proposta-generazione-slop.v2.0.0.md), checked last because they
-move every earlier image to the trash.
-v2.7.0, 2026-11-12T19:00:00Z: privacy notes; the local Worker accepts the scheduled handler (--test-scheduled).
-v2.6.0, 2026-11-12T11:00:00Z: Statistiche and Settings (docs/statistiche-impostazioni.v1.0.0.md).
-v2.5.0, 2026-11-12T09:00:00Z: level game and leaderboard (docs/gioco-a-livelli.v1.0.0.md).
-v2.4.0, 2026-11-12T08:00:00Z: 4:5 game copies (docs/copie-di-gioco.v3.0.0.md), new versions of the checks.
-v2.3.0, 2026-11-11T09:30:00Z: library 1.2.0 and database checks (docs/database-immagini.v1.0.0.md).
-v2.2.0, 2026-11-09T21:30:00Z. Start an isolated LOCAL Worker (real local D1 and R2) wired to a fake OpenAI
-(tests/fake_openai.py), run the HTTP and, with ROS_TEST_BROWSER=1, browser checks, then stop both.
-Never touches remote resources and never calls OpenAI."""
+"""Starts an isolated local Worker (real local D1 and R2) wired to the fake OpenAI (tests/fake_openai.py), runs the HTTP
+checks and, with ROS_TEST_BROWSER=1, the browser checks, then stops both. Never touches remote resources and never calls OpenAI.
+The automatic SLOP batches run last, because they move every earlier image to the trash."""
 import os
 import secrets
 import shutil
@@ -30,9 +21,9 @@ try:
                    check=True, env=env, stdout=subprocess.DEVNULL)
     Path('artifacts').mkdir(exist_ok=True)
     with Path('artifacts/integration-worker.log').open('w') as log:
-        # Paid calls on, against the fake model (tests/fake_openai.v1.2.0.py); everything lives in the local D1.
+        # Paid calls on, against the fake model (tests/fake_openai.py); everything lives in the local D1.
         analysis = {'OPENAI_API_KEY': 'test-openai-key', 'OPENAI_BASE_URL': fake + '/v1/'}
-        model = subprocess.Popen(['python3', 'tests/fake_openai.v1.4.0.py', fake.rsplit(':', 1)[1]], stdout=log, stderr=log)
+        model = subprocess.Popen(['python3', 'tests/fake_openai.py', fake.rsplit(':', 1)[1]], stdout=log, stderr=log)
         proc = subprocess.Popen(['npx', 'wrangler', 'dev', '--local', '--port', '8788', '--test-scheduled', '--persist-to', str(state), '--env', 'local',
                                  *[arg for key, value in analysis.items() for arg in ('--var', f'{key}:{value}')]],
                                 env=env, stdout=log, stderr=log, start_new_session=True)
@@ -43,10 +34,10 @@ try:
                         if r.status == 200: break
                 except OSError: time.sleep(.4)
             else: raise RuntimeError('Worker locale non pronto; vedere artifacts/integration-worker.log')
-            scripts = ['tests/library.v1.9.0.integration.py', 'tests/analysis.v1.9.0.integration.py', 'tests/slop.v1.3.0.integration.py', 'tests/database.v1.4.0.integration.py', 'tests/game.v2.5.0.integration.py', 'tests/stats.v1.2.0.integration.py']
-            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.v1.14.0.integration.py', 'tests/real_wizard.v1.15.0.integration.py', 'tests/slop_browser.v1.4.0.integration.py', 'tests/database_browser.v1.7.0.integration.py', 'tests/game_browser.v1.5.0.integration.py'])
-            scripts.append('tests/slop_auto.v1.0.0.integration.py')
-            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.append('tests/slop_auto_browser.v1.1.0.integration.py')
+            scripts = ['tests/library.integration.py', 'tests/analysis.integration.py', 'tests/slop.integration.py', 'tests/database.integration.py', 'tests/game.integration.py', 'tests/stats.integration.py']
+            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.integration.py', 'tests/real_wizard.integration.py', 'tests/slop_browser.integration.py', 'tests/database_browser.integration.py', 'tests/game_browser.integration.py'])
+            scripts.append('tests/slop_auto.integration.py')
+            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.append('tests/slop_auto_browser.integration.py')
             for script in scripts: subprocess.run(['python3', script], env=env, check=True)
         finally:
             os.killpg(proc.pid, 15)

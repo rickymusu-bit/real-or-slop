@@ -1,0 +1,26 @@
+# Tags every release: when main changes and its package.json carries a version without a tag, the merge commit gets the tag
+# vX.Y.Z. Merging to main is the release (Workers Builds deploys it), so the tag marks exactly what went to production. A merge
+# that does not change the version (documents only) adds no tag. Any file of a release: git show vX.Y.Z:<file>.
+name: Release tag
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Tag the version of package.json if it has no tag yet
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
+            echo "$version already tagged"
+          else
+            git tag "$version" "$GITHUB_SHA"
+            git push origin "refs/tags/$version"
+            echo "Tagged $version"
+          fi

@@ -1,7 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ImagePreloader, type DecodedImage } from "../src/preload.ts";
-import { serverCountdown } from "../src/clock.ts";
 const wait = (ms = 0) => new Promise(resolve => setTimeout(resolve, ms));
 function asset(url = "blob:fixture", width = 10, height = 10, release = () => {}) { return { url, width, height, release }; }
 
@@ -73,10 +72,4 @@ test("changing the active round cannot resolve a previous image as the current o
   const manager = new ImagePreloader({ fetcher: async () => { await wait(); return new Blob(["x"]); }, decoder: async () => asset("blob:x", 10, 10, () => released.push("x")) });
   const stale = assert.rejects(manager.activate("one")); const current = manager.activate("two");
   await stale; await current; manager.dispose(); assert.equal(released.length, 2);
-});
-test("countdown uses monotonic elapsed time and never restarts from a wall-clock change", () => {
-  let elapsed = 100;
-  const remaining = serverCountdown(61_000, 1000, () => elapsed);
-  assert.equal(remaining(), 60); elapsed += 30_001; assert.equal(remaining(), 30);
-  elapsed += 60_000; assert.equal(remaining(), 0);
 });

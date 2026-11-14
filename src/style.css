@@ -282,7 +282,7 @@ dialog button { margin-bottom: 12px; }
 .media-obscured [data-game-media] { visibility: hidden !important; }
 .media-obscured .media-privacy-cover { display: grid; align-content: center; justify-items: center; position: absolute; inset: 0; background: var(--surface); }
 @media print { [data-game-media] { visibility: hidden !important; } }
-/* Visible «RS» mark (docs/lotti-editoriali.v1.6.2.md, 6.4): same on every game image; position and size from src/media-mark.v1.0.0.ts. */
+/* Visible «RS» mark (spec `contenuti-e-trasparenza`, 6.4): same on every game image; position and size from src/media-mark.ts. */
 .rs-mark { position: absolute; z-index: 1; pointer-events: none; -webkit-user-select: none; user-select: none; font: 700 14px/1 "Space Grotesk", Arial, sans-serif; letter-spacing: .04em; color: #fff; opacity: .65; text-shadow: -1px -1px 0 #111, 1px -1px 0 #111, -1px 1px 0 #111, 1px 1px 0 #111; }
 .media-obscured .rs-mark { visibility: hidden; }
 @media print { .rs-mark { visibility: hidden; } }

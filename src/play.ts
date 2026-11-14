@@ -1,276 +1,247 @@
-import { api, content, escape, publicDemo } from "./main";
+/** The level game (spec `gioco-a-livelli`): level picker, one photo at a time with its countdown, REAL and SLOP buttons
+ * (keys R and S), verdict after each answer, the photo covered when the page is left, results with the leaderboard form and the
+ * final list (description and credits of each REAL, prompt of each SLOP). */
+import "./play.css";
+import { photoViewer, type Viewer } from "./photo-viewer";
+import { MIN_AGE } from "../shared/legal";
+import { api, content, escape } from "./main";
 import { safeUrl } from "../shared/html";
 import { ImagePreloader } from "./preload";
-import { serverCountdown } from "./clock";
 import { protectGameMedia } from "./media-privacy";
-import { markGameMedia } from "./media-mark.v1.0.0";
-export interface Reveal {
-  serverNow?: number;
-  expiresAt?: number | null;
-  answer: string;
-  correct: boolean;
-  timedOut?: boolean;
-  explanation: string;
-  title: string;
-  author: string;
-  source: string | null;
-  license: string;
-  licenseUrl: string | null;
-  demo: boolean;
-}
-interface Question {
-  id: string;
-  number: number;
-  image: string;
-  alt: string;
-  caption?: string;
-}
+import { markGameMedia } from "./media-mark";
+import type { Level, Score } from "../shared/levels";
+
+interface LevelInfo { id: Level; label: string; photos: number; seconds: number; available: boolean }
+interface Question { id: string; number: number; image: string; alt: string }
+interface Credit { number: number; image: string; answer: "REAL" | "AI"; choice: "REAL" | "AI" | null; correct: boolean; timedOut: boolean;
+  title?: string; description?: string; author?: string; source?: string | null; license?: string; licenseUrl?: string | null; changes?: string; prompt?: string }
 interface State {
-  id: string;
-  protocolVersion: number;
-  phase: "preparing" | "active" | "completed" | "invalidated";
-  invalidReason: string | null;
-  mode: string;
-  demo: boolean;
-  serverNow: number;
-  expiresAt: number | null;
-  done: boolean;
-  total: number;
-  answered: number;
-  score: number;
-  elapsedMs: number;
-  timingMode: "legacy" | "unlimited" | "per-image";
-  roundSeconds: number | null;
-  timedOut: number;
-  question: Question | null;
-  credits: Reveal[];
+  id: string; level: Level; seconds: number; phase: "preparing" | "active" | "completed" | "invalidated"; invalidReason: string | null;
+  done: boolean; serverNow: number; expiresAt: number | null; total: number; answered: number; right: number; timedOut: number;
+  question: Question | null; result: Score | null; entered: boolean; credits: Credit[];
 }
+const SESSION_KEY = "ros_levels", FEEDBACK_MS = 900;
+let viewer: Viewer | null = null;
+const LABEL: Record<Level, string> = { facile: "Facile", medio: "Medio", difficile: "Difficile", esperto: "Esperto" };
+const points = (n: number) => n.toLocaleString("it-IT", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
 export let stopPlay = () => {};
-export function zoom() {
-  markGameMedia(content());
-  document.querySelector(".play-image")?.addEventListener("click", (event) => {
-    const img = event.target as HTMLImageElement;
-    const d = document.createElement("dialog");
-    d.setAttribute("aria-label", "Immagine ingrandita");
-    d.dataset.gameZoom = "";
-    d.innerHTML = `<button autofocus>Chiudi ×</button><br><div class="game-media-surface"><img data-game-media draggable="false" src="${escape(img.src)}" alt="${escape(img.alt)}"></div>`;
-    document.body.append(d);
-    d.querySelector("button")!.onclick = () => d.close();
-    d.addEventListener("close", () => { d.remove(); img.focus(); });
-    d.showModal();
-    markGameMedia(d);
-  });
-  document.querySelector(".play-image")?.addEventListener("keydown", (event) => {
-    const key = (event as KeyboardEvent).key;
-    if (key === "Enter" || key === " ") {
-      event.preventDefault();
-      (event.target as HTMLElement).click();
+
+/** /gioca: the level picker. */
+export async function setupGame() {
+  stopPlay();
+  const saved = sessionStorage.getItem(SESSION_KEY);
+  content().innerHTML = `<section class="page narrow levels-page"><div class="eyebrow">UNA FOTO ALLA VOLTA</div><h1>Scegli il livello.</h1>
+    <p class="lead">Ogni foto ha il suo tempo. Decidi se è REAL, una fotografia vera, o SLOP, generata con l'intelligenza artificiale.</p>
+    ${saved ? '<p><button type="button" id="resume">Riprendi la partita in corso</button></p>' : ""}
+    <div id="levels" class="levels" role="list"><p class="hint">Caricamento…</p></div>
+    <details class="rules"><summary>Regole</summary><ul>
+      <li>Il tempo di una foto parte quando la foto compare e si ferma quando rispondi. Se scade, la foto conta come non riconosciuta e si passa alla successiva.</li>
+      <li>Rispondi con i pulsanti REAL e SLOP, o con i tasti R e S sul computer.</li>
+      <li>Puoi esplorare la foto: trascinala per spostarti, ingrandiscila con due dita, con la rotella o con un doppio tocco. «Foto intera» la riporta com'era.</li>
+      <li>Se lasci la pagina, la foto si oscura ma il tempo continua.</li>
+      <li>Il punteggio è foto × (2 × accuratezza bilanciata − 1): chi risponde a caso, o sempre allo stesso modo, fa zero. Vale solo una partita giocata fino all'ultima foto.</li>
+    </ul></details><div id="error" role="alert"></div></section>`;
+  document.querySelector("#resume")?.addEventListener("click", () => void play(saved!));
+  try {
+    const { levels } = await api<{ levels: LevelInfo[] }>("/levels");
+    document.querySelector("#levels")!.innerHTML = levels.map(l => `<button type="button" class="level-card" role="listitem" data-level="${l.id}" ${l.available ? "" : "disabled"}>
+      <strong>${escape(l.label)}</strong><span>${l.photos} foto · ${l.seconds} secondi per foto</span>
+      <small>${l.available ? `Punteggio massimo ${l.photos}` : "Non ancora disponibile: servono più foto pubblicate"}</small></button>`).join("");
+  } catch (error) { document.querySelector("#error")!.textContent = String(error instanceof Error ? error.message : error); }
+  document.querySelector("#levels")!.addEventListener("click", async event => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-level]");
+    if (!button || button.disabled) return;
+    document.querySelectorAll<HTMLButtonElement>("[data-level]").forEach(b => { b.disabled = true; });
+    try {
+      const { id } = await api<{ id: string }>("/sessions", { method: "POST", body: JSON.stringify({ level: button.dataset.level }) });
+      sessionStorage.setItem(SESSION_KEY, id);
+      await play(id);
+    } catch (error) {
+      document.querySelector("#error")!.textContent = String(error instanceof Error ? error.message : error);
+      document.querySelectorAll<HTMLButtonElement>("[data-level]").forEach(b => { b.disabled = false; });
     }
   });
 }
-export const choices = (attribute: "data-choice" | "data-pvp-choice", disabled = false) =>
-  `<div class="choices"><button ${attribute}="REAL" class="choice-real" aria-label="REAL, reale. Tasto R" ${disabled ? "disabled" : ""}><span>REAL</span><kbd aria-hidden="true">R</kbd></button><button ${attribute}="AI" class="choice-slop" aria-label="SLOP, generata con IA. Tasto I" ${disabled ? "disabled" : ""}><span>SLOP</span><kbd aria-hidden="true">I</kbd></button></div>`;
-export const progress = (completed: number, total: number) =>
-  `<progress class="round-progress" max="${total}" value="${completed}" aria-label="Immagini completate">${completed} / ${total}</progress>`;
-export const feedback = (r: Reveal) =>
-  `<h2>${r.timedOut ? "Tempo scaduto" : r.correct ? "✓ Risposta corretta" : "Un dettaglio ti è sfuggito"}</h2><p><strong>${r.answer === "REAL" ? "REAL · Reale" : "SLOP · Generata con IA"}</strong> · ${escape(r.title)}</p><p>${escape(r.explanation)}</p><p>${escape(r.author)} · ${r.licenseUrl ? `<a href="${safeUrl(r.licenseUrl)}" target="_blank" rel="noopener noreferrer">${escape(r.license)}</a>` : escape(r.license)} ${r.source ? `· <a href="${safeUrl(r.source)}" target="_blank" rel="noopener noreferrer">Fonte</a>` : ""}</p>`;
-export async function setupGame(mode: string) {
+
+async function play(sid: string) {
   stopPlay();
-  const saved = sessionStorage.getItem("ros_" + mode);
-  content().innerHTML = `<section class="page narrow"><div class="eyebrow">${publicDemo ? "DEMO SINTETICA · RISPOSTE SIMULATE" : "CATALOGO VERIFICATO"}</div><h1>${mode === "training" ? "Allena lo sguardo." : "Sfida il tempo."}</h1><p class="lead">Scegli cosa osservare. Ogni risposta corretta vale 100 punti. ${mode === "training" ? "Il tempo è misurato per il riepilogo e non cambia il punteggio." : "Ogni immagine ha il proprio countdown. Alla scadenza si passa alla successiva, senza punti per quella scaduta."}</p>${saved ? '<button id="resume">Riprendi la partita precedente</button>' : ""}<form id="settings"><div class="form-grid"><div><label for="count">Numero di immagini</label><input type="number" id="count" min="1" max="50" value="10"></div><div>${mode === "timed" ? '<label for="round-seconds">Tempo per immagine</label><select id="round-seconds"><option value="10">10 secondi</option><option value="20" selected>20 secondi</option><option value="30">30 secondi</option></select>' : ""}</div></div>${mode === "timed" ? "<p>Prepariamo una sola immagine alla volta. Il countdown continua anche cambiando scheda o applicazione.</p>" : ""}<p>${publicDemo ? "La demo usa illustrazioni geometriche con etichette simulate. Non misura la capacità di riconoscere immagini IA." : "Giocherai con le immagini REAL e SLOP pubblicate. Le immagini in revisione restano escluse."}</p><p><a href="/informazioni#origine">Regole delle immagini e limiti della verifica visiva</a></p><button class="primary" type="submit">Inizia la partita</button><div id="error" role="alert"></div></form></section>`;
-  document
-    .querySelector("#resume")
-    ?.addEventListener("click", () => void play(saved!));
-  const formElement = document.querySelector<HTMLFormElement>("#settings")!;
-  document
-    .querySelector("#settings")!
-    .addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const btn = document.querySelector<HTMLButtonElement>("[type=submit]")!;
-      btn.disabled = true;
-      try {
-        const result = await api<{ id: string; warnings: string[] }>(
-          "/sessions",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              mode,
-              count: Number(
-                document.querySelector<HTMLInputElement>("#count")?.value || 10,
-              ),
-              roundSeconds: Number(
-                document.querySelector<HTMLSelectElement>("#round-seconds")?.value ||
-                  20,
-              ),
-            }),
-          },
-        );
-        if (!formElement.isConnected) return;
-        sessionStorage.setItem("ros_" + mode, result.id);
-        await play(result.id, result.warnings.join(" "));
-      } catch (e) {
-        if (!formElement.isConnected) return;
-        document.querySelector("#error")!.textContent = String(e);
-        btn.disabled = false;
-      }
-    });
-}
-async function play(sid: string, warning = "") {
-  stopPlay();
-  let timer: ReturnType<typeof setInterval> | undefined;
-  let active = true, busy = false, refreshing = false, version = 0;
-  let preloader = new ImagePreloader(), last: State | null = null;
-  let seconds: (() => number) | null = null, clockExpired = false;
-  const mediaPrivacy = protectGameMedia(document, window, () => !refreshing && (!seconds || seconds() > 0));
+  let active = true, version = 0, answering = false, preloader = new ImagePreloader();
+  let timer: ReturnType<typeof setInterval> | undefined, deadline = 0, offset = 0, total = 1;
+  const mediaPrivacy = protectGameMedia(document, window, () => true);
   const current = (value: number) => active && value === version;
-  const resyncOnReturn = () => {
-    if (active && !busy && seconds && document.visibilityState === "visible") void load();
-  };
+  const choose = (choice: "REAL" | "AI") => document.querySelector<HTMLButtonElement>(`[data-choice="${choice}"]`)?.click();
   const key = (event: KeyboardEvent) => {
     if (event.ctrlKey || event.metaKey || event.altKey || ["INPUT", "SELECT", "TEXTAREA"].includes((event.target as HTMLElement).tagName)) return;
-    const choice = event.key.toLowerCase() === "r" ? "REAL" : event.key.toLowerCase() === "i" ? "AI" : null;
-    if (choice) document.querySelector<HTMLButtonElement>(`[data-choice=${choice}]`)?.click();
+    const k = event.key.toLowerCase();
+    if (k === "r") choose("REAL"); else if (k === "s") choose("AI");
   };
   stopPlay = () => {
-    active = false; version++; preloader.dispose(); mediaPrivacy.dispose();
-    document.querySelector<HTMLDialogElement>("[data-game-zoom]")?.close();
+    active = false; version++; preloader.dispose(); mediaPrivacy.dispose(); viewer?.dispose(); viewer = null;
     if (timer) clearInterval(timer);
     document.removeEventListener("keydown", key);
-    document.removeEventListener("visibilitychange", resyncOnReturn);
-    window.removeEventListener("focus", resyncOnReturn);
-    window.removeEventListener("pageshow", resyncOnReturn);
   };
   document.addEventListener("keydown", key);
-  const syncClock = (state: { expiresAt: number | null; serverNow: number }) => {
-    if (!state.expiresAt) { if (timer) clearInterval(timer); timer = undefined; seconds = null; const clock = document.querySelector("#clock"); if (clock) clock.textContent = ""; return; }
-    seconds = serverCountdown(state.expiresAt, state.serverNow); clockExpired = false;
+
+  const message = (title: string, text: string, actions = "") => {
+    content().innerHTML = `<section class="page narrow preparation"><div class="eyebrow">${escape(LABEL[last?.level || "facile"] || "")}</div><h1>${title}</h1><p>${text}</p>${actions}<div id="play-error" role="alert"></div></section>`;
+  };
+  let last: State | null = null;
+  const stopClock = () => { if (timer) clearInterval(timer); timer = undefined; };
+  /** Display clock only: the server alone accepts or refuses an answer. */
+  const startClock = (state: State, onEnd: () => void) => {
+    stopClock();
+    if (!state.expiresAt) return;
+    deadline = state.expiresAt; offset = state.serverNow - Date.now(); total = state.seconds * 1000;
     const tick = () => {
-      const left = seconds?.() ?? 0;
-      const clock = document.querySelector("#clock"); if (clock) clock.textContent = left + " s";
-      if (!left && !clockExpired) {
-        clockExpired = true;
-        document.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach(button => { button.disabled = true; });
-        document.querySelector<HTMLDialogElement>("[data-game-zoom]")?.close();
-        void load();
-      }
+      const left = Math.max(0, deadline - (Date.now() + offset));
+      const clock = document.querySelector<HTMLElement>("#clock"), bar = document.querySelector<HTMLElement>("#clock-bar");
+      if (clock) clock.textContent = Math.ceil(left / 1000) + " s";
+      if (bar) bar.style.transform = `scaleX(${Math.min(1, left / total)})`;
+      if (!left) { stopClock(); onEnd(); }
     };
-    if (timer) clearInterval(timer);
-    timer = setInterval(tick, 200); tick();
+    timer = setInterval(tick, 100); tick();
   };
-  const loading = (title: string, copy: string) => {
-    content().innerHTML = `<section class="page narrow preparation"><div class="eyebrow">${last?.demo ?? publicDemo ? "DEMO SINTETICA" : "CATALOGO VERIFICATO"}</div><h1>${title}</h1><p>${copy}</p><strong id="clock" role="timer" aria-label="Tempo rimasto"></strong><p id="preload-progress" role="status" aria-live="polite"></p></section>`;
-    if (seconds) document.querySelector("#clock")!.textContent = seconds() + " s";
-  };
-  const failure = (error: unknown, preparing = false) => {
-    if (!active) return;
-    busy = true;
-    void api(`/sessions/${sid}/report`, { method: "POST", body: JSON.stringify({ reason: "media_unavailable" }) }).catch(() => { /* A network failure may also prevent reporting. */ });
-    loading("Immagine non disponibile.", preparing ? "Il tempo di gioco non è partito. Puoi riprovare la preparazione." : last?.mode === "timed" ? "Il timer del server continua. Puoi riprovare oppure annullare la partita senza un risultato valido." : "Nessuna risposta è stata registrata per questo caricamento. Puoi riprovare o annullare l’allenamento.");
-    content().insertAdjacentHTML("beforeend", `<div class="narrow load-actions"><p role="alert">${escape(error)}</p><button id="retry-media" class="primary">Riprova</button> <button id="invalidate-session">Annulla partita</button></div>`);
-    document.querySelector("#retry-media")!.addEventListener("click", () => {
-      if (preparing) { preloader.dispose(); preloader = new ImagePreloader(); }
-      void load();
-    });
-    document.querySelector("#invalidate-session")!.addEventListener("click", async () => {
-      try { await api(`/sessions/${sid}/invalidate`, { method: "POST", body: JSON.stringify({ reason: "media_unavailable" }) }); await load(); }
-      catch (error) { failure(error, preparing); }
-    });
-  };
+
   const finish = (state: State) => {
-    sessionStorage.removeItem("ros_" + state.mode);
-    if (state.phase === "invalidated") {
-      content().innerHTML = `<section class="page narrow"><div class="eyebrow">PARTITA ANNULLATA${state.demo ? " · DEMO" : ""}</div><h1>Ripartiamo da un’immagine visibile.</h1><p>${state.invalidReason === "preparation_expired" ? "La finestra di preparazione è scaduta." : "La partita è stata annullata per un problema di caricamento."} Nessun risultato valido o punto di questa partita entra nelle statistiche.</p><a class="button primary" href="${state.mode === "training" ? "/allenamento" : "/tempo"}">Nuova partita</a></section>`;
-    } else {
-      content().innerHTML = `<section class="page narrow"><div class="eyebrow">PARTITA COMPLETATA${state.demo ? " · DEMO" : ""}</div><h1>Il tuo sguardo,<br>in numeri.</h1><div class="score">${state.score}<small> punti</small></div><p>${state.answered - (state.timedOut || 0)} risposte su ${state.total} immagini${state.timedOut ? ` · ${state.timedOut} scadute` : ""} · tempo di osservazione ${(state.elapsedMs / 1000).toFixed(1)} s${state.mode === "training" ? " (solo informativo)" : ""}</p><a class="button primary" href="${state.mode === "training" ? "/allenamento" : "/tempo"}">Gioca ancora</a><h2>Storie e crediti</h2>${state.credits.map(r => `<div class="feedback">${feedback(r)}</div>`).join("")}</section>`;
+    stopClock();
+    sessionStorage.removeItem(SESSION_KEY);
+    if (state.phase === "invalidated" || !state.result) {
+      content().innerHTML = `<section class="page narrow"><div class="eyebrow">PARTITA NON CONCLUSA</div><h1>Nessun punteggio.</h1>
+        <p>${state.invalidReason === "preparation_expired" ? "La preparazione è scaduta prima dell'inizio." : "La partita non è arrivata all'ultima foto."}</p>
+        <a class="button primary" href="/gioca">Nuova partita</a></section>`;
+      stopPlay(); return;
     }
+    const r = state.result;
+    content().innerHTML = `<section class="page results"><div class="eyebrow">PARTITA CONCLUSA · ${escape(LABEL[state.level])}</div>
+      <h1>Il tuo sguardo,<br>in numeri.</h1><div class="score">${points(r.score)}<small> punti su ${r.photos}</small></div>
+      <p>REAL riconosciute <strong>${r.real.right}/${r.real.total}</strong> · SLOP riconosciute <strong>${r.slop.right}/${r.slop.total}</strong>
+        · accuratezza bilanciata <strong>${Math.round(r.balanced_accuracy * 100)}%</strong>${r.timed_out ? ` · ${r.timed_out} ${r.timed_out === 1 ? "foto scaduta" : "foto scadute"}` : ""}</p>
+      <section class="enter" id="enter">${state.entered ? '<p>Questa partita è già in classifica.</p>' : `<h2>Entra in classifica</h2>
+        <form id="enter-form" class="enter-form"><label>Soprannome<input name="nickname" minlength="3" maxlength="20" required autocomplete="nickname" autocapitalize="off"></label>
+        <label class="enter-age"><input type="checkbox" name="age_ok" required> Ho almeno ${MIN_AGE} anni, oppure un genitore mi ha dato il permesso</label>
+        <button class="primary">Entra in classifica</button></form><p class="hint">Il soprannome è pubblico: non usare il tuo nome e cognome. Riceverai un codice partita: fotografa lo schermo per conservarlo, è l'unica prova che la partita è tua e serve anche per chiedere di cancellarla (<a href="/privacy">privacy</a>).</p>`}
+        <div id="enter-error" role="alert"></div></section>
+      <div class="actions"><a class="button primary" href="/gioca">Gioca ancora</a> <a class="button" href="/">Classifica</a></div>
+      <h2>Le foto della partita</h2><ol class="credits">${state.credits.map(c => `<li class="credit ${c.correct ? "is-right" : "is-wrong"}">
+        <div class="game-media-surface credit-image"><img data-game-media draggable="false" src="${escape(c.image)}" alt="Foto ${c.number}" loading="lazy"></div>
+        <div class="credit-text"><p class="credit-head"><strong>${c.answer === "REAL" ? "REAL" : "SLOP"}</strong> · ${c.timedOut ? "tempo scaduto" : c.correct ? "✓ risposta giusta" : "✗ risposta sbagliata"}</p>
+        ${c.answer === "REAL" ? `${c.description ? `<p class="credit-description">${escape(c.description)}</p>` : ""}<p class="credit-source">${escape(c.title || "")}${c.author ? " · " + escape(c.author) : ""}${c.license ? " · " + (c.licenseUrl ? `<a href="${safeUrl(c.licenseUrl)}" target="_blank" rel="noopener noreferrer">${escape(c.license)}</a>` : escape(c.license)) : ""}${c.source ? ` · <a href="${safeUrl(c.source)}" target="_blank" rel="noopener noreferrer">Fonte</a>` : ""}</p>${c.changes ? `<p class="credit-changes">${escape(c.changes)}; la versione modificata ha la stessa licenza dell'originale.</p>` : ""}`
+          : `<p class="credit-prompt"><span>Prompt</span> <q lang="en">${escape(c.prompt || "")}</q></p>`}</div></li>`).join("")}</ol></section>`;
+    markGameMedia(content());
+    document.querySelector("#enter-form")?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.target as HTMLFormElement, nickname = String(new FormData(form).get("nickname") || ""), ageOk = new FormData(form).get("age_ok") === "on";
+      form.querySelector("button")!.disabled = true;
+      try {
+        const entry = await api<{ code: string; score: number; nickname: string }>(`/sessions/${sid}/leaderboard`, { method: "POST", body: JSON.stringify({ nickname, age_ok: ageOk }) });
+        document.querySelector("#enter")!.innerHTML = `<h2>Sei in classifica, ${escape(entry.nickname)}.</h2><p>Il tuo codice partita:</p>
+          <p class="game-code" data-game-code>${escape(entry.code)}</p><p class="hint">Fotografa lo schermo adesso: il codice non verrà più mostrato e serve a dimostrare che la partita è tua.</p>`;
+      } catch (error) {
+        document.querySelector("#enter-error")!.textContent = String(error instanceof Error ? error.message : error);
+        form.querySelector("button")!.disabled = false;
+      }
+    });
     stopPlay();
   };
-  const showQuestion = async (state: State, manifest: Question[], value: number, started = false) => {
+
+  /** A moment of feedback over the card, then the next photo. */
+  const outcome = (kind: "right" | "wrong" | "late", answer?: "REAL" | "AI") => {
+    const card = document.querySelector<HTMLElement>(".card");
+    card?.classList.add("is-" + kind);
+    const text = kind === "late" ? "Tempo scaduto" : (kind === "right" ? "✓ Giusto" : "✗ Sbagliato") + (answer ? `: era ${answer === "REAL" ? "REAL" : "SLOP"}` : "");
+    document.querySelector("#verdict")!.innerHTML = `<span class="verdict verdict-${kind}">${text}</span>`;
+    if (kind !== "late" && "vibrate" in navigator) navigator.vibrate(kind === "right" ? 30 : [40, 60, 40]);
+    window.setTimeout(() => { if (active) void load(); }, FEEDBACK_MS);
+  };
+
+  const showQuestion = async (state: State, value: number, started = false) => {
     const q = state.question!;
-    loading("Osserva tra un istante.", state.mode === "timed" ? "Prepariamo l’immagine. Il timer del server resta attivo." : "Controlliamo il file prima di abilitare le risposte.");
-    preloader.retain(manifest.slice(0, 3).map(q => q.image), state.mode === "timed");
     const asset = await preloader.activate(q.image);
     if (!current(value)) return;
-    if (state.protocolVersion === 2 && !started) {
+    if (!started || !state.expiresAt) {
       state = await api<State>(`/sessions/${sid}/ready`, { method: "POST", body: JSON.stringify({ roundId: q.id }) });
       if (!current(value)) return;
       if (state.done || state.question?.id !== q.id) { await load(); return; }
-      syncClock(state);
     }
-    last = state; busy = false; refreshing = false;
-    content().innerHTML = `<section class="play" aria-label="Domanda ${q.number} di ${state.total}"><div class="play-top"><span>${state.mode === "training" ? "ALLENAMENTO" : "A TEMPO"}${state.demo ? " · DEMO" : ""}</span><div class="play-metrics"><span>Round <strong>${q.number}/${state.total}</strong></span><span><strong>${state.score}</strong> pt</span><strong id="clock" role="timer" aria-label="Tempo rimasto"></strong></div></div>${progress(state.answered, state.total)}${warning ? `<details class="play-warning"><summary>Nota sul catalogo</summary><p>${escape(warning)}</p></details>` : ""}<div class="game-media-surface"><img data-game-media draggable="false" class="play-image" src="${escape(asset.url)}" alt="${escape(q.alt)}" loading="eager" fetchpriority="high" decoding="async" tabindex="0" role="button" aria-label="Ingrandisci l’immagine"><div class="media-privacy-cover"><p>Immagine oscurata dopo aver lasciato la pagina. Il tempo continua.</p><button type="button" data-reveal-media>Mostra immagine</button></div></div>${q.caption ? `<p class="play-caption">${escape(q.caption)}</p>` : ""}<p class="sr-only">R per REAL, I per SLOP (generata con IA).</p>${choices("data-choice")}<div id="feedback" aria-live="polite"></div><div id="play-error" role="alert"></div></section>`;
-    if (seconds) document.querySelector("#clock")!.textContent = seconds() + " s";
+    last = state; answering = false;
+    content().innerHTML = `<section class="play play-levels" aria-label="Foto ${q.number} di ${state.total}">
+      <div class="play-top"><span>${escape(LABEL[state.level])}</span><div class="play-metrics"><span>Foto <strong>${q.number}/${state.total}</strong></span>
+        <span>Giuste <strong>${state.right}</strong></span><strong id="clock" role="timer" aria-label="Tempo rimasto"></strong></div></div>
+      <div class="clock-track" aria-hidden="true"><span id="clock-bar"></span></div>
+      <div class="card" tabindex="-1">
+        <div class="game-media-surface card-media"><div class="viewer-layer"><img data-game-media draggable="false" class="play-image" src="${escape(asset.url)}" alt="${escape(q.alt)}" decoding="async"></div>
+          <div class="media-privacy-cover"><p>Foto oscurata perché hai lasciato la pagina. Il tempo continua.</p><button type="button" data-reveal-media>Mostra la foto</button></div></div>
+        <p class="viewer-tools"><button type="button" data-viewer-reset disabled>Foto intera</button></p>
+        <div id="verdict" aria-live="assertive"></div></div>
+      <div class="choices"><button type="button" data-choice="AI" class="choice-slop" aria-label="SLOP, generata con IA. Tasto S"><span>SLOP</span><kbd aria-hidden="true">S</kbd></button>
+        <button type="button" data-choice="REAL" class="choice-real" aria-label="REAL, fotografia vera. Tasto R"><span>REAL</span><kbd aria-hidden="true">R</kbd></button></div>
+      <div id="play-error" role="alert"></div></section>`;
+    viewer?.dispose();
+    const resetButton = document.querySelector<HTMLButtonElement>("[data-viewer-reset]")!;
+    viewer = photoViewer(document.querySelector<HTMLElement>(".card-media")!, document.querySelector<HTMLElement>(".viewer-layer")!,
+      document.querySelector<HTMLImageElement>(".play-image")!, changed => { resetButton.disabled = !changed; });
+    resetButton.onclick = () => viewer?.reset();
+    markGameMedia(content());
     mediaPrivacy.refresh();
-    zoom();
-    for (const future of manifest.slice(1, 3)) void preloader.prefetch(future.image).catch(() => { /* Retry if this future image is actually needed. */ });
-    document.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach(button => {
-      button.onclick = async () => {
-        if (busy) return;
-        busy = true;
-        document.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach(button => { button.disabled = true; });
-        try {
-          const r = await api<Reveal>(`/sessions/${sid}/answer`, { method: "POST", body: JSON.stringify({ roundId: q.id, choice: button.dataset.choice }) });
-          if (!current(value)) return;
-          if (r.serverNow !== undefined) syncClock({ expiresAt: r.expiresAt ?? null, serverNow: r.serverNow });
-          document.querySelector("#feedback")!.innerHTML = `<div class="feedback" tabindex="-1">${feedback(r)}<button id="next" class="primary">Continua</button></div>`;
-          document.querySelector<HTMLElement>("#feedback .feedback")!.focus({ preventScroll: true });
-          document.querySelector("#next")!.addEventListener("click", () => void load());
-        } catch (error) {
-          if (!current(value)) return;
-          if (seconds && seconds() === 0) { await load(); return; }
-          document.querySelector("#play-error")!.innerHTML = `${escape(error)} <button id="retry">Riprendi connessione</button>`;
-          document.querySelector("#retry")!.addEventListener("click", () => void load());
-        }
-      };
+    const send = async (choice: "REAL" | "AI") => {
+      if (answering) return;
+      answering = true; stopClock();
+      document.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach(b => { b.disabled = true; });
+      try {
+        const r = await api<{ correct: boolean; answer: "REAL" | "AI" }>(`/sessions/${sid}/answer`, { method: "POST", body: JSON.stringify({ roundId: q.id, choice }) });
+        if (current(value)) outcome(r.correct ? "right" : "wrong", r.answer);
+      } catch (error) {
+        if (!current(value)) return;
+        if (/scaduto/.test(String(error))) { outcome("late"); return; }
+        document.querySelector("#play-error")!.innerHTML = `${escape(error)} <button type="button" id="retry">Riprova</button>`;
+        document.querySelector("#retry")!.addEventListener("click", () => { answering = false; void send(choice); });
+      }
+    };
+    document.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach(b => { b.onclick = () => void send(b.dataset.choice as "REAL" | "AI"); });
+    startClock(state, () => {
+      if (answering || !current(value)) return;
+      answering = true;
+      document.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach(b => { b.disabled = true; });
+      outcome("late");
     });
   };
+
   const load = async () => {
-    const value = ++version; busy = true; refreshing = true;
+    const value = ++version;
     try {
       const state = await api<State>("/sessions/" + sid);
       if (!current(value)) return;
-      const previousTimeouts = last?.timedOut || 0;
       last = state;
       if (state.done) { finish(state); return; }
-      syncClock(state);
-      if (!current(value)) return;
-      if (state.timedOut > previousTimeouts) {
-        loading("Tempo scaduto.", "Non è stata registrata una risposta per questa immagine. Il prossimo countdown partirà con la prossima immagine.");
-        content().insertAdjacentHTML("beforeend", '<div class="narrow"><button id="next-after-timeout" class="primary">Prossima immagine</button></div>');
-        document.querySelector("#next-after-timeout")!.addEventListener("click", () => void load());
-        return;
-      }
-      const manifest = await api<{ images: Question[] }>(`/sessions/${sid}/manifest`);
-      if (!current(value)) return;
       if (state.phase === "preparing") {
-        loading("Prepariamo la tua sfida.", "Il timer non è ancora partito. Scarichiamo e controlliamo l’immagine prima di avviare il suo countdown. Puoi lasciare questa pagina per interrompere il caricamento.");
-        const urls = manifest.images.map(q => q.image);
-        document.querySelector("#preload-progress")!.textContent = `0/${urls.length} immagini verificate`;
-        preloader.retain(urls.slice(0, 3));
-        await preloader.prepareAll(urls, info => {
-          if (current(value)) document.querySelector("#preload-progress")!.textContent = `${info.verified}/${info.total} immagini verificate · ${(info.bytes / 1024 / 1024).toFixed(2)} MiB scaricati`;
-        });
+        message("Prepariamo la prima foto.", "Il tempo non è ancora partito.");
+        const manifest = await api<{ images: Question[] }>(`/sessions/${sid}/manifest`);
         if (!current(value)) return;
-        if (!urls.length) throw Error("Nessuna immagine assegnata");
-        await preloader.activate(urls[0]);
+        const first = manifest.images[0];
+        if (!first) throw Error("Nessuna foto assegnata");
+        await preloader.activate(first.image);
         if (!current(value)) return;
-        document.querySelector("#preload-progress")!.insertAdjacentHTML("afterend", '<button id="start-prepared" class="primary">Inizia il countdown</button>');
-        document.querySelector<HTMLButtonElement>("#start-prepared")!.onclick = async event => {
+        message("Pronto?", `${state.total} foto, ${state.seconds} secondi per foto. Il tempo di ogni foto parte quando la vedi.`,
+          '<button type="button" id="start" class="primary">Inizia</button>');
+        document.querySelector<HTMLButtonElement>("#start")!.onclick = async event => {
           (event.currentTarget as HTMLButtonElement).disabled = true;
           try {
-            const started = await api<State>(`/sessions/${sid}/start`, { method: "POST", body: JSON.stringify({ prepared: true, roundIds: manifest.images.map(q => q.id) }) });
-            if (!current(value)) return;
-            last = started; syncClock(started);
-            await showQuestion(started, manifest.images, value, true);
-          } catch (error) { if (current(value)) failure(error, true); }
+            const started = await api<State>(`/sessions/${sid}/start`, { method: "POST", body: JSON.stringify({ prepared: true, roundIds: [first.id] }) });
+            if (current(value)) await showQuestion(started, value);
+          } catch (error) { if (current(value)) failure(error); }
         };
         return;
       }
-      await showQuestion(state, manifest.images, value);
-    } catch (error) { if (current(value)) failure(error, last?.phase === "preparing"); }
+      if (!state.question) { await load(); return; }
+      await showQuestion(state, value, !!state.expiresAt);
+    } catch (error) { if (current(value)) failure(error); }
   };
-  document.addEventListener("visibilitychange", resyncOnReturn);
-  window.addEventListener("focus", resyncOnReturn);
-  window.addEventListener("pageshow", resyncOnReturn);
+  const failure = (error: unknown) => {
+    message("Qualcosa non ha funzionato.", "Se la foto in corso aveva già il suo tempo, il tempo continua. Puoi riprovare.",
+      '<button type="button" id="retry-load" class="primary">Riprova</button>');
+    document.querySelector("#play-error")!.textContent = String(error instanceof Error ? error.message : error);
+    document.querySelector("#retry-load")!.addEventListener("click", () => { preloader.dispose(); preloader = new ImagePreloader(); void load(); });
+  };
   await load();
 }

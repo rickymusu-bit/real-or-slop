@@ -1,6 +1,60 @@
+# Registro delle versioni
+
+Aggiornato: 2026-11-14T12:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.24.1 — 2026-11-14T15:30:00Z (proposta, senza migrazioni)
+
+Uscirà con il riordino (PR rickymusu-bit/real-or-slop#132), che contiene anche le voci seguenti.
+
+- **Database:** dopo «Analizza con IA» in gruppo e dopo «Svuota cestino» il messaggio di esito compariva prima che l'elenco fosse
+  ricaricato: aprendo subito una scheda si vedevano i dati di prima, senza i tag nuovi. Ora il messaggio compare a elenco aggiornato.
+  La corsa faceva fallire a volte il test `library_browser` sul telefono.
+
+## Nomi senza versione — 2026-11-14T15:00:00Z (nessun cambiamento di comportamento; `AGENTS.md` e `MASTER.md` 19.0.0)
+
+Decisione dell'owner del 2026-11-14: la versione esce dai nomi dei file; la storia è in git.
+
+- Codice, test e specifiche hanno nomi stabili (`src/library.ts`, `worker/game.ts`, `docs/gioco-a-livelli.md`): 84 file rinominati.
+  Le versioni parallele ancora importate sono state unite senza cambiare comportamento: il gioco e la classifica usati dalle
+  statistiche (funzioni identiche), le impostazioni (la 1.1.0 contiene la 1.0.0), le costanti legali, la copia di gioco nel browser e i
+  fogli di stile del wizard e del gioco, uniti nell'ordine in cui si applicavano.
+- Le intestazioni del codice e dei test descrivono lo scopo, non la cronologia; i commenti citano le specifiche per nome.
+- Tolte le snapshot di `AGENTS.md` e `MASTER.md`. Le specifiche, `AGENTS.md` e `MASTER.md` dichiarano la versione nell'intestazione.
+- Nuovo workflow `release-tag`: al merge su `main` crea il tag `vX.Y.Z` con la versione di `package.json`, se manca.
+- Le migrazioni conservano il nome: Wrangler le riconosce dal nome del file.
+
+## Pulizia del codice — 2026-11-14T14:00:00Z (nessun cambiamento di comportamento; `MASTER.md` 18.2.0)
+
+- Richiesta dell'owner del 2026-11-14: tolto il codice che nessun punto d'ingresso (`src/main.ts`, `worker/index.ts`) importava, cioè le
+  versioni precedenti dei moduli di `src/`, `worker/` e `shared/`, il vecchio gioco (`src/play.ts`, `worker/game.ts`) e `src/clock.ts`:
+  160 file. Tolti anche i test che verificavano solo quel codice (4 unitari, 80 d'integrazione e di supporto non più eseguiti, compresi i
+  modelli finti precedenti) e i dati delle vecchie pipeline (`data/editorial/`). Dai test di `media-privacy` e `preload` tolte le
+  verifiche del vecchio conto alla rovescia. Tutto resta nella cronologia git.
+
+## Documentazione 18.1.0 — 2026-11-14T13:00:00Z
+
+- Decisione dell'owner del 2026-11-14: le versioni precedenti dei file non si conservano più nel repository; una nuova versione cancella
+  la precedente, che resta nella cronologia git (`AGENTS.md` 18.1.0, regola 3). Tolte le snapshot 18.0.0 e la privacy 1.1.0.
+- `MASTER.md` 18.1.0: tolte le discrepanze note, corrette nell'app 1.24.0. Privacy 1.1.1: «Fonti e crediti» aggiornata.
+- Le specifiche si citano tra loro per nome, senza versione: una nuova versione non costringe più a riscrivere quelle che la citano.
+
+## Documentazione 18.0.0 — 2026-11-14T12:00:00Z (riordino, nessun cambiamento all'app)
+
+Richiesta dell'owner del 2026-11-14: riordino e refactoring dei documenti importanti.
+
+- **Specifiche consolidate**, una per area e senza strati: libreria `2.0.0`, contenuti e trasparenza `1.0.0` (nuova), copie di gioco
+  `6.0.0`, dashboard e wizard REAL `2.0.0`, generazione SLOP `1.0.0` (riunisce studio e batch automatici), Database `2.0.0`, gioco
+  `2.0.0`, Statistiche e Impostazioni `2.0.0`, privacy `1.1.0` (corretta la descrizione delle modifiche nei crediti, testi del sito invariati).
+- **Documenti tolti** su richiesta dell'owner: le specifiche precedenti, le note delle vecchie pipeline e le snapshot di `AGENTS.md` e
+  `MASTER.md` fino alla 17.30.0: 298 file. Restano nella cronologia git.
+- `AGENTS.md` 18.0.0: principi e regole di lavoro, con la regola di una sola specifica vigente per area. `MASTER.md` 18.0.0: solo la mappa
+  (stato, specifiche e corrispondenze, discrepanze note, file in uso, migrazioni, rilascio); la storia passa qui. `README.md` riscritto.
+- Completate le voci da 1.15.1 a 1.23.0, che mancavano.
+
 ## 1.24.0 — 2026-11-14T09:00:00Z (proposta, senza migrazioni)
 
-Anteprima a pressione prolungata, selezione immediata, descrizione delle REAL, tag di partenza delle SLOP (`docs/anteprima-descrizione.v1.2.0.md`, decisioni dell'owner del 2026-11-14).
+Anteprima a pressione prolungata, selezione immediata, descrizione delle REAL, tag di partenza delle SLOP (decisioni dell'owner del 2026-11-14; proposta scritta in `anteprima-descrizione.v1.2.0`, oggi nelle specifiche consolidate).
 
 - **Ricerca su Commons:** il tasto «×» è una casella a sé dopo il campo, sempre presente e disattivato a campo vuoto; non copre più il testo.
 - **Selezione:** un tocco su un risultato lo spunta e lo mette subito tra le «Immagini selezionate»; un secondo tocco o «×» lo toglie. Tolto «Aggiungi le selezionate». La selezione resta con una nuova ricerca (prima spariva).
@@ -10,6 +64,45 @@ Anteprima a pressione prolungata, selezione immediata, descrizione delle REAL, t
 - **Pagine del sito:** «Come funziona» descrive pulsanti, foto intera ed esplorabile e formato comune più vicino, non più swipe e 4:5; «Fonti e crediti» non dice più «ritagliata nel formato 4:5» e avverte che la descrizione delle REAL può essere stata corretta o riscritta per il gioco.
 - **Prompt SLOP, testo proposto** (`worker/model-context.v1.6.0.ts`): persone reali né nominate né descritte; gente comune con tratti concreti e volti visibili, mai «indistinti» o «anonimi» nel prompt; «mai nudità che riguardi minori» al posto di «mai minori». Prima il modello nascondeva tutti i volti e scriveva solo adulti. Vale quando l'owner lo salva dalle Impostazioni.
 - Nuove versioni: `worker/model-context.v1.6.0.ts` con `worker/library.v1.22.0.ts`, `worker/analysis.v1.22.0.ts`, `worker/slop.v1.14.0.ts`, `worker/slop-generation.v1.13.0.ts` (solo l'import; la 1.5.0 e i moduli intermedi restano come storico), `src/image-preview.v1.0.0.ts`, `src/real-wizard.v1.17.0.ts`, `src/library.v1.23.0.ts`, `src/slop-studio.v1.6.0.ts`, `src/play.v2.5.0.ts`, `worker/game.v2.5.0.ts`. Test `game.v2.5.0`, `real_wizard.v1.15.0`, `database_browser.v1.7.0`, `slop_browser.v1.4.0`, `slop_auto_browser.v1.1.0`, `game_browser.v1.5.0`; `scripts/integration.py` 2.9.0. `AGENTS.md` 17.30.0, `MASTER.md` 17.31.0.
+
+## 1.23.0 — 2026-11-13T22:00:00Z (pubblicata il 2026-11-13, PR 129; migrazione 0047 applicata alle 22:47 UTC)
+
+- **Niente didascalie**, né nella partita né nella dashboard; quelle scritte cancellate dalla migrazione 0047 (non reversibile); l'analisi
+  genera solo tag.
+- Wizard REAL in quattro passi, con l'inquadratura dopo i tag; tasto che svuota la ricerca su Commons; la dashboard segnala il caricamento.
+- Termini d'uso senza didascalie, approvati dal legale il 2026-11-14. Lo stesso giorno (PR 130) l'owner ha salvato nuove versioni del
+  contesto dei modelli senza didascalie e con il paragrafo «Formato» nei prompt SLOP.
+
+## 1.22.0 — 2026-11-13T19:00:00Z (pubblicata il 2026-11-13, PR 128)
+
+- Foto intera nel suo formato su ogni schermo, senza vista iniziale 4:5; «Inquadratura» sceglie solo formato e ritaglio; zoom fino a
+  due pixel CSS per pixel della copia e doppio tocco; foto intere anche nella lista finale.
+- Il wizard REAL toglie le foto spostate nel cestino o eliminate nel Database; nel passo 2 «Togli dal caricamento».
+
+## 1.21.1 — 2026-11-13 (pubblicata il 2026-11-13, PR 127)
+
+- Schede del Database senza gli avvisi «senza copia» e «licenza ND», che restano nel dettaglio.
+
+## 1.21.0 — 2026-11-13 (pubblicata il 2026-11-13, PR 126)
+
+- Sezione Database senza caricamento di file, ricerca per titolo, filtro «Copia» e pannello Commons; ordinamento per data di aggiunta,
+  visualizzazioni o accuratezza; schede con sola miniatura, origine e stato.
+- Tolti il segno «copia da rifare» e «Rifai le copie»: nessuna copia 4:5 rimasta.
+
+## 1.20.0 — 2026-11-13 (pubblicata il 2026-11-13, PR 125)
+
+- Il cestino ritira subito una pubblicata, anche in gruppo.
+- Nella ricerca su Commons il tocco sulla miniatura la seleziona; il collegamento alla pagina Commons passa alle immagini selezionate.
+
+## 1.19.0 — 2026-11-13 (pubblicata il 2026-11-13, PR 124; migrazione 0046)
+
+- Copie di gioco nel formato della foto (il più vicino di sette formati comuni) con vista iniziale 4:5, foto esplorabile nella partita,
+  pulsanti al posto dello swipe; formato delle SLOP scelto dal modello di testo per il soggetto.
+
+## 1.15.1–1.18.0 — 2026-11-13 (pubblicate il 2026-11-13, PR 120–123)
+
+- Ricerca su Commons con sole miniature, categorie correlate richiudibili, pagine con frecce, colonne a scelta, link incollati in una
+  sezione chiusa. Un'anteprima a pressione prolungata (1.16.0) è stata ritirata con la 1.17.0.
 
 ## 1.15.0 — 2026-11-12T22:00:00Z (pubblicata il 2026-11-12, PR 118)
 

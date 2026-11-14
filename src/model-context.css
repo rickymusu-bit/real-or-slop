@@ -1,0 +1,8 @@
+/* Settings: model context. */
+.library-context { margin: 18px 0 26px; }
+.library-context h3 { margin: 0 0 4px; font-size: 16px; }
+.library-context textarea { width: 100%; font: inherit; font-size: 14px; line-height: 1.45; }
+.library-context-history ol { padding-left: 18px; }
+.library-context-history li { margin: 6px 0; font-size: 13px; }
+.library-context-history pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; background: var(--surface); padding: 8px; }
+#library-settings-message:empty { display: none; }

@@ -1,5 +1,5 @@
 import { type Env, type ImageRow, HttpError } from "./core";
-import { cleanImage } from "../shared/media-clean.v1.0.0";
+import { cleanImage } from "../shared/media-clean";
 /** The approved game copy of a published image, from the game bucket. */
 export async function media(env: Env, image: Pick<ImageRow, "r2_key">) {
   if (!env.IMAGES) throw new HttpError(503, "Storage immagini non configurato");
