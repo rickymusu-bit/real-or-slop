@@ -65,6 +65,11 @@ async function call<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!response.ok) throw Error(data.error || "Connessione non disponibile");
   return data;
 }
+interface Conflict { label: string; proposed: string; existing: string }
+/** Tags the model proposed in a category other than the vocabulary's: the vocabulary wins, so the owner must hear about them (a Genre
+ * proposed as «mugshot» while «mugshot» is in Altro leaves the image without a Genre). */
+const conflictText = (list: Conflict[] = []) => list.length ? " Categorie in conflitto, da sistemare nel vocabolario: " + list.map(c =>
+  `«${c.label}» proposto come ${CATEGORY_LABELS[c.proposed as Category] || c.proposed}, nel vocabolario è ${CATEGORY_LABELS[c.existing as Category] || c.existing}`).join("; ") + "." : "";
 const kb = (bytes: number) => bytes < 1024 ? bytes + " byte" : Math.round(bytes / 1024) + " kB";
 
 export async function showLibrary() {
@@ -181,15 +186,18 @@ export async function showLibrary() {
     if (!analysis?.enabled || !ids.length) return;
     if (!window.confirm(`Completare Genere, Colore e Supporto di ${ids.length} ${ids.length === 1 ? "immagine" : "immagini"} con ${analysis.model}? ` +
       `${ids.length === 1 ? "È una chiamata" : "Sono " + ids.length + " chiamate"} a pagamento, una sola volta per immagine; gli altri tag restano, le pubblicate restano nel gioco.`)) return;
-    let done = 0; const errors: string[] = [];
+    let done = 0; const errors: string[] = [], conflicts: Conflict[] = [];
     for (const [index, imageId] of ids.entries()) {
       progress(`Completamento ${index + 1} di ${ids.length}`);
-      try { await call(`/${encodeURIComponent(imageId)}/categories`, { method: "POST", body: JSON.stringify({ confirm: true }) }); done++; }
+      try {
+        const result = await call<{ tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(imageId)}/categories`, { method: "POST", body: JSON.stringify({ confirm: true }) });
+        conflicts.push(...(result.tag_conflicts || [])); done++;
+      }
       catch (error) { errors.push(error instanceof Error ? error.message : String(error)); if (/OpenAI:/.test(String(error))) break; }
     }
     await Promise.all([load(), refreshTags(), refreshAnalysis(), refreshGroups()]);
     progress("");
-    message(`${done} di ${ids.length} completate.` + (errors.length ? " " + [...new Set(errors)].join(" · ") : ""));
+    message(`${done} di ${ids.length} completate.` + conflictText(conflicts) + (errors.length ? " " + [...new Set(errors)].join(" · ") : ""));
   };
   const refreshGroups = async () => {
     try {
@@ -202,16 +210,19 @@ export async function showLibrary() {
   const analyzeMany = async (ids: string[]) => {
     if (!analysis?.enabled || !ids.length) return;
     if (!window.confirm(`Analizzare ${ids.length} ${ids.length === 1 ? "immagine" : "immagini"} con ${analysis.model}? Sono chiamate a pagamento. I tag attuali saranno sostituiti; ogni immagine si analizza una sola volta.`)) return;
-    let done = 0; const errors: string[] = [];
+    let done = 0; const errors: string[] = [], conflicts: Conflict[] = [];
     for (const [index, imageId] of ids.entries()) {
       progress(`Analisi ${index + 1} di ${ids.length}`);
-      try { await call(`/${encodeURIComponent(imageId)}/analyze`, { method: "POST", body: JSON.stringify({ confirm: true }) }); done++; }
+      try {
+        const result = await call<{ tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(imageId)}/analyze`, { method: "POST", body: JSON.stringify({ confirm: true }) });
+        conflicts.push(...(result.tag_conflicts || [])); done++;
+      }
       catch (error) { errors.push(error instanceof Error ? error.message : String(error)); if (/OpenAI:/.test(String(error))) break; }
     }
     // The list is reloaded first: the message says the work is over only when the cards show the new tags.
     await Promise.all([load(), refreshTags(), refreshAnalysis()]);
     progress("");
-    message(`${done} di ${ids.length} analizzate.` + (errors.length ? " " + [...new Set(errors)].join(" · ") : ""));
+    message(`${done} di ${ids.length} analizzate.` + conflictText(conflicts) + (errors.length ? " " + [...new Set(errors)].join(" · ") : ""));
   };
   // The list of the last request wins: a slower, older answer never overwrites a newer one.
   let loadSeq = 0;
@@ -411,7 +422,8 @@ export async function showLibrary() {
       else if (button.id === "library-complete" && analysis) {
         if (!window.confirm(`Completare Genere, Colore e Supporto di «${open.title}» con ${analysis.model}? È una chiamata a pagamento, una sola volta per l'immagine; gli altri tag restano.`)) return;
         detailMessage("Completamento in corso…");
-        open = await call<Item>(`/${encodeURIComponent(open.id)}/categories`, { method: "POST", body: JSON.stringify({ confirm: true }) });
+        const completed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(open.id)}/categories`, { method: "POST", body: JSON.stringify({ confirm: true }) });
+        open = completed; detailMessage("Completamento fatto." + conflictText(completed.tag_conflicts));
         void Promise.all([refreshTags(), refreshAnalysis(), refreshGroups()]);
       }
       else if (button.id.startsWith("library-treatment-")) {
@@ -431,7 +443,8 @@ export async function showLibrary() {
         const repeat = open.analysis.status === "uncertain" ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
         if (!window.confirm(`Analizzare «${open.title}» con ${analysis.model}? È una chiamata a pagamento. I tag attuali saranno sostituiti.${repeat}`)) return;
         detailMessage("Analisi in corso…");
-        open = await call<Item>(`/${encodeURIComponent(open.id)}/analyze`, { method: "POST", body: JSON.stringify({ confirm: true }) });
+        const analysed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(open.id)}/analyze`, { method: "POST", body: JSON.stringify({ confirm: true }) });
+        open = analysed; detailMessage("Analisi completata." + conflictText(analysed.tag_conflicts));
         void Promise.all([refreshTags(), refreshAnalysis()]);
       }
       else if (button.id === "library-restore" && open.generated) {
@@ -458,7 +471,8 @@ export async function showLibrary() {
         detailMessage("Copia di gioco…");
         open = await prepareItemCopy<Item>(open);
         detailMessage("Analisi…");
-        open = await call<Item>(`/${encodeURIComponent(open.id)}/analyze`, { method: "POST", body: JSON.stringify({ confirm: true }) });
+        const analysed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(open.id)}/analyze`, { method: "POST", body: JSON.stringify({ confirm: true }) });
+        open = analysed; detailMessage("Immagine rigenerata e analizzata." + conflictText(analysed.tag_conflicts));
         void Promise.all([refreshTags(), refreshAnalysis()]);
       }
       else if (button.dataset.action) open = await call<Item>(`/${encodeURIComponent(open.id)}/${button.dataset.action}`, { method: "POST",

@@ -1,6 +1,6 @@
-# Sezione Database — specifica 2.1.1
+# Sezione Database — specifica 2.2.0
 
-Stato: approvata dall'owner il 2026-11-14, implementata nell'app 1.25.0 (in revisione). Aggiornata: 2026-11-14T16:30:00Z. La 2.1.1 chiama «REAL campione» la foto delle misure del trattamento. La 2.1.0 aggiunge il filtro
+Stato: vigente; la 2.1.1 è in produzione con l'app 1.25.0, la 2.2.0 è nell'app 1.25.1 (proposta). Aggiornata: 2026-11-14T20:00:00Z. La 2.2.0 mostra i conflitti di categoria dopo analisi e completamento (app 1.25.1). La 2.1.1 chiama «REAL campione» la foto delle misure del trattamento. La 2.1.0 aggiunge il filtro
 per gruppo, il completamento di Genere, Colore e Supporto, le misure della copia e i comandi del trattamento delle SLOP (specifiche
 `libreria-immagini` 3.0.0, `copie-di-gioco` 7.0.0, `generazione-slop` 2.0.0). La 2.0.0 era la versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `database-immagini.v1.0.1` e le modifiche delle app 1.17–1.24 (cestino, schede, ordinamento, anteprima, tag di partenza),
@@ -26,6 +26,10 @@ che restano nella cronologia git. Stati e regole della libreria: specifica `libr
   foto mai viste vanno in fondo.
 - **Schede:** miniatura (copia di gioco), origine e stato, casella di selezione. Tocco breve: dettaglio. Pressione prolungata: anteprima
   grande (specifica `dashboard-admin-wizard-real`, sezione 3).
+- **Conflitti di categoria** (app 1.25.1): dopo un'analisi o un completamento, dal dettaglio, in gruppo o dopo una rigenerazione, il
+  messaggio elenca i tag che il modello ha proposto in una categoria diversa da quella del vocabolario («mugshot» proposto come Genere,
+  nel vocabolario è Altro). Prevale il vocabolario, quindi l'immagine può restare senza quella categoria: l'owner sposta il tag dal
+  vocabolario. Il 2026-11-14 il completamento della foto segnaletica di King era rimasto senza Genere per questo motivo.
 - **Selezione multipla:** sposta nel cestino (con conferma se ci sono pubblicate), analizza con IA, completa Genere, Colore e Supporto
   (a pagamento, con conferma del numero di chiamate; solo le immagini che ne hanno diritto, specifica `libreria-immagini`, sezione 5),
   approva (con la conferma dei diritti

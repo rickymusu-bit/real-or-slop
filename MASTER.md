@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 19.2.0, aggiornata il 2026-11-14T18:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 19.3.0, aggiornata il 2026-11-14T20:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,14 +9,12 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **In produzione:** app 1.24.1 (PR rickymusu-bit/real-or-slop#132, unita il 2026-11-14: riordino della documentazione e correzione del
-  messaggio dopo l'analisi in gruppo; migrazioni fino alla 0047). Il testo proposto dei prompt SLOP vale quando l'owner lo salva dalle
-  Impostazioni: al 2026-11-14T16:00:00Z in produzione vale ancora la versione salvata alle 06:06, con «figure non riconoscibili».
-- **In preparazione:** app 1.25.0, migrazione 0048, sul ramo `ccr-dbd14347-i92tp0`: gruppi di genere e decennio per il bilanciamento,
-  categorie Genere, Colore e Supporto al posto di Formato (giudicate solo dall'immagine, completamento a pagamento per le immagini già
-  analizzate), esempi del gruppo e prompt da 600 a 1000 caratteri, trattamento delle SLOP con le misure delle copie, contesto 1.7.0
-  proposto, «Come funziona», «Fonti e crediti» e Termini (decisioni dell'owner del 2026-11-14). La frase nuova dei Termini è stata
-  verificata da un legale (2026-11-14).
+- **In produzione:** app 1.25.0 (PR rickymusu-bit/real-or-slop#133, unita il 2026-11-14; migrazioni fino alla 0048). Operazioni fatte
+  in produzione il 2026-11-14 su richiesta dell'owner: contesto 1.7.0 salvato (base, analisi, prompt SLOP); Genere, Colore e Supporto
+  completati per le 55 REAL (55 chiamate a pagamento, tutte riuscite); misure delle 55 copie; `mugshot` spostato da Altro a Genere;
+  decennio aggiunto alle 9 REAL che non lo avevano, dalla data EXIF dell'originale o dalla pagina Commons. Gruppi oltre la soglia:
+  `crowd-scene/1960s`, `press-photo/2020s`, `press-photo/1960s`.
+- **Proposta aperta:** app 1.25.1: i conflitti di categoria dopo analisi e completamento compaiono nella dashboard.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
 
 ## Specifiche vigenti
@@ -31,7 +29,7 @@ nome.
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 7.0.1 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.0.0 |
 | Studio SLOP, gruppi e batch automatici | `docs/generazione-slop.md` | 2.0.1 |
-| Sezione Database | `docs/database-immagini.md` | 2.1.1 |
+| Sezione Database | `docs/database-immagini.md` | 2.2.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.0.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.1.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.2.0 |

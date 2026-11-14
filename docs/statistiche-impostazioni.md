@@ -1,6 +1,6 @@
 # Statistiche e Impostazioni — specifica 2.1.0
 
-Stato: approvata dall'owner il 2026-11-14, implementata nell'app 1.25.0 (in revisione). Aggiornata: 2026-11-14T16:00:00Z. La 2.1.0 sostituisce la soglia
+Stato: vigente, in produzione con l'app 1.25.0 (2026-11-14). Aggiornata: 2026-11-14T16:00:00Z. La 2.1.0 sostituisce la soglia
 del tema con quella del gruppo e aggiunge i gruppi all'equilibrio del catalogo (specifica `generazione-slop`). La 2.0.0 era la
 versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `statistiche-impostazioni.v1.0.1` e le aggiunte successive (soglie dei batch automatici, formati, cancellazione delle voci
