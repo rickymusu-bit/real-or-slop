@@ -1,34 +1,122 @@
-# Mappa canonica — versione canonica 17.30.0
+# Mappa del progetto — versione canonica 18.0.0
 
-Snapshot: `docs/MASTER.v17.30.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-14T11:00:00Z. Precedente: `docs/MASTER.v17.29.0.md` (storico).
+Snapshot: `docs/MASTER.v18.0.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-14T12:00:00Z. Precedente: 17.30.0, nella cronologia git (riordino della documentazione dell'owner del 2026-11-14).
+
+Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso (nel repository convivono molte versioni
+dello stesso modulo), quali specifiche sono vigenti, come si rilascia. Le regole di lavoro sono in `AGENTS.md`, la storia delle versioni
+in `CHANGELOG.md`.
+
+## Stato
+
+- **In produzione:** app 1.23.0 (PR 129, migrazioni fino alla 0047), con il contesto dei modelli salvato dall'owner il 2026-11-14.
+- **Proposta aperta:** app 1.24.0, PR rickymusu-bit/real-or-slop#131, senza migrazioni: anteprima a pressione prolungata, selezione
+  immediata su Commons, descrizione delle REAL nella lista finale, tag di partenza delle SLOP, proposta del testo dei prompt SLOP con
+  volti visibili (vale quando l'owner lo salva dalle Impostazioni).
+- **Riordino della documentazione** (questa versione): specifiche consolidate senza strati, documenti storici tolti dal repository.
+- **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
+
+## Specifiche vigenti
+
+Ogni specifica descrive il comportamento attuale della sua area, senza rimandi a versioni precedenti; i nomi dei file di codice stanno
+in questa mappa, non nelle specifiche.
+
+| Area | Specifica |
+|---|---|
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.v2.0.0.md` |
+| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.v1.0.0.md` |
+| Copie di gioco, formati, inquadratura | `docs/copie-di-gioco.v6.0.0.md` |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.v2.0.0.md` |
+| Studio SLOP e batch automatici | `docs/generazione-slop.v1.0.0.md` |
+| Sezione Database | `docs/database-immagini.v2.0.0.md` |
+| Partita a livelli e classifica | `docs/gioco-a-livelli.v2.0.0.md` |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.v2.0.0.md` |
+| Privacy e note legali | `docs/privacy-note-legali.v1.1.0.md` |
+
+**Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
+delle vecchie pipeline e le snapshot di `AGENTS.md` e `MASTER.md` fino alla 17.30.0. Restano nella cronologia git: `git log -- docs/<nome>`
+trova il commit che li ha cancellati e `git show <commit>^:docs/<nome>` li mostra. I commenti del codice citano ancora quei nomi come
+storia. Corrispondenze delle ultime specifiche vigenti:
+
+| Prima (fino alla 17.30.0) | Ora |
+|---|---|
+| `libreria-immagini.v1.8.0`, `categorie-tag.v1.1.0` | `libreria-immagini.v2.0.0`, `contenuti-e-trasparenza.v1.0.0` |
+| `dashboard-admin-wizard-real.v1.3.0`, `didascalie-wizard.v1.0.0`, `anteprima-descrizione.v1.2.0` | `dashboard-admin-wizard-real.v2.0.0` (e le altre aree per le parti relative) |
+| `wizard-slop.v1.4.1`, `proposta-generazione-slop.v2.0.1` | `generazione-slop.v1.0.0` |
+| `database-immagini.v1.0.1` | `database-immagini.v2.0.0` |
+| `copie-di-gioco.v5.0.0` | `copie-di-gioco.v6.0.0` |
+| `gioco-a-livelli.v1.0.1` | `gioco-a-livelli.v2.0.0` |
+| `statistiche-impostazioni.v1.0.1` | `statistiche-impostazioni.v2.0.0` |
+| `privacy-note-legali.v1.0.4` | `privacy-note-legali.v1.1.0` |
+
+## Discrepanze note
+
+Testi pubblici del sito non aggiornati (in `src/main.ts`, da correggere con una PR di codice):
+- «Come funziona» descrive ancora lo swipe sul telefono e «lo stesso formato 4:5»: dall'app 1.22.0 si risponde con i pulsanti e la foto
+  è intera nel suo formato.
+- «Fonti e crediti» dice «ritagliata nel formato 4:5»: la copia è ritagliata al formato comune più vicino.
 
 ## Architettura
 
-- **Frontend** Vite/TypeScript in `src/`: gioco a livelli (`play.v2.5.0.ts`, foto intera ed esplorabile in `photo-viewer.v2.0.0.ts`, precaricamento in `preload.ts`; `play.ts` storico), home con classifica (`main.ts`), marchio «RS»
-  (`media-mark.v1.0.0.ts`), protezioni (`media-privacy.ts`), anteprima a pressione prolungata della dashboard (`image-preview.v1.0.0.ts`), libreria admin e sezione Database (`library.v1.23.0.ts`, con indicatore di caricamento in `admin-loading.v1.0.0.css`, il riquadro dei batch automatici in `slop-auto.v1.2.0.ts`, statistiche in `stats.v1.2.0.ts`, grafico della distribuzione in `database-chart.v1.0.0.ts`), wizard REAL in quattro passi (`real-wizard.v1.17.0.ts`), pillole e categorie dei tag (`tag-ui.v1.1.0.ts`),
-  studio SLOP (`slop-studio.v1.6.0.ts`),
-  codifica delle copie di gioco nel formato della foto nel browser (`game-copy.v3.0.0.ts`, salvataggio dell'inquadratura in `game-copy.v3.1.0.ts`) e inquadratura con formato e ritaglio (`crop-editor.v3.0.0.ts`).
-- **Worker** Cloudflare in `worker/`: router (`index.ts`), accesso admin (`core.ts`), libreria
-  (`library.v1.22.0.ts`, con vocabolario, alias, categorie, statistiche e distribuzione), partite in corso e copie trattenute (`in-play.v1.2.0.ts`), statistiche (`stats.v1.1.0.ts`), impostazioni (`app-settings.v1.1.0.ts`), analisi a pagamento (`analysis.v1.22.0.ts`, solo tag), contesto dei modelli (`model-context.v1.6.0.ts`, proposta dei prompt SLOP con volti visibili),
-  selettori dei modelli e qualità (`models.v1.1.0.ts`), studio SLOP (`slop.v1.14.0.ts`, generazione in `slop-generation.v1.13.0.ts`, batch automatici su proposta in `slop-auto.v1.0.0.ts`), Commons (`commons-editorial.v1.0.0.ts`), gioco a livelli (`game.v2.5.0.ts`, `sampling.ts`; `game.ts` storico), classifica (`leaderboard.v1.1.0.ts`), file del gioco senza metadati (`storage.ts`).
-- **Codice condiviso** in `shared/`: tag (`tags.v2.0.0.ts`), lunghezza della didascalia (`caption.v1.0.0.ts`, non più usato), tag scritti a mano (`tag-input.v1.0.0.ts`), categorie dei tag (`tag-categories.v1.0.0.ts`), modelli OpenAI (`models.v1.0.0.ts`), estrazione degli slot (`slot-extraction.v1.0.0.ts`), proposta dei batch automatici (`slop-auto.v1.0.0.ts`), formati, ricetta della copia e dimensione chiesta al generatore (le funzioni della vista iniziale restano, inutilizzate) (`game-copy.v3.0.0.ts`; la 2.0.0 e `image-size.v1.0.0.ts` storici), licenze ND (`licenses.v1.0.0.ts`),
-  pulizia dei metadati (`media-clean.v1.0.0.ts`), livelli, punteggio, soprannome e codice partita (`levels.v1.0.0.ts`), formati e geometria delle immagini.
-- **Dati:** D1, schema `0033_clean_slate.v1.0.0.sql` (immagini, tag, gioco) più `0034_tag_aliases_analysis.v1.1.0.sql`
-  (alias, rimozione dei tag orfani, stato dell'analisi, registro di spesa, budget unico) `0035_generated_texts.v1.0.0.sql` (testi generati, ripristinabili) `0036_caption_soft_limit.v1.0.0.sql` (didascalia fino a 256 caratteri) `0037_model_contexts.v1.0.0.sql` (contesto dei modelli con versioni) `0038_tag_categories.v1.0.0.sql` (categoria dei tag) `0039_calls_and_models.v1.0.0.sql` (registro delle chiamate senza importi, niente budget, impostazioni dei modelli) `0040_slop_batches.v1.0.0.sql` (gruppi di generazione SLOP) `0041_database_section.v1.0.0.sql` (didascalia e copia di ogni round, immagini delle sfide, copie ritirate in attesa) `0042_game_copy_crop.v1.0.0.sql` (inquadratura della copia 4:5) `0043_levels_leaderboard.v1.0.0.sql` (partite a livelli, classifica, via le tabelle del PvP) `0044_app_settings.v1.0.0.sql` (qualità, soglie, durata delle partite aperte) `0045_slop_auto_batches.v1.0.0.sql` (batch automatici delle SLOP, proposte ignorate, nuove chiavi delle Impostazioni) e `0046_game_copy_format_view.v1.0.0.sql` (formato nel ritaglio, vista iniziale della copia e di ogni round; dall'app 1.22.0 le colonne della vista restano inutilizzate) e `0047_remove_captions.v1.0.0.sql` (didascalie cancellate, colonne inutilizzate). R2: quarantena privata
-  (`library/<id>/` originale e copia) e bucket del gioco (copie pubblicate).
+**Browser** (Vite e TypeScript, `src/`, ingresso `main.ts`):
+- Sito: home con classifica, «Come funziona», «Fonti e crediti» (`main.ts`); pagine legali (`legal.v1.1.0.ts`, `legal.v1.0.0.css`).
+- Gioco: `play.v2.5.0.ts` (CSS `play.v2.3.0.css` e `play.v2.4.0.css`), foto esplorabile `photo-viewer.v2.0.0.ts`, precaricamento
+  `preload.ts`, marchio «RS» `media-mark.v1.0.0.ts`, protezioni `media-privacy.ts`.
+- Dashboard: `library.v1.23.0.ts` (sezioni, Database, Impostazioni; CSS `library.v1.0.0.css`, `database.v1.0.0.css`,
+  `admin-navigation.v1.0.0.css`, `admin-loading.v1.0.0.css`, `model-context.v1.0.0.css`), wizard REAL `real-wizard.v1.17.0.ts` (CSS
+  `real-wizard.v1.5.0.css`, `v1.6.0`, `v1.7.0`), studio SLOP `slop-studio.v1.6.0.ts` (CSS `slop-studio.v1.1.0.css`), riquadro dei batch
+  automatici `slop-auto.v1.2.0.ts`, statistiche `stats.v1.2.0.ts`, grafico della distribuzione `database-chart.v1.0.0.ts`, anteprima a
+  pressione prolungata `image-preview.v1.0.0.ts`, pillole e categorie dei tag `tag-ui.v1.1.0.ts`, editor di formato e ritaglio
+  `crop-editor.v3.0.0.ts`, copie di gioco nel browser `game-copy.v3.1.0.ts` (lo studio usa `game-copy.v3.0.0.ts`).
+
+**Worker** Cloudflare (`worker/`, ingresso `index.ts`):
+- `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.v1.0.0.ts` (manutenzione giornaliera).
+- Libreria `library.v1.22.0.ts` (stati, vocabolario, alias, categorie, distribuzione, copie), partite in corso e copie trattenute
+  `in-play.v1.2.0.ts`, analisi `analysis.v1.22.0.ts`, contesto dei modelli `model-context.v1.6.0.ts`, modelli `models.v1.1.0.ts`,
+  Impostazioni `app-settings.v1.1.0.ts`, statistiche `stats.v1.1.0.ts`, Commons `commons-editorial.v1.0.0.ts`.
+- SLOP: studio `slop.v1.14.0.ts`, generazione `slop-generation.v1.13.0.ts`, batch automatici `slop-auto.v1.0.0.ts`.
+- Gioco `game.v2.5.0.ts` con `sampling.ts`, classifica `leaderboard.v1.1.0.ts`.
+
+**Codice condiviso** (`shared/`): tag `tags.v2.0.0.ts`, tag scritti a mano `tag-input.v1.0.0.ts`, categorie `tag-categories.v1.0.0.ts`,
+modelli OpenAI `models.v1.0.0.ts`, slot `slot-extraction.v1.0.0.ts`, proposta dei batch `slop-auto.v1.0.0.ts`, formati e ricetta della
+copia `game-copy.v3.0.0.ts`, licenze ND `licenses.v1.0.0.ts`, pulizia dei metadati `media-clean.v1.0.0.ts`, livelli e punteggio
+`levels.v1.0.0.ts`, testi legali `legal.v1.1.0.ts` con `legal.v1.0.0.ts`, geometria e formati delle immagini.
+
+Le versioni precedenti dei moduli restano nel repository come storico e non sono importate.
+
+**Dati.** D1 con le migrazioni in `migrations/`:
+
+| Migrazione | Contenuto |
+|---|---|
+| 0033 | schema pulito: immagini, tag, gioco |
+| 0034 | alias, rimozione dei tag orfani, stato dell'analisi, registro delle chiamate |
+| 0035 | tag e didascalie generati, ripristinabili |
+| 0036 | didascalia fino a 256 caratteri (colonna oggi inutilizzata) |
+| 0037 | contesto dei modelli con versioni |
+| 0038 | categoria dei tag |
+| 0039 | registro delle chiamate senza importi, impostazioni dei modelli |
+| 0040 | gruppi di generazione SLOP |
+| 0041 | copia di ogni round, copie ritirate in attesa |
+| 0042 | inquadratura della copia |
+| 0043 | partite a livelli e classifica, via le tabelle del PvP |
+| 0044 | impostazioni dell'app (qualità, soglie, durata delle partite aperte) |
+| 0045 | batch automatici delle SLOP, proposte ignorate |
+| 0046 | formato nel ritaglio (la vista iniziale resta, inutilizzata) |
+| 0047 | didascalie cancellate, colonne inutilizzate |
+
+R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 
 ## Rilascio e anteprime
 
-- Manutenzione giornaliera (Cron Trigger 03:17 UTC, `worker/maintenance.v1.0.0.ts`): partite oltre 12 mesi, limiti scaduti, copie ritirate.
-- Merge su `main` → Workers Builds: `npm run build`, poi migrazioni remote e `npm run deploy` sulle risorse di produzione
-  (D1 `real-or-slop-local`, R2 `real-or-slop-quarantine` e `real-or-slop-approved`).
-- Anteprime delle PR: migrazioni con `--env preview`, poi `npm run preview` (controllo `scripts/check-preview.mjs` e
-  `wrangler preview --ignore-base-config`) su D1 `real-or-slop-preview` e R2 `real-or-slop-preview-quarantine` e
-  `real-or-slop-preview-approved`, inizialmente vuoti. Test `tests/wrangler-config.v1.0.0.test.ts`.
+- Il merge su `main` avvia Workers Builds: `npm run build`, poi `npx wrangler d1 migrations apply DB --remote && npm run deploy` sulle
+  risorse di produzione (D1 `real-or-slop-local`, R2 `real-or-slop-quarantine` e `real-or-slop-approved`).
+- Anteprime delle PR: migrazioni con `--env preview`, poi `npm run preview` (controllo `scripts/check-preview.mjs`) su D1
+  `real-or-slop-preview` e R2 `real-or-slop-preview-quarantine` e `real-or-slop-preview-approved`, inizialmente vuoti.
+- CI (`.github/workflows/checks.yml`): lint, test, build e controlli di Wrangler; non parte per le PR che toccano solo documenti.
+- Manutenzione giornaliera: Cron Trigger alle 03:17 UTC.
 
-## Stato e fasi
+## Verifiche
 
-Fase 1 rilasciata (app 1.0.1). Fase 2 unita in `main` (app 1.1.0): alias, tag e didascalie dal modello con
-visione, budget unico e registro di spesa. Fase 3: consulente SLOP e generazione. Più avanti: Topic Discovery sulle
-embedding dei tag. In produzione app 1.4.0 (PR 103 e 104, migrazioni fino alla 0035): dashboard a quattro sezioni, wizard REAL in tre schede, generazione congiunta di tag e didascalia che sostituisce i testi delle sole immagini scelte, una volta per immagine, con ripristino senza costi. Proposta app 1.5.0: didascalia con limite morbido di 160 caratteri e tetto di 256 (migrazione 0036), tag scritti a mano convertiti senza avviso; regole di contenuto e trasparenza riunite nella sezione 11 della specifica. In produzione app 1.7.0 (migrazioni fino alla 0038): contesto dei modelli e categorie dei tag. Proposta app 1.8.0 (migrazione 0039): niente prezzi né budget, modelli scelti nelle Impostazioni, studio SLOP parte gratuita (tema con spread, slot), `docs/wizard-slop.v1.4.1.md`; proposta app 1.9.0 (migrazione 0040): parte a pagamento (prompt, immagini, analisi, revisione). In produzione app 1.10.0 (PR 109, migrazioni fino alla 0041, pubblicata il 2026-11-11): sezione Database, `docs/database-immagini.v1.0.1.md`, approvata dall'owner. In produzione app 1.12.0 (PR 110, migrazioni fino alla 0043, pubblicata il 2026-11-12): copie di gioco 4:5 con inquadratura ed esclusione delle ND (`docs/copie-di-gioco.v3.0.1.md`), partita a livelli con classifica e codice partita, via PvP e allenamento (`docs/gioco-a-livelli.v1.0.1.md`). Proposta app 1.14.0: privacy e note legali, `docs/privacy-note-legali.v1.0.2.md` (testi verificati da un legale, comunicazione dell'owner del 2026-11-13). In produzione app 1.13.0 (PR 111, migrazioni fino alla 0044, pubblicata il 2026-11-12): schede Statistiche e Impostazioni, `docs/statistiche-impostazioni.v1.0.1.md`. In produzione app 1.14.0 (PR 117, pubblicata il 2026-11-12): privacy e note legali, `docs/privacy-note-legali.v1.0.2.md` (testi verificati da un legale, comunicazione dell'owner del 2026-11-13). In produzione app 1.15.0 (PR 118, migrazioni fino alla 0045, pubblicata il 2026-11-12): generazione automatica delle SLOP su proposta, un batch alla volta (`docs/proposta-generazione-slop.v2.0.1.md`, approvata dall'owner il 2026-11-12). Specifiche `docs/libreria-immagini.v1.8.0.md` e `docs/dashboard-admin-wizard-real.v1.3.0.md`. Proposta app 1.19.0 (migrazione 0046): copie di gioco nel formato della foto con vista iniziale 4:5, foto esplorabile nella partita, pulsanti al posto dello swipe, formato delle SLOP scelto per il soggetto (`docs/copie-di-gioco.v4.0.1.md`, approvata dall'owner il 2026-11-13). Nel frattempo in produzione, senza migrazioni: ricerca su Commons con sole miniature, categorie collassabili, pagine con frecce, colonne a scelta, miniature collegate a Commons (app 1.15.1–1.18.0, PR 120–123). In produzione app 1.19.0 (PR 124, migrazione 0046, pubblicata il 2026-11-13). Proposta app 1.20.0: il cestino ritira subito una pubblicata, anche in gruppo; nella ricerca su Commons il tocco sulla miniatura la seleziona e il collegamento alla pagina Commons passa alle immagini selezionate. In produzione app 1.20.0 (PR 125). Proposta app 1.21.0: sezione Database senza caricamento di file, ricerca per titolo, filtro «Copia» e «Da Commons»; ordinamento per data di aggiunta, visualizzazioni o accuratezza; tolti anche il segno «copia da rifare» e «Rifai le copie», perché non ne restano (`docs/copie-di-gioco.v4.0.2.md`); schede con sola miniatura, origine e stato. In produzione app 1.21.0 (PR 126). Proposta app 1.21.1: schede del Database senza gli avvisi «senza copia» e «licenza ND», che restano nel dettaglio. Proposta app 1.22.0, senza migrazioni: la foto si mostra intera nel suo formato su ogni schermo, senza vista iniziale 4:5; «Inquadratura» sceglie solo formato e ritaglio; zoom fino a due pixel CSS per pixel della copia e doppio tocco; foto intere anche nella lista finale (`docs/copie-di-gioco.v5.0.0.md`, decisione dell'owner del 2026-11-13). Nella stessa app il wizard REAL toglie le foto spostate nel cestino o eliminate nella sezione Database (prima restavano fino al ricaricamento della pagina e il passo 3 falliva) e nel passo 2 offre «Togli dal caricamento». In produzione app 1.22.0 (PR 128). Proposta app 1.23.0 (migrazione 0047, non reversibile): niente didascalie, quelle esistenti cancellate; wizard REAL in quattro passi con l'inquadratura dopo i tag; tasto che svuota la ricerca su Commons; la dashboard segnala il caricamento (`docs/didascalie-wizard.v1.0.0.md`); termini d'uso senza didascalie (`src/legal.v1.1.0.ts`, `docs/privacy-note-legali.v1.0.3.md`), da far verificare di nuovo al legale. In produzione app 1.23.0 (PR 129, migrazione 0047 applicata il 2026-11-13 alle 22:47 UTC: nessuna didascalia rimasta). Il 2026-11-14, su richiesta dell'owner, nuove versioni del contesto dei modelli in produzione: base senza «brevi testi» e con «Lingua» accorciata, parte «Tag» senza il paragrafo sulla didascalia (le precedenti restano nello storico). Termini senza didascalie approvati dal legale (`docs/privacy-note-legali.v1.0.4.md`). Proposta del codice per base e «Tag» uguale ai testi in produzione (`worker/model-context.v1.4.0.ts`); il 2026-11-14, su richiesta dell'owner, il testo dei prompt SLOP in produzione ha ricevuto il paragrafo «Formato» della proposta: le tre parti in produzione coincidono con la proposta del codice. Proposta app 1.24.0, senza migrazioni (`docs/anteprima-descrizione.v1.2.0.md`, decisioni dell'owner del 2026-11-14): tasto «×» della ricerca su Commons in una casella a sé dopo il campo; un tocco su un risultato lo aggiunge subito alle selezionate, che restano con una nuova ricerca; pressione prolungata su una miniatura (wizard, Database, studio SLOP) che apre un'anteprima grande con titolo, descrizione, collegamento a Commons o prompt, chiusa con «×»; descrizione modificabile nel passo 2 e mostrata con ogni REAL nella lista finale della partita; tag di partenza (tema e slot) delle SLOP generate nel dettaglio del Database. Nella stessa app, su richiesta dell'owner, la proposta del codice per i prompt SLOP (`worker/model-context.v1.6.0.ts`, `docs/anteprima-descrizione.v1.2.0.md`): persone reali né nominate né descritte, gente comune con tratti concreti e volti visibili, mai «indistinti» o «anonimi» nel prompt; «mai nudità che riguardi minori» al posto di «mai minori». Il testo in produzione cambia solo quando l'owner la salva dalle Impostazioni.
+`npm run lint`, `npm test`, `npm run build`, `npm run dry-run`, `npm run test:integration` (Worker locale con D1 e R2 locali e il modello
+finto `tests/fake_openai.v1.4.0.py`) e `ROS_TEST_BROWSER=1 npm run test:integration` per la dashboard, desktop e mobile. L'elenco dei
+test d'integrazione eseguiti è in `scripts/integration.py`.
