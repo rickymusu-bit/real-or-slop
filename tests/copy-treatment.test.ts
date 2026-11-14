@@ -72,6 +72,7 @@ test("the Worker accepts only well-formed measures and treatments", () => {
   assert.equal(validMetrics({ ...m, cast: [1, 2] }), null);
   const t = { version: 1, off: false, seed: 5, long: 700, medium: "film-still", color: "color", sample: { id: "abc", metrics: m } };
   assert.ok(validTreatment(t));
-  assert.equal(validTreatment({ ...t, version: 2 }), null);
+  assert.ok(validTreatment({ ...t, version: 2 }), "the current version");
+  assert.equal(validTreatment({ ...t, version: 3 }), null);
   assert.equal(validTreatment({ ...t, sample: { id: "a b", metrics: m } }), null);
 });

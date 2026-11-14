@@ -1,6 +1,7 @@
-# Statistiche e Impostazioni — specifica 2.1.0
+# Statistiche e Impostazioni — specifica 2.2.0
 
-Stato: vigente, in produzione con l'app 1.25.0 (2026-11-14). Aggiornata: 2026-11-14T16:00:00Z. La 2.1.0 sostituisce la soglia
+Stato: vigente; la 2.2.0 è nell'app 1.26.0 (in revisione). Aggiornata: 2026-11-14T21:30:00Z. La 2.2.0 toglie la soglia del gruppo
+(le SLOP sono gemelle di una REAL, specifica `generazione-slop` 3.0.0) e aggiunge il conteggio delle gemelle. La 2.1.0 sostituisce la soglia
 del tema con quella del gruppo e aggiunge i gruppi all'equilibrio del catalogo (specifica `generazione-slop`). La 2.0.0 era la
 versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `statistiche-impostazioni.v1.0.1` e le aggiunte successive (soglie dei batch automatici, formati, cancellazione delle voci
@@ -21,8 +22,8 @@ di classifica), che restano nella cronologia git.
 - **Vocabolario dei tag:** elenco per categoria con il numero di immagini, cambio di categoria con conferma, alias, «Unisci».
 - **Classifica:** verifica di un codice partita (soprannome, livello, punteggio, data), Nascondi, Mostra, Cancella (per sempre, per le
   richieste di cancellazione).
-- **Studio SLOP:** REAL per aprire lo studio (predefinito 50, da 1 a 1000), REAL di un gruppo per generare (5, da 1 a 200; sostituisce la soglia del tema, 2026-11-14), proposte
-  automatiche attive o spente, soglia di proposta in percentuale di spread (33%, da 1 a 100).
+- **Studio SLOP:** REAL per aprire lo studio (predefinito 50, da 1 a 1000), proposte
+  automatiche attive o spente, soglia di proposta in percentuale di spread (33%, da 1 a 100): 100 × (REAL − REAL con una gemella approvata o pubblicata) / REAL.
 - **Partite:** durata massima di una partita aperta in ore (24, da 1 a 168): oltre, una partita non conclusa non trattiene più le copie
   ritirate e non conta tra le aperte.
 - Dati in `app_settings`; una riga mancante vale il predefinito del codice.
@@ -40,7 +41,8 @@ Periodo: ultimi 7 giorni, ultimi 30 (predefinito) o da sempre; «Aggiorna». API
   le ultime 200 chiamate del periodo con filtri per tipo ed esito. Nessun importo.
 - **Equilibrio del catalogo:** REAL e SLOP pubblicate e approvate, quota di REAL tra le pubblicate con la fascia 40–60% e un avviso non
   bloccante fuori fascia, livelli giocabili e foto mancanti agli altri, formati delle copie pubblicate di REAL e SLOP.
-- **Gruppi** (genere e decennio): REAL, SLOP, nuove, spread, REAL mancanti alla soglia; per i gruppi con SLOP pubblicate, le medie
+- **Gemelle:** REAL con una SLOP gemella approvata o pubblicata e REAL in attesa.
+- **Gruppi** (genere e decennio): REAL, SLOP, nuove, spread; per i gruppi con SLOP pubblicate, le medie
   delle misure delle copie (lato lungo, rumore, nitidezza, contrasto, saturazione) di REAL e SLOP affiancate, con un avviso non
   bloccante quando divergono di oltre il 25%.
 

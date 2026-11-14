@@ -125,7 +125,7 @@ function parseSlot(value: string | null): unknown {
 }
 const parseJson = (value: string | null): unknown => { try { return value ? JSON.parse(value) : null; } catch { return null; } };
 /** What makes two treatments give the same copy. */
-const treatmentKey = (t: ReturnType<typeof validTreatment>) => t ? JSON.stringify([t.off, t.seed, t.long, t.medium, t.color, t.sample.id]) : "";
+const treatmentKey = (t: ReturnType<typeof validTreatment>) => t ? JSON.stringify([t.version, t.off, t.seed, t.long, t.medium, t.color, t.sample.id]) : "";
 interface Extra { stats?: { views: number; correct: number }; in_play?: number }
 function view(row: Row, rows: TagRow[], extra: Extra = {}) {
   const tags = rows.map(r => r.label), group = groupOf(rows);

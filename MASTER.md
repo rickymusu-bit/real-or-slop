@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 19.3.0, aggiornata il 2026-11-14T20:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 20.0.0, aggiornata il 2026-11-14T21:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,12 +9,14 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **In produzione:** app 1.25.0 (PR rickymusu-bit/real-or-slop#133, unita il 2026-11-14; migrazioni fino alla 0048). Operazioni fatte
+- **In produzione:** app 1.25.1 (PR rickymusu-bit/real-or-slop#133 e #134, unite il 2026-11-14; migrazioni fino alla 0048). Operazioni fatte
   in produzione il 2026-11-14 su richiesta dell'owner: contesto 1.7.0 salvato (base, analisi, prompt SLOP); Genere, Colore e Supporto
   completati per le 55 REAL (55 chiamate a pagamento, tutte riuscite); misure delle 55 copie; `mugshot` spostato da Altro a Genere;
   decennio aggiunto alle 9 REAL che non lo avevano, dalla data EXIF dell'originale o dalla pagina Commons. Gruppi oltre la soglia:
   `crowd-scene/1960s`, `press-photo/2020s`, `press-photo/1960s`.
-- **Proposta aperta:** app 1.25.1: i conflitti di categoria dopo analisi e completamento compaiono nella dashboard.
+- **Proposta aperta:** app 1.26.0, migrazione 0049: SLOP gemelle al posto di gruppi e slot (una REAL per il prompt, un'altra per
+  l'aspetto), coppia mai nella stessa partita, contesto 1.8.0 proposto, trattamento senza effetti disegnati, misure versione 2, tetto
+  di risposta dell'analisi a 8000 token, e le correzioni della revisione del codice della 1.25 (voce 1.26.0 del `CHANGELOG.md`).
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
 
 ## Specifiche vigenti
@@ -24,14 +26,14 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.0.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.1.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 7.0.1 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 8.0.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.0.0 |
-| Studio SLOP, gruppi e batch automatici | `docs/generazione-slop.md` | 2.0.1 |
-| Sezione Database | `docs/database-immagini.md` | 2.2.0 |
-| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.0.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.1.0 |
+| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 3.0.0 |
+| Sezione Database | `docs/database-immagini.md` | 2.3.0 |
+| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.1.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.2.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.2.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -69,11 +71,12 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - Libreria `library.ts` (stati, vocabolario, alias, categorie, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   analisi `analysis.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, Commons `commons-editorial.ts`.
-- SLOP: studio `slop.ts`, gruppi e loro misure `slop-groups.ts`, generazione `slop-generation.ts`, batch automatici `slop-auto.ts`.
+- SLOP: studio `slop.ts`, gemelle `twins.ts`, generazione `slop-generation.ts`, batch automatici `slop-auto.ts`, gruppi e loro misure
+  per Database e Statistiche `slop-groups.ts`.
 - Gioco `game.ts` con `sampling.ts` e `random.ts`, classifica `leaderboard.ts`.
 
 **Codice condiviso** (`shared/`): tag `tags.ts`, tag scritti a mano `tag-input.ts`, categorie `tag-categories.ts`, modelli OpenAI
-`models.ts`, slot `slot-extraction.ts`, gruppi `slop-groups.ts`, proposta dei batch `slop-auto.ts`, formati e ricetta della copia
+`models.ts`, gemelle, proposta dei batch e coppie in partita `twins.ts`, gruppi `slop-groups.ts`, formati e ricetta della copia
 `game-copy.ts`, misure e trattamento `copy-treatment.ts`, licenze ND
 `licenses.ts`, pulizia dei metadati `media-clean.ts`, livelli e punteggio `levels.ts`, costanti legali `legal.ts`, controllo delle
 immagini `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
@@ -101,6 +104,7 @@ modello finto `fake_openai.py` e gli aiuti `catalog.py`, `game_copy.py`, `long_p
 | 0046 | formato nel ritaglio (la vista iniziale resta, inutilizzata) |
 | 0047 | didascalie cancellate, colonne inutilizzate |
 | 0048 | categorie Genere, Colore e Supporto al posto di Formato; completamento, misure, trattamento e gruppo delle immagini; gruppo dei batch; soglia del gruppo |
+| 0049 | REAL di origine di una SLOP gemella |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

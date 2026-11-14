@@ -1,9 +1,32 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-14T20:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-14T21:30:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.25.1 — 2026-11-14T20:00:00Z (proposta, senza migrazioni)
+## 1.26.0 — 2026-11-14T21:30:00Z (proposta, migrazione 0049)
+
+Dopo il primo lotto per gruppi (2026-11-14: scene incoerenti, bordi da stampa, stessa composizione, luoghi scritti nelle insegne).
+Specifiche `generazione-slop` 3.0.0, `copie-di-gioco` 8.0.0, `gioco-a-livelli` 2.1.0, `libreria-immagini` 3.1.0, `database-immagini`
+2.3.0, `statistiche-impostazioni` 2.2.0; `AGENTS.md` e `MASTER.md` 20.0.0.
+
+- **SLOP gemelle** al posto di gruppi e slot (proposta dell'owner): ogni SLOP nasce dai tag e dalla descrizione di una sola REAL e
+  prende l'aspetto da un'altra REAL con lo stesso colore, supporto e decennio. Studio in quattro passi (REAL, Prompt, Immagini,
+  Revisione); proposta automatica sulle REAL senza gemella; una gemella nel cestino libera la sua REAL.
+- **Gioco:** una SLOP e la REAL da cui è nata non compaiono nella stessa partita; la sequenza delle origini estratta non cambia.
+- **Contesto 1.8.0** proposto per i prompt SLOP: nessuno schema fisso, la resa dell'immagine e mai la stampa come oggetto, niente nomi
+  di luogo nelle scritte. Da salvare dalle Impostazioni.
+- **Revisione del codice della 1.25**, problemi corretti:
+  - analisi: tetto di risposta da 2000 a 8000 token (un'analisi su dieci del lotto tornava troncata, pagata e persa);
+  - trattamento: tolti gli effetti disegnati per Supporto (retino, vignettatura, alone), inventati e in parte annullati dal passo
+    successivo; grana ammorbidita invece che a blocchi 2×2; JPEG intermedio a 0,85 per tutti; la tinta di una campione in bianco e
+    nero non veniva applicata;
+  - misure: il rumore non conta più le zone bruciate (versione 2; le copie si rimisurano da sole);
+  - Distribuzione: il filtro per categoria aveva perso Tempo e Genere;
+  - documenti: la specifica dava i comandi del trattamento anche nella revisione dello studio, dove non ci sono, e la grana «più
+    grossa nelle immagini piccole», il contrario del codice.
+- Tolti: estrazione degli slot, proposta per gruppi, soglia del gruppo nelle Impostazioni.
+
+## 1.25.1 — 2026-11-14T20:00:00Z (in produzione, senza migrazioni)
 
 - **Database:** dopo un'analisi, un completamento di Genere, Colore e Supporto o una rigenerazione, il messaggio elenca i conflitti di
   categoria (tag proposto in una categoria diversa da quella del vocabolario). Il server li restituiva già, la dashboard no: il

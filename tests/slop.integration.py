@@ -152,7 +152,7 @@ try:
     # Measures and treatment travel with the copy in headers; the server checks them (spec `copie-di-gioco`, section 4).
     metrics = {'long': 96, 'noise': 1.5, 'sharpness': 10.2, 'contrast': 120, 'saturation': 0.2, 'cast': [1, 0, -1]}
     sample = {'id': items[0]['sample'], 'metrics': {**metrics, 'long': 700, 'noise': 4}}
-    treatment = {'version': 1, 'off': False, 'seed': 7, 'long': 96, 'medium': 'newspaper-print', 'color': 'black-and-white', 'sample': sample}
+    treatment = {'version': 2, 'off': False, 'seed': 7, 'long': 96, 'medium': 'newspaper-print', 'color': 'black-and-white', 'sample': sample}
     def upload(headers):
         req = urllib.request.Request(LIBRARY + f'/{first["id"]}/copy', data=copy, method='POST',
                                      headers={'Content-Type': 'image/webp', 'Authorization': 'Bearer ' + token, **headers})

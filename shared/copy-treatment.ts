@@ -1,10 +1,11 @@
 /** Measures of a game copy and treatment of a SLOP (spec `copie-di-gioco`, section 4). Pure functions on RGBA pixels, used by the
  * browser when it makes a copy and by the tests; the Worker only validates what the browser sends. The treatment brings a SLOP
- * towards the measures of one REAL of its group (the «REAL campione»): long side, effects of the medium, contrast and colour cast,
- * saturation or black and white, sharpness, grain, then an intermediate JPEG compression made by the browser. */
-import { MEDIA } from "./tag-categories";
+ * towards the measures of another REAL of the same colour, medium and decade (the «REAL campione»): long side, contrast, colour
+ * cast and saturation or black and white, sharpness, grain, then an intermediate JPEG compression made by the browser. */
 
-export const TREATMENT_VERSION = 1;
+export const TREATMENT_VERSION = 2;
+/** The one JPEG generation a photo from an archive has gone through before the game copy. */
+const JPEG_QUALITY = 0.85;
 /** Version of the measures: 2 leaves burnt-out areas out of the noise. Copies measured before are measured again. */
 export const METRICS_VERSION = 2;
 export interface Metrics {
@@ -173,56 +174,30 @@ function blur(data: Float32Array, width: number, height: number, channels: numbe
   return pass(pass(data, true), false);
 }
 
-/** Effects of the medium: screen of a printed page, warm paper and soft edges of a print, halation of film, the compressed range of
- * an instant photo. The others leave the image as it is. */
-function mediumEffect(rgb: Float32Array, width: number, height: number, medium: string): void {
-  const n = width * height;
-  if (medium === "newspaper-print" || medium === "magazine-print") {
-    const amplitude = medium === "newspaper-print" ? 0.1 : 0.05, period = Math.max(3, Math.round(Math.max(width, height) / 300));
-    for (let r = 0; r < height; r++) for (let c = 0; c < width; c++) {
-      const pattern = Math.cos(2 * Math.PI * (c + r) / (period * Math.SQRT2)) * Math.cos(2 * Math.PI * (c - r) / (period * Math.SQRT2));
-      const i = r * width + c;
-      for (let ch = 0; ch < 3; ch++) rgb[3 * i + ch] *= 1 + amplitude * pattern;
-    }
-  } else if (medium === "photo-print" || medium === "postcard") {
-    const cx = (width - 1) / 2, cy = (height - 1) / 2, reach = Math.hypot(cx, cy) || 1;
-    for (let r = 0; r < height; r++) for (let c = 0; c < width; c++) {
-      const i = r * width + c, edge = 1 - 0.12 * (Math.hypot(c - cx, r - cy) / reach) ** 2, light = (rgb[3 * i] + rgb[3 * i + 1] + rgb[3 * i + 2]) / 765;
-      rgb[3 * i] = rgb[3 * i] * edge + 6 * light; rgb[3 * i + 1] = rgb[3 * i + 1] * edge + 3 * light; rgb[3 * i + 2] = rgb[3 * i + 2] * edge - 6 * light;
-    }
-  } else if (medium === "film-still" || medium === "slide") {
-    const highlights = new Float32Array(n);
-    for (let i = 0; i < n; i++) { const y = 0.299 * rgb[3 * i] + 0.587 * rgb[3 * i + 1] + 0.114 * rgb[3 * i + 2]; highlights[i] = Math.max(0, y - 200); }
-    const glow = blur(highlights, width, height, 1, Math.max(1, Math.max(width, height) / 200));
-    for (let i = 0; i < n; i++) { rgb[3 * i] += 0.5 * glow[i]; rgb[3 * i + 1] += 0.3 * glow[i]; rgb[3 * i + 2] += 0.2 * glow[i]; }
-  } else if (medium === "instant-photo") {
-    for (let i = 0; i < 3 * n; i++) rgb[i] = 18 + rgb[i] * (255 - 18 - 12) / 255;
-  }
-}
-
 /** Applies the treatment to RGBA pixels already reduced to the sample's long side; returns the new pixels and what was applied
- * (the JPEG quality is for the browser, which compresses afterwards). Deterministic for a given seed. */
+ * (the JPEG quality is for the browser, which compresses afterwards). Deterministic for a given seed. Every step follows a measure
+ * of the sample: nothing is drawn that the REAL do not have. Version 1 also painted effects by medium (halftone screen, vignette,
+ * glow): invented looks, some undone at once by the next step, and possible signs of the origin. */
 export function treat(rgba: ArrayLike<number>, width: number, height: number, target: Metrics, medium: string, color: string, seed: number):
   { rgba: Uint8ClampedArray<ArrayBuffer>; applied: Applied } {
   const n = width * height;
   let rgb = toRgb(rgba, width, height);
-  const knownMedium = (MEDIA as readonly string[]).includes(medium) ? medium : "";
-  mediumEffect(rgb, width, height, knownMedium);
-  // Contrast around the median, then the colour cast of the sample.
+  const monochrome: Applied["monochrome"] = color === "black-and-white" || color === "sepia" ? color : "";
+  // Contrast around the median.
   let y = luminance(rgb, n);
   const [p2, median, p98] = percentiles(y, 0.02, 0.98), contrast = clamp(target.contrast / Math.max(p98 - p2, 1), 0.5, 1.6);
   for (let i = 0; i < 3 * n; i++) rgb[i] = median + (rgb[i] - median) * contrast;
   y = luminance(rgb, n);
-  const now = chromaStats(rgb, y), shift = target.cast.map((v, k) => clamp(v - now.cast[k], -25, 25)) as [number, number, number];
-  for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] += shift[k];
-  // Black and white or sepia when the slot asks for it; otherwise the saturation of the sample.
-  y = luminance(rgb, n);
-  const monochrome: Applied["monochrome"] = color === "black-and-white" || color === "sepia" ? color : "";
-  let saturation = 1;
+  let saturation = 1, shift: [number, number, number] = [0, 0, 0];
   if (monochrome) {
-    const tint = monochrome === "sepia" ? [1.07, 0.98, 0.8] : [1, 1, 1];
-    for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] = y[i] * tint[k];
+    // Black and white or sepia when the source REAL is: the tint of the sample on the luminance.
+    for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] = y[i] + target.cast[k];
   } else {
+    // The colour cast of the sample, then its saturation.
+    const now = chromaStats(rgb, y);
+    shift = target.cast.map((v, k) => clamp(v - now.cast[k], -25, 25)) as [number, number, number];
+    for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] += shift[k];
+    y = luminance(rgb, n);
     saturation = clamp(target.saturation / Math.max(chromaStats(rgb, y).saturation, 1e-3), 0.3, 1.5);
     for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] = y[i] + (rgb[3 * i + k] - y[i]) * saturation;
   }
@@ -237,29 +212,31 @@ export function treat(rgba: ArrayLike<number>, width: number, height: number, ta
     }
     rgb = blur(rgb, width, height, 3, sigma);
   }
-  // Luminance grain up to the sample's noise; coarser grain in larger images.
+  // Luminance grain up to the sample's noise. In larger images the grain is softened, as film grain is at that scale, and brought
+  // back to its strength; never drawn as blocks.
   y = luminance(rgb, n);
   const current = noiseOf(y, width, height), grain = Math.sqrt(Math.max(0, target.noise ** 2 - current ** 2));
   const grainSize = Math.max(width, height) >= 1000 ? 2 : 1;
   if (grain > 0.3) {
-    const normal = gaussian(random(seed)), gw = Math.ceil(width / grainSize), gh = Math.ceil(height / grainSize), field = new Float32Array(gw * gh);
-    for (let i = 0; i < field.length; i++) field[i] = normal() * grain;
-    for (let r = 0; r < height; r++) for (let c = 0; c < width; c++) {
-      const v = field[Math.floor(r / grainSize) * gw + Math.floor(c / grainSize)], i = r * width + c;
-      for (let k = 0; k < 3; k++) rgb[3 * i + k] = clamp(rgb[3 * i + k] + v, 0, 255);
-    }
+    const normal = gaussian(random(seed));
+    let field = new Float32Array(n);
+    for (let i = 0; i < n; i++) field[i] = normal();
+    if (grainSize > 1) field = blur(field, width, height, 1, 0.7) as Float32Array<ArrayBuffer>;
+    let sum = 0;
+    for (let i = 0; i < n; i++) sum += field[i] * field[i];
+    const scale = grain / Math.max(Math.sqrt(sum / n), 1e-6);
+    for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] = clamp(rgb[3 * i + k] + field[i] * scale, 0, 255);
   }
-  const jpeg = ["newspaper-print", "magazine-print", "photo-print", "postcard", "film-still", "slide", "instant-photo"].includes(knownMedium) ? 0.72 : 0.82;
   return { rgba: toRgba(rgb, width, height),
-    applied: { medium: knownMedium, contrast: round(contrast), cast: shift.map(v => round(v, 2)) as [number, number, number], saturation: round(saturation),
-      monochrome, blur: sigma, grain: round(grain), grainSize, jpeg } };
+    applied: { medium, contrast: round(contrast), cast: shift.map(v => round(v, 2)) as [number, number, number], saturation: round(saturation),
+      monochrome, blur: sigma, grain: round(grain), grainSize, jpeg: JPEG_QUALITY } };
 }
 
 /** A stored treatment as the Worker accepts it, or null. */
 export function validTreatment(value: unknown): Treatment | null {
   if (!value || typeof value !== "object") return null;
   const t = value as Record<string, unknown>, sample = t.sample as Record<string, unknown> | undefined;
-  if (t.version !== TREATMENT_VERSION || typeof t.off !== "boolean" || typeof t.seed !== "number" || !Number.isSafeInteger(t.seed)
+  if (typeof t.version !== "number" || t.version < 1 || t.version > TREATMENT_VERSION || typeof t.off !== "boolean" || typeof t.seed !== "number" || !Number.isSafeInteger(t.seed)
     || typeof t.long !== "number" || !Number.isSafeInteger(t.long) || t.long < 1 || typeof t.medium !== "string" || t.medium.length > 40
     || typeof t.color !== "string" || t.color.length > 40 || !sample || typeof sample.id !== "string" || !/^[\w-]{1,64}$/.test(sample.id)
     || !validMetrics(sample.metrics)) return null;

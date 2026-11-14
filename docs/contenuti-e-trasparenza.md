@@ -30,7 +30,7 @@ Valgono per ogni modello che produce contenuti del sito e per la revisione dell'
 - Le regole arrivano al **modello di testo** attraverso il contesto «Prompt per le SLOP» (specifica `libreria-immagini`, sezione 7).
   Il generatore di immagini riceve solo il testo del prompt e applica anche le proprie regole d'uso, che possono rifiutare richieste
   ammesse qui.
-- Nel batch automatico nessuno rilegge slot e prompt prima della generazione: il controllo finale è la **revisione dell'owner** di ogni
+- Nel batch automatico nessuno rilegge i prompt prima della generazione: il controllo finale è la **revisione dell'owner** di ogni
   immagine, dove si intercetta anche ciò che il generatore aggiunge di suo (un volto simile a una persona reale, una scritta).
 - Il modello che scrive i tag non sa che esistono immagini generate: la base comune del contesto non ne parla.
 - Le REAL di Commons possono ritrarre persone vive: sono foto autentiche. Le valuta l'owner al caricamento.
