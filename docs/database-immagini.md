@@ -1,6 +1,6 @@
-# Sezione Database — specifica 2.1.0
+# Sezione Database — specifica 2.1.1
 
-Stato: approvata dall'owner il 2026-11-14, in implementazione (app 1.25.0). Aggiornata: 2026-11-14T16:00:00Z. La 2.1.0 aggiunge il filtro
+Stato: approvata dall'owner il 2026-11-14, in implementazione (app 1.25.0). Aggiornata: 2026-11-14T16:30:00Z. La 2.1.1 chiama «REAL campione» la foto delle misure del trattamento. La 2.1.0 aggiunge il filtro
 per gruppo, il completamento di Genere, Colore e Supporto, le misure della copia e i comandi del trattamento delle SLOP (specifiche
 `libreria-immagini` 3.0.0, `copie-di-gioco` 7.0.0, `generazione-slop` 2.0.0). La 2.0.0 era la versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `database-immagini.v1.0.1` e le modifiche delle app 1.17–1.24 (cestino, schede, ordinamento, anteprima, tag di partenza),
@@ -35,7 +35,7 @@ che restano nella cronologia git. Stati e regole della libreria: specifica `libr
 
 - Origine, stato, dimensioni dell'originale, copia di gioco con formato e peso; visualizzazioni e classificazioni corrette con la
   percentuale; partite in corso che la includono; avvisi (licenza ND, copia mancante con «Prepara la copia di gioco», immagine fuori
-  dai gruppi); gruppo; misure della copia e, per una SLOP trattata, REAL di riferimento e scarto dall'obiettivo.
+  dai gruppi); gruppo; misure della copia e, per una SLOP trattata, REAL campione e scarto dall'obiettivo.
 - **Campi:** titolo, descrizione, spiegazione, fonte, autore, licenza e, per le SLOP, prompt e modello; tag per categoria con aggiunta e
   rimozione; «Tag di partenza» per le SLOP generate; avviso se una REAL non ha il tag di Tempo. Ogni modifica si salva subito.
 - **Azioni:** Inquadratura (nuove e approvate), comandi del trattamento per le SLOP (specifica `copie-di-gioco`, sezione 4.3),
@@ -44,7 +44,7 @@ che restano nella cronologia git. Stati e regole della libreria: specifica `libr
   definitivamente (cestino).
 - **Rigenerare una SLOP** (nuova o approvata): dal prompt del campo, con modello e qualità delle Impostazioni, nel formato della copia
   attuale; una conferma copre generazione e analisi. L'immagine torna nuova senza copia, il browser prepara la copia, parte una nuova
-  analisi; le statistiche ripartono da zero. Il trattamento usa la stessa REAL di riferimento, se esiste ancora. I file precedenti escono dalla quarantena; la vecchia copia resta nel bucket del gioco finché
+  analisi; le statistiche ripartono da zero. Il trattamento usa la stessa REAL campione, se esiste ancora. I file precedenti escono dalla quarantena; la vecchia copia resta nel bucket del gioco finché
   le partite in corso la usano.
 
 ## 4. Statistiche delle foto

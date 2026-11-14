@@ -27,10 +27,10 @@ nome.
 |---|---|---|
 | Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.0.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.1.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 7.0.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 7.0.1 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.0.0 |
-| Studio SLOP, gruppi e batch automatici | `docs/generazione-slop.md` | 2.0.0 |
-| Sezione Database | `docs/database-immagini.md` | 2.1.0 |
+| Studio SLOP, gruppi e batch automatici | `docs/generazione-slop.md` | 2.0.1 |
+| Sezione Database | `docs/database-immagini.md` | 2.1.1 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.0.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.1.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.1.1 |

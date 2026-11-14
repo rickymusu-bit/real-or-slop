@@ -1,7 +1,8 @@
-# Generazione delle SLOP: studio e batch automatici — specifica 2.0.0
+# Generazione delle SLOP: studio e batch automatici — specifica 2.0.1
 
-Stato: approvata dall'owner il 2026-11-14, in implementazione (app 1.25.0, migrazione 0048). Aggiornata: 2026-11-14T16:00:00Z.
-La 2.0.0 sposta il bilanciamento dai singoli tag ai **gruppi** di REAL dello stesso genere e decennio, dà al modello di testo esempi
+Stato: approvata dall'owner il 2026-11-14, in implementazione (app 1.25.0, migrazione 0048). Aggiornata: 2026-11-14T16:30:00Z.
+La 2.0.1 chiama «REAL campione» la foto da cui il trattamento prende le misure, per non confonderla con le foto da cui nascono
+slot ed esempi. La 2.0.0 sposta il bilanciamento dai singoli tag ai **gruppi** di REAL dello stesso genere e decennio, dà al modello di testo esempi
 del gruppo, chiede prompt più lunghi e tratta le SLOP perché abbiano l'aspetto delle REAL del gruppo (decisioni dell'owner del
 2026-11-14, sezione 1). La 1.0.0 era la versione consolidata di `wizard-slop.v1.4.1` e `proposta-generazione-slop.v2.0.1`; le versioni
 precedenti restano nella cronologia git. Regole sui contenuti: specifica `contenuti-e-trasparenza`. Tag e categorie: specifica
@@ -43,14 +44,14 @@ precedenti restano nella cronologia git. Regole sui contenuti: specifica `conten
 
 - **Tabella dei gruppi:** genere, decennio, REAL, SLOP, nuove, spread, stato rispetto alla soglia (o REAL mancanti), ordinata per spread
   percentuale; filtro per genere e per decennio. Un clic sceglie il gruppo.
-- **Tema** facoltativo: uno o più tag del vocabolario che tutte le REAL di riferimento devono avere (`protest`, `police`). Le REAL di
-  riferimento sono quelle del gruppo con tutti i tag del tema; devono essere almeno quante la soglia del gruppo.
+- **Tema** facoltativo: uno o più tag del vocabolario che tutte le foto di riferimento devono avere (`protest`, `police`). Le foto di
+  riferimento sono le REAL del gruppo con tutti i tag del tema; devono essere almeno quante la soglia del gruppo.
 - Numero di immagini da 1 a 10, preimpostato a `min(N, 10)`; oltre `N` un avviso non bloccante. «Prepara gli slot» è gratuito.
 - Il grafico dello spread per tag resta nella scheda «Distribuzione» del Database (specifica `database-immagini`), come informazione.
 
 ## 4. Slot
 
-Uno slot per immagine: gruppo, tema, al massimo un tag per categoria e una REAL di riferimento per il trattamento
+Uno slot per immagine: gruppo, tema, al massimo un tag per categoria e una REAL campione per il trattamento
 (`shared/slot-extraction.ts`).
 
 1. Foto di riferimento: le REAL del gruppo con tutti i tag del tema.
@@ -61,8 +62,11 @@ Uno slot per immagine: gruppo, tema, al massimo un tag per categoria e una REAL 
 4. **Peso:** radice quadrata della frequenza tra le foto di riferimento per il fattore di spread del tag `max(0,25; 1 + s / S)`, come
    nella 1.0.0: lo spread per tag conta ancora dentro il gruppo.
 5. **Varietà:** un tag già uscito nella stessa categoria pesa un terzo; due slot non hanno la stessa combinazione (fino a 20 tentativi).
-6. **REAL di riferimento del trattamento:** una REAL a caso tra le foto di riferimento con lo stesso Supporto e Colore dello slot (se
-   nessuna, una qualsiasi del gruppo), diversa per ogni slot finché ce ne sono.
+6. **REAL campione del trattamento:** una REAL a caso tra le foto di riferimento con lo stesso Supporto e Colore dello slot (se
+   nessuna, una qualsiasi del gruppo), diversa per ogni slot finché ce ne sono. Fornisce solo le misure e il Supporto al trattamento
+   (specifica `copie-di-gioco`, sezione 4): non entra nei prompt né negli esempi, e il modello di testo non sa quale sia. Una sola foto
+   e non la media di più foto, perché la media stringerebbe la varietà (SLOP tutte su valori intermedi) e mescolerebbe misure che
+   nessuna REAL ha insieme.
 7. Una categoria senza candidati resta vuota: il modello di testo è libero su quell'aspetto.
 
 Nello studio l'owner vede gli slot (una riga per slot, una colonna per categoria), cambia o svuota ogni cella e ripesca uno slot o tutti.
@@ -72,7 +76,7 @@ Nello studio l'owner vede gli slot (una riga per slot, una colonna per categoria
 - Una chiamata a pagamento al modello di testo scrive tutti i prompt del gruppo: base comune e «Prompt per le SLOP» del contesto, più le
   righe fisse nel codice (inglese, schema JSON, lunghezza). Per ogni slot la risposta dà il prompt, i tag dello slot usati e il formato
   (specifica `copie-di-gioco`).
-- **Esempi del gruppo** nell'input della chiamata: fino a 8 REAL di riferimento scelte a caso, ciascuna con descrizione (al massimo 500
+- **Esempi del gruppo** nell'input della chiamata: fino a 8 foto di riferimento scelte a caso, ciascuna con descrizione (al massimo 500
   caratteri) e tag. Una riga fissa nel codice dice che servono a capire genere, epoca, supporto e modo di fotografare; che nessun
   prompt deve riprendere la scena, l'inquadratura o le persone di un esempio; che i nomi di persone degli esempi non si usano mai.
 - **Lunghezza:** una riga fissa nel codice chiede prompt da 600 a 1000 caratteri. Un prompt fuori misura non si scarta (sarebbe una
@@ -97,7 +101,7 @@ Nello studio l'owner vede gli slot (una riga per slot, una colonna per categoria
 
 - Il generatore (modello e qualità delle Impostazioni, mostrati in sola lettura) riceve solo il testo del prompt e la dimensione del
   formato. L'immagine entra come SLOP nuova con prompt, modello, gruppo, slot e qualità; il browser applica il **trattamento** con la
-  REAL di riferimento dello slot e prepara la copia di gioco (specifica `copie-di-gioco`, sezione 4); poi parte l'analisi (specifica
+  REAL campione dello slot e prepara la copia di gioco (specifica `copie-di-gioco`, sezione 4); poi parte l'analisi (specifica
   `libreria-immagini`, sezione 5), con il prompt come contesto, salvo Genere, Colore e Supporto che si giudicano solo dall'immagine.
   Una sola conferma copre immagini e analisi del gruppo; le chiamate restano registrate una per una; un problema dell'account OpenAI
   ferma la serie.

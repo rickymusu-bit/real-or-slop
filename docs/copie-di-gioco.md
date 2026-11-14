@@ -1,7 +1,7 @@
-# Copie di gioco — specifica 7.0.0
+# Copie di gioco — specifica 7.0.1
 
-Stato: approvata dall'owner il 2026-11-14, in implementazione (app 1.25.0, migrazione 0048). Aggiornata: 2026-11-14T16:00:00Z.
-La 7.0.0 aggiunge le misure di ogni copia e il trattamento delle SLOP, che ne avvicina l'aspetto a quello delle REAL del loro gruppo
+Stato: approvata dall'owner il 2026-11-14, in implementazione (app 1.25.0, migrazione 0048). Aggiornata: 2026-11-14T16:30:00Z.
+La 7.0.1 chiama «REAL campione» la foto da cui il trattamento prende le misure. La 7.0.0 aggiunge le misure di ogni copia e il trattamento delle SLOP, che ne avvicina l'aspetto a quello delle REAL del loro gruppo
 (sezione 4). La 6.0.0 era la versione consolidata (riordino della documentazione dell'owner del 2026-11-14) della 5.0.0,
 senza la storia del passaggio dalle copie 4:5, concluso; le versioni precedenti restano nella cronologia git. Principio invariato dalla
 2.0.0: l'owner approva la copia e il gioco serve esattamente quei byte.
@@ -73,11 +73,11 @@ del gruppo e senza superarle, perché «rovinata» non diventi il nuovo indizio.
 
 - Si applica a ogni SLOP generata (studio, batch, rigenerazione) prima della copia di gioco: l'originale del generatore resta intatto
   nella quarantena.
-- **Obiettivo:** le misure della REAL di riferimento dello slot (specifica `generazione-slop`, sezione 4); per una SLOP rigenerata
+- **Obiettivo:** le misure della REAL campione dello slot (specifica `generazione-slop`, sezione 4); per una SLOP rigenerata
   dal Database, la stessa REAL se esiste ancora, altrimenti una a caso del suo gruppo.
 - **Passi**, in quest'ordine, con un seme registrato perché il risultato sia ripetibile:
   1. ritaglio dell'inquadratura;
-  2. riduzione al lato lungo della REAL di riferimento (mai un ingrandimento);
+  2. riduzione al lato lungo della REAL campione (mai un ingrandimento);
   3. effetti del **Supporto** dello slot: `newspaper-print` e `magazine-print` retino e contrasto da stampa; `photo-print` e `postcard`
      carta, bordi morbidi e lieve ingiallimento; `film-still` e `slide` dominante e alone sulle alte luci; `instant-photo` colori
      compressi; `digital-photo` e `phone-photo` nessun effetto oltre a quelli seguenti; gli altri supporti nessun effetto;
@@ -87,9 +87,9 @@ del gruppo e senza superarle, perché «rovinata» non diventi il nuovo indizio.
   6. grana di luminanza fino al rumore dell'obiettivo, con grana più grossa nelle immagini piccole;
   7. una compressione JPEG intermedia, poi la ricetta della copia (sezione 3).
 - Dopo il trattamento il browser misura la copia e registra lo scarto dall'obiettivo; il dettaglio del Database lo mostra.
-- **Registro** `copy_treatment`: REAL di riferimento (identificativo e misure, che restano valide anche se la REAL viene eliminata),
+- **Registro** `copy_treatment`: REAL campione (identificativo e misure, che restano valide anche se la REAL viene eliminata),
   Supporto e Colore applicati, parametri di ogni passo, seme, versione dell'algoritmo.
-- **Comandi** nel dettaglio di una SLOP nuova o approvata e nella revisione dello studio, gratuiti: «Altra REAL di riferimento» (ne pesca
+- **Comandi** nel dettaglio di una SLOP nuova o approvata e nella revisione dello studio, gratuiti: «Altra REAL campione» (ne pesca
   un'altra del gruppo e rifà la copia), «Senza trattamento» e «Con trattamento». Cambiare il trattamento rifà la copia come
   «Inquadratura»: azzera le statistiche e, per una pubblicata, passa da «Modifica».
 - «Inquadratura» su una SLOP ritaglia l'originale e riapplica lo stesso trattamento.
