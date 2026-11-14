@@ -1,7 +1,7 @@
-# Istruzioni Codex — versione canonica 17.29.0
+# Istruzioni Codex — versione canonica 17.30.0
 
-Snapshot: `docs/AGENTS.v17.29.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-14T10:00:00Z. Precedente: `docs/AGENTS.v17.28.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.30.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-14T11:00:00Z. Precedente: `docs/AGENTS.v17.29.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
@@ -13,7 +13,7 @@ dell'owner del 2026-11-13, app 1.22.0, senza migrazioni), che sostituisce la 4.0
 `docs/proposta-generazione-slop.v2.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.15.0). Didascalie tolte, inquadratura come
 passo del wizard, caricamento della dashboard: `docs/didascalie-wizard.v1.0.0.md` (decisioni dell'owner del 2026-11-13, app 1.23.0,
 migrazione 0047), che prevale sulle specifiche precedenti dove parlano di didascalie e dei passi del wizard. Anteprima a pressione prolungata,
-selezione immediata su Commons, descrizione delle REAL nella lista finale, tag di partenza delle SLOP, persone nelle SLOP: `docs/anteprima-descrizione.v1.1.0.md`
+selezione immediata su Commons, descrizione delle REAL nella lista finale, tag di partenza delle SLOP, persone nelle SLOP: `docs/anteprima-descrizione.v1.2.0.md`
 (decisioni dell'owner del 2026-11-14, app 1.24.0, senza migrazioni), che prevale sulle precedenti dove dicono altro.
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
@@ -61,8 +61,8 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   **Batch automatici** (`docs/proposta-generazione-slop.v2.0.1.md`): nessun timer né prefiltro; se 100 × (n_real − n_slop) / n_real ≥ 33% (SLOP
   approvate e pubblicate, almeno 10 REAL) una notifica nella dashboard chiede di approvare un batch automatico di min(N, 10) SLOP per
   quel tag, con N = n_real − n_slop − n_slop_nuove; un solo batch aperto alla volta, nessuna nuova proposta finché ogni sua foto non è decisa.
-- **Contenuti delle SLOP:** niente persone vive o morte da meno di 50 anni (conta la somiglianza, non il nome: persone inventate
-  con volti visibili, mai somiglianti a persone reali identificabili); personaggi storici ammessi senza crimini
+- **Contenuti delle SLOP:** niente persone vive o morte da meno di 50 anni (né nominate né descritte nei prompt; gente comune con
+  tratti concreti e volti visibili, mai «indistinti» o «anonimi»); personaggi storici ammessi senza crimini
   attribuiti né scene degradanti; marchi ammessi; regimi documentati ma mai celebrati; nessuna nudità umana tranne
   nelle opere d'arte, mai nudità che riguardi minori.
 - **Sezione Database** (`docs/database-immagini.v1.0.1.md`): filtri per uno o più tag e per origine; ordinamento per data di aggiunta,
