@@ -1,6 +1,8 @@
-# Copie di gioco — specifica 6.0.0
+# Copie di gioco — specifica 7.0.0
 
-Stato: vigente. Aggiornata: 2026-11-14T12:00:00Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14) della 5.0.0,
+Stato: approvata dall'owner il 2026-11-14, in implementazione (app 1.25.0, migrazione 0048). Aggiornata: 2026-11-14T16:00:00Z.
+La 7.0.0 aggiunge le misure di ogni copia e il trattamento delle SLOP, che ne avvicina l'aspetto a quello delle REAL del loro gruppo
+(sezione 4). La 6.0.0 era la versione consolidata (riordino della documentazione dell'owner del 2026-11-14) della 5.0.0,
 senza la storia del passaggio dalle copie 4:5, concluso; le versioni precedenti restano nella cronologia git. Principio invariato dalla
 2.0.0: l'owner approva la copia e il gioco serve esattamente quei byte.
 
@@ -32,7 +34,7 @@ con sole dimensioni fisse (GPT Image 1.5, 1 mini, `chatgpt-image-latest`) offron
 
 ## 3. Ricetta
 
-- Uguale per REAL e SLOP: formato più vicino dell'insieme (distanza sul logaritmo del rapporto), ritaglio centrato più grande, WebP
+- Uguale per REAL e SLOP, dopo il trattamento delle SLOP (sezione 4): formato più vicino dell'insieme (distanza sul logaritmo del rapporto), ritaglio centrato più grande, WebP
   qualità 0,85, **lato lungo al massimo 1536 px**, mai ingrandita, sRGB, sfondo bianco per le trasparenze, nessun metadato. Lo stesso
   massimo per tutte evita che lo zoom riveli l'origine dalla risoluzione.
 - La copia si crea nel browser dell'owner appena l'immagine entra nella libreria; il server verifica formato, dimensioni e
@@ -50,6 +52,49 @@ con sole dimensioni fisse (GPT Image 1.5, 1 mini, `chatgpt-image-latest`) offron
   contesto «Prompt per le SLOP» lo chiede. L'owner può cambiarlo nello studio, senza costi.
 - Il generatore riceve il testo del prompt e la dimensione del formato. Rigenerare dal Database usa il formato della copia attuale.
 
+### 4.1 Perché il trattamento (decisione dell'owner del 2026-11-14)
+
+Le REAL d'epoca hanno l'aspetto che dà loro la strada percorsa: una pagina di giornale rifotografata, un fotogramma di pellicola a 700 px,
+una piccola stampa scansionata a 272 px. Le SLOP escono dal generatore a 1536 px, nitide ovunque, con un istogramma pulito: nessuna
+fotografia d'epoca è così. Il 2026-11-14 12 REAL su 55 avevano il lato lungo sotto i 1536 px e nessuna SLOP: «piccola e morbida»
+voleva dire REAL. Chi fa disinformazione riduce, ricomprime e sporca le immagini generate; il gioco fa lo stesso, ma copiando le REAL
+del gruppo e senza superarle, perché «rovinata» non diventi il nuovo indizio.
+
+### 4.2 Misure
+
+- Il browser misura **ogni copia di gioco**, REAL e SLOP, quando la crea, senza modelli e senza costi, e le salva in `copy_metrics`:
+  lato lungo in pixel; **rumore** (deviazione standard del residuo ad alta frequenza nelle zone uniformi); **nitidezza** (energia del
+  laplaciano sulla luminanza); **contrasto** (distanza tra i percentili 2 e 98 della luminanza); **saturazione** media; **dominante**
+  (scarto medio dei canali dal grigio nelle zone neutre).
+- Le copie esistenti si misurano all'apertura della dashboard, una alla volta, scaricando la copia dalla quarantena (gratuito).
+- Il codice delle misure è condiviso (`shared/`) e provato con immagini di prova nei test.
+
+### 4.3 Trattamento
+
+- Si applica a ogni SLOP generata (studio, batch, rigenerazione) prima della copia di gioco: l'originale del generatore resta intatto
+  nella quarantena.
+- **Obiettivo:** le misure della REAL di riferimento dello slot (specifica `generazione-slop`, sezione 4); per una SLOP rigenerata
+  dal Database, la stessa REAL se esiste ancora, altrimenti una a caso del suo gruppo.
+- **Passi**, in quest'ordine, con un seme registrato perché il risultato sia ripetibile:
+  1. ritaglio dell'inquadratura;
+  2. riduzione al lato lungo della REAL di riferimento (mai un ingrandimento);
+  3. effetti del **Supporto** dello slot: `newspaper-print` e `magazine-print` retino e contrasto da stampa; `photo-print` e `postcard`
+     carta, bordi morbidi e lieve ingiallimento; `film-still` e `slide` dominante e alone sulle alte luci; `instant-photo` colori
+     compressi; `digital-photo` e `phone-photo` nessun effetto oltre a quelli seguenti; gli altri supporti nessun effetto;
+  4. curva di tono verso contrasto e dominante dell'obiettivo; saturazione verso quella dell'obiettivo; bianco e nero o seppia se il
+     Colore dello slot lo è e l'immagine generata non lo è già;
+  5. sfocatura fino alla nitidezza dell'obiettivo;
+  6. grana di luminanza fino al rumore dell'obiettivo, con grana più grossa nelle immagini piccole;
+  7. una compressione JPEG intermedia, poi la ricetta della copia (sezione 3).
+- Dopo il trattamento il browser misura la copia e registra lo scarto dall'obiettivo; il dettaglio del Database lo mostra.
+- **Registro** `copy_treatment`: REAL di riferimento (identificativo e misure, che restano valide anche se la REAL viene eliminata),
+  Supporto e Colore applicati, parametri di ogni passo, seme, versione dell'algoritmo.
+- **Comandi** nel dettaglio di una SLOP nuova o approvata e nella revisione dello studio, gratuiti: «Altra REAL di riferimento» (ne pesca
+  un'altra del gruppo e rifà la copia), «Senza trattamento» e «Con trattamento». Cambiare il trattamento rifà la copia come
+  «Inquadratura»: azzera le statistiche e, per una pubblicata, passa da «Modifica».
+- «Inquadratura» su una SLOP ritaglia l'originale e riapplica lo stesso trattamento.
+- Le REAL non hanno trattamento: la loro ricetta resta quella della sezione 3.
+
 ## 5. Nella partita
 
 - Il riquadro ha il formato della copia; la foto entra intera nello spazio disponibile, con i pulsanti sempre visibili.
@@ -64,4 +109,6 @@ con sole dimensioni fisse (GPT Image 1.5, 1 mini, `chatgpt-image-latest`) offron
   Le Statistiche mostrano i formati delle copie pubblicate di REAL e SLOP, per correggere il contesto se divergono.
 - **Foto piccole sul telefono:** un 16:9 su un telefono verticale è basso e alcuni indizi si vedono solo ingrandendo; vale per REAL e
   SLOP allo stesso modo.
+- **Trattamento sbagliato:** un trattamento troppo forte o troppo debole crea un indizio opposto. Le Statistiche confrontano le misure
+  delle copie pubblicate di REAL e SLOP per gruppo, come fanno con i formati.
 - **Costo:** le dimensioni dei formati hanno tra 1,3 e 2,4 milioni di pixel; il costo di un'immagine cambia con la dimensione.

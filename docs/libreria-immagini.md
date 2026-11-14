@@ -1,6 +1,9 @@
-# Libreria delle immagini, tag e analisi — specifica 2.0.0
+# Libreria delle immagini, tag e analisi — specifica 3.0.0
 
-Stato: vigente. Aggiornata: 2026-11-14T12:00:00Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
+Stato: approvata dall'owner il 2026-11-14, in implementazione (app 1.25.0, migrazione 0048). Aggiornata: 2026-11-14T16:00:00Z.
+La 3.0.0 sostituisce la categoria Formato con Genere, Colore e Supporto, giudicate solo dall'immagine, e aggiunge il completamento a
+pagamento di queste tre categorie per le immagini già analizzate (decisioni dell'owner del 2026-11-14, sezioni 4 e 5). La 2.0.0 è la
+versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `libreria-immagini.v1.8.0`, `categorie-tag.v1.1.0` e le parti su libreria, tag e analisi di `database-immagini.v1.0.1`,
 `didascalie-wizard.v1.0.0` e `anteprima-descrizione.v1.2.0`, che restano nella cronologia git. Regole di contenuto delle SLOP e
 trasparenza: specifica `contenuti-e-trasparenza`. Copie di gioco: specifica `copie-di-gioco`.
@@ -22,6 +25,15 @@ trasparenza: specifica `contenuti-e-trasparenza`. Copie di gioco: specifica `cop
 - Niente didascalie, né nel gioco né nella dashboard; quelle scritte sono state cancellate (2026-11-13).
 - Una modifica lascia approvata un'immagine approvata; spostare nel cestino una pubblicata la ritira subito dal gioco (2026-11-11 e
   2026-11-13).
+- I tag descrivono anche che tipo di fotografia è un'immagine (**Genere**), il suo colore (**Colore**) e che cosa è materialmente
+  (**Supporto**: stampa, pagina di giornale, fotogramma di pellicola, foto digitale…). Sostituiscono la categoria Formato, che ammetteva
+  un solo tag e lasciava posto a `color` o `black-and-white` e a nient'altro. Genere e decennio definiscono i gruppi del bilanciamento
+  (specifica `generazione-slop`) (2026-11-14).
+- Genere, Colore e Supporto si giudicano **solo dall'immagine**, per tutte le immagini: l'analisi di una SLOP riceve il prompt, che
+  dichiara ciò che si voleva e non ciò che il generatore ha prodotto (batch del 2026-11-14: «1960s» e `color` copiati dal prompt su
+  immagini dall'aspetto digitale) (2026-11-14).
+- Le immagini già analizzate ricevono Genere, Colore e Supporto con un **completamento a pagamento**, un'eccezione alla regola di una
+  generazione per immagine, invece che a mano (2026-11-14).
 
 ## 2. Immagini
 
@@ -68,7 +80,9 @@ Una sola raccolta di immagini REAL e SLOP.
   | Id | Nome | Contenuto | Esempi |
   |---|---|---|---|
   | `time` | Tempo | solo decenni, formato `NNN0s`; al massimo uno per immagine | `1970s` |
-  | `format` | Formato | mezzo e aspetto dell'immagine; al massimo uno per immagine | `black-and-white`, `poster`, `illustration` |
+  | `genre` | Genere | che tipo di fotografia è; al massimo uno per immagine | `mugshot`, `studio-portrait`, `crowd-scene` |
+  | `color` | Colore | lista chiusa; al massimo uno per immagine | `color`, `black-and-white`, `sepia`, `hand-colored` |
+  | `medium` | Supporto | che cosa è materialmente l'immagine; lista chiusa; al massimo uno per immagine | `newspaper-print`, `film-still` |
   | `place` | Luogo | nomi propri di luoghi, anche più d'uno | `paris`, `france` |
   | `setting` | Ambiente | tipi di luogo, ora, meteo, stagione | `street`, `night`, `rain` |
   | `event` | Evento | ciò che accade | `riot`, `parade` |
@@ -76,14 +90,28 @@ Una sola raccolta di immagini REAL e SLOP.
   | `object` | Oggetti e strutture | oggetti, veicoli, edifici, animali | `bridge`, `tram` |
   | `other` | Altro | il resto | |
 
-  Un tag nel formato dei decenni appartiene sempre a Tempo. Formato e mezzo sono tag legittimi: `illustration` o `cgi` indicano una
-  tecnica, non l'IA. La categoria appartiene al tag: cambiarla vale per tutte le immagini che lo usano, con conferma.
+  Un tag nel formato dei decenni appartiene sempre a Tempo. La categoria appartiene al tag: cambiarla vale per tutte le immagini che lo
+  usano, con conferma.
+- **Genere** (lista aperta): il tipo di fotografia, riconoscibile da inquadratura, posa e scopo, indipendente dal soggetto. Esempi:
+  `mugshot`, `studio-portrait`, `group-portrait`, `snapshot`, `street-scene`, `crowd-scene`, `press-photo`, `aerial-view`, `landscape`,
+  `architecture`, `interior`, `still-life`, `sports-action`, `stage-performance`, `ceremony`. Non dice che cosa accade (Evento) né
+  dove (Luogo). Le varianti di un genere si uniscono con gli alias, perché frammentano i gruppi.
+- **Colore** (lista chiusa nel codice): `color`, `black-and-white`, `sepia`, `hand-colored`.
+- **Supporto** (lista chiusa nel codice): `photo-print`, `newspaper-print`, `magazine-print`, `postcard`, `slide`, `film-still`,
+  `instant-photo`, `digital-photo`, `phone-photo`, `screen-capture`, `poster`, `painting`, `drawing`, `illustration`. Dice che cosa si vede
+  materialmente: una pagina di giornale stampata a retino, un fotogramma di pellicola, una diapositiva, una foto digitale. Le marche e i
+  tipi di pellicola restano fuori: dalla copia di gioco non si riconoscono, e un tag che il modello non può verificare sarebbe inventato.
+- Le proprietà continue dell'aspetto (risoluzione, rumore, nitidezza, contrasto, saturazione) non sono tag: le misura il codice
+  (specifica `copie-di-gioco`, sezione 4).
+- **Migrazione 0048:** la categoria `format` sparisce. `color`, `black-and-white`, `sepia` e `hand-colored` passano a Colore; gli altri
+  tag di Formato passano a Supporto se sono nella lista, altrimenti ad Altro con un avviso nel vocabolario.
 - **Parole ambigue:** si sceglie la parola con un solo significato (`house-fire` per l'evento, `flames` per l'oggetto,
   `construction-crane`); il suffisso di categoria (`fire-event`) lo crea solo l'owner, come ultima risorsa. Il nome di un tag è unico.
 - **Vocabolario:** contiene solo tag in uso; un tag esce con l'ultima immagine che lo usa, insieme ai suoi alias.
 - **Alias:** etichetta alternativa che rimanda a un tag e non si attacca mai a un'immagine; ogni tag, scritto o generato, passa per gli
   alias prima del salvataggio. «Unisci A in B» sposta immagini e alias di A su B, che conserva la sua categoria, e fa di A un alias.
-- **Avviso:** una REAL senza tag di Tempo riceve un avviso non bloccante.
+- **Avvisi** non bloccanti: una REAL senza tag di Tempo; un'immagine senza Genere, Colore o Supporto (fuori dai gruppi del
+  bilanciamento).
 
 ## 5. Analisi a pagamento
 
@@ -91,9 +119,19 @@ Una sola raccolta di immagini REAL e SLOP.
   di testo scelto nelle Impostazioni, che deve leggere immagini, riceve la copia di gioco, titolo e descrizione (REAL) o il prompt (SLOP)
   e i 300 tag più usati divisi per categoria; mai l'origine. Istruzioni identiche per REAL e SLOP: base comune e parte «Tag» del
   contesto dei modelli (sezione 7).
-- Risposta JSON con schema rigido: da 5 a 15 tag divisi per categoria, al massimo uno di Tempo e uno di Formato. I tag vengono resi
-  conformi, risolti per alias e **sostituiscono** quelli presenti. Un tag proposto in una categoria diversa da quella del vocabolario
-  mantiene la categoria del vocabolario e il conflitto viene segnalato all'owner.
+- Risposta JSON con schema rigido: da 5 a 15 tag divisi per categoria, al massimo uno di Tempo; esattamente un Genere, un Colore e un
+  Supporto, questi ultimi due tra i valori della lista chiusa (enumerazione nello schema). I tag vengono resi conformi, risolti per alias
+  e **sostituiscono** quelli presenti. Un tag proposto in una categoria diversa da quella del vocabolario mantiene la categoria del
+  vocabolario e il conflitto viene segnalato all'owner.
+- **Solo dall'immagine.** Una riga fissa nel codice, aggiunta alle istruzioni di ogni analisi, chiede di giudicare Genere, Colore e
+  Supporto soltanto da ciò che si vede nell'immagine, mai da titolo, descrizione o altro testo. Vale per REAL e SLOP allo stesso modo e
+  non parla di immagini generate.
+- **Completamento di Genere, Colore e Supporto** (eccezione alla regola seguente, decisione dell'owner del 2026-11-14): per le immagini
+  fuori dal cestino che hanno già un'analisi riuscita e non hanno ancora tutte e tre le categorie. Dal Database, su una o più immagini
+  (azione in gruppo), con conferma esplicita del numero di chiamate: una chiamata a pagamento per immagine, con la copia di gioco e le
+  stesse istruzioni dell'analisi, che restituisce solo le tre categorie. Sostituisce i tag di quelle tre categorie e lascia gli altri.
+  Non ritira le pubblicate, perché non cambia nulla di ciò che vede il giocatore. Una sola volta per immagine (`categories_completed_at`);
+  registrata in `paid_calls` come analisi.
 - **Una generazione per immagine:** dopo un esito riuscito il server rifiuta un'altra analisi. I tag generati restano nel database
   e «Ripristina i tag generati» li riporta senza costi. Fa eccezione la rigenerazione di una SLOP, che è un'immagine nuova.
 - Una sola analisi alla volta per immagine; un segno «in corso» più vecchio di 10 minuti non blocca più.
@@ -119,13 +157,20 @@ Una sola raccolta di immagini REAL e SLOP.
   Ogni analisi registra le versioni usate.
 - Il codice propone un testo (`DEFAULTS` del modulo del contesto) che le Impostazioni mostrano accanto a quello in vigore finché è
   diverso; diventa una versione solo quando l'owner lo salva. Un database nuovo parte dalla proposta.
-- Restano nel codice, qualunque cosa dicano i testi: formato JSON e schema delle risposte, conversione e filtri dei tag, limiti.
+- Restano nel codice, qualunque cosa dicano i testi: formato JSON e schema delle risposte, conversione e filtri dei tag, limiti, le
+  liste chiuse di Colore e Supporto, la regola «solo dall'immagine» e la lunghezza chiesta ai prompt SLOP.
+- Con l'app 1.25.0 il codice propone una nuova base (categorie Genere, Colore e Supporto al posto di Formato) e un nuovo «Prompt per le
+  SLOP» (specifica `generazione-slop`, sezione 5). Finché l'owner non salva la base, la versione in vigore descrive ancora la
+  categoria Formato: lo schema nel codice prevale, ma il testo resta incoerente.
 
 ## 8. Dati
 
 - D1: `images`, `tags`, `image_tags`, `tag_aliases`, `paid_calls`, `model_contexts`, `app_settings`, `slop_batches`,
   `slop_proposal_ignored`, `retired_copies`, tabelle del gioco (`game_sessions`, `game_rounds`, `answers`, `media_events`,
   `leaderboard`, `rate_limits`). Elenco delle migrazioni in `MASTER.md`.
+- Migrazione 0048 (`images`): `categories_completed_at` (completamento delle tre categorie), `copy_metrics` (misure della copia di
+  gioco) e `copy_treatment` (trattamento di una SLOP), specifica `copie-di-gioco`, sezione 4; `generation_group` (genere e decennio
+  del gruppo da cui è nata una SLOP), specifica `generazione-slop`.
 - Colonne inutilizzate, lasciate per non ricostruire le tabelle: `caption`, `generated_caption` (`images`), `caption` e `copy_view`
   (`game_rounds`), `copy_view` (`images`).
 - R2: quarantena privata (`library/<id>/`: originale e copia) e bucket del gioco (copie pubblicate).

@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 19.0.0, aggiornata il 2026-11-14T15:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 19.1.0, aggiornata il 2026-11-14T16:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,10 +9,13 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **In produzione:** app 1.24.0 (PR rickymusu-bit/real-or-slop#131, unita il 2026-11-14; migrazioni fino alla 0047). Il testo proposto dei
-  prompt SLOP vale quando l'owner lo salva dalle Impostazioni.
-- **Proposta aperta:** app 1.24.1, PR rickymusu-bit/real-or-slop#132: riordino (specifiche consolidate senza strati, documenti storici e codice inutilizzato tolti,
-  nomi dei file senza versione, tag `vX.Y.Z` a ogni rilascio) e la correzione del messaggio dopo l'analisi in gruppo.
+- **In produzione:** app 1.24.1 (PR rickymusu-bit/real-or-slop#132, unita il 2026-11-14: riordino della documentazione e correzione del
+  messaggio dopo l'analisi in gruppo; migrazioni fino alla 0047). Il testo proposto dei prompt SLOP vale quando l'owner lo salva dalle
+  Impostazioni: al 2026-11-14T16:00:00Z in produzione vale ancora la versione salvata alle 06:06, con «figure non riconoscibili».
+- **In preparazione:** app 1.25.0, migrazione 0048, sul ramo `ccr-dbd14347-i92tp0`: gruppi di genere e decennio per il bilanciamento,
+  categorie Genere, Colore e Supporto al posto di Formato (giudicate solo dall'immagine, completamento a pagamento per le immagini già
+  analizzate), esempi del gruppo e prompt da 600 a 1000 caratteri, trattamento delle SLOP con le misure delle copie (decisioni
+  dell'owner del 2026-11-14). Per ora sono aggiornate solo le specifiche; il codice segue nella stessa PR.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
 
 ## Specifiche vigenti
@@ -22,14 +25,14 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 2.0.0 |
-| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.0.0 |
-| Copie di gioco, formati, inquadratura | `docs/copie-di-gioco.md` | 6.0.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.0.0 |
+| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.1.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 7.0.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.0.0 |
-| Studio SLOP e batch automatici | `docs/generazione-slop.md` | 1.0.0 |
-| Sezione Database | `docs/database-immagini.md` | 2.0.0 |
+| Studio SLOP, gruppi e batch automatici | `docs/generazione-slop.md` | 2.0.0 |
+| Sezione Database | `docs/database-immagini.md` | 2.1.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.0.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.0.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.1.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.1.1 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note

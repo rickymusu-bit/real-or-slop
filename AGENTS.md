@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 19.0.0, aggiornata il 2026-11-14T15:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 19.1.0, aggiornata il 2026-11-14T16:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -16,9 +16,12 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 
 ## Principi che non cambiano senza l'owner
 
-- **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta e
-  stesso formato massimo per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati al
-  browser prima della risposta. Il modello che scrive i tag non sa che esistono immagini generate.
+- **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta finale
+  e stesso formato massimo per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
+  al browser prima della risposta. Il modello che scrive i tag non sa che esistono immagini generate.
+- **Le SLOP somigliano alle REAL del loro gruppo** (decisione del 2026-11-14): si generano per gruppi di genere e decennio e passano per
+  un trattamento che ne copia risoluzione, rumore, nitidezza e tono dalle REAL del gruppo, senza superarle (specifiche
+  `generazione-slop` e `copie-di-gioco`).
 - **Chiamate a pagamento:** solo con conferma esplicita dell'owner, registrate in `paid_calls` senza importi, esiti incerti mai ripetuti in
   automatico; niente prezzi né budget, il limite è quello del progetto OpenAI. Nei test solo modelli finti.
 - **Libreria come un file system:** nessun lotto, archivio o registro delle eliminazioni; svuotare il cestino cancella ogni riga e ogni
