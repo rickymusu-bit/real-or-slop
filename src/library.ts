@@ -697,7 +697,7 @@ export async function showLibrary() {
       settingsMessage(done); await slopStudio.refresh(); await autoBox.refresh();
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
-  numbersForm("#library-thresholds-form", ["slop_section_min_real", "slop_theme_min_real", "slop_auto_enabled", "slop_auto_threshold_percent"], "Soglie dello studio SLOP salvate.");
+  numbersForm("#library-thresholds-form", ["slop_section_min_real", "slop_group_min_real", "slop_auto_enabled", "slop_auto_threshold_percent"], "Soglie dello studio SLOP salvate.");
   numbersForm("#library-games-form", ["open_game_hours"], "Durata massima di una partita aperta salvata.");
   await call<Numbers>("/settings").then(renderNumbers).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   statsView = mountStats($<HTMLElement>("#stats-body"), period => call<Stats>("/stats?" + new URLSearchParams({ period })));

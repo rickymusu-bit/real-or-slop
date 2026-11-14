@@ -47,7 +47,7 @@ test("narrowing keeps the medium coherent: no car on a printed page of trams", (
 });
 test("no duplicate combinations in a batch while alternatives exist", () => {
   const { slots } = extractSlots({ images, spread: new Map(), theme: ["riot"], count: 8, random: seeded(7) });
-  const tagsOnly = slots.map(({ sample: _sample, ...tags }) => JSON.stringify(tags));
+  const tagsOnly = slots.map(slot => JSON.stringify({ ...slot, sample: undefined }));
   assert.equal(new Set(tagsOnly).size, 8);
 });
 test("the spread steers the draw", () => {

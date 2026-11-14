@@ -1,6 +1,11 @@
-# Privacy e note legali — specifica 1.1.1
+# Privacy e note legali — specifica 1.2.0
 
-Stato: vigente, in produzione con l'app 1.23.0. Aggiornata: 2026-11-14T13:00:00Z. 1.1.1: con l'app 1.24.0 la pagina «Fonti e crediti»
+Stato: vigente, in produzione con l'app 1.23.0; la 1.2.0 è implementata nell'app 1.25.0 (in revisione). Aggiornata: 2026-11-14T18:00:00Z.
+1.2.0: su richiesta dell'owner del 2026-11-14 i Termini d'uso (aggiornati il 14 novembre 2026) dicono che le SLOP sono generate «senza
+parti di fotografie vere, e spesso ridotte, sfocate, sgranate o sbiadite come lo sono le immagini che circolano», al posto di «generate
+integralmente», per il trattamento delle SLOP (specifica `copie-di-gioco`, sezione 4); «Fonti e crediti» lo dice allo stesso modo.
+**La frase dei Termini non è ancora stata verificata dal legale**: va fatta verificare prima del merge, o comunque prima che il sito
+apra al pubblico. 1.1.1: con l'app 1.24.0 la pagina «Fonti e crediti»
 non dice più «ritagliata nel formato 4:5» e avverte che la descrizione delle REAL può essere stata corretta (sezione 6). 1.1.0: versione
 consolidata (riordino della documentazione dell'owner del 2026-11-14) della 1.0.4; le precedenti sono nella cronologia git. I testi di
 Privacy e Termini non cambiano.
@@ -35,7 +40,8 @@ a OpenAI. Cloudflare è responsabile del trattamento; trasferimenti verso gli US
 
 - **Privacy e cookie** (`/privacy`): titolare e contatti, dati e finalità, base giuridica, fornitori, età, diritti (accesso, rettifica,
   cancellazione, limitazione, opposizione, reclamo al Garante); per la classifica il giocatore indica il codice partita.
-- **Termini d'uso** (`/termini`): scopo educativo; le SLOP sono immagini false; divieto di diffonderle fuori dal gioco come vere o di
+- **Termini d'uso** (`/termini`): scopo educativo; le SLOP sono immagini false, generate senza parti di fotografie vere e spesso
+  ridotte, sfocate, sgranate o sbiadite; divieto di diffonderle fuori dal gioco come vere o di
   togliere il marchio; licenze delle REAL; regole del soprannome; nessuna garanzia; contatti.
 - **Fonti e crediti** (`/crediti`) e **Come funziona**; collegamenti nel piè di pagina.
 

@@ -1,7 +1,30 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-14T12:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-14T18:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.25.0 — 2026-11-14T18:00:00Z (proposta, migrazione 0048)
+
+Decisioni dell'owner del 2026-11-14 dopo il primo batch automatico (tema `color`: volti nascosti, cartelli rivolti alla camera, scene
+incoerenti, foto dall'aspetto digitale). Specifiche `libreria-immagini` 3.0.0, `generazione-slop` 2.0.1, `copie-di-gioco` 7.0.1,
+`contenuti-e-trasparenza` 1.2.0, `database-immagini` 2.1.1, `statistiche-impostazioni` 2.1.0, `privacy-note-legali` 1.2.0.
+
+- **Categorie:** Formato lascia il posto a Genere (lista aperta), Colore e Supporto (liste chiuse), uno per immagine, giudicati solo
+  dall'immagine. La migrazione 0048 sposta `color` e `black-and-white` in Colore, `painting` in Supporto.
+- **Completamento a pagamento** di Genere, Colore e Supporto per le immagini già analizzate, una volta per immagine, dal dettaglio o in
+  gruppo nel Database; le pubblicate restano nel gioco.
+- **Gruppi** di genere e decennio al posto dei tag nel bilanciamento: soglia di 5 REAL (Impostazioni), al massimo tante SLOP quante REAL;
+  proposte automatiche per gruppo; studio con la tabella dei gruppi e il tema facoltativo; slot estratti dentro il gruppo con una REAL
+  campione per il trattamento.
+- **Prompt:** esempi del gruppo (descrizioni e tag di fino a 8 REAL) nella chiamata, prompt da 600 a 1000 caratteri, tetto di risposta a
+  16 000 token; contesto 1.7.0 proposto per base, analisi e prompt SLOP (supporto descritto, cartelli coerenti, persone varie, regole in
+  positivo), da salvare dalle Impostazioni.
+- **Misure e trattamento:** ogni copia di gioco ha le sue misure (lato lungo, rumore, nitidezza, contrasto, saturazione, dominante); le
+  copie esistenti si misurano all'apertura della dashboard. Le SLOP passano per un trattamento verso la REAL campione (riduzione, effetti
+  del supporto, tono, colore, sfocatura, grana, JPEG intermedio); nel Database «Altra REAL campione», «Senza trattamento», «Con
+  trattamento». Le Statistiche mostrano i gruppi e confrontano le misure di REAL e SLOP pubblicate.
+- **Testi del sito:** «Come funziona», «Fonti e crediti» e Termini citano il trattamento delle SLOP; la frase dei Termini va verificata
+  dal legale.
 
 ## 1.24.1 — 2026-11-14T15:30:00Z (proposta, senza migrazioni)
 

@@ -317,6 +317,10 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () 
       persist();
     }
   });
+  root.addEventListener("keydown", event => {
+    const target = event.target as HTMLInputElement;
+    if (target.matches("[data-slop-theme]") && event.key === "Enter") { event.preventDefault(); void addTheme(target.value); }
+  });
   render();
   await refresh();
   return { refresh };

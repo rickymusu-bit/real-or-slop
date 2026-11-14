@@ -93,15 +93,15 @@ export async function categoriesOf(env: Env, wanted: readonly string[]): Promise
     .bind(JSON.stringify(wanted)).all<TagRow>()).results;
   return new Map(rows.map(r => [r.label, r.category]));
 }
-/** Categories for a set of labels: an existing tag keeps its own; a new one takes its forced category (Time for a decade, Color
- * and Medium for their closed lists), or the requested one, or «other». Refuses labels outside their category and two tags of a
- * single-tag category. */
+/** Categories for a set of labels: an existing tag keeps its own; a new one takes the requested category, or its forced one (Time
+ * for a decade, Color and Medium for their closed lists), or «other». Refuses labels outside their category and two tags of a
+ * single-tag category. A category asked against the forced one is refused, not corrected: the server stays strict. */
 export async function categorize(env: Env, wanted: readonly string[], requested: Record<string, unknown> = {}): Promise<Map<string, Category>> {
   const existing = await categoriesOf(env, wanted), out = new Map<string, Category>();
   for (const label of wanted) {
     const asked = requested[label];
     if (asked !== undefined && !isCategory(asked)) throw new HttpError(400, "Categoria inesistente per «" + label + "»");
-    const category = existing.get(label) ?? forcedCategory(label) ?? (isCategory(asked) ? asked : "other");
+    const category = existing.get(label) ?? (isCategory(asked) ? asked : forcedCategory(label) ?? "other");
     const error = categoryError(label, category);
     if (error) throw new HttpError(400, error);
     out.set(label, category);
@@ -265,16 +265,18 @@ async function storeCopy(request: Request, env: Env, row: Row) {
   if (actual.width !== expected.width || actual.height !== expected.height)
     throw new HttpError(409, `Dimensioni della copia ${actual.width}×${actual.height}, attese ${expected.width}×${expected.height}`);
   const hash = await sha256(copy.bytes), key = `library/${row.id}/copy-${hash.slice(0, 16)}.webp`;
-  if (key === row.copy_key) return json({ ...(await viewOf(env, row.id)), already_prepared: true });
-  await env.QUARANTINE.put(key, copy.bytes, { httpMetadata: { contentType: GAME_COPY.mime }, customMetadata: { sha256: hash } });
+  // The same bytes with another crop or treatment record (a treatment that changed nothing): only the record changes.
+  const sameFile = key === row.copy_key;
+  if (sameFile && row.copy_crop === JSON.stringify(crop) && sameTreatment) return json({ ...(await viewOf(env, row.id)), already_prepared: true });
+  if (!sameFile) await env.QUARANTINE.put(key, copy.bytes, { httpMetadata: { contentType: GAME_COPY.mime }, customMetadata: { sha256: hash } });
   // A SLOP keeps its treatment record when a copy comes without one (an old browser): only «Senza trattamento» turns it off.
   const treatmentValue = treatment ? JSON.stringify(treatment) : row.origin === "SLOP" ? row.copy_treatment : null;
   const result = await env.DB.prepare(`UPDATE images SET copy_key=?,copy_sha256=?,copy_width=?,copy_height=?,copy_bytes=?,copy_crop=?,copy_view=NULL,
     copy_metrics=?,copy_treatment=?,revision=revision+1,updated_at=? WHERE id=? AND revision=? AND status IN ('new','approved')`)
     .bind(key, hash, actual.width, actual.height, copy.bytes.length, JSON.stringify(crop), metrics ? JSON.stringify(metrics) : null,
       treatmentValue, now(), row.id, row.revision).run();
-  if (!result.meta.changes) { await env.QUARANTINE.delete(key); throw new HttpError(409, "Immagine modificata altrove: ricaricare"); }
-  if (row.copy_key) await env.QUARANTINE.delete(row.copy_key);
+  if (!result.meta.changes) { if (!sameFile) await env.QUARANTINE.delete(key); throw new HttpError(409, "Immagine modificata altrove: ricaricare"); }
+  if (row.copy_key && !sameFile) await env.QUARANTINE.delete(row.copy_key);
   return json({ ...(await viewOf(env, row.id)), already_prepared: false }, 201);
 }
 

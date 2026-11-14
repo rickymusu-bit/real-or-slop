@@ -1,6 +1,6 @@
 # Generazione delle SLOP: studio e batch automatici — specifica 2.0.1
 
-Stato: approvata dall'owner il 2026-11-14, in implementazione (app 1.25.0, migrazione 0048). Aggiornata: 2026-11-14T16:30:00Z.
+Stato: approvata dall'owner il 2026-11-14, implementata nell'app 1.25.0 con la migrazione 0048 (in revisione). Aggiornata: 2026-11-14T16:30:00Z.
 La 2.0.1 chiama «REAL campione» la foto da cui il trattamento prende le misure, per non confonderla con le foto da cui nascono
 slot ed esempi. La 2.0.0 sposta il bilanciamento dai singoli tag ai **gruppi** di REAL dello stesso genere e decennio, dà al modello di testo esempi
 del gruppo, chiede prompt più lunghi e tratta le SLOP perché abbiano l'aspetto delle REAL del gruppo (decisioni dell'owner del
