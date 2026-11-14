@@ -9,7 +9,9 @@ export const PARTS: Part[] = ["base", "analysis", "slop_prompt"];
 export const CONTEXT_MAX = 4000;
 const HISTORY = 50;
 
-/** First versions and proposals: the texts approved by the owner on 2026-11-10, with tag categories. */
+/** Proposals of the code (context 1.7.0, owner decisions of 2026-11-14): categories Genre, Color and Medium in the base and the
+ * analysis; SLOP prompts built on the group's examples, with the medium described concretely, signs and inscriptions consistent with
+ * the scene, varied people, the period's wear, rules written as what to describe. */
 export const DEFAULTS: Record<Part, string> = {
   base: `Lavori per un archivio fotografico italiano che cataloga le immagini con etichette brevi.
 
@@ -17,17 +19,31 @@ Lingua: sobria e precisa, senza enfasi, emoji o hashtag.
 
 Fatti: non inventare nomi di persone; usa solo quelli presenti nel contesto che ricevi. Indica luoghi ed epoche solo se sono plausibili dal contesto o da ciò che si vede; nel dubbio resta generico («una piazza», «anni Settanta»). Non citare mai fotografi, agenzie, archivi, fonti, licenze o indirizzi web.
 
-Tag: brevi etichette in lettere minuscole senza accenti, cifre e trattini singoli tra le parole, senza spazi. Nomi comuni in inglese («riot», «police-car»); nomi propri nella lingua originale, traslitterati («place-de-la-republique», «munchen»). Ogni tag ha una categoria: tempo (solo decenni come «1970s», al massimo uno), formato (mezzo e aspetto, come «black-and-white», «poster», al massimo uno), luogo (nomi propri), ambiente (tipi di luogo, ora, meteo), evento, persone (ruoli e gruppi, mai nomi), oggetti e strutture, altro. Scegli parole con un solo significato («house-fire» per l'evento, «flames» per l'oggetto). Mai tag sull'origine dell'immagine o sulla sua autenticità.`,
+Tag: brevi etichette in lettere minuscole senza accenti, cifre e trattini singoli tra le parole, senza spazi. Nomi comuni in inglese («riot», «police-car»); nomi propri nella lingua originale, traslitterati («place-de-la-republique», «munchen»). Ogni tag ha una categoria:
+- tempo: solo decenni come «1970s», al massimo uno;
+- genere: il tipo di fotografia, riconoscibile da inquadratura, posa e scopo, come «mugshot», «studio-portrait», «group-portrait», «snapshot», «street-scene», «crowd-scene», «press-photo», «aerial-view», «landscape»; uno;
+- colore: color, black-and-white, sepia o hand-colored; uno;
+- supporto: che cosa è materialmente l'immagine, come «photo-print», «newspaper-print», «magazine-print», «postcard», «slide», «film-still», «instant-photo», «digital-photo», «phone-photo», «screen-capture», «poster», «painting»; uno;
+- luogo (nomi propri), ambiente (tipi di luogo, ora, meteo), evento, persone (ruoli e gruppi, mai nomi), oggetti e strutture, altro.
+Scegli parole con un solo significato («house-fire» per l'evento, «flames» per l'oggetto). Mai tag sull'origine dell'immagine o sulla sua autenticità.`,
   analysis: `Ricevi un'immagine e il suo contesto: titolo e descrizione, oppure la descrizione della scena. Descrivi ciò che si vede.
 
-Tag: da 5 a 15, divisi per categoria. Se l'epoca è ricavabile, indica il decennio; se lo è, indica il formato. Preferisci i tag del vocabolario esistente, che ricevi diviso per categoria, quando sono adatti; creane di nuovi solo se nessuno lo è.`,
-  slop_prompt: `Scrivi prompt per un generatore di immagini fotorealistiche. Ogni prompt descrive una scena fotografica plausibile per l'epoca e il luogo: inquadratura, luce, ambiente, persone, azioni, dettagli d'epoca. Indica uno stile fotografico coerente (pellicola, colore o bianco e nero, grana, obiettivo) senza nominare fotografi, agenzie o archivi.
+Tag: da 5 a 15, divisi per categoria. Se l'epoca è ricavabile, indica il decennio. Indica sempre genere, colore e supporto, giudicandoli dall'aspetto dell'immagine: retino di stampa, bordi e grana di una pellicola, carta di una stampa, nitidezza di un sensore digitale. Preferisci i tag del vocabolario esistente, che ricevi diviso per categoria, quando sono adatti; creane di nuovi solo se nessuno lo è.`,
+  slop_prompt: `Scrivi prompt per un generatore di immagini fotorealistiche. Ogni prompt descrive una fotografia plausibile del genere e del decennio del gruppo, con i tag del suo slot: inquadratura, luce, ambiente, persone, azioni, dettagli d'epoca. Gli esempi sono fotografie vere dello stesso genere ed epoca: prendine il modo di fotografare, mai la scena. Descrivi ciò che si vede, mai ciò che manca: niente elenchi di cose da evitare.
 
-Formato: scegli il formato più adatto al soggetto, come farebbe un fotografo: orizzontale per paesaggi e scene larghe, verticale per persone in piedi, edifici alti e ritratti; quadrato solo se il soggetto lo chiede. Componi la scena per quel formato.
+Supporto: descrivilo in concreto secondo il supporto e il colore dello slot. Pagina di giornale: stampa a retino ad alto contrasto, alte luci bruciate, neri chiusi. Fotogramma o diapositiva: colori sbiaditi con una dominante, poca nitidezza, alone sulle luci. Stampa o cartolina: carta ingiallita, toni morbidi. Foto digitale o di telefono: la resa dei sensori di quel decennio. Indica obiettivo e distanza, senza nominare fotografi, agenzie o archivi.
+
+Formato: scegli il formato più adatto al soggetto, come farebbe un fotografo: orizzontale per paesaggi e scene larghe, verticale per persone in piedi, edifici alti e ritratti; quadrato solo se il soggetto lo chiede. Componi la scena per quel formato, come un fotografo dell'epoca, non per forza al centro. Nelle scene affollate poche figure in primo piano, le altre più lontane.
+
+Persone: gente comune dell'epoca e del luogo, diversa per età, corporatura, espressione, capelli, abiti e gesti; ognuna fa qualcosa di suo e tiene oggetti diversi. I volti si vedono quando l'inquadratura lo consente.
+
+Scritte: poche e brevi, fatte a mano quando lo sono nella realtà. Un cartello è rivolto dove guarda chi lo tiene: chi è ripreso di spalle ne mostra il retro. Il luogo si riconosce da edifici, strade e paesaggio, non da insegne che lo nominano.
+
+Epoca: abiti, acconciature, veicoli, segnaletica, luci e oggetti del decennio, con l'usura e il disordine della realtà.
 
 Regole sui contenuti:
-- Persone vive o morte da meno di 50 anni: mai; non nominarle e non descriverne l'aspetto. Le persone della scena sono gente comune dell'epoca e del luogo, descritta con tratti concreti e vari come in una vera fotografia: età, corporatura, espressione, capelli, barba, abiti, gesti. I volti si vedono quando l'inquadratura lo consente; nel prompt non scrivere mai che sono indistinti, anonimi, generici o non riconoscibili.
-- Personaggi storici morti da almeno 50 anni: ammessi, anche in eventi mai accaduti; mai crimini o atrocità attribuiti a loro, mai scene degradanti.
+- Persone vive o morte da meno di 50 anni: mai; non nominarle e non descriverne l'aspetto. Nel prompt non scrivere mai che i volti sono indistinti, anonimi, generici o non riconoscibili.
+- Personaggi storici morti da almeno 50 anni: ammessi, anche in eventi mai accaduti; mai crimini o atrocità attribuiti a loro, mai scene degradanti. Foto segnaletiche, arresti e processi solo con persone inventate.
 - Marchi reali: ammessi.
 - Regimi e ideologie: possono comparire come contesto storico (manifesti, bandiere, simboli presenti nella scena); mai immagini che li esaltano, mai manifesti di propaganda creati ex novo.
 - Nudità: nessuna nudità umana, tranne nelle opere d'arte presenti nella scena (statue, dipinti, affreschi); mai contenuti sessuali; mai nudità che riguardi minori.`,

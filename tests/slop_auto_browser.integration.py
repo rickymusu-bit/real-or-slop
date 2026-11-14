@@ -24,16 +24,16 @@ def clean_field():
     sql("UPDATE images SET trashed_from=CASE status WHEN 'new' THEN 'new' ELSE 'approved' END,status='trash' WHERE status<>'trash' AND id NOT LIKE 'autob-%'; "
         "DELETE FROM slop_batches; DELETE FROM slop_proposal_ignored")
 
-# 62 REAL approved (12 with ab-arch) and 9 new SLOP with ab-arch: spread 100%, 3 missing, a batch of 3.
+# 62 REAL approved (12 in the group ab-arch/1830s) and 9 new SLOP of the group: spread 100%, 3 missing, a batch of 3.
 clean_field()
-statements = ["INSERT OR IGNORE INTO tags(id,label,category,created_at) VALUES ('ab-tag-arch','ab-arch','object','x'),('ab-tag-roma','ab-roma','place','x'),('ab-tag-napoli','ab-napoli','place','x')"]
+statements = ["INSERT OR IGNORE INTO tags(id,label,category,created_at) VALUES ('ab-tag-arch','ab-arch','genre','x'),('ab-tag-1830s','1830s','time','x'),('ab-tag-roma','ab-roma','place','x'),('ab-tag-napoli','ab-napoli','place','x')"]
 def add(i, origin, labels, status='approved'):
     h = format(20_000 + i, '064x')
     statements.append(f"INSERT INTO images(id,origin,status,title,original_key,original_sha256,original_mime,width,height,copy_key,copy_sha256,created_at,updated_at) "
                       f"VALUES('autob-{i}','{origin}','{status}','ab{i}','autob/{i}','{h}','image/jpeg',10,10,'autob/c{i}','{h}','x','x')")
     if labels: statements.append('INSERT INTO image_tags(image_id,tag_id) VALUES ' + ','.join(f"('autob-{i}','ab-tag-{l}')" for l in labels))
-for i in range(62): add(i, 'REAL', ['arch', ['roma', 'napoli'][i % 2]] if i < 12 else [])
-for i in range(100, 109): add(i, 'SLOP', ['arch'], 'new')
+for i in range(62): add(i, 'REAL', ['arch', '1830s', ['roma', 'napoli'][i % 2]] if i < 12 else [])
+for i in range(100, 109): add(i, 'SLOP', ['arch', '1830s'], 'new')
 sql('; '.join(statements))
 try:
     with sync_playwright() as p:
@@ -46,7 +46,7 @@ try:
             page.goto(base + '/admin')
             box = page.locator('#slop-auto')
             expect(box).to_contain_text('Proposta di generazione')
-            expect(box).to_contain_text('ab-arch'); expect(box).to_contain_text('12 REAL'); expect(box).to_contain_text('9 SLOP nuove')
+            expect(box).to_contain_text('ab-arch'); expect(box).to_contain_text('1830s'); expect(box).to_contain_text('12 REAL'); expect(box).to_contain_text('9 SLOP nuove')
             expect(box).to_contain_text('spread 100%, ne mancano 3')
             expect(page.locator('#slop-auto-count')).to_have_text(' (1)')
             page.screenshot(path=str(folder / f'{name}-proposal.png'), full_page=True)
@@ -81,11 +81,12 @@ try:
             expect(cards).to_have_count(3)
             expect(cards.first).to_contain_text('SLOP'); expect(cards.first).not_to_contain_text('senza copia')
             page.screenshot(path=str(folder / f'{name}-database.png'), full_page=True)
-            # Starting tags: the theme of the batch and a place drawn for the slot, in the detail and in the preview.
+            # Starting tags: the group of the batch and a place drawn for the slot, in the detail and in the preview.
             cards.first.locator('.library-open').click()
             start = page.locator('#library-detail [data-start-tags]')
             expect(start).to_contain_text('Tag di partenza')
-            expect(start.locator('.rw-pill', has_text='ab-arch')).to_contain_text('tema')
+            expect(start.locator('.rw-pill', has_text='ab-arch')).to_contain_text('gruppo')
+            expect(page.locator('#library-detail [data-group]')).to_be_visible()
             expect(start.locator('.rw-pill.tag-cat-place')).to_have_count(1)
             page.locator('#library-detail .library-detail-close button').click()
             long_press(page, cards.first.locator('.library-open'))

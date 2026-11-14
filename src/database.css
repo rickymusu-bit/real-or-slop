@@ -57,3 +57,4 @@
 .dist-table th:first-child, .dist-table td:nth-child(2) { text-align: left; }
 @media (forced-colors: active) { .dist-published { background: CanvasText; } .dist-approved { background: none; border: 1px solid CanvasText; } }
 @media (max-width: 600px) { .dist-axis, .dist-row { grid-template-columns: minmax(5em, 8em) 1fr 2.8em; } }
+.library-check-inline { display: inline-flex; align-items: center; gap: 6px; }

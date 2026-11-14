@@ -1,5 +1,6 @@
-/** SLOP groups and paid generation (spec `generazione-slop`, sections 5–6): groups with theme, slots, prompts and their
- * formats; one call writes the prompts (or rewrites one); the image generator receives only the prompt text and the size of its
+/** SLOP batches and paid generation (spec `generazione-slop`, sections 5–6): batches of a group with theme, slots, prompts and
+ * their formats; one call writes the prompts (or rewrites one) with examples of the group; the image generator receives only the
+ * prompt text and the size of its
  * format; the image enters the library as a new SLOP with prompt, model, group, slot and quality. Refusals (4xx) are not charged,
  * uncertain outcomes are recorded and never resent. */
 import { HttpError, id, type Env } from "./core";
@@ -10,16 +11,21 @@ import { IMAGE_MODELS } from "../shared/models";
 import { formatsFor, generationSize, isFormat, type Format } from "../shared/game-copy";
 import { isCategory } from "../shared/tag-categories";
 import { MAX_SLOTS, SLOT_ORDER, type Slot } from "../shared/slot-extraction";
+import { parseGroup } from "../shared/slop-groups";
 
-const TIMEOUT_MS = 120_000, STALE_MS = 10 * 60_000, PROMPT_MAX = 4000, MAX_OUTPUT_TOKENS = 4000;
-const OUTPUT = "Write every prompt in English. Return JSON only, matching the schema: «prompts», one per slot in the same order, " +
-  "each with «prompt», the text for the image generator, «used_tags», the tags of its slot that the prompt uses, and «format», " +
-  "the photographic format (width:height) a photographer would choose for that subject, among those allowed by the schema.";
+const TIMEOUT_MS = 120_000, STALE_MS = 10 * 60_000, PROMPT_MAX = 4000, MAX_OUTPUT_TOKENS = 16_000, EXAMPLES = 8;
+/** Lines fixed in the code (spec `generazione-slop`, section 5): language and schema, length, use of the examples. */
+const OUTPUT = "Write every prompt in English, between 600 and 1000 characters. Return JSON only, matching the schema: «prompts», one per " +
+  "slot in the same order, each with «prompt», the text for the image generator, «used_tags», the tags of its slot that the prompt uses, " +
+  "and «format», the photographic format (width:height) a photographer would choose for that subject, among those allowed by the schema.";
+const EXAMPLES_RULE = "The examples are real photographs of the same genre and decade: use them to understand the genre, the period, " +
+  "the medium and the way of photographing. No prompt may take up the scene, the framing or the people of an example, and the names " +
+  "of people in the examples are never used.";
 /** Format of prompts written before formats existed (v1.5.0): the closest to the 4:5 they were meant for. */
 const LEGACY_FORMAT: Format = "3:4";
 const OPENAI = "https://api.openai.com/v1/";
 
-interface Batch { id: string; theme: string; slots: string; prompts: string; prompts_status: string; prompts_error: string; created_at: string; updated_at: string }
+interface Batch { id: string; theme: string; slots: string; prompts: string; prompts_status: string; prompts_error: string; created_at: string; updated_at: string; group_key: string | null }
 export interface PromptEntry { prompt: string; used: string[]; format?: Format }
 
 const parse = <T>(value: string, fallback: T): T => { try { return JSON.parse(value) as T; } catch { return fallback; } };
@@ -30,14 +36,19 @@ function slotsOf(value: unknown): Slot[] {
     const slot: Slot = {};
     for (const [category, label] of Object.entries(item as Record<string, unknown>))
       if (isCategory(category) && SLOT_ORDER.includes(category) && typeof label === "string" && label) slot[category] = label.slice(0, 40);
+    const sample = (item as Record<string, unknown>).sample;
+    if (typeof sample === "string" && /^[\w-]{1,64}$/.test(sample)) slot.sample = sample;
     return slot;
   });
 }
 function themeOf(value: unknown): string[] {
-  const theme = Array.isArray(value) ? [...new Set(value.filter((t): t is string => typeof t === "string" && !!t))] : [];
-  if (!theme.length || theme.length > 10) throw new HttpError(400, "Indica da 1 a 10 tag per il tema");
+  if (value === undefined) return [];
+  const theme = Array.isArray(value) ? [...new Set(value.filter((t): t is string => typeof t === "string" && !!t))] : null;
+  if (!theme || theme.length > 10) throw new HttpError(400, "Il tema ha al massimo 10 tag");
   return theme;
 }
+/** The tags of a slot, without its «REAL campione». */
+const tagsOf = (slot: Slot) => Object.fromEntries(Object.entries(slot).filter(([key]) => key !== "sample"));
 const confirmOnly = (data: Record<string, unknown>, allowed: string[]) => {
   if (Object.keys(data).some(key => !["confirm", ...allowed].includes(key))) throw new HttpError(400, "Campi non previsti");
   if (data.confirm !== true) throw new HttpError(400, "Conferma la chiamata a pagamento");
@@ -51,7 +62,7 @@ async function load(env: Env, batchId: string): Promise<Batch> {
 async function show(env: Env, batchId: string) {
   const row = await load(env, batchId);
   const ids = (await env.DB.prepare("SELECT id FROM images WHERE generation_batch=? ORDER BY created_at,rowid").bind(batchId).all<{ id: string }>()).results;
-  return { id: row.id, theme: parse<string[]>(row.theme, []), slots: parse<Slot[]>(row.slots, []), prompts: parse<PromptEntry[]>(row.prompts, []),
+  return { id: row.id, group: row.group_key, theme: parse<string[]>(row.theme, []), slots: parse<Slot[]>(row.slots, []), prompts: parse<PromptEntry[]>(row.prompts, []),
     prompts_status: row.prompts_status, prompts_error: row.prompts_error, created_at: row.created_at, updated_at: row.updated_at,
     images: await Promise.all(ids.map(r => viewOf(env, r.id))) };
 }
@@ -78,12 +89,14 @@ async function record(env: Env, kind: "prompts" | "images", model: string) {
       .bind(status, usage?.input_tokens ?? null, usage?.output_tokens ?? null, new Date().toISOString(), callId).run();
 }
 
-/** POST /slop/batches {theme, slots}: a new group, free. */
+/** POST /slop/batches {group, theme, slots}: a new batch of a group, free. */
 async function createBatch(env: Env, data: Record<string, unknown>) {
-  if (Object.keys(data).some(key => key !== "theme" && key !== "slots")) throw new HttpError(400, "Campi non previsti");
+  if (Object.keys(data).some(key => !["group", "theme", "slots"].includes(key))) throw new HttpError(400, "Campi non previsti");
+  const group = parseGroup(data.group);
+  if (!group) throw new HttpError(400, "Scegli un gruppo (genere e decennio)");
   const theme = themeOf(data.theme), slots = slotsOf(data.slots), batchId = id(), stamp = new Date().toISOString();
-  await env.DB.prepare("INSERT INTO slop_batches(id,theme,slots,created_at,updated_at) VALUES(?,?,?,?,?)")
-    .bind(batchId, JSON.stringify(theme), JSON.stringify(slots), stamp, stamp).run();
+  await env.DB.prepare("INSERT INTO slop_batches(id,theme,slots,created_at,updated_at,group_key) VALUES(?,?,?,?,?,?)")
+    .bind(batchId, JSON.stringify(theme), JSON.stringify(slots), stamp, stamp, group.key).run();
   return show(env, batchId);
 }
 /** PUT /slop/batches/:id {slots?, prompts?, formats?}: the owner's edits, free. Prompts are plain texts, one per slot; formats one per
@@ -107,6 +120,19 @@ async function editBatch(env: Env, batchId: string, data: Record<string, unknown
   return show(env, batchId);
 }
 
+/** Up to EXAMPLES approved or published REAL of the group with the whole theme, at random: description (500 characters at most) and
+ * tags. They go to the text model as examples of the genre, never as scenes to copy. */
+async function examples(env: Env, group: string, theme: string[]) {
+  const parsed = parseGroup(group)!;
+  const rows = (await env.DB.prepare(`SELECT i.id,i.description,(SELECT json_group_array(t.label) FROM image_tags it JOIN tags t ON t.id=it.tag_id
+    WHERE it.image_id=i.id) AS tags FROM images i WHERE i.origin='REAL' AND i.status IN ('approved','published')
+    AND EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=i.id AND t.category='genre' AND t.label=?)
+    AND EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=i.id AND t.category='time' AND t.label=?)
+    ORDER BY random() LIMIT 200`).bind(parsed.genre, parsed.time).all<{ id: string; description: string; tags: string }>()).results;
+  return rows.map(r => ({ description: r.description.slice(0, 500), tags: parse<string[]>(r.tags, []) }))
+    .filter(r => theme.every(t => r.tags.includes(t))).slice(0, EXAMPLES);
+}
+
 /** POST /slop/batches/:id/prompts {confirm, index?}: one paid call writes all the prompts, or rewrites one. */
 async function writePrompts(env: Env, batchId: string, data: Record<string, unknown>) {
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
@@ -128,15 +154,17 @@ async function writePrompts(env: Env, batchId: string, data: Record<string, unkn
   const format = { type: "json_schema", name: "slop_prompts", strict: true, schema: { type: "object", additionalProperties: false, required: ["prompts"], properties: {
     prompts: { type: "array", minItems: wanted.length, maxItems: wanted.length, items: { type: "object", additionalProperties: false, required: ["prompt", "used_tags", "format"],
       properties: { prompt: { type: "string" }, used_tags: { type: "array", items: { type: "string" } }, format: { type: "string", enum: allowed } } } } } } };
-  const input = { theme, count: wanted.length,
-    note: "The theme tags must appear in every prompt. Make the prompts different from one another; keep each faithful to its slot." +
-      (index === undefined ? "" : " Other prompts of the group, to stay different from: " + current.filter((_, i) => i !== index).map(p => p.prompt).join(" | ")),
-    slots: wanted.map(({ slot }) => slot) };
+  const group = parseGroup(row.group_key);
+  const input = { group: group ? { genre: group.genre, decade: group.time } : null, theme, count: wanted.length,
+    note: "Every prompt is a photograph of the group's genre and decade. The theme tags must appear in every prompt. Make the prompts " +
+      "different from one another; keep each faithful to its slot." +
+      (index === undefined ? "" : " Other prompts of the batch, to stay different from: " + current.filter((_, i) => i !== index).map(p => p.prompt).join(" | ")),
+    slots: wanted.map(({ slot }) => tagsOf(slot)), examples: group ? await examples(env, group.key, theme) : [] };
   let response: Response;
   try {
     response = await fetch((env.OPENAI_BASE_URL || OPENAI) + "responses", { method: "POST", redirect: "manual", signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: { Authorization: "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, instructions: baseContext.body + "\n\n" + taskContext.body + "\n\n" + OUTPUT, text: { format },
+      body: JSON.stringify({ model, instructions: baseContext.body + "\n\n" + taskContext.body + "\n\n" + OUTPUT + " " + EXAMPLES_RULE, text: { format },
         max_output_tokens: MAX_OUTPUT_TOKENS, input: [{ role: "user", content: [{ type: "input_text", text: JSON.stringify(input) }] }] }) });
   } catch {
     await settle("uncertain"); await finish("uncertain", "Esito incerto: la chiamata potrebbe essere stata addebitata. Non è stata ripetuta.");
@@ -215,16 +243,17 @@ async function generateImage(env: Env, batchId: string, data: Record<string, unk
   if (typeof data.quality !== "string" || !qualities.includes(data.quality)) throw new HttpError(400, `Qualità non ammessa da ${model}: ${qualities.join(", ")}`);
   const quality = data.quality, size = generationSize(model, prompts[index]?.format || LEGACY_FORMAT);
   const bytes = await requestImage(env, model, prompt, size, quality);
-  const view = await create(env, { origin: "SLOP", title: (theme.join(", ") + " " + (index + 1)).slice(0, 200), bytes: bytes.buffer as ArrayBuffer,
-    prompt, model, generation: { batch: batchId, slot: { index, theme, tags: slots[index] }, quality } });
+  const view = await create(env, { origin: "SLOP", title: ([row.group_key, ...theme].filter(Boolean).join(", ") + " " + (index + 1)).slice(0, 200),
+    bytes: bytes.buffer as ArrayBuffer, prompt, model, generation: { batch: batchId, group: row.group_key,
+      slot: { index, group: row.group_key, theme, tags: tagsOf(slots[index]), sample: slots[index].sample ?? null }, quality } });
   return view;
 }
 
 /** GET /slop/batches: the last groups, to pick one up again. */
 async function recent(env: Env) {
-  const rows = (await env.DB.prepare(`SELECT b.id,b.theme,b.slots,b.prompts_status,b.updated_at,(SELECT count(*) FROM images i WHERE i.generation_batch=b.id) AS images
-    FROM slop_batches b ORDER BY b.updated_at DESC LIMIT 10`).all<{ id: string; theme: string; slots: string; prompts_status: string; updated_at: string; images: number }>()).results;
-  return { batches: rows.map(r => ({ id: r.id, theme: parse<string[]>(r.theme, []), count: parse<Slot[]>(r.slots, []).length,
+  const rows = (await env.DB.prepare(`SELECT b.id,b.theme,b.slots,b.group_key,b.prompts_status,b.updated_at,(SELECT count(*) FROM images i WHERE i.generation_batch=b.id) AS images
+    FROM slop_batches b ORDER BY b.updated_at DESC LIMIT 10`).all<{ id: string; theme: string; slots: string; group_key: string | null; prompts_status: string; updated_at: string; images: number }>()).results;
+  return { batches: rows.map(r => ({ id: r.id, group: r.group_key, theme: parse<string[]>(r.theme, []), count: parse<Slot[]>(r.slots, []).length,
     prompts_status: r.prompts_status, images: r.images, updated_at: r.updated_at })) };
 }
 

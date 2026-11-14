@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 19.0.0, aggiornata il 2026-11-14T15:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 19.2.0, aggiornata il 2026-11-14T18:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,10 +9,14 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **In produzione:** app 1.24.0 (PR rickymusu-bit/real-or-slop#131, unita il 2026-11-14; migrazioni fino alla 0047). Il testo proposto dei
-  prompt SLOP vale quando l'owner lo salva dalle Impostazioni.
-- **Proposta aperta:** app 1.24.1, PR rickymusu-bit/real-or-slop#132: riordino (specifiche consolidate senza strati, documenti storici e codice inutilizzato tolti,
-  nomi dei file senza versione, tag `vX.Y.Z` a ogni rilascio) e la correzione del messaggio dopo l'analisi in gruppo.
+- **In produzione:** app 1.24.1 (PR rickymusu-bit/real-or-slop#132, unita il 2026-11-14: riordino della documentazione e correzione del
+  messaggio dopo l'analisi in gruppo; migrazioni fino alla 0047). Il testo proposto dei prompt SLOP vale quando l'owner lo salva dalle
+  Impostazioni: al 2026-11-14T16:00:00Z in produzione vale ancora la versione salvata alle 06:06, con «figure non riconoscibili».
+- **In preparazione:** app 1.25.0, migrazione 0048, sul ramo `ccr-dbd14347-i92tp0`: gruppi di genere e decennio per il bilanciamento,
+  categorie Genere, Colore e Supporto al posto di Formato (giudicate solo dall'immagine, completamento a pagamento per le immagini già
+  analizzate), esempi del gruppo e prompt da 600 a 1000 caratteri, trattamento delle SLOP con le misure delle copie, contesto 1.7.0
+  proposto, «Come funziona», «Fonti e crediti» e Termini (decisioni dell'owner del 2026-11-14). La frase nuova dei Termini è stata
+  verificata da un legale (2026-11-14).
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
 
 ## Specifiche vigenti
@@ -22,15 +26,15 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 2.0.0 |
-| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.0.0 |
-| Copie di gioco, formati, inquadratura | `docs/copie-di-gioco.md` | 6.0.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.0.0 |
+| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 7.0.1 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.0.0 |
-| Studio SLOP e batch automatici | `docs/generazione-slop.md` | 1.0.0 |
-| Sezione Database | `docs/database-immagini.md` | 2.0.0 |
+| Studio SLOP, gruppi e batch automatici | `docs/generazione-slop.md` | 2.0.1 |
+| Sezione Database | `docs/database-immagini.md` | 2.1.1 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.0.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.0.0 |
-| Privacy e note legali | `docs/privacy-note-legali.md` | 1.1.1 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.1.0 |
+| Privacy e note legali | `docs/privacy-note-legali.md` | 1.2.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
 delle vecchie pipeline e le snapshot di `AGENTS.md` e `MASTER.md`. Restano nella cronologia git: `git log -- docs/<nome>` trova il
@@ -60,18 +64,19 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
   `slop-studio.ts` e `slop-studio.css`, riquadro dei batch automatici `slop-auto.ts` e `slop-auto.css`, statistiche `stats.ts` e
   `stats.css`, grafico della distribuzione `database-chart.ts`, anteprima a pressione prolungata `image-preview.ts` e
   `image-preview.css`, pillole e categorie dei tag `tag-ui.ts` e `tag-categories.css`, editor di formato e ritaglio `crop-editor.ts` e
-  `crop-editor.css`, copie di gioco nel browser `game-copy.ts`.
+  `crop-editor.css`, copie di gioco nel browser con misure e trattamento delle SLOP `game-copy.ts`.
 
 **Worker** Cloudflare (`worker/`, ingresso `index.ts`):
 - `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera).
 - Libreria `library.ts` (stati, vocabolario, alias, categorie, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   analisi `analysis.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, Commons `commons-editorial.ts`.
-- SLOP: studio `slop.ts`, generazione `slop-generation.ts`, batch automatici `slop-auto.ts`.
+- SLOP: studio `slop.ts`, gruppi e loro misure `slop-groups.ts`, generazione `slop-generation.ts`, batch automatici `slop-auto.ts`.
 - Gioco `game.ts` con `sampling.ts` e `random.ts`, classifica `leaderboard.ts`.
 
 **Codice condiviso** (`shared/`): tag `tags.ts`, tag scritti a mano `tag-input.ts`, categorie `tag-categories.ts`, modelli OpenAI
-`models.ts`, slot `slot-extraction.ts`, proposta dei batch `slop-auto.ts`, formati e ricetta della copia `game-copy.ts`, licenze ND
+`models.ts`, slot `slot-extraction.ts`, gruppi `slop-groups.ts`, proposta dei batch `slop-auto.ts`, formati e ricetta della copia
+`game-copy.ts`, misure e trattamento `copy-treatment.ts`, licenze ND
 `licenses.ts`, pulizia dei metadati `media-clean.ts`, livelli e punteggio `levels.ts`, costanti legali `legal.ts`, controllo delle
 immagini `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
 
@@ -97,6 +102,7 @@ modello finto `fake_openai.py` e gli aiuti `catalog.py`, `game_copy.py`, `long_p
 | 0045 | batch automatici delle SLOP, proposte ignorate |
 | 0046 | formato nel ritaglio (la vista iniziale resta, inutilizzata) |
 | 0047 | didascalie cancellate, colonne inutilizzate |
+| 0048 | categorie Genere, Colore e Supporto al posto di Formato; completamento, misure, trattamento e gruppo delle immagini; gruppo dei batch; soglia del gruppo |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

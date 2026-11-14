@@ -124,8 +124,12 @@ try:
             expect(page.locator('#content')).to_contain_text('Rispondi con i pulsanti REAL e SLOP')
             expect(page.locator('#content')).not_to_contain_text('4:5')
             expect(page.locator('#content')).not_to_contain_text('scorri la foto')
+            # The treatment of the SLOP is said; «the same preparation» is not true any more.
+            expect(page.locator('#content')).to_contain_text('Le SLOP possono essere anche ridotte, sgranate o sbiadite')
+            expect(page.locator('#content')).not_to_contain_text('stessa preparazione')
             page.goto(base + '/crediti')
             expect(page.locator('#content')).to_contain_text('formato fotografico comune più vicino')
+            expect(page.locator('#content')).to_contain_text('possono essere state ridotte, sgranate o sbiadite')
             expect(page.locator('#content')).not_to_contain_text('4:5')
             page.goto(base + '/')
             expect(page.locator('.leaderboard').first.locator('tbody')).to_contain_text(f'Browser {name}')
@@ -138,7 +142,8 @@ try:
             page.locator('footer a', has_text='Termini d’uso').click()
             expect(page.get_by_role('heading', name='Termini d’uso.')).to_be_visible()
             expect(page.locator('.legal')).not_to_contain_text('didascal')  # no captions any more
-            expect(page.locator('.legal .eyebrow')).to_have_text('AGGIORNATI IL 13 NOVEMBRE 2026')
+            expect(page.locator('.legal .eyebrow')).to_have_text('AGGIORNATI IL 14 NOVEMBRE 2026')
+            expect(page.locator('.legal')).to_contain_text('senza parti di fotografie vere')
             assert not errors, errors
             context.close()
             # The owner checks the code in Settings and hides the entry.

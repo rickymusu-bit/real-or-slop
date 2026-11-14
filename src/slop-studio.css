@@ -39,3 +39,4 @@
 .slop-generate { margin: 12px 0; align-items: center; gap: 12px; }
 .slop-progress { color: var(--text); }
 .slop-review .rw-pills { margin: 6px 0; }
+.slop-group-chosen td { background: color-mix(in srgb, var(--accent, #6b8cff) 14%, transparent); }

@@ -6,4 +6,4 @@ export const GAME_RETENTION_MONTHS = 12;
 export const GAME_RETENTION_MS = GAME_RETENTION_MONTHS * 30.44 * 86_400_000;
 export const MIN_AGE = 14;
 export const LEGAL_UPDATED = "12 novembre 2026";
-export const TERMS_UPDATED = "13 novembre 2026";
+export const TERMS_UPDATED = "14 novembre 2026";

@@ -11,8 +11,10 @@ import { centredCrop, copyDimensions, cropError, GAME_COPY, generationSize, near
 import { isNoDerivatives } from "../shared/licenses";
 import { checkTag } from "../shared/tags";
 import { contextRoute } from "./model-context";
-import { categoryError, isCategory, isDecade, limitError, SINGLE, type Category } from "../shared/tag-categories";
-import { analysisStatus, analyze } from "./analysis";
+import { categoryError, forcedCategory, isCategory, limitError, SINGLE, VISUAL, type Category } from "../shared/tag-categories";
+import { treatedLong, validMetrics, validTreatment } from "../shared/copy-treatment";
+import { groupOf, parseGroup } from "../shared/slop-groups";
+import { analysisStatus, analyze, completable, completeCategories } from "./analysis";
 import { modelsRoute } from "./models";
 import { settingsRoute } from "./app-settings";
 import { stats } from "./stats";
@@ -37,6 +39,7 @@ export interface Row {
   generated_caption: string | null; generated_tags: string | null;
   generation_batch: string | null; generation_slot: string | null; generation_quality: string | null;
   analysis_base_context: string | null; analysis_task_context: string | null; copy_crop: string | null; copy_view: string | null;
+  categories_completed_at: string | null; copy_metrics: string | null; copy_treatment: string | null; generation_group: string | null;
 }
 const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
@@ -90,14 +93,15 @@ export async function categoriesOf(env: Env, wanted: readonly string[]): Promise
     .bind(JSON.stringify(wanted)).all<TagRow>()).results;
   return new Map(rows.map(r => [r.label, r.category]));
 }
-/** Categories for a set of labels: an existing tag keeps its own; a new one takes the requested category, or Time for a
- * decade, or «other». Refuses a decade outside Time, Time without a decade, and two Time or Format tags. */
+/** Categories for a set of labels: an existing tag keeps its own; a new one takes the requested category, or its forced one (Time
+ * for a decade, Color and Medium for their closed lists), or «other». Refuses labels outside their category and two tags of a
+ * single-tag category. A category asked against the forced one is refused, not corrected: the server stays strict. */
 export async function categorize(env: Env, wanted: readonly string[], requested: Record<string, unknown> = {}): Promise<Map<string, Category>> {
   const existing = await categoriesOf(env, wanted), out = new Map<string, Category>();
   for (const label of wanted) {
     const asked = requested[label];
     if (asked !== undefined && !isCategory(asked)) throw new HttpError(400, "Categoria inesistente per «" + label + "»");
-    const category = existing.get(label) ?? (isCategory(asked) ? asked : isDecade(label) ? "time" : "other");
+    const category = existing.get(label) ?? (isCategory(asked) ? asked : forcedCategory(label) ?? "other");
     const error = categoryError(label, category);
     if (error) throw new HttpError(400, error);
     out.set(label, category);
@@ -119,9 +123,12 @@ const cropOf = (row: Pick<Row, "copy_crop">) => storedCrop(row.copy_crop);
 function parseSlot(value: string | null): unknown {
   try { return value ? JSON.parse(value) : null; } catch { return null; }
 }
+const parseJson = (value: string | null): unknown => { try { return value ? JSON.parse(value) : null; } catch { return null; } };
+/** What makes two treatments give the same copy. */
+const treatmentKey = (t: ReturnType<typeof validTreatment>) => t ? JSON.stringify([t.off, t.seed, t.long, t.medium, t.color, t.sample.id]) : "";
 interface Extra { stats?: { views: number; correct: number }; in_play?: number }
 function view(row: Row, rows: TagRow[], extra: Extra = {}) {
-  const tags = rows.map(r => r.label);
+  const tags = rows.map(r => r.label), group = groupOf(rows);
   const v = row.copy_sha256 ? row.copy_sha256.slice(0, 12) : row.original_sha256.slice(0, 12);
   return {
     id: row.id, origin: row.origin, status: row.status, trashed_from: row.trashed_from, title: row.title,
@@ -136,7 +143,11 @@ function view(row: Row, rows: TagRow[], extra: Extra = {}) {
     analysis: { status: row.analysis_status, error: row.analysis_error, at: row.analyzed_at,
       context: row.analysis_task_context ? { base: row.analysis_base_context, task: row.analysis_task_context } : null },
     generated: generatedOf(row),
-    generation: row.generation_batch ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality } : null,
+    generation: row.generation_batch ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality,
+      group: row.generation_group } : null,
+    group, missing_categories: VISUAL.filter(c => !rows.some(r => r.category === c)),
+    completable: completable(row, rows.map(r => r.category)),
+    metrics: validMetrics(parseJson(row.copy_metrics)), treatment: validTreatment(parseJson(row.copy_treatment)),
     file: `${base}/${row.id}/file?v=${v}`, original: `${base}/${row.id}/original`,
     stats: extra.stats || { views: 0, correct: 0 }, in_play: extra.in_play || 0,
   };
@@ -184,7 +195,7 @@ export function tagStatements(env: Env, imageIdValue: string, wanted: string[], 
 /** Adds a new image to the library. The original goes to quarantine; the browser then uploads its game copy. */
 export async function create(env: Env, input: { origin: Origin; title: string; description?: string; bytes: ArrayBuffer;
   source_url?: string; author?: string; license_name?: string; license_url?: string; prompt?: string; model?: string;
-  generation?: { batch: string; slot: unknown; quality: string } }) {
+  generation?: { batch: string; slot: unknown; quality: string; group?: string | null } }) {
   if (!env.QUARANTINE) throw new HttpError(503, "Quarantena privata non configurata");
   const bytes = new Uint8Array(input.bytes);
   if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new HttpError(413, "File vuoto o oltre 12 MB");
@@ -201,13 +212,13 @@ export async function create(env: Env, input: { origin: Origin; title: string; d
   await env.QUARANTINE.put(key, bytes, { httpMetadata: { contentType: mime }, customMetadata: { sha256: hash } });
   try {
     await env.DB.prepare(`INSERT INTO images(id,origin,title,description,source_url,author,license_name,license_url,prompt,model,
-      original_key,original_sha256,original_mime,width,height,created_at,updated_at,generation_batch,generation_slot,generation_quality)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      original_key,original_sha256,original_mime,width,height,created_at,updated_at,generation_batch,generation_slot,generation_quality,generation_group)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(imageIdValue, input.origin, text(input.title, "title", true), text(input.description, "description"),
         text(input.source_url, "source_url"), text(input.author, "author"), text(input.license_name, "license_name"),
         text(input.license_url, "license_url"), text(input.prompt, "prompt"), text(input.model, "model"),
         key, hash, mime, width, height, stamp, stamp, input.generation?.batch ?? null,
-        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null).run();
+        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null, input.generation?.group ?? null).run();
   } catch (error) {
     await env.QUARANTINE.delete(key);
     if (error instanceof HttpError) throw error;
@@ -229,8 +240,20 @@ async function storeCopy(request: Request, env: Env, row: Row) {
   try { crop = asked === null ? centredCrop(row.width, row.height) : parseCrop(asked); } catch { throw new HttpError(400, "Immagine troppo piccola per una copia di gioco"); }
   const invalid = cropError(row.width, row.height, crop);
   if (!crop || invalid) throw new HttpError(400, invalid || "Inquadratura non valida");
-  const expected = copyDimensions(crop);
-  if (row.copy_key && row.copy_crop === JSON.stringify(crop))
+  // Measures of the copy and, for a SLOP, its treatment (spec `copie-di-gioco`, section 4), sent by the browser in headers.
+  const metricsHeader = request.headers.get("X-Copy-Metrics"), treatmentHeader = request.headers.get("X-Copy-Treatment");
+  const readJson = (value: string | null) => { try { return value && value.length <= 4000 ? JSON.parse(value) : undefined; } catch { return undefined; } };
+  const metrics = metricsHeader === null ? null : validMetrics(readJson(metricsHeader));
+  if (metricsHeader !== null && !metrics) throw new HttpError(400, "Misure della copia non valide");
+  const treatment = treatmentHeader === null ? null : validTreatment(readJson(treatmentHeader));
+  if (treatmentHeader !== null && !treatment) throw new HttpError(400, "Trattamento non valido");
+  if (treatment && row.origin !== "SLOP") throw new HttpError(400, "Il trattamento vale solo per le SLOP");
+  const cropLong = Math.max(crop.width, crop.height);
+  const maxSide = treatment && !treatment.off ? treatedLong(treatment.sample.metrics.long, cropLong, GAME_COPY.maxSide) : GAME_COPY.maxSide;
+  if (treatment && !treatment.off && treatment.long !== maxSide) throw new HttpError(400, `Lato lungo del trattamento ${treatment.long}, atteso ${maxSide}`);
+  const expected = copyDimensions(crop, maxSide);
+  const sameTreatment = treatmentKey(validTreatment(parseJson(row.copy_treatment))) === treatmentKey(treatment) || (!treatment && row.origin === "SLOP");
+  if (row.copy_key && row.copy_crop === JSON.stringify(crop) && sameTreatment)
     return json({ ...(await viewOf(env, row.id)), already_prepared: true });
   if (Number(request.headers.get("content-length") || 0) > GAME_COPY.maxBytes) throw new HttpError(413, "Copia di gioco oltre 4 MB");
   const upload = new Uint8Array(await request.arrayBuffer());
@@ -242,13 +265,18 @@ async function storeCopy(request: Request, env: Env, row: Row) {
   if (actual.width !== expected.width || actual.height !== expected.height)
     throw new HttpError(409, `Dimensioni della copia ${actual.width}×${actual.height}, attese ${expected.width}×${expected.height}`);
   const hash = await sha256(copy.bytes), key = `library/${row.id}/copy-${hash.slice(0, 16)}.webp`;
-  if (key === row.copy_key) return json({ ...(await viewOf(env, row.id)), already_prepared: true });
-  await env.QUARANTINE.put(key, copy.bytes, { httpMetadata: { contentType: GAME_COPY.mime }, customMetadata: { sha256: hash } });
+  // The same bytes with another crop or treatment record (a treatment that changed nothing): only the record changes.
+  const sameFile = key === row.copy_key;
+  if (sameFile && row.copy_crop === JSON.stringify(crop) && sameTreatment) return json({ ...(await viewOf(env, row.id)), already_prepared: true });
+  if (!sameFile) await env.QUARANTINE.put(key, copy.bytes, { httpMetadata: { contentType: GAME_COPY.mime }, customMetadata: { sha256: hash } });
+  // A SLOP keeps its treatment record when a copy comes without one (an old browser): only «Senza trattamento» turns it off.
+  const treatmentValue = treatment ? JSON.stringify(treatment) : row.origin === "SLOP" ? row.copy_treatment : null;
   const result = await env.DB.prepare(`UPDATE images SET copy_key=?,copy_sha256=?,copy_width=?,copy_height=?,copy_bytes=?,copy_crop=?,copy_view=NULL,
-    revision=revision+1,updated_at=? WHERE id=? AND revision=? AND status IN ('new','approved')`)
-    .bind(key, hash, actual.width, actual.height, copy.bytes.length, JSON.stringify(crop), now(), row.id, row.revision).run();
-  if (!result.meta.changes) { await env.QUARANTINE.delete(key); throw new HttpError(409, "Immagine modificata altrove: ricaricare"); }
-  if (row.copy_key) await env.QUARANTINE.delete(row.copy_key);
+    copy_metrics=?,copy_treatment=?,revision=revision+1,updated_at=? WHERE id=? AND revision=? AND status IN ('new','approved')`)
+    .bind(key, hash, actual.width, actual.height, copy.bytes.length, JSON.stringify(crop), metrics ? JSON.stringify(metrics) : null,
+      treatmentValue, now(), row.id, row.revision).run();
+  if (!result.meta.changes) { if (!sameFile) await env.QUARANTINE.delete(key); throw new HttpError(409, "Immagine modificata altrove: ricaricare"); }
+  if (row.copy_key && !sameFile) await env.QUARANTINE.delete(row.copy_key);
   return json({ ...(await viewOf(env, row.id)), already_prepared: false }, 201);
 }
 
@@ -347,17 +375,23 @@ async function destroy(env: Env, ids: readonly string[]): Promise<{ deleted: num
 async function list(env: Env, url: URL) {
   const status = url.searchParams.get("status") || "library", originFilter = url.searchParams.get("origin") || "all";
   const q = (url.searchParams.get("q") || "").trim().slice(0, 100), match = url.searchParams.get("match") || "all";
-  const batch = url.searchParams.get("batch") || "";
+  const batch = url.searchParams.get("batch") || "", groupFilter = url.searchParams.get("group") || "", incomplete = url.searchParams.get("incomplete") === "1" ? 1 : 0;
+  const group = groupFilter ? parseGroup(groupFilter) : null;
+  if (groupFilter && !group) throw new HttpError(400, "Filtro non valido");
   const wanted = [...new Set([url.searchParams.get("tag") || "", ...(url.searchParams.get("tags") || "").split(",")].map(t => t.trim()).filter(Boolean))];
   if (!["library", "new", "approved", "published", "trash"].includes(status) || !["all", "REAL", "SLOP"].includes(originFilter)
     || !["all", "any"].includes(match) || wanted.length > 20 || (batch && !/^[\w-]{1,64}$/.test(batch))) throw new HttpError(400, "Filtro non valido");
   const where = [status === "library" ? "status<>'trash'" : "status=?1", "(?2='all' OR origin=?2)",
     `(?3='[]' OR id IN (SELECT it.image_id FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE t.label IN (SELECT value FROM json_each(?3))
       GROUP BY it.image_id HAVING count(DISTINCT t.label)>=CASE ?5 WHEN 'any' THEN 1 ELSE json_array_length(?3) END))`,
-    "(?4='' OR title LIKE '%'||?4||'%' COLLATE NOCASE)", "(?6='' OR generation_batch=?6)"].join(" AND ");
+    "(?4='' OR title LIKE '%'||?4||'%' COLLATE NOCASE)", "(?6='' OR generation_batch=?6)",
+    `(?7='' OR (EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id AND t.category='genre' AND t.label=?7)
+      AND EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id AND t.category='time' AND t.label=?8)))`,
+    `(?9=0 OR (SELECT count(DISTINCT t.category) FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id
+      AND t.category IN ('genre','color','medium'))<3)`].join(" AND ");
   await sweepRetired(env);
   const rows = (await env.DB.prepare(`SELECT * FROM images WHERE ${where} ORDER BY updated_at DESC,id LIMIT 500`)
-    .bind(status, originFilter, JSON.stringify(wanted), q, match, batch).all<Row>()).results;
+    .bind(status, originFilter, JSON.stringify(wanted), q, match, batch, group?.genre || "", group?.time || "", incomplete).all<Row>()).results;
   const ids = rows.map(r => r.id), [tags, more] = await Promise.all([tagRowsOf(env, ids), extras(env, ids)]);
   const counts = (await env.DB.prepare("SELECT status,origin,count(*) AS n FROM images GROUP BY status,origin").all<{ status: string; origin: string; n: number }>()).results;
   return json({ items: rows.map(r => view(r, tags.get(r.id) || [], more.get(r.id))), counts });
@@ -409,8 +443,8 @@ async function regenerate(env: Env, row: Row, data: Record<string, unknown>) {
   const key = `library/${row.id}/original-${hash.slice(0, 16)}`, stamp = now();
   await env.QUARANTINE.put(key, bytes, { httpMetadata: { contentType: mime }, customMetadata: { sha256: hash } });
   const result = await env.DB.prepare(`UPDATE images SET original_key=?,original_sha256=?,original_mime=?,width=?,height=?,
-    copy_key=NULL,copy_sha256=NULL,copy_width=NULL,copy_height=NULL,copy_bytes=NULL,copy_crop=NULL,copy_view=NULL,status='new',approved_at=NULL,prompt=?,model=?,
-    generation_quality=?,analysis_status='none',analysis_error='',analyzed_at=NULL,generated_caption=NULL,generated_tags=NULL,
+    copy_key=NULL,copy_sha256=NULL,copy_width=NULL,copy_height=NULL,copy_bytes=NULL,copy_crop=NULL,copy_view=NULL,copy_metrics=NULL,status='new',approved_at=NULL,prompt=?,model=?,
+    generation_quality=?,analysis_status='none',analysis_error='',analyzed_at=NULL,generated_caption=NULL,generated_tags=NULL,categories_completed_at=NULL,
     revision=revision+1,updated_at=? WHERE id=? AND revision=? AND status IN ('new','approved')`)
     .bind(key, hash, mime, width, height, prompt, model, data.quality, stamp, row.id, row.revision).run().catch(() => null);
   if (!result?.meta.changes) {
@@ -478,7 +512,7 @@ export async function library(request: Request, env: Env, path: string): Promise
     }
     return json({ done: done.length, failed });
   }
-  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|analyze|regenerate))?$/);
+  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|analyze|regenerate|categories|metrics))?$/);
   if (!match) throw new HttpError(404, "API della libreria inesistente");
   const row = await find(env, match[1]);
   if (match[2] === "file" || match[2] === "original") {
@@ -491,6 +525,19 @@ export async function library(request: Request, env: Env, path: string): Promise
   if (match[2] === "analyze") {
     if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
     return json(await analyze(env, row, await body(request, 1000)));
+  }
+  if (match[2] === "categories") {
+    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    return json(await completeCategories(env, row, await body(request, 1000)));
+  }
+  if (match[2] === "metrics") {
+    // Measures of an existing copy, made by the browser from that copy: free, any state, the copy must still be the same.
+    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    const data = await body(request, 2000), metrics = validMetrics(data.metrics);
+    if (Object.keys(data).some(key => key !== "metrics" && key !== "sha256") || !metrics || typeof data.sha256 !== "string") throw new HttpError(400, "Misure non valide");
+    const result = await env.DB.prepare("UPDATE images SET copy_metrics=? WHERE id=? AND copy_sha256=?").bind(JSON.stringify(metrics), row.id, data.sha256).run();
+    if (!result.meta.changes) throw new HttpError(409, "Copia cambiata: misure non salvate");
+    return json({ id: row.id, metrics });
   }
   if (match[2] === "regenerate") {
     if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");

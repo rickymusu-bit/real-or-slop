@@ -1,6 +1,8 @@
-# Contenuti delle SLOP e trasparenza — specifica 1.0.0
+# Contenuti delle SLOP e trasparenza — specifica 1.2.0
 
-Stato: vigente. Aggiornata: 2026-11-14T12:00:00Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riprende
+Stato: approvata dall'owner il 2026-11-14, implementata nell'app 1.25.0 (in revisione). Aggiornata: 2026-11-14T18:00:00Z. La 1.2.0
+dice dove i testi del sito citano il trattamento, compresi i Termini (richiesta dell'owner del 2026-11-14). La 1.1.0 aggiunge i generi
+che implicano un reato e il trattamento delle SLOP nella trasparenza verso i giocatori. La 1.0.0 era la versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riprende
 la sezione 11 di `libreria-immagini.v1.8.0` e la sezione 6 di `anteprima-descrizione.v1.2.0`, che restano nella cronologia git.
 Valgono per ogni modello che produce contenuti del sito e per la revisione dell'owner.
 
@@ -12,7 +14,8 @@ Valgono per ogni modello che produce contenuti del sito e per la revisione dell'
   deve mai dire che i volti sono indistinti, anonimi o non riconoscibili: il modello di testo trascrive i vincoli nei prompt e volti
   nascosti diventerebbero un indizio dell'origine (batch del 2026-11-14: 10 prompt su 10 con «faces are indistinct» o simili).
 - **Personaggi storici** morti da almeno 50 anni: ammessi, anche in eventi mai accaduti, perché riconoscere un falso storico è parte del
-  gioco. Esclusi crimini e atrocità attribuiti a loro e ogni scena degradante.
+  gioco. Esclusi crimini e atrocità attribuiti a loro e ogni scena degradante. Per questo i generi che implicano un reato o una colpa
+  (foto segnaletiche, arresti, processi) si generano solo con persone inventate (2026-11-14).
 - **Marchi reali:** ammessi.
 - **Regimi e ideologie:** documentare sì, celebrare no. Ammessi manifesti, bandiere e simboli come contesto storico di una scena;
   escluse le immagini che esaltano un regime, un leader o un'ideologia, compresi manifesti di propaganda creati ex novo, che fuori dal
@@ -43,6 +46,12 @@ Valgono per ogni modello che produce contenuti del sito e per la revisione dell'
 - **Salvataggio scoraggiato:** nel gioco sono bloccati tasto destro, trascinamento e pressione prolungata sulle immagini. Nella
   dashboard la pressione prolungata apre invece l'anteprima.
 - **Metadati:** il gioco serve solo le copie WebP senza metadati, uguali per REAL e SLOP; gli originali restano nella quarantena privata.
+- **Trattamento delle SLOP** (decisione dell'owner del 2026-11-14, specifica `copie-di-gioco`, sezione 4): le SLOP possono essere
+  ridotte, sfocate, sgranate o virate come le REAL del loro genere ed epoca, perché le immagini false in circolazione lo sono. Il
+  trattamento non aggiunge materiale fotografico: resta un'immagine generata. Lo dicono, con l'app 1.25.0, «Come funziona» («Le SLOP
+  possono essere anche ridotte, sgranate o sbiadite, come le immagini false che circolano davvero», al posto di «REAL e SLOP passano per
+  la stessa preparazione», che non sarebbe più vera), «Fonti e crediti» e i Termini d'uso (specifica `privacy-note-legali`, sezione 3,
+  su richiesta dell'owner del 2026-11-14; la frase dei Termini è stata verificata da un legale lo stesso giorno).
 - **Durante la partita** nessun testo accompagna la foto; descrizione, fonti e prompt arrivano solo alla fine.
 - **Licenze:** le SLOP non hanno licenza restrittiva; valgono i termini d'uso del sito, che vietano di diffonderle come vere o di
   togliere il marchio (specifica `privacy-note-legali`).

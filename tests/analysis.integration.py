@@ -84,9 +84,13 @@ assert picture.startswith('data:image/webp;base64,UklGR'), picture[:40]  # the g
 assert not any(word in json.dumps(sent['body']) for word in ('REAL', 'SLOP', '"AI"')), 'the model must not know the origin'
 # The instructions are the editable context (base, then analysis) plus the fixed line on the JSON output.
 assert sent['body']['instructions'].startswith('Lavori per un archivio fotografico italiano') and 'Didascalia' not in sent['body']['instructions'], sent['body']['instructions'][:200]
-assert sent['body']['instructions'].endswith('people; object; other).') and 'time: un decennio' in sent['body']['instructions']
+assert sent['body']['instructions'].endswith('mai dal titolo, dalla descrizione o da altro testo.') and 'time: un decennio' in sent['body']['instructions']
+assert 'genre: il tipo di fotografia' in sent['body']['instructions'] and 'medium: che cosa è materialmente' in sent['body']['instructions']
 assert sent['body']['text']['format']['schema']['required'] == ['tags'] and 'caption' not in sent['body']['text']['format']['schema']['properties']
-assert sent['body']['text']['format']['schema']['properties']['tags']['required'] == ['time', 'format', 'place', 'setting', 'event', 'people', 'object', 'other']
+schema_tags = sent['body']['text']['format']['schema']['properties']['tags']
+assert schema_tags['required'] == ['time', 'genre', 'color', 'medium', 'place', 'setting', 'event', 'people', 'object', 'other'], schema_tags['required']
+assert schema_tags['properties']['color']['items']['enum'] == ['color', 'black-and-white', 'sepia', 'hand-colored']
+assert 'newspaper-print' in schema_tags['properties']['medium']['items']['enum'] and schema_tags['properties']['genre']['minItems'] == 1
 assert 'generat' not in sent['body']['instructions'], 'the base and the tag rules must not mention generated images'
 assert spend() == [{'kind': 'analysis', 'model': 'gpt-6.1-terra', 'status': 'completed', 'input_tokens': 1200, 'output_tokens': 60}], spend()
 # Once per image: a second generation is refused before anything is sent or held.
@@ -175,21 +179,22 @@ assert analysis_part['history'][1]['used'] == 1, analysis_part['history']  # the
 call(f'{API}/{item["id"]}/trash', {}); assert call(f'{API}/{item["id"]}', method='DELETE')[1]['deleted'] == 1
 # Tag categories. A plain list from the model (older answers) counts as «other».
 assert all(t['category'] == 'other' for t in labels().values() if t['label'] in ('riot', 'crowd', 'street')), labels()
-def categorized(**tags): return {c: tags.get(c, []) for c in ('time', 'format', 'place', 'setting', 'event', 'people', 'object', 'other')}
+def categorized(**tags): return {c: tags.get(c, []) for c in ('time', 'genre', 'color', 'medium', 'place', 'setting', 'event', 'people', 'object', 'other')}
 x, x_copy = image(110, 'Categorie X', 'Parigi, 1968.')
 status, x = call(f'{API}/{x["id"]}/copy', raw=x_copy, mime='image/webp'); assert status == 201, x
-openai([{'tags': categorized(time=['1960s', '1970s'], format=['Black and White'], place=['Paris'], event=['riot'], people=['Students'],
+openai([{'tags': categorized(time=['1960s', '1970s'], color=['Black and White'], place=['Paris'], event=['riot'], people=['Students'],
                              object=['1950s', 'Lamp Post'], setting=['night']), 'caption': 'Parigi, 1968. Studenti in strada.'}])
 status, x = analyze(x); assert status == 200, x
 [sent] = openai(); assert 'Existing vocabulary by category:\nother: ' in sent['body']['input'][0]['content'][0]['text'], sent['body']['input'][0]['content'][0]['text'][:300]
-assert x['categories'] == {'1960s': 'time', 'black-and-white': 'format', 'paris': 'place', 'night': 'setting', 'riot': 'other',
+assert x['categories'] == {'1960s': 'time', 'black-and-white': 'color', 'paris': 'place', 'night': 'setting', 'riot': 'other',
                            'students': 'people', 'lamp-post': 'object'}, x['categories']  # 1970s and 1950s: a second Time tag, dropped
 assert x['tag_conflicts'] == [{'label': 'riot', 'proposed': 'event', 'existing': 'other'}], x['tag_conflicts']
 # Owner edits: a new tag takes the category asked; an existing one keeps its own; decades only in Time; one Time per image.
 status, x = call(f'{API}/{x["id"]}'); x = patch(x, {'tags': x['tags'] + ['tram', 'riot'], 'tag_categories': {'tram': 'object', 'riot': 'place'}})
 assert x['categories']['tram'] == 'object' and x['categories']['riot'] == 'other', x['categories']
 for change, error in (({'tags': x['tags'] + ['1980s']}, 'Al massimo un tag di Tempo'), ({'tags': x['tags'] + ['sixties'], 'tag_categories': {'sixties': 'time'}}, 'decenni'),
-                      ({'tags': ['1990s'], 'tag_categories': {'1990s': 'event'}}, 'Tempo'), ({'tags': ['sepia', 'polaroid'], 'tag_categories': {'sepia': 'format', 'polaroid': 'format'}}, 'Formato'),
+                      ({'tags': ['1990s'], 'tag_categories': {'1990s': 'event'}}, 'Tempo'), ({'tags': ['sepia', 'color']}, 'Al massimo un tag di Colore'), ({'tags': ['kodachrome'], 'tag_categories': {'kodachrome': 'medium'}}, 'Supporto accetta solo'),
+                      ({'tags': ['tram'], 'tag_categories': {'tram': 'format'}}, 'Categoria'),
                       ({'tags': ['tram'], 'tag_categories': {'tram': 'mood'}}, 'Categoria'), ({'tags': ['tram'], 'tag_categories': ['tram']}, 'Categorie')):
     status, result = call(f'{API}/{x["id"]}', {'revision': x['revision'], **change}, method='PATCH'); assert status == 400 and error in result['error'], (change, result)
 # Change of category, for every image that uses the tag.
@@ -199,15 +204,36 @@ assert call(f'{API}/tags/category', {'label': 'paris', 'category': 'time'}, meth
 assert call(f'{API}/tags/category', {'label': 'missing-tag', 'category': 'event'}, method='PUT')[0] == 404
 y, y_copy = image(130, 'Categorie Y')
 status, y = call(f'{API}/{y["id"]}/copy', raw=y_copy, mime='image/webp'); assert status == 201, y
-y = patch(y, {'tags': ['sepia', '1970s', 'retro'], 'tag_categories': {'sepia': 'format'}})
-assert y['categories'] == {'sepia': 'format', '1970s': 'time', 'retro': 'other'}, y['categories']
-x = patch(x, {'tags': x['tags'] + ['retro']})
+y = patch(y, {'tags': ['sepia', '1970s', 'retro']})
+assert y['categories'] == {'sepia': 'color', '1970s': 'time', 'retro': 'other'}, y['categories']  # a Color of the closed list is Color by itself
+x = patch(x, {'tags': x['tags'] + ['retro', 'press-photo'], 'tag_categories': {'press-photo': 'genre'}})
 status, result = call(f'{API}/tags/category', {'label': 'retro', 'category': 'time'}, method='PUT'); assert status == 400, result  # not a decade
-status, result = call(f'{API}/tags/category', {'label': 'paris', 'category': 'format'}, method='PUT'); assert status == 409 and '1 immagine' in result['error'], result
+status, result = call(f'{API}/tags/category', {'label': 'retro', 'category': 'genre'}, method='PUT'); assert status == 409 and '1 immagine' in result['error'], result
 # Merge: the remaining tag keeps its category; refused when an image would end up with two Time tags.
 status, result = call(f'{API}/tags/merge', {'from': 'retro', 'into': '1960s'}); assert status == 409 and 'due tag' in result['error'], result
 assert call(f'{API}/tags/merge', {'from': 'sepia', 'into': 'black-and-white'})[0] == 200
-status, y = call(f'{API}/{y["id"]}'); assert y['categories'].get('black-and-white') == 'format' and 'sepia' not in y['tags'], y
+status, y = call(f'{API}/{y["id"]}'); assert y['categories'].get('black-and-white') == 'color' and 'sepia' not in y['tags'], y
+# Completion of Genre, Color and Medium for an image analysed before they existed: one paid call, once; only those three change.
+assert x['completable'] is False and x['group']['key'] == 'press-photo/1960s' and x['missing_categories'] == ['medium'], x  # analysed after 0048: no completion
+sql(f"UPDATE images SET categories_completed_at=NULL WHERE id='{y['id']}'")
+code, result = call(f'{API}/{y["id"]}/categories', {'confirm': True}); assert code == 409 and 'analisi' in result['error'], result  # never analysed
+sql(f"UPDATE images SET analysis_status='done' WHERE id='{y['id']}'")
+status, y = call(f'{API}/{y["id"]}'); assert y['completable'] and y['missing_categories'] == ['genre', 'medium'], y
+for wrong in ({}, {'confirm': False}, {'confirm': True, 'model': 'x'}):
+    assert call(f'{API}/{y["id"]}/categories', wrong)[0] == 400, wrong
+openai([{'status': 400}])
+assert call(f'{API}/{y["id"]}/categories', {'confirm': True})[0] == 502
+status, y = call(f'{API}/{y["id"]}'); assert y['completable'], y  # a refusal is not charged: the image may try again
+before = len(spend())
+openai([{'json': {'tags': {'genre': ['Studio Portrait'], 'color': ['color'], 'medium': ['photo-print']}}}])
+code, y = call(f'{API}/{y["id"]}/categories', {'confirm': True}); assert code == 200, y
+# The three categories are replaced (black-and-white becomes color), the others stay.
+assert y['categories'] == {'1970s': 'time', 'retro': 'other', 'studio-portrait': 'genre', 'color': 'color', 'photo-print': 'medium'}, y['categories']
+assert y['group'] == {'key': 'studio-portrait/1970s', 'genre': 'studio-portrait', 'time': '1970s'} and not y['completable'], y
+[sent] = openai(); assert sent['body']['text']['format']['schema']['properties']['tags']['required'] == ['genre', 'color', 'medium'], sent['body']['text']
+assert 'mai dal titolo' in sent['body']['instructions'] and len(spend()) == before + 1 and spend()[-1]['kind'] == 'analysis'
+openai([])
+code, result = call(f'{API}/{y["id"]}/categories', {'confirm': True}); assert code == 409 and openai() == [], result  # once per image
 # Bulk: a new tag with its category.
 status, result = call(f'{API}/bulk', {'action': 'tag-add', 'ids': [x['id'], y['id']], 'tags': ['Bicycle'], 'category': 'object'}); assert result['done'] == 0 and result['failed'], result
 status, result = call(f'{API}/bulk', {'action': 'tag-add', 'ids': [x['id'], y['id']], 'tags': ['bicycle'], 'category': 'object'}); assert result['done'] == 2, result
@@ -234,4 +260,4 @@ assert analyze(z)[0] == 200
 assert spend()[-1]['model'] == 'gpt-5-mini' and analysis_state()["model"] == 'gpt-5-mini'
 call(f'{API}/{z["id"]}/trash', {}); call(f'{API}/{z["id"]}', method='DELETE')
 assert call(f'{API}/models', {'text_model': 'gpt-6.1-terra', 'image_model': 'gpt-image-2.5-flare'}, method='PUT')[0] == 200
-print('Analysis integration 1.9.0 passed: tags only, no captions; confirmation of each paid call, register of calls, model selectors, uncertain not resent, OpenAI limit, ASCII tags, aliases, texts replaced once and restorable, caption soft limit and ceiling, editable model context, tag categories, merge, tags removed with their last image.')
+print('Analysis integration 1.9.0 passed: tags only, no captions; confirmation of each paid call, register of calls, model selectors, uncertain not resent, OpenAI limit, ASCII tags, aliases, texts replaced once and restorable, caption soft limit and ceiling, editable model context, tag categories (Genre, Color, Medium), paid completion of the three, merge, tags removed with their last image.')

@@ -37,13 +37,13 @@ call('/models', {'image_quality': 'medium'}, method='PUT')
 
 # Numbers of Settings: defaults, bounds, used by the SLOP studio.
 status, settings = call('/settings')
-assert settings['values'] == {'slop_section_min_real': 50, 'slop_theme_min_real': 10, 'open_game_hours': 24, 'slop_auto_enabled': 1, 'slop_auto_threshold_percent': 33}, settings
-for wrong in ({'slop_section_min_real': 0}, {'slop_theme_min_real': 201}, {'open_game_hours': 1.5}, {'open_game_hours': '24'}, {'other': 1}, {}):
+assert settings['values'] == {'slop_section_min_real': 50, 'slop_group_min_real': 5, 'open_game_hours': 24, 'slop_auto_enabled': 1, 'slop_auto_threshold_percent': 33}, settings
+for wrong in ({'slop_section_min_real': 0}, {'slop_group_min_real': 201}, {'slop_theme_min_real': 3}, {'open_game_hours': 1.5}, {'open_game_hours': '24'}, {'other': 1}, {}):
     assert call('/settings', wrong, method='PUT')[0] == 400, wrong
-status, settings = call('/settings', {'slop_section_min_real': 7, 'slop_theme_min_real': 3}, method='PUT')
-assert settings['values']['slop_section_min_real'] == 7 and settings['values']['slop_theme_min_real'] == 3, settings
-status, spread = call('/slop/spread'); assert spread['thresholds']['section'] == 7 and spread['thresholds']['theme'] == 3, spread
-call('/settings', {'slop_section_min_real': 50, 'slop_theme_min_real': 10}, method='PUT')
+status, settings = call('/settings', {'slop_section_min_real': 7, 'slop_group_min_real': 3}, method='PUT')
+assert settings['values']['slop_section_min_real'] == 7 and settings['values']['slop_group_min_real'] == 3, settings
+status, spread = call('/slop/spread'); assert spread['thresholds']['section'] == 7 and spread['thresholds']['group'] == 3, spread
+call('/settings', {'slop_section_min_real': 50, 'slop_group_min_real': 5}, method='PUT')
 
 # Statistics: a game being played now, an open game left yesterday, a concluded game, a game whose preparation expired.
 now = int(time.time() * 1000)

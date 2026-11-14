@@ -1,7 +1,9 @@
 /* Tag categories: one colour each, as a left border, checked for colour blindness and contrast on the dark theme. */
 .tag-cat { border-left: 4px solid var(--tag-colour, var(--hairline)) !important; }
 .tag-cat-time { --tag-colour: #3987e5; }
-.tag-cat-format { --tag-colour: #d95926; }
+.tag-cat-genre { --tag-colour: #d95926; }
+.tag-cat-color { --tag-colour: #b0b0b0; }
+.tag-cat-medium { --tag-colour: #c56bd6; }
 .tag-cat-place { --tag-colour: #199e70; }
 .tag-cat-setting { --tag-colour: #c98500; }
 .tag-cat-event { --tag-colour: #d55181; }
