@@ -5,6 +5,8 @@
 import { MEDIA } from "./tag-categories";
 
 export const TREATMENT_VERSION = 1;
+/** Version of the measures: 2 leaves burnt-out areas out of the noise. Copies measured before are measured again. */
+export const METRICS_VERSION = 2;
 export interface Metrics {
   /** Long side in pixels. */ long: number;
   /** Standard deviation of the noise of the luminance in uniform areas (0–255 scale). */ noise: number;
@@ -12,6 +14,7 @@ export interface Metrics {
   /** Distance between the 2nd and 98th percentiles of the luminance (0–255). */ contrast: number;
   /** Mean chroma, (max − min) / 255. */ saturation: number;
   /** Mean deviation of R, G, B from the luminance in neutral areas. */ cast: [number, number, number];
+  /** Version of the algorithm; absent on the first measures. */ v?: number;
 }
 export interface Applied {
   medium: string; contrast: number; cast: [number, number, number]; saturation: number; monochrome: "" | "black-and-white" | "sepia";
@@ -60,7 +63,9 @@ function sharpnessOf(y: Float32Array, width: number, height: number): number {
   return Math.sqrt(sum / ((width - 2) * (height - 2)));
 }
 /** Noise: in 8×8 blocks, the deviation of the Laplacian divided by √20 (its gain on white noise); the median over the 10% of
- * blocks with the least structure, where what varies is noise rather than detail. */
+ * blocks with the least structure, where what varies is noise rather than detail. Blocks burnt to white or black are left out:
+ * they are the flattest of all and hold no grain, so a print with a white sky measured zero (34 REAL out of 55 on 2026-11-14). */
+const CLIP_LOW = 24, CLIP_HIGH = 231;
 function noiseOf(y: Float32Array, width: number, height: number): number {
   const l = laplacian(y, width, height), blocks: { structure: number; noise: number }[] = [];
   for (let r0 = 1; r0 + 8 < height; r0 += 8) for (let c0 = 1; c0 + 8 < width; c0 += 8) {
@@ -69,7 +74,9 @@ function noiseOf(y: Float32Array, width: number, height: number): number {
       const i = r * width + c, v = y[i], d = l[i];
       sy += v; syy += v * v; sl += d; sll += d * d;
     }
-    const structure = Math.sqrt(Math.max(0, syy / 64 - (sy / 64) ** 2)), deviation = Math.sqrt(Math.max(0, sll / 64 - (sl / 64) ** 2));
+    const mean = sy / 64;
+    if (mean < CLIP_LOW || mean > CLIP_HIGH) continue;
+    const structure = Math.sqrt(Math.max(0, syy / 64 - mean ** 2)), deviation = Math.sqrt(Math.max(0, sll / 64 - (sl / 64) ** 2));
     blocks.push({ structure, noise: deviation / Math.sqrt(20) });
   }
   if (!blocks.length) return 0;
@@ -104,7 +111,7 @@ function chromaStats(rgb: Float32Array, y: Float32Array): { saturation: number; 
 function measureRgb(rgb: Float32Array, width: number, height: number): Metrics {
   const y = luminance(rgb, width * height), [p2, , p98] = percentiles(y, 0.02, 0.98), { saturation, cast } = chromaStats(rgb, y);
   return { long: Math.max(width, height), noise: round(noiseOf(y, width, height)), sharpness: round(sharpnessOf(y, width, height)),
-    contrast: p98 - p2, saturation: round(saturation), cast: cast.map(v => round(v, 2)) as [number, number, number] };
+    contrast: p98 - p2, saturation: round(saturation), cast: cast.map(v => round(v, 2)) as [number, number, number], v: METRICS_VERSION };
 }
 /** Measures of an image given as RGBA bytes. */
 export function measure(rgba: ArrayLike<number>, width: number, height: number): Metrics {
@@ -119,7 +126,7 @@ export function validMetrics(value: unknown): Metrics | null {
   if (!finite(m.long, 1, 100_000) || !finite(m.noise, 0, 255) || !finite(m.sharpness, 0, 2000) || !finite(m.contrast, 0, 255)
     || !finite(m.saturation, 0, 1) || !Array.isArray(m.cast) || m.cast.length !== 3 || !m.cast.every(v => finite(v, -255, 255))) return null;
   return { long: Math.round(m.long as number), noise: m.noise as number, sharpness: m.sharpness as number, contrast: m.contrast as number,
-    saturation: m.saturation as number, cast: m.cast as [number, number, number] };
+    saturation: m.saturation as number, cast: m.cast as [number, number, number], ...(m.v === METRICS_VERSION ? { v: METRICS_VERSION } : {}) };
 }
 /** Relative distance between two measures: the mean of the relative differences of noise, sharpness, contrast and saturation. */
 export function gap(a: Metrics, b: Metrics): number {

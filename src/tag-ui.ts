@@ -24,3 +24,23 @@ export const suggestedCategory = (label: string, vocabulary: Map<string, Categor
   vocabulary.get(label) || forcedCategory(label) || "";
 /** Legend of the colours. */
 export const legend = () => '<p class="tag-legend">' + CATEGORIES.map(c => pill(CATEGORY_LABELS[c], c, "tag-legend-item")).join("") + "</p>";
+
+/** What a generated SLOP started from, as stored with it: a twin keeps the tags of its source REAL; a SLOP drawn before the twins
+ * keeps a group, a theme and one tag per category. */
+export interface StartSlot {
+  index?: number; source?: string | null; sample?: string | null; group?: string | null; theme?: string[];
+  tags?: { label: string; category: string }[] | Record<string, string>;
+}
+/** The starting tags of a slot with their category and, for the old slots, a note («gruppo», «tema»). */
+export function startTagList(slot: StartSlot | null | undefined): { label: string; category: Category; note: string }[] {
+  if (!slot) return [];
+  if (Array.isArray(slot.tags)) return sortByCategory(slot.tags.map(t => t.label), Object.fromEntries(slot.tags.map(t => [t.label, t.category])))
+    .map(label => ({ label, category: categoryOf(Object.fromEntries((slot.tags as { label: string; category: string }[]).map(t => [t.label, t.category])), label), note: "" }));
+  const [genre, time] = (slot.group || "").split("/"), theme = Array.isArray(slot.theme) ? slot.theme.filter(t => typeof t === "string") : [];
+  const old = slot.tags && typeof slot.tags === "object" ? slot.tags as Record<string, string> : {};
+  return [...(genre && time ? [{ label: genre, category: "genre" as Category, note: "gruppo" }, { label: time, category: "time" as Category, note: "gruppo" }] : []),
+    ...theme.map(label => ({ label, category: "other" as Category, note: "tema" })),
+    ...Object.entries(old).filter(([c, label]) => isCategory(c) && typeof label === "string" && !theme.includes(label)).map(([c, label]) => ({ label, category: c as Category, note: "" }))];
+}
+export const startPills = (slot: StartSlot | null | undefined) =>
+  startTagList(slot).map(t => pill(t.label, t.category, "rw-pill", t.note ? " <small>" + t.note + "</small>" : "")).join("");

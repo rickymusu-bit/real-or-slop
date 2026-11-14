@@ -77,7 +77,7 @@ assert 'caption' not in place and 'proposed_caption' not in place and place['ana
 assert sorted(place['generated']['tags']) == place['tags'] and place['generated'] == {'tags': place['generated']['tags']}, place
 assert 'mine' not in labels()  # the owner's tag went with its only image
 [sent] = openai()
-assert sent['authorization'] == 'Bearer test-openai-key' and sent['body']['model'] == 'gpt-6.1-terra' and sent['body']['max_output_tokens'] == 2000, sent['authorization']
+assert sent['authorization'] == 'Bearer test-openai-key' and sent['body']['model'] == 'gpt-6.1-terra' and sent['body']['max_output_tokens'] == 8000, sent['authorization']
 text, picture = sent['body']['input'][0]['content'][0]['text'], sent['body']['input'][0]['content'][1]['image_url']
 assert 'barricade' in text and 'riot' in text and 'Title: Place de la République, 1968' in text, text
 assert picture.startswith('data:image/webp;base64,UklGR'), picture[:40]  # the game copy, as the player will see it

@@ -1,20 +1,16 @@
-/** Groups of the SLOP balance read from the library (spec `generazione-slop`, section 2), for the studio, the automatic
- * batches and the statistics. */
+/** Groups of genre and decade read from the library, for the Database filter and the Statistics (spec `statistiche-impostazioni`). */
 import type { Env } from "./core";
 import { groupCounts, groupKey, type GroupCount } from "../shared/slop-groups";
 import { validMetrics, type Metrics } from "../shared/copy-treatment";
 
-/** Counts per group: a new SLOP not analysed yet counts in the group it was generated for. */
+/** Counts per group, from the tags of the images. */
 export async function groups(env: Env): Promise<GroupCount[]> {
-  const rows = (await env.DB.prepare(`SELECT i.origin,i.status,i.analysis_status,i.generation_group,
+  const rows = (await env.DB.prepare(`SELECT i.origin,i.status,
     (SELECT t.label FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=i.id AND t.category='genre' LIMIT 1) AS genre,
     (SELECT t.label FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=i.id AND t.category='time' LIMIT 1) AS time
-    FROM images i WHERE i.status<>'trash'`).all<{ origin: "REAL" | "SLOP"; status: string; analysis_status: string; generation_group: string | null;
-      genre: string | null; time: string | null }>()).results;
-  return groupCounts(rows.map(r => ({ origin: r.origin, status: r.status,
-    group: r.genre && r.time ? groupKey(r.genre, r.time) : r.origin === "SLOP" && r.status === "new" && r.analysis_status !== "done" ? r.generation_group : null })));
+    FROM images i WHERE i.status<>'trash'`).all<{ origin: "REAL" | "SLOP"; status: string; genre: string | null; time: string | null }>()).results;
+  return groupCounts(rows.map(r => ({ origin: r.origin, status: r.status, group: r.genre && r.time ? groupKey(r.genre, r.time) : null })));
 }
-
 
 const MEASURES = ["long", "noise", "sharpness", "contrast", "saturation"] as const;
 type Measure = typeof MEASURES[number];

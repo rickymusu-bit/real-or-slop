@@ -4,7 +4,7 @@ import { HttpError, type Env } from "./core";
 import { since as openSince } from "./in-play";
 import { levels } from "./game";
 import { groupMeasures, groups } from "./slop-groups";
-import { numberSetting } from "./app-settings";
+import { twinCounts } from "./twins";
 import { LEVEL_IDS, scoreOf, type Level, type Outcome } from "../shared/levels";
 
 const NOW_MS = 5 * 60_000, DAY_MS = 86_400_000;
@@ -68,13 +68,11 @@ export async function stats(env: Env, period: string) {
       warning: share !== null && (share < 0.4 || share > 0.6), levels: (await levels(env)).levels,
       formats: [...new Set(formats.map(f => f.format))].map(format => ({ format,
         real: formats.find(f => f.format === format && f.origin === "REAL")?.n || 0, slop: formats.find(f => f.format === format && f.origin === "SLOP")?.n || 0 })),
-      groups: await groupBalance(env), measures: await groupMeasures(env) },
+      groups: await groupBalance(env), measures: await groupMeasures(env), twins: await twinCounts(env) },
   };
 }
 
-/** Groups of genre and decade: counts, spread and REAL missing to the threshold (spec `statistiche-impostazioni`, section 3). */
+/** Groups of genre and decade with their counts, and the twins: REAL, REAL with an approved or published twin, REAL waiting. */
 async function groupBalance(env: Env) {
-  const minimum = await numberSetting(env, "slop_group_min_real");
-  return (await groups(env)).map(g => ({ group: g.key, real: g.real, slop: g.slop, fresh: g.fresh, spread: g.real - g.slop,
-    missing_real: Math.max(0, minimum - g.real) }));
+  return (await groups(env)).map(g => ({ group: g.key, real: g.real, slop: g.slop, fresh: g.fresh, spread: g.real - g.slop }));
 }

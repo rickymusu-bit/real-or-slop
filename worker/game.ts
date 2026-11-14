@@ -6,6 +6,7 @@ import { body, GAME_IMAGE, hash, HttpError, id, json, rateLimit, type Env, type 
 import { media, privateMedia } from "./storage";
 import { preparationTtlMs } from "../shared/preloading";
 import { curatedSample } from "./sampling";
+import { separateTwins } from "../shared/twins";
 import { isLevel, LEVEL_IDS, LEVELS, scoreOf, type Level, type Outcome } from "../shared/levels";
 import { enter } from "./leaderboard";
 
@@ -120,8 +121,13 @@ export async function game(request: Request, env: Env, path: string) {
     const real = rows.filter(r => r.type === "REAL").length, slop = rows.filter(r => r.type === "AI").length;
     if (real < level.photos || slop < level.photos)
       throw new HttpError(409, `Il catalogo non ha ancora abbastanza foto per il livello ${level.label}: ne servono almeno ${level.photos} REAL e ${level.photos} SLOP`);
-    const sample = curatedSample(rows, level.photos);
-    if (sample.images.length !== level.photos) throw new HttpError(409, "Catalogo insufficiente per questo livello");
+    const drawn = curatedSample(rows, level.photos);
+    if (drawn.images.length !== level.photos) throw new HttpError(409, "Catalogo insufficiente per questo livello");
+    // A SLOP and the REAL it was written from never meet in a game (spec `gioco-a-livelli`): one of the two leaves for another photo
+    // of the same origin, so the sequence of origins drawn by the sampler does not change.
+    const twins = (await env.DB.prepare("SELECT id,generation_source FROM images WHERE status='published' AND origin='SLOP' AND generation_source IS NOT NULL")
+      .all<{ id: string; generation_source: string }>()).results;
+    const sample = { images: separateTwins(drawn.images, rows, new Map(twins.map(t => [t.id, t.generation_source]))) };
     const token = cookie(request) || id() + id(), key = await hash(token), now = Date.now(), sid = id();
     await env.DB.batch([
       env.DB.prepare(`INSERT INTO game_sessions(id,mode,level,created_at,owner_hash,protocol_version,phase,preparation_expires_at,timing_mode,round_seconds)

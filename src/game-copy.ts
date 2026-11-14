@@ -2,7 +2,7 @@
  * «REAL campione», WebP encoding, measures of the copy, upload to the library; saving «Inquadratura» makes a new copy only when the
  * crop changed. Copies without measures are measured when the dashboard opens. */
 import { centredCrop, copyDimensions, cropQuery, GAME_COPY, viewQuery, type Crop, type View } from "../shared/game-copy";
-import { gap, measure, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Treatment } from "../shared/copy-treatment";
+import { gap, measure, METRICS_VERSION, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Treatment } from "../shared/copy-treatment";
 
 const API = "/api/admin/library/";
 
@@ -76,31 +76,35 @@ async function sampleOf(id: string): Promise<Sample | null> {
 }
 /** Items of the library a treatment plan is built from. */
 export interface TreatableItem {
-  id: string; origin: string; tags?: string[]; categories?: Record<string, string>;
-  generation?: { slot?: { tags?: Record<string, string>; sample?: string | null } | null; group?: string | null } | null;
-  treatment?: Treatment | null; group?: { key: string } | null;
+  id: string; origin: string;
+  generation?: { slot?: { tags?: { label: string; category: string }[] | Record<string, string>; sample?: string | null; source?: string | null } | null } | null;
+  treatment?: Treatment | null;
 }
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0] & 0x7fffffff;
 
-/** The plan for a SLOP: the stored treatment if there is one (same sample, same seed), otherwise the slot's «REAL campione», otherwise
- * a REAL of its group picked at random. `change` picks another sample of the group; `off` turns the treatment off or on. Null for a
- * REAL, or for a SLOP whose group has no measured REAL. */
+/** Colour, medium and decade a twin was asked for, from the tags of its source REAL (a SLOP drawn before the twins keeps one tag per
+ * category in an object). */
+function lookOf(slot: NonNullable<TreatableItem["generation"]>["slot"]) {
+  const tags = slot?.tags, of = (category: string) => (Array.isArray(tags) ? tags.find(t => t.category === category)?.label
+    : tags && typeof tags === "object" ? (tags as Record<string, string>)[category] : "") || "";
+  return { color: of("color"), medium: of("medium"), time: of("time") };
+}
+/** The plan for a SLOP: the stored treatment if there is one (same sample, same seed), otherwise the «REAL campione» drawn with its
+ * batch, otherwise a measured REAL with the same colour, medium and decade picked at random, otherwise its source REAL. `change`
+ * picks another sample; `off` turns the treatment off or on. Null for a REAL, or for a SLOP with no measured REAL to follow. */
 export async function treatmentPlan(item: TreatableItem, options: { change?: boolean; off?: boolean } = {}): Promise<TreatmentPlan | null> {
   if (item.origin !== "SLOP") return null;
-  const stored = item.treatment, slot = item.generation?.slot;
-  const medium = stored?.medium || slot?.tags?.medium || "", color = stored?.color || slot?.tags?.color || "";
+  const stored = item.treatment, slot = item.generation?.slot, look = lookOf(slot);
+  const medium = stored?.medium || look.medium, color = stored?.color || look.color;
   const off = options.off ?? stored?.off ?? false;
   if (stored && !options.change) return { off, seed: stored.seed, medium, color, sample: stored.sample };
   const wantedId = !options.change ? slot?.sample : null;
   let sample = wantedId ? await sampleOf(wantedId) : null;
   if (!sample?.metrics) {
-    const group = item.generation?.group || item.group?.key;
-    if (!group) return null;
-    const list = await fetch(API + "?status=library&origin=REAL&group=" + encodeURIComponent(group), { credentials: "same-origin", cache: "no-store" });
-    const items = list.ok ? ((await list.json()) as { items: Sample[] }).items.filter(i => i.metrics && i.id !== stored?.sample.id) : [];
-    const fitting = items.filter(i => (!medium || i.tags.includes(medium)) && (!color || i.tags.includes(color)));
-    const pool = fitting.length ? fitting : items;
-    sample = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+    const labels = [color, medium, look.time].filter(Boolean);
+    const list = labels.length ? await fetch(API + "?status=library&origin=REAL&match=all&tags=" + encodeURIComponent(labels.join(",")), { credentials: "same-origin", cache: "no-store" }) : null;
+    const items = list?.ok ? ((await list.json()) as { items: Sample[] }).items.filter(i => i.metrics && i.id !== stored?.sample.id && i.id !== slot?.source) : [];
+    sample = items.length ? items[Math.floor(Math.random() * items.length)] : slot?.source && !options.change ? await sampleOf(slot.source) : null;
   }
   if (!sample?.metrics) return null;
   return { off, seed: randomSeed(), medium, color, sample: { id: sample.id, metrics: sample.metrics } };
@@ -135,11 +139,11 @@ export async function saveFrame<T>(item: T & TreatableItem & { copy: { crop: Cro
   return same ? item : prepareItemCopy<T>(item, undefined, choice.crop);
 }
 
-/** Measures the copies that have none (copies made before the measures existed), one at a time, from the copy itself. Free. */
+/** Measures the copies that have no measures of the current version, one at a time, from the copy itself. Free. */
 export async function measureMissing(items: { id: string; metrics?: Metrics | null; copy?: { sha256: string | null } | null }[]): Promise<number> {
   let done = 0;
   for (const item of items) {
-    if (item.metrics || !item.copy?.sha256) continue;
+    if (item.metrics?.v === METRICS_VERSION || !item.copy?.sha256) continue;
     try {
       const response = await fetch(API + encodeURIComponent(item.id) + "/file", { credentials: "same-origin", cache: "no-store" });
       if (!response.ok) continue;

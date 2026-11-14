@@ -24,16 +24,19 @@ def clean_field():
     sql("UPDATE images SET trashed_from=CASE status WHEN 'new' THEN 'new' ELSE 'approved' END,status='trash' WHERE status<>'trash' AND id NOT LIKE 'autob-%'; "
         "DELETE FROM slop_batches; DELETE FROM slop_proposal_ignored")
 
-# 62 REAL approved (12 in the group ab-arch/1830s) and 9 new SLOP of the group: spread 100%, 3 missing, a batch of 3.
+# 62 REAL approved (12 tagged) and 59 twins: 50 approved, 9 new. 100 × (62 − 50) / 62 = 19%: the threshold is lowered to 15 for this
+# check. 3 REAL wait: a batch of 3.
 clean_field()
 statements = ["INSERT OR IGNORE INTO tags(id,label,category,created_at) VALUES ('ab-tag-arch','ab-arch','genre','x'),('ab-tag-1830s','1830s','time','x'),('ab-tag-roma','ab-roma','place','x'),('ab-tag-napoli','ab-napoli','place','x')"]
-def add(i, origin, labels, status='approved'):
+def add(i, origin, labels, status='approved', source=None):
     h = format(20_000 + i, '064x')
-    statements.append(f"INSERT INTO images(id,origin,status,title,original_key,original_sha256,original_mime,width,height,copy_key,copy_sha256,created_at,updated_at) "
-                      f"VALUES('autob-{i}','{origin}','{status}','ab{i}','autob/{i}','{h}','image/jpeg',10,10,'autob/c{i}','{h}','x','x')")
+    statements.append(f"INSERT INTO images(id,origin,status,title,original_key,original_sha256,original_mime,width,height,copy_key,copy_sha256,created_at,updated_at,generation_source) "
+                      f"VALUES('autob-{i}','{origin}','{status}','ab{i}','autob/{i}','{h}','image/jpeg',10,10,'autob/c{i}','{h}','x','x',{repr(source) if source else 'NULL'})")
     if labels: statements.append('INSERT INTO image_tags(image_id,tag_id) VALUES ' + ','.join(f"('autob-{i}','ab-tag-{l}')" for l in labels))
 for i in range(62): add(i, 'REAL', ['arch', '1830s', ['roma', 'napoli'][i % 2]] if i < 12 else [])
-for i in range(100, 109): add(i, 'SLOP', ['arch', '1830s'], 'new')
+for i in range(12, 62): add(100 + i, 'SLOP', [], source=f'autob-{i}')
+for i in range(3, 12): add(100 + i, 'SLOP', [], 'new', source=f'autob-{i}')
+statements.append("INSERT INTO app_settings(key,value,updated_at) VALUES('slop_auto_threshold_percent','15','x') ON CONFLICT(key) DO UPDATE SET value='15'")
 sql('; '.join(statements))
 try:
     with sync_playwright() as p:
@@ -46,8 +49,8 @@ try:
             page.goto(base + '/admin')
             box = page.locator('#slop-auto')
             expect(box).to_contain_text('Proposta di generazione')
-            expect(box).to_contain_text('ab-arch'); expect(box).to_contain_text('1830s'); expect(box).to_contain_text('12 REAL'); expect(box).to_contain_text('9 SLOP nuove')
-            expect(box).to_contain_text('spread 100%, ne mancano 3')
+            expect(box).to_contain_text('62 REAL'); expect(box).to_contain_text('9 con una gemella nuova')
+            expect(box).to_contain_text('spread 19%, 3 REAL senza gemella')
             expect(page.locator('#slop-auto-count')).to_have_text(' (1)')
             page.screenshot(path=str(folder / f'{name}-proposal.png'), full_page=True)
             # «Chiudi» hides it until the next opening of the dashboard.
@@ -58,7 +61,8 @@ try:
             page.get_by_role('button', name='Impostazioni').click()
             page.locator('#library-thresholds summary').click()
             expect(page.locator('[name="slop_auto_enabled"]')).to_have_value('1')
-            expect(page.locator('[name="slop_auto_threshold_percent"]')).to_have_value('33')
+            expect(page.locator('[name="slop_auto_threshold_percent"]')).to_have_value('15')
+            expect(page.locator('[name="slop_group_min_real"]')).to_have_count(0)
             page.locator('[name="slop_auto_enabled"]').select_option('0')
             page.locator('#library-thresholds-form').get_by_role('button', name='Salva').click()
             expect(page.locator('#library-settings-message')).to_contain_text('Soglie dello studio SLOP salvate')
@@ -81,13 +85,15 @@ try:
             expect(cards).to_have_count(3)
             expect(cards.first).to_contain_text('SLOP'); expect(cards.first).not_to_contain_text('senza copia')
             page.screenshot(path=str(folder / f'{name}-database.png'), full_page=True)
-            # Starting tags: the group of the batch and a place drawn for the slot, in the detail and in the preview.
+            # Starting tags: those of the REAL the SLOP is the twin of, in the detail (with the way to that REAL) and in the preview.
             cards.first.locator('.library-open').click()
             start = page.locator('#library-detail [data-start-tags]')
             expect(start).to_contain_text('Tag di partenza')
-            expect(start.locator('.rw-pill', has_text='ab-arch')).to_contain_text('gruppo')
-            expect(page.locator('#library-detail [data-group]')).to_be_visible()
+            expect(start.locator('.rw-pill', has_text='ab-arch')).to_have_count(1)
+            expect(start).to_contain_text('gemella')
             expect(start.locator('.rw-pill.tag-cat-place')).to_have_count(1)
+            start.get_by_role('button', name='Apri la REAL di origine').click()
+            expect(page.locator('#library-detail')).to_contain_text('REAL · approvata')
             page.locator('#library-detail .library-detail-close button').click()
             long_press(page, cards.first.locator('.library-open'))
             preview = page.locator('dialog.image-preview')
@@ -110,4 +116,4 @@ finally:
     sql("DELETE FROM image_tags WHERE image_id IN (SELECT id FROM images WHERE id LIKE 'autob-%' OR generation_batch IS NOT NULL); "
         "DELETE FROM images WHERE id LIKE 'autob-%'; DELETE FROM tags WHERE id LIKE 'ab-tag-%'; DELETE FROM slop_batches; DELETE FROM slop_proposal_ignored; "
         "DELETE FROM app_settings WHERE key IN ('slop_auto_enabled','slop_auto_threshold_percent')")
-print('Automatic SLOP batches in the browser 1.1.0 passed on desktop and mobile: starting tags in the Database, proposal, close, Settings, confirmation, batch run, review, Database filter.')
+print('Automatic SLOP batches in the browser 2.0.0 passed on desktop and mobile: twins, starting tags and source REAL in the Database, proposal, close, Settings, confirmation, batch run, review, Database filter.')

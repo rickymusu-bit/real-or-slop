@@ -9,9 +9,10 @@ export const PARTS: Part[] = ["base", "analysis", "slop_prompt"];
 export const CONTEXT_MAX = 4000;
 const HISTORY = 50;
 
-/** Proposals of the code (context 1.7.0, owner decisions of 2026-11-14): categories Genre, Color and Medium in the base and the
- * analysis; SLOP prompts built on the group's examples, with the medium described concretely, signs and inscriptions consistent with
- * the scene, varied people, the period's wear, rules written as what to describe. */
+/** Proposals of the code (context 1.8.0, after the first batch of twins' predecessors on 2026-11-14): the SLOP prompt is the twin of
+ * one REAL; no fixed sentence structure (every prompt of that batch put «a woman… while a man…» in the foreground of a crowd scene);
+ * the rendering of the picture, never the print as an object (five prints out of five came with white margins, worn corners and
+ * scratches); no place names on signs. Base and analysis as in 1.7.0. */
 export const DEFAULTS: Record<Part, string> = {
   base: `Lavori per un archivio fotografico italiano che cataloga le immagini con etichette brevi.
 
@@ -29,15 +30,17 @@ Scegli parole con un solo significato («house-fire» per l'evento, «flames» p
   analysis: `Ricevi un'immagine e il suo contesto: titolo e descrizione, oppure la descrizione della scena. Descrivi ciò che si vede.
 
 Tag: da 5 a 15, divisi per categoria. Se l'epoca è ricavabile, indica il decennio. Indica sempre genere, colore e supporto, giudicandoli dall'aspetto dell'immagine: retino di stampa, bordi e grana di una pellicola, carta di una stampa, nitidezza di un sensore digitale. Preferisci i tag del vocabolario esistente, che ricevi diviso per categoria, quando sono adatti; creane di nuovi solo se nessuno lo è.`,
-  slop_prompt: `Scrivi prompt per un generatore di immagini fotorealistiche. Ogni prompt descrive una fotografia plausibile del genere e del decennio del gruppo, con i tag del suo slot: inquadratura, luce, ambiente, persone, azioni, dettagli d'epoca. Gli esempi sono fotografie vere dello stesso genere ed epoca: prendine il modo di fotografare, mai la scena. Descrivi ciò che si vede, mai ciò che manca: niente elenchi di cose da evitare.
+  slop_prompt: `Scrivi prompt per un generatore di immagini fotorealistiche. Ogni voce è una fotografia vera, data con i suoi tag e la sua descrizione: scrivi il prompt di un'altra fotografia che potrebbe stare accanto a quella nello stesso archivio. Stesso evento o stesso tipo di scena, stesso luogo, decennio, genere, colore e supporto; momento, punto di vista e persone diversi. Descrivi ciò che si vede, mai ciò che manca: niente elenchi di cose da evitare.
 
-Supporto: descrivilo in concreto secondo il supporto e il colore dello slot. Pagina di giornale: stampa a retino ad alto contrasto, alte luci bruciate, neri chiusi. Fotogramma o diapositiva: colori sbiaditi con una dominante, poca nitidezza, alone sulle luci. Stampa o cartolina: carta ingiallita, toni morbidi. Foto digitale o di telefono: la resa dei sensori di quel decennio. Indica obiettivo e distanza, senza nominare fotografi, agenzie o archivi.
+Varietà: ogni prompt ha una sua struttura. Cambia da uno all'altro distanza, altezza del punto di vista, obiettivo, luce e formato; non ripetere gli stessi oggetti di scena né lo stesso schema di frase. Rispetta il genere: una scena di folla mostra la folla, da lontano o dall'alto, senza una coppia di protagonisti in primo piano; un ritratto mostra una persona; una foto di cronaca coglie un'azione, anche tagliata o mossa.
 
-Formato: scegli il formato più adatto al soggetto, come farebbe un fotografo: orizzontale per paesaggi e scene larghe, verticale per persone in piedi, edifici alti e ritratti; quadrato solo se il soggetto lo chiede. Componi la scena per quel formato, come un fotografo dell'epoca, non per forza al centro. Nelle scene affollate poche figure in primo piano, le altre più lontane.
+Resa: l'immagine riempie tutto il fotogramma, da bordo a bordo. Descrivi solo la resa di ciò che è ripreso, secondo colore e supporto della voce: grana, nitidezza, contrasto, dominante, alte luci, mosso. Mai la fotografia come oggetto: niente carta, margini, angoli, pieghe, graffi o cornici. Stampa in bianco e nero: grana visibile, neri pieni, messa a fuoco imperfetta. Pagina di giornale: retino, alto contrasto, alte luci bruciate. Diapositiva o fotogramma: colori pieni ma d'epoca, con una dominante e poca nitidezza. Foto digitale o di telefono: la resa dei sensori di quel decennio.
 
-Persone: gente comune dell'epoca e del luogo, diversa per età, corporatura, espressione, capelli, abiti e gesti; ognuna fa qualcosa di suo e tiene oggetti diversi. I volti si vedono quando l'inquadratura lo consente.
+Formato: quello che sceglierebbe un fotografo per quel soggetto, orizzontale, verticale o quadrato; non sempre lo stesso.
 
-Scritte: poche e brevi, fatte a mano quando lo sono nella realtà. Un cartello è rivolto dove guarda chi lo tiene: chi è ripreso di spalle ne mostra il retro. Il luogo si riconosce da edifici, strade e paesaggio, non da insegne che lo nominano.
+Persone: gente comune dell'epoca e del luogo, diversa per età, corporatura, espressione, capelli, abiti e gesti; ognuna fa qualcosa di suo. I volti si vedono quando l'inquadratura lo consente.
+
+Scritte: solo dove la scena le ha davvero, poche e brevi, fatte a mano quando lo sono nella realtà e con parole diverse da un cartello all'altro. Un cartello è rivolto dove guarda chi lo tiene: chi è ripreso di spalle ne mostra il retro. Insegne, striscioni e stampati portano nomi di negozi, sigle e parole comuni, mai il nome della città, dello Stato o dell'evento: il luogo si riconosce da edifici, strade e paesaggio.
 
 Epoca: abiti, acconciature, veicoli, segnaletica, luci e oggetti del decennio, con l'usura e il disordine della realtà.
 

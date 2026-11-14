@@ -6,10 +6,10 @@ import "./slop-auto.css";
 import { prepareItemCopy, type TreatableItem } from "./game-copy";
 import { escape } from "../shared/html";
 
-interface Proposal { group: string; genre: string; time: string; n_real: number; n_slop: number; n_new: number; spread: number; spread_percent: number; missing: number; size: number }
+interface Proposal { n_real: number; n_slop: number; n_new: number; spread: number; spread_percent: number; missing: number; size: number }
 interface AutoImage { id: string; status: string; index: number | null; copy: boolean; analysis: string }
 interface AutoBatch {
-  id: string; group: string; size: number; status: "running" | "review"; prompts_status: string; prompts_error: string; slots: number;
+  id: string; size: number; status: "running" | "review"; prompts_status: string; prompts_error: string; slots: number;
   attempted: number[]; snapshot: Proposal | null; images: AutoImage[]; undecided: number; updated_at: string;
 }
 export interface AutoState { enabled: boolean; threshold_percent: number; max_batch: number; paid_calls: boolean; batch: AutoBatch | null; proposal: Proposal | null; reason: string | null }
@@ -52,16 +52,16 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
     let html = "";
     if (batch && batch.status === "running") {
       const ready = batch.images.filter(i => i.analysis === "done").length;
-      html = `<p><strong>Batch automatico</strong> per il gruppo <code>${escape(batch.group)}</code>: ${batch.attempted.length} di ${batch.slots} immagini inviate al generatore, ${ready} pronte.</p>
+      html = `<p><strong>Batch automatico</strong> di SLOP gemelle: ${batch.attempted.length} di ${batch.slots} immagini inviate al generatore, ${ready} pronte.</p>
         <p class="slop-auto-progress" role="status">${escape(running ? progress : "In pausa: riprende da qui.")}</p>
         <div class="slop-auto-actions"><button type="button" data-auto="stop">Interrompi</button></div>`;
     } else if (batch) {
-      html = `<p><strong>Batch automatico</strong> per il gruppo <code>${escape(batch.group)}</code>: ${batch.undecided} di ${batch.images.length} ${batch.images.length === 1 ? "immagine" : "immagini"} da decidere.
+      html = `<p><strong>Batch automatico</strong> di SLOP gemelle: ${batch.undecided} di ${batch.images.length} ${batch.images.length === 1 ? "immagine" : "immagini"} da decidere.
         Nessuna nuova proposta finché non sono tutte approvate, pubblicate o nel cestino.</p>
         <div class="slop-auto-actions"><button type="button" data-auto="review">Rivedi nel Database</button></div>`;
-    } else if (next && dismissed !== next.group + ":" + next.size) {
-      html = `<p><strong>Proposta di generazione</strong> per il gruppo <code>${escape(next.genre)}</code> degli anni <code>${escape(next.time)}</code>: ${next.n_real} REAL, ${next.n_slop} SLOP approvate o pubblicate,
-        ${next.n_new} SLOP nuove; spread ${percent(next.spread_percent)}, ne mancano ${next.missing}.
+    } else if (next && dismissed !== "twins:" + next.size) {
+      html = `<p><strong>Proposta di generazione</strong>: ${next.n_real} REAL, ${next.n_slop} con una SLOP gemella approvata o pubblicata,
+        ${next.n_new} con una gemella nuova da decidere; spread ${percent(next.spread_percent)}, ${next.missing} REAL senza gemella.
         Generare un batch di <strong>${next.size} SLOP</strong>? Per ogni immagine: generazione, trattamento della copia e tag; in più una chiamata per i prompt.</p>
         ${state!.paid_calls ? "" : '<p class="hint">Chiamate a pagamento spente: manca la chiave OpenAI.</p>'}
         <div class="slop-auto-actions"><button type="button" class="primary" data-auto="start" ${state!.paid_calls ? "" : "disabled"}>Genera ${next.size} SLOP</button>
@@ -151,16 +151,16 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
     const action = button.dataset.auto!, next = state.proposal;
     notice = "";
     try {
-      if (action === "dismiss" && next) { dismissed = next.group + ":" + next.size; render(); return; }
+      if (action === "dismiss" && next) { dismissed = "twins:" + next.size; render(); return; }
       if (action === "review" && state.batch) { await hooks.review(state.batch.id); return; }
       if (action === "stop") { stopping = true; await call(SLOP + "auto/stop", {}); await load(); return; }
-      if (action === "ignore" && next) { state = await call<AutoState>(SLOP + "auto/ignore", { group: next.group }); render(); return; }
+      if (action === "ignore" && next) { state = await call<AutoState>(SLOP + "auto/ignore", {}); render(); return; }
       if (action === "start" && next) {
         const models = await call<{ text_model: string; image_model: string; image_quality: string }>(LIBRARY + "/models");
-        if (!window.confirm(`Generare ${next.size} SLOP per il gruppo «${next.group}» con ${models.image_model} in qualità ${models.image_quality} e analizzarle con ${models.text_model}? ` +
+        if (!window.confirm(`Generare ${next.size} SLOP gemelle con ${models.image_model} in qualità ${models.image_quality} e analizzarle con ${models.text_model}? ` +
           `Sono ${next.size * 2 + 1} chiamate a pagamento: una per i prompt, una per ogni immagine e una per ogni analisi.`)) return;
         button.disabled = true;
-        state = await call<AutoState>(SLOP + "auto/start", { group: next.group, size: next.size, confirm: true });
+        state = await call<AutoState>(SLOP + "auto/start", { size: next.size, confirm: true });
         render();
         void run();
       }

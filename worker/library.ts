@@ -39,7 +39,7 @@ export interface Row {
   generated_caption: string | null; generated_tags: string | null;
   generation_batch: string | null; generation_slot: string | null; generation_quality: string | null;
   analysis_base_context: string | null; analysis_task_context: string | null; copy_crop: string | null; copy_view: string | null;
-  categories_completed_at: string | null; copy_metrics: string | null; copy_treatment: string | null; generation_group: string | null;
+  categories_completed_at: string | null; copy_metrics: string | null; copy_treatment: string | null; generation_group: string | null; generation_source: string | null;
 }
 const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
@@ -144,7 +144,7 @@ function view(row: Row, rows: TagRow[], extra: Extra = {}) {
       context: row.analysis_task_context ? { base: row.analysis_base_context, task: row.analysis_task_context } : null },
     generated: generatedOf(row),
     generation: row.generation_batch ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality,
-      group: row.generation_group } : null,
+      source: row.generation_source } : null,
     group, missing_categories: VISUAL.filter(c => !rows.some(r => r.category === c)),
     completable: completable(row, rows.map(r => r.category)),
     metrics: validMetrics(parseJson(row.copy_metrics)), treatment: validTreatment(parseJson(row.copy_treatment)),
@@ -195,7 +195,7 @@ export function tagStatements(env: Env, imageIdValue: string, wanted: string[], 
 /** Adds a new image to the library. The original goes to quarantine; the browser then uploads its game copy. */
 export async function create(env: Env, input: { origin: Origin; title: string; description?: string; bytes: ArrayBuffer;
   source_url?: string; author?: string; license_name?: string; license_url?: string; prompt?: string; model?: string;
-  generation?: { batch: string; slot: unknown; quality: string; group?: string | null } }) {
+  generation?: { batch: string; slot: unknown; quality: string; source?: string | null } }) {
   if (!env.QUARANTINE) throw new HttpError(503, "Quarantena privata non configurata");
   const bytes = new Uint8Array(input.bytes);
   if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new HttpError(413, "File vuoto o oltre 12 MB");
@@ -212,13 +212,13 @@ export async function create(env: Env, input: { origin: Origin; title: string; d
   await env.QUARANTINE.put(key, bytes, { httpMetadata: { contentType: mime }, customMetadata: { sha256: hash } });
   try {
     await env.DB.prepare(`INSERT INTO images(id,origin,title,description,source_url,author,license_name,license_url,prompt,model,
-      original_key,original_sha256,original_mime,width,height,created_at,updated_at,generation_batch,generation_slot,generation_quality,generation_group)
+      original_key,original_sha256,original_mime,width,height,created_at,updated_at,generation_batch,generation_slot,generation_quality,generation_source)
       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(imageIdValue, input.origin, text(input.title, "title", true), text(input.description, "description"),
         text(input.source_url, "source_url"), text(input.author, "author"), text(input.license_name, "license_name"),
         text(input.license_url, "license_url"), text(input.prompt, "prompt"), text(input.model, "model"),
         key, hash, mime, width, height, stamp, stamp, input.generation?.batch ?? null,
-        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null, input.generation?.group ?? null).run();
+        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null, input.generation?.source ?? null).run();
   } catch (error) {
     await env.QUARANTINE.delete(key);
     if (error instanceof HttpError) throw error;

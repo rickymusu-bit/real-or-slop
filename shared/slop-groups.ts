@@ -1,8 +1,7 @@
-/** Groups of the SLOP balance (spec `generazione-slop`, section 2): a group is a Genre tag and a Time tag («mugshot/1960s»).
- * Pure. */
+/** Groups of images of the same Genre and decade («mugshot/1960s»): a filter of the Database and the unit the Statistics compare
+ * REAL and SLOP on (spec `statistiche-impostazioni`, section 3). Pure. */
 import type { Category } from "./tag-categories";
 
-export const GROUP_MIN_REAL = 5;
 export interface Group { key: string; genre: string; time: string }
 export const groupKey = (genre: string, time: string) => genre + "/" + time;
 /** The group of a key, or null if the key is not «genre/decade». */

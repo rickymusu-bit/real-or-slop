@@ -48,9 +48,10 @@ class Handler(BaseHTTPRequestHandler):
         if behaviour is None and data.get('text', {}).get('format', {}).get('name') == 'slop_prompts':
             request = json.loads(data['input'][0]['content'][0]['text'])
             allowed = data['text']['format']['schema']['properties']['prompts']['items']['properties']['format']['enum']
-            behaviour = {'json': {'prompts': [{'prompt': 'A documentary photograph: ' + ', '.join(request['theme'] + list(slot.values())),
-                                               'used_tags': list(slot.values()), 'format': allowed[i % len(allowed)]}
-                                              for i, slot in enumerate(request['slots'])]}}
+            labels = lambda item: [l for c in ('time', 'genre', 'color', 'medium', 'place', 'event') for l in item['tags'].get(c, [])]
+            behaviour = {'json': {'prompts': [{'prompt': 'A documentary photograph: ' + ', '.join(labels(item)),
+                                               'used_tags': labels(item), 'format': allowed[i % len(allowed)]}
+                                              for i, item in enumerate(request['items'])]}}
         behaviour = behaviour or DEFAULT
         text = 'not json' if behaviour.get('garbage') else json.dumps(behaviour['json']) if 'json' in behaviour \
             else json.dumps({'tags': behaviour['tags'], 'caption': behaviour['caption']})

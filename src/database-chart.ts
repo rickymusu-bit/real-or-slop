@@ -2,13 +2,12 @@
  * published and approved stacked, with the spread; filters, sorting, compact view, tooltip and table view. */
 import "./database.css";
 import { escape } from "../shared/html";
-import { CATEGORY_LABELS, type Category } from "../shared/tag-categories";
-import { SLOT_ORDER } from "../shared/slot-extraction";
+import { CATEGORIES, CATEGORY_LABELS, type Category } from "../shared/tag-categories";
 
 export interface DistributionTag { label: string; category: Category; real_approved: number; real_published: number; slop_approved: number; slop_published: number; spread: number }
 export interface Distribution { totals: { REAL: { approved: number; published: number }; SLOP: { approved: number; published: number } }; tags: DistributionTag[] }
 type Order = "spread" | "total" | "label";
-const CATEGORY_FILTER: Category[] = [...SLOT_ORDER, "other"];
+const CATEGORY_FILTER: Category[] = [...CATEGORIES];
 const signed = (n: number) => (n > 0 ? "+" : "") + n;
 const pct = (part: number, whole: number) => whole ? Math.round(part / whole * 100) + "%" : "—";
 
