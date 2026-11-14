@@ -1,6 +1,6 @@
 # Contenuti delle SLOP e trasparenza — specifica 1.2.0
 
-Stato: approvata dall'owner il 2026-11-14, implementata nell'app 1.25.0 (in revisione). Aggiornata: 2026-11-14T18:00:00Z. La 1.2.0
+Stato: vigente, in produzione con l'app 1.25.0 (2026-11-14). Aggiornata: 2026-11-14T18:00:00Z. La 1.2.0
 dice dove i testi del sito citano il trattamento, compresi i Termini (richiesta dell'owner del 2026-11-14). La 1.1.0 aggiunge i generi
 che implicano un reato e il trattamento delle SLOP nella trasparenza verso i giocatori. La 1.0.0 era la versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riprende
 la sezione 11 di `libreria-immagini.v1.8.0` e la sezione 6 di `anteprima-descrizione.v1.2.0`, che restano nella cronologia git.

@@ -1,6 +1,6 @@
 # Privacy e note legali — specifica 1.2.0
 
-Stato: vigente, in produzione con l'app 1.23.0; la 1.2.0 è implementata nell'app 1.25.0 (in revisione). Aggiornata: 2026-11-14T19:00:00Z.
+Stato: vigente, la 1.2.0 in produzione con l'app 1.25.0. Aggiornata: 2026-11-14T19:00:00Z.
 1.2.0: su richiesta dell'owner del 2026-11-14 i Termini d'uso (aggiornati il 14 novembre 2026) dicono che le SLOP sono generate «senza
 parti di fotografie vere, e spesso ridotte, sfocate, sgranate o sbiadite come lo sono le immagini che circolano», al posto di «generate
 integralmente», per il trattamento delle SLOP (specifica `copie-di-gioco`, sezione 4); «Fonti e crediti» lo dice allo stesso modo.

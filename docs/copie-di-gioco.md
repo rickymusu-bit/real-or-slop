@@ -1,6 +1,6 @@
 # Copie di gioco — specifica 7.0.1
 
-Stato: approvata dall'owner il 2026-11-14, implementata nell'app 1.25.0 con la migrazione 0048 (in revisione). Aggiornata: 2026-11-14T16:30:00Z.
+Stato: vigente, in produzione con l'app 1.25.0 e la migrazione 0048 (2026-11-14). Aggiornata: 2026-11-14T16:30:00Z.
 La 7.0.1 chiama «REAL campione» la foto da cui il trattamento prende le misure. La 7.0.0 aggiunge le misure di ogni copia e il trattamento delle SLOP, che ne avvicina l'aspetto a quello delle REAL del loro gruppo
 (sezione 4). La 6.0.0 era la versione consolidata (riordino della documentazione dell'owner del 2026-11-14) della 5.0.0,
 senza la storia del passaggio dalle copie 4:5, concluso; le versioni precedenti restano nella cronologia git. Principio invariato dalla

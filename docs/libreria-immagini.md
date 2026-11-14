@@ -1,6 +1,6 @@
 # Libreria delle immagini, tag e analisi — specifica 3.0.0
 
-Stato: approvata dall'owner il 2026-11-14, implementata nell'app 1.25.0 con la migrazione 0048 (in revisione). Aggiornata: 2026-11-14T16:00:00Z.
+Stato: vigente, in produzione con l'app 1.25.0 e la migrazione 0048 (2026-11-14). Aggiornata: 2026-11-14T16:00:00Z.
 La 3.0.0 sostituisce la categoria Formato con Genere, Colore e Supporto, giudicate solo dall'immagine, e aggiunge il completamento a
 pagamento di queste tre categorie per le immagini già analizzate (decisioni dell'owner del 2026-11-14, sezioni 4 e 5). La 2.0.0 è la
 versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce

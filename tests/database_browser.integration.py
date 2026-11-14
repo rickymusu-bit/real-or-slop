@@ -26,6 +26,9 @@ def call(url, data=None, method=None, raw=None, mime='application/json'):
 def sql(command):
     subprocess.run(['npx', 'wrangler', 'd1', 'execute', 'DB', '--local', '--env', 'local', '--persist-to', state, '--command', command],
                    capture_output=True, text=True, check=True)
+def openai(queue):
+    req = urllib.request.Request(os.environ['ROS_TEST_FAKE_OPENAI'] + '/control', data=json.dumps({'queue': queue}).encode(), headers={'Content-Type': 'application/json'})
+    urllib.request.urlopen(req).read()
 def png(seed, size):
     image = Image.new('RGB', size); image.putdata([((seed * 41) % 256, (x * 5 + seed) % 256, (y * 9) % 256) for y in range(size[1]) for x in range(size[0])])
     out = io.BytesIO(); image.save(out, 'PNG'); return out.getvalue()
@@ -131,9 +134,12 @@ with sync_playwright() as p:
         expect(dialog.locator('#library-detail-message')).to_have_text('Salvato.')
         expect(dialog.locator('.db-regenerate')).to_contain_text('qualità medium (Impostazioni)')
         dialog.screenshot(path=str(folder / f'{name}-edit.png'))
+        # The analysis after the regeneration proposes «dbb-paris» as an Event, while the vocabulary has it as a Place: the owner is told.
+        openai([{}, {'json': {'tags': {'event': ['dbb-paris'], 'setting': ['dbb-dusk']}}}])
         dialog.locator('#library-regenerate').click()
         expect(dialog).to_contain_text('SLOP · nuova', timeout=30000)
         expect(dialog.locator('.library-analysis')).to_contain_text('Analizzata', timeout=30000)
+        expect(dialog.locator('#library-detail-message')).to_contain_text('«dbb-paris» proposto come Evento, nel vocabolario è Luogo')
         assert 'due chiamate a pagamento' in confirms[-1] and 'statistiche ripartono da zero' in confirms[-1] and '$' not in confirms[-1], confirms
         expect(dialog.locator('[data-stats]')).to_have_text('Vista 0 volte · classificata correttamente 0')
         expect(dialog.locator('[data-field=prompt]')).to_have_value('A riot in a square at dusk, 1968')

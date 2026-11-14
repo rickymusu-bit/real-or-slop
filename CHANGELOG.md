@@ -1,9 +1,17 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-14T18:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-14T20:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.25.0 — 2026-11-14T18:00:00Z (proposta, migrazione 0048)
+## 1.25.1 — 2026-11-14T20:00:00Z (proposta, senza migrazioni)
+
+- **Database:** dopo un'analisi, un completamento di Genere, Colore e Supporto o una rigenerazione, il messaggio elenca i conflitti di
+  categoria (tag proposto in una categoria diversa da quella del vocabolario). Il server li restituiva già, la dashboard no: il
+  2026-11-14 la foto segnaletica di King era rimasta senza Genere perché `mugshot` era in Altro. Specifica `database-immagini` 2.2.0.
+- **Produzione, 2026-11-14 (app 1.25.0):** contesto 1.7.0 salvato; 55 REAL completate (55 chiamate, tutte riuscite); 55 copie misurate;
+  `mugshot` spostato in Genere; decennio aggiunto a 9 REAL dalla data EXIF o dalla pagina Commons.
+
+## 1.25.0 — 2026-11-14T18:00:00Z (in produzione, migrazione 0048)
 
 Decisioni dell'owner del 2026-11-14 dopo il primo batch automatico (tema `color`: volti nascosti, cartelli rivolti alla camera, scene
 incoerenti, foto dall'aspetto digitale). Specifiche `libreria-immagini` 3.0.0, `generazione-slop` 2.0.1, `copie-di-gioco` 7.0.1,
