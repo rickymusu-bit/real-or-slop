@@ -2,7 +2,7 @@
 
 Stato: vigente. Aggiornata: 2026-11-14T12:00:00Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `database-immagini.v1.0.1` e le modifiche delle app 1.17–1.24 (cestino, schede, ordinamento, anteprima, tag di partenza),
-che restano nella cronologia git. Stati e regole della libreria: `docs/libreria-immagini.v2.0.0.md`.
+che restano nella cronologia git. Stati e regole della libreria: specifica `libreria-immagini`.
 
 ## 1. Decisioni dell'owner
 
@@ -23,7 +23,7 @@ che restano nella cronologia git. Stati e regole della libreria: `docs/libreria-
 - **Ordinamento:** data di aggiunta, visualizzazioni o accuratezza, decrescente o crescente, ricordato nel browser; per l'accuratezza le
   foto mai viste vanno in fondo.
 - **Schede:** miniatura (copia di gioco), origine e stato, casella di selezione. Tocco breve: dettaglio. Pressione prolungata: anteprima
-  grande (`docs/dashboard-admin-wizard-real.v2.0.0.md`, sezione 3).
+  grande (specifica `dashboard-admin-wizard-real`, sezione 3).
 - **Selezione multipla:** sposta nel cestino (con conferma se ci sono pubblicate), analizza con IA, approva (con la conferma dei diritti
   delle REAL), pubblica, ritira, aggiungi o togli un tag; nel cestino ripristina o elimina definitivamente.
 

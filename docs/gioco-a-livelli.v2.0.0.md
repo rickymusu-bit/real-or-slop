@@ -36,7 +36,7 @@ sono le sue foto, altrimenti resta disattivato con il motivo.
 2. Il browser scarica la prima foto; «Inizia» avvia la partita entro il tempo di preparazione.
 3. Il server consegna **una foto alla volta**, mai una successiva. Il tempo parte quando il browser la mostra e lo segnala.
 4. **Foto:** intera nel suo formato, esplorabile con dita, mouse, rotella o doppio tocco, «Foto intera» per tornare all'inizio
-   (`docs/copie-di-gioco.v6.0.0.md`, sezione 5). Nessun testo accompagna la foto. Marchio «RS» sovrapposto.
+   (specifica `copie-di-gioco`, sezione 5). Nessun testo accompagna la foto. Marchio «RS» sovrapposto.
 5. **Risposta:** pulsanti REAL e SLOP sempre visibili, tasti R e S sul computer. Il server risponde subito giusto o sbagliato con
    l'origine; il browser mostra l'esito per circa un secondo (segno, bordo, breve vibrazione dove esiste), poi la foto successiva.
 6. **Tempo scaduto:** «Tempo scaduto» per un istante, foto non riconosciuta; una risposta arrivata entro mezzo secondo dalla scadenza vale

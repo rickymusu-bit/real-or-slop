@@ -18,12 +18,12 @@ senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wiza
 ## 2. Dashboard `/admin`
 
 - Accesso con le credenziali dell'owner (`ADMIN_TOKEN`).
-- **Sezioni:** Caricamento REAL (predefinita), Generazione SLOP (`docs/generazione-slop.v1.0.0.md`), Database immagini
-  (`docs/database-immagini.v2.0.0.md`), Statistiche e Impostazioni (`docs/statistiche-impostazioni.v2.0.0.md`).
+- **Sezioni:** Caricamento REAL (predefinita), Generazione SLOP (specifica `generazione-slop`), Database immagini
+  (specifica `database-immagini`), Statistiche e Impostazioni (specifica `statistiche-impostazioni`).
 - **Caricamento:** accanto al titolo «Caricamento della dashboard…» con un indicatore che gira (fermo con «riduci movimento») finché
   tutte le sezioni non sono pronte; ogni sezione ha il suo segnaposto. Il wizard REAL si monta per primo.
 - **Riquadro dei batch automatici** in cima a ogni sezione, con il numero delle proposte sul pulsante «Generazione SLOP»
-  (`docs/generazione-slop.v1.0.0.md`, sezione 8).
+  (specifica `generazione-slop`, sezione 8).
 - Tornando a «Caricamento REAL», il wizard toglie le foto spostate nel cestino, pubblicate o eliminate altrove, con un avviso.
 
 ## 3. Anteprima a pressione prolungata
@@ -69,7 +69,7 @@ acquisite sono comunque nella libreria privata.
 - Si passa al 3 solo se ogni foto ha almeno un tag.
 
 **3. Inquadratura.** Ogni foto con la sua copia di gioco, il formato e le dimensioni; «Cambia inquadratura» apre l'editor di formato e
-ritaglio (`docs/copie-di-gioco.v6.0.0.md`, sezione 3); «Prepara la copia di gioco» se manca. Si passa al 4 solo se ogni foto ha la copia.
+ritaglio (specifica `copie-di-gioco`, sezione 3); «Prepara la copia di gioco» se manca. Si passa al 4 solo se ogni foto ha la copia.
 
 **4. Riepilogo e pubblicazione.** Ogni foto con la copia servita dal gioco e il marchio «RS» sovrapposto, la descrizione e i tag.
 L'owner dichiara di aver verificato autenticità, provenienza e condizioni della licenza; poi le immagini si approvano e si pubblicano una

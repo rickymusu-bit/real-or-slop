@@ -3,7 +3,7 @@
 Stato: vigente. Aggiornata: 2026-11-14T12:00:00Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `libreria-immagini.v1.8.0`, `categorie-tag.v1.1.0` e le parti su libreria, tag e analisi di `database-immagini.v1.0.1`,
 `didascalie-wizard.v1.0.0` e `anteprima-descrizione.v1.2.0`, che restano nella cronologia git. Regole di contenuto delle SLOP e
-trasparenza: `docs/contenuti-e-trasparenza.v1.0.0.md`. Copie di gioco: `docs/copie-di-gioco.v6.0.0.md`.
+trasparenza: specifica `contenuti-e-trasparenza`. Copie di gioco: specifica `copie-di-gioco`.
 
 ## 1. Decisioni dell'owner
 
@@ -27,14 +27,14 @@ trasparenza: `docs/contenuti-e-trasparenza.v1.0.0.md`. Copie di gioco: `docs/cop
 
 Una sola raccolta di immagini REAL e SLOP.
 
-- **Ingresso.** Le REAL entrano dal wizard REAL (Wikimedia Commons, `docs/dashboard-admin-wizard-real.v2.0.0.md`), le SLOP dallo studio
-  e dai batch automatici (`docs/generazione-slop.v1.0.0.md`). La sezione Database non carica file né cerca su Commons. Esiste ancora
+- **Ingresso.** Le REAL entrano dal wizard REAL (Wikimedia Commons, specifica `dashboard-admin-wizard-real`), le SLOP dallo studio
+  e dai batch automatici (specifica `generazione-slop`). La sezione Database non carica file né cerca su Commons. Esiste ancora
   la rotta `POST /upload`, usata dai test.
 - **Campi.** Origine, titolo (≤200 caratteri), descrizione (≤1000), spiegazione (≤2000, oggi non mostrata nel gioco), fonte, autore e
   licenza (REAL), prompt e modello (SLOP), tag con le categorie, stato, originale e copia di gioco, revisione per le modifiche
   concorrenti. Per una SLOP generata anche gruppo, slot (tema e tag di partenza) e qualità della generazione.
 - **Descrizione.** Per le REAL arriva da Commons (testo ripulito, al massimo 500 caratteri) e l'owner la corregge nel passo 2 del wizard
-  o nella sezione Database. Il giocatore la legge nella lista di fine partita (`docs/gioco-a-livelli.v2.0.0.md`). Entra anche nel
+  o nella sezione Database. Il giocatore la legge nella lista di fine partita (specifica `gioco-a-livelli`). Entra anche nel
   contesto dell'analisi.
 - **Limiti dei file.** JPEG, PNG o WebP fino a 12 MB e 32 megapixel; copia di gioco WebP fino a 4 MB.
 
@@ -114,7 +114,7 @@ Una sola raccolta di immagini REAL e SLOP.
 
 - Tre testi modificabili dalle Impostazioni, fino a 4000 caratteri ciascuno: **base comune** (ogni chiamata: lingua, fatti, regole dei
   tag; non parla mai di immagini generate), **Tag** (con la base a ogni analisi), **Prompt per le SLOP** (con la base alla scrittura dei
-  prompt, con le regole di `docs/contenuti-e-trasparenza.v1.0.0.md`).
+  prompt, con le regole della specifica `contenuti-e-trasparenza`).
 - Ogni salvataggio di un testo diverso crea una versione datata; ripristinarne una vecchia crea una nuova versione con lo stesso testo.
   Ogni analisi registra le versioni usate.
 - Il codice propone un testo (`DEFAULTS` del modulo del contesto) che le Impostazioni mostrano accanto a quello in vigore finché è

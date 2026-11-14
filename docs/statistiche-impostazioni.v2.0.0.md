@@ -14,7 +14,7 @@ di classifica), che restano nella cronologia git.
 
 - **Modelli:** modello di testo, modello di immagini (con la data di dismissione dove nota) e qualità delle immagini tra quelle ammesse;
   se il modello scelto non ammette la qualità salvata, si torna a `medium`. Lo studio SLOP e la rigenerazione del Database la usano.
-- **Contesto dei modelli:** i tre testi con le versioni, il ripristino e la proposta del codice (`docs/libreria-immagini.v2.0.0.md`,
+- **Contesto dei modelli:** i tre testi con le versioni, il ripristino e la proposta del codice (specifica `libreria-immagini`,
   sezione 7).
 - **Vocabolario dei tag:** elenco per categoria con il numero di immagini, cambio di categoria con conferma, alias, «Unisci».
 - **Classifica:** verifica di un codice partita (soprannome, livello, punteggio, data), Nascondi, Mostra, Cancella (per sempre, per le

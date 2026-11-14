@@ -3,6 +3,13 @@
 Aggiornato: 2026-11-14T12:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
+## Documentazione 18.1.0 — 2026-11-14T13:00:00Z
+
+- Decisione dell'owner del 2026-11-14: le versioni precedenti dei file non si conservano più nel repository; una nuova versione cancella
+  la precedente, che resta nella cronologia git (`AGENTS.md` 18.1.0, regola 3). Tolte le snapshot 18.0.0 e la privacy 1.1.0.
+- `MASTER.md` 18.1.0: tolte le discrepanze note, corrette nell'app 1.24.0. Privacy 1.1.1: «Fonti e crediti» aggiornata.
+- Le specifiche si citano tra loro per nome, senza versione: una nuova versione non costringe più a riscrivere quelle che la citano.
+
 ## Documentazione 18.0.0 — 2026-11-14T12:00:00Z (riordino, nessun cambiamento all'app)
 
 Richiesta dell'owner del 2026-11-14: riordino e refactoring dei documenti importanti.
@@ -25,8 +32,9 @@ Anteprima a pressione prolungata, selezione immediata, descrizione delle REAL, t
 - **Anteprima:** una pressione prolungata (500 ms) su una miniatura del wizard, del Database o della revisione dello studio SLOP apre l'immagine grande con titolo, descrizione e collegamento a Commons (REAL) o prompt e tag (SLOP); resta aperta fino a «×». Anche con il tasto destro o Maiusc+F10.
 - **Descrizione:** modificabile nel passo 2 del wizard, mostrata nel riepilogo e, per ogni REAL, nella lista finale della partita.
 - **Tag di partenza** (tema e slot del prompt) delle SLOP generate nel dettaglio del Database e nelle anteprime.
+- **Pagine del sito:** «Come funziona» descrive pulsanti, foto intera ed esplorabile e formato comune più vicino, non più swipe e 4:5; «Fonti e crediti» non dice più «ritagliata nel formato 4:5» e avverte che la descrizione delle REAL può essere stata corretta o riscritta per il gioco.
 - **Prompt SLOP, testo proposto** (`worker/model-context.v1.6.0.ts`): persone reali né nominate né descritte; gente comune con tratti concreti e volti visibili, mai «indistinti» o «anonimi» nel prompt; «mai nudità che riguardi minori» al posto di «mai minori». Prima il modello nascondeva tutti i volti e scriveva solo adulti. Vale quando l'owner lo salva dalle Impostazioni.
-- Nuove versioni: `worker/model-context.v1.6.0.ts` con `worker/library.v1.22.0.ts`, `worker/analysis.v1.22.0.ts`, `worker/slop.v1.14.0.ts`, `worker/slop-generation.v1.13.0.ts` (solo l'import; la 1.5.0 e i moduli intermedi restano come storico), `src/image-preview.v1.0.0.ts`, `src/real-wizard.v1.17.0.ts`, `src/library.v1.23.0.ts`, `src/slop-studio.v1.6.0.ts`, `src/play.v2.5.0.ts`, `worker/game.v2.5.0.ts`. Test `game.v2.5.0`, `real_wizard.v1.15.0`, `database_browser.v1.7.0`, `slop_browser.v1.4.0`, `slop_auto_browser.v1.1.0`, `game_browser.v1.5.0`; `scripts/integration.py` 2.9.0. `AGENTS.md`/`MASTER.md` 17.30.0.
+- Nuove versioni: `worker/model-context.v1.6.0.ts` con `worker/library.v1.22.0.ts`, `worker/analysis.v1.22.0.ts`, `worker/slop.v1.14.0.ts`, `worker/slop-generation.v1.13.0.ts` (solo l'import; la 1.5.0 e i moduli intermedi restano come storico), `src/image-preview.v1.0.0.ts`, `src/real-wizard.v1.17.0.ts`, `src/library.v1.23.0.ts`, `src/slop-studio.v1.6.0.ts`, `src/play.v2.5.0.ts`, `worker/game.v2.5.0.ts`. Test `game.v2.5.0`, `real_wizard.v1.15.0`, `database_browser.v1.7.0`, `slop_browser.v1.4.0`, `slop_auto_browser.v1.1.0`, `game_browser.v1.5.0`; `scripts/integration.py` 2.9.0. `AGENTS.md` 17.30.0, `MASTER.md` 17.31.0.
 
 ## 1.23.0 — 2026-11-13T22:00:00Z (pubblicata il 2026-11-13, PR 129; migrazione 0047 applicata alle 22:47 UTC)
 

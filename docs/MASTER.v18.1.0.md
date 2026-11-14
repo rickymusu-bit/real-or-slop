@@ -1,7 +1,7 @@
-# Mappa del progetto — versione canonica 18.0.0
+# Mappa del progetto — versione canonica 18.1.0
 
-Snapshot: `docs/MASTER.v18.0.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-14T12:00:00Z. Precedente: 17.30.0, nella cronologia git (riordino della documentazione dell'owner del 2026-11-14).
+Snapshot: `docs/MASTER.v18.1.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-14T13:00:00Z. Precedente: 18.0.0, nella cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso (nel repository convivono molte versioni
 dello stesso modulo), quali specifiche sono vigenti, come si rilascia. Le regole di lavoro sono in `AGENTS.md`, la storia delle versioni
@@ -12,14 +12,15 @@ in `CHANGELOG.md`.
 - **In produzione:** app 1.23.0 (PR 129, migrazioni fino alla 0047), con il contesto dei modelli salvato dall'owner il 2026-11-14.
 - **Proposta aperta:** app 1.24.0, PR rickymusu-bit/real-or-slop#131, senza migrazioni: anteprima a pressione prolungata, selezione
   immediata su Commons, descrizione delle REAL nella lista finale, tag di partenza delle SLOP, proposta del testo dei prompt SLOP con
-  volti visibili (vale quando l'owner lo salva dalle Impostazioni).
+  volti visibili (vale quando l'owner lo salva dalle Impostazioni), pagine «Come funziona» e «Fonti e crediti» corrette (parlavano ancora
+  di swipe e formato 4:5).
 - **Riordino della documentazione** (questa versione): specifiche consolidate senza strati, documenti storici tolti dal repository.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
 
 ## Specifiche vigenti
 
-Ogni specifica descrive il comportamento attuale della sua area, senza rimandi a versioni precedenti; i nomi dei file di codice stanno
-in questa mappa, non nelle specifiche.
+Ogni specifica descrive il comportamento attuale della sua area, senza rimandi a versioni precedenti, e cita le altre per nome, senza
+versione: i nomi dei file correnti, di specifiche e codice, stanno solo in questa mappa.
 
 | Area | Specifica |
 |---|---|
@@ -31,7 +32,7 @@ in questa mappa, non nelle specifiche.
 | Sezione Database | `docs/database-immagini.v2.0.0.md` |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.v2.0.0.md` |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.v2.0.0.md` |
-| Privacy e note legali | `docs/privacy-note-legali.v1.1.0.md` |
+| Privacy e note legali | `docs/privacy-note-legali.v1.1.1.md` |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
 delle vecchie pipeline e le snapshot di `AGENTS.md` e `MASTER.md` fino alla 17.30.0. Restano nella cronologia git: `git log -- docs/<nome>`
@@ -47,14 +48,7 @@ storia. Corrispondenze delle ultime specifiche vigenti:
 | `copie-di-gioco.v5.0.0` | `copie-di-gioco.v6.0.0` |
 | `gioco-a-livelli.v1.0.1` | `gioco-a-livelli.v2.0.0` |
 | `statistiche-impostazioni.v1.0.1` | `statistiche-impostazioni.v2.0.0` |
-| `privacy-note-legali.v1.0.4` | `privacy-note-legali.v1.1.0` |
-
-## Discrepanze note
-
-Testi pubblici del sito non aggiornati (in `src/main.ts`, da correggere con una PR di codice):
-- «Come funziona» descrive ancora lo swipe sul telefono e «lo stesso formato 4:5»: dall'app 1.22.0 si risponde con i pulsanti e la foto
-  è intera nel suo formato.
-- «Fonti e crediti» dice «ritagliata nel formato 4:5»: la copia è ritagliata al formato comune più vicino.
+| `privacy-note-legali.v1.0.4` | `privacy-note-legali.v1.1.1` |
 
 ## Architettura
 
@@ -82,7 +76,8 @@ modelli OpenAI `models.v1.0.0.ts`, slot `slot-extraction.v1.0.0.ts`, proposta de
 copia `game-copy.v3.0.0.ts`, licenze ND `licenses.v1.0.0.ts`, pulizia dei metadati `media-clean.v1.0.0.ts`, livelli e punteggio
 `levels.v1.0.0.ts`, testi legali `legal.v1.1.0.ts` con `legal.v1.0.0.ts`, geometria e formati delle immagini.
 
-Le versioni precedenti dei moduli restano nel repository come storico e non sono importate.
+Le versioni precedenti dei moduli ancora nel repository sono storiche e non sono importate. Dalla decisione dell'owner del 2026-11-14 una
+nuova versione cancella la precedente (`AGENTS.md`, regola 3).
 
 **Dati.** D1 con le migrazioni in `migrations/`:
 

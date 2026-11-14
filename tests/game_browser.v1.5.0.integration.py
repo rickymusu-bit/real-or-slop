@@ -1,4 +1,5 @@
-"""v1.5.0, 2026-11-14T09:00:00Z: the final list shows the description of each REAL (docs/anteprima-descrizione.v1.0.0.md).
+"""v1.5.0, 2026-11-14T13:00:00Z: the final list shows the description of each REAL (docs/anteprima-descrizione.v1.0.0.md); «Come funziona»
+and «Fonti e crediti» without swipe and 4:5.
 v1.4.0, 2026-11-13T22:00:00Z: no captions (docs/didascalie-wizard.v1.0.0.md): the round and the final list show none.
 v1.3.0, 2026-11-13T19:00:00Z: whole photo on every screen (docs/copie-di-gioco.v5.0.0.md): the frame has the copy's format on
 the phone too; «Foto intera» goes back after a pinch, a drag or the wheel; a double tap zooms in and a second one goes back; the
@@ -132,6 +133,14 @@ try:
             expect(code).to_have_text(re.compile(r'^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{2}$'))
             game_code = code.inner_text()
             page.screenshot(path=str(folder / f'{name}-results.png'), full_page=True)
+            # «Come funziona» and «Fonti e crediti» describe the current game: buttons, whole photo, nearest common format.
+            page.goto(base + '/informazioni')
+            expect(page.locator('#content')).to_contain_text('Rispondi con i pulsanti REAL e SLOP')
+            expect(page.locator('#content')).not_to_contain_text('4:5')
+            expect(page.locator('#content')).not_to_contain_text('scorri la foto')
+            page.goto(base + '/crediti')
+            expect(page.locator('#content')).to_contain_text('formato fotografico comune più vicino')
+            expect(page.locator('#content')).not_to_contain_text('4:5')
             page.goto(base + '/')
             expect(page.locator('.leaderboard').first.locator('tbody')).to_contain_text(f'Browser {name}')
             expect(page.locator('.leaderboard').first.locator('tbody')).to_contain_text('Facile')

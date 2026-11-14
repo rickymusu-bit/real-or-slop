@@ -20,11 +20,11 @@ Valgono per ogni modello che produce contenuti del sito e per la revisione dell'
 - **Nudità:** nessuna nudità umana, tranne nelle opere d'arte presenti nella scena (statue, dipinti, affreschi). Mai contenuti sessuali;
   mai nudità che riguardi minori, nemmeno nelle opere.
 - **Stile:** fotografico e plausibile per l'epoca e il luogo, senza nominare fotografi, agenzie o archivi; formato scelto per il
-  soggetto come farebbe un fotografo (`docs/copie-di-gioco.v6.0.0.md`, sezione 4).
+  soggetto come farebbe un fotografo (specifica `copie-di-gioco`, sezione 4).
 
 ## 2. Come si applicano
 
-- Le regole arrivano al **modello di testo** attraverso il contesto «Prompt per le SLOP» (`docs/libreria-immagini.v2.0.0.md`, sezione 7).
+- Le regole arrivano al **modello di testo** attraverso il contesto «Prompt per le SLOP» (specifica `libreria-immagini`, sezione 7).
   Il generatore di immagini riceve solo il testo del prompt e applica anche le proprie regole d'uso, che possono rifiutare richieste
   ammesse qui.
 - Nel batch automatico nessuno rilegge slot e prompt prima della generazione: il controllo finale è la **revisione dell'owner** di ogni
@@ -45,4 +45,4 @@ Valgono per ogni modello che produce contenuti del sito e per la revisione dell'
 - **Metadati:** il gioco serve solo le copie WebP senza metadati, uguali per REAL e SLOP; gli originali restano nella quarantena privata.
 - **Durante la partita** nessun testo accompagna la foto; descrizione, fonti e prompt arrivano solo alla fine.
 - **Licenze:** le SLOP non hanno licenza restrittiva; valgono i termini d'uso del sito, che vietano di diffonderle come vere o di
-  togliere il marchio (`docs/privacy-note-legali.v1.1.0.md`).
+  togliere il marchio (specifica `privacy-note-legali`).

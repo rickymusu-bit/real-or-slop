@@ -3,7 +3,7 @@
 Stato: vigente. Aggiornata: 2026-11-14T12:00:00Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `wizard-slop.v1.4.1`, `proposta-generazione-slop.v2.0.1` e le parti sulle SLOP di `copie-di-gioco.v5.0.0`,
 `didascalie-wizard.v1.0.0` e `anteprima-descrizione.v1.2.0`, che restano nella cronologia git. Regole sui contenuti:
-`docs/contenuti-e-trasparenza.v1.0.0.md`.
+specifica `contenuti-e-trasparenza`.
 
 ## 1. Decisioni dell'owner
 
@@ -51,7 +51,7 @@ Nello studio l'owner vede gli slot (una riga per slot, una colonna per categoria
 
 - Una chiamata a pagamento al modello di testo scrive tutti i prompt del gruppo: base comune e «Prompt per le SLOP» del contesto, più una
   riga fissa nel codice (inglese, schema JSON). Per ogni slot la risposta dà il prompt, i tag dello slot usati e il formato
-  (`docs/copie-di-gioco.v6.0.0.md`, sezione 4).
+  (specifica `copie-di-gioco`, sezione 4).
 - Nello studio l'owner rilegge e modifica i prompt (salvati all'uscita dal campo), ne cambia il formato senza costi, e può farne
   riscrivere uno con una nuova chiamata: il modello riceve gli altri prompt per restare diverso.
 
@@ -59,7 +59,7 @@ Nello studio l'owner vede gli slot (una riga per slot, una colonna per categoria
 
 - Il generatore (modello e qualità delle Impostazioni, mostrati in sola lettura) riceve solo il testo del prompt e la dimensione del
   formato. L'immagine entra come SLOP nuova con prompt, modello, gruppo, slot e qualità; il browser prepara la copia di gioco; poi parte
-  l'analisi (`docs/libreria-immagini.v2.0.0.md`, sezione 5), con il prompt come contesto. Una sola conferma copre immagini e analisi
+  l'analisi (specifica `libreria-immagini`, sezione 5), con il prompt come contesto. Una sola conferma copre immagini e analisi
   del gruppo; le chiamate restano registrate una per una; un problema dell'account OpenAI ferma la serie.
 - Esiti: un rifiuto del generatore per le sue regole d'uso (4xx) non è addebitato e lo slot resta da rigenerare; un esito incerto è
   registrato e mai ripetuto.

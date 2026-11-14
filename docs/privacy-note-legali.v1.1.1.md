@@ -1,8 +1,9 @@
-# Privacy e note legali — specifica 1.1.0
+# Privacy e note legali — specifica 1.1.1
 
-Stato: vigente, in produzione con l'app 1.23.0. Aggiornata: 2026-11-14T12:00:00Z. Versione consolidata (riordino della documentazione
-dell'owner del 2026-11-14) della 1.0.4, che resta nella cronologia git: corretta la descrizione delle modifiche indicate nei crediti
-(non più «ritagliata in 4:5») e tolte le note di lavoro superate. I testi del sito non cambiano.
+Stato: vigente, in produzione con l'app 1.23.0. Aggiornata: 2026-11-14T13:00:00Z. 1.1.1: con l'app 1.24.0 la pagina «Fonti e crediti»
+non dice più «ritagliata nel formato 4:5» e avverte che la descrizione delle REAL può essere stata corretta (sezione 6). 1.1.0: versione
+consolidata (riordino della documentazione dell'owner del 2026-11-14) della 1.0.4; le precedenti sono nella cronologia git. I testi di
+Privacy e Termini non cambiano.
 
 **Verifica legale.** I testi delle pagine Privacy e Termini, scritti a partire da ciò che il codice fa, sono stati verificati da un legale
 (comunicazione dell'owner del 2026-11-13); le due frasi dei termini cambiate con la tolta delle didascalie sono state approvate il
@@ -52,5 +53,6 @@ Casella obbligatoria sull'età (rifiutata anche dal server senza `age_ok: true`)
 
 Le licenze CC BY e CC BY-SA chiedono di indicare le modifiche; la CC BY-SA chiede la stessa licenza per l'opera modificata. La copia di
 gioco è ritagliata al formato comune più vicino, ridotta e ricompressa: i crediti di fine partita dicono «Ritagliata, ridotta e
-ricompressa per il gioco; la versione modificata ha la stessa licenza dell'originale». Le licenze ND sono escluse. La descrizione di una
-REAL, che l'owner può riscrivere, compare in un paragrafo separato dai crediti dell'autore.
+ricompressa per il gioco; la versione modificata ha la stessa licenza dell'originale», e la pagina «Fonti e crediti» lo spiega. Le
+licenze ND sono escluse. La descrizione di una REAL, che l'owner può riscrivere, compare in un paragrafo separato dai crediti dell'autore;
+«Fonti e crediti» avverte che può essere stata corretta o riscritta per il gioco.
