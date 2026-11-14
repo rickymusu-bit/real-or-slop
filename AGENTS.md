@@ -1,7 +1,7 @@
-# Istruzioni Codex — versione canonica 17.27.0
+# Istruzioni Codex — versione canonica 17.28.0
 
-Snapshot: `docs/AGENTS.v17.27.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-14T01:10:00Z. Precedente: `docs/AGENTS.v17.26.0.md` (storico, non più vigente).
+Snapshot: `docs/AGENTS.v17.28.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-14T09:00:00Z. Precedente: `docs/AGENTS.v17.27.0.md` (storico, non più vigente).
 
 ## Sistema corrente
 
@@ -12,7 +12,9 @@ dell'owner del 2026-11-13, app 1.22.0, senza migrazioni), che sostituisce la 4.0
 (approvata il 2026-11-12, in produzione con l'app 1.13.0). Generazione automatica delle SLOP su proposta:
 `docs/proposta-generazione-slop.v2.0.1.md` (approvata il 2026-11-12, in produzione con l'app 1.15.0). Didascalie tolte, inquadratura come
 passo del wizard, caricamento della dashboard: `docs/didascalie-wizard.v1.0.0.md` (decisioni dell'owner del 2026-11-13, app 1.23.0,
-migrazione 0047), che prevale sulle specifiche precedenti dove parlano di didascalie e dei passi del wizard.
+migrazione 0047), che prevale sulle specifiche precedenti dove parlano di didascalie e dei passi del wizard. Anteprima a pressione prolungata,
+selezione immediata su Commons, descrizione delle REAL nella lista finale, tag di partenza delle SLOP: `docs/anteprima-descrizione.v1.0.0.md`
+(decisioni dell'owner del 2026-11-14, app 1.24.0, senza migrazioni), che prevale sulle precedenti dove dicono altro.
 Ogni altro documento in `docs/` è storico, compreso `docs/lotti-editoriali.v1.6.2.md`:
 le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 11 di `docs/libreria-immagini.v1.8.0.md`.
 
@@ -22,7 +24,9 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
 - Una sola **libreria** di immagini REAL e SLOP, gestita come un file system: le REAL entrano dal wizard (Commons), le SLOP dallo
   studio; modifica in linea, cestino; niente lotti, proposte, cicli o archivi storici. Nel passo 2 del wizard «Togli dal caricamento» sposta una
   foto nel cestino; una foto spostata nel cestino o eliminata altrove esce dal wizard al ritorno nella sezione (app 1.22.0). La sezione Database non carica file né cerca
-  su Commons (decisione dell'owner del 2026-11-13).
+  su Commons (decisione dell'owner del 2026-11-13). Nel passo 1 un tocco su un risultato lo aggiunge subito alle selezionate, che restano con una nuova ricerca;
+  nel passo 2 si modifica la descrizione. Nella dashboard (wizard, Database, studio SLOP) la pressione prolungata su una miniatura apre un'anteprima grande con
+  i testi, chiusa con «×» (app 1.24.0).
 - **Copia di gioco WebP nel formato della foto**: ritagliata al più vicino dei formati comuni (3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 1:1),
   qualità 0,85, lato lungo ≤1536 px per tutte, sRGB, senza metadati, mostrata **intera su ogni schermo** (niente vista iniziale 4:5, decisione dell'owner del 2026-11-13); ritaglio
   e formato scelti dall'owner con «Inquadratura» (centrati all'inizio), copia creata nel browser appena l'immagine entra; è il file
@@ -70,8 +74,8 @@ le sue regole su persone, marchi, marchio «RS» e metadati sono nella sezione 1
   Medio 15×15 s, Difficile 20×10 s, Esperto 25×5 s); esito immediato dal server; tempo scaduto = foto non riconosciuta; punteggio
   foto × (2 × accuratezza bilanciata − 1) solo per partite concluse; foto intera nel suo formato su ogni schermo, esplorabile (trascinare, zoom con
   due dita, rotella o doppio tocco, «Foto intera»); pulsanti REAL e SLOP sempre visibili, R e S
-  su computer, niente swipe; lista finale con fonti e
-  prompt. Classifica nella home (7 giorni e sempre, migliore per giocatore) con soprannome controllato e codice partita (solo
+  su computer, niente swipe; lista finale con descrizione e fonti delle REAL e
+  prompt delle SLOP. Classifica nella home (7 giorni e sempre, migliore per giocatore) con soprannome controllato e codice partita (solo
   l'impronta nel database). PvP e allenamento eliminati.
 - **Privacy e note legali** (`docs/privacy-note-legali.v1.0.4.md`, in produzione con l'app 1.23.0; termini senza didascalie, le due frasi cambiate
   approvate dal legale il 2026-11-14): progetto personale non commerciale; pagine
