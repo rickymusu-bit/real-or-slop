@@ -51,7 +51,7 @@ Valgono per ogni modello che produce contenuti del sito e per la revisione dell'
   trattamento non aggiunge materiale fotografico: resta un'immagine generata. Lo dicono, con l'app 1.25.0, «Come funziona» («Le SLOP
   possono essere anche ridotte, sgranate o sbiadite, come le immagini false che circolano davvero», al posto di «REAL e SLOP passano per
   la stessa preparazione», che non sarebbe più vera), «Fonti e crediti» e i Termini d'uso (specifica `privacy-note-legali`, sezione 3,
-  su richiesta dell'owner del 2026-11-14; la frase dei Termini va verificata dal legale).
+  su richiesta dell'owner del 2026-11-14; la frase dei Termini è stata verificata da un legale lo stesso giorno).
 - **Durante la partita** nessun testo accompagna la foto; descrizione, fonti e prompt arrivano solo alla fine.
 - **Licenze:** le SLOP non hanno licenza restrittiva; valgono i termini d'uso del sito, che vietano di diffonderle come vere o di
   togliere il marchio (specifica `privacy-note-legali`).

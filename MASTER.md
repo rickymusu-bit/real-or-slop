@@ -15,8 +15,8 @@ in `CHANGELOG.md`.
 - **In preparazione:** app 1.25.0, migrazione 0048, sul ramo `ccr-dbd14347-i92tp0`: gruppi di genere e decennio per il bilanciamento,
   categorie Genere, Colore e Supporto al posto di Formato (giudicate solo dall'immagine, completamento a pagamento per le immagini già
   analizzate), esempi del gruppo e prompt da 600 a 1000 caratteri, trattamento delle SLOP con le misure delle copie, contesto 1.7.0
-  proposto, «Come funziona», «Fonti e crediti» e Termini (decisioni dell'owner del 2026-11-14). La frase nuova dei Termini aspetta la
-  verifica del legale.
+  proposto, «Come funziona», «Fonti e crediti» e Termini (decisioni dell'owner del 2026-11-14). La frase nuova dei Termini è stata
+  verificata da un legale (2026-11-14).
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
 
 ## Specifiche vigenti

@@ -23,8 +23,8 @@ incoerenti, foto dall'aspetto digitale). Specifiche `libreria-immagini` 3.0.0, `
   copie esistenti si misurano all'apertura della dashboard. Le SLOP passano per un trattamento verso la REAL campione (riduzione, effetti
   del supporto, tono, colore, sfocatura, grana, JPEG intermedio); nel Database «Altra REAL campione», «Senza trattamento», «Con
   trattamento». Le Statistiche mostrano i gruppi e confrontano le misure di REAL e SLOP pubblicate.
-- **Testi del sito:** «Come funziona», «Fonti e crediti» e Termini citano il trattamento delle SLOP; la frase dei Termini va verificata
-  dal legale.
+- **Testi del sito:** «Come funziona», «Fonti e crediti» e Termini citano il trattamento delle SLOP; la frase dei Termini è stata verificata
+  da un legale (comunicazione dell'owner del 2026-11-14).
 
 ## 1.24.1 — 2026-11-14T15:30:00Z (proposta, senza migrazioni)
 
