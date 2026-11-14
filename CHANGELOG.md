@@ -3,6 +3,14 @@
 Aggiornato: 2026-11-14T12:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
+## Pulizia del codice — 2026-11-14T14:00:00Z (nessun cambiamento di comportamento; `MASTER.md` 18.2.0)
+
+- Richiesta dell'owner del 2026-11-14: tolto il codice che nessun punto d'ingresso (`src/main.ts`, `worker/index.ts`) importava, cioè le
+  versioni precedenti dei moduli di `src/`, `worker/` e `shared/`, il vecchio gioco (`src/play.ts`, `worker/game.ts`) e `src/clock.ts`:
+  160 file. Tolti anche i test che verificavano solo quel codice (4 unitari, 80 d'integrazione e di supporto non più eseguiti, compresi i
+  modelli finti precedenti) e i dati delle vecchie pipeline (`data/editorial/`). Dai test di `media-privacy` e `preload` tolte le
+  verifiche del vecchio conto alla rovescia. Tutto resta nella cronologia git.
+
 ## Documentazione 18.1.0 — 2026-11-14T13:00:00Z
 
 - Decisione dell'owner del 2026-11-14: le versioni precedenti dei file non si conservano più nel repository; una nuova versione cancella

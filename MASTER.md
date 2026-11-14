@@ -1,7 +1,7 @@
-# Mappa del progetto — versione canonica 18.1.0
+# Mappa del progetto — versione canonica 18.2.0
 
-Snapshot: `docs/MASTER.v18.1.0.md`. Percorsi relativi alla radice del repository.
-Aggiornato: 2026-11-14T13:00:00Z. Precedente: 18.0.0, nella cronologia git.
+Snapshot: `docs/MASTER.v18.2.0.md`. Percorsi relativi alla radice del repository.
+Aggiornato: 2026-11-14T14:00:00Z. Precedente: 18.1.0, nella cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso (nel repository convivono molte versioni
 dello stesso modulo), quali specifiche sono vigenti, come si rilascia. Le regole di lavoro sono in `AGENTS.md`, la storia delle versioni
@@ -14,7 +14,8 @@ in `CHANGELOG.md`.
   immediata su Commons, descrizione delle REAL nella lista finale, tag di partenza delle SLOP, proposta del testo dei prompt SLOP con
   volti visibili (vale quando l'owner lo salva dalle Impostazioni), pagine «Come funziona» e «Fonti e crediti» corrette (parlavano ancora
   di swipe e formato 4:5).
-- **Riordino della documentazione** (questa versione): specifiche consolidate senza strati, documenti storici tolti dal repository.
+- **Riordino** (PR rickymusu-bit/real-or-slop#132): specifiche consolidate senza strati, documenti storici e codice inutilizzato tolti dal
+  repository.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
 
 ## Specifiche vigenti
@@ -76,8 +77,8 @@ modelli OpenAI `models.v1.0.0.ts`, slot `slot-extraction.v1.0.0.ts`, proposta de
 copia `game-copy.v3.0.0.ts`, licenze ND `licenses.v1.0.0.ts`, pulizia dei metadati `media-clean.v1.0.0.ts`, livelli e punteggio
 `levels.v1.0.0.ts`, testi legali `legal.v1.1.0.ts` con `legal.v1.0.0.ts`, geometria e formati delle immagini.
 
-Le versioni precedenti dei moduli ancora nel repository sono storiche e non sono importate. Dalla decisione dell'owner del 2026-11-14 una
-nuova versione cancella la precedente (`AGENTS.md`, regola 3).
+Nel repository ci sono solo i file in uso: il codice che nessun punto d'ingresso importava (versioni precedenti dei moduli, il vecchio
+gioco, `src/clock.ts`, `data/editorial/`) e i test che lo verificavano sono stati tolti il 2026-11-14; restano nella cronologia git.
 
 **Dati.** D1 con le migrazioni in `migrations/`:
 

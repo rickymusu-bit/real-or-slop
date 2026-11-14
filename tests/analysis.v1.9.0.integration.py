@@ -7,7 +7,7 @@ v1.6.0, 2026-11-10T22:11:48Z: no prices and no budget (migration 0039): each pai
 «paid_calls» with model, tokens and outcome; the text model is the one chosen in Settings (GET/PUT /models, checked
 against the fake project's GET /v1/models). Uncertain outcomes not resent, OpenAI's own spend limit, ASCII tags, aliases,
 texts replaced once and restorable, caption limits, model context, tag categories, merge, tags removed with their last
-image. Against a LOCAL Worker and the fake OpenAI of tests/fake_openai.v1.2.0.py (never the real one)."""
+image. Against a LOCAL Worker and the fake OpenAI of tests/fake_openai.v1.4.0.py (never the real one)."""
 import io
 import json
 import os

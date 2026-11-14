@@ -1,7 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { protectGameMedia } from "../src/media-privacy.ts";
-import { serverCountdown } from "../src/clock.ts";
 function fixture(hidden = false) {
   const classes = new Set<string>();
   let closes = 0, allowed = true;
@@ -33,14 +32,12 @@ test("hidden tab covers media, closes zoom, and return requires explicit reopeni
   f.dispatch("click", "[data-reveal-media]"); assert.equal(f.covered(), false);
   f.guard.dispose();
 });
-test("window loss and page exit cover media without changing the countdown", () => {
-  const f = fixture(); let elapsed = 0;
-  const seconds = serverCountdown(20_000, 0, () => elapsed);
+test("window loss and page exit cover media", () => {
+  const f = fixture();
   f.win.dispatchEvent(new Event("blur")); assert.equal(f.covered(), true);
-  elapsed = 15_000; assert.equal(seconds(), 5);
   f.win.dispatchEvent(new Event("pagehide"));
-  elapsed = 21_000; f.disallow(); f.dispatch("click", "[data-reveal-media]");
-  assert.equal(seconds(), 0); assert.equal(f.covered(), true);
+  f.disallow(); f.dispatch("click", "[data-reveal-media]");
+  assert.equal(f.covered(), true);
   f.guard.dispose(); assert.equal(f.covered(), false);
   f.win.dispatchEvent(new Event("blur")); assert.equal(f.covered(), false);
 });

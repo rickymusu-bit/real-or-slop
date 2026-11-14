@@ -8,7 +8,7 @@ v2.5.0, 2026-11-12T09:00:00Z: level game and leaderboard (docs/gioco-a-livelli.v
 v2.4.0, 2026-11-12T08:00:00Z: 4:5 game copies (docs/copie-di-gioco.v3.0.0.md), new versions of the checks.
 v2.3.0, 2026-11-11T09:30:00Z: library 1.2.0 and database checks (docs/database-immagini.v1.0.0.md).
 v2.2.0, 2026-11-09T21:30:00Z. Start an isolated LOCAL Worker (real local D1 and R2) wired to a fake OpenAI
-(tests/fake_openai.py), run the HTTP and, with ROS_TEST_BROWSER=1, browser checks, then stop both.
+(tests/fake_openai.v1.4.0.py), run the HTTP and, with ROS_TEST_BROWSER=1, browser checks, then stop both.
 Never touches remote resources and never calls OpenAI."""
 import os
 import secrets
@@ -30,7 +30,7 @@ try:
                    check=True, env=env, stdout=subprocess.DEVNULL)
     Path('artifacts').mkdir(exist_ok=True)
     with Path('artifacts/integration-worker.log').open('w') as log:
-        # Paid calls on, against the fake model (tests/fake_openai.v1.2.0.py); everything lives in the local D1.
+        # Paid calls on, against the fake model (tests/fake_openai.v1.4.0.py); everything lives in the local D1.
         analysis = {'OPENAI_API_KEY': 'test-openai-key', 'OPENAI_BASE_URL': fake + '/v1/'}
         model = subprocess.Popen(['python3', 'tests/fake_openai.v1.4.0.py', fake.rsplit(':', 1)[1]], stdout=log, stderr=log)
         proc = subprocess.Popen(['npx', 'wrangler', 'dev', '--local', '--port', '8788', '--test-scheduled', '--persist-to', str(state), '--env', 'local',
