@@ -1,7 +1,8 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.3.0
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.4.0
 
-Stato: implementata nel ramo app **1.27.0**, da verificare in anteprima e rilasciare con autorizzazione. Aggiornata: 2026-11-15T13:54:58Z.
-In produzione resta l'app 1.26.0; la specifica 4.0.0 e l'issue #136 descrivono una pipeline precedente, **superata su somiglianza alla REAL,
+Stato: vigente; la 5.3.0 è in produzione con l'app 1.27.0 (rilasciata il 2026-11-15), la 5.4.0 è per l'app 1.28.0. Aggiornata: 2026-11-15T17:00:44Z.
+La 5.4.0 rende modificabile il contesto del valutatore, blocca brief e prompt con il contesto delle gemelle e conta nel massimo le
+riscritture confermate di brief e prompt. La specifica 4.0.0 e l'issue #136 descrivono una pipeline precedente, **superata su somiglianza alla REAL,
 cambiamento singolo, seconda analisi visiva della REAL nella generazione e numero di generazioni**. Rimangono validi, salvo diversa indicazione qui, il 4:5 e il trattamento leggero di
 `docs/copie-di-gioco.md` 9.1.3; tag e contesti in `docs/libreria-immagini.md`; contenuti in `docs/contenuti-e-trasparenza.md`.
 Le versioni precedenti sono nella cronologia Git.
@@ -81,7 +82,8 @@ associata alla REAL e può essere riusata quando occorre riequilibrare il catalo
    - `prompt`: descrizione **in inglese** di una nuova fotografia plausibile, con soggetti, azione, composizione, ambiente
      e resa fotografica concreti, senza cliché o enfasi cinematografica.
    L'owner può modificare brief e prompt prima della generazione, oppure richiedere con nuova conferma a pagamento
-   di rigenerarli. Il brief è congelato per l'intero loop (versione/hash), mentre il prompt può essere revisionato dal
+   di rigenerarli: ogni riscrittura confermata aggiunge la sua chiamata al massimo del batch. La chiamata non parte se il
+   contesto in vigore di «Brief e prompt per le SLOP» è ancora quello delle gemelle (specifica `libreria-immagini`, sezione 7). Il brief è congelato per l'intero loop (versione/hash), mentre il prompt può essere revisionato dal
    valutatore. Se il brief cambia dopo l'avvio, parte un nuovo processo. Un output non valido blocca il passaggio
    alle chiamate successive, senza inventare campi. Il modello di prompt non sceglie il formato.
 
@@ -90,7 +92,9 @@ associata alla REAL e può essere riusata quando occorre riequilibrare il catalo
    alla decisione. **Non ritagliare né trattare l'immagine prima della valutazione.** Il generatore e il valutatore non devono
    essere condizionati dal riquadro 4:5 in cui la fotografia sarà successivamente mostrata nel gioco.
 5. **Valutazione multimodale sull'immagine INTERA.** Vede la fotografia generata completa, mai un ritaglio 4:5,
-   e il brief immutabile e il prompt operativo. Distingue: (I) credibilità
+   e il brief immutabile e il prompt operativo. Le istruzioni sono la base comune, il contesto modificabile «Valutazione delle SLOP»
+   e una parte fissa nel codice (decisioni, tolleranza, difetti critici mai accettati, ancoraggi ed esclusioni copiati alla lettera);
+   il tentativo registra le versioni dei contesti usate. Distingue: (I) credibilità
    fotografica, (II) plausibilità fisica e contestuale, (III) rispetto dei soli ancoraggi editoriali obbligatori. L'aderenza a
    dettagli secondari del prompt non è un requisito. Deve riportare difetti **osservabili** e incertezze, senza proclamare
    «foto autentica» o dedurre identità, licenze, provenienza o verità storica dai pixel.
@@ -151,7 +155,8 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
   è **già stata pagata durante il caricamento** e non si ripete. Per una REAL storica senza descrizione occorre un'operazione
   **separata** e autorizzata prima di avviare il processo (+1 eventuale analisi combinata), da mostrare nel preventivo totale.
   La successiva analisi dei tag SLOP avviene solo se una candidata è accettata. Rigenerazioni manuali del brief/prompt richiedono
-  nuova conferma. Il preventivo distingue i tipi di chiamata e i modelli; il costo monetario resta gestito dal limite OpenAI.
+  nuova conferma, che dichiara la chiamata in più: il massimo mostrato diventa la somma, per REAL, di `max(1, chiamate di brief e
+  prompt) + 1 + 2N`, e non scende mai sotto le chiamate fatte. Il preventivo distingue i tipi di chiamata e i modelli; il costo monetario resta gestito dal limite OpenAI.
 - Ogni chiamata a pagamento è registrata **prima** dell'invio con ID univoco, tipo, immagine, processo e tentativo. I passi e gli
   output sono persistenti con stati `pending / completed / failed / uncertain`. Nessuna chiamata `uncertain` viene ripetuta
   automaticamente; la singola foto è sospesa, il resto del batch può proseguire. Problemi di account OpenAI fermano il batch.

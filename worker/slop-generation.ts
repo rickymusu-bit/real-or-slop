@@ -3,7 +3,7 @@
 import { HttpError, id, type Env } from "./core";
 import { create, viewOf, find, tagRowsOf } from "./library";
 import { chosenModel, chosenQuality } from "./models";
-import { currentContext } from "./model-context";
+import { currentContext, PIPELINE } from "./model-context";
 import { numberSettings } from "./app-settings";
 import { generationSize, nearestFormat, type Format } from "../shared/game-copy";
 import { MAX_BATCH, type TwinItem } from "../shared/twins";
@@ -50,8 +50,8 @@ export async function processViews(env: Env, batchId: string) {
   const rows = (await env.DB.prepare("SELECT * FROM slop_processes WHERE batch_id=? ORDER BY slot").bind(batchId).all<Process>()).results;
   return Promise.all(rows.map(async p => {
     const attempts = (await env.DB.prepare("SELECT * FROM slop_attempts WHERE process_id=? ORDER BY number").bind(p.id).all<Attempt>()).results;
-    const calls = await env.DB.prepare("SELECT count(*) AS n FROM paid_calls WHERE process_id=?").bind(p.id).first<{n: number}>();
-    return { ...p, brief: parse<Brief | null>(p.brief, null), snapshot: parse<Snapshot | null>(p.snapshot, null), calls: calls?.n || 0,
+    const calls = await env.DB.prepare("SELECT count(*) AS n,coalesce(sum(kind='prompts'),0) AS prompts FROM paid_calls WHERE process_id=?").bind(p.id).first<{n: number; prompts: number}>();
+    return { ...p, brief: parse<Brief | null>(p.brief, null), snapshot: parse<Snapshot | null>(p.snapshot, null), calls: calls?.n || 0, prompt_calls: calls?.prompts || 0,
       attempts: attempts.map(a => ({ id: a.id, number: a.number, prompt: a.prompt, status: a.status,
         evaluation: parse<Evaluation | null>(a.evaluation, null), file: a.candidate_key ? `/api/admin/library/slop/batches/${batchId}/candidate/${a.id}` : null })) };
   }));
@@ -62,7 +62,9 @@ async function show(env: Env, batchId: string) {
   const prompts: PromptEntry[] = row.pipeline_version === 2 ? processes.filter(p => p.prompt && p.brief).map(p => ({prompt: p.prompt, used: [], brief: p.brief!})) : parse(row.prompts, []);
   const config = parse<Snapshot | null>(row.loop_settings, null);
   return { id: row.id, items: itemsOf(row), prompts, processes, config, pipeline_version: row.pipeline_version,
-    max_calls: config ? itemsOf(row).length * (2 + 2 * config.max_generation_attempts) : null,
+    // Planned: one brief call, N generations, N evaluations and the tags after acceptance per REAL. Every confirmed rewrite of a
+    // brief adds its call to the maximum, so the figure shown never falls below what was spent.
+    max_calls: config ? processes.reduce((n, p) => n + Math.max(1, p.prompt_calls) + 1 + 2 * config.max_generation_attempts, 0) : null,
     prompts_status: row.prompts_status, prompts_error: row.prompts_error, created_at: row.created_at, updated_at: row.updated_at,
     images: await Promise.all(ids.map(i => viewOf(env, i.id))) };
 }
@@ -106,7 +108,7 @@ async function editBatch(env: Env, batchId: string, data: Record<string, unknown
 const PROMPT_RULE = `Write a new plausible photograph in English (600–1000 characters). Return a minimal editorial brief and prompt together.
 Use ONLY the supplied saved description and tags as editorial context, not as a scene to imitate. No required visual resemblance or single changed element.
 Separate required anchors, preferred, flexible and exclusions. Credibility takes priority over literal prompt details. Invent all people; never name or describe living people or people dead less than 50 years. Never attribute crimes to historical figures, celebrate regimes, or depict nudity outside artworks.
-Concrete natural photographic technique and light, no cinematic clichés. Never compose for a later game crop. Do not choose a format. These rules supersede any older instructions about twins or matching every tag.`;
+Concrete natural photographic technique and light, no cinematic clichés. Never compose for a later game crop. Do not choose a format.`;
 async function writePrompts(env: Env, batchId: string, data: Record<string, unknown>) {
   confirmOnly(data, ["index"]);
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
@@ -122,10 +124,13 @@ async function writePrompts(env: Env, batchId: string, data: Record<string, unkn
     if (!["approved","published"].includes(source.status)) throw new HttpError(409, "REAL non più approvata o pubblicata");
     return { description, tags: byCategory((await tagRowsOf(env, [source.id])).get(source.id) || []) };
   }));
+  // Read before the claim: a refusal here costs nothing. A text written for the twin prompts would contradict the brief.
+  const base = await currentContext(env, "base"), context = await currentContext(env, "slop_prompt");
+  if (context.pipeline < PIPELINE) throw new HttpError(409, "Il contesto «Brief e prompt per le SLOP» in vigore è stato scritto per le SLOP gemelle: " +
+    "salva nelle Impostazioni il testo proposto o uno tuo prima di scrivere brief e prompt. Nessuna chiamata inviata");
   const claim = await env.DB.prepare("UPDATE slop_batches SET prompts_status='running',prompts_error='',updated_at=? WHERE id=? AND prompts_status NOT IN ('running','editing','uncertain')").bind(now(), batchId).run();
   if (!claim.meta.changes) throw new HttpError(409, "Prompt già in scrittura o incerti: nessuna chiamata inviata");
   try {
-    const base = await currentContext(env, "base"), context = await currentContext(env, "slop_prompt");
     const failures: string[] = [];
     for (const [i, p] of wanted.entries()) {
       const marked = await env.DB.prepare("UPDATE slop_processes SET state='prompting',updated_at=? WHERE id=? AND attempts=0 AND state IN ('draft','ready','failed') AND EXISTS(SELECT 1 FROM images WHERE id=slop_processes.source_id AND status IN ('approved','published'))").bind(now(), p.id).run();
@@ -163,7 +168,8 @@ const evaluationSchema = { type: "object", additionalProperties: false,
   required: ["attempt_id", "decision", "critical_findings", "minor_findings", "editorial_constraints_met", "uncertainty_notes", "action_reason", "revised_prompt", "preserved_required", "preserved_exclusions"],
   properties: {attempt_id: {type: "string"}, decision: {type: "string", enum: [...DECISIONS]}, critical_findings: strings, minor_findings: strings,
     editorial_constraints_met: {type: "boolean"}, uncertainty_notes: strings, action_reason: {type: "string"}, revised_prompt: {type: "string"}, preserved_required: strings, preserved_exclusions: strings} };
-const EVALUATE = `Evaluate the ENTIRE unprocessed generated photograph for photographic credibility, physical/contextual plausibility and the immutable brief's required anchors and exclusions. Literal adherence to secondary prompt details is not required. Critical defects cannot be compensated: anatomy, physics, geometry, central nonsense text, artificial rendering, contextual contradictions, content violations or missing required anchors. Cite observable regions and consequences for every finding; report uncertainty, never infer identity, provenance, licence or historical truth from pixels. People must be invented, no living/recently deceased identifiable people, attributed crimes, regime celebration or nudity outside art. Choose accept, retry_same_prompt, revise_prompt, replan_scene or review_needed. For uncertainty choose review_needed. Tolerance 0 accepts no minor defects; 1 accepts subtle photographically plausible imperfections; 2 tolerates minor defects only while credibility holds. Never accept critical defects at any tolerance. If revising/replanning, supply the revised prompt in this same response, retain every required anchor and exclusion verbatim in preserved_required/preserved_exclusions. Never compose for a later crop. This is an editorial estimate, not authentication.`;
+/** The part of the evaluator's instructions that the code enforces, after the editable context «slop_evaluation». */
+const EVALUATE_RULE = `Evaluate the ENTIRE unprocessed generated photograph. Choose accept, retry_same_prompt, revise_prompt, replan_scene or review_needed; for uncertainty choose review_needed. Critical defects are never accepted at any tolerance. Tolerance 0 accepts no minor defects; 1 accepts subtle photographically plausible imperfections; 2 tolerates minor defects only while credibility holds. If revising or replanning, give the revised prompt in this same response and copy every required anchor and exclusion of the brief verbatim into preserved_required and preserved_exclusions. Never compose for a later crop.`;
 function base64(bytes: Uint8Array) { let s = ""; for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode(...bytes.subarray(i, i + 8192)); return btoa(s); }
 async function hash(brief: Brief) { return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(brief))))].map(b => b.toString(16).padStart(2, "0")).join(""); }
 async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array, evaluation: Evaluation) {
@@ -195,6 +201,8 @@ async function generateImage(env: Env, batchId: string, data: Record<string, unk
   if (live) throw new HttpError(409, "La REAL ha già una SLOP attiva");
   const briefHash = await hash(brief);
   if (p.brief_hash && p.brief_hash !== briefHash) throw new HttpError(409, "Brief modificato dopo l'avvio");
+  // Read before the attempt is claimed: a failure here costs nothing.
+  const [base, context] = [await currentContext(env, "base"), await currentContext(env, "slop_evaluation")];
   let marked;
   try { marked = await env.DB.prepare("UPDATE slop_processes SET state='running',brief_hash=?,attempts=attempts+1,updated_at=? WHERE id=? AND state=? AND attempts=? AND EXISTS(SELECT 1 FROM slop_batches WHERE id=? AND prompts_status='done') AND EXISTS(SELECT 1 FROM images WHERE id=slop_processes.source_id AND status IN ('approved','published')) AND NOT EXISTS(SELECT 1 FROM images s WHERE s.generation_source=slop_processes.source_id AND s.status IN ('new','approved','published'))")
     .bind(briefHash, now(), p.id, p.state, p.attempts, batchId).run(); }
@@ -219,14 +227,17 @@ async function generateImage(env: Env, batchId: string, data: Record<string, unk
       await env.DB.prepare("UPDATE slop_processes SET state='review_needed',error='Interrotto prima della valutazione',updated_at=? WHERE id=?").bind(now(),p.id).run();
       return {process:{id:p.id,state:"review_needed",attempts:p.attempts}};
     }
-    const evaluationPayload = await paid(env, "evaluation", config.text_model, {model: config.text_model, instructions: EVALUATE, max_output_tokens: 8000,
+    const evaluationPayload = await paid(env, "evaluation", config.text_model, {model: config.text_model,
+      instructions: base.body + "\n\n" + context.body + "\n\n" + EVALUATE_RULE, max_output_tokens: 8000,
       text: {format: {type: "json_schema", name: "slop_evaluation", strict: true, schema: evaluationSchema}},
       input: [{role: "user", content: [{type: "input_text", text: JSON.stringify({attempt_id: attemptId, brief, prompt: p.prompt, tolerance: config.editorial_tolerance})},
         {type: "input_image", image_url: `data:${mime};base64,${base64(bytes)}`}]}]}, {process: p.id, attempt: attemptId});
     let evaluation = validEvaluation(responseJson(evaluationPayload), attemptId, brief);
     if (!evaluation) throw new HttpError(502, "Valutazione non valida: processo sospeso");
     if (config.editorial_tolerance === 0 && evaluation.decision === "accept" && evaluation.minor_findings.length) evaluation = {...evaluation, decision: "review_needed"};
-    await env.DB.prepare("UPDATE slop_attempts SET status='completed',evaluation=?,updated_at=? WHERE id=?").bind(JSON.stringify(evaluation), now(), attemptId).run();
+    // The stored evaluation records the context versions it was made with.
+    await env.DB.prepare("UPDATE slop_attempts SET status='completed',evaluation=?,updated_at=? WHERE id=?")
+      .bind(JSON.stringify({...evaluation, contexts: {base: base.id, evaluation: context.id}}), now(), attemptId).run();
     if (evaluation.decision === "accept") return await materialize(env, p, batch, bytes, evaluation);
     const state = evaluation.decision === "review_needed" ? "review_needed" : p.attempts >= config.max_generation_attempts ? "exhausted" : "retry";
     const prompt = ["revise_prompt", "replan_scene"].includes(evaluation.decision) ? evaluation.revised_prompt.trim() : p.prompt;

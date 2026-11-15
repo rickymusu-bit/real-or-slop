@@ -43,8 +43,8 @@ def image(color, title, description=''):
     status, item = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': 'REAL', 'title': title, 'description': description}),
                         raw=source.getvalue(), mime='image/jpeg'); assert status == 201, item
     return item, game_copy(source.getvalue())
-def analyze(item, confirm=True):
-    return call(f'{API}/{item["id"]}/analyze', {'confirm': confirm} if confirm is not None else {})
+def analyze(item, confirm=True, repeat=False):
+    return call(f'{API}/{item["id"]}/analyze', ({'confirm': confirm} if confirm is not None else {}) | ({'repeat_uncertain': True} if repeat else {}))
 def patch(item, change):
     status, result = call(f'{API}/{item["id"]}', {'revision': item['revision'], **change}, method='PATCH'); assert status == 200, result
     return result
@@ -124,9 +124,10 @@ status, result = analyze(other); assert status == 502, result
 assert len(openai()) == 1
 status, other = call(f'{API}/{other["id"]}'); assert other['analysis']['status'] == 'uncertain' and 'addebitata' in other['analysis']['error'], other
 openai([{'status': 400}])
-assert analyze(other)[0] == 409  # uncertain outcomes cannot be resent
-sql(f"UPDATE images SET analysis_status='failed' WHERE id='{other['id']}'")
-assert analyze(other)[0] == 502
+# An uncertain outcome is never resent by itself: only an explicit confirmation of the risk repeats it.
+code, result = analyze(other); assert code == 409 and 'addebitata' in result['error'] and openai() == [], result
+openai([{'status': 400}])
+assert analyze(other, repeat=True)[0] == 502
 status, other = call(f'{API}/{other["id"]}'); assert other['analysis']['status'] == 'failed', other
 # OpenAI's own spend limit or credit reached first: refused there, nothing charged, a message the dashboard stops on.
 openai([{'status': 429, 'code': 'insufficient_quota'}])
@@ -141,10 +142,11 @@ sql(f"UPDATE images SET analysis_status='running' WHERE id='{other['id']}'")
 code, result = analyze(other); assert code == 409 and 'in corso' in result['error'], result
 assert len(spend()) == 5  # refused before anything is recorded or sent
 sql(f"UPDATE images SET updated_at='2000-01-01T00:00:00.000Z' WHERE id='{other['id']}'")
-assert analyze(other)[0] == 409  # stale claim stays suspended
-sql(f"UPDATE images SET analysis_status='failed' WHERE id='{other['id']}'")
+# A stale claim may have been charged: like an uncertain outcome, it is repeated only with the explicit confirmation.
+code, result = analyze(other); assert code == 409 and 'addebitata' in result['error'] and len(spend()) == 5, result
 openai([])
-status, other = analyze(other); assert status == 200 and other['tags'] == ['crowd', 'street'] and len(spend()) == 6, other
+status, other = analyze(other, repeat=True); assert status == 200 and other['tags'] == ['crowd', 'street'] and len(spend()) == 6, other
+assert analyze(other, repeat=True)[0] == 409  # done: the flag does not open a second analysis
 status, result = analyze(other); assert status == 409 and 'già generati' in result['error'] and len(spend()) == 6, result
 # Only new images are analysed.
 status, place = call(f'{API}/{place["id"]}'); status, place = call(f'{API}/{place["id"]}/approve', {'rights_confirmed': True})
@@ -167,11 +169,12 @@ assert sql("SELECT count(*) AS n FROM tag_aliases WHERE alias='barricades'")[0][
 assert len(spend()) == 6
 assert call(f'{API}/tags/alias', {'alias': 'police-car'}, method='DELETE') == (200, {'removed': 'police-car'})
 assert labels()['riot']['aliases'] == []
-# Model context: three parts with the approved first versions; each save is a version; restore; used by each call.
+# Model context: four parts with the approved first versions; each save is a version; restore; used by each call.
 status, contexts = call(f'{API}/contexts'); assert status == 200 and contexts['max'] == 4000, contexts
 parts = {p['part']: p for p in contexts['parts']}
-assert set(parts) == {'base', 'analysis', 'slop_prompt'} and all(len(p['history']) == 1 for p in parts.values()), contexts
+assert set(parts) == {'base', 'analysis', 'slop_prompt', 'slop_evaluation'} and all(len(p['history']) == 1 for p in parts.values()), contexts
 assert 'brief editoriale' in parts['slop_prompt']['current']['body'] and 'nessuna somiglianza obbligatoria' in parts['slop_prompt']['current']['body']
+assert 'credibilità fotografica' in parts['slop_evaluation']['current']['body'] and not any(p['outdated'] for p in parts.values()), parts
 first_analysis = parts['analysis']['current']
 for wrong in ({'part': 'other', 'body': 'x'}, {'part': 'base', 'body': '   '}, {'part': 'base', 'body': 'x' * 4001}, {'part': 'base'}, {'part': 'base', 'body': 'x', 'extra': 1}):
     assert call(f'{API}/contexts', wrong)[0] == 400, wrong

@@ -1,18 +1,20 @@
 /** Fixed context of the language model (spec `libreria-immagini`, section 7), edited from Settings and kept as versions in
- * D1. «base» goes with every call; «analysis» with tags; «slop_prompt» with SLOP prompts. The base must not mention generated images:
- * the analysis model never learns that some are. DEFAULTS are the code's proposal: a proposal becomes a version only when the owner
- * saves it; a fresh database starts from it. The JSON format and the tag filters stay in the code, whatever these texts say. */
+ * D1. «base» goes with every call; «analysis» with tags; «slop_prompt» with the SLOP brief and prompt; «slop_evaluation» with the
+ * evaluation of a SLOP candidate. The base must not mention generated images: the analysis model never learns that some are.
+ * DEFAULTS are the code's proposal: a proposal becomes a version only when the owner saves it; a part with no version starts from
+ * it. The JSON format, the decisions of the evaluator and the tag filters stay in the code, whatever these texts say. */
 import { HttpError, id, type Env } from "./core";
 
-export type Part = "base" | "analysis" | "slop_prompt";
-export const PARTS: Part[] = ["base", "analysis", "slop_prompt"];
+export type Part = "base" | "analysis" | "slop_prompt" | "slop_evaluation";
+export const PARTS: Part[] = ["base", "analysis", "slop_prompt", "slop_evaluation"];
 export const CONTEXT_MAX = 4000;
+/** SLOP pipeline of the texts saved from now on (migration 0051). A «slop_prompt» of pipeline 1 was written for the twin prompts
+ * of app 1.26 and contradicts the editorial brief: no brief call is sent with it. */
+export const PIPELINE = 2;
 const HISTORY = 50;
 
-/** Proposals of the code (context 1.8.0, after the first batch of twins' predecessors on 2026-11-14): the SLOP prompt is the twin of
- * one REAL; no fixed sentence structure (every prompt of that batch put «a woman… while a man…» in the foreground of a crowd scene);
- * the rendering of the picture, never the print as an object (five prints out of five came with white margins, worn corners and
- * scratches); no place names on signs. Base and analysis as in 1.7.0. */
+/** Proposals of the code (context 1.9.0, app 1.28.0): base and analysis as in 1.7.0; «slop_prompt» for the brief and prompt of
+ * the editorial pipeline (spec `generazione-slop` 5.x); «slop_evaluation», the editable part of the evaluator. */
 export const DEFAULTS: Record<Part, string> = {
   base: `Lavori per un archivio fotografico italiano che cataloga le immagini con etichette brevi.
 
@@ -31,9 +33,16 @@ Scegli parole con un solo significato («house-fire» per l'evento, «flames» p
 
 Tag: da 5 a 15, divisi per categoria. Se l'epoca è ricavabile, indica il decennio. Indica sempre genere, colore e supporto, giudicandoli dall'aspetto dell'immagine: retino di stampa, bordi e grana di una pellicola, carta di una stampa, nitidezza di un sensore digitale. Preferisci i tag del vocabolario esistente, che ricevi diviso per categoria, quando sono adatti; creane di nuovi solo se nessuno lo è.`,
   slop_prompt: `Scrivi insieme un brief editoriale minimo e un prompt in inglese per una fotografia sintetica credibile. Ricevi i tag e la descrizione editoriale salvata di una REAL, senza i suoi pixel. La REAL è un riferimento tematico e fotografico: nessuna somiglianza obbligatoria, nessun numero di elementi da cambiare. Distingui ancoraggi obbligatori, preferenze, elementi flessibili ed esclusioni. Il brief resterà immutabile nel ciclo di valutazione, mentre prompt e scena possono cambiare. Credibilità, varietà, luce e tecnica concrete; evita enfasi cinematografica e schemi ripetitivi. Persone inventate: nessun nome o descrizione di persone vive o morte da meno di 50 anni. Nessun crimine attribuito a personaggi storici, regimi mai celebrati, niente nudità fuori dalle opere d'arte. Non scegliere formati né comporre per il ritaglio del gioco.`,
+  slop_evaluation: `Valuti una fotografia generata, intera e non trattata, prima che entri nella libreria come candidata. Giudica prima la credibilità fotografica: deve poter essere scambiata per una fotografia autentica della tecnica, dell'epoca e della situazione rappresentata. Poi la plausibilità fisica e contestuale e il rispetto degli ancoraggi obbligatori e delle esclusioni del brief. L'aderenza letterale ai dettagli secondari del prompt non è richiesta.
+
+Difetti critici, che nessun punto forte compensa: anatomia, fisica, geometria, scritte centrali senza senso, resa artificiale, contraddizioni di contesto, violazioni delle regole sui contenuti, ancoraggi obbligatori mancanti. Per ogni difetto indica la zona dell'immagine e la conseguenza. Segnala le incertezze; non dedurre identità, provenienza, licenza o verità storica dai pixel. La valutazione è una stima editoriale, non una certificazione.
+
+Contenuti: persone inventate; nessuna persona viva o morta da meno di 50 anni riconoscibile; nessun crimine attribuito a personaggi storici; regimi mai celebrati; niente nudità fuori dalle opere d'arte.
+
+Lingua: difetti, incertezze e motivazione in italiano; il prompt rivisto in inglese.`,
 };
 
-export interface ContextVersion { id: string; part: Part; body: string; created_at: string }
+export interface ContextVersion { id: string; part: Part; body: string; created_at: string; pipeline: number }
 
 function part(value: unknown): Part {
   if (typeof value !== "string" || !PARTS.includes(value as Part)) throw new HttpError(400, "Parte del contesto inesistente");
@@ -51,7 +60,7 @@ function clean(value: unknown): string {
 
 /** Current version of a part; the first read writes the approved default. */
 export async function currentContext(env: Env, which: Part): Promise<ContextVersion> {
-  const latest = () => env.DB.prepare("SELECT id,part,body,created_at FROM model_contexts WHERE part=? ORDER BY created_at DESC,rowid DESC LIMIT 1")
+  const latest = () => env.DB.prepare("SELECT id,part,body,created_at,pipeline FROM model_contexts WHERE part=? ORDER BY created_at DESC,rowid DESC LIMIT 1")
     .bind(which).first<ContextVersion>();
   const found = await latest();
   if (found) return found;
@@ -65,19 +74,23 @@ async function state(env: Env) {
   // A proposal from the code is shown when it differs from the current text; it is never saved by itself.
   for (const which of PARTS) {
     const current = await currentContext(env, which);
-    const history = (await env.DB.prepare(`SELECT c.id,c.body,c.created_at,
+    const history = (await env.DB.prepare(`SELECT c.id,c.body,c.created_at,c.pipeline,
       (SELECT count(*) FROM images i WHERE i.analysis_base_context=c.id OR i.analysis_task_context=c.id) AS used
       FROM model_contexts c WHERE c.part=? ORDER BY c.created_at DESC,c.rowid DESC LIMIT ?`).bind(which, HISTORY)
-      .all<{ id: string; body: string; created_at: string; used: number }>()).results;
-    parts.push({ part: which, current, history, proposed: current.body === DEFAULTS[which] ? null : DEFAULTS[which] });
+      .all<{ id: string; body: string; created_at: string; pipeline: number; used: number }>()).results;
+    // A «slop_prompt» saved for the twin pipeline blocks the brief calls until a new version is saved.
+    const outdated = which === "slop_prompt" && current.pipeline < PIPELINE;
+    parts.push({ part: which, current, history, outdated, proposed: current.body === DEFAULTS[which] && !outdated ? null : DEFAULTS[which] });
   }
   return { max: CONTEXT_MAX, parts };
 }
 
-async function save(env: Env, which: Part, body: string) {
+/** A new version, unless it repeats the current one. Saving a text marks it for the current pipeline; a restored version keeps its own. */
+async function save(env: Env, which: Part, body: string, pipeline = PIPELINE) {
   const current = await currentContext(env, which);
-  if (current.body !== body)
-    await env.DB.prepare("INSERT INTO model_contexts(id,part,body,created_at) VALUES(?,?,?,?)").bind(id(), which, body, new Date().toISOString()).run();
+  if (current.body !== body || current.pipeline !== pipeline)
+    await env.DB.prepare("INSERT INTO model_contexts(id,part,body,created_at,pipeline) VALUES(?,?,?,?,?)")
+      .bind(id(), which, body, new Date().toISOString(), pipeline).run();
   return state(env);
 }
 
@@ -87,9 +100,9 @@ export async function contextRoute(env: Env, method: string, restore: boolean, d
   if (method !== "POST") throw new HttpError(405, "Metodo non consentito");
   if (restore) {
     if (Object.keys(data).some(key => key !== "id") || typeof data.id !== "string") throw new HttpError(400, "Versione richiesta");
-    const old = await env.DB.prepare("SELECT part,body FROM model_contexts WHERE id=?").bind(data.id).first<{ part: Part; body: string }>();
+    const old = await env.DB.prepare("SELECT part,body,pipeline FROM model_contexts WHERE id=?").bind(data.id).first<{ part: Part; body: string; pipeline: number }>();
     if (!old) throw new HttpError(404, "Versione inesistente");
-    return save(env, old.part, old.body);
+    return save(env, old.part, old.body, old.pipeline);
   }
   if (Object.keys(data).some(key => key !== "part" && key !== "body")) throw new HttpError(400, "Campi non previsti");
   return save(env, part(data.part), clean(data.body));
