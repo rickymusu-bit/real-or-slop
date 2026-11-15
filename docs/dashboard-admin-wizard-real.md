@@ -1,4 +1,4 @@
-# Dashboard e wizard REAL — specifica 2.3.0
+# Dashboard e wizard REAL — specifica 2.3.1
 
 Stato: vigente (con decisioni future indicate a parte). Aggiornata: 2026-11-15T13:42:00+01:00. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wizard di `didascalie-wizard.v1.0.0` e
@@ -8,7 +8,7 @@ senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wiza
 descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
 
 - **Passo 3, Inquadratura:** il riquadro è sempre 4:5 verticale; il formato non si sceglie più (specifica `copie-di-gioco` 9.0.0).
-- **Tag e descrizione editoriale della REAL** (specifiche `libreria-immagini` 3.5.0, `generazione-slop` 5.2.0): al passo 2
+- **Tag e descrizione editoriale della REAL** (specifiche `libreria-immagini` 3.5.1, `generazione-slop` 5.2.0): al passo 2
   **una sola chiamata multimodale** sulla copia 4:5 e sul contesto Commons produce i tag e una descrizione della foto
   e del contesto. Il testo editoriale è privato, correggibile e separato dalla descrizione Commons mostrata a fine partita.
   Non presenta indizi dell'esistenza di immagini SLOP. Durante l'analisi non viene creata alcuna immagine sintetica.
@@ -26,7 +26,9 @@ descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le
   tocco breve su una foto la seleziona e la mette subito tra le selezionate; la selezione resta con una nuova ricerca (2026-11-14).
 - Una pressione prolungata su una miniatura la ingrandisce con titolo, descrizione e link a Commons; la finestra resta aperta e si
   chiude con una × nell'angolo. Vale anche nel Database e nello studio SLOP (2026-11-14).
-- La descrizione delle REAL si corregge durante il caricamento e si mostra alla fine della partita (2026-11-14).
+- La **descrizione Commons modificabile dall'owner** è quella mostrata alla fine della partita (2026-11-14).
+  La nuova **descrizione editoriale generata con i tag** rimane privata; il suo contenuto può essere corretto durante
+  il caricamento senza sostituire automaticamente quello mostrato nel gioco.
 
 ## 2. Dashboard `/admin`
 
@@ -92,6 +94,8 @@ acquisite sono comunque nella libreria privata.
 ritaglio (specifica `copie-di-gioco`, sezione 3); «Prepara la copia di gioco» se manca. Si passa al 4 solo se ogni foto ha la copia.
   **Vincolo editoriale:** l'inquadratura deve conservare gli elementi che determinano i tag tematici e il significato della foto;
   l'owner corregge eventuali ritagli che li eliminano. Non servono tag distinti per l'originale e per il 4:5.
+  Se l'inquadratura cambia dopo l'analisi, non effettuare nuove chiamate automatiche; l'owner può correggere manualmente
+  la descrizione quando qualche dettaglio secondario non è più visibile.
 
 **4. Riepilogo e pubblicazione.** Ogni foto con la copia servita dal gioco e il marchio «RS» sovrapposto, la descrizione e i tag.
 L'owner dichiara di aver verificato autenticità, provenienza e condizioni della licenza; poi le immagini si approvano e si pubblicano una
