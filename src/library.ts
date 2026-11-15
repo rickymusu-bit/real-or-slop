@@ -211,15 +211,17 @@ export async function showLibrary() {
   /** Analyses images one by one after an explicit confirmation of the total estimate. */
   const analyzeMany = async (ids: string[], describe = false) => {
     if (!analysis?.enabled || !ids.length) return;
-    if (!window.confirm(describe
-      ? `Analisi combinata tag e descrizione di ${ids.length} REAL con ${analysis.model}: al massimo ${ids.length} ${ids.length === 1 ? "chiamata" : "chiamate"} a pagamento, una per foto, sull'originale intero, nessuna ripetuta in automatico. I tag attuali saranno sostituiti. Continuare?`
-      : `Analizzare ${ids.length} ${ids.length === 1 ? "immagine" : "immagini"} con ${analysis.model}? Sono chiamate a pagamento. I tag attuali saranno sostituiti; ogni immagine si analizza una sola volta.`)) return;
+    const repeated = new Set(items.filter(i => ids.includes(i.id) && unsure(i)).map(i => i.id));
+    const risk = repeated.size ? ` ${repeated.size === 1 ? "Una di queste ha" : repeated.size + " di queste hanno"} un'analisi precedente interrotta o con esito incerto, che potrebbe essere già stata addebitata: ${repeated.size === 1 ? "verrà ripetuta" : "verranno ripetute"}.` : "";
+    if (!window.confirm((describe
+      ? `Analisi combinata tag e descrizione di ${ids.length} REAL con ${analysis.model}: al massimo ${ids.length} ${ids.length === 1 ? "chiamata" : "chiamate"} a pagamento, una per foto, sull'originale intero, nessuna ripetuta in automatico. I tag attuali saranno sostituiti.`
+      : `Analizzare ${ids.length} ${ids.length === 1 ? "immagine" : "immagini"} con ${analysis.model}? Sono chiamate a pagamento. I tag attuali saranno sostituiti; ogni immagine si analizza una sola volta.`) + risk + " Continuare?")) return;
     let done = 0; const errors: string[] = [], conflicts: Conflict[] = [];
     for (const [index, imageId] of ids.entries()) {
       progress(`Analisi ${index + 1} di ${ids.length}`);
       try {
         const result = await call<{ tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(imageId)}/analyze`, { method: "POST",
-          body: JSON.stringify(describe ? { confirm: true, refresh_description: true } : { confirm: true }) });
+          body: JSON.stringify({ confirm: true, ...(describe ? { refresh_description: true } : {}), ...(repeated.has(imageId) ? { repeat_uncertain: true } : {}) }) });
         conflicts.push(...(result.tag_conflicts || [])); done++;
       }
       catch (error) { errors.push(error instanceof Error ? error.message : String(error)); if (/OpenAI:/.test(String(error))) break; }
@@ -565,16 +567,19 @@ export async function showLibrary() {
           if (!ids.length) { message("Nessuna immagine selezionata da completare: servono un'analisi riuscita, un completamento mai fatto e almeno una categoria tra Genere, Colore e Supporto mancante."); return; }
           await completeMany(ids); return;
         }
+        // An analysis still running (less than ten minutes) is left alone; an uncertain or interrupted one may have been charged:
+        // it is included only after a confirmation that names it, and its request carries the explicit repeat.
+        const waiting = (i: Item) => i.analysis.status === "running" && !interrupted(i);
         if (action === "describe") {
           // REAL without the private description, at any status but the trash: tags and description from the whole original.
-          const ids = items.filter(i => selected.has(i.id) && i.origin === "REAL" && !i.real_description && i.status !== "trash" && i.analysis.status !== "running" && i.analysis.status !== "uncertain").map(i => i.id);
-          if (!ids.length) { message("Nessuna REAL senza descrizione tra le selezionate. Un'analisi con esito incerto si ripete dalla scheda dell'immagine."); return; }
+          const chosen = items.filter(i => selected.has(i.id) && i.origin === "REAL" && !i.real_description && i.status !== "trash");
+          const ids = chosen.filter(i => !waiting(i)).map(i => i.id), busyNow = chosen.length - ids.length;
+          if (!ids.length) { message(chosen.length ? `${busyNow === 1 ? "L'analisi della REAL selezionata è" : "Le analisi delle REAL selezionate sono"} ancora in corso: riprova fra qualche minuto.` : "Nessuna REAL senza descrizione privata tra le selezionate: le altre l'hanno già (il testo di Commons non conta)."); return; }
           await analyzeMany(ids, true); return;
         }
         if (action === "analyze") {
-          // An uncertain outcome may have been charged: it is repeated only from the image card, with its own warning.
-          const ids = items.filter(i => selected.has(i.id) && i.status === "new" && i.copy && (i.analysis.status === "none" || i.analysis.status === "failed")).map(i => i.id);
-          if (!ids.length) { message("Nessuna immagine nuova, con copia di gioco e non ancora analizzata tra le selezionate. Un'analisi con esito incerto si ripete dalla scheda dell'immagine."); return; }
+          const ids = items.filter(i => selected.has(i.id) && i.status === "new" && i.copy && i.analysis.status !== "done" && !waiting(i)).map(i => i.id);
+          if (!ids.length) { message("Nessuna immagine nuova, con copia di gioco e non ancora analizzata tra le selezionate."); return; }
           await analyzeMany(ids); return;
         }
         let tag = $<HTMLInputElement>("#library-bulk-tag")?.value.trim();
@@ -730,8 +735,11 @@ export async function showLibrary() {
   });
   // Thresholds of the SLOP studio and hours of an open game: numbers checked by the server.
   interface Numbers { values: Record<string, number>; limits: Record<string, { min: number; max: number; default: number }> }
-  const renderNumbers = (n: Numbers) => {
+  /** Writes the stored numbers into the fields; after a save only those of the saved form, so that a slower answer never
+   * overwrites what the owner is typing in another form. */
+  const renderNumbers = (n: Numbers, only?: string[]) => {
     for (const [key, value] of Object.entries(n.values)) {
+      if (only && !only.includes(key)) continue;
       const input = page.querySelector<HTMLInputElement>(`[name="${key}"]`);
       if (input) { input.value = String(value); input.min = String(n.limits[key].min); input.max = String(n.limits[key].max); }
     }
@@ -740,7 +748,7 @@ export async function showLibrary() {
     event.preventDefault();
     const form = event.target as HTMLFormElement;
     try {
-      renderNumbers(await call<Numbers>("/settings", { method: "PUT", body: JSON.stringify(Object.fromEntries(fields.map(f => [f, Number((form.elements.namedItem(f) as HTMLInputElement).value)]))) }));
+      renderNumbers(await call<Numbers>("/settings", { method: "PUT", body: JSON.stringify(Object.fromEntries(fields.map(f => [f, Number((form.elements.namedItem(f) as HTMLInputElement).value)]))) }), fields);
       settingsMessage(done); await slopStudio.refresh(); await autoBox.refresh();
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
@@ -796,7 +804,7 @@ export async function showLibrary() {
   await Promise.all([load(), refreshTags(), refreshAnalysis(), refreshGroups()]).catch(error => message(String(error instanceof Error ? error.message : error)));
   await refreshContexts().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   await refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
-  await call<Numbers>("/settings").then(renderNumbers).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
+  await call<Numbers>("/settings").then(n => renderNumbers(n)).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   tagPills();
   slopStudio = await mountSlopStudio($<HTMLElement>("#slop-studio"), n => { $("#slop-attention-count").textContent = n ? ` · ${n} da vedere` : ""; });
   // Automatic SLOP batches: proposal, progress and review (spec `generazione-slop`).

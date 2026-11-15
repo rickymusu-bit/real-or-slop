@@ -148,7 +148,22 @@ with sync_playwright() as p:
         assert 'esito incerto' in confirms[-1], confirms[-1]
         assert call(f'{API}/{stuck["id"]}')['real_description']['visible']
         page.locator('#library-detail .library-detail-close button').click()
-        call(f'{API}/bulk', {'action': 'trash', 'ids': [stuck['id']]}); call(f'{API}/bulk', {'action': 'delete', 'ids': [stuck['id']]})
+        # The same case in the group action: included, named in the confirmation, repeated explicitly. One still running is left alone.
+        again = seed(prefix, 'REAL', 'interrotta-gruppo', 40 + index, ['dbb-riot'], False)
+        fresh = seed(prefix, 'REAL', 'in-corso', 50 + index, ['dbb-riot'], False)
+        sql(f"UPDATE images SET analysis_status='running',updated_at='2000-01-01T00:00:00.000Z' WHERE id='{again['id']}'")
+        sql(f"UPDATE images SET analysis_status='running',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id='{fresh['id']}'")
+        page.locator('#library-undescribed').uncheck(); page.locator('#library-undescribed').check()
+        expect(cards).to_have_count(2)
+        page.locator('#library-select-all').click()
+        openai([{'tags': ['dbb-riot']}])
+        page.locator('[data-bulk=describe]').click()
+        expect(cards).to_have_count(1, timeout=30000)  # the described one leaves the filter; the running one stays
+        expect(page.locator('#library-message')).to_contain_text('1 di 1 analizzate')
+        assert "un'analisi precedente interrotta o con esito incerto" in confirms[-1] and 'al massimo 1 chiamata' in confirms[-1], confirms[-1]
+        assert call(f'{API}/{again["id"]}')['real_description']['visible'] and call(f'{API}/{fresh["id"]}')['real_description'] is None
+        ids = [stuck['id'], again['id'], fresh['id']]
+        call(f'{API}/bulk', {'action': 'trash', 'ids': ids}); call(f'{API}/bulk', {'action': 'delete', 'ids': ids})
         page.locator('#library-undescribed').uncheck()
         expect(cards).to_have_count(2)
 

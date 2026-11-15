@@ -1,9 +1,21 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T19:21:51Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T21:27:29Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.30.1 — 2026-11-15T19:21:51Z
+## 1.30.2 — 2026-11-15T21:27:29Z
+
+- **Analisi in gruppo con esiti incerti o interrotti:** l'azione «Analisi combinata tag e descrizione» (e «Analizza con IA») scartava
+  in silenzio le immagini con un'analisi interrotta o incerta e rispondeva «Nessuna REAL senza descrizione tra le selezionate», come se
+  la descrizione di Commons contasse. Ora le include: la conferma dice quante sono e che potrebbero essere già state addebitate, e le
+  loro richieste portano la ripetizione esplicita. Restano escluse solo le analisi in corso da meno di dieci minuti, con un messaggio
+  che lo dice. Specifiche `libreria-immagini` 3.9.0 e `database-immagini` 2.7.1.
+- **Impostazioni:** il salvataggio di un modulo numerico riscriveva tutti i campi numerici della pagina all'arrivo della risposta, anche
+  quelli di un altro modulo appena modificati e non salvati. Ora riscrive solo i propri. In CI la risposta più lenta faceva fallire il
+  test del browser (controllo `verify` della PR #145); un nuovo test lo riproduce in modo deterministico. Specifica
+  `statistiche-impostazioni` 2.8.1, `MASTER.md` 23.3.3.
+
+## 1.30.1 — 2026-11-15T19:21:51Z (rilasciata il 2026-11-15)
 
 - **Memoria del Worker:** cinque analisi combinate di fila (originali da 2 a 6 MB) sono state interrotte da Cloudflare per memoria
   superata («exceededResources») dopo aver registrato la chiamata, e restavano «in corso». L'immagine va ora nel corpo della richiesta

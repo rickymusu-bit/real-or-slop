@@ -1,6 +1,7 @@
-# Libreria delle immagini, tag e analisi — specifica 3.8.1
+# Libreria delle immagini, tag e analisi — specifica 3.9.0
 
-Stato: vigente; la 3.8.0 è in produzione con l'app 1.29.0, la 3.8.1 è per l'app 1.30.1. Aggiornata: 2026-11-15T19:21:51Z. La 3.8.1 corregge la
+Stato: vigente; la 3.8.1 è in produzione con l'app 1.30.1, la 3.9.0 è per l'app 1.30.2. Aggiornata: 2026-11-15T21:07:23Z. La 3.9.0 ammette nelle azioni
+in gruppo la ripetizione confermata degli esiti incerti o interrotti (decisione dell'owner del 2026-11-15). La 3.8.1 corregge la
 memoria usata per inviare l'originale e la ripetizione di un'analisi interrotta dalla dashboard.
 La 3.8.0 fa analizzare REAL e SLOP intere (l'originale, non la copia 4:5: decisioni dell'owner del 2026-11-15) e aggiunge
 l'analisi combinata in gruppo delle REAL senza descrizione. La 3.7.0 aggiunge il contesto «Valutazione delle SLOP», blocca brief e prompt finché il contesto in vigore è quello delle
@@ -123,7 +124,7 @@ Una sola raccolta di immagini REAL e SLOP.
 
 Per una REAL l’unica analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Il modello vede la REAL **intera**, cioè l’originale caricato (JPEG, PNG o WebP fino a 12 MB), mai il ritaglio 4:5 (decisione dell’owner del 2026-11-15). Modello, hash dell’originale, revisione e data sono conservati come provenienza. La descrizione è privata, modificabile senza alterare tag o testo Commons; quest’ultimo è conservato separatamente per le nuove acquisizioni. Per una SLOP l’analisi restituisce soltanto tag, anch’essa sull’originale intero.
 
-Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova generazione richiede compilazione manuale o una nuova analisi combinata confermata (`refresh_description:true`), anche se già approvata/pubblicata. Nessun backfill. L'analisi combinata si lancia dalla scheda o in gruppo dal Database (filtro «REAL senza descrizione», azione «Analisi combinata tag e descrizione»), con conferma del numero massimo di chiamate, una per foto; un'immagine con esito incerto si ripete solo dalla scheda. La modifica della sola descrizione privata non ritira una pubblicata.
+Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova generazione richiede compilazione manuale o una nuova analisi combinata confermata (`refresh_description:true`), anche se già approvata/pubblicata. Nessun backfill. L'analisi combinata si lancia dalla scheda o in gruppo dal Database (filtro «REAL senza descrizione», azione «Analisi combinata tag e descrizione»), con conferma del numero massimo di chiamate, una per foto; le immagini con esito incerto o interrotto sono incluse e la conferma le nomina. La modifica della sola descrizione privata non ritira una pubblicata.
 
 - Su richiesta dell'owner (wizard, dettaglio o gruppo nel Database, studio SLOP), solo per immagini nuove. Il modello di testo scelto
   nelle Impostazioni, che deve leggere immagini, riceve l'originale intero (vede i pixel, non i metadati del file) con titolo e
@@ -149,8 +150,9 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
 - **Una generazione per immagine:** dopo un esito riuscito il server rifiuta un'altra analisi. I tag generati restano nel database
   e «Ripristina i tag generati» li riporta senza costi. Fanno eccezione l’analisi combinata confermata di una REAL storica senza descrizione e una nuova SLOP accettata da un nuovo processo.
 - Una sola analisi alla volta per immagine; un segno interrotto resta sospeso e viene marcato incerto dalla manutenzione.
-- **Esito incerto o segno interrotto** (più di dieci minuti): mai ripetuto in automatico né nelle azioni in gruppo. Dalla scheda
-  dell'immagine l'owner può ripeterlo con una conferma che avverte del possibile addebito già avvenuto; la richiesta porta
+- **Esito incerto o segno interrotto** (più di dieci minuti): mai ripetuto in automatico. Dalla scheda dell'immagine, o in gruppo dal
+  Database e dal wizard, l'owner può ripeterlo con una conferma che lo nomina e avverte del possibile addebito già avvenuto; un'analisi
+  ancora in corso da meno di dieci minuti resta esclusa. La richiesta porta
   `repeat_uncertain: true`, senza la quale il server rifiuta. La chiamata pendente dell'analisi interrotta passa a `uncertain`.
   La dashboard tratta allo stesso modo un'analisi ancora «in corso» dopo dieci minuti: la mostra come interrotta e offre la
   ripetizione con l'avviso.
