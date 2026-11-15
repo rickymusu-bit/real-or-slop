@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 22.0.0, aggiornata il 2026-11-15T11:08:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 22.0.1, aggiornata il 2026-11-15T11:08:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -19,12 +19,13 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 - **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta finale
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
   al browser prima della risposta. Il modello che scrive i tag o descrive una REAL non sa che esistono immagini generate.
-- **Ogni SLOP nasce da una REAL di riferimento** (decisione del 2026-11-15, specifica `generazione-slop` 5.0.0): il riferimento
+- **Ogni SLOP nasce da una REAL di riferimento** (decisione del 2026-11-15, specifica `generazione-slop` 5.0.1): il riferimento
   assicura ancoraggi editoriali tematici e fotografici, **non** somiglianza visiva né il cambiamento di un solo elemento.
   Il brief editoriale del processo resta immutabile; il prompt e la scena possono cambiare. Le persone sono inventate.
   Una SLOP e la propria REAL non compaiono nella stessa partita (specifiche `copie-di-gioco`, `gioco-a-livelli`).
-- **Credibilità prima dell'aderenza letterale al prompt.** Il valutatore di ogni copia finale 4:5 decide accettazione, nuovo
-  tentativo, revisione del prompt o revisione umana. I difetti critici non sono compensabili con altri punti forti; tentativi
+- **Credibilità prima dell'aderenza letterale al prompt.** Il valutatore esamina **l'immagine generata intera**, senza crop
+  né trattamento 4:5; decide accettazione, nuovo tentativo, revisione del prompt o revisione umana. Il ritaglio 4:5 è preparato
+  **soltanto dopo l'accettazione** e non dà feedback al generatore. I difetti critici non sono compensabili con altri punti forti; tentativi
   e tolleranza sono configurabili. Nessuna candidata rifiutata entra nella libreria giocabile o viene pubblicata automaticamente.
 - **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP.
 - **Chiamate a pagamento:** solo con conferma esplicita dell'owner del **numero massimo** previsto per un loop, registrate in
