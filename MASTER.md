@@ -37,7 +37,7 @@ nome.
 | SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.0.0 (da implementare) |
 | Sezione Database | `docs/database-immagini.md` | 2.4.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.3.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.4.0 (decisioni da implementare) |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
