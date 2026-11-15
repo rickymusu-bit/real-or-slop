@@ -15,7 +15,7 @@ nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia 
   (2026-11-13, invariato). Nessuna vista iniziale diversa dalla foto intera.
 - Trattamento delle SLOP: copia le REAL, non le supera (2026-11-14). Le misure vengono dalla **REAL di riferimento** (2026-11-15): prese
   da un'altra REAL avevano rovinato il lotto del 2026-11-15 (sezione 4.1). Il trattamento è un suggerimento fotografico leggero,
-  **non** un vincolo a rendere la scena simile alla REAL; la credibilità della copia finale prevale (specifica `generazione-slop` 5.0.0).
+  **non** un vincolo a rendere la scena simile alla REAL; la credibilità della copia finale prevale (specifica `generazione-slop` 5.0.1).
 
 ## 2. Formati
 
