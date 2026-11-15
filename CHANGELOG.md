@@ -1,9 +1,18 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T21:27:29Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T21:51:59Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.30.2 — 2026-11-15T21:27:29Z
+## 1.30.3 — 2026-11-15T21:51:59Z
+
+- **Brief e prompt una REAL per volta:** il primo batch automatico (10 SLOP) scriveva tutti i brief in un'unica richiesta di circa tre
+  minuti; il browser del telefono ha chiuso la connessione dopo 48 secondi e Cloudflare ha interrotto il Worker («clientDisconnected»):
+  2 brief scritti, uno incerto, 7 mai iniziati, batch bloccato su «in scrittura». Studio e batch automatico chiedono ora un brief per
+  richiesta. Lo stato dei brief del batch segue i suoi processi, e un brief fallito o incerto non blocca più gli altri; una scrittura
+  rimasta in corso oltre dieci minuti si sblocca alla lettura del batch, senza ripetere il brief interrotto. Specifica
+  `generazione-slop` 5.5.1, `MASTER.md` 23.4.0.
+
+## 1.30.2 — 2026-11-15T21:27:29Z (rilasciata il 2026-11-15)
 
 - **Analisi in gruppo con esiti incerti o interrotti:** l'azione «Analisi combinata tag e descrizione» (e «Analizza con IA») scartava
   in silenzio le immagini con un'analisi interrotta o incerta e rispondeva «Nessuna REAL senza descrizione tra le selezionate», come se

@@ -133,7 +133,10 @@ export async function guardBatch(env: Env, method: string, rest: string, data: R
   if (row.pipeline_version !== 2) throw new HttpError(409, "Batch precedente: sola revisione; non si riprende automaticamente");
   if (row.auto_status !== "running") throw new HttpError(409, "Il batch automatico non è più in generazione: nessuna chiamata inviata");
   if (action === "prompts") {
-    if (data.index !== undefined || row.prompts_status !== "none")
+    // One request per REAL (index), each written once: never a rewrite of a brief already written, failed or uncertain.
+    const draft = typeof data.index === "number" && await env.DB.prepare("SELECT 1 FROM slop_processes WHERE batch_id=? AND slot=? AND state='draft'")
+      .bind(batchId, data.index).first();
+    if (row.prompts_status !== "none" || (data.index !== undefined && !draft))
       throw new HttpError(409, "I prompt di un batch automatico si scrivono una volta sola: nessuna chiamata inviata");
     return;
   }

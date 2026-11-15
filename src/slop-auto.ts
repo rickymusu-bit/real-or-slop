@@ -101,12 +101,16 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
     try {
       const quality = state.batch.config.quality;
       let batch = state.batch;
-      if (batch.prompts_status === "none") {
-        step("Scrittura dei prompt…");
-        try { await call(SLOP + "batches/" + encodeURIComponent(batchId) + "/prompts", { confirm: true }); }
-        catch (error) { problems.push("prompt: " + errorText(error)); }
-        await load(); batch = state?.batch?.id === batchId ? state.batch : batch;
+      // One request per REAL: a closed connection (a phone that changes app) interrupts one brief, never the whole batch.
+      const drafts = batch.prompts_status === "none" ? batch.processes.filter(p => p.state === "draft").map(p => p.slot) : [];
+      for (const [n, index] of drafts.entries()) {
+        if (stopping) break;
+        step(`Brief e prompt ${n + 1} di ${drafts.length}…`);
+        try { await call(SLOP + "batches/" + encodeURIComponent(batchId) + "/prompts", { confirm: true, index }); }
+        catch (error) { problems.push("prompt " + (index + 1) + ": " + errorText(error)); if (/OpenAI:/.test(errorText(error))) { account = true; break; } }
       }
+      if (drafts.length) { await load(); batch = state?.batch?.id === batchId ? state.batch : batch; }
+      if (stopping || account) { if (account) await call(SLOP + "auto/stop", {}).catch(() => {}); notice = account ? "Batch fermato da un problema dell'account OpenAI." : "Batch interrotto."; return; }
       if (batch.prompts_status === "running") {
         if (Date.now() - Date.parse(batch.updated_at) < STALE_MS) { notice = "Prompt in scrittura: il batch riprende alla prossima apertura della dashboard."; return; }
         problems.push("scrittura dei prompt interrotta, esito incerto: non ripetuta");

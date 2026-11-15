@@ -1,6 +1,7 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.5.0
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.5.1
 
-Stato: vigente; la 5.4.0 è in produzione con l'app 1.28.0 (rilasciata il 2026-11-15), la 5.5.0 è per l'app 1.29.0. Aggiornata: 2026-11-15T17:58:54Z.
+Stato: vigente; la 5.5.0 è in produzione con l'app 1.30.2, la 5.5.1 è per l'app 1.30.3. Aggiornata: 2026-11-15T21:51:59Z. La 5.5.1 scrive brief e
+prompt con una richiesta per REAL e sblocca un batch rimasto «in scrittura».
 La 5.5.0 fa analizzare REAL e SLOP intere invece del ritaglio 4:5, tiene in evidenza, con ogni tentativo, i processi finiti senza
 SLOP finché l'owner non li chiude e con tolleranza 0 fa rigenerare invece di fermare il ciclo (decisioni dell'owner del 2026-11-15). La 5.4.0 rende modificabile il contesto del valutatore, blocca brief e prompt con il contesto delle gemelle e conta nel massimo le
 riscritture confermate di brief e prompt. La specifica 4.0.0 e l'issue #136 descrivono una pipeline precedente, **superata su somiglianza alla REAL,
@@ -166,6 +167,13 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
   idempotente a livello applicativo. Registrare prima dell'invio **non prova** che un esito di rete incerto non abbia consumato
   crediti: comunicarlo senza promesse assolute.
 - Processi `draft`, `prompting`, `ready`, `running`, `retry`, `accepted`, `exhausted`, `review_needed`, `failed`, `uncertain`, `closed`; una chiamata pendente interrotta resta sospesa e la manutenzione la marca incerta dopo dieci minuti.
+- **Una richiesta per REAL anche per brief e prompt** (app 1.30.3): studio e batch automatico chiedono brief e prompt di ogni REAL con
+  una richiesta separata, come già i tentativi. Il 2026-11-15 un batch di 10 scritto con un'unica richiesta di circa tre minuti si è
+  interrotto quando il browser del telefono ha chiuso la connessione («clientDisconnected»): 2 brief scritti, uno incerto, 7 mai
+  iniziati e il batch bloccato su «in scrittura». Lo stato dei brief del batch segue ora i suoi processi: qualcuno da scrivere →
+  `none`; almeno uno utilizzabile → `done`; altrimenti `failed`; un brief fallito o incerto non blocca gli altri. Una scrittura
+  rimasta `running` per oltre dieci minuti torna a seguire i processi alla lettura del batch: il brief interrotto resta `uncertain`
+  (mai ripetuto, tra quelli «Da vedere») e gli altri si possono scrivere. Nel batch automatico ogni brief si scrive una sola volta.
 - Ogni tentativo conserva privatamente prompt, modello, qualità, esito, motivi, eventuale bozza di revisione e riferimento alla
   candidata per consentire ripresa e revisione; **i tentativi rifiutati non entrano nella libreria delle immagini e non sono
   pubblicati**, né generano nuove REAL/SLOP attive. Le anteprime temporanee sono cancellate sette giorni dopo l'accettazione o la chiusura del processo; la cancellazione della REAL o SLOP elimina anche processi, tentativi e file collegati. Non creare

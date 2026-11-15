@@ -163,6 +163,17 @@ try:
     control([]);assert load(stale)['processes'][0]['state']=='uncertain'
     assert generate(stale)[0]==409 and control()==[]
     assert sql("SELECT status FROM paid_calls WHERE id='editorial-stale-call'")[0]['status']=='uncertain'
+    # A brief request that died with the browser connection: after ten minutes the batch follows its processes again.
+    three=[real()['id'] for _ in range(3)];sources.extend(three)
+    code,cut=call('batches',{'sources':three});assert code==200,cut
+    control([]);assert call('batches/'+cut['id']+'/prompts',{'confirm':True,'index':0})[0]==200
+    second=cut['processes'][1]['id']
+    sql(f"UPDATE slop_batches SET prompts_status='running',updated_at='2000-01-01' WHERE id='{cut['id']}'; UPDATE slop_processes SET state='prompting',updated_at='2000-01-01' WHERE id='{second}'; INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,process_id) VALUES('editorial-cut-call','prompts','fake','pending','2000-01-01','2000-01-01','{second}')")
+    cut=load(cut);assert [p['state'] for p in cut['processes']]==['ready','uncertain','draft'] and cut['prompts_status']=='none',cut
+    assert sql("SELECT status FROM paid_calls WHERE id='editorial-cut-call'")[0]['status']=='uncertain'
+    assert call('batches/'+cut['id']+'/prompts',{'confirm':True,'index':1})[0]==409  # never resent
+    code,cut=call('batches/'+cut['id']+'/prompts',{'confirm':True,'index':2});assert code==200 and cut['prompts_status']=='done',cut
+    assert len(control())==2 and any(p['id']==second for p in call('attention')[1]['attention'])
     # Legacy batches are readable; no automatic conversion or paid resume.
     legacy='editorial-legacy'
     sql("INSERT INTO slop_batches(id,theme,slots,prompts,prompts_status,created_at,updated_at) VALUES('editorial-legacy','[]','[]','[]','done','x','x')")

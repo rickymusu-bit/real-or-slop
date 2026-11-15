@@ -40,6 +40,12 @@ export async function loopSnapshot(env: Env): Promise<Snapshot> {
   return { max_generation_attempts: settings.max_generation_attempts, editorial_tolerance: settings.editorial_tolerance,
     text_model: await chosenModel(env, "text_model"), image_model, quality: await chosenQuality(env) };
 }
+/** The brief status of a batch follows its processes: some still to write → none; at least one usable → done; else failed.
+ * A brief that ended uncertain or failed never blocks the others (each REAL is written by its own request). */
+const settleBatch = (env: Env, batchId: string, error: string) => env.DB.prepare(`UPDATE slop_batches SET prompts_status=CASE
+    WHEN EXISTS(SELECT 1 FROM slop_processes WHERE batch_id=?1 AND state IN ('draft','prompting')) THEN 'none'
+    WHEN EXISTS(SELECT 1 FROM slop_processes WHERE batch_id=?1 AND state NOT IN ('failed','uncertain','closed')) THEN 'done'
+    ELSE 'failed' END, prompts_error=?2, updated_at=?3 WHERE id=?1`).bind(batchId, error.slice(0, 500), now());
 export async function processViews(env: Env, batchId: string) {
   // The request may have outlived its browser. A stale claim is uncertain, never permission to resend it.
   const stale = new Date(Date.now()-10*60_000).toISOString();
@@ -48,6 +54,10 @@ export async function processViews(env: Env, batchId: string) {
     env.DB.prepare("UPDATE paid_calls SET status='uncertain' WHERE status='pending' AND updated_at<? AND process_id IN (SELECT id FROM slop_processes WHERE batch_id=? AND state='uncertain')").bind(stale,batchId),
     env.DB.prepare("UPDATE slop_attempts SET status='uncertain' WHERE status IN ('pending','generated') AND updated_at<? AND process_id IN (SELECT id FROM slop_processes WHERE batch_id=? AND state='uncertain')").bind(stale,batchId),
   ]);
+  // A brief request that died (the browser closed the connection, 2026-11-15) left the batch «running»: after ten minutes the
+  // batch follows its processes again, and the remaining REAL can be written; the interrupted one stays uncertain.
+  const stuck = await env.DB.prepare("SELECT 1 FROM slop_batches WHERE id=? AND prompts_status='running' AND updated_at<?").bind(batchId, stale).first();
+  if (stuck) await settleBatch(env, batchId, "Scrittura di brief e prompt interrotta: nessuna chiamata ripetuta").run();
   const rows = (await env.DB.prepare("SELECT * FROM slop_processes WHERE batch_id=? ORDER BY slot").bind(batchId).all<Process>()).results;
   return Promise.all(rows.map(async p => {
     const attempts = (await env.DB.prepare("SELECT * FROM slop_attempts WHERE process_id=? ORDER BY number").bind(p.id).all<Attempt>()).results;
@@ -156,11 +166,9 @@ async function writePrompts(env: Env, batchId: string, data: Record<string, unkn
         failures.push(String(e));
       }
     }
-    const ready = await env.DB.prepare("SELECT count(*) AS n FROM slop_processes WHERE batch_id=? AND state='ready'").bind(batchId).first<{n:number}>();
-    await env.DB.prepare("UPDATE slop_batches SET prompts_status=?,prompts_error=?,updated_at=? WHERE id=?").bind(ready?.n ? "done" : "failed", failures.join("; ").slice(0,500), now(), batchId).run();
+    await settleBatch(env, batchId, failures.join("; ")).run();
   } catch (e) {
-    await env.DB.prepare("UPDATE slop_batches SET prompts_status=?,prompts_error=?,updated_at=? WHERE id=?")
-      .bind(e instanceof PaidError && e.outcome === "uncertain" ? "uncertain" : "failed", String(e).slice(0, 500), now(), batchId).run(); throw e;
+    await settleBatch(env, batchId, String(e)).run(); throw e;
   }
   return show(env, batchId);
 }

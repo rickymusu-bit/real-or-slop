@@ -15,7 +15,11 @@ try:
     b=auto['batch'];bid=b['id'];assert b['pipeline_version']==2 and b['config']['max_generation_attempts']==2
     assert call('auto/start',{'size':3,'confirm':True})[0]==409 and control()==[]
     assert call('batches/'+bid,{'prompts':['x']*3},method='PUT')[0]==409
-    code,b=call('batches/'+bid+'/prompts',{'confirm':True});assert code==200 and len(control())==3,b
+    # One brief request per REAL, each written once.
+    code,b=call('batches/'+bid+'/prompts',{'confirm':True,'index':0});assert code==200 and len(control())==1 and b['prompts_status']=='none',b
+    assert call('batches/'+bid+'/prompts',{'confirm':True,'index':0})[0]==409 and control()==[]
+    for index in (1,2):code,b=call('batches/'+bid+'/prompts',{'confirm':True,'index':index});assert code==200,b
+    assert len(control())==2 and b['prompts_status']=='done',b
     assert call('batches/'+bid+'/prompts',{'confirm':True})[0]==409
     # First photo exhausts, second is suspended, third accepted. Others continue independently.
     control([None,{'evaluation':'retry_same_prompt'},None,{'evaluation':'retry_same_prompt'},None,{'evaluation':'review_needed'},None,{'evaluation':'accept'}])

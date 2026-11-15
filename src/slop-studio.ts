@@ -145,7 +145,13 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
         analyze:"Analizzare questa SLOP? Una chiamata a pagamento."};
       if(messages[action]&&!window.confirm(messages[action]))return;
       busy=true;notice="";render();
-      if(action==="prompts"){batch=await call<Batch>("batches",{sources:chosen});batchId=batch.id;sessionStorage.setItem(DRAFT,batchId);page=2;batch=await call<Batch>("batches/"+batchId+"/prompts",{confirm:true});}
+      if(action==="prompts"){batch=await call<Batch>("batches",{sources:chosen});batchId=batch.id;sessionStorage.setItem(DRAFT,batchId);page=2;
+        // One request per REAL: a closed connection interrupts one brief, never the whole batch.
+        const drafts=batch.processes.filter(p=>p.state==="draft");
+        for(const [n,p] of drafts.entries()){progress=`Brief e prompt ${n+1} di ${drafts.length}…`;render();
+          try{batch=await call<Batch>("batches/"+batchId+"/prompts",{confirm:true,index:p.slot});}
+          catch(e){notice+=" "+String(e);if(/OpenAI:/.test(String(e)))break;}}
+        batch=await call<Batch>("batches/"+batchId);}
       else if(action==="rewrite"){batch=await call<Batch>("batches/"+batchId+"/prompts",{confirm:true,index:slot});}
       else if(action==="images"){page=3;await produce();page=4;state=await call<State>("state");}
       else if(action==="save")notice="Brief e prompt salvati.";
