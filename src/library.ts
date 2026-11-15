@@ -79,7 +79,7 @@ export async function showLibrary() {
   try { const saved = JSON.parse(localStorage.getItem(SORT_KEY) || "null") as typeof sort | null;
     if (saved && ["added", "views", "accuracy"].includes(saved.by) && ["asc", "desc"].includes(saved.order)) sort = saved; } catch { /* private browsing */ }
   let slopStudio: { refresh: () => Promise<void> } = { refresh: async () => {} };
-  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "", group: "", redo_copy: false, incomplete: false };
+  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "", group: "", redo_copy: false, incomplete: false, undescribed: false };
   let measuring = false;
   let autoBox: { refresh: () => Promise<void> } = { refresh: async () => {} };
   let models: Models | null = null;
@@ -113,6 +113,7 @@ export async function showLibrary() {
         <div class="rw-pills" id="library-tag-pills"></div></div>
       <label>Gruppo<select id="library-group"><option value="">tutti</option></select></label>
       <label class="library-check-inline"><input type="checkbox" id="library-redo-copy"> Copia da rifare in 4:5</label>
+      <label class="library-check-inline"><input type="checkbox" id="library-undescribed"> REAL senza descrizione</label>
       <label class="library-check-inline"><input type="checkbox" id="library-incomplete"> Senza Genere, Colore o Supporto</label>
       <label>Ordina per<select id="library-sort"><option value="added">data di aggiunta</option><option value="views">visualizzazioni</option><option value="accuracy">accuratezza</option></select></label>
       <label>Ordine<select id="library-order"><option value="desc">decrescente</option><option value="asc">crescente</option></select></label>
@@ -208,14 +209,17 @@ export async function showLibrary() {
     } catch { /* the filter stays as it is */ }
   };
   /** Analyses images one by one after an explicit confirmation of the total estimate. */
-  const analyzeMany = async (ids: string[]) => {
+  const analyzeMany = async (ids: string[], describe = false) => {
     if (!analysis?.enabled || !ids.length) return;
-    if (!window.confirm(`Analizzare ${ids.length} ${ids.length === 1 ? "immagine" : "immagini"} con ${analysis.model}? Sono chiamate a pagamento. I tag attuali saranno sostituiti; ogni immagine si analizza una sola volta.`)) return;
+    if (!window.confirm(describe
+      ? `Analisi combinata tag e descrizione di ${ids.length} REAL con ${analysis.model}: al massimo ${ids.length} ${ids.length === 1 ? "chiamata" : "chiamate"} a pagamento, una per foto, sull'originale intero, nessuna ripetuta in automatico. I tag attuali saranno sostituiti. Continuare?`
+      : `Analizzare ${ids.length} ${ids.length === 1 ? "immagine" : "immagini"} con ${analysis.model}? Sono chiamate a pagamento. I tag attuali saranno sostituiti; ogni immagine si analizza una sola volta.`)) return;
     let done = 0; const errors: string[] = [], conflicts: Conflict[] = [];
     for (const [index, imageId] of ids.entries()) {
       progress(`Analisi ${index + 1} di ${ids.length}`);
       try {
-        const result = await call<{ tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(imageId)}/analyze`, { method: "POST", body: JSON.stringify({ confirm: true }) });
+        const result = await call<{ tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(imageId)}/analyze`, { method: "POST",
+          body: JSON.stringify(describe ? { confirm: true, refresh_description: true } : { confirm: true }) });
         conflicts.push(...(result.tag_conflicts || [])); done++;
       }
       catch (error) { errors.push(error instanceof Error ? error.message : String(error)); if (/OpenAI:/.test(String(error))) break; }
@@ -230,7 +234,7 @@ export async function showLibrary() {
   const load = async () => {
     const seq = ++loadSeq;
     const params = new URLSearchParams({ status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q, batch: filter.batch,
-      group: filter.group, redo_copy: filter.redo_copy ? "1" : "", incomplete: filter.incomplete ? "1" : "" });
+      group: filter.group, redo_copy: filter.redo_copy ? "1" : "", incomplete: filter.incomplete ? "1" : "", undescribed: filter.undescribed ? "1" : "" });
     $("#library-batch-filter").hidden = !filter.batch;
     const data = await call<{ items: Item[]; counts: { status: string; origin: string; n: number }[] }>("?" + params);
     if (seq !== loadSeq) return;
@@ -280,7 +284,7 @@ export async function showLibrary() {
     const trash = filter.status === "trash";
     bar.innerHTML = `<strong>${n} selezionate</strong>` + (trash
       ? '<button data-bulk="restore">Ripristina</button><button data-bulk="delete" class="danger">Elimina definitivamente</button>'
-      : '<button data-bulk="trash">Sposta nel cestino</button><label><input type="checkbox" id="library-bulk-rights"> Diritti delle REAL verificati</label><button data-bulk="copy-portrait">Rifai la copia in 4:5</button><button data-bulk="analyze">Analizza con IA</button><button data-bulk="complete">Completa Genere, Colore e Supporto</button><button data-bulk="approve">Approva</button><button data-bulk="publish">Pubblica</button><button data-bulk="withdraw">Ritira dal gioco</button>' +
+      : '<button data-bulk="trash">Sposta nel cestino</button><label><input type="checkbox" id="library-bulk-rights"> Diritti delle REAL verificati</label><button data-bulk="copy-portrait">Rifai la copia in 4:5</button><button data-bulk="analyze">Analizza con IA</button><button data-bulk="describe">Analisi combinata tag e descrizione</button><button data-bulk="complete">Completa Genere, Colore e Supporto</button><button data-bulk="approve">Approva</button><button data-bulk="publish">Pubblica</button><button data-bulk="withdraw">Ritira dal gioco</button>' +
         '<label>Tag<input id="library-bulk-tag" autocomplete="off" autocapitalize="none" spellcheck="false"></label>' + categorySelect('id="library-bulk-category"') + '<button data-bulk="tag-add">Aggiungi tag</button><button data-bulk="tag-remove">Togli tag</button>') +
       '<button data-bulk="none">Deseleziona</button>';
   };
@@ -552,6 +556,12 @@ export async function showLibrary() {
           if (!ids.length) { message("Nessuna immagine selezionata da completare: servono un'analisi riuscita, un completamento mai fatto e almeno una categoria tra Genere, Colore e Supporto mancante."); return; }
           await completeMany(ids); return;
         }
+        if (action === "describe") {
+          // REAL without the private description, at any status but the trash: tags and description from the whole original.
+          const ids = items.filter(i => selected.has(i.id) && i.origin === "REAL" && !i.real_description && i.status !== "trash" && i.analysis.status !== "running" && i.analysis.status !== "uncertain").map(i => i.id);
+          if (!ids.length) { message("Nessuna REAL senza descrizione tra le selezionate. Un'analisi con esito incerto si ripete dalla scheda dell'immagine."); return; }
+          await analyzeMany(ids, true); return;
+        }
         if (action === "analyze") {
           // An uncertain outcome may have been charged: it is repeated only from the image card, with its own warning.
           const ids = items.filter(i => selected.has(i.id) && i.status === "new" && i.copy && (i.analysis.status === "none" || i.analysis.status === "failed")).map(i => i.id);
@@ -596,6 +606,7 @@ export async function showLibrary() {
     else if (target.id === "library-tag-match") { filter.match = target.value; void load(); }
     else if (target.id === "library-group") { filter.group = target.value; void load(); }
     else if (target.id === "library-redo-copy") { filter.redo_copy = target.checked; void load(); }
+    else if (target.id === "library-undescribed") { filter.undescribed = target.checked; void load(); }
     else if (target.id === "library-incomplete") { filter.incomplete = target.checked; void load(); }
   });
   /** A tag typed in the filter, converted like a tag written by hand; an alias is resolved by the server only when saving, so

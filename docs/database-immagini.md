@@ -1,6 +1,7 @@
-# Sezione Database — specifica 2.5.0
+# Sezione Database — specifica 2.6.0
 
-Stato: vigente; la 2.3.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T13:54:58Z. La 2.3.0: i tag di partenza di una SLOP
+Stato: vigente; la 2.5.0 è in produzione con l'app 1.28.0, la 2.6.0 è per l'app 1.29.0. Aggiornata: 2026-11-15T17:58:54Z. La 2.6.0 aggiunge il filtro
+«REAL senza descrizione» e l'azione in gruppo «Analisi combinata tag e descrizione». La 2.3.0: i tag di partenza di una SLOP
 sono quelli della REAL di cui è la gemella, con «Apri la REAL di origine»; il filtro per categoria della Distribuzione torna a
 comprendere Tempo e Genere, persi con la 1.25.0. La 2.2.0 mostra i conflitti di categoria dopo analisi e completamento (app 1.25.1). La 2.1.1 chiama «REAL di riferimento» la foto delle misure del trattamento. La 2.1.0 aggiunge il filtro
 per gruppo, il completamento di Genere, Colore e Supporto, le misure della copia e i comandi del trattamento delle SLOP (specifiche
@@ -52,6 +53,10 @@ che restano nella cronologia git. Stati e regole della libreria: specifica `libr
   definitivamente (cestino).
 - **Rigenerare una SLOP:** richiede un nuovo processo nello studio con conferma, brief ed esame dell’immagine intera. Prima cestinare la SLOP attiva della REAL; nessuna sostituzione diretta che scavalchi la valutazione.
 - **Descrizione REAL privata:** elementi visibili, contesto documentato e incertezze, modificabili indipendentemente dai tag, anche per una pubblicata. Per una REAL storica senza descrizione, compilazione manuale o analisi combinata tag+descrizione con conferma separata.
+- **REAL senza descrizione:** filtro «REAL senza descrizione» e azione in gruppo «Analisi combinata tag e descrizione» (decisione
+  dell'owner del 2026-11-15): per le REAL selezionate fuori dal cestino e senza descrizione privata, una chiamata a pagamento per foto
+  sull'originale intero, dopo una conferma che dichiara il massimo; sostituisce i tag, non ritira le pubblicate. Le immagini con
+  esito incerto restano escluse e si ripetono dalla scheda.
 - **Vecchie copie:** filtro «Copia da rifare in 4:5», azione in gruppo «Rifai la copia in 4:5». Le pubblicate sono ritirate con conferma e restano approvate; le partite in corso mantengono i propri byte. Controllare il nuovo crop prima di ripubblicare.
 
 ## 4. Statistiche delle foto

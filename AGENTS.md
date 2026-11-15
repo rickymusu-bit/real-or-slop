@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 22.4.0, aggiornata il 2026-11-15T17:35:03Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 22.4.0, aggiornata il 2026-11-15T17:58:54Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -38,8 +38,8 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   Un processo che finisce senza SLOP (tentativi esauriti, revisione chiesta, errore, esito incerto) è un'eccezione che richiede
   l'attenzione dell'owner (decisione del 2026-11-15): resta in evidenza con immagini, prompt e valutazioni di ogni tentativo
   finché l'owner non lo chiude.
-- **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP. Tag e descrizione della REAL descrivono la
-  foto intera; il ritaglio non deve eliminare elementi **fondamentali** per il significato della fotografia; in caso contrario
+- **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP. Tag e descrizione della REAL, e i tag della
+  SLOP, descrivono l'immagine intera (l'originale); il ritaglio non deve eliminare elementi **fondamentali** per il significato della fotografia; in caso contrario
   l'owner corregge l'inquadratura. Le SLOP si valutano **intere** prima di creare la copia 4:5.
 - **Chiamate a pagamento:** solo con conferma esplicita dell'owner del **numero massimo** previsto per un loop, registrate in
   `paid_calls` senza importi, esiti incerti mai ripetuti in automatico; niente prezzi né budget, il limite è quello del progetto

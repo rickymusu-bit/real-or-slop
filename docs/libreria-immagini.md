@@ -1,7 +1,8 @@
 # Libreria delle immagini, tag e analisi — specifica 3.8.0
 
-Stato: vigente; la 3.7.0 è in produzione con l'app 1.28.0, la 3.8.0 è per l'app 1.29.0. Aggiornata: 2026-11-15T17:35:03Z.
-La 3.8.0 fa analizzare la REAL intera (l'originale, non la copia 4:5: decisione dell'owner del 2026-11-15). La 3.7.0 aggiunge il contesto «Valutazione delle SLOP», blocca brief e prompt finché il contesto in vigore è quello delle
+Stato: vigente; la 3.7.0 è in produzione con l'app 1.28.0, la 3.8.0 è per l'app 1.29.0. Aggiornata: 2026-11-15T17:58:54Z.
+La 3.8.0 fa analizzare REAL e SLOP intere (l'originale, non la copia 4:5: decisioni dell'owner del 2026-11-15) e aggiunge
+l'analisi combinata in gruppo delle REAL senza descrizione. La 3.7.0 aggiunge il contesto «Valutazione delle SLOP», blocca brief e prompt finché il contesto in vigore è quello delle
 gemelle (migrazione 0051) e riammette la ripetizione confermata di un'analisi con esito incerto.
 La 3.1.0 registra la REAL di origine delle SLOP gemelle (migrazione 0049), il tetto di risposta dell'analisi e il contesto 1.8.0.
 La 3.0.0 sostituisce la categoria Formato con Genere, Colore e Supporto, giudicate solo dall'immagine, e aggiunge il completamento a
@@ -119,13 +120,13 @@ Una sola raccolta di immagini REAL e SLOP.
 
 ## 5. Analisi a pagamento
 
-Per una REAL l’unica analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Il modello vede la REAL **intera**, cioè l’originale caricato (JPEG, PNG o WebP fino a 12 MB), mai il ritaglio 4:5 (decisione dell’owner del 2026-11-15). Modello, hash dell’originale, revisione e data sono conservati come provenienza. La descrizione è privata, modificabile senza alterare tag o testo Commons; quest’ultimo è conservato separatamente per le nuove acquisizioni. Per una SLOP l’analisi restituisce soltanto tag.
+Per una REAL l’unica analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Il modello vede la REAL **intera**, cioè l’originale caricato (JPEG, PNG o WebP fino a 12 MB), mai il ritaglio 4:5 (decisione dell’owner del 2026-11-15). Modello, hash dell’originale, revisione e data sono conservati come provenienza. La descrizione è privata, modificabile senza alterare tag o testo Commons; quest’ultimo è conservato separatamente per le nuove acquisizioni. Per una SLOP l’analisi restituisce soltanto tag, anch’essa sull’originale intero.
 
-Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova generazione richiede compilazione manuale o una nuova analisi combinata confermata (`refresh_description:true`), anche se già approvata/pubblicata. Nessun backfill. La modifica della sola descrizione privata non ritira una pubblicata.
+Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova generazione richiede compilazione manuale o una nuova analisi combinata confermata (`refresh_description:true`), anche se già approvata/pubblicata. Nessun backfill. L'analisi combinata si lancia dalla scheda o in gruppo dal Database (filtro «REAL senza descrizione», azione «Analisi combinata tag e descrizione»), con conferma del numero massimo di chiamate, una per foto; un'immagine con esito incerto si ripete solo dalla scheda. La modifica della sola descrizione privata non ritira una pubblicata.
 
-- Su richiesta dell'owner (wizard, dettaglio o gruppo nel Database, studio SLOP), solo per immagini nuove; una SLOP deve avere la copia
-  di gioco. Il modello di testo scelto nelle Impostazioni, che deve leggere immagini, riceve l'originale intero, titolo e descrizione
-  (REAL) oppure la copia di gioco e il prompt (SLOP)
+- Su richiesta dell'owner (wizard, dettaglio o gruppo nel Database, studio SLOP), solo per immagini nuove. Il modello di testo scelto
+  nelle Impostazioni, che deve leggere immagini, riceve l'originale intero (vede i pixel, non i metadati del file) con titolo e
+  descrizione (REAL) o con il prompt (SLOP)
   e i 300 tag più usati divisi per categoria; mai l'origine. La base comune e la parte «Tag» si applicano ad entrambe
   senza menzionare immagini sintetiche; **per le REAL** si richiede in più la descrizione editoriale neutra, **per le SLOP**
   rimane l'output dei soli tag. Schemi diversi per tipo non devono introdurre istruzioni che rivelino la natura dell'altra categoria.

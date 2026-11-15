@@ -1,5 +1,5 @@
-/** Confirmed analysis: a REAL is seen whole (its original, never the 4:5 crop: decision of the owner of 2026-11-15) and returns
- * tags and the private description in one atomic result; a SLOP is seen as its game copy and returns tags only.
+/** Confirmed analysis of the whole image, REAL or SLOP: its original, never the 4:5 crop (decisions of the owner of 2026-11-15).
+ * A REAL returns tags and the private description in one atomic result; a SLOP returns tags only.
  * Contexts never mention synthetic images. Claims and uncertain results prevent automatic paid retries. */
 import { descriptionSchema, realDescription } from "../shared/editorial";
 import { HttpError, id, type Env } from "./core";
@@ -144,21 +144,14 @@ async function recordCall(env: Env, model: string, row?: Row) {
       .bind(call, usage?.input_tokens ?? null, usage?.output_tokens ?? null, new Date().toISOString(), callId) };
 }
 interface Picture { bytes: ArrayBuffer; mime: string }
-/** What the model sees. A REAL: the whole original, so that tags and description cover the full photograph and not the crop the
- * player sees (owner decision of 2026-11-15). A SLOP: its 4:5 game copy, as before. Read before any call is recorded. */
+/** What the model sees: the whole original, REAL or SLOP, so that tags and description cover the full picture and not the crop
+ * the player sees (owner decisions of 2026-11-15). Pixels only: the model never reads file metadata. Read before any call. */
 async function analysisImage(env: Env, row: Row): Promise<Picture> {
-  if (row.origin === "REAL") {
-    const original = await env.QUARANTINE?.get(row.original_key);
-    if (!original) throw new HttpError(409, "Originale non disponibile");
-    const bytes = await original.arrayBuffer(), mime = imageMime(new Uint8Array(bytes));
-    if (!mime) throw new HttpError(409, "Formato dell'originale non leggibile dal modello");
-    return { bytes, mime };
-  }
-  if (row.copy_crop && JSON.parse(row.copy_crop).format !== "4:5") throw new HttpError(409, "Prepara la copia di gioco 4:5 prima dell’analisi");
-  if (!row.copy_key) throw new HttpError(409, "Prepara prima la copia di gioco: il modello analizza ciò che vedrà il giocatore");
-  const copy = await env.QUARANTINE?.get(row.copy_key);
-  if (!copy) throw new HttpError(409, "Copia di gioco non disponibile");
-  return { bytes: await copy.arrayBuffer(), mime: "image/webp" };
+  const original = await env.QUARANTINE?.get(row.original_key);
+  if (!original) throw new HttpError(409, "Originale non disponibile");
+  const bytes = await original.arrayBuffer(), mime = imageMime(new Uint8Array(bytes));
+  if (!mime) throw new HttpError(409, "Formato dell'originale non leggibile dal modello");
+  return { bytes, mime };
 }
 const confirmed = (data: Record<string, unknown>) => {
   if (Object.keys(data).some(key => key !== "confirm") || data.confirm !== true) throw new HttpError(400, "Conferma la chiamata a pagamento");
