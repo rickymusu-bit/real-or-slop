@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 23.0.2, aggiornata il 2026-11-15T14:47:34Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 23.1.0, aggiornata il 2026-11-15T17:00:44Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,15 +9,14 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **In produzione:** app 1.26.0 (PR rickymusu-bit/real-or-slop#135, unita il 2026-11-14; migrazioni fino alla 0049). In produzione
-  dal 2026-11-14: contesto 1.8.0 dei prompt SLOP, soglia di proposta al 10%, modello di immagini `gpt-image-2.6-flare` in qualità
-  `medium` (da riportare a `gpt-image-2.5-flare` `high` con la prossima versione). Il primo lotto di gemelle (2026-11-15, 9 immagini,
-  batch in pausa) ha mostrato copie rovinate dal trattamento e prompt inventati senza vedere la foto.
-- **Implementato nel ramo 1.27.0, non rilasciato:** analisi REAL con tag e descrizione privata atomici, brief+prompt solo testuali,
-  loop persistente con valutazione dell’immagine intera, massimo 1–5 tentativi e tolleranza indipendente; copie 4:5 dopo accettazione,
-  trattamento leggero dalla REAL di riferimento e approvazione/pubblicazione manuali. Migrazione locale 0050, nessun backfill pagato.
-  I batch precedenti restano in sola revisione; gli esiti incerti non si ripetono. La produzione resta 1.26.0 fino al rilascio autorizzato.
-- **PR #140, correzione CI:** i comandi delle Impostazioni si attivano prima delle richieste iniziali; test desktop/mobile con risposta dei contesti sospesa per verificare il codice partita durante il caricamento.
+- **In produzione:** app 1.27.0 (PR rickymusu-bit/real-or-slop#140, unita il 2026-11-15 alle 15:09 UTC, deploy alle 15:10; migrazioni
+  fino alla 0050). La migrazione 0050 ha ritirato dal gioco le pubblicate con copia non 4:5: il 2026-11-15 restano 20 REAL approvate e
+  nessuna immagine pubblicata, quindi nessun livello è giocabile finché l'owner non rifà le copie in 4:5 e ripubblica. Qualità
+  immagini salvata `medium`. Il contesto «Prompt per le SLOP» in vigore è ancora quello delle gemelle (2026-11-14).
+- **Nel ramo 1.28.0 (PR da unire):** correzioni della revisione della 1.27.0. Contesto «Valutazione delle SLOP» modificabile (prima
+  fisso nel codice); brief e prompt bloccati finché il contesto in vigore è quello delle gemelle; analisi con esito incerto ripetibile
+  solo con conferma esplicita del rischio (la 1.27.0 la rifiutava sempre, mentre la dashboard la offriva); riscritture confermate di
+  brief e prompt contate nel massimo del batch. Migrazione 0051 sul solo `model_contexts`.
 - **Selezione REAL:** otto principi qualitativi nella issue #138; nessun filtro o scoring automatico.
 - **Da decidere con l'owner:** se e come comunicare al giocatore il processo di generazione dopo la risposta.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
@@ -29,14 +28,14 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.6.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.7.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.2.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.4.0 |
-| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.3.0 |
+| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.4.0 |
 | Sezione Database | `docs/database-immagini.md` | 2.5.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.7.1 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.8.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -62,8 +61,8 @@ commit che li ha cancellati e `git show <commit>^:docs/<nome>` li mostra. Corris
   controllo spesa e fake API. Nessuna seconda lettura visiva della REAL nella generazione.
 - **Frontend (implementato 1.27.0):** descrizione della REAL modificabile nel wizard e nel Database; ciclo nel browser, immagine SLOP **intera**
   sottoposta al valutatore, copia 4:5 **solo dopo** accettazione, configurazioni, anteprime e revisione.
-- **Rilascio:** dopo verifica manuale delle anteprime e autorizzazione owner; il merge su main esegue deploy e migrazioni remote.
-  Consultare `generazione-slop` 5.3.0, sezione 10. I batch della 1.26.0 in pausa **non** vanno ripresi con schema incompatibile.
+- **Rilascio:** 1.27.0 rilasciata il 2026-11-15; correzioni nella 1.28.0. Il merge su main esegue deploy e migrazioni remote.
+  Consultare `generazione-slop` 5.4.0, sezione 10. I batch della 1.26.0 in pausa **non** vanno ripresi con schema incompatibile.
 
 ## Architettura
 
@@ -120,6 +119,7 @@ modello finto `fake_openai.py` e gli aiuti `catalog.py`, `game_copy.py`, `long_p
 | 0048 | categorie Genere, Colore e Supporto al posto di Formato; completamento, misure, trattamento e gruppo delle immagini; gruppo dei batch; soglia del gruppo |
 | 0049 | REAL di origine di una SLOP gemella |
 | 0050 | descrizione editoriale REAL e provenienza, contesto Commons separato, processi/tentativi privati, chiamate evaluation e collegamenti, snapshot e impostazioni del loop; batch legacy invariati |
+| 0051 | contesto «Valutazione delle SLOP» e pipeline di ogni versione del contesto (testi delle gemelle = 1) |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 
@@ -140,6 +140,7 @@ R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (
 finto `tests/fake_openai.py`) e `ROS_TEST_BROWSER=1 npm run test:integration` per la dashboard, desktop e mobile. L'elenco dei
 test d'integrazione eseguiti è in `scripts/integration.py`.
 
-**Verifica locale della 1.27.0:** lint, 95 test unitari, build, dry-run e suite completa con `ROS_TEST_BROWSER=1` riusciti (desktop e mobile). Solo API fittizia, D1 e R2 locali; anteprima remota, CI ospitata, merge e rilascio non eseguiti.
+**Verifica locale della 1.28.0:** lint, 96 test unitari, build, dry-run e suite d'integrazione riusciti; esito della suite con
+`ROS_TEST_BROWSER=1` e della CI nella PR. Solo API fittizia, D1 e R2 locali.
 
 **Consegna del lavoro:** pubblicare sempre il ramo e aprire o aggiornare una PR per avviare i controlli CI (`AGENTS.md` 22.3.0). Commit e patch locali non completano la consegna.

@@ -154,17 +154,22 @@ const confirmed = (data: Record<string, unknown>) => {
 
 export async function analyze(env: Env, row: Row, data: Record<string, unknown>) {
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
-  if (Object.keys(data).some(k => !["confirm", "refresh_description"].includes(k)) || data.confirm !== true ||
-    (data.refresh_description !== undefined && data.refresh_description !== true)) throw new HttpError(400, "Conferma la chiamata a pagamento");
+  if (Object.keys(data).some(k => !["confirm", "refresh_description", "repeat_uncertain"].includes(k)) || data.confirm !== true ||
+    (data.refresh_description !== undefined && data.refresh_description !== true) ||
+    (data.repeat_uncertain !== undefined && data.repeat_uncertain !== true)) throw new HttpError(400, "Conferma la chiamata a pagamento");
   const refresh = data.refresh_description === true && row.origin === "REAL" && !row.real_description;
   const snapshot = row.generation_slot ? (JSON.parse(row.generation_slot) as {process?:string}).process : null;
   const process = snapshot ? await env.DB.prepare("SELECT snapshot FROM slop_processes WHERE id=?").bind(snapshot).first<{snapshot:string}>() : null;
   const model = process ? (JSON.parse(process.snapshot) as {text_model:string}).text_model : await chosenModel(env, "text_model");
   if (row.status !== "new" && !refresh) throw new HttpError(409, "Si analizzano solo immagini nuove");
   if (row.analysis_status === "done" && !refresh) throw new HttpError(409, "Tag già generati per questa immagine: modificali o ripristinali, senza nuove chiamate");
-  // A «running» mark older than STALE_MS belongs to a Worker that died mid-call: its call stays recorded as pending.
+  // A «running» mark older than STALE_MS belongs to a Worker that died mid-call. Like an uncertain outcome, it may have been charged:
+  // the owner repeats it only by confirming that risk (repeat_uncertain), never automatically.
   const staleBefore = new Date(Date.now() - STALE_MS).toISOString();
   if (row.analysis_status === "running" && row.updated_at > staleBefore) throw new HttpError(409, "Analisi già in corso");
+  const unsure = row.analysis_status === "uncertain" || row.analysis_status === "running";
+  if (unsure && data.repeat_uncertain !== true)
+    throw new HttpError(409, "L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata: ripetila solo confermando questo rischio");
   const image = await gameCopy(env, row);
   // Read before the call is recorded: a failure here costs nothing.
   const [baseContext, taskContext] = [await currentContext(env, "base"), await currentContext(env, "analysis")];
@@ -173,9 +178,14 @@ export async function analyze(env: Env, row: Row, data: Record<string, unknown>)
     " Restituisci anche real_description: visible descrive solo elementi osservabili, documented_context solo fatti documentati nel titolo e contesto Commons forniti; uncertainties segnala lacune o dettagli incerti. Testo neutro, senza giudizi di autenticità; non inventare contesto." : "");
   const stamp = new Date().toISOString();
   // The «running» mark comes first: only the request that sets it records and sends the call.
+  // Only one of two simultaneous confirmations sets the fresh mark: the other finds it running and sends nothing.
   const marked = await env.DB.prepare(`UPDATE images SET analysis_status='running',analysis_error='',updated_at=? WHERE id=? AND status IN ('new','approved','published')
-    AND (analysis_status<>'done' OR ?=1) AND analysis_status NOT IN ('running','uncertain')`).bind(stamp, row.id, refresh ? 1 : 0).run();
+    AND (analysis_status<>'done' OR ?=1) AND (analysis_status NOT IN ('running','uncertain') OR ?=1)
+    AND (analysis_status<>'running' OR updated_at<=?)`).bind(stamp, row.id, refresh ? 1 : 0, unsure ? 1 : 0, staleBefore).run();
   if (!marked.meta.changes) throw new HttpError(409, "Immagine cambiata o già in analisi: nessuna chiamata inviata");
+  // The call of an interrupted analysis stays in the register as uncertain, never as pending.
+  if (unsure) await env.DB.prepare("UPDATE paid_calls SET status='uncertain',updated_at=? WHERE image_id=? AND kind='analysis' AND status='pending'")
+    .bind(stamp, row.id).run();
   const call = await recordCall(env, model, row);
   const text = `Existing vocabulary by category:\n${await vocabularyText(env, CATEGORIES) || "(empty)"}\n${contextOf(row) || "No context."}`;
   // The register keeps the outcome and the tokens reported.

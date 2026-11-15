@@ -26,3 +26,20 @@ test("editorial migration preserves legacy data and withdraws only non-4:5 publi
     assert.equal(db.prepare("SELECT count(*) AS n FROM slop_processes").get()?.n, 0);
   } finally { db.close(); }
 });
+
+test("context migration adds the evaluator part and marks the twin-era texts as pipeline 1", () => {
+  const db = new DatabaseSync(":memory:");
+  try {
+    for (const file of readdirSync("migrations").filter(f => f >= "0033" && f < "0051").sort()) db.exec(readFileSync("migrations/" + file, "utf8"));
+    const insert = db.prepare("INSERT INTO model_contexts(id,part,body,created_at) VALUES(?,?,?,?)");
+    insert.run("twin", "slop_prompt", "Twin prompt text", "2026-11-14T10:00:00.000Z");
+    insert.run("base", "base", "Base text", "2026-11-14T09:00:00.000Z");
+    insert.run("after", "slop_prompt", "Saved after the 1.27.0 release", "2026-11-15T16:00:00.000Z");
+    db.exec(readFileSync("migrations/0051_context_parts.sql", "utf8"));
+    assert.deepEqual(db.prepare("SELECT id,body,pipeline FROM model_contexts ORDER BY created_at").all().map(r => [r.id, r.body, r.pipeline]),
+      [["base", "Base text", 1], ["twin", "Twin prompt text", 1], ["after", "Saved after the 1.27.0 release", 2]]);
+    db.prepare("INSERT INTO model_contexts(id,part,body,created_at) VALUES('eval','slop_evaluation','Evaluator','now')").run();
+    assert.equal(db.prepare("SELECT pipeline FROM model_contexts WHERE id='eval'").get()?.pipeline, 2);
+    assert.throws(() => db.prepare("INSERT INTO model_contexts(id,part,body,created_at) VALUES('x','other','x','now')").run());
+  } finally { db.close(); }
+});

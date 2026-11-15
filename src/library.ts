@@ -44,8 +44,8 @@ interface Item {
 interface Analysis { enabled: boolean; reason: string; model: string; calls_30_days: { total: number; uncertain: number; input_tokens: number; output_tokens: number }; note: string }
 interface ModelOption { id: string; available: boolean | null; qualities?: string[]; shutdown?: string | null }
 interface Models { text_model: string; image_model: string; image_quality: string; text_models: ModelOption[]; image_models: ModelOption[]; note: string }
-interface ContextVersion { id: string; body: string; created_at: string; used: number }
-interface ContextState { max: number; parts: { part: string; current: { id: string; body: string }; history: ContextVersion[]; proposed?: string | null }[] }
+interface ContextVersion { id: string; body: string; created_at: string; pipeline: number; used: number }
+interface ContextState { max: number; parts: { part: string; current: { id: string; body: string }; history: ContextVersion[]; outdated?: boolean; proposed?: string | null }[] }
 interface Tag { label: string; category: Category; images: number; aliases: string[] }
 const API = "/api/admin/library";
 const STATUS_LABEL: Record<string, string> = { library: "Tutte", new: "Nuove", approved: "Approvate", published: "Pubblicate", trash: "Cestino" };
@@ -429,8 +429,9 @@ export async function showLibrary() {
     busy = true;
     try {
       if (button.id === "library-description-analysis") {
-        if (!window.confirm(`Analizzare nuovamente tag e descrizione di «${open.title}»? Una chiamata a pagamento con ${analysis?.model}. I tag saranno sostituiti.`)) return;
-        open = await call<Item>(`/${open.id}/analyze`, {method:"POST",body:JSON.stringify({confirm:true,refresh_description:true})});
+        const unsure = open.analysis.status === "uncertain";
+        if (!window.confirm(`Analizzare nuovamente tag e descrizione di «${open.title}»? Una chiamata a pagamento con ${analysis?.model}. I tag saranno sostituiti.${unsure ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : ""}`)) return;
+        open = await call<Item>(`/${open.id}/analyze`, {method:"POST",body:JSON.stringify(unsure ? {confirm:true,refresh_description:true,repeat_uncertain:true} : {confirm:true,refresh_description:true})});
       }
       else if (button.dataset.tagRemove) open = await save(open, { tags: open.tags.filter(t => t !== button.dataset.tagRemove) });
       else if (button.id === "library-copy") { detailMessage("Preparo la copia di gioco…"); open = await prepareItemCopy<Item>(open); }
@@ -458,7 +459,8 @@ export async function showLibrary() {
         const repeat = open.analysis.status === "uncertain" ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
         if (!window.confirm(`Analizzare «${open.title}» con ${analysis.model}? È una chiamata a pagamento. I tag attuali saranno sostituiti.${repeat}`)) return;
         detailMessage("Analisi in corso…");
-        const analysed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(open.id)}/analyze`, { method: "POST", body: JSON.stringify({ confirm: true }) });
+        const analysed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(open.id)}/analyze`, { method: "POST",
+          body: JSON.stringify(repeat ? { confirm: true, repeat_uncertain: true } : { confirm: true }) });
         open = analysed; detailMessage("Analisi completata." + conflictText(analysed.tag_conflicts));
         void Promise.all([refreshTags(), refreshAnalysis()]);
       }
@@ -551,8 +553,9 @@ export async function showLibrary() {
           await completeMany(ids); return;
         }
         if (action === "analyze") {
-          const ids = items.filter(i => selected.has(i.id) && i.status === "new" && i.copy && i.analysis.status !== "running" && i.analysis.status !== "done").map(i => i.id);
-          if (!ids.length) { message("Nessuna immagine nuova, con copia di gioco e non ancora analizzata tra le selezionate."); return; }
+          // An uncertain outcome may have been charged: it is repeated only from the image card, with its own warning.
+          const ids = items.filter(i => selected.has(i.id) && i.status === "new" && i.copy && (i.analysis.status === "none" || i.analysis.status === "failed")).map(i => i.id);
+          if (!ids.length) { message("Nessuna immagine nuova, con copia di gioco e non ancora analizzata tra le selezionate. Un'analisi con esito incerto si ripete dalla scheda dell'immagine."); return; }
           await analyzeMany(ids); return;
         }
         let tag = $<HTMLInputElement>("#library-bulk-tag")?.value.trim();
@@ -652,11 +655,12 @@ export async function showLibrary() {
     try { await call("/tags/alias", { method: "DELETE", body: JSON.stringify({ alias }) }); settingsMessage("Alias tolto."); await refreshTags(); }
     catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
-  // Model context: three texts, each saved as a new version; an old version can become the current one again.
+  // Model context: four texts, each saved as a new version; an old version can become the current one again.
   const CONTEXT_LABELS: Record<string, [string, string]> = {
     base: ["Base comune", "Inviata in ogni chiamata. Non deve parlare di immagini generate: il modello che scrive i tag non deve sapere che esistono."],
-    analysis: ["Tag", "Inviato insieme alla base a ogni generazione dei tag."],
-    slop_prompt: ["Prompt per le SLOP", "Servirà nella fase 3 per scrivere i prompt del generatore di immagini: oggi non viene inviato a nessun modello."],
+    analysis: ["Tag", "Inviato insieme alla base a ogni analisi: tag e, per le REAL, descrizione privata."],
+    slop_prompt: ["Brief e prompt per le SLOP", "Inviato insieme alla base alla chiamata che scrive brief e prompt di una SLOP dalla descrizione e dai tag della REAL."],
+    slop_evaluation: ["Valutazione delle SLOP", "Inviato insieme alla base a ogni valutazione di una candidata intera. Decisioni, tolleranza e formato della risposta restano fissati nel codice."],
   };
   const when = (iso: string) => new Date(iso).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" });
   let proposals = new Map<string, string>();
@@ -667,10 +671,11 @@ export async function showLibrary() {
       return `<section class="library-context" data-context-part="${escape(p.part)}"><h3>${escape(label)}</h3><p class="hint">${escape(hint)}</p>
         <textarea data-context="${escape(p.part)}" rows="10" maxlength="${state.max}" spellcheck="true" aria-label="${escape(label)}">${escape(p.current.body)}</textarea>
         <small class="caption-count" data-context-count>${p.current.body.length}/${state.max}</small>
+        ${p.outdated ? `<p class="hint" role="status" data-context-outdated><strong>Il testo in vigore è stato scritto per le SLOP gemelle e contraddice il brief editoriale: finché non salvi una nuova versione (il testo proposto o uno tuo) lo studio non scrive brief e prompt.</strong></p>` : ""}
         ${p.proposed ? `<p class="hint" data-context-proposal>È disponibile un testo proposto con l'aggiornamento dell'app. <button type="button" data-context-load="${escape(p.part)}">Carica nel campo</button> (diventa una versione solo se lo salvi).</p>` : ""}
         <div class="library-inline"><button type="button" data-context-save="${escape(p.part)}">Salva nuova versione</button></div>
         <details class="library-context-history"><summary>Versioni (${p.history.length})</summary><ol>${p.history.map((v, index) =>
-          `<li><span>${escape(when(v.created_at))}</span> · ${v.body.length} caratteri · usata da ${v.used} ${v.used === 1 ? "immagine" : "immagini"}${index === 0 ? " · <strong>attuale</strong>" : ` <button type="button" data-context-restore="${escape(v.id)}">Ripristina</button>`}
+          `<li><span>${escape(when(v.created_at))}</span> · ${v.body.length} caratteri${p.part === "base" || p.part === "analysis" ? ` · usata da ${v.used} ${v.used === 1 ? "immagine" : "immagini"}` : ""}${p.part === "slop_prompt" && v.pipeline < 2 ? " · SLOP gemelle" : ""}${index === 0 ? " · <strong>attuale</strong>" : ` <button type="button" data-context-restore="${escape(v.id)}">Ripristina</button>`}
           <details><summary>Testo</summary><pre>${escape(v.body)}</pre></details></li>`).join("")}</ol></details></section>`;
     }).join("");
   };

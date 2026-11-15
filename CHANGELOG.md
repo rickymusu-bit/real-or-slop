@@ -1,9 +1,24 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T14:47:34Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T17:00:44Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.27.0 — 2026-11-15T14:47:34Z (implementazione #139, da rilasciare)
+## 1.28.0 — 2026-11-15T17:00:44Z (correzioni della revisione della 1.27.0)
+
+- **Contesto dei prompt delle gemelle bloccato:** il server usa il contesto salvato, e in produzione quello in vigore era ancora il
+  testo delle gemelle, in contrasto con il brief editoriale (la 1.27.0 aggiungeva solo una frase che chiedeva di ignorarlo). Ogni
+  versione del contesto registra ora la sua pipeline (migrazione 0051); finché «Brief e prompt per le SLOP» è un testo delle gemelle
+  non parte alcuna chiamata e le Impostazioni lo segnalano. Salvare la proposta lo sblocca.
+- **Valutatore modificabile:** nuovo contesto «Valutazione delle SLOP», inviato con la base; decisioni, tolleranza, rifiuto dei difetti
+  critici e ancoraggi letterali restano nel codice. Ogni valutazione registra le versioni dei contesti usate.
+- **Analisi incerta:** la 1.27.0 rifiutava sempre di ripeterla mentre la dashboard offriva il pulsante («Immagine cambiata o già in
+  analisi»). Ora si ripete solo dalla scheda, con conferma del possibile addebito (`repeat_uncertain`); le azioni in gruppo la
+  escludono. Un segno interrotto da più di dieci minuti vale come incerto, senza aspettare la manutenzione notturna.
+- **Massimo delle chiamate:** «Riscrivi brief e prompt» dichiara la chiamata in più e il massimo del batch la include.
+- Specifiche `libreria-immagini` 3.7.0, `generazione-slop` 5.4.0, `statistiche-impostazioni` 2.8.0; `MASTER.md` 23.1.0 con lo stato
+  della produzione dopo la 1.27.0.
+
+## 1.27.0 — 2026-11-15T14:47:34Z (implementazione #139, rilasciata il 2026-11-15)
 
 - **Correzione CI #140:** comandi delle Impostazioni attivi prima del caricamento iniziale; la verifica del codice partita non provoca più un invio nativo e un ricaricamento della dashboard. Test browser desktop/mobile con caricamento dei contesti sospeso.
 - **Consegna tramite PR:** registrata in `AGENTS.md` 22.3.0 la preferenza dell’owner di pubblicare sempre il ramo e aprire/aggiornare una PR per i test CI; nessuna consegna limitata ai file locali.

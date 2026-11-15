@@ -1,6 +1,8 @@
-# Libreria delle immagini, tag e analisi — specifica 3.6.0
+# Libreria delle immagini, tag e analisi — specifica 3.7.0
 
-Stato: vigente; la 3.0.0 è in produzione con l'app 1.25.0, la 3.1.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T13:54:58Z.
+Stato: vigente; la 3.6.0 è in produzione con l'app 1.27.0, la 3.7.0 è per l'app 1.28.0. Aggiornata: 2026-11-15T17:00:44Z.
+La 3.7.0 aggiunge il contesto «Valutazione delle SLOP», blocca brief e prompt finché il contesto in vigore è quello delle
+gemelle (migrazione 0051) e riammette la ripetizione confermata di un'analisi con esito incerto.
 La 3.1.0 registra la REAL di origine delle SLOP gemelle (migrazione 0049), il tetto di risposta dell'analisi e il contesto 1.8.0.
 La 3.0.0 sostituisce la categoria Formato con Genere, Colore e Supporto, giudicate solo dall'immagine, e aggiunge il completamento a
 pagamento di queste tre categorie per le immagini già analizzate (decisioni dell'owner del 2026-11-14, sezioni 4 e 5). La 2.0.0 è la
@@ -144,6 +146,9 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
 - **Una generazione per immagine:** dopo un esito riuscito il server rifiuta un'altra analisi. I tag generati restano nel database
   e «Ripristina i tag generati» li riporta senza costi. Fanno eccezione l’analisi combinata confermata di una REAL storica senza descrizione e una nuova SLOP accettata da un nuovo processo.
 - Una sola analisi alla volta per immagine; un segno interrotto resta sospeso e viene marcato incerto dalla manutenzione.
+- **Esito incerto o segno interrotto** (più di dieci minuti): mai ripetuto in automatico né nelle azioni in gruppo. Dalla scheda
+  dell'immagine l'owner può ripeterlo con una conferma che avverte del possibile addebito già avvenuto; la richiesta porta
+  `repeat_uncertain: true`, senza la quale il server rifiuta. La chiamata pendente dell'analisi interrotta passa a `uncertain`.
 
 ## 6. Chiamate a pagamento e modelli
 
@@ -159,18 +164,26 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
 
 ## 7. Contesto dei modelli
 
-- Tre testi modificabili dalle Impostazioni, fino a 4000 caratteri ciascuno: **base comune** (ogni chiamata: lingua, fatti, regole dei
-  tag; non parla mai di immagini generate), **Tag** (con la base a ogni analisi), **Prompt per le SLOP** (con la base alla scrittura dei
-  prompt, con le regole della specifica `contenuti-e-trasparenza`).
+- Quattro testi modificabili dalle Impostazioni, fino a 4000 caratteri ciascuno: **base comune** (ogni chiamata: lingua, fatti, regole
+  dei tag; non parla mai di immagini generate), **Tag** (con la base a ogni analisi), **Brief e prompt per le SLOP** (con la base alla
+  chiamata che scrive brief e prompt, con le regole della specifica `contenuti-e-trasparenza`), **Valutazione delle SLOP** (con la base
+  a ogni valutazione di una candidata intera; dall'app 1.28.0, prima era fisso nel codice).
+- **Pipeline di un testo** (migrazione 0051): ogni versione registra la pipeline SLOP per cui è stata salvata. Le versioni salvate
+  prima del rilascio della 1.27.0 (2026-11-15T15:10:12Z) valgono 1: il «Prompt per le SLOP» di allora descrive le gemelle e
+  contraddice il brief editoriale. Finché il testo in vigore di «Brief e prompt per le SLOP» è di pipeline 1, il server non invia la
+  chiamata di brief e prompt e le Impostazioni lo segnalano; salvare una versione (la proposta o un testo dell'owner) la sblocca.
+  Ripristinare una versione ne conserva la pipeline.
 - Ogni salvataggio di un testo diverso crea una versione datata; ripristinarne una vecchia crea una nuova versione con lo stesso testo.
   Ogni analisi registra le versioni usate.
 - Il codice propone un testo (`DEFAULTS` del modulo del contesto) che le Impostazioni mostrano accanto a quello in vigore finché è
   diverso; diventa una versione solo quando l'owner lo salva. Un database nuovo parte dalla proposta.
 - Restano nel codice, qualunque cosa dicano i testi: formato JSON e schema delle risposte, conversione e filtri dei tag, limiti, le
-  liste chiuse di Colore e Supporto, la regola «solo dall'immagine» e la lunghezza chiesta ai prompt SLOP.
+  liste chiuse di Colore e Supporto, la regola «solo dall'immagine», la lunghezza chiesta ai prompt SLOP e, per il valutatore,
+  decisioni ammesse, significato della tolleranza, rifiuto dei difetti critici e conservazione letterale di ancoraggi ed esclusioni.
 - Proposte del codice: con l'app 1.25.0 la base e la parte «Tag» con Genere, Colore e Supporto (contesto 1.7.0, salvato in produzione
-  il 2026-11-14); con l'app 1.26.0 il «Prompt per le SLOP» delle gemelle (contesto 1.8.0, specifica `generazione-slop`, sezione 4),
-  da salvare dalle Impostazioni.
+  il 2026-11-14); con l'app 1.26.0 il «Prompt per le SLOP» delle gemelle (contesto 1.8.0); con l'app 1.27.0 «Brief e prompt per le
+  SLOP» della pipeline editoriale e con la 1.28.0 «Valutazione delle SLOP» (contesto 1.9.0). In produzione il 2026-11-15 è ancora in
+  vigore il testo delle gemelle del 2026-11-14: va salvata la proposta prima di generare.
 
 ## 8. Dati
 
@@ -186,3 +199,4 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
 - Le statistiche di un'immagine (visualizzazioni e classificazioni corrette) contano solo i round giocati con la copia attuale.
 
 Migrazione 0050: descrizioni e provenienza, contesto Commons originale, `slop_processes` e `slop_attempts`, collegamenti del registro `paid_calls`, versione/snapshot del batch. Nessuna conversione o chiamata sulle REAL storiche.
+Migrazione 0051 (`model_contexts`): parte `slop_evaluation` e colonna `pipeline` (sezione 7); testi, date e identificativi conservati.

@@ -1,6 +1,7 @@
-# Statistiche e Impostazioni — specifica 2.7.1
+# Statistiche e Impostazioni — specifica 2.8.0
 
-Stato: vigente; la 2.2.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T14:47:34Z. La 2.2.0 toglie la soglia del gruppo
+Stato: vigente; la 2.7.1 è in produzione con l'app 1.27.0, la 2.8.0 è per l'app 1.28.0. Aggiornata: 2026-11-15T17:00:44Z. La 2.8.0 porta a quattro i
+testi del contesto dei modelli e segnala il testo dei prompt scritto per le gemelle. La 2.2.0 toglie la soglia del gruppo
 (le SLOP sono gemelle di una REAL, specifica `generazione-slop` 3.0.0) e aggiunge il conteggio delle gemelle. La 2.1.0 sostituisce la soglia
 del tema con quella del gruppo e aggiunge i gruppi all'equilibrio del catalogo (specifica `generazione-slop`). La 2.0.0 era la
 versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
@@ -22,8 +23,9 @@ si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ri
 
 - **Modelli:** modello di testo, modello di immagini (con la data di dismissione dove nota) e qualità delle immagini tra quelle ammesse;
   se il modello scelto non ammette la qualità salvata, si torna a `high`. Lo studio SLOP la conserva nello snapshot.
-- **Contesto dei modelli:** i tre testi con le versioni, il ripristino e la proposta del codice (specifica `libreria-immagini`,
-  sezione 7).
+- **Contesto dei modelli:** i quattro testi (base, Tag, Brief e prompt per le SLOP, Valutazione delle SLOP) con le versioni, il
+  ripristino e la proposta del codice; un avviso quando il testo in vigore dei prompt è stato scritto per le gemelle e blocca lo
+  studio (specifica `libreria-immagini`, sezione 7).
 - **Vocabolario dei tag:** elenco per categoria con il numero di immagini, cambio di categoria con conferma, alias, «Unisci».
 - **Classifica:** verifica di un codice partita (soprannome, livello, punteggio, data), Nascondi, Mostra, Cancella (per sempre, per le
   richieste di cancellazione).
@@ -58,4 +60,4 @@ Periodo: ultimi 7 giorni, ultimi 30 (predefinito) o da sempre; «Aggiorna». API
 
 ## Ciclo editoriale SLOP
 
-Impostazioni `max_generation_attempts` (1–5, default 3) ed `editorial_tolerance` (0 rigorosa, 1 normale, 2 permissiva; default 1). Snapshot prima delle chiamate. Default testo `gpt-6.1-sol`, immagini `gpt-image-2.5-flare` qualità `high`, preservando le scelte già salvate. Tre contesti: base, Tag, Prompt per le SLOP. Statistiche includono evaluation, processi accettati/esauriti/sospesi e tentativi; la tabella dei formati sparisce perché le copie nuove sono tutte 4:5. Nessun punteggio di difficoltà derivato dai tentativi.
+Impostazioni `max_generation_attempts` (1–5, default 3) ed `editorial_tolerance` (0 rigorosa, 1 normale, 2 permissiva; default 1). Snapshot prima delle chiamate. Default testo `gpt-6.1-sol`, immagini `gpt-image-2.5-flare` qualità `high`, preservando le scelte già salvate. Quattro contesti dalla 1.28.0: base, Tag, Brief e prompt per le SLOP, Valutazione delle SLOP. Statistiche includono evaluation, processi accettati/esauriti/sospesi e tentativi; la tabella dei formati sparisce perché le copie nuove sono tutte 4:5. Nessun punteggio di difficoltà derivato dai tentativi.
