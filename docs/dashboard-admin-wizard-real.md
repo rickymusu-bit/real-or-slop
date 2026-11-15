@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 2.2.0
+# Dashboard e wizard REAL — specifica 2.3.0
 
-Stato: vigente (con decisioni future indicate a parte). Aggiornata: 2026-11-15T11:08:00Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
+Stato: vigente (con decisioni future indicate a parte). Aggiornata: 2026-11-15T13:42:00+01:00. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wizard di `didascalie-wizard.v1.0.0` e
 `anteprima-descrizione.v1.2.0`, che restano nella cronologia git.
 
@@ -8,6 +8,10 @@ senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wiza
 descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
 
 - **Passo 3, Inquadratura:** il riquadro è sempre 4:5 verticale; il formato non si sceglie più (specifica `copie-di-gioco` 9.0.0).
+- **Tag e descrizione editoriale della REAL** (specifiche `libreria-immagini` 3.5.0, `generazione-slop` 5.2.0): al passo 2
+  **una sola chiamata multimodale** sulla copia 4:5 e sul contesto Commons produce i tag e una descrizione della foto
+  e del contesto. Il testo editoriale è privato, correggibile e separato dalla descrizione Commons mostrata a fine partita.
+  Non presenta indizi dell'esistenza di immagini SLOP. Durante l'analisi non viene creata alcuna immagine sintetica.
 - **Criteri di scelta delle REAL** (issue #138): otto principi qualitativi indipendenti dal generatore: chiarezza del soggetto,
   complessità semantica, relazioni spaziali/fisiche, precisione dei dettagli, riconoscibilità della scena, coerenza del contesto,
   compatibilità 4:5, trasformabilità. **Nessun filtro, punteggio o avviso automatico nel wizard**: sono un promemoria editoriale
@@ -70,15 +74,24 @@ acquisite sono comunque nella libreria privata.
   campo, «la leggono i giocatori alla fine della partita»), tag come pillole colorate per categoria, campo per un nuovo tag con
   suggerimenti dal vocabolario e scelta della categoria, avviso se manca il tag di Tempo, «Titolo e metadati» (autore, licenza,
   dimensioni, link alla fonte e alla licenza), «Togli dal caricamento» (sposta nel cestino, ripristinabile dal Database).
-- **Genera i tag con IA:** dialogo di scelta delle immagini (preselezionate quelle mai generate o rifiutate senza addebito; un esito
-  incerto resta deselezionato e la conferma lo avverte), poi conferma della chiamata a pagamento per immagine. I tag delle immagini
-  scelte vengono sostituiti; le altre non cambiano; un'immagine già generata non è selezionabile.
-- **Ripristina i tag generati:** per le immagini scelte, senza costi; le modifiche dell'owner su quelle immagini si perdono.
+- **Genera tag e descrizione con IA:** dialogo di scelta delle REAL da analizzare (preselezionate quelle mai analizzate o
+  rifiutate senza addebito; esiti incerti deselezionati con avviso), poi una conferma per **una chiamata per REAL**.
+  Produce contemporaneamente tag e descrizione editoriale privata, distinta dal campo Commons. I tag delle foto selezionate
+  vengono sostituiti; una REAL già analizzata non è selezionabile per ripetere automaticamente una chiamata pagata, ma
+  può ricevere un'analisi nuova su richiesta esplicita, con conferma, nel Database. Le altre REAL non cambiano.
+- **Descrizione editoriale:** mostrare nella scheda della REAL il contenuto **visibile**, il **contesto documentato Commons**
+  e le **incertezze**, ciascuno modificabile dall'owner. Se Commons non documenta un fatto, non inventarlo per riempire
+  la descrizione. Le correzioni del testo non cancellano i tag. Non sostituisce automaticamente la descrizione destinata
+  ai giocatori né altera l'attribuzione/licenza.
+- **Ripristina i tag generati:** per le immagini scelte, senza costi; le modifiche dell'owner ai tag si perdono. La descrizione
+  editoriale ha una propria revisione: ripristinare i tag non deve sovrascriverla.
 - Le modifiche di una foto partono una dopo l'altra, ciascuna con la revisione più recente.
 - Si passa al 3 solo se ogni foto ha almeno un tag.
 
 **3. Inquadratura.** Ogni foto con la sua copia di gioco, il formato e le dimensioni; «Cambia inquadratura» apre l'editor di formato e
 ritaglio (specifica `copie-di-gioco`, sezione 3); «Prepara la copia di gioco» se manca. Si passa al 4 solo se ogni foto ha la copia.
+  **Vincolo editoriale:** l'inquadratura deve conservare gli elementi che determinano i tag tematici e il significato della foto;
+  l'owner corregge eventuali ritagli che li eliminano. Non servono tag distinti per l'originale e per il 4:5.
 
 **4. Riepilogo e pubblicazione.** Ogni foto con la copia servita dal gioco e il marchio «RS» sovrapposto, la descrizione e i tag.
 L'owner dichiara di aver verificato autenticità, provenienza e condizioni della licenza; poi le immagini si approvano e si pubblicano una
