@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 22.1.0, aggiornata il 2026-11-15T11:44:02Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 22.2.0, aggiornata il 2026-11-15T13:42:00+01:00. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -18,21 +18,25 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 
 - **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta finale
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
-  al browser prima della risposta. Il modello che **analizza una REAL per i tag o per una descrizione editoriale autonoma**
-  non sa che esistono immagini generate. **Eccezione circoscritta:** il modello distinto che prepara il brief e il prompt SLOP
-  deve sapere lo scopo della generazione e può ricevere la REAL come input visivo; non riutilizzare queste istruzioni per
-  l'analisi delle REAL.
-- **Ogni SLOP nasce da una REAL di riferimento** (decisione del 2026-11-15, specifica `generazione-slop` 5.1.0): il riferimento
+  al browser prima della risposta. Durante il caricamento della REAL, **la stessa chiamata multimodale genera tag e
+  descrizione editoriale neutra**: vede la copia 4:5, il titolo e il contesto Commons, ma **non conosce l'esistenza delle SLOP**.
+  Il modello successivo che produce **brief e prompt SLOP** riceve solo tag e descrizione salvata, **non l'immagine**;
+  conosce invece lo scopo sintetico della generazione. Tenere separati i contesti di istruzione.
+- **Ogni SLOP nasce da una REAL di riferimento** (decisione del 2026-11-15, specifica `generazione-slop` 5.2.0): il riferimento
   assicura ancoraggi editoriali tematici e fotografici, **non** somiglianza visiva né il cambiamento di un solo elemento.
-  **Una sola chiamata multimodale** vede la REAL intera insieme a tag e contesto Commons e restituisce **brief e prompt iniziale**,
-  senza descrizione visiva dedicata. Il brief editoriale del processo resta immutabile; il prompt e la scena possono cambiare.
+  Il wizard salva **tag e descrizione della REAL nella medesima chiamata di analisi**; successivamente **una sola chiamata
+  testuale** trasforma tag e descrizione in brief e prompt iniziale. La descrizione separa osservazioni visive, contesto
+  documentato da Commons e incertezze, senza inventare fatti né sovrascrivere il testo originale di Commons.
+  Il brief editoriale del processo resta immutabile; il prompt e la scena possono cambiare.
   Le persone sono inventate.
   Una SLOP e la propria REAL non compaiono nella stessa partita (specifiche `copie-di-gioco`, `gioco-a-livelli`).
 - **Credibilità prima dell'aderenza letterale al prompt.** Il valutatore esamina **l'immagine generata intera**, senza crop
   né trattamento 4:5; decide accettazione, nuovo tentativo, revisione del prompt o revisione umana. Il ritaglio 4:5 è preparato
   **soltanto dopo l'accettazione** e non dà feedback al generatore. I difetti critici non sono compensabili con altri punti forti; tentativi
   e tolleranza sono configurabili. Nessuna candidata rifiutata entra nella libreria giocabile o viene pubblicata automaticamente.
-- **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP.
+- **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP. Il ritaglio della REAL non deve
+  eliminare elementi **fondamentali** per i tag o il significato della fotografia; in caso contrario l'owner corregge
+  l'inquadratura. Le SLOP si valutano **intere** prima di creare la copia 4:5.
 - **Chiamate a pagamento:** solo con conferma esplicita dell'owner del **numero massimo** previsto per un loop, registrate in
   `paid_calls` senza importi, esiti incerti mai ripetuti in automatico; niente prezzi né budget, il limite è quello del progetto
   OpenAI. Il massimo di tentativi di generazione è configurabile, ogni tentativo include la sua valutazione. Nei test solo modelli finti.
