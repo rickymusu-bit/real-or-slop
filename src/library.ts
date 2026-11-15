@@ -703,12 +703,6 @@ export async function showLibrary() {
       }
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
-  // The REAL wizard is the section shown first: it is mounted before the others load.
-  realWizard = await mountRealWizard($<HTMLElement>("#real-wizard"), async () => { await Promise.all([load(), refreshTags(), refreshAnalysis()]); })
-    .catch(error => { $("#real-wizard").textContent = String(error instanceof Error ? error.message : error); return null; });
-  await Promise.all([load(), refreshTags(), refreshAnalysis(), refreshGroups()]).catch(error => message(String(error instanceof Error ? error.message : error)));
-  await refreshContexts().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
-  await refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   // Thresholds of the SLOP studio and hours of an open game: numbers checked by the server.
   interface Numbers { values: Record<string, number>; limits: Record<string, { min: number; max: number; default: number }> }
   const renderNumbers = (n: Numbers) => {
@@ -727,7 +721,6 @@ export async function showLibrary() {
   });
   numbersForm("#library-thresholds-form", ["slop_section_min_real", "slop_auto_enabled", "slop_auto_threshold_percent", "max_generation_attempts", "editorial_tolerance"], "Soglie dello studio SLOP salvate.");
   numbersForm("#library-games-form", ["open_game_hours"], "Durata massima di una partita aperta salvata.");
-  await call<Numbers>("/settings").then(renderNumbers).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   statsView = mountStats($<HTMLElement>("#stats-body"), period => call<Stats>("/stats?" + new URLSearchParams({ period })));
   // Leaderboard: check a code, hide or show an entry.
   interface Entry { id: string; nickname: string; level_label: string; score: number; photos: number; balanced_accuracy: number; hidden: boolean; created_at: string }
@@ -771,6 +764,14 @@ export async function showLibrary() {
   // Opened while the dashboard was still loading: the toggle came before this listener, so load the entries now.
   if (($("#library-leaderboard") as HTMLDetailsElement).open) void refreshEntries().catch(error => settingsMessage(String(error)));
   distribution = mountDistribution($<HTMLElement>("#db-distribution"), () => call<Distribution>("/distribution"));
+  // Bind every command before startup requests: visible forms must never submit natively while data loads.
+  // The REAL wizard is the section shown first: it is mounted before the others load.
+  realWizard = await mountRealWizard($<HTMLElement>("#real-wizard"), async () => { await Promise.all([load(), refreshTags(), refreshAnalysis()]); })
+    .catch(error => { $("#real-wizard").textContent = String(error instanceof Error ? error.message : error); return null; });
+  await Promise.all([load(), refreshTags(), refreshAnalysis(), refreshGroups()]).catch(error => message(String(error instanceof Error ? error.message : error)));
+  await refreshContexts().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
+  await refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
+  await call<Numbers>("/settings").then(renderNumbers).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   tagPills();
   slopStudio = await mountSlopStudio($<HTMLElement>("#slop-studio"));
   // Automatic SLOP batches: proposal, progress and review (spec `generazione-slop`).

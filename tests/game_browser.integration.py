@@ -149,12 +149,23 @@ try:
             # The owner checks the code in Settings and hides the entry.
             admin = browser.new_context(**options, http_credentials={'username': 'owner', 'password': token})
             page = admin.new_page()
-            page.goto(base + '/admin')
+            # Hold an unrelated startup response: Settings must work before loading finishes.
+            startup_routes = []
+            page.route('**/api/admin/library/contexts', lambda route: startup_routes.append(route))
+            with page.expect_request('**/api/admin/library/contexts'):
+                page.goto(base + '/admin')
             page.get_by_role('button', name='Impostazioni').click()
             page.locator('#library-leaderboard summary').click()
             page.locator('#library-code [name=code]').fill(game_code.lower())
             page.locator('#library-code button').click()
             expect(page.locator('#library-code-result')).to_contain_text(f'Codice valido: Browser {name}')
+            expect(page).to_have_url(base + '/admin')  # no native GET submission exposing the code in the URL
+            expect(page.locator('#dashboard-loading')).to_be_visible()
+            assert startup_routes, 'The initial contexts request must still be pending'
+            for route in startup_routes: route.continue_()
+            page.unroute('**/api/admin/library/contexts')
+            expect(page.locator('#dashboard-loading')).to_have_count(0, timeout=15000)
+            expect(page.get_by_role('button', name='Impostazioni')).to_have_attribute('aria-pressed', 'true')
             entry = page.locator('#library-entries li', has_text=f'Browser {name}')
             entry.get_by_role('button', name='Nascondi').click()
             expect(page.locator('#library-entries li', has_text=f'Browser {name}')).to_contain_text('nascosta')

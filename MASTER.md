@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 23.0.1, aggiornata il 2026-11-15T14:21:17Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 23.0.2, aggiornata il 2026-11-15T14:47:34Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -17,6 +17,7 @@ in `CHANGELOG.md`.
   loop persistente con valutazione dell’immagine intera, massimo 1–5 tentativi e tolleranza indipendente; copie 4:5 dopo accettazione,
   trattamento leggero dalla REAL di riferimento e approvazione/pubblicazione manuali. Migrazione locale 0050, nessun backfill pagato.
   I batch precedenti restano in sola revisione; gli esiti incerti non si ripetono. La produzione resta 1.26.0 fino al rilascio autorizzato.
+- **PR #140, correzione CI:** i comandi delle Impostazioni si attivano prima delle richieste iniziali; test desktop/mobile con risposta dei contesti sospesa per verificare il codice partita durante il caricamento.
 - **Selezione REAL:** otto principi qualitativi nella issue #138; nessun filtro o scoring automatico.
 - **Da decidere con l'owner:** se e come comunicare al giocatore il processo di generazione dopo la risposta.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
@@ -35,7 +36,7 @@ nome.
 | SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.3.0 |
 | Sezione Database | `docs/database-immagini.md` | 2.5.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.7.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.7.1 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
