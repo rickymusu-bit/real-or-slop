@@ -1,6 +1,7 @@
-# Sezione Database — specifica 2.6.0
+# Sezione Database — specifica 2.7.0
 
-Stato: vigente; la 2.5.0 è in produzione con l'app 1.28.0, la 2.6.0 è per l'app 1.29.0. Aggiornata: 2026-11-15T17:58:54Z. La 2.6.0 aggiunge il filtro
+Stato: vigente; la 2.6.0 è in produzione con l'app 1.29.0, la 2.7.0 è per l'app 1.30.0. Aggiornata: 2026-11-15T18:25:36Z. La 2.7.0 aggiunge «Seleziona
+tutte». La 2.6.0 aggiunge il filtro
 «REAL senza descrizione» e l'azione in gruppo «Analisi combinata tag e descrizione». La 2.3.0: i tag di partenza di una SLOP
 sono quelli della REAL di cui è la gemella, con «Apri la REAL di origine»; il filtro per categoria della Distribuzione torna a
 comprendere Tempo e Genere, persi con la 1.25.0. La 2.2.0 mostra i conflitti di categoria dopo analisi e completamento (app 1.25.1). La 2.1.1 chiama «REAL di riferimento» la foto delle misure del trattamento. La 2.1.0 aggiunge il filtro
@@ -35,6 +36,8 @@ che restano nella cronologia git. Stati e regole della libreria: specifica `libr
   messaggio elenca i tag che il modello ha proposto in una categoria diversa da quella del vocabolario («mugshot» proposto come Genere,
   nel vocabolario è Altro). Prevale il vocabolario, quindi l'immagine può restare senza quella categoria: l'owner sposta il tag dal
   vocabolario. Il 2026-11-14 il completamento della foto segnaletica di King era rimasto senza Genere per questo motivo.
+- **Seleziona tutte (N)** (decisione dell'owner del 2026-11-15): seleziona tutte e sole le immagini mostrate dalla vista e dai filtri
+  correnti; sparisce quando sono già tutte selezionate. «Deseleziona» nella barra le toglie.
 - **Selezione multipla:** sposta nel cestino (con conferma se ci sono pubblicate), analizza con IA, completa Genere, Colore e Supporto
   (a pagamento, con conferma del numero di chiamate; solo le immagini che ne hanno diritto, specifica `libreria-immagini`, sezione 5),
   approva (con la conferma dei diritti
