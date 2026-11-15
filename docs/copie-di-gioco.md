@@ -1,7 +1,7 @@
-# Copie di gioco — specifica 9.1.2
+# Copie di gioco — specifica 9.1.3
 
-Stato: decisioni approvate, **da implementare** (#136 e successivo loop di credibilità in `generazione-slop` 5.1.0); in produzione c'è la 8.0.0
-(app 1.26.0: copia nel formato della foto, trattamento verso un'altra REAL). Aggiornata: 2026-11-15T11:44:02Z. La 9.0.0 riporta tutte
+Stato: decisioni approvate, **da implementare** (#136 e successivo loop di credibilità in `generazione-slop` 5.2.0); in produzione c'è la 8.0.0
+(app 1.26.0: copia nel formato della foto, trattamento verso un'altra REAL). Aggiornata: 2026-11-15T13:42:00+01:00. La 9.0.0 riporta tutte
 le copie di gioco al formato verticale 4:5 e prende le misure del trattamento dalla REAL di origine. Le versioni precedenti restano
 nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia e il gioco serve esattamente quei byte.
 
@@ -15,7 +15,7 @@ nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia 
   (2026-11-13, invariato). Nessuna vista iniziale diversa dalla foto intera.
 - Trattamento delle SLOP: copia le REAL, non le supera (2026-11-14). Le misure vengono dalla **REAL di riferimento** (2026-11-15): prese
   da un'altra REAL avevano rovinato il lotto del 2026-11-15 (sezione 4.1). Il trattamento è un suggerimento fotografico leggero,
-  **non** un vincolo a rendere la scena simile alla REAL; la credibilità della copia finale prevale (specifica `generazione-slop` 5.1.0).
+  **non** un vincolo a rendere la scena simile alla REAL; la credibilità della copia finale prevale (specifica `generazione-slop` 5.2.0).
 
 ## 2. Formati
 
@@ -99,7 +99,7 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
 - **Correzioni leggere.** I limiti dei passi 3–5 sono più stretti della versione 2 (contrasto fino a 1,6, saturazione da 0,3, raggio
   fino a 3): il trattamento ritocca, non stravolge. Niente effetti disegnati: ogni passo segue una misura della REAL.
 - Dopo il trattamento il browser misura la copia e registra lo scarto dall'obiettivo; il dettaglio del Database lo mostra.
-  **Lo scarto metrico non è una misura di realismo.** Nel loop di `generazione-slop` 5.1.0 il valutatore multimodale vede
+  **Lo scarto metrico non è una misura di realismo.** Nel loop di `generazione-slop` 5.2.0 il valutatore multimodale vede
   **l'immagine generata intera, prima del ritaglio e del trattamento**. Solo se la candidata è accettata, il browser prepara
   la copia 4:5 e applica il trattamento. L'owner controlla la copia risultante nella revisione; il crop non deve condizionare
   il prompt né innescare una nuova generazione automatica per concentrare i soggetti nel 4:5.
