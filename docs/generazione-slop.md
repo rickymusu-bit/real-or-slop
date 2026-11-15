@@ -1,9 +1,9 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.1.0
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.2.0
 
-Stato: **decisioni editoriali approvate il 2026-11-15, da implementare** tramite PR successive. Aggiornata: 2026-11-15T11:44:02Z.
+Stato: **decisioni editoriali approvate il 2026-11-15, da implementare** tramite PR successive. Aggiornata: 2026-11-15T13:42:00+01:00.
 In produzione resta l'app 1.26.0; la specifica 4.0.0 e l'issue #136 descrivono una pipeline precedente, **superata su somiglianza alla REAL,
-cambiamento singolo, descrizione intermedia obbligatoria e numero di generazioni**. Rimangono validi, salvo diversa indicazione qui, il 4:5 e il trattamento leggero di
-`docs/copie-di-gioco.md` 9.1.1; tag e contesti in `docs/libreria-immagini.md`; contenuti in `docs/contenuti-e-trasparenza.md`.
+cambiamento singolo, seconda analisi visiva della REAL nella generazione e numero di generazioni**. Rimangono validi, salvo diversa indicazione qui, il 4:5 e il trattamento leggero di
+`docs/copie-di-gioco.md` 9.1.3; tag e contesti in `docs/libreria-immagini.md`; contenuti in `docs/contenuti-e-trasparenza.md`.
 Le versioni precedenti sono nella cronologia Git.
 
 ## 1. Obiettivo e principi non negoziabili
@@ -42,32 +42,48 @@ Le versioni precedenti sono nella cronologia Git.
 
 ## 3. Pipeline di una REAL
 
-La pipeline è per foto, tracciabile e riprendibile: `REAL intera + tag + contesto Commons → UNA chiamata multimodale (brief editoriale + prompt iniziale) → [genera → valuta immagine INTERA → (accetta | rigenera | correggi prompt)] → copia 4:5 e trattamento → tag → nuova SLOP in libreria → revisione owner → pubblicazione`.
+Il flusso si divide in **catalogazione della REAL** e **generazione SLOP**. La comprensione visiva della REAL avviene
+normalmente **una volta sola nel wizard di caricamento**, insieme ai tag; una descrizione strutturata e correggibile resta
+associata alla REAL e può essere riusata quando occorre riequilibrare il catalogo.
 
-1. **Una sola chiamata multimodale per brief e prompt iniziale.** Il modello vede **direttamente l'immagine REAL intera**, senza ritaglio
-   preliminare 4:5, e riceve i tag della REAL per categoria e il contesto descrittivo proveniente da Commons (una sola REAL per
-   chiamata). Restituisce in un'unica risposta strutturata:
-   - `brief.required[]`: pochi ancoraggi **obbligatori** tematici, semantici o fotografici, significativi, verificabili e
-     compatibili con una scena diversa;
+`Caricamento REAL: copia 4:5 + metadati Commons → UNA chiamata multimodale (tag + descrizione contestualizzata) → REAL catalogata`
+
+`Generazione SLOP: tag REAL + descrizione salvata → UNA chiamata testuale (brief + prompt iniziale) → [genera → valuta immagine SLOP INTERA → (accetta | rigenera | correggi prompt)] → copia 4:5 e trattamento → tag SLOP → nuova SLOP in libreria → revisione owner → pubblicazione`
+
+1. **Analisi REAL durante il caricamento, una sola chiamata multimodale.** Il modello che produce i tag REAL riceve la **copia
+   di gioco 4:5** già predisposta, il titolo e il contesto disponibile di Wikimedia Commons, più il vocabolario dei tag.
+   Nella medesima risposta strutturata produce:
+   - `tags`: categorie e tag secondo le regole ordinarie dell'analisi, senza dedurre dalla fonte ciò che deve essere giudicato
+     esclusivamente dai pixel (in particolare Genere, Colore e Supporto);
+   - `real_description.visible`: soggetti, azioni, ambiente, composizione e aspetto fotografico **osservabili**;
+   - `real_description.documented_context`: contesto (luogo, epoca, evento, circostanze) **solo** se documentato nei metadati o
+     nella descrizione Commons fornita, distinguendolo dalle caratteristiche direttamente osservabili;
+   - `real_description.uncertainties`: eventuali dettagli non identificabili o elementi della fonte poco affidabili.
+   La descrizione è **neutra, fattuale, modificabile**, priva di interpretazioni sull'autenticità o di riferimenti a
+   generazione artificiale. Se Commons è lacunoso, completare il racconto *visivo*, non inventare contesto storico o geografico.
+   I dati originali Commons restano disponibili, non sono sovrascritti da questa descrizione. Il testo generato è **un campo
+   editoriale privato** distinto dalla descrizione/didascalia già eventualmente visibile al giocatore nel riepilogo.
+2. **Conservazione e compatibilità.** Tag e descrizione REAL vengono salvati **insieme come esito della stessa chiamata**
+   (modello, revisione del file/copia 4:5 e data); la descrizione può essere modificata senza invalidare automaticamente
+   i tag, e viceversa. L'owner controlla nel wizard che la selezione 4:5 non escluda soggetti o fatti **fondamentali**:
+   per questa ragione i tag rilevanti non devono dipendere da dettagli rimossi dal crop. Un cambio di ritaglio che
+   elimini dati fondamentali deve essere corretto dall'owner, non compensato inventando tag.
+   Le REAL già presenti senza `real_description` rimangono utilizzabili nel catalogo: per avviare una nuova generazione
+   SLOP occorre prima aggiungere/correggere manualmente la descrizione oppure richiedere **con conferma a pagamento**
+   una nuova analisi combinata tag+descrizione. Nessuna analisi o backfill massivo automatico.
+3. **Brief e prompt iniziale: unica chiamata SOLO TESTUALE.** Nello studio o nel batch il modello riceve i **tag aggiornati
+   della REAL** e la **descrizione salvata** (comprensiva di contesto documentale e incertezze), senza una nuova immagine.
+   Produce in un'unica risposta strutturata:
+   - `brief.required[]`: pochi ancoraggi tematici e fotografici **obbligatori**, verificabili nell'output;
    - `brief.preferred[]`: preferenze non vincolanti;
-   - `brief.flexible[]`: elementi lasciati liberi, senza obbligo di somigliare alla REAL;
-   - `brief.exclusions[]`: esclusioni editoriali o contenutistiche;
-   - `prompt`: descrizione operativa **in inglese** di una nuova fotografia plausibile, con dettagli concreti di soggetti,
-     interazioni, ambiente e resa fotografica, senza cliché o grading cinematografico.
-   I tag e Commons possono contestualizzare un evento non identificabile dai soli pixel: il modello deve distinguere
-   esplicitamente le informazioni **visibili**, quelle **fornite dal contesto** e le **incertezze**; non inventare prove,
-   trascrizioni o fatti non documentati. Il modello non è tenuto a conservare punto di vista, numero di persone o composizione.
-   Il modello non sceglie il formato. Questa chiamata sostituisce **sia** la generazione di una descrizione visiva dedicata
-   **sia** la successiva chiamata testuale per brief e prompt: **non sono previste due richieste separate**.
-2. **Revisione e congelamento del brief.** Lo studio mostra brief e prompt prodotti insieme: l'owner può correggerli
-   gratuitamente prima di avviare il loop oppure richiedere, con nuova conferma a pagamento, di rigenerarli **insieme**.
-   Il brief viene poi congelato per l'intero processo (versione e hash); il prompt operativo resta modificabile dal valutatore.
-   Se l'owner cambia il brief dopo l'avvio, serve un nuovo processo. La risposta iniziale va validata prima di avviare
-   chiamate al generatore: in caso di JSON incompleto o ancoraggi incoerenti, richiedere revisione, senza inventare campi.
-3. **Descrizione visiva preesistente: compatibilità, non prerequisito.** Eventuali valori storici `visual_description` di una
-   REAL rimangono intatti e consultabili dove già previsti, ma la pipeline nuova **non li usa, non li richiede e non avvia
-   alcuna chiamata separata per produrli**. Nessuna nuova sezione «Descrizione delle REAL» nelle Impostazioni. L'analisi
-   standard delle REAL per i tag rimane indipendente dal processo di generazione delle SLOP.
+   - `brief.flexible[]`: elementi liberi; nessuna somiglianza obbligatoria alla REAL;
+   - `brief.exclusions[]`: esclusioni editoriali e contenutistiche;
+   - `prompt`: descrizione **in inglese** di una nuova fotografia plausibile, con soggetti, azione, composizione, ambiente
+     e resa fotografica concreti, senza cliché o enfasi cinematografica.
+   L'owner può modificare brief e prompt prima della generazione, oppure richiedere con nuova conferma a pagamento
+   di rigenerarli. Il brief è congelato per l'intero loop (versione/hash), mentre il prompt può essere revisionato dal
+   valutatore. Se il brief cambia dopo l'avvio, parte un nuovo processo. Un output non valido blocca il passaggio
+   alle chiamate successive, senza inventare campi. Il modello di prompt non sceglie il formato.
 
 4. **Generazione della candidata integrale.** Il generatore riceve il prompt operativo e la dimensione scelta da `copie-di-gioco`;
    produce un'immagine completamente sintetica, nel **suo formato originale di generazione**. Il file intero resta privato fino
@@ -129,12 +145,13 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
 
 ## 6. Stato, spese, ripresa e conservazione
 
-- **Conferma preventiva del tetto massimo** delle chiamate del batch, non del numero esatto effettivo: per ogni REAL la versione
-  base prevede al massimo **`1 brief+prompt multimodale + N immagini + N valutazioni + 1 analisi tag = 2 + 2N`** chiamate,
-  dove `N = max_generation_attempts` (per esempio N=3 → massimo 8 chiamate per REAL). L'analisi tag avviene solo se una
-  candidata è accettata; nessuna chiamata di descrizione separata viene conteggiata. Nuove rigenerazioni manuali del brief/prompt
-  richiedono autorizzazione e un preventivo aggiornato. Il preventivo distingue i tipi di chiamata e i modelli; il costo
-  monetario resta gestito dal limite OpenAI del progetto.
+- **Conferma preventiva del tetto massimo** delle chiamate del batch, non del numero esatto effettivo: con una REAL **già
+  catalogata e dotata di descrizione**, la generazione SLOP richiede al massimo **`1 brief+prompt testuale + N immagini
+  + N valutazioni + 1 analisi tag SLOP = 2 + 2N`** chiamate (N=3 → al massimo 8). L'analisi congiunta tag+descrizione REAL
+  è **già stata pagata durante il caricamento** e non si ripete. Per una REAL storica senza descrizione occorre un'operazione
+  **separata** e autorizzata prima di avviare il processo (+1 eventuale analisi combinata), da mostrare nel preventivo totale.
+  La successiva analisi dei tag SLOP avviene solo se una candidata è accettata. Rigenerazioni manuali del brief/prompt richiedono
+  nuova conferma. Il preventivo distingue i tipi di chiamata e i modelli; il costo monetario resta gestito dal limite OpenAI.
 - Ogni chiamata a pagamento è registrata **prima** dell'invio con ID univoco, tipo, immagine, processo e tentativo. I passi e gli
   output sono persistenti con stati `pending / completed / failed / uncertain`. Nessuna chiamata `uncertain` viene ripetuta
   automaticamente; la singola foto è sospesa, il resto del batch può proseguire. Problemi di account OpenAI fermano il batch.
@@ -152,7 +169,7 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
 
 ## 7. Studio e interfaccia amministrativa
 
-Quattro passaggi evolutivi: **REAL** (scelta da 1 a 10), **Brief e prompt** (prodotti insieme in una sola chiamata multimodale, poi revisione),
+Quattro passaggi evolutivi: **REAL** (scelta da 1 a 10, con tag e descrizione già disponibili), **Brief e prompt** (prodotti insieme in una chiamata testuale e poi revisionabili),
 **Generazione e valutazione dell'immagine intera** (avanzamento per foto e per tentativo, decisione, difetti e correzione del prompt),
 **Revisione** (solo candidate accettate automaticamente, più eventuali casi sospesi visibili separatamente).
 Mostrare il numero massimo di tentativi, la tolleranza, il preventivo massimo delle chiamate e il totale effettivo.
@@ -166,30 +183,31 @@ Una SLOP `new` non è automaticamente una SLOP `published`.
 gestiti senza doppie chiamate. Non tentare di riprendere un vecchio batch con un formato di stato incompatibile: segnalarlo e
 richiedere un'esplicita scelta operativa. Nessuna migrazione remota, deploy o conversione distruttiva senza autorizzazione owner.
 
-## 8. Prompt iniziale multimodale, modelli e controlli
+## 8. Descrizione REAL, prompt testuale, modelli e controlli
 
-- **Una sola richiesta multimodale** riceve REAL integrale, tag strutturati e descrizione Commons e produce **entrambi** i
-  campi `brief` e `prompt`; non aggiungere uno step preliminare di descrizione/riassunto né una seconda richiesta per
-  costruire il prompt. Brief e prompt sono distinti **nel dato**, non nelle chiamate API.
-- Il generatore iniziale della SLOP è **distinto dal modello che tagga la REAL**. Le istruzioni della generazione possono
-  parlare di fotografie sintetiche; quelle dell'analisi REAL continuano a non menzionarle, come richiesto in `AGENTS.md`.
-  Usare il contesto configurabile «Prompt per le SLOP» e istruzioni fisse del nuovo contratto strutturato; **non** creare
-  un contesto separato «Descrizione delle REAL» per questa pipeline.
-- Il modello deve proporre vincoli essenziali **minimi**, senza imporre la fedeltà ai dettagli visivi della REAL. Rilevanza
-  tematica e credibilità fotografica sono prioritarie; il prompt iniziale è modificabile e in inglese, con resa concreta e
-  naturale, senza espressioni come «cinematic» o luci artificiose. La chiamata non modifica i tag esistenti.
-- Il valutatore può **cambiare la scena**, purché il brief immutabile sia rispettato: ciò è desiderabile se corregge
-  deformazioni, testi insensati o composizioni artificiose. Mai imporre la conservazione della posizione delle persone della REAL.
-- I modelli sono selezionabili dalle Impostazioni, inclusa la possibilità futura di generatori differenti; default già
-  proposti dalla #136 (`gpt-6.1-sol` testo multimodale e `gpt-image-2.5-flare` `high`) finché l'owner non decide diversamente.
-  Il sistema verifica il supporto all'input immagine del modello scelto **prima** di autorizzare il passaggio iniziale.
-- Il valutatore non certifica autenticità: non usare una percentuale di «probabilità che sia REAL» come verità.
-- I test usano solo modelli finti; coprire la **singola chiamata con immagine REAL intera e output congiunto brief/prompt**,
-  validazione, edit manuale, assenza di chiamate di descrizione, input da Commons distinguibile dai pixel, decisioni `accept`,
-  `retry_same_prompt`, `revise_prompt`, `replan_scene`, `review_needed`, `exhausted`, vincoli immutabili, massimo tentativi,
-  tetto di spesa aggiornato, ripresa e chiamate incerte, valutazione sempre sull'immagine intera (no crop 4:5),
-  preparazione del 4:5 solo dopo l'accettazione, revisione dell'inquadratura senza feedback automatico al prompt
-  e assenza dei tentativi rifiutati dal catalogo/gioco.
+- **Al caricamento:** la chiamata **multimodale già usata per taggare la REAL** restituisce anche la descrizione strutturata
+  `visible`, `documented_context`, `uncertainties`. È neutra, contestuale, modificabile e non ha conoscenza delle
+  immagini sintetiche. Le istruzioni della parte «Tag» e le regole di schema distinguono obbligatoriamente le osservazioni
+  visive dalle informazioni Commons. Nessuna seconda chiamata per descrivere la stessa REAL.
+- **Al momento della SLOP:** una richiesta **solo testuale** riceve la descrizione salvata e i tag e restituisce **insieme**
+  `brief` e `prompt`. Il brief è distinto dal prompt **nei dati**, non nelle chiamate; non ricevere la REAL come immagine
+  durante la generazione SLOP. Le istruzioni «Prompt per le SLOP» possono parlare esplicitamente di sintesi e valutazione;
+  **non** vanno riutilizzate nella chiamata di catalogazione delle REAL.
+- Il modello deve proporre vincoli essenziali **minimi**, senza imporre fedeltà ai dettagli visivi della REAL. Credibilità,
+  varietà e pertinenza tematica sono prioritarie; prompt in inglese, descrizioni di tecnica e luce concrete, niente
+  formulazioni «cinematic» o illuminazione artificiosa.
+- Il valutatore può **cambiare la scena**, purché il brief immutabile sia rispettato; non imporre conservazione di persone,
+  pose e posizione dei soggetti rispetto alla REAL.
+- I modelli sono selezionabili dalle Impostazioni. Predefiniti proposti dalla #136: `gpt-6.1-sol` testo e
+  `gpt-image-2.5-flare` `high`, salvo decisione diversa dell'owner. La capacità di visione è necessaria al modello
+  di **analisi REAL** e al **valutatore SLOP**, non a quello che scrive brief e prompt.
+- Il valutatore non certifica autenticità: non usare una percentuale di probabilità REAL come verità.
+- I test usano solo modelli finti e verificano: **una** chiamata tag+descrizione REAL con immagine e contesto Commons,
+  provenienza dei fatti distinta dalla visione, edit indipendente dei tag e della descrizione, salvataggio atomico della
+  risposta, **una** chiamata testuale brief+prompt senza immagine, aggiornamento del brief, REAL senza descrizione preesistente,
+  nessun backfill implicito, nessuna contaminazione del contesto REAL con istruzioni sulle SLOP, decisioni `accept`,
+  `retry_same_prompt`, `revise_prompt`, `replan_scene`, `review_needed`, `exhausted`, tetto chiamate, gestione errori
+  e ripresa, valutazione **dell'immagine SLOP integrale**, 4:5 solo dopo accettazione, nessuna candidata rifiutata nel gioco.
 
 ## 9. Fuori dallo scopo immediato e decisioni future
 
@@ -203,10 +221,13 @@ richiedere un'esplicita scelta operativa. Nessuna migrazione remota, deploy o co
 
 1. **PR A — specifiche:** allineare `AGENTS.md`, `MASTER.md`, `generazione-slop`, `copie-di-gioco` e le specifiche collegate;
    senza modificare codice, database o produzione.
-2. **PR B — backend e persistenza:** **unica chiamata multimodale REAL → brief+prompt**, brief bloccato, processo/tentativi, chiamate registrate, valutatore e decisioni strutturate,
-   limiti e compatibilità dei batch, fake API e test. Migrazione additiva, senza conversione delle immagini esistenti.
-3. **PR C — browser e studio:** ciclo visibile, impostazione limite e tolleranza, immagine integrale valutata e 4:5 preparato dopo, progressi e revisione owner,
-   test d'integrazione desktop/mobile.
+2. **PR B — backend e persistenza:** **estendere l'analisi REAL per produrre tag+descrizione insieme** e salvare il campo
+   editoriale; **unica chiamata testuale descrizione+tag → brief+prompt**; brief bloccato, processo/tentativi, chiamate
+   registrate, valutatore e decisioni strutturate, limiti e compatibilità batch, fake API e test. Migrazione additiva,
+   senza conversione delle REAL esistenti.
+3. **PR C — browser e studio:** nel wizard REAL mostrare e correggere la descrizione prodotta coi tag; nello studio usare
+   descrizione+tag salvati, ciclo visibile, impostazioni dei tentativi/tolleranza, valutazione SLOP integrale e 4:5 dopo
+   l'accettazione, avanzamento e revisione owner, test desktop/mobile.
 4. **PR D — rilascio:** solo dopo CI, anteprima esaminata e autorizzazione esplicita dell'owner; valutare la migrazione dei batch in
    pausa e le impostazioni persistenti in produzione. Un merge su main avvia automaticamente il deploy.
 
