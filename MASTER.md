@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 22.1.0, aggiornata il 2026-11-15T11:44:02Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 22.1.1, aggiornata il 2026-11-15T11:44:02Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -20,7 +20,7 @@ in `CHANGELOG.md`.
   credibilità fotografica. Candidato in libreria
   solo dopo esito positivo, poi revisione e pubblicazione manuali. Fino a 1–5 tentativi (3 predefiniti), tolleranza qualitativa
   separata, chiamate registrate, ripresa senza duplicazioni automatiche. Specifiche: `generazione-slop` 5.1.0,
-  `copie-di-gioco` 9.1.1, `libreria-immagini` 3.4.0; **nessun codice di questa fase è ancora in produzione**.
+  `copie-di-gioco` 9.1.2, `libreria-immagini` 3.4.0; **nessun codice di questa fase è ancora in produzione**.
 - **Selezione REAL:** otto principi qualitativi nella issue #138; nessun filtro o scoring automatico.
 - **Da decidere con l'owner:** se e come comunicare al giocatore il processo di generazione dopo la risposta.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
@@ -34,7 +34,7 @@ nome.
 |---|---|---|
 | Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.4.0 (decisioni da implementare) |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.1.1 (da implementare) |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.1.2 (da implementare) |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.2.0 (criteri editoriali, UI invariata) |
 | SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.1.0 (da implementare) |
 | Sezione Database | `docs/database-immagini.md` | 2.4.0 |
