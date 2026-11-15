@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 3.4.0
+# Libreria delle immagini, tag e analisi — specifica 3.5.0
 
-Stato: vigente; la 3.0.0 è in produzione con l'app 1.25.0, la 3.1.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T11:44:02Z.
+Stato: vigente; la 3.0.0 è in produzione con l'app 1.25.0, la 3.1.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T13:42:00+01:00.
 La 3.1.0 registra la REAL di origine delle SLOP gemelle (migrazione 0049), il tetto di risposta dell'analisi e il contesto 1.8.0.
 La 3.0.0 sostituisce la categoria Formato con Genere, Colore e Supporto, giudicate solo dall'immagine, e aggiunge il completamento a
 pagamento di queste tre categorie per le immagini già analizzate (decisioni dell'owner del 2026-11-14, sezioni 4 e 5). La 2.0.0 è la
@@ -9,24 +9,34 @@ senza strati `libreria-immagini.v1.8.0`, `categorie-tag.v1.1.0` e le parti su li
 `didascalie-wizard.v1.0.0` e `anteprima-descrizione.v1.2.0`, che restano nella cronologia git. Regole di contenuto delle SLOP e
 trasparenza: specifica `contenuti-e-trasparenza`. Copie di gioco: specifica `copie-di-gioco`.
 
-**Decisioni dell'owner del 2026-11-15, da implementare** (issue #136, aggiornata dalla specifica `generazione-slop` 5.1.0).
+**Decisioni dell'owner del 2026-11-15, da implementare** (issue #136, aggiornata dalla specifica `generazione-slop` 5.2.0).
 Fino al rilascio il resto di questa specifica descrive il comportamento dell'app 1.26.0: queste decisioni non sono ancora codice.
 Chi implementa aggiorna tutte le sezioni interessate e toglie questo riquadro.
 
-- **Brief e prompt SLOP in una sola chiamata multimodale:** il modello riceve la **REAL intera**, tag per categoria e
-  contesto Commons e restituisce **entrambi** i campi strutturati `brief` e `prompt`. Il brief resta congelato nel loop;
-  il prompt può cambiare. Nessuna chiamata autonoma di descrizione visiva della REAL, né passaggio obbligatorio attraverso
-  `visual_description`. Valori preesistenti di quel campo, se presenti, rimangono consultabili e invariati ma non sono usati
-  dal nuovo flusso (specifica `generazione-slop` 5.1.0, sezioni 3 e 8).
-- **Chiamate a pagamento:** la chiamata `prompt` è ora **multimodale** e produce contemporaneamente brief+prompt; si aggiunge
-  `evaluation` per giudicare l'immagine intera. **Nessuna chiamata `description` aggiuntiva.** Ogni tentativo genera una
-  candidata e la valuta; registrazione preventiva e nessun retry automatico di esiti incerti. La conferma comunica il
-  **massimo possibile**, non un numero esatto: per una REAL con N tentativi massimo `2 + 2N` chiamate (brief+prompt,
-  N generazioni, N valutazioni, un'analisi tag della candidata accettata).
-- **Contesto dei modelli:** rimangono **tre parti**: base comune, Tag, Prompt per le SLOP. La parte «Prompt per le SLOP»
-  istruisce ora la chiamata multimodale iniziale a produrre brief+prompt; nessuna quarta parte «Descrizione delle REAL».
-  Il contesto di analisi delle REAL per i tag rimane separato e non deve menzionare immagini generate.
-- **Modelli predefiniti:** `gpt-6.1-sol` per il testo (deve leggere immagini), `gpt-image-2.5-flare` in qualità `high` per le immagini.
+- **Analisi REAL combinata:** l'analisi multimodale effettuata normalmente nel wizard sulla **copia 4:5** della REAL e
+  sul contesto Commons restituisce **insieme tag e descrizione editoriale neutra** (`real_description.visible`,
+  `real_description.documented_context`, `real_description.uncertainties`). Un unico esito a pagamento con la stessa
+  conferma, senza ulteriori chiamate. Non sovrascrive la descrizione di Commons né il testo eventualmente mostrato ai
+  giocatori; la descrizione editoriale è privata e correggibile. Segnalare esplicitamente se mancano informazioni di contesto.
+- **Brief e prompt SLOP in una sola chiamata testuale:** quando serve generare, il modello riceve i tag REAL e la
+  descrizione editoriale **già salvata** e produce `brief` e `prompt` insieme. Il brief resta congelato nel loop; il prompt
+  può cambiare. Non riceve nuovamente i pixel della REAL (specifica `generazione-slop` 5.2.0, sezioni 3 e 8).
+- **REAL storiche:** se prive della nuova descrizione, restano in libreria; l'owner può compilarla a mano o autorizzare
+  una nuova analisi tag+descrizione. Nessun backfill automatico. Gli eventuali campi `visual_description` legacy non
+  vanno cancellati o convertiti senza una migrazione concordata.
+- **Chiamate a pagamento:** l'analisi REAL di caricamento (`analysis`) restituisce **tag+descrizione nella stessa chiamata**.
+  La chiamata `prompt` successiva è **solo testuale** e restituisce `brief+prompt`; `evaluation` giudica la SLOP intera.
+  Nessuna chiamata `description` aggiuntiva. Ogni tentativo genera una candidata e la valuta; registrazione preventiva,
+  mai retry automatici dopo esito incerto. Con REAL già descritta: massimo `2 + 2N` chiamate **nel solo processo SLOP**
+  (brief+prompt, N immagini, N valutazioni e una analisi dei tag SLOP). L'analisi REAL è stata pagata nel caricamento;
+  recuperare una descrizione mancante richiede conferma e preventivo separati.
+- **Contesto dei modelli:** rimangono **tre parti**: base comune, Tag, Prompt per le SLOP. La parte «Tag» istruisce la
+  chiamata REAL a generare anche la descrizione neutra. La parte «Prompt per le SLOP» governa la **chiamata testuale**
+  successiva per brief+prompt. Nessuna quarta parte, nessun riferimento a immagini generate nel contesto di analisi REAL.
+- **Modelli predefiniti:** `gpt-6.1-sol` per analisi REAL, prompt testuale e valutazione SLOP (la visione è richiesta solo
+  per analisi e valutazione), `gpt-image-2.5-flare` in qualità `high` per le immagini.
+- **Campi della REAL:** descrizione editoriale strutturata e modificabile, separata da descrizione Commons, tag, dettagli
+  fonte, modello e revisione della copia di gioco usata nell'analisi. Non esporre il nuovo testo automaticamente nel gioco.
 - **Campi di una SLOP generata:** REAL di riferimento, ancoraggi del brief editoriale, prompt finale, qualità, valutazione
   positiva **dell'immagine intera prima di ritaglio e trattamento**, e riepilogo dei tentativi; niente REAL campione né `change`
   obbligatorio. I tentativi rifiutati sono privati e temporanei, **non** immagini della libreria. La copia 4:5 si prepara
@@ -141,6 +151,16 @@ Una sola raccolta di immagini REAL e SLOP.
 - **Avvisi** non bloccanti: una REAL senza tag di Tempo; un'immagine senza Genere, Colore o Supporto (fuori dai gruppi).
 
 ## 5. Analisi a pagamento
+
+**Modifica prevista, da implementare:** per una **REAL** la risposta dell'analisi a pagamento contiene **sia** i tag sia
+`real_description` (contenuto visibile, contesto Commons documentato, incertezze); per una **SLOP** mantiene l'analisi dei
+tag della copia giocabile. La chiamata della REAL continua a non ricevere istruzioni su immagini sintetiche. Distinguere
+contenuto osservabile e metadati Commons, non colmare lacune documentali con ipotesi.
+
+L'owner può correggere la descrizione senza rifare i tag e viceversa. Il sistema conserva revisione e modello dell'esito
+originario e non sovrascrive né il campo originale Commons né la descrizione destinata al riepilogo del gioco.
+Le REAL senza descrizione possono essere completate manualmente oppure con analisi combinata **solo dopo conferma**.
+
 
 - Su richiesta dell'owner (wizard, dettaglio o gruppo nel Database, studio SLOP), solo per immagini nuove con copia di gioco. Il modello
   di testo scelto nelle Impostazioni, che deve leggere immagini, riceve la copia di gioco, titolo e descrizione (REAL) o il prompt (SLOP)
