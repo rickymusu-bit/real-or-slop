@@ -1,6 +1,7 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.6.0
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.7.0
 
-Stato: vigente; la 5.5.0 è in produzione con l'app 1.30.2, la 5.6.0 è per l'app 1.31.0. Aggiornata: 2026-11-15T22:43:46Z. La 5.6.0 sposta il ciclo
+Stato: vigente; la 5.5.0 è in produzione con l'app 1.30.2, la 5.7.0 è per l'app 1.32.0. Aggiornata: 2026-11-15T23:09:52Z. La 5.7.0: copia della SLOP
+accettata preparata dal Worker. La 5.6.0 sposta il ciclo
 su Cloudflare (Workflow), fuori dal browser (decisione dell'owner del 2026-11-15). La 5.5.1 scrive brief e
 prompt con una richiesta per REAL e sblocca un batch rimasto «in scrittura».
 La 5.5.0 fa analizzare REAL e SLOP intere invece del ritaglio 4:5, tiene in evidenza, con ogni tentativo, i processi finiti senza
@@ -106,8 +107,8 @@ associata alla REAL e può essere riusata quando occorre riequilibrare il catalo
    proposti al prompt sono ammessi solo se mantengono il brief; il server verifica almeno struttura, vincoli dichiarati e revisioni.
    Una rigenerazione con lo stesso prompt è appropriata per anomalie occasionali; la revisione per istruzioni ambigue o ricorrenti;
    la riprogettazione per scene sistematicamente troppo difficili. Ogni nuova generazione consuma un tentativo.
-7. **Candidato accettato:** solo **dopo la valutazione dell'immagine intera**, il browser prepara il ritaglio 4:5 e l'eventuale
-   trattamento leggero per la copia di gioco. La candidata accettata viene registrata come `new` con originale; il browser prepara subito la copia 4:5. Senza copia non può essere approvata né pubblicata. Conserva
+7. **Candidato accettato:** solo **dopo la valutazione dell'immagine intera**, il Worker prepara il ritaglio 4:5 e il trattamento
+   leggero per la copia di gioco. La candidata accettata viene registrata come `new` con originale; il Worker prepara subito la copia 4:5. Senza copia non può essere approvata né pubblicata. Conserva
    copia, prompt finale, brief, REAL di riferimento, modello, qualità, configurazione e tracciabilità dell'esito.
    L'analisi dei tag usa l'immagine SLOP intera (l'originale accettato, non la copia 4:5: decisione dell'owner del 2026-11-15) e distingue le evidenze visive dai desideri del prompt. L'owner verifica
    che il ritaglio non comprometta il risultato; eventuali correzioni di crop o trattamento **non producono feedback automatico
@@ -158,7 +159,7 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
   dell'immagine intera) una REAL alla volta, si ferma alla prima accettazione e analizza i tag della SLOP accettata
   sull'originale. Il browser lo avvia dopo la conferma del massimo (`POST batches/:id/run {confirm, phase: briefs|images}` dallo
   studio; `auto/start` per il batch automatico, che fa tutto) e ne segue l'avanzamento: chiudere la dashboard o cambiare app sul
-  telefono non ferma nulla. Le copie di gioco 4:5 delle SLOP accettate restano nel browser, alla revisione.
+  telefono non ferma nulla. Anche la copia di gioco 4:5 della SLOP accettata la prepara il Worker (specifica `copie-di-gioco`).
 - **Un runner per batch:** il batch registra istanza, stato (`running`, `stopping`, `done`, `stopped`, `failed`) e ora dell'ultimo
   passo (migrazione 0052); un secondo avvio mentre il runner è vivo è rifiutato. Un runner fermo da oltre quindici minuti è
   considerato morto: lo studio permette un nuovo avvio e il batch automatico mostra «Riprendi sul server» (`auto/resume`), che

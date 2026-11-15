@@ -29,7 +29,7 @@ try:
     b=call('batches/'+bid)[1]
     assert [p['state'] for p in b['processes']]==['exhausted','review_needed','accepted'] and len(b['images'])==1,b
     image=b['images'][0];generated.append(image['id'])
-    assert image['status']=='new' and image['analysis']['status']=='done' and image['copy'] is None,image  # tags on the server, copy in the browser
+    assert image['status']=='new' and image['analysis']['status']=='done' and image['copy']['crop']['format']=='4:5',image  # tags and copy on the server
     log=control();assert len(log)==12,[(r['path'],r['body'].get('text',{}).get('format',{}).get('name')) for r in log]
     assert b['runner']['status']=='done' and not b['runner']['alive'],b['runner']
     control([]);assert call('batches/'+bid+'/prompts',{'confirm':True,'index':0})[0]==409

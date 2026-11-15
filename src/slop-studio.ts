@@ -158,7 +158,7 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
       else if(action==="save")notice="Brief e prompt salvati.";
       else if(image){
         if(action==="frame"){const choice=await chooseFrame(image.id,image.width,image.height,image.copy);if(choice)await saveFrame(image,choice);}
-        else if(action==="treatment-off"||action==="treatment-on")await prepareItemCopy(image,undefined, image.copy?.crop || undefined,{off:action==="treatment-off"});
+        else if(action==="treatment-off"||action==="treatment-on")await prepareItemCopy(image,image.copy?.crop || undefined,{off:action==="treatment-off"});
         else await call("/"+image.id+"/"+action,action==="analyze"?{confirm:true}:{},"POST",LIBRARY);
         await loadBatch();
       }

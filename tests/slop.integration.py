@@ -4,7 +4,6 @@ import concurrent.futures
 import io
 from PIL import Image
 from editorial_helpers import *
-from game_copy import game_copy
 import urllib.request
 
 code,settings=call('/settings',library=True);assert code==200
@@ -33,7 +32,9 @@ try:
         if expected!='accepted':
             assert load(b)['images']==[]
             assert call('batches/'+b['id'],{'briefs':[BRIEF]},method='PUT')[0]==409
-    images.append(result['id']);assert result['status']=='new' and result['copy'] is None
+    images.append(result['id']);assert result['status']=='new' and result['copy']['crop']['format']=='4:5',result
+    # The Worker made the copy at acceptance: 4:5, treated towards the measures of the source REAL (copy made there too).
+    t=result['treatment'];assert t and not t['off'] and t['sample']['id']==historical['id'] and t['applied'] and t['result'],t
     b=load(b);assert b['processes'][0]['brief']==original_brief and len(b['processes'][0]['attempts'])==3
     assert b['processes'][0]['calls']==7 and len(b['images'])==1
     logs=control();assert len(logs)==6
@@ -52,7 +53,7 @@ try:
     assert call('/'+result['id']+'/regenerate',{'confirm':True,'revision':result['revision'],'prompt':'test','quality':'high'},library=True)[0]==409
     req=urllib.request.Request(LIBRARY+'/'+result['id']+'/original',headers={'Authorization':'Bearer '+TOKEN})
     with urllib.request.urlopen(req) as r:original=r.read()
-    req=urllib.request.Request(LIBRARY+'/'+result['id']+'/copy',data=game_copy(original),method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'image/webp'})
+    req=urllib.request.Request(LIBRARY+'/'+result['id']+'/copy',data=b'{}',method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'})
     with urllib.request.urlopen(req) as r:copy=__import__('json').loads(r.read())
     assert copy['copy']['crop']['format']=='4:5'
     assert call('/'+result['id']+'/analyze',{'confirm':True},library=True)[0]==200
@@ -137,8 +138,8 @@ try:
     code,accepted=generate(fresh);assert code==200,accepted;images.append(accepted['id'])
     req=urllib.request.Request(LIBRARY+'/'+accepted['id']+'/original',headers={'Authorization':'Bearer '+TOKEN})
     with urllib.request.urlopen(req) as r:original=r.read()
-    req=urllib.request.Request(LIBRARY+'/'+accepted['id']+'/copy',data=game_copy(original),method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'image/webp'})
-    with urllib.request.urlopen(req) as r:assert r.status==201
+    req=urllib.request.Request(LIBRARY+'/'+accepted['id']+'/copy',data=b'{}',method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'})
+    with urllib.request.urlopen(req) as r:assert r.status in (200,201)
     remove([source['id']])
     assert call('/'+accepted['id']+'/analyze',{'confirm':True},library=True)[0]==200
     # A source in an in-flight process stays in the trash until that operation settles.

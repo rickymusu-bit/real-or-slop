@@ -1,7 +1,20 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T22:43:46Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T23:09:52Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.32.0 — 2026-11-15T23:09:52Z (decisione dell'owner del 2026-11-15: il browser è solo un'interfaccia)
+
+- **Copie di gioco preparate dal Worker:** ritaglio 4:5, ricampionamento, trattamento delle SLOP verso la REAL di riferimento con la
+  compressione JPEG intermedia, WebP e misure non avvengono più nel browser. Il binding Images di Cloudflare decodifica e riduce
+  l'originale (al massimo sei megapixel di lavoro) e codifica il WebP; ritaglio, ricampionamento per aree, trattamento e misure sono
+  in JavaScript nel Worker (`worker/copy-maker.ts`, `worker/png.ts`). La copia nasce al caricamento o all'acquisizione di una REAL e
+  all'accettazione di una SLOP; il browser sceglie solo l'inquadratura e chiede (`POST /:id/copy` in JSON; un file inviato è rifiutato).
+- **«Rifai la copia di gioco»** per una selezione è un Workflow (`CopiesWorkflow`, `POST /copies`, `GET /copies/:job`), gratis; le
+  pubblicate tornano approvate. Le misure di una copia esistente le fa il Worker (`POST /:id/metrics`); niente più misure in
+  background nella dashboard.
+- Principio in `AGENTS.md` 23.0.0; specifiche `copie-di-gioco` 10.0.0, `database-immagini` 2.8.0, `dashboard-admin-wizard-real`
+  2.6.0, `generazione-slop` 5.7.0; `MASTER.md` 25.0.0. Nuovi test unitari del PNG e del ricampionamento.
 
 ## 1.31.0 — 2026-11-15T22:43:46Z (decisione dell'owner del 2026-11-15)
 

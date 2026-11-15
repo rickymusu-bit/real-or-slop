@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 24.0.0, aggiornata il 2026-11-15T22:43:46Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 25.0.0, aggiornata il 2026-11-15T23:09:52Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -14,9 +14,12 @@ in `CHANGELOG.md`.
   Il primo batch automatico (10 SLOP, 21:45 UTC) si è fermato alla scrittura dei brief: 2 scritti, 1 incerto, 7 da scrivere (vedi 1.30.3).
   Su indicazione dell'owner, alle 17:24 UTC sono stati salvati direttamente nel D1 il contesto «Brief e prompt per le SLOP» proposto
   (pipeline 2) e la soglia dello studio a 20 REAL. Qualità immagini `medium`.
-- **Nel ramo 1.31.0 (PR da unire, comprende la 1.30.3 della PR #146):** il ciclo SLOP gira su Cloudflare in un Workflow (brief,
-  tentativi, tag dopo l'accettazione); la dashboard lo avvia e lo segue. Il batch automatico fermo in produzione si riprende con
-  «Riprendi sul server». Migrazione 0052.
+- **Nel ramo 1.32.0 (PR #146 da unire, comprende 1.30.3 e 1.31.0):** il browser è solo un'interfaccia (decisione dell'owner del
+  2026-11-15). Il ciclo SLOP gira in un Workflow (1.31.0, migrazione 0052); le copie di gioco le prepara il Worker con il binding
+  Images (caricamento, acquisizione, accettazione di una SLOP, inquadratura, trattamento); «Rifai la copia di gioco» è un Workflow.
+  Dopo il rilascio: rifare le copie delle 20 REAL (fatte nel browser) per avere la stessa ricetta delle SLOP; riprendere il batch
+  automatico fermo con «Riprendi sul server».
+- **Nella 1.31.0:** il ciclo SLOP gira su Cloudflare in un Workflow; la dashboard lo avvia e lo segue.
 - **Nella 1.30.3:** brief e prompt con una richiesta per REAL; un batch rimasto «in scrittura» oltre dieci minuti riprende dai brief
   mancanti, senza ripetere quello interrotto.
 - **Nella 1.30.2:** analisi in gruppo anche per gli esiti incerti o interrotti; nelle Impostazioni un modulo non sovrascrive gli altri.
@@ -41,10 +44,10 @@ nome.
 |---|---|---|
 | Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.9.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.2.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.5.0 |
-| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.6.0 |
-| Sezione Database | `docs/database-immagini.md` | 2.7.1 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 10.0.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.6.0 |
+| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.7.0 |
+| Sezione Database | `docs/database-immagini.md` | 2.8.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.8.1 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
@@ -88,7 +91,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
   `slop-studio.ts` e `slop-studio.css`, campi editoriali `editorial-ui.ts`, riquadro dei batch automatici `slop-auto.ts` e `slop-auto.css`, statistiche `stats.ts` e
   `stats.css`, grafico della distribuzione `database-chart.ts`, anteprima a pressione prolungata `image-preview.ts` e
   `image-preview.css`, pillole e categorie dei tag `tag-ui.ts` e `tag-categories.css`, editor di formato e ritaglio `crop-editor.ts` e
-  `crop-editor.css`, copie di gioco nel browser con misure e trattamento delle SLOP `game-copy.ts`.
+  `crop-editor.css`, richieste delle copie di gioco al Worker (inquadratura, trattamento, rifacimento in gruppo) `game-copy.ts`.
 
 **Worker** Cloudflare (`worker/`, ingresso `index.ts`):
 - `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera).
@@ -98,6 +101,8 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - SLOP: studio `slop.ts`, gemelle `twins.ts`, generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
   `slop-runner.ts`, batch automatici `slop-auto.ts`, gruppi e loro misure per Database e Statistiche `slop-groups.ts`.
 - Corpo delle richieste con un'immagine (analisi e valutazione, base64 scritto nei byte) `image-body.ts`.
+- Copie di gioco: preparazione con il binding Images `copy-maker.ts`, PNG in JavaScript `png.ts`, rifacimento in gruppo (Workflow
+  `CopiesWorkflow`) `copies-runner.ts`.
 - Gioco `game.ts` con `sampling.ts` e `random.ts`, classifica `leaderboard.ts`.
 
 **Codice condiviso** (`shared/`): tag `tags.ts`, tag scritti a mano `tag-input.ts`, categorie `tag-categories.ts`, modelli OpenAI

@@ -1,6 +1,7 @@
-# Sezione Database — specifica 2.7.1
+# Sezione Database — specifica 2.8.0
 
-Stato: vigente; la 2.7.0 è in produzione con l'app 1.30.0, la 2.7.1 è per l'app 1.30.2. Aggiornata: 2026-11-15T21:07:23Z. La 2.7.1 include nelle analisi
+Stato: vigente; la 2.7.1 è in produzione con l'app 1.30.2, la 2.8.0 è per l'app 1.32.0. Aggiornata: 2026-11-15T23:09:52Z. La 2.8.0: copie e misure
+le prepara il Worker; «Rifai la copia di gioco» è un lavoro su Cloudflare. La 2.7.1 include nelle analisi
 in gruppo le immagini con esito incerto o interrotto, nominate nella conferma. La 2.7.0 aggiunge «Seleziona
 tutte». La 2.6.0 aggiunge il filtro
 «REAL senza descrizione» e l'azione in gruppo «Analisi combinata tag e descrizione». La 2.3.0: i tag di partenza di una SLOP
@@ -63,7 +64,8 @@ che restano nella cronologia git. Stati e regole della libreria: specifica `libr
   esito incerto sono incluse: la conferma dice quante sono e che potrebbero essere già state addebitate. Restano escluse solo quelle
   con un'analisi in corso da meno di dieci minuti. Se nessuna selezionata è senza descrizione privata, il messaggio lo dice (il
   testo di Commons non conta).
-- **Vecchie copie:** filtro «Copia da rifare in 4:5», azione in gruppo «Rifai la copia in 4:5». Le pubblicate sono ritirate con conferma e restano approvate; le partite in corso mantengono i propri byte. Controllare il nuovo crop prima di ripubblicare.
+- **Vecchie copie:** filtro «Copia da rifare in 4:5», azione in gruppo «Rifai la copia di gioco» (Workflow su Cloudflare, gratis,
+  per qualunque selezione: la dashboard ne segue l'avanzamento e può essere chiusa). Nessuna misura delle copie nel browser. Le pubblicate sono ritirate con conferma e restano approvate; le partite in corso mantengono i propri byte. Controllare il nuovo crop prima di ripubblicare.
 
 ## 4. Statistiche delle foto
 
