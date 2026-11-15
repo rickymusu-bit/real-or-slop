@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 22.2.0, aggiornata il 2026-11-15T13:42:00+01:00. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 22.2.1, aggiornata il 2026-11-15T13:42:00+01:00. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -21,7 +21,7 @@ in `CHANGELOG.md`.
   il crop 4:5 viene **dopo** l'accettazione, poi revisione e pubblicazione manuali. Fino a 1–5 tentativi (3 predefiniti),
   tolleranza separata, chiamate registrate, ripresa senza duplicazioni automatiche. Le REAL storiche senza descrizione
   non vengono analizzate a pagamento automaticamente. Specifiche: `generazione-slop` 5.2.0,
-  `copie-di-gioco` 9.1.3, `libreria-immagini` 3.5.0; **nessun codice di questa fase è ancora in produzione**.
+  `copie-di-gioco` 9.1.3, `libreria-immagini` 3.5.1; **nessun codice di questa fase è ancora in produzione**.
 - **Selezione REAL:** otto principi qualitativi nella issue #138; nessun filtro o scoring automatico.
 - **Da decidere con l'owner:** se e come comunicare al giocatore il processo di generazione dopo la risposta.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
@@ -33,10 +33,10 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.5.0 (decisioni da implementare) |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.5.1 (decisioni da implementare) |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.1.3 (da implementare) |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.3.0 (criteri editoriali, UI invariata) |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.3.1 (criteri editoriali, UI invariata) |
 | SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.2.0 (da implementare) |
 | Sezione Database | `docs/database-immagini.md` | 2.4.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
