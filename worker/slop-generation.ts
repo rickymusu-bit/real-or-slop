@@ -250,6 +250,28 @@ async function generateImage(env: Env, batchId: string, data: Record<string, unk
     throw e;
   }
 }
+/** Processes that ended without a SLOP: exhausted attempts, a review requested by the evaluator, a failure or an uncertain outcome.
+ * They are exceptional and wait for the owner, with every attempt (whole candidate, prompt, evaluation), until closed. */
+export const ATTENTION = ["exhausted", "review_needed", "failed", "uncertain"] as const;
+export async function attention(env: Env) {
+  const batches = (await env.DB.prepare(`SELECT DISTINCT p.batch_id,b.slots FROM slop_processes p JOIN slop_batches b ON b.id=p.batch_id
+    WHERE p.state IN ('exhausted','review_needed','failed','uncertain') ORDER BY p.batch_id`).all<{batch_id: string; slots: string}>()).results;
+  const out = [];
+  for (const b of batches) {
+    const items = itemsOf(b);
+    for (const p of await processViews(env, b.batch_id))
+      if ((ATTENTION as readonly string[]).includes(p.state)) out.push({...p, title: items[p.slot]?.title || "", source_id: p.source_id});
+  }
+  return out.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+}
+/** POST processes/:id/close {}: the owner has seen a process without a SLOP. Its candidates follow the usual seven days. */
+export async function closeProcess(env: Env, processId: string, data: Record<string, unknown>) {
+  if (Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
+  const closed = await env.DB.prepare("UPDATE slop_processes SET state='closed',updated_at=? WHERE id=? AND state IN ('exhausted','review_needed','failed','uncertain')")
+    .bind(now(), processId).run();
+  if (!closed.meta.changes) throw new HttpError(409, "Processo inesistente o non da rivedere");
+  return {attention: await attention(env)};
+}
 async function recent(env: Env) {
   const rows = (await env.DB.prepare(`SELECT b.id,b.slots,b.prompts_status,b.updated_at,(SELECT count(*) FROM images i WHERE i.generation_batch=b.id) AS images
     FROM slop_batches b ORDER BY b.updated_at DESC LIMIT 10`).all<Batch & {images: number}>()).results;

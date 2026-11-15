@@ -1,6 +1,6 @@
 /** SLOP studio routes (spec `generazione-slop`): the REAL waiting for a twin, the counts, batches and the automatic batches. */
 import { HttpError, type Env } from "./core";
-import { batchRoute } from "./slop-generation";
+import { attention, batchRoute, closeProcess } from "./slop-generation";
 import { autoRoute, guardBatch } from "./slop-auto";
 import { MAX_BATCH } from "../shared/twins";
 import { realRows, twinCounts } from "./twins";
@@ -14,11 +14,14 @@ async function state(env: Env) {
   return { thresholds: { section: settings.slop_section_min_real, max_batch: MAX_BATCH },
     real_total: counts.real, slop_total: slop?.n || 0, twinned: counts.twinned,
     waiting: all.filter(r => !r.twin).map(r => ({ id: r.id, title: r.title, tags: r.tags, measured: r.measured, described: r.described, file: `/api/admin/library/${r.id}/file` })),
-    groups: (await groups(env)).map(g => ({ ...g, spread: g.real - g.slop })) };
+    groups: (await groups(env)).map(g => ({ ...g, spread: g.real - g.slop })), attention: await attention(env) };
 }
 
 export async function slopRoute(env: Env, method: string, path: string, data: Record<string, unknown>) {
   if (path === "state" && method === "GET") return state(env);
+  if (path === "attention" && method === "GET") return {attention: await attention(env)};
+  const closing = /^processes\/([\w-]{1,64})\/close$/.exec(path);
+  if (closing && method === "POST") return closeProcess(env, closing[1], data);
   if (path === "auto" || path.startsWith("auto/")) return autoRoute(env, method, path.slice("auto".length).replace(/^\//, ""), data);
   if (path === "batches" || path.startsWith("batches/")) {
     const rest = path.slice("batches".length).replace(/^\//, "");

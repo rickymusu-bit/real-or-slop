@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 22.3.0, aggiornata il 2026-11-15T14:21:17Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 22.4.0, aggiornata il 2026-11-15T17:35:03Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -19,7 +19,8 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 - **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta finale
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
   al browser prima della risposta. Durante il caricamento della REAL, **la stessa chiamata multimodale genera tag e
-  descrizione editoriale neutra**: vede la copia 4:5, il titolo e il contesto Commons, ma **non conosce l'esistenza delle SLOP**.
+  descrizione editoriale neutra**: vede la REAL **intera** (l'originale, mai il ritaglio 4:5: decisione del 2026-11-15), il titolo
+  e il contesto Commons, ma **non conosce l'esistenza delle SLOP**.
   Il modello successivo che produce **brief e prompt SLOP** riceve solo tag e descrizione salvata, **non l'immagine**;
   conosce invece lo scopo sintetico della generazione. Tenere separati i contesti di istruzione.
 - **Ogni SLOP nasce da una REAL di riferimento** (decisione del 2026-11-15, specifica `generazione-slop` 5.2.0): il riferimento
@@ -34,9 +35,12 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   né trattamento 4:5; decide accettazione, nuovo tentativo, revisione del prompt o revisione umana. Il ritaglio 4:5 è preparato
   **soltanto dopo l'accettazione** e non dà feedback al generatore. I difetti critici non sono compensabili con altri punti forti; tentativi
   e tolleranza sono configurabili. Nessuna candidata rifiutata entra nella libreria giocabile o viene pubblicata automaticamente.
-- **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP. Il ritaglio della REAL non deve
-  eliminare elementi **fondamentali** per i tag o il significato della fotografia; in caso contrario l'owner corregge
-  l'inquadratura. Le SLOP si valutano **intere** prima di creare la copia 4:5.
+  Un processo che finisce senza SLOP (tentativi esauriti, revisione chiesta, errore, esito incerto) è un'eccezione che richiede
+  l'attenzione dell'owner (decisione del 2026-11-15): resta in evidenza con immagini, prompt e valutazioni di ogni tentativo
+  finché l'owner non lo chiude.
+- **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP. Tag e descrizione della REAL descrivono la
+  foto intera; il ritaglio non deve eliminare elementi **fondamentali** per il significato della fotografia; in caso contrario
+  l'owner corregge l'inquadratura. Le SLOP si valutano **intere** prima di creare la copia 4:5.
 - **Chiamate a pagamento:** solo con conferma esplicita dell'owner del **numero massimo** previsto per un loop, registrate in
   `paid_calls` senza importi, esiti incerti mai ripetuti in automatico; niente prezzi né budget, il limite è quello del progetto
   OpenAI. Il massimo di tentativi di generazione è configurabile, ogni tentativo include la sua valutazione. Nei test solo modelli finti.

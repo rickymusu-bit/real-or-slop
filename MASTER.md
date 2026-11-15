@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 23.1.0, aggiornata il 2026-11-15T17:00:44Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 23.2.0, aggiornata il 2026-11-15T17:35:03Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,14 +9,14 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **In produzione:** app 1.27.0 (PR rickymusu-bit/real-or-slop#140, unita il 2026-11-15 alle 15:09 UTC, deploy alle 15:10; migrazioni
-  fino alla 0050). La migrazione 0050 ha ritirato dal gioco le pubblicate con copia non 4:5: il 2026-11-15 restano 20 REAL approvate e
-  nessuna immagine pubblicata, quindi nessun livello è giocabile finché l'owner non rifà le copie in 4:5 e ripubblica. Qualità
-  immagini salvata `medium`. Il contesto «Prompt per le SLOP» in vigore è ancora quello delle gemelle (2026-11-14).
-- **Nel ramo 1.28.0 (PR da unire):** correzioni della revisione della 1.27.0. Contesto «Valutazione delle SLOP» modificabile (prima
-  fisso nel codice); brief e prompt bloccati finché il contesto in vigore è quello delle gemelle; analisi con esito incerto ripetibile
-  solo con conferma esplicita del rischio (la 1.27.0 la rifiutava sempre, mentre la dashboard la offriva); riscritture confermate di
-  brief e prompt contate nel massimo del batch. Migrazione 0051 sul solo `model_contexts`.
+- **In produzione:** app 1.28.0 (PR rickymusu-bit/real-or-slop#141, unita il 2026-11-15; migrazioni fino alla 0051, applicata alle
+  17:14 UTC). Il 2026-11-15 restano 20 REAL approvate con copia 4:5, tag della vecchia analisi e nessuna descrizione privata, e nessuna
+  immagine pubblicata: nessun livello è giocabile. Su indicazione dell'owner, alle 17:24 UTC sono stati salvati direttamente nel D1
+  il contesto «Brief e prompt per le SLOP» proposto (pipeline 2) e la soglia dello studio a 20 REAL. Qualità immagini `medium`.
+- **Nel ramo 1.29.0 (PR da unire):** analisi della REAL sull'originale intero invece della copia 4:5; processi senza SLOP in
+  evidenza nello studio, con immagini, prompt e valutazioni di ogni tentativo, conservati fino alla chiusura dell'owner; ripetizione
+  confermata degli esiti incerti anche dal wizard. Nessuna migrazione.
+- **Da fare dopo il rilascio della 1.29.0:** analisi combinata tag e descrizione delle 20 REAL (20 chiamate a pagamento).
 - **Selezione REAL:** otto principi qualitativi nella issue #138; nessun filtro o scoring automatico.
 - **Da decidere con l'owner:** se e come comunicare al giocatore il processo di generazione dopo la risposta.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
@@ -28,11 +28,11 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.7.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.8.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.2.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.4.0 |
-| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.4.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.5.0 |
+| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.5.0 |
 | Sezione Database | `docs/database-immagini.md` | 2.5.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.8.0 |
@@ -62,7 +62,7 @@ commit che li ha cancellati e `git show <commit>^:docs/<nome>` li mostra. Corris
 - **Frontend (implementato 1.27.0):** descrizione della REAL modificabile nel wizard e nel Database; ciclo nel browser, immagine SLOP **intera**
   sottoposta al valutatore, copia 4:5 **solo dopo** accettazione, configurazioni, anteprime e revisione.
 - **Rilascio:** 1.27.0 rilasciata il 2026-11-15; correzioni nella 1.28.0. Il merge su main esegue deploy e migrazioni remote.
-  Consultare `generazione-slop` 5.4.0, sezione 10. I batch della 1.26.0 in pausa **non** vanno ripresi con schema incompatibile.
+  Consultare `generazione-slop` 5.5.0, sezione 10. I batch della 1.26.0 in pausa **non** vanno ripresi con schema incompatibile.
 
 ## Architettura
 
@@ -140,7 +140,7 @@ R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (
 finto `tests/fake_openai.py`) e `ROS_TEST_BROWSER=1 npm run test:integration` per la dashboard, desktop e mobile. L'elenco dei
 test d'integrazione eseguiti è in `scripts/integration.py`.
 
-**Verifica locale della 1.28.0:** lint, 96 test unitari, build, dry-run e suite d'integrazione riusciti; esito della suite con
-`ROS_TEST_BROWSER=1` e della CI nella PR. Solo API fittizia, D1 e R2 locali.
+**Verifica locale della 1.29.0:** esiti nella PR. Solo API fittizia, D1 e R2 locali. Per la suite con browser in un container senza
+il modulo Python `playwright`: `pip install playwright` e `ROS_CHROMIUM_PATH` sul Chromium installato.
 
 **Consegna del lavoro:** pubblicare sempre il ramo e aprire o aggiornare una PR per avviare i controlli CI (`AGENTS.md` 22.3.0). Commit e patch locali non completano la consegna.

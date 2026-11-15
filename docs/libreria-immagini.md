@@ -1,7 +1,7 @@
-# Libreria delle immagini, tag e analisi — specifica 3.7.0
+# Libreria delle immagini, tag e analisi — specifica 3.8.0
 
-Stato: vigente; la 3.6.0 è in produzione con l'app 1.27.0, la 3.7.0 è per l'app 1.28.0. Aggiornata: 2026-11-15T17:00:44Z.
-La 3.7.0 aggiunge il contesto «Valutazione delle SLOP», blocca brief e prompt finché il contesto in vigore è quello delle
+Stato: vigente; la 3.7.0 è in produzione con l'app 1.28.0, la 3.8.0 è per l'app 1.29.0. Aggiornata: 2026-11-15T17:35:03Z.
+La 3.8.0 fa analizzare la REAL intera (l'originale, non la copia 4:5: decisione dell'owner del 2026-11-15). La 3.7.0 aggiunge il contesto «Valutazione delle SLOP», blocca brief e prompt finché il contesto in vigore è quello delle
 gemelle (migrazione 0051) e riammette la ripetizione confermata di un'analisi con esito incerto.
 La 3.1.0 registra la REAL di origine delle SLOP gemelle (migrazione 0049), il tetto di risposta dell'analisi e il contesto 1.8.0.
 La 3.0.0 sostituisce la categoria Formato con Genere, Colore e Supporto, giudicate solo dall'immagine, e aggiunge il completamento a
@@ -105,7 +105,7 @@ Una sola raccolta di immagini REAL e SLOP.
 - **Supporto** (lista chiusa nel codice): `photo-print`, `newspaper-print`, `magazine-print`, `postcard`, `slide`, `film-still`,
   `instant-photo`, `digital-photo`, `phone-photo`, `screen-capture`, `poster`, `painting`, `drawing`, `illustration`. Dice che cosa si vede
   materialmente: una pagina di giornale stampata a retino, un fotogramma di pellicola, una diapositiva, una foto digitale. Le marche e i
-  tipi di pellicola restano fuori: dalla copia di gioco non si riconoscono, e un tag che il modello non può verificare sarebbe inventato.
+  tipi di pellicola restano fuori: dall'immagine non si riconoscono, e un tag che il modello non può verificare sarebbe inventato.
 - Le proprietà continue dell'aspetto (risoluzione, rumore, nitidezza, contrasto, saturazione) non sono tag: le misura il codice
   (specifica `copie-di-gioco`, sezione 4).
 - **Migrazione 0048:** la categoria `format` sparisce. `color`, `black-and-white`, `sepia` e `hand-colored` passano a Colore; gli altri
@@ -119,12 +119,13 @@ Una sola raccolta di immagini REAL e SLOP.
 
 ## 5. Analisi a pagamento
 
-Per una REAL l’unica analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Modello, hash della copia, revisione e data sono conservati come provenienza. La descrizione è privata, modificabile senza alterare tag o testo Commons; quest’ultimo è conservato separatamente per le nuove acquisizioni. Per una SLOP l’analisi restituisce soltanto tag.
+Per una REAL l’unica analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Il modello vede la REAL **intera**, cioè l’originale caricato (JPEG, PNG o WebP fino a 12 MB), mai il ritaglio 4:5 (decisione dell’owner del 2026-11-15). Modello, hash dell’originale, revisione e data sono conservati come provenienza. La descrizione è privata, modificabile senza alterare tag o testo Commons; quest’ultimo è conservato separatamente per le nuove acquisizioni. Per una SLOP l’analisi restituisce soltanto tag.
 
 Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova generazione richiede compilazione manuale o una nuova analisi combinata confermata (`refresh_description:true`), anche se già approvata/pubblicata. Nessun backfill. La modifica della sola descrizione privata non ritira una pubblicata.
 
-- Su richiesta dell'owner (wizard, dettaglio o gruppo nel Database, studio SLOP), solo per immagini nuove con copia di gioco. Il modello
-  di testo scelto nelle Impostazioni, che deve leggere immagini, riceve la copia di gioco, titolo e descrizione (REAL) o il prompt (SLOP)
+- Su richiesta dell'owner (wizard, dettaglio o gruppo nel Database, studio SLOP), solo per immagini nuove; una SLOP deve avere la copia
+  di gioco. Il modello di testo scelto nelle Impostazioni, che deve leggere immagini, riceve l'originale intero, titolo e descrizione
+  (REAL) oppure la copia di gioco e il prompt (SLOP)
   e i 300 tag più usati divisi per categoria; mai l'origine. La base comune e la parte «Tag» si applicano ad entrambe
   senza menzionare immagini sintetiche; **per le REAL** si richiede in più la descrizione editoriale neutra, **per le SLOP**
   rimane l'output dei soli tag. Schemi diversi per tipo non devono introdurre istruzioni che rivelino la natura dell'altra categoria.
@@ -139,7 +140,7 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
   non parla di immagini generate.
 - **Completamento di Genere, Colore e Supporto** (eccezione alla regola seguente, decisione dell'owner del 2026-11-14): per le immagini
   fuori dal cestino che hanno già un'analisi riuscita e non hanno ancora tutte e tre le categorie. Dal Database, su una o più immagini
-  (azione in gruppo), con conferma esplicita del numero di chiamate: una chiamata a pagamento per immagine, con la copia di gioco e le
+  (azione in gruppo), con conferma esplicita del numero di chiamate: una chiamata a pagamento per immagine, con la stessa immagine dell'analisi e le
   stesse istruzioni dell'analisi, che restituisce solo le tre categorie. Sostituisce i tag di quelle tre categorie e lascia gli altri.
   Non ritira le pubblicate, perché non cambia nulla di ciò che vede il giocatore. Una sola volta per immagine (`categories_completed_at`);
   registrata in `paid_calls` come analisi.

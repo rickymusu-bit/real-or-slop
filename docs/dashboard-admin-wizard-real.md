@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 2.4.0
+# Dashboard e wizard REAL — specifica 2.5.0
 
-Stato: vigente (con decisioni future indicate a parte). Aggiornata: 2026-11-15T13:54:58Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
+Stato: vigente (con decisioni future indicate a parte). Aggiornata: 2026-11-15T17:35:03Z. La 2.5.0 fa analizzare la REAL intera invece della copia 4:5. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wizard di `didascalie-wizard.v1.0.0` e
 `anteprima-descrizione.v1.2.0`, che restano nella cronologia git.
 
@@ -100,4 +100,4 @@ alla volta. Dopo un errore quelle già pubblicate non si ripetono; gli errori re
 
 ## Descrizione editoriale privata
 
-Nel passo dei tag, tre campi modificabili: elementi visibili, contesto Commons documentato e incertezze. La stessa chiamata che genera i tag li compila, sulla copia 4:5 già preparata. Le modifiche si salvano senza rifare i tag e senza sovrascrivere la descrizione destinata ai giocatori. Inquadratura conserva gli elementi fondamentali della REAL.
+Nel passo dei tag, tre campi modificabili: elementi visibili, contesto Commons documentato e incertezze. La stessa chiamata che genera i tag li compila, sulla REAL intera (l’originale, non il ritaglio 4:5: decisione dell’owner del 2026-11-15). Le modifiche si salvano senza rifare i tag e senza sovrascrivere la descrizione destinata ai giocatori. Inquadratura conserva gli elementi fondamentali della REAL.

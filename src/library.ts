@@ -92,7 +92,7 @@ export async function showLibrary() {
     <div id="slop-auto" class="slop-auto" role="region" aria-label="Generazione automatica delle SLOP" hidden></div>
     <nav class="admin-tabs" aria-label="Sezioni amministrazione">
       <button type="button" data-admin-tab="real" aria-pressed="true">Caricamento REAL</button>
-      <button type="button" data-admin-tab="slop" aria-pressed="false">Generazione SLOP<span id="slop-auto-count"></span></button>
+      <button type="button" data-admin-tab="slop" aria-pressed="false">Generazione SLOP<span id="slop-auto-count"></span><span id="slop-attention-count"></span></button>
       <button type="button" data-admin-tab="database" aria-pressed="false">Database immagini</button>
       <button type="button" data-admin-tab="stats" aria-pressed="false">Statistiche</button>
       <button type="button" data-admin-tab="settings" aria-pressed="false">Impostazioni</button>
@@ -778,7 +778,7 @@ export async function showLibrary() {
   await refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   await call<Numbers>("/settings").then(renderNumbers).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   tagPills();
-  slopStudio = await mountSlopStudio($<HTMLElement>("#slop-studio"));
+  slopStudio = await mountSlopStudio($<HTMLElement>("#slop-studio"), n => { $("#slop-attention-count").textContent = n ? ` · ${n} da vedere` : ""; });
   // Automatic SLOP batches: proposal, progress and review (spec `generazione-slop`).
   autoBox = mountSlopAuto($<HTMLElement>("#slop-auto"), {
     loop: async batchId => {
