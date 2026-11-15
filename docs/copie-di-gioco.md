@@ -1,7 +1,7 @@
-# Copie di gioco — specifica 9.0.0
+# Copie di gioco — specifica 9.1.0
 
-Stato: approvata dall'owner il 2026-11-15, **da implementare** (issue rickymusu-bit/real-or-slop#136); in produzione c'è la 8.0.0
-(app 1.26.0: copia nel formato della foto, trattamento verso un'altra REAL). Aggiornata: 2026-11-15T09:00:00Z. La 9.0.0 riporta tutte
+Stato: decisioni approvate, **da implementare** (#136 e successivo loop di credibilità in `generazione-slop` 5.0.0); in produzione c'è la 8.0.0
+(app 1.26.0: copia nel formato della foto, trattamento verso un'altra REAL). Aggiornata: 2026-11-15T11:08:00Z. La 9.0.0 riporta tutte
 le copie di gioco al formato verticale 4:5 e prende le misure del trattamento dalla REAL di origine. Le versioni precedenti restano
 nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia e il gioco serve esattamente quei byte.
 
@@ -10,12 +10,12 @@ nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia 
 - **Tutte le copie di gioco in 4:5 verticale** (2026-11-15), REAL e SLOP. Il ritaglio permette di togliere da una SLOP una zona con
   un errore troppo evidente e le dà un'inquadratura diversa da quella della REAL di riferimento. Annulla la decisione del 2026-11-13
   (copia nel formato più vicino a quello della foto), presa perché con il 4:5 le REAL apparivano tagliate e le SLOP composte per quel
-  riquadro. Quel difetto non torna: una SLOP si genera nel formato della sua REAL e si ritaglia come lei, quindi sono entrambe ritagli
-  di un'immagine più larga.
+  riquadro. Quel difetto non torna: una SLOP viene generata nel formato derivato dalla REAL e poi ritagliata in 4:5; **non** deve però assomigliare alla REAL per composizione o soggetti.
 - La foto si mostra **intera su ogni schermo**; il giocatore la esplora con le dita o il mouse; niente swipe per rispondere
   (2026-11-13, invariato). Nessuna vista iniziale diversa dalla foto intera.
-- Trattamento delle SLOP: copia le REAL, non le supera (2026-11-14). Le misure vengono dalla **REAL di origine** (2026-11-15): prese
-  da un'altra REAL avevano rovinato il lotto del 2026-11-15 (sezione 4.1).
+- Trattamento delle SLOP: copia le REAL, non le supera (2026-11-14). Le misure vengono dalla **REAL di riferimento** (2026-11-15): prese
+  da un'altra REAL avevano rovinato il lotto del 2026-11-15 (sezione 4.1). Il trattamento è un suggerimento fotografico leggero,
+  **non** un vincolo a rendere la scena simile alla REAL; la credibilità della copia finale prevale (specifica `generazione-slop` 5.0.0).
 
 ## 2. Formati
 
@@ -65,8 +65,9 @@ Con l'app 1.26.0 le misure venivano da un'altra REAL con lo stesso colore, suppo
 rovinato le copie: saturazione, contrasto e dominante dipendono dalla scena, non dal supporto. Una scena di saccheggio a colori ha
 preso la saturazione di una foto quasi grigia (ridotta a un terzo), un incendio ha perso l'arancione, una scena di strada è stata
 ridotta a 357 px e virata come la foto segnaletica presa a campione. Le REAL di origine avevano invece misure vicine agli originali del
-generatore, o più sature. Le misure vengono quindi dalla **REAL di origine**, che ritrae lo stesso tipo di scena. La REAL campione
-separata serviva a non far somigliare la gemella alla sua REAL: le due non compaiono mai nella stessa partita, quindi non serve più.
+generatore, o più sature. Le misure vengono quindi dalla **REAL di riferimento**, che fornisce un contesto fotografico ma può ritrarre una scena
+completamente diversa. La REAL campione separata non serve più. L'algoritmo può proporre una resa analoga, senza forzare
+corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP meno credibile.
 
 ### 4.2 Misure
 
@@ -83,7 +84,9 @@ separata serviva a non far somigliare la gemella alla sua REAL: le due non compa
 
 - Si applica a ogni SLOP gemella (studio, batch, rigenerazione) prima della copia di gioco: l'originale del generatore resta intatto
   nella quarantena.
-- **Obiettivo:** le misure della copia di gioco della REAL di origine. Senza REAL di origine, o se non è misurata, nessun trattamento.
+- **Obiettivo indicativo:** le misure della copia di gioco della REAL di riferimento, con i limiti descritti. Senza REAL di riferimento,
+  o se non è misurata, nessun trattamento. Se il trattamento crea artefatti, colori o illuminazione incoerenti, usare la versione
+  senza trattamento o riprogettare la scena; **non** sacrificare la credibilità per la somiglianza delle metriche.
 - **Passi** (versione 3 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile:
   1. ritaglio 4:5 dell'inquadratura;
   2. riduzione all'altezza della copia della REAL di origine (mai un ingrandimento, mai sotto 480 px);
@@ -96,6 +99,8 @@ separata serviva a non far somigliare la gemella alla sua REAL: le due non compa
 - **Correzioni leggere.** I limiti dei passi 3–5 sono più stretti della versione 2 (contrasto fino a 1,6, saturazione da 0,3, raggio
   fino a 3): il trattamento ritocca, non stravolge. Niente effetti disegnati: ogni passo segue una misura della REAL.
 - Dopo il trattamento il browser misura la copia e registra lo scarto dall'obiettivo; il dettaglio del Database lo mostra.
+  **Lo scarto metrico non è una misura di realismo.** Nel loop di `generazione-slop` 5.0.0 la valutazione riguarda la copia 4:5
+  effettiva, dopo l'eventuale trattamento, prima che la candidata entri nella libreria ordinaria.
 - **Registro** `copy_treatment`: REAL da cui vengono le misure (identificativo e misure), Colore, parametri di ogni passo, seme,
   versione dell'algoritmo. Una copia fatta con una versione precedente si rifà con quella corrente alla prossima «Inquadratura» o al
   prossimo comando del trattamento.
@@ -117,7 +122,8 @@ separata serviva a non far somigliare la gemella alla sua REAL: le due non compa
 
 - **REAL tagliate:** una REAL orizzontale perde quasi metà della scena; soggetti larghi non reggono il 4:5. Vale per le SLOP allo
   stesso modo, perché nascono nel formato della loro REAL.
-- **Trattamento sbagliato:** le Statistiche confrontano le misure delle copie pubblicate di REAL e SLOP per gruppo.
+- **Trattamento sbagliato:** le Statistiche confrontano le misure delle copie pubblicate di REAL e SLOP per gruppo; non correggere
+  automaticamente le copie solo per ridurre quella distanza, che può essere naturale per scene diverse.
 - **Costo:** la dimensione chiesta al generatore dipende dal formato della REAL (tra 1,3 e 2,4 milioni di pixel).
 
 ## 7. Passaggio dalle copie nel formato della foto
