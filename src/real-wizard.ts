@@ -340,8 +340,9 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       if (!item || !generable(item)) continue;
       notice = "Generazione " + (done + failures.length + 1) + " di " + ids.length + "…"; render();
       try {
+        // The confirmation above names the uncertain outcomes: only those carry the explicit repeat.
         const result = await api<Image>("/" + encodeURIComponent(id) + "/analyze", {
-          method: "POST", body: JSON.stringify({ confirm: true }),
+          method: "POST", body: JSON.stringify(item.analysis.status === "uncertain" ? { confirm: true, repeat_uncertain: true } : { confirm: true }),
         });
         replace(result); done++;
         const extra = result as Image & { tag_conflicts?: { label: string; proposed: Category; existing: Category }[] };

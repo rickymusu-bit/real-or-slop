@@ -1,7 +1,8 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.4.0
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.5.0
 
-Stato: vigente; la 5.3.0 è in produzione con l'app 1.27.0 (rilasciata il 2026-11-15), la 5.4.0 è per l'app 1.28.0. Aggiornata: 2026-11-15T17:00:44Z.
-La 5.4.0 rende modificabile il contesto del valutatore, blocca brief e prompt con il contesto delle gemelle e conta nel massimo le
+Stato: vigente; la 5.4.0 è in produzione con l'app 1.28.0 (rilasciata il 2026-11-15), la 5.5.0 è per l'app 1.29.0. Aggiornata: 2026-11-15T17:58:54Z.
+La 5.5.0 fa analizzare REAL e SLOP intere invece del ritaglio 4:5, tiene in evidenza, con ogni tentativo, i processi finiti senza
+SLOP finché l'owner non li chiude e con tolleranza 0 fa rigenerare invece di fermare il ciclo (decisioni dell'owner del 2026-11-15). La 5.4.0 rende modificabile il contesto del valutatore, blocca brief e prompt con il contesto delle gemelle e conta nel massimo le
 riscritture confermate di brief e prompt. La specifica 4.0.0 e l'issue #136 descrivono una pipeline precedente, **superata su somiglianza alla REAL,
 cambiamento singolo, seconda analisi visiva della REAL nella generazione e numero di generazioni**. Rimangono validi, salvo diversa indicazione qui, il 4:5 e il trattamento leggero di
 `docs/copie-di-gioco.md` 9.1.3; tag e contesti in `docs/libreria-immagini.md`; contenuti in `docs/contenuti-e-trasparenza.md`.
@@ -47,12 +48,14 @@ Il flusso si divide in **catalogazione della REAL** e **generazione SLOP**. La c
 normalmente **una volta sola nel wizard di caricamento**, insieme ai tag; una descrizione strutturata e correggibile resta
 associata alla REAL e può essere riusata quando occorre riequilibrare il catalogo.
 
-`Caricamento REAL: copia 4:5 + metadati Commons → UNA chiamata multimodale (tag + descrizione contestualizzata) → REAL catalogata`
+`Caricamento REAL: originale intero + metadati Commons → UNA chiamata multimodale (tag + descrizione contestualizzata) → REAL catalogata`
 
-`Generazione SLOP: tag REAL + descrizione salvata → UNA chiamata testuale (brief + prompt iniziale) → [genera → valuta immagine SLOP INTERA → (accetta | rigenera | correggi prompt)] → copia 4:5 e trattamento → tag SLOP → nuova SLOP in libreria → revisione owner → pubblicazione`
+`Generazione SLOP: tag REAL + descrizione salvata → UNA chiamata testuale (brief + prompt iniziale) → [genera → valuta immagine SLOP INTERA → (accetta | rigenera | correggi prompt)] → nuova SLOP in libreria → copia 4:5 e trattamento; tag SLOP dall'immagine intera → revisione owner → pubblicazione`
 
 1. **Analisi REAL durante il caricamento, una sola chiamata multimodale.** Il modello che produce i tag REAL riceve la **copia
-   di gioco 4:5** già predisposta, il titolo e il contesto disponibile di Wikimedia Commons, più il vocabolario dei tag.
+   intera**, cioè l'originale caricato e mai il ritaglio 4:5 (decisione dell'owner del 2026-11-15, perché tag e descrizione
+   devono coprire tutta la fotografia), il titolo e il contesto disponibile di Wikimedia Commons, più il vocabolario dei tag.
+   La copia di gioco non serve all'analisi della REAL.
    Nella medesima risposta strutturata produce:
    - `tags`: categorie e tag secondo le regole ordinarie dell'analisi, senza dedurre dalla fonte ciò che deve essere giudicato
      esclusivamente dai pixel (in particolare Genere, Colore e Supporto);
@@ -65,10 +68,9 @@ associata alla REAL e può essere riusata quando occorre riequilibrare il catalo
    I dati originali Commons restano disponibili, non sono sovrascritti da questa descrizione. Il testo generato è **un campo
    editoriale privato** distinto dalla descrizione/didascalia già eventualmente visibile al giocatore nel riepilogo.
 2. **Conservazione e compatibilità.** Tag e descrizione REAL vengono salvati **insieme come esito della stessa chiamata**
-   (modello, revisione del file/copia 4:5 e data); la descrizione può essere modificata senza invalidare automaticamente
-   i tag, e viceversa. L'owner controlla nel wizard che la selezione 4:5 non escluda soggetti o fatti **fondamentali**:
-   per questa ragione i tag rilevanti non devono dipendere da dettagli rimossi dal crop. Un cambio di ritaglio che
-   elimini dati fondamentali deve essere corretto dall'owner, non compensato inventando tag.
+   (modello, hash dell'originale, revisione e data); la descrizione può essere modificata senza invalidare automaticamente
+   i tag, e viceversa. Tag e descrizione descrivono la foto intera, anche ciò che il ritaglio 4:5 lascia fuori; l'owner
+   controlla nel wizard che il ritaglio non escluda soggetti o fatti **fondamentali** per il significato della fotografia.
    Le REAL già presenti senza `real_description` rimangono utilizzabili nel catalogo: per avviare una nuova generazione
    SLOP occorre prima aggiungere/correggere manualmente la descrizione oppure richiedere **con conferma a pagamento**
    una nuova analisi combinata tag+descrizione. Nessuna analisi o backfill massivo automatico.
@@ -105,7 +107,7 @@ associata alla REAL e può essere riusata quando occorre riequilibrare il catalo
 7. **Candidato accettato:** solo **dopo la valutazione dell'immagine intera**, il browser prepara il ritaglio 4:5 e l'eventuale
    trattamento leggero per la copia di gioco. La candidata accettata viene registrata come `new` con originale; il browser prepara subito la copia 4:5. Senza copia non può essere approvata né pubblicata. Conserva
    copia, prompt finale, brief, REAL di riferimento, modello, qualità, configurazione e tracciabilità dell'esito.
-   L'analisi dei tag usa la copia che sarà giocata e distingue le evidenze visive dai desideri del prompt. L'owner verifica
+   L'analisi dei tag usa l'immagine SLOP intera (l'originale accettato, non la copia 4:5: decisione dell'owner del 2026-11-15) e distingue le evidenze visive dai desideri del prompt. L'owner verifica
    che il ritaglio non comprometta il risultato; eventuali correzioni di crop o trattamento **non producono feedback automatico
    per riscrivere il prompt e non forzano il generatore a comporre per il 4:5**. Approvare e pubblicare restano azioni
    separate dell'owner. Nessuna pubblicazione automatica.
@@ -163,14 +165,22 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
 - Concorrenza: impedire che doppio clic, due schede o ripresa dopo refresh inviino la stessa chiamata; sequenza per foto
   idempotente a livello applicativo. Registrare prima dell'invio **non prova** che un esito di rete incerto non abbia consumato
   crediti: comunicarlo senza promesse assolute.
-- Processi `draft`, `prompting`, `ready`, `running`, `retry`, `accepted`, `exhausted`, `review_needed`, `failed`, `uncertain`; una chiamata pendente interrotta resta sospesa e la manutenzione la marca incerta dopo dieci minuti.
+- Processi `draft`, `prompting`, `ready`, `running`, `retry`, `accepted`, `exhausted`, `review_needed`, `failed`, `uncertain`, `closed`; una chiamata pendente interrotta resta sospesa e la manutenzione la marca incerta dopo dieci minuti.
 - Ogni tentativo conserva privatamente prompt, modello, qualità, esito, motivi, eventuale bozza di revisione e riferimento alla
   candidata per consentire ripresa e revisione; **i tentativi rifiutati non entrano nella libreria delle immagini e non sono
-  pubblicati**, né generano nuove REAL/SLOP attive. Le anteprime temporanee dei processi fermi sono cancellate dopo sette giorni; la cancellazione della REAL o SLOP elimina anche processi, tentativi e file collegati. Non creare
+  pubblicati**, né generano nuove REAL/SLOP attive. Le anteprime temporanee sono cancellate sette giorni dopo l'accettazione o la chiusura del processo; la cancellazione della REAL o SLOP elimina anche processi, tentativi e file collegati. Non creare
   archivi permanenti delle eliminazioni in contrasto con `AGENTS.md`.
 - Conservare l'esito e l'identità del processo accettato con la nuova SLOP per audit editoriali; le anteprime della libreria
   riportano solo contenuti privati all'owner. Nessun criterio o risposta corretta viene inviato al giocatore prima della scelta.
-- I casi esauriti o sospesi restano in revisione fino a «Chiudi revisione», dopo aver deciso le immagini nuove; i dettagli dei tentativi sono accessibili nello studio.
+- **Processi senza SLOP** (decisione dell'owner del 2026-11-15): `exhausted`, `review_needed`, `failed` e `uncertain` sono
+  eccezioni che richiedono l'attenzione dell'owner. Lo studio li mostra in cima a ogni passaggio («Da vedere»), con un contatore
+  sulla scheda «Generazione SLOP», qualunque sia il batch, manuale o automatico: per ogni tentativo l'immagine candidata intera, il
+  prompt usato e la valutazione, più brief ed errore del processo. Restano finché l'owner non sceglie «Chiudi: ho visto»
+  (`POST processes/:id/close`, stato `closed`); la manutenzione non cancella le loro candidate. Sette giorni dopo la chiusura,
+  o dopo un'accettazione, la manutenzione cancella le candidate e, per i chiusi, il processo. Cancellare la REAL dal cestino
+  elimina subito processi, tentativi e file.
+- Un batch automatico in revisione si chiude con «Chiudi revisione» dopo aver deciso le immagini nuove; i suoi processi senza SLOP
+  restano comunque tra quelli «Da vedere».
 - Il batch automatico continua a girare con la dashboard aperta, al massimo uno alla volta. Se una REAL esaurisce i tentativi,
   le altre proseguono; il risultato dell'intero batch mostra accettate, esaurite, sospese e ancora da rivedere.
 
@@ -181,7 +191,7 @@ Quattro passaggi: **REAL** (scelta da 1 a 10, con tag e descrizione già disponi
 **Revisione** (solo candidate accettate automaticamente, più eventuali casi sospesi visibili separatamente).
 Mostrare il numero massimo di tentativi, la tolleranza, il preventivo massimo delle chiamate e il totale effettivo.
 
-Tolleranza: 0 rigorosa (nessun difetto minore), 1 normale (imperfezioni sottili e fotograficamente plausibili), 2 permissiva (difetti minori che non compromettono credibilità). I difetti critici sono sempre bloccanti.
+Tolleranza: 0 rigorosa (nessun difetto minore), 1 normale (imperfezioni sottili e fotograficamente plausibili), 2 permissiva (difetti minori che non compromettono credibilità). I difetti critici sono sempre bloccanti. Con 0 una candidata con soli difetti minori non si accetta e non ferma il ciclo: consuma un nuovo tentativo con lo stesso prompt o con quello rivisto (decisione dell'owner del 2026-11-15); se i tentativi finiscono il processo è esaurito e resta tra quelli «Da vedere». Il codice lo garantisce anche quando il valutatore risponde «accept» elencando difetti minori. Con 1 e 2 la distinzione dipende dal giudizio del valutatore.
 
 In revisione: originale della SLOP **intero**, poi copia 4:5 preparata dopo l'accettazione (con/senza trattamento), prompt finale, ancoraggi, tag effettivi,
 divergenze tematiche, dettagli della valutazione, Inquadratura, Analizza, Approva, Pubblica, Cestino. Nessun tasto per cestinare

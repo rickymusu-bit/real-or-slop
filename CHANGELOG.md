@@ -1,9 +1,27 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T17:00:44Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T17:58:54Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.28.0 — 2026-11-15T17:00:44Z (correzioni della revisione della 1.27.0)
+## 1.29.0 — 2026-11-15T17:58:54Z (decisioni dell'owner del 2026-11-15)
+
+- **Analisi dell'immagine intera:** tag e descrizione privata della REAL, e i tag della SLOP, nascono dall'originale, non dal
+  ritaglio 4:5, così coprono tutta l'immagine. La copia di gioco non serve più all'analisi. La provenienza della descrizione registra
+  l'hash dell'originale. Vale anche per il completamento di Genere, Colore e Supporto.
+- **Tolleranza 0:** una candidata con soli difetti minori non ferma più il ciclo per la revisione ma consuma un nuovo tentativo; finiti
+  i tentativi il processo è esaurito e resta «Da vedere».
+- **Analisi combinata in gruppo:** nel Database il filtro «REAL senza descrizione» e l'azione «Analisi combinata tag e descrizione»,
+  con conferma del numero massimo di chiamate.
+- **Processi senza SLOP in evidenza:** tentativi esauriti, revisione chiesta dal valutatore, errori ed esiti incerti compaiono in cima
+  allo studio («Da vedere», con il numero sulla scheda) con immagine intera, prompt e valutazione di ogni tentativo. Restano finché
+  l'owner non sceglie «Chiudi: ho visto»; la manutenzione cancella le candidate solo sette giorni dopo un'accettazione o una chiusura
+  (prima le cancellava dopo sette giorni in ogni caso, e cancellava anche i processi esauriti).
+- **Wizard REAL:** la generazione dei tag su immagini con esito incerto invia la ripetizione confermata (nella 1.28.0 il server la
+  rifiutava pur avendo chiesto conferma).
+- `AGENTS.md` 22.4.0; specifiche `generazione-slop` 5.5.0, `libreria-immagini` 3.8.0, `dashboard-admin-wizard-real` 2.5.0,
+  `database-immagini` 2.6.0; `MASTER.md` 23.2.0.
+
+## 1.28.0 — 2026-11-15T17:00:44Z (correzioni della revisione della 1.27.0, rilasciata il 2026-11-15)
 
 - **Contesto dei prompt delle gemelle bloccato:** il server usa il contesto salvato, e in produzione quello in vigore era ancora il
   testo delle gemelle, in contrasto con il brief editoriale (la 1.27.0 aggiungeva solo una frase che chiedeva di ignorarlo). Ogni

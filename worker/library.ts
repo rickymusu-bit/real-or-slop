@@ -407,10 +407,10 @@ async function list(env: Env, url: URL) {
     `(?7='' OR (EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id AND t.category='genre' AND t.label=?7)
       AND EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id AND t.category='time' AND t.label=?8)))`,
     `(?9=0 OR (SELECT count(DISTINCT t.category) FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id
-      AND t.category IN ('genre','color','medium'))<3)`, `(?10=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`].join(" AND ");
+      AND t.category IN ('genre','color','medium'))<3)`, `(?10=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, "(?11=0 OR (origin='REAL' AND real_description IS NULL))"].join(" AND ");
   await sweepRetired(env);
   const rows = (await env.DB.prepare(`SELECT * FROM images WHERE ${where} ORDER BY updated_at DESC,id LIMIT 500`)
-    .bind(status, originFilter, JSON.stringify(wanted), q, match, batch, group?.genre || "", group?.time || "", incomplete, url.searchParams.get("redo_copy") === "1" ? 1 : 0).all<Row>()).results;
+    .bind(status, originFilter, JSON.stringify(wanted), q, match, batch, group?.genre || "", group?.time || "", incomplete, url.searchParams.get("redo_copy") === "1" ? 1 : 0, url.searchParams.get("undescribed") === "1" ? 1 : 0).all<Row>()).results;
   const ids = rows.map(r => r.id), [tags, more] = await Promise.all([tagRowsOf(env, ids), extras(env, ids)]);
   const counts = (await env.DB.prepare("SELECT status,origin,count(*) AS n FROM images GROUP BY status,origin").all<{ status: string; origin: string; n: number }>()).results;
   return json({ items: rows.map(r => view(r, tags.get(r.id) || [], more.get(r.id))), counts });

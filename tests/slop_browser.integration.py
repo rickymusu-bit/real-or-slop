@@ -17,8 +17,19 @@ try:
             page.on('pageerror',lambda e:errors.append(str(e)))
             page.on('dialog',lambda d:(confirmations.append(d.message),d.accept()))
             try:
-                page.goto(BASE+'/admin');page.get_by_role('button',name='Generazione SLOP',exact=True).click()
+                # A process that ended without a SLOP is shown on top, with its attempts, until the owner closes it.
+                stuck_source=real('browser-stuck-'+name);generated.append(stuck_source['id']);stuck=batch(stuck_source)
+                control([None,{'evaluation':'review_needed'}]);assert generate(stuck)[1]['process']['state']=='review_needed'
+                page.goto(BASE+'/admin');page.locator('[data-admin-tab=slop]').click()
                 studio=page.locator('#slop-studio')
+                card=studio.locator('[data-attention="'+stuck['processes'][0]['id']+'"]')
+                expect(card).to_contain_text('il valutatore chiede la tua revisione')
+                expect(card.locator('img')).to_be_visible();expect(card.locator('p[lang=en]')).to_be_visible()
+                expect(page.locator('#slop-attention-count')).to_contain_text('da vedere')
+                page.screenshot(path=str(folder/(name+'-attention.png')),full_page=True)
+                card.locator('[data-slop=close-process]').click();expect(card).to_have_count(0)
+                assert 'Chiudere questo processo' in confirmations[-1]
+                assert sql("SELECT state FROM slop_processes WHERE id='"+stuck['processes'][0]['id']+"'")[0]['state']=='closed'
                 studio.locator('[data-slop-pick="'+source['id']+'"]').check()
                 control([]);studio.locator('[data-slop=prompts]').click()
                 expect(studio.locator('[data-prompt="0"]')).to_be_visible(timeout=20000)

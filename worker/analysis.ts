@@ -1,4 +1,5 @@
-/** Confirmed analysis of the actual 4:5 copy: REAL tags and private description in one atomic result; SLOP tags only.
+/** Confirmed analysis of the whole image, REAL or SLOP: its original, never the 4:5 crop (decisions of the owner of 2026-11-15).
+ * A REAL returns tags and the private description in one atomic result; a SLOP returns tags only.
  * Contexts never mention synthetic images. Claims and uncertain results prevent automatic paid retries. */
 import { descriptionSchema, realDescription } from "../shared/editorial";
 import { HttpError, id, type Env } from "./core";
@@ -6,6 +7,7 @@ import { categoriesOf, tagRowsOf, tagStatements, viewOf, type Row } from "./libr
 import { chosenModel } from "./models";
 import { CATEGORIES, categoryError, COLORS, forcedCategory, MEDIA, SINGLE, VISUAL, type Category } from "../shared/tag-categories";
 import { checkTag, suggestTag } from "../shared/tags";
+import { imageMime } from "../shared/image-format";
 import { currentContext } from "./model-context";
 
 const VOCABULARY = 300, MAX_TAGS = 40, TIMEOUT_MS = 60_000, STALE_MS = 10 * 60_000;
@@ -93,8 +95,8 @@ async function vocabularyText(env: Env, categories: readonly Category[]) {
 const contextOf = (row: Row) => [row.title && "Title: " + row.title, row.description && "Description: " + row.description,
   row.commons_description && "Original Commons context: " + row.commons_description, row.prompt && "Description: " + row.prompt].filter(Boolean).join("\n");
 
-/** One call to the text model with the game copy. Never throws for the call itself: the outcome says what happened. */
-async function send(env: Env, model: string, instructions: string, format: unknown, text: string, image: ArrayBuffer): Promise<Outcome> {
+/** One call to the text model with the image to analyse. Never throws for the call itself: the outcome says what happened. */
+async function send(env: Env, model: string, instructions: string, format: unknown, text: string, image: Picture): Promise<Outcome> {
   let response: Response;
   try {
     response = await fetch((env.OPENAI_BASE_URL || "https://api.openai.com/v1/") + "responses", {
@@ -102,7 +104,7 @@ async function send(env: Env, model: string, instructions: string, format: unkno
       headers: { Authorization: "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({ model, instructions, text: { format }, max_output_tokens: MAX_OUTPUT_TOKENS, input: [{ role: "user", content: [
         { type: "input_text", text },
-        { type: "input_image", image_url: "data:image/webp;base64," + base64(image) },
+        { type: "input_image", image_url: `data:${image.mime};base64,` + base64(image.bytes) },
       ] }] }),
     });
   } catch {
@@ -141,12 +143,15 @@ async function recordCall(env: Env, model: string, row?: Row) {
     env.DB.prepare("UPDATE paid_calls SET status=?,input_tokens=?,output_tokens=?,updated_at=? WHERE id=?")
       .bind(call, usage?.input_tokens ?? null, usage?.output_tokens ?? null, new Date().toISOString(), callId) };
 }
-async function gameCopy(env: Env, row: Row) {
-  if (row.copy_crop && JSON.parse(row.copy_crop).format !== "4:5") throw new HttpError(409, "Prepara la copia di gioco 4:5 prima dell’analisi");
-  if (!row.copy_key) throw new HttpError(409, "Prepara prima la copia di gioco: il modello analizza ciò che vedrà il giocatore");
-  const copy = await env.QUARANTINE?.get(row.copy_key);
-  if (!copy) throw new HttpError(409, "Copia di gioco non disponibile");
-  return copy.arrayBuffer();
+interface Picture { bytes: ArrayBuffer; mime: string }
+/** What the model sees: the whole original, REAL or SLOP, so that tags and description cover the full picture and not the crop
+ * the player sees (owner decisions of 2026-11-15). Pixels only: the model never reads file metadata. Read before any call. */
+async function analysisImage(env: Env, row: Row): Promise<Picture> {
+  const original = await env.QUARANTINE?.get(row.original_key);
+  if (!original) throw new HttpError(409, "Originale non disponibile");
+  const bytes = await original.arrayBuffer(), mime = imageMime(new Uint8Array(bytes));
+  if (!mime) throw new HttpError(409, "Formato dell'originale non leggibile dal modello");
+  return { bytes, mime };
 }
 const confirmed = (data: Record<string, unknown>) => {
   if (Object.keys(data).some(key => key !== "confirm") || data.confirm !== true) throw new HttpError(400, "Conferma la chiamata a pagamento");
@@ -170,7 +175,7 @@ export async function analyze(env: Env, row: Row, data: Record<string, unknown>)
   const unsure = row.analysis_status === "uncertain" || row.analysis_status === "running";
   if (unsure && data.repeat_uncertain !== true)
     throw new HttpError(409, "L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata: ripetila solo confermando questo rischio");
-  const image = await gameCopy(env, row);
+  const image = await analysisImage(env, row);
   // Read before the call is recorded: a failure here costs nothing.
   const [baseContext, taskContext] = [await currentContext(env, "base"), await currentContext(env, "analysis")];
   const describe = row.origin === "REAL";
@@ -216,7 +221,7 @@ export async function analyze(env: Env, row: Row, data: Record<string, unknown>)
       real_description_provenance=CASE WHEN ? IS NULL THEN real_description_provenance ELSE ? END
       WHERE id=? AND analysis_status='running'`).bind(JSON.stringify(wanted), baseContext.id, taskContext.id, stamp, new Date().toISOString(),
         description ? JSON.stringify(description) : null, description ? JSON.stringify(description) : null,
-        description ? JSON.stringify(description) : null, JSON.stringify({model, copy_sha256: row.copy_sha256, revision: row.revision, at: stamp, generated: description}), row.id),
+        description ? JSON.stringify(description) : null, JSON.stringify({model, image: "original", original_sha256: row.original_sha256, revision: row.revision, at: stamp, generated: description}), row.id),
     call.update("completed", outcome.usage),
     ...tagStatements(env, row.id, wanted, { sql: "EXISTS(SELECT 1 FROM images WHERE id=? AND analysis_status='running')", values: [row.id] }, categories),
     env.DB.prepare("UPDATE images SET analysis_status='done',analysis_error='',analyzed_at=?,revision=revision+1 WHERE id=? AND analysis_status='running'").bind(stamp, row.id),
@@ -240,7 +245,7 @@ export async function completeCategories(env: Env, row: Row, data: Record<string
   if (!completable(row, current.map(t => t.category)))
     throw new HttpError(409, row.categories_completed_at ? "Genere, Colore e Supporto già completati per questa immagine: nessuna chiamata inviata"
       : row.analysis_status !== "done" ? "Prima l'analisi dell'immagine" : row.status === "trash" ? "Immagine nel cestino" : "L'immagine ha già Genere, Colore e Supporto");
-  const model = await chosenModel(env, "text_model"), image = await gameCopy(env, row);
+  const model = await chosenModel(env, "text_model"), image = await analysisImage(env, row);
   const [baseContext, taskContext] = [await currentContext(env, "base"), await currentContext(env, "analysis")];
   const instructions = baseContext.body + "\n\n" + taskContext.body + "\n\n" + COMPLETE_OUTPUT;
   const stamp = new Date().toISOString();

@@ -57,13 +57,38 @@ try:
     assert copy['copy']['crop']['format']=='4:5'
     assert call('/'+result['id']+'/analyze',{'confirm':True},library=True)[0]==200
     assert load(b)['processes'][0]['calls']==8  # 2+2N, including the final tags
-    assert control()[-1]['body']['text']['format']['schema']['required']==['tags']
+    analysed=control()[-1];assert analysed['body']['text']['format']['schema']['required']==['tags']
+    seen=analysed['body']['input'][0]['content'][1]['image_url'];assert seen.startswith('data:image/png;base64,'),seen[:40]
+    assert Image.open(io.BytesIO(base64.b64decode(seen.split(',')[1]))).size==(96,64)  # the whole SLOP, not its 4:5 copy
     # Exhaustion never creates a library image, and cannot consume another attempt after refresh.
     source=real();sources.append(source['id']);b=batch(source)
     control([None,{'evaluation':'retry_same_prompt'}]*3)
     for n in range(3):code,result=generate(b);assert code==200,result
     assert result['process']['state']=='exhausted' and load(b)['images']==[] and len(control())==6
     assert generate(b)[0]==409 and len(control())==6
+    # A process without a SLOP waits for the owner with every attempt (whole candidate, prompt, evaluation), also through the
+    # daily maintenance, until the owner closes it; seven days after the closing its files and rows go.
+    exhausted=load(b)['processes'][0]
+    code,studio=call('state');assert code==200
+    seen=next(p for p in studio['attention'] if p['id']==exhausted['id'])
+    assert seen['state']=='exhausted' and seen['title'] and len(seen['attempts'])==3,seen
+    assert all(a['file'] and a['prompt'] and a['evaluation'] for a in seen['attempts']),seen['attempts']
+    assert any(p['id']==exhausted['id'] for p in call('attention')[1]['attention'])
+    def maintenance():
+        with urllib.request.urlopen(BASE+'/cdn-cgi/handler/scheduled?cron=17+3+*+*+*') as r: assert r.status==200
+    sql(f"UPDATE slop_processes SET updated_at='2000-01-01' WHERE id='{exhausted['id']}'; UPDATE slop_attempts SET updated_at='2000-01-01' WHERE process_id='{exhausted['id']}'")
+    maintenance();__import__('time').sleep(2)
+    assert sql(f"SELECT count(*) AS n FROM slop_attempts WHERE process_id='{exhausted['id']}' AND candidate_key IS NOT NULL")[0]['n']==3
+    assert all(call(a['file'].split('/slop/')[1])[0]==200 for a in seen['attempts'])
+    code,closed=call('processes/'+exhausted['id']+'/close',{});assert code==200 and all(p['id']!=exhausted['id'] for p in closed['attention']),closed
+    assert call('processes/'+exhausted['id']+'/close',{})[0]==409 and call('processes/'+exhausted['id']+'/close',{'x':1})[0]==400
+    sql(f"UPDATE slop_processes SET updated_at='2000-01-01' WHERE id='{exhausted['id']}'")
+    maintenance()
+    for _ in range(40):
+        if not sql(f"SELECT count(*) AS n FROM slop_processes WHERE id='{exhausted['id']}'")[0]['n']: break
+        __import__('time').sleep(0.5)
+    assert sql(f"SELECT count(*) AS n FROM slop_processes WHERE id='{exhausted['id']}'")[0]['n']==0
+    assert call(seen['attempts'][0]['file'].split('/slop/')[1])[0]==404
     # review_needed stops early, even with attempts available.
     source=real();sources.append(source['id']);b=batch(source);control([None,{'evaluation':'review_needed'}])
     assert generate(b)[1]['process']['state']=='review_needed';assert generate(b)[0]==409 and len(control())==2
@@ -100,6 +125,13 @@ try:
     source=real();sources.append(source['id']);b=batch(source)
     assert call('/settings',{'max_generation_attempts':1,'editorial_tolerance':0},method='PUT',library=True)[0]==200
     assert load(b)['config']['max_generation_attempts']==3
+    # Tolerance 0: a candidate with minor defects is never accepted and never stops the loop; it consumes another attempt.
+    assert call('/settings',{'max_generation_attempts':2},method='PUT',library=True)[0]==200
+    source=real();sources.append(source['id']);strict=batch(source)
+    control([None,{'evaluation':'accept','minor':['slightly soft focus on the left edge']},None,{'evaluation':'accept','minor':['faint banding in the sky']}])
+    code,first=generate(strict);assert code==200 and first['process']['state']=='retry' and first['process']['evaluation']['decision']=='retry_same_prompt',first
+    code,second=generate(strict);assert code==200 and second['process']['state']=='exhausted',second
+    assert load(strict)['images']==[] and len(control())==4
     # Deleting the reference later cannot break the accepted SLOP's analysis or leave stale paid-call foreign keys.
     source=real();sources.append(source['id']);fresh=batch(source);control([])
     code,accepted=generate(fresh);assert code==200,accepted;images.append(accepted['id'])

@@ -15,7 +15,10 @@ interface Process {id: string; slot: number; state: string; prompt: string; brie
 interface Batch {id: string; items: TwinItem[]; prompts: {prompt: string; brief?: Brief}[]; processes: Process[]; config: Config | null; max_calls: number;
   pipeline_version: number; prompts_status: string; prompts_error: string; images: Image[]}
 interface Waiting {id: string; title: string; file: string; described: boolean; tags: TwinItem["tags"]}
-interface State {thresholds: {section: number; max_batch: number}; real_total: number; waiting: Waiting[]}
+interface Attention extends Process {title: string; batch_id: string; updated_at: string}
+interface State {thresholds: {section: number; max_batch: number}; real_total: number; waiting: Waiting[]; attention: Attention[]}
+const STATE_LABELS: Record<string, string> = {exhausted: "tentativi esauriti senza SLOP", review_needed: "il valutatore chiede la tua revisione",
+  failed: "non riuscito", uncertain: "esito incerto, nessuna chiamata ripetuta"};
 const BRIEF_LABELS = {required:"Ancoraggi obbligatori",preferred:"Preferenze",flexible:"Elementi liberi",exclusions:"Esclusioni"};
 const API = "/api/admin/library/slop/", LIBRARY = "/api/admin/library", DRAFT = "ros-editorial-studio-v1";
 async function call<T>(path: string, body?: unknown, method?: string, base = API): Promise<T> {
@@ -24,11 +27,11 @@ async function call<T>(path: string, body?: unknown, method?: string, base = API
   const data = await response.json() as T & {error?: string};
   if (!response.ok) throw Error(data.error || "Richiesta non riuscita"); return data;
 }
-export async function mountSlopStudio(root: HTMLElement): Promise<{refresh: () => Promise<void>}> {
+export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number) => void = () => {}): Promise<{refresh: () => Promise<void>}> {
   let state: State | null = null, batch: Batch | null = null, config: Config | null = null, chosen: string[] = [], page = 1, busy = false, notice = "", progress = "";
   let batchId = sessionStorage.getItem(DRAFT) || "", recent: {id: string; count: number}[] = [];
   const loadBatch = async () => { if (batchId) batch = await call<Batch>("batches/" + batchId); };
-  const evaluation = (a: Attempt) => `<details><summary>Tentativo ${a.number}: ${escape(a.evaluation?.decision || a.status)}</summary>` +
+  const evaluation = (a: Attempt, open = false) => `<details${open ? " open" : ""}><summary>Tentativo ${a.number}: ${escape(a.evaluation?.decision || a.status)}</summary>` +
     (a.file ? `<img src="${escape(a.file)}" alt="Candidata intera del tentativo ${a.number}" style="max-width:100%;max-height:360px;object-fit:contain">` : "") +
     `<p lang="en">${escape(a.prompt)}</p>` + (a.evaluation ? `<p>${escape(a.evaluation.action_reason)}</p><p>Difetti critici: ${escape(a.evaluation.critical_findings.join("; ") || "nessuno")}</p><p>Difetti minori: ${escape(a.evaluation.minor_findings.join("; ") || "nessuno")}</p><p>Incertezze: ${escape(a.evaluation.uncertainty_notes.join("; ") || "nessuna")}</p><p>Vincoli editoriali: ${a.evaluation.editorial_constraints_met ? "rispettati" : "non rispettati"}</p>` : "") + "</details>";
   const summary = () => batch?.config ? `<p class="hint">${batch.config.max_generation_attempts} tentativi massimi per REAL; tolleranza ${["rigorosa","normale","permissiva"][batch.config.editorial_tolerance]}. Massimo ${batch.max_calls} chiamate (brief+prompt e loro riscritture confermate, generazioni, valutazioni e tag dopo accettazione). Effettive: ${batch.processes.reduce((n,p) => n+p.calls,0)}. Modelli: ${escape(batch.config.text_model)}, ${escape(batch.config.image_model)}, qualità ${escape(batch.config.quality)}.</p>` : "";
@@ -57,10 +60,22 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{refresh: () =
       (image.status === "new" ? `${image.analysis.status === "none" || image.analysis.status === "failed" ? `<button data-slop="analyze" data-id="${image.id}">Analizza</button>` : ""}<button data-slop="approve" data-id="${image.id}" ${image.copy && image.tags.length ? "" : "disabled"}>Approva</button>` : "") +
       (image.status === "approved" ? `<button data-slop="publish" data-id="${image.id}">Pubblica</button>` : "") +
       (image.status !== "published" && image.status !== "trash" ? `<button data-slop="trash" data-id="${image.id}">Cestino</button>` : "") + '</div></article>').join("") +
-    (batch?.processes || []).map(p => `<section><h3>${escape(batch!.items[p.slot].title)}: ${escape(p.state)}</h3>${p.error ? `<p role="status">${escape(p.error)}</p>` : ""}${p.brief ? `<p>Ancoraggi obbligatori: ${escape(p.brief.required.join("; "))}. Esclusioni: ${escape(p.brief.exclusions.join("; "))}</p>` : ""}${p.attempts.map(evaluation).join("")}</section>`).join("") +
+    (batch?.processes || []).map(p => `<section><h3>${escape(batch!.items[p.slot].title)}: ${escape(p.state)}</h3>${p.error ? `<p role="status">${escape(p.error)}</p>` : ""}${p.brief ? `<p>Ancoraggi obbligatori: ${escape(p.brief.required.join("; "))}. Esclusioni: ${escape(p.brief.exclusions.join("; "))}</p>` : ""}${p.attempts.map(a => evaluation(a)).join("")}</section>`).join("") +
     '<div class="rw-actions"><button data-slop="to-prompts">Brief e prompt / ripresa</button><button data-slop="new-batch">Nuovo batch</button></div>';
+  // Processes that ended without a SLOP are exceptional: they stay on top, with every attempt, until the owner closes them.
+  const attentionView = () => {
+    const list = state?.attention || [];
+    onAttention(list.length);
+    if (!list.length) return "";
+    return `<section class="slop-attention" aria-labelledby="slop-attention-title"><h3 id="slop-attention-title">Da vedere: ${list.length} ${list.length === 1 ? "processo senza SLOP" : "processi senza SLOP"}</h3>` +
+      list.map(p => `<article class="slop-closed" data-attention="${escape(p.id)}"><h4>${escape(p.title)}: ${escape(STATE_LABELS[p.state] || p.state)}</h4>` +
+        `<p>${p.attempts.length} ${p.attempts.length === 1 ? "tentativo" : "tentativi"}, ${p.calls} chiamate registrate.${p.error ? " " + escape(p.error) : ""}</p>` +
+        (p.brief ? `<p>Ancoraggi obbligatori: ${escape(p.brief.required.join("; "))}. Esclusioni: ${escape(p.brief.exclusions.join("; ") || "nessuna")}</p>` : "") +
+        p.attempts.map(a => evaluation(a, true)).join("") +
+        `<div class="rw-actions"><button data-slop="close-process" data-process="${escape(p.id)}">Chiudi: ho visto</button></div></article>`).join("") + "</section>";
+  };
   const render = () => {
-    root.innerHTML = `<div class="rw slop"><h2>Generazione SLOP</h2><ol class="rw-steps">${["REAL","Brief e prompt","Generazione e valutazione","Revisione"].map((l,i) => `<li ${page===i+1?'aria-current="step"':""}>${i+1}. ${l}</li>`).join("")}</ol><p role="status" aria-live="polite">${escape(notice)}</p>` +
+    root.innerHTML = `<div class="rw slop"><h2>Generazione SLOP</h2>${attentionView()}<ol class="rw-steps">${["REAL","Brief e prompt","Generazione e valutazione","Revisione"].map((l,i) => `<li ${page===i+1?'aria-current="step"':""}>${i+1}. ${l}</li>`).join("")}</ol><p role="status" aria-live="polite">${escape(notice)}</p>` +
       (busy ? `<p role="status">${escape(progress || "Operazione in corso…")}</p>` : "") + [first, second, () => summary() + `<p role="status">${escape(progress)}</p>`, fourth][page-1]() + '</div>';
     if (busy) root.querySelectorAll<HTMLButtonElement>("button").forEach(b => b.disabled = true);
   };
@@ -116,6 +131,10 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{refresh: () =
     const button=(event.target as HTMLElement).closest<HTMLButtonElement>("[data-slop]");if(!button||busy)return;
     const action=button.dataset.slop!, slot=Number(button.dataset.slot), image=batch?.images.find(i=>i.id===button.dataset.id);
     if(action==="first"){chosen=(state?.waiting||[]).filter(w=>w.described).slice(0,10).map(w=>w.id);render();return;}
+    if(action==="close-process"){
+      if(!window.confirm("Chiudere questo processo? Sparisce dall'elenco e le immagini dei suoi tentativi vengono cancellate dopo sette giorni."))return;
+      try{state={...state!,...await call<{attention: Attention[]}>("processes/"+button.dataset.process+"/close",{})};notice="Processo chiuso.";}
+      catch(e){notice=String(e);} render();return;}
     if(action==="new-batch"){batch=null;batchId="";sessionStorage.removeItem(DRAFT);page=1;notice="";await refresh();return;}
     if(action==="to-prompts"||action==="to-review"){page=action==="to-prompts"?2:4;render();return;}
     try {
@@ -128,7 +147,7 @@ export async function mountSlopStudio(root: HTMLElement): Promise<{refresh: () =
       busy=true;notice="";render();
       if(action==="prompts"){batch=await call<Batch>("batches",{sources:chosen});batchId=batch.id;sessionStorage.setItem(DRAFT,batchId);page=2;batch=await call<Batch>("batches/"+batchId+"/prompts",{confirm:true});}
       else if(action==="rewrite"){batch=await call<Batch>("batches/"+batchId+"/prompts",{confirm:true,index:slot});}
-      else if(action==="images"){page=3;await produce();page=4;}
+      else if(action==="images"){page=3;await produce();page=4;state=await call<State>("state");}
       else if(action==="save")notice="Brief e prompt salvati.";
       else if(image){
         if(action==="frame"){const choice=await chooseFrame(image.id,image.width,image.height,image.copy);if(choice)await saveFrame(image,choice);}

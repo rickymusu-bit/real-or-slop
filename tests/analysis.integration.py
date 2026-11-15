@@ -56,10 +56,9 @@ info = analysis_state()
 assert info['enabled'] and info['model'] == 'gpt-6.1-sol' and info['calls_30_days']['total'] == 0, info
 assert 'cap_usd' not in info and 'call_usd' not in info and call(f'{API}/budget', {'cap_usd': 5}, method='PUT')[0] == 404, info
 assert 'platform.openai.com' in info['note']
-# No call without the game copy, nor without the exact cost confirmation.
+# No call without the exact cost confirmation. A REAL is analysed whole: its 4:5 game copy plays no part.
 place, place_copy = image(170, 'Place de la République, 1968', 'Manifestanti e polizia in place de la République.')
 openai([])
-status, result = analyze(place); assert status == 409 and 'copia' in result['error'], result
 status, place = call(f'{API}/{place["id"]}/copy', raw=place_copy, mime='image/webp'); assert status == 201, place
 for confirm in (None, False, 'true', 1):
     code, result = analyze(place, confirm); assert code == 400 and 'Conferma' in result['error'], result
@@ -80,7 +79,7 @@ assert sorted(place['proposed_tags']) == ['barricade', 'place-de-la-republique',
 assert 'caption' not in place and 'proposed_caption' not in place and place['analysis']['status'] == 'done', place
 assert sorted(place['generated']['tags']) == place['tags'] and place['generated'] == {'tags': place['generated']['tags']}, place
 assert place['real_description']['visible'] and place['real_description_provenance']['model']=='gpt-6.1-sol'
-assert place['real_description_provenance']['copy_sha256']==place['copy']['sha256']
+assert place['real_description_provenance']['image']=='original' and place['real_description_provenance']['original_sha256']==place['original_sha256']
 assert place['description']=='Manifestanti e polizia in place de la République.'
 original_description=place['real_description']
 place=patch(place, {'real_description': {**original_description,'visible':'Owner corrected visible content.'}})
@@ -91,7 +90,9 @@ assert 'mine' not in labels()  # the owner's tag went with its only image
 assert sent['authorization'] == 'Bearer test-openai-key' and sent['body']['model'] == 'gpt-6.1-sol' and sent['body']['max_output_tokens'] == 8000, sent['authorization']
 text, picture = sent['body']['input'][0]['content'][0]['text'], sent['body']['input'][0]['content'][1]['image_url']
 assert 'barricade' in text and 'riot' in text and 'Title: Place de la République, 1968' in text, text
-assert picture.startswith('data:image/webp;base64,UklGR'), picture[:40]  # the game copy, as the player will see it
+assert picture.startswith('data:image/jpeg;base64,/9j/'), picture[:40]  # the uploaded original, not the 4:5 game copy
+import base64 as _b64
+assert Image.open(io.BytesIO(_b64.b64decode(picture.split(',', 1)[1]))).size == (48, 32)  # whole frame, no crop
 assert not any(word in json.dumps(sent['body']) for word in ('REAL', 'SLOP', '"AI"')), 'the model must not know the origin'
 # The instructions are the editable context (base, then analysis) plus the fixed line on the JSON output.
 assert sent['body']['instructions'].startswith('Lavori per un archivio fotografico italiano') and 'Didascalia' not in sent['body']['instructions'], sent['body']['instructions'][:200]

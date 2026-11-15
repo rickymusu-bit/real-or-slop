@@ -113,6 +113,19 @@ with sync_playwright() as p:
         page.locator('[data-filter-remove="dbb-paris"]').click(); page.locator('[data-filter-remove="dbb-beach"]').click()
         tag_input.fill('dbb-riot'); tag_input.press('Enter')
         expect(cards).to_have_count(2)
+        # REAL without the private description: filter, then the combined analysis of the selection, with the exact maximum.
+        page.locator('#library-undescribed').check()
+        expect(cards).to_have_count(1)
+        page.get_by_role('checkbox', name=f'Seleziona {prefix}-barricate').check()
+        openai([{'tags': ['dbb-riot', 'dbb-paris', '1960s']}])
+        page.locator('[data-bulk=describe]').click()
+        expect(page.locator('#library-message')).to_contain_text('1 di 1 analizzate', timeout=30000)
+        assert 'al massimo 1 chiamata' in confirms[-1] and "sull'originale intero" in confirms[-1], confirms[-1]
+        described = call(f'{API}/{real["id"]}')
+        assert described['real_description']['visible'] and described['status'] == 'published', described
+        expect(cards).to_have_count(0)
+        page.locator('#library-undescribed').uncheck()
+        expect(cards).to_have_count(2)
 
         # Edit a published SLOP: confirmation, out of publication, approved; then the prompt and a regeneration.
         page.get_by_role('button', name=f'Apri {prefix}-scontri').click()
