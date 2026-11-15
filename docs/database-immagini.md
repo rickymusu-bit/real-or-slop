@@ -1,6 +1,7 @@
-# Sezione Database — specifica 2.7.0
+# Sezione Database — specifica 2.7.1
 
-Stato: vigente; la 2.6.0 è in produzione con l'app 1.29.0, la 2.7.0 è per l'app 1.30.0. Aggiornata: 2026-11-15T18:25:36Z. La 2.7.0 aggiunge «Seleziona
+Stato: vigente; la 2.7.0 è in produzione con l'app 1.30.0, la 2.7.1 è per l'app 1.30.2. Aggiornata: 2026-11-15T21:07:23Z. La 2.7.1 include nelle analisi
+in gruppo le immagini con esito incerto o interrotto, nominate nella conferma. La 2.7.0 aggiunge «Seleziona
 tutte». La 2.6.0 aggiunge il filtro
 «REAL senza descrizione» e l'azione in gruppo «Analisi combinata tag e descrizione». La 2.3.0: i tag di partenza di una SLOP
 sono quelli della REAL di cui è la gemella, con «Apri la REAL di origine»; il filtro per categoria della Distribuzione torna a
@@ -58,8 +59,10 @@ che restano nella cronologia git. Stati e regole della libreria: specifica `libr
 - **Descrizione REAL privata:** elementi visibili, contesto documentato e incertezze, modificabili indipendentemente dai tag, anche per una pubblicata. Per una REAL storica senza descrizione, compilazione manuale o analisi combinata tag+descrizione con conferma separata.
 - **REAL senza descrizione:** filtro «REAL senza descrizione» e azione in gruppo «Analisi combinata tag e descrizione» (decisione
   dell'owner del 2026-11-15): per le REAL selezionate fuori dal cestino e senza descrizione privata, una chiamata a pagamento per foto
-  sull'originale intero, dopo una conferma che dichiara il massimo; sostituisce i tag, non ritira le pubblicate. Le immagini con
-  esito incerto restano escluse e si ripetono dalla scheda.
+  sull'originale intero, dopo una conferma che dichiara il massimo; sostituisce i tag, non ritira le pubblicate. Le immagini con un'analisi interrotta o con
+  esito incerto sono incluse: la conferma dice quante sono e che potrebbero essere già state addebitate. Restano escluse solo quelle
+  con un'analisi in corso da meno di dieci minuti. Se nessuna selezionata è senza descrizione privata, il messaggio lo dice (il
+  testo di Commons non conta).
 - **Vecchie copie:** filtro «Copia da rifare in 4:5», azione in gruppo «Rifai la copia in 4:5». Le pubblicate sono ritirate con conferma e restano approvate; le partite in corso mantengono i propri byte. Controllare il nuovo crop prima di ripubblicare.
 
 ## 4. Statistiche delle foto
