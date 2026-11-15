@@ -135,6 +135,22 @@ with sync_playwright() as p:
         expect(cards).to_have_count(0)
         page.locator('#library-undescribed').uncheck()
         expect(cards).to_have_count(2)
+        # An analysis left «running» by a request that died (more than ten minutes ago) is repeated from the card, with the warning.
+        stuck = seed(prefix, 'REAL', 'interrotta', 30 + index, ['dbb-riot'], False)
+        sql(f"UPDATE images SET analysis_status='running',updated_at='2000-01-01T00:00:00.000Z' WHERE id='{stuck['id']}'")
+        page.locator('#library-undescribed').check()
+        expect(cards).to_have_count(1)
+        page.get_by_role('button', name=f'Apri {prefix}-interrotta').click()
+        expect(page.locator('#library-detail [data-analysis-unsure]')).to_contain_text('interrotta')
+        openai([{'tags': ['dbb-riot']}])
+        page.locator('#library-description-analysis').click()
+        expect(page.locator('#library-detail [data-analysis-unsure]')).to_have_count(0, timeout=30000)
+        assert 'esito incerto' in confirms[-1], confirms[-1]
+        assert call(f'{API}/{stuck["id"]}')['real_description']['visible']
+        page.locator('#library-detail .library-detail-close button').click()
+        call(f'{API}/bulk', {'action': 'trash', 'ids': [stuck['id']]}); call(f'{API}/bulk', {'action': 'delete', 'ids': [stuck['id']]})
+        page.locator('#library-undescribed').uncheck()
+        expect(cards).to_have_count(2)
 
         # Edit a published SLOP: confirmation, out of publication, approved; then the prompt and a regeneration.
         page.get_by_role('button', name=f'Apri {prefix}-scontri').click()

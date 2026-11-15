@@ -16,7 +16,8 @@ export async function paid(env: Env, kind: "prompts" | "images" | "evaluation", 
   try {
     response = await fetch((env.OPENAI_BASE_URL || "https://api.openai.com/v1/") + (kind === "images" ? "images/generations" : "responses"), {
       method: "POST", redirect: "manual", signal: AbortSignal.timeout(120_000),
-      headers: { Authorization: "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" }, body: JSON.stringify(body),
+      // A body already encoded (an image inside, see image-body.ts) goes as it is.
+      headers: { Authorization: "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" }, body: body instanceof Uint8Array ? body : JSON.stringify(body),
     });
   } catch {
     await settle("uncertain");

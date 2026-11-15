@@ -1,9 +1,19 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T18:25:36Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T19:21:51Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.30.0 — 2026-11-15T18:25:36Z
+## 1.30.1 — 2026-11-15T19:21:51Z
+
+- **Memoria del Worker:** cinque analisi combinate di fila (originali da 2 a 6 MB) sono state interrotte da Cloudflare per memoria
+  superata («exceededResources») dopo aver registrato la chiamata, e restavano «in corso». L'immagine va ora nel corpo della richiesta
+  come base64 scritto direttamente nei byte, senza copie in stringhe: per un originale di 6,7 MB la memoria aggiuntiva scende da circa
+  87 a circa 9 MB. Stessa codifica per la valutazione delle SLOP. Test unitario della codifica.
+- **Analisi interrotta:** la dashboard mostra come interrotta un'analisi ancora «in corso» dopo dieci minuti e ne permette la
+  ripetizione dalla scheda, con l'avviso del possibile addebito (prima bisognava aspettare la manutenzione notturna).
+- Specifica `libreria-immagini` 3.8.1, `MASTER.md` 23.3.1.
+
+## 1.30.0 — 2026-11-15T18:25:36Z (rilasciata il 2026-11-15)
 
 - **Seleziona tutte:** nel Database un tasto seleziona tutte e sole le immagini mostrate da vista e filtri (per esempio le REAL senza
   descrizione, prima dell'analisi combinata in gruppo). Prima la selezione era solo una casella per foto. Specifica
