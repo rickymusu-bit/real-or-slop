@@ -1,6 +1,7 @@
-# Libreria delle immagini, tag e analisi — specifica 3.8.0
+# Libreria delle immagini, tag e analisi — specifica 3.8.1
 
-Stato: vigente; la 3.7.0 è in produzione con l'app 1.28.0, la 3.8.0 è per l'app 1.29.0. Aggiornata: 2026-11-15T17:58:54Z.
+Stato: vigente; la 3.8.0 è in produzione con l'app 1.29.0, la 3.8.1 è per l'app 1.30.1. Aggiornata: 2026-11-15T19:21:51Z. La 3.8.1 corregge la
+memoria usata per inviare l'originale e la ripetizione di un'analisi interrotta dalla dashboard.
 La 3.8.0 fa analizzare REAL e SLOP intere (l'originale, non la copia 4:5: decisioni dell'owner del 2026-11-15) e aggiunge
 l'analisi combinata in gruppo delle REAL senza descrizione. La 3.7.0 aggiunge il contesto «Valutazione delle SLOP», blocca brief e prompt finché il contesto in vigore è quello delle
 gemelle (migrazione 0051) e riammette la ripetizione confermata di un'analisi con esito incerto.
@@ -151,6 +152,12 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
 - **Esito incerto o segno interrotto** (più di dieci minuti): mai ripetuto in automatico né nelle azioni in gruppo. Dalla scheda
   dell'immagine l'owner può ripeterlo con una conferma che avverte del possibile addebito già avvenuto; la richiesta porta
   `repeat_uncertain: true`, senza la quale il server rifiuta. La chiamata pendente dell'analisi interrotta passa a `uncertain`.
+  La dashboard tratta allo stesso modo un'analisi ancora «in corso» dopo dieci minuti: la mostra come interrotta e offre la
+  ripetizione con l'avviso.
+- **Invio dell'immagine:** l'originale va al modello come data URL base64 scritta direttamente nei byte della richiesta, senza
+  copie in stringhe JavaScript. Il 2026-11-15 cinque analisi di fila su originali da 2 a 6 MB hanno superato il limite di memoria
+  del Worker (128 MB, «exceededResources») dopo aver registrato la chiamata: restavano «in corso». Con la nuova codifica la memoria
+  aggiuntiva per un originale di 6,7 MB scende da circa 87 a circa 9 MB (misura locale con Node). Vale anche per la valutazione delle SLOP.
 
 ## 6. Chiamate a pagamento e modelli
 

@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 23.3.0, aggiornata il 2026-11-15T18:25:36Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 23.3.1, aggiornata il 2026-11-15T19:21:51Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,11 +9,13 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **In produzione:** app 1.29.0 (PR rickymusu-bit/real-or-slop#142, deploy il 2026-11-15 alle 18:18 UTC; migrazioni fino alla
-  0051). Il 2026-11-15 restano 20 REAL approvate con copia 4:5, tag della vecchia analisi e nessuna descrizione privata, e nessuna
-  immagine pubblicata: nessun livello è giocabile. Su indicazione dell'owner, alle 17:24 UTC sono stati salvati direttamente nel D1
+- **In produzione:** app 1.30.0 (PR rickymusu-bit/real-or-slop#143; migrazioni fino alla 0051). Il 2026-11-15 alle 19:13 UTC
+  15 delle 20 REAL approvate hanno tag e descrizione dall'originale intero; 5 sono ferme «in corso» dalle 19:10, quando il Worker
+  ha superato il limite di memoria (vedi 1.30.1). Nessuna immagine pubblicata: nessun livello è giocabile. Su indicazione dell'owner, alle 17:24 UTC sono stati salvati direttamente nel D1
   il contesto «Brief e prompt per le SLOP» proposto (pipeline 2) e la soglia dello studio a 20 REAL. Qualità immagini `medium`.
-- **Nel ramo 1.30.0 (PR da unire):** nel Database il tasto «Seleziona tutte», per le immagini mostrate da vista e filtri.
+- **Nel ramo 1.30.1 (PR da unire):** invio dell'immagine ai modelli senza copie in stringhe (memoria), ripetizione dalla scheda
+  di un'analisi rimasta «in corso» oltre dieci minuti.
+- **Nella 1.30.0:** nel Database il tasto «Seleziona tutte», per le immagini mostrate da vista e filtri.
 - **Nella 1.29.0:** analisi di REAL e SLOP sull'originale intero invece della copia 4:5; processi senza SLOP in
   evidenza nello studio, con immagini, prompt e valutazioni di ogni tentativo, conservati fino alla chiusura dell'owner; con
   tolleranza 0 i difetti minori fanno rigenerare invece di fermare il ciclo; nel Database filtro «REAL senza descrizione» e analisi
@@ -30,7 +32,7 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.8.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.8.1 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.2.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.5.0 |

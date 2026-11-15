@@ -10,6 +10,7 @@ import { MAX_BATCH, type TwinItem } from "../shared/twins";
 import { briefSchema, realDescription, validBrief, validEvaluation, DECISIONS, type Brief, type Evaluation } from "../shared/editorial";
 import { byCategory, twinItems } from "./twins";
 import { paid, PaidError, responseJson } from "./paid";
+import { IMAGE_MARK, jsonWithImage } from "./image-body";
 import { imageMime } from "../shared/image-format";
 import { imageGeometry } from "../shared/image-geometry";
 
@@ -170,7 +171,6 @@ const evaluationSchema = { type: "object", additionalProperties: false,
     editorial_constraints_met: {type: "boolean"}, uncertainty_notes: strings, action_reason: {type: "string"}, revised_prompt: {type: "string"}, preserved_required: strings, preserved_exclusions: strings} };
 /** The part of the evaluator's instructions that the code enforces, after the editable context «slop_evaluation». */
 const EVALUATE_RULE = `Evaluate the ENTIRE unprocessed generated photograph. Choose accept, retry_same_prompt, revise_prompt, replan_scene or review_needed; for uncertainty choose review_needed. Critical defects are never accepted at any tolerance. Tolerance 0 accepts no minor defects: with only minor defects choose retry_same_prompt or revise_prompt, never review_needed; 1 accepts subtle photographically plausible imperfections; 2 tolerates minor defects only while credibility holds. If revising or replanning, give the revised prompt in this same response and copy every required anchor and exclusion of the brief verbatim into preserved_required and preserved_exclusions. Never compose for a later crop.`;
-function base64(bytes: Uint8Array) { let s = ""; for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode(...bytes.subarray(i, i + 8192)); return btoa(s); }
 async function hash(brief: Brief) { return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(brief))))].map(b => b.toString(16).padStart(2, "0")).join(""); }
 async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array, evaluation: Evaluation) {
   // Reuse a saved accepted result if the Worker was interrupted after inserting the library row.
@@ -227,11 +227,11 @@ async function generateImage(env: Env, batchId: string, data: Record<string, unk
       await env.DB.prepare("UPDATE slop_processes SET state='review_needed',error='Interrotto prima della valutazione',updated_at=? WHERE id=?").bind(now(),p.id).run();
       return {process:{id:p.id,state:"review_needed",attempts:p.attempts}};
     }
-    const evaluationPayload = await paid(env, "evaluation", config.text_model, {model: config.text_model,
+    const evaluationPayload = await paid(env, "evaluation", config.text_model, jsonWithImage({model: config.text_model,
       instructions: base.body + "\n\n" + context.body + "\n\n" + EVALUATE_RULE, max_output_tokens: 8000,
       text: {format: {type: "json_schema", name: "slop_evaluation", strict: true, schema: evaluationSchema}},
       input: [{role: "user", content: [{type: "input_text", text: JSON.stringify({attempt_id: attemptId, brief, prompt: p.prompt, tolerance: config.editorial_tolerance})},
-        {type: "input_image", image_url: `data:${mime};base64,${base64(bytes)}`}]}]}, {process: p.id, attempt: attemptId});
+        {type: "input_image", image_url: IMAGE_MARK}]}]}, bytes, mime), {process: p.id, attempt: attemptId});
     let evaluation = validEvaluation(responseJson(evaluationPayload), attemptId, brief);
     if (!evaluation) throw new HttpError(502, "Valutazione non valida: processo sospeso");
     // Tolerance 0 asks for fewer defects, so a candidate with minor ones consumes another attempt instead of stopping the loop;

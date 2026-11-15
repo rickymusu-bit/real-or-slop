@@ -323,7 +323,11 @@ export async function showLibrary() {
     });
     saving = request; return request;
   };
-  const analysisLine = (item: Item) => ({ none: "Non ancora analizzata.", running: "Analisi in corso…",
+  /** An analysis still marked «running» after ten minutes belongs to a request that died (the server treats it the same way): it may
+   * have been charged, so it is repeated only with the explicit warning, like an uncertain outcome. */
+  const interrupted = (item: Item) => item.analysis.status === "running" && Date.now() - Date.parse(item.updated_at) > 10 * 60_000;
+  const unsure = (item: Item) => item.analysis.status === "uncertain" || interrupted(item);
+  const analysisLine = (item: Item) => interrupted(item) ? "Analisi interrotta: esito incerto, forse già addebitata." : ({ none: "Non ancora analizzata.", running: "Analisi in corso…",
     done: "Analizzata: tag generati una volta sola, da rivedere prima di approvare.",
     uncertain: "Esito incerto: " + item.analysis.error, failed: "Analisi non riuscita: " + item.analysis.error })[item.analysis.status];
   const metricText = (m: Metrics) => `lato ${m.long} px · rumore ${m.noise.toFixed(1)} · nitidezza ${m.sharpness.toFixed(1)} · contrasto ${m.contrast} · saturazione ${m.saturation.toFixed(2)}`;
@@ -366,12 +370,12 @@ export async function showLibrary() {
         ? `<textarea data-field="${key}" maxlength="${max}" rows="3" ${editable ? "" : "readonly"}>${escape(item[key])}</textarea>`
         : `<input data-field="${key}" maxlength="${max}" value="${escape(item[key])}" ${editable ? "" : "readonly"}>`}</label>`).join("")}
       ${item.origin === "REAL" ? descriptionFields(item.id, item.real_description, item.status === "trash", item.commons_description || "") : ""}
-      ${item.origin === "REAL" && !item.real_description && item.copy && item.status !== "trash" ? '<button type="button" id="library-description-analysis">Analisi combinata tag e descrizione (a pagamento)</button>' : ""}
+      ${item.origin === "REAL" && !item.real_description && item.copy && item.status !== "trash" ? (unsure(item) ? `<p class="hint" data-analysis-unsure>${escape(analysisLine(item))}</p>` : "") + '<button type="button" id="library-description-analysis">Analisi combinata tag e descrizione (a pagamento)</button>' : ""}
       <div class="library-tags"><span>Tag</span>${legend()}<ul>${sortByCategory(item.tags, item.categories).map(t => `<li class="tag-cat tag-cat-${categoryOf(item.categories, t)}" title="${escape(CATEGORY_LABELS[categoryOf(item.categories, t)])}">${escape(t)}${editable ? ` <button type="button" data-tag-remove="${escape(t)}" aria-label="Togli ${escape(t)}">×</button>` : ""}</li>`).join("") || "<li>nessuno</li>"}</ul>
         ${item.origin === "REAL" && !item.tags.some(t => categoryOf(item.categories, t) === "time") ? '<p class="hint" data-no-time>Nessun tag di Tempo: aggiungi il decennio se è noto.</p>' : ""}
         ${startTags(item)}
         ${editable ? '<div class="library-tag-entry library-inline"><input id="library-tag-input" list="library-tag-list" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="nuovo tag, Invio">' + categorySelect('id="library-tag-category"') + '</div><p id="library-tag-hint" class="hint">Scegli la categoria per un tag nuovo. Maiuscole, accenti e spazi vengono convertiti (São Paulo → sao-paulo); inglese per i nomi comuni.</p>' : ""}</div>
-      ${item.status === "new" && item.copy ? `<p class="library-analysis">${analysisLine(item)} ${analysis?.enabled && item.analysis.status !== "running" && item.analysis.status !== "done"
+      ${item.status === "new" && item.copy ? `<p class="library-analysis">${analysisLine(item)} ${analysis?.enabled && (item.analysis.status !== "running" || interrupted(item)) && item.analysis.status !== "done"
         ? `<button type="button" id="library-analyze">${item.analysis.status === "none" ? "Analizza con IA" : "Riprova l'analisi"} (a pagamento)</button>` : ""}</p>` : ""}
       ${editable && item.generated ? '<p><button type="button" id="library-restore">Ripristina i tag generati</button></p>' : ""}
       ${editable && item.origin === "SLOP" ? '<p class="hint">Per rigenerare: cestina questa SLOP e avvia un nuovo processo nello studio, con conferma e valutazione.</p>' : ""}
@@ -437,9 +441,9 @@ export async function showLibrary() {
     busy = true;
     try {
       if (button.id === "library-description-analysis") {
-        const unsure = open.analysis.status === "uncertain";
-        if (!window.confirm(`Analizzare nuovamente tag e descrizione di «${open.title}»? Una chiamata a pagamento con ${analysis?.model}. I tag saranno sostituiti.${unsure ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : ""}`)) return;
-        open = await call<Item>(`/${open.id}/analyze`, {method:"POST",body:JSON.stringify(unsure ? {confirm:true,refresh_description:true,repeat_uncertain:true} : {confirm:true,refresh_description:true})});
+        const repeat = unsure(open);
+        if (!window.confirm(`Analizzare nuovamente tag e descrizione di «${open.title}»? Una chiamata a pagamento con ${analysis?.model}. I tag saranno sostituiti.${repeat ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : ""}`)) return;
+        open = await call<Item>(`/${open.id}/analyze`, {method:"POST",body:JSON.stringify(repeat ? {confirm:true,refresh_description:true,repeat_uncertain:true} : {confirm:true,refresh_description:true})});
       }
       else if (button.dataset.tagRemove) open = await save(open, { tags: open.tags.filter(t => t !== button.dataset.tagRemove) });
       else if (button.id === "library-copy") { detailMessage("Preparo la copia di gioco…"); open = await prepareItemCopy<Item>(open); }
@@ -464,7 +468,7 @@ export async function showLibrary() {
         detailMessage("Inquadratura salvata.");
       }
       else if (button.id === "library-analyze" && analysis) {
-        const repeat = open.analysis.status === "uncertain" ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
+        const repeat = unsure(open) ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
         if (!window.confirm(`Analizzare «${open.title}» con ${analysis.model}? È una chiamata a pagamento. I tag attuali saranno sostituiti.${repeat}`)) return;
         detailMessage("Analisi in corso…");
         const analysed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(open.id)}/analyze`, { method: "POST",

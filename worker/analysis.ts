@@ -8,6 +8,7 @@ import { chosenModel } from "./models";
 import { CATEGORIES, categoryError, COLORS, forcedCategory, MEDIA, SINGLE, VISUAL, type Category } from "../shared/tag-categories";
 import { checkTag, suggestTag } from "../shared/tags";
 import { imageMime } from "../shared/image-format";
+import { IMAGE_MARK, jsonWithImage } from "./image-body";
 import { currentContext } from "./model-context";
 
 const VOCABULARY = 300, MAX_TAGS = 40, TIMEOUT_MS = 60_000, STALE_MS = 10 * 60_000;
@@ -45,11 +46,6 @@ const FORMAT = schemaFor(CATEGORIES), REAL_FORMAT = schemaFor(CATEGORIES, true),
 function outputText(value: Record<string, unknown>): string {
   const outputs = Array.isArray(value.output) ? value.output as Array<{ content?: Array<{ type?: string; text?: string }> }> : [];
   return outputs.flatMap(o => o.content || []).filter(c => c.type === "output_text" && typeof c.text === "string").map(c => c.text!).join("");
-}
-function base64(bytes: ArrayBuffer): string {
-  const view = new Uint8Array(bytes); let binary = "";
-  for (let i = 0; i < view.length; i += 8192) binary += String.fromCharCode(...view.subarray(i, i + 8192));
-  return btoa(binary);
 }
 export interface Conflict { label: string; proposed: Category; existing: Category }
 /** Model tags made conforming (ASCII form, refused words dropped), resolved through aliases and categorised. A decade is
@@ -102,10 +98,10 @@ async function send(env: Env, model: string, instructions: string, format: unkno
     response = await fetch((env.OPENAI_BASE_URL || "https://api.openai.com/v1/") + "responses", {
       method: "POST", redirect: "manual", signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: { Authorization: "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, instructions, text: { format }, max_output_tokens: MAX_OUTPUT_TOKENS, input: [{ role: "user", content: [
+      body: jsonWithImage({ model, instructions, text: { format }, max_output_tokens: MAX_OUTPUT_TOKENS, input: [{ role: "user", content: [
         { type: "input_text", text },
-        { type: "input_image", image_url: `data:${image.mime};base64,` + base64(image.bytes) },
-      ] }] }),
+        { type: "input_image", image_url: IMAGE_MARK },
+      ] }] }, image.bytes, image.mime),
     });
   } catch {
     // Sent or not, we cannot know: recorded as uncertain, never resent automatically.
