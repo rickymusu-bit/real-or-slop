@@ -1,4 +1,4 @@
-# Libreria delle immagini, tag e analisi — specifica 3.3.0
+# Libreria delle immagini, tag e analisi — specifica 3.3.1
 
 Stato: vigente; la 3.0.0 è in produzione con l'app 1.25.0, la 3.1.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T11:08:00Z.
 La 3.1.0 registra la REAL di origine delle SLOP gemelle (migrazione 0049), il tetto di risposta dell'analisi e il contesto 1.8.0.
@@ -9,7 +9,7 @@ senza strati `libreria-immagini.v1.8.0`, `categorie-tag.v1.1.0` e le parti su li
 `didascalie-wizard.v1.0.0` e `anteprima-descrizione.v1.2.0`, che restano nella cronologia git. Regole di contenuto delle SLOP e
 trasparenza: specifica `contenuti-e-trasparenza`. Copie di gioco: specifica `copie-di-gioco`.
 
-**Decisioni dell'owner del 2026-11-15, da implementare** (issue #136, aggiornata dalla specifica `generazione-slop` 5.0.0).
+**Decisioni dell'owner del 2026-11-15, da implementare** (issue #136, aggiornata dalla specifica `generazione-slop` 5.0.1).
 Fino al rilascio il resto di questa specifica descrive il comportamento dell'app 1.26.0: queste decisioni non sono ancora codice.
 Chi implementa aggiorna tutte le sezioni interessate e toglie questo riquadro.
 
@@ -23,8 +23,9 @@ Chi implementa aggiorna tutte le sezioni interessate e toglie questo riquadro.
   1.9.0 per questa parte e per «Prompt per le SLOP».
 - **Modelli predefiniti:** `gpt-6.1-sol` per il testo (deve leggere immagini), `gpt-image-2.5-flare` in qualità `high` per le immagini.
 - **Campi di una SLOP generata:** REAL di riferimento, ancoraggi del brief editoriale, prompt finale, qualità, valutazione
-  positiva e riepilogo dei tentativi; niente REAL campione né `change` obbligatorio. I tentativi rifiutati sono privati e
-  temporanei, **non** immagini della libreria. Tag assegnati sulla candidata effettivamente accettata.
+  positiva **dell'immagine intera prima di ritaglio e trattamento**, e riepilogo dei tentativi; niente REAL campione né `change`
+  obbligatorio. I tentativi rifiutati sono privati e temporanei, **non** immagini della libreria. La copia 4:5 si prepara
+  **dopo l'accettazione**; tag assegnati sulla copia effettivamente destinata al gioco.
 - **Stati:** approvare e pubblicare richiedono una copia di gioco 4:5 (specifica `copie-di-gioco`). Accettazione del loop
   crea un'immagine `new`: non equivale né all'approvazione né alla pubblicazione. 
 - **Impostazioni:** limite massimo di tentativi (1–5, predefinito 3) e tolleranza qualitativa distinti; snapshot nel processo
