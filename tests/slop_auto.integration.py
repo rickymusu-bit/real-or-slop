@@ -17,7 +17,7 @@ try:
     assert call('batches/'+bid,{'prompts':['x']*3},method='PUT')[0]==409
     # One brief request per REAL, each written once.
     code,b=call('batches/'+bid+'/prompts',{'confirm':True,'index':0});assert code==200 and len(control())==1 and b['prompts_status']=='none',b
-    assert call('batches/'+bid+'/prompts',{'confirm':True,'index':0})[0]==409 and control()==[]
+    control([]);assert call('batches/'+bid+'/prompts',{'confirm':True,'index':0})[0]==409 and control()==[]
     for index in (1,2):code,b=call('batches/'+bid+'/prompts',{'confirm':True,'index':index});assert code==200,b
     assert len(control())==2 and b['prompts_status']=='done',b
     assert call('batches/'+bid+'/prompts',{'confirm':True})[0]==409

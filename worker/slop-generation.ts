@@ -68,7 +68,8 @@ export async function processViews(env: Env, batchId: string) {
   }));
 }
 async function show(env: Env, batchId: string) {
-  const row = await load(env, batchId), processes = await processViews(env, batchId);
+  // Processes first: reading them may settle a stuck batch, and the batch row must reflect it.
+  const processes = await processViews(env, batchId), row = await load(env, batchId);
   const ids = (await env.DB.prepare("SELECT id FROM images WHERE generation_batch=? ORDER BY created_at,rowid").bind(batchId).all<{id: string}>()).results;
   const prompts: PromptEntry[] = row.pipeline_version === 2 ? processes.filter(p => p.prompt && p.brief).map(p => ({prompt: p.prompt, used: [], brief: p.brief!})) : parse(row.prompts, []);
   const config = parse<Snapshot | null>(row.loop_settings, null);

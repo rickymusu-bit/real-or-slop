@@ -28,6 +28,10 @@ async function batchView(env: Env, row: AutoRow) {
   const images = (await env.DB.prepare(`SELECT id,status,generation_slot,copy_key,analysis_status FROM images WHERE generation_batch=?
     ORDER BY created_at,rowid`).bind(row.id).all<{ id: string; status: string; generation_slot: string | null; copy_key: string | null; analysis_status: string }>()).results;
   const processes = await processViews(env, row.id);
+  // Reading the processes may have settled a stuck brief claim: the batch fields shown must be the current ones.
+  const fresh = await env.DB.prepare("SELECT prompts_status,prompts_error,updated_at FROM slop_batches WHERE id=?").bind(row.id)
+    .first<{ prompts_status: string; prompts_error: string; updated_at: string }>();
+  if (fresh) Object.assign(row, fresh);
   // A batch drawn before the twins holds slots of tags: its size is the one recorded at its start.
   return { id: row.id, size: row.auto_size, status: row.auto_status, prompts_status: row.prompts_status,
     prompts_error: row.prompts_error, slots: itemsOf(row).length || row.auto_size, attempted: row.pipeline_version === 2 ? processes.filter(p=>p.attempts.length).map(p=>p.slot) : parse<number[]>(row.auto_attempted, []),
