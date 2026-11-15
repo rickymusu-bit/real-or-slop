@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 21.0.0, aggiornata il 2026-11-15T09:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 22.0.0, aggiornata il 2026-11-15T11:08:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -13,11 +13,14 @@ in `CHANGELOG.md`.
   dal 2026-11-14: contesto 1.8.0 dei prompt SLOP, soglia di proposta al 10%, modello di immagini `gpt-image-2.6-flare` in qualità
   `medium` (da riportare a `gpt-image-2.5-flare` `high` con la prossima versione). Il primo lotto di gemelle (2026-11-15, 9 immagini,
   batch in pausa) ha mostrato copie rovinate dal trattamento e prompt inventati senza vedere la foto.
-- **Da implementare** (issue rickymusu-bit/real-or-slop#136, decisioni dell'owner del 2026-11-15): pipeline foto REAL → descrizione
-  → prompt con un solo elemento cambiato → foto SLOP → tag, una chiamata per foto a ogni passo; copie di gioco 4:5 per tutte;
-  trattamento dalle misure della REAL di origine; modelli predefiniti `gpt-6.1-sol` e `gpt-image-2.5-flare` `high`. Specifiche già
-  scritte: `generazione-slop` 4.0.0 e `copie-di-gioco` 9.0.0; le altre hanno un riquadro con le decisioni da implementare.
-- **Da decidere con l'owner:** criteri di scelta delle REAL; elemento inventato nella lista di fine partita.
+- **Da implementare, specifiche aggiornate il 2026-11-15:** #136 mantiene formato comune 4:5 e trattamento leggero dalla REAL di
+  riferimento; la successiva decisione dell'owner sostituisce **la variazione di un singolo elemento** con un brief semantico e
+  fotografico **non imitativo** e un loop generatore ↔ valutatore che privilegia la credibilità fotografica. Candidato in libreria
+  solo dopo esito positivo, poi revisione e pubblicazione manuali. Fino a 1–5 tentativi (3 predefiniti), tolleranza qualitativa
+  separata, chiamate registrate, ripresa senza duplicazioni automatiche. Specifiche: `generazione-slop` 5.0.0,
+  `copie-di-gioco` 9.1.0, `libreria-immagini` 3.3.0; **nessun codice di questa fase è ancora in produzione**.
+- **Selezione REAL:** otto principi qualitativi nella issue #138; nessun filtro o scoring automatico.
+- **Da decidere con l'owner:** se e come comunicare al giocatore il processo di generazione dopo la risposta.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
 
 ## Specifiche vigenti
@@ -27,11 +30,11 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.2.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.3.0 (decisioni da implementare) |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.0.0 (da implementare) |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.1.0 |
-| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 4.0.0 (da implementare) |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.1.0 (da implementare) |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.2.0 (criteri editoriali, UI invariata) |
+| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.0.0 (da implementare) |
 | Sezione Database | `docs/database-immagini.md` | 2.4.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.3.0 |
@@ -51,6 +54,14 @@ commit che li ha cancellati e `git show <commit>^:docs/<nome>` li mostra. Corris
 | `gioco-a-livelli.v1.0.1` | `gioco-a-livelli` |
 | `statistiche-impostazioni.v1.0.1` | `statistiche-impostazioni` |
 | `privacy-note-legali.v1.0.4` | `privacy-note-legali` |
+
+## Sequenza delle PR della nuova pipeline
+
+- **Documentazione:** specifiche, istruzioni e mappa, senza codice né rilascio.
+- **Backend:** stati persistenti del processo e dei tentativi, brief immutabile, valutazione strutturata, controllo spesa e fake API.
+- **Frontend:** ciclo nel browser, copia 4:5 sottoposta al giudizio, configurazioni, anteprime e revisione.
+- **Rilascio:** dopo verifica manuale delle anteprime e autorizzazione owner; il merge su main esegue deploy e migrazioni remote.
+  Consultare `generazione-slop` 5.0.0, sezione 10. I batch della 1.26.0 in pausa **non** vanno ripresi con schema incompatibile.
 
 ## Architettura
 
