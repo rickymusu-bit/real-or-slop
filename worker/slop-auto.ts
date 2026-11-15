@@ -1,17 +1,14 @@
-/** Automatic SLOP batches on proposal (spec `generazione-slop`, section 7): GET /slop/auto (open batch or proposal, free), start
- * (checks the proposal again, draws the REAL to twin), ignore, stop and finish. guardBatch: on an automatic batch prompts are not
- * edited, they are written once and each image goes to the generator at most once, recorded before the call. */
+/** Automatic editorial batches: confirmed snapshots, one open batch, per-photo persistent loops, manual review.
+ * Legacy batches remain inspectable; no incompatible paid resume. */
 import { HttpError, type Env } from "./core";
 import { numberSettings } from "./app-settings";
 import { IGNORE_KEY, MAX_BATCH, proposal, spreadPercent, type Proposal } from "../shared/twins";
-import { IMAGE_MODELS } from "../shared/models";
-import { chosenModel } from "./models";
-import { itemsOf } from "./slop-generation";
+import { initializeBatch, loopSnapshot, processViews, itemsOf } from "./slop-generation";
 import { realRows, twinCounts, twinItems } from "./twins";
 
 interface AutoRow {
   id: string; slots: string; prompts_status: string; prompts_error: string; auto_status: string;
-  auto_size: number; auto_snapshot: string; auto_attempted: string; created_at: string; updated_at: string;
+  auto_size: number; auto_snapshot: string; auto_attempted: string; pipeline_version: number; loop_settings: string; created_at: string; updated_at: string;
 }
 const parse = <T>(value: string | null, fallback: T): T => { try { return value ? JSON.parse(value) as T : fallback; } catch { return fallback; } };
 const now = () => new Date().toISOString();
@@ -21,7 +18,8 @@ async function openBatch(env: Env): Promise<AutoRow | null> {
   const row = await env.DB.prepare("SELECT * FROM slop_batches WHERE origin='auto' AND auto_status IN ('running','review') LIMIT 1").first<AutoRow>();
   if (!row || row.auto_status !== "review") return row;
   const pending = await env.DB.prepare("SELECT count(*) AS n FROM images WHERE generation_batch=? AND status='new'").bind(row.id).first<{ n: number }>();
-  if (pending?.n) return row;
+  const unresolved = await env.DB.prepare("SELECT count(*) AS n FROM slop_processes WHERE batch_id=? AND state IN ('review_needed','uncertain','failed','exhausted','running','prompting','retry')").bind(row.id).first<{n:number}>();
+  if (pending?.n || unresolved?.n) return row;
   await env.DB.prepare("UPDATE slop_batches SET auto_status='closed',updated_at=? WHERE id=? AND auto_status='review'").bind(now(), row.id).run();
   return null;
 }
@@ -29,9 +27,11 @@ async function openBatch(env: Env): Promise<AutoRow | null> {
 async function batchView(env: Env, row: AutoRow) {
   const images = (await env.DB.prepare(`SELECT id,status,generation_slot,copy_key,analysis_status FROM images WHERE generation_batch=?
     ORDER BY created_at,rowid`).bind(row.id).all<{ id: string; status: string; generation_slot: string | null; copy_key: string | null; analysis_status: string }>()).results;
+  const processes = await processViews(env, row.id);
   // A batch drawn before the twins holds slots of tags: its size is the one recorded at its start.
   return { id: row.id, size: row.auto_size, status: row.auto_status, prompts_status: row.prompts_status,
-    prompts_error: row.prompts_error, slots: itemsOf(row).length || row.auto_size, attempted: parse<number[]>(row.auto_attempted, []),
+    prompts_error: row.prompts_error, slots: itemsOf(row).length || row.auto_size, attempted: row.pipeline_version === 2 ? processes.filter(p=>p.attempts.length).map(p=>p.slot) : parse<number[]>(row.auto_attempted, []),
+    pipeline_version: row.pipeline_version, config: parse(row.loop_settings, null), processes,
     snapshot: parse<Proposal | null>(row.auto_snapshot, null), created_at: row.created_at, updated_at: row.updated_at,
     images: images.map(i => ({ id: i.id, status: i.status, index: parse<{ index?: number }>(i.generation_slot, {}).index ?? null,
       copy: !!i.copy_key, analysis: i.analysis_status })),
@@ -49,7 +49,7 @@ async function current(env: Env) {
 export async function autoState(env: Env) {
   const { v, open, proposal: next, reason } = await current(env);
   return { enabled: v.slop_auto_enabled === 1, threshold_percent: v.slop_auto_threshold_percent, max_batch: MAX_BATCH, paid_calls: !!env.OPENAI_API_KEY,
-    batch: open ? await batchView(env, open) : null, proposal: next, reason };
+    config: await loopSnapshot(env), batch: open ? await batchView(env, open) : null, proposal: next, reason };
 }
 
 /** The REAL of a batch: among those waiting for a twin, at random, so that a batch does not follow the order of loading. */
@@ -59,19 +59,23 @@ function draw<T>(list: T[], count: number): T[] {
   return out;
 }
 async function start(env: Env, data: Record<string, unknown>) {
-  if (Object.keys(data).some(key => !["size", "confirm"].includes(key))) throw new HttpError(400, "Campi non previsti");
+  if (Object.keys(data).some(key => !["size", "confirm", "config"].includes(key))) throw new HttpError(400, "Campi non previsti");
   if (data.confirm !== true) throw new HttpError(400, "Conferma le chiamate a pagamento del batch");
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
+  const snapshot = await loopSnapshot(env);
+  if (data.config !== undefined && Object.entries(snapshot).some(([key,value]) => !data.config || (data.config as Record<string,unknown>)[key] !== value)) throw new HttpError(409, "Configurazione cambiata: controlla e conferma il nuovo tetto di chiamate");
   const { open, proposal: next } = await current(env);
   if (open) throw new HttpError(409, "C'è già un batch automatico aperto: nessuna chiamata inviata");
   if (!next || next.size !== data.size)
     throw new HttpError(409, "La proposta è cambiata nel frattempo: nessun batch avviato. Controlla la nuova proposta");
-  const waiting = (await realRows(env)).filter(r => !r.twin).map(r => r.id);
+  const waiting = (await realRows(env)).filter(r => !r.twin && r.described).map(r => r.id);
+  if (waiting.length < next.size) throw new HttpError(409, "Descrizioni REAL mancanti: completale manualmente o autorizza l'analisi nel Database");
   const items = await twinItems(env, draw(waiting, next.size)), stamp = now(), batchId = crypto.randomUUID();
   try {
     await env.DB.prepare(`INSERT INTO slop_batches(id,theme,slots,created_at,updated_at,origin,auto_tag,auto_status,auto_size,auto_snapshot)
       VALUES(?,'[]',?,?,?,'auto',?,'running',?,?)`).bind(batchId, JSON.stringify(items), stamp, stamp, IGNORE_KEY, items.length, JSON.stringify(next)).run();
   } catch { throw new HttpError(409, "C'è già un batch automatico aperto: nessuna chiamata inviata"); }
+  await initializeBatch(env, batchId, items, snapshot);
   return autoState(env);
 }
 
@@ -96,6 +100,15 @@ export async function autoRoute(env: Env, method: string, rest: string, data: Re
   if (method !== "POST") throw new HttpError(405, "Metodo non consentito");
   if (rest === "start") return start(env, data);
   if (rest === "ignore") return ignore(env, data);
+  if (rest === "close") {
+    if (Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
+    const row = await openBatch(env);
+    if (!row || row.auto_status !== "review") throw new HttpError(409, "Prima interrompi o termina la generazione");
+    const pending = await env.DB.prepare("SELECT count(*) AS n FROM images WHERE generation_batch=? AND status='new'").bind(row.id).first<{n:number}>();
+    if (pending?.n) throw new HttpError(409, "Decidi prima le immagini nuove del batch");
+    await env.DB.prepare("UPDATE slop_batches SET auto_status='closed',updated_at=? WHERE id=?").bind(now(),row.id).run();
+    return autoState(env);
+  }
   if (rest === "stop" || rest === "finish") {
     if (Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
     return settle(env);
@@ -112,28 +125,17 @@ export async function autoBatchIds(env: Env): Promise<Set<string>> {
 export async function guardBatch(env: Env, method: string, rest: string, data: Record<string, unknown>) {
   const [batchId, action] = rest.split("/");
   if (!batchId || !/^[\w-]{1,64}$/.test(batchId)) return;
-  const row = await env.DB.prepare("SELECT origin,auto_status,prompts_status,slots FROM slop_batches WHERE id=?").bind(batchId)
-    .first<{ origin: string; auto_status: string; prompts_status: string; slots: string }>();
+  const row = await env.DB.prepare("SELECT origin,auto_status,prompts_status,slots,pipeline_version FROM slop_batches WHERE id=?").bind(batchId)
+    .first<{ origin: string; auto_status: string; prompts_status: string; slots: string; pipeline_version: number }>();
   if (!row || row.origin !== "auto") return;
   if (method === "PUT") throw new HttpError(409, "I prompt di un batch automatico non si modificano");
   if (method !== "POST") return;
+  if (row.pipeline_version !== 2) throw new HttpError(409, "Batch precedente: sola revisione; non si riprende automaticamente");
   if (row.auto_status !== "running") throw new HttpError(409, "Il batch automatico non è più in generazione: nessuna chiamata inviata");
   if (action === "prompts") {
     if (data.index !== undefined || row.prompts_status !== "none")
       throw new HttpError(409, "I prompt di un batch automatico si scrivono una volta sola: nessuna chiamata inviata");
     return;
   }
-  if (action === "images") {
-    const index = data.index, count = itemsOf(row).length;
-    if (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= count) throw new HttpError(400, "Immagine inesistente");
-    // Whatever the studio route would refuse is refused here first, so that a refused request never uses up the image.
-    if (data.confirm !== true || !env.OPENAI_API_KEY) return;
-    if (row.prompts_status !== "done") throw new HttpError(409, "Prima i prompt del batch: nessuna chiamata inviata");
-    const qualities = IMAGE_MODELS[await chosenModel(env, "image_model")] || [];
-    if (typeof data.quality !== "string" || !qualities.includes(data.quality)) return;
-    const marked = await env.DB.prepare(`UPDATE slop_batches SET auto_attempted=json_insert(auto_attempted,'$[#]',?1),updated_at=?2
-      WHERE id=?3 AND auto_status='running' AND NOT EXISTS (SELECT 1 FROM json_each(slop_batches.auto_attempted) WHERE value=?1)`)
-      .bind(index, now(), batchId).run();
-    if (!marked.meta.changes) throw new HttpError(409, "Questa immagine è già stata chiesta al generatore: nessuna chiamata ripetuta");
-  }
+  if (action === "images" && row.prompts_status !== "done") throw new HttpError(409, "Prima completa brief e prompt");
 }

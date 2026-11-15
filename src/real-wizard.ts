@@ -3,6 +3,8 @@
  * paid generation once per image, restore, «Togli dal caricamento»), crop, summary and publication. The draft lives in the
  * browser session; photos trashed or deleted elsewhere leave the wizard. */
 import "./real-wizard.css";
+import { descriptionFields, readDescription } from "./editorial-ui";
+import type { RealDescription } from "../shared/editorial";
 import { onLongPress, openPreview } from "./image-preview";
 import { escape } from "../shared/html";
 import { CATEGORY_LABELS, isCategory, type Category } from "../shared/tag-categories";
@@ -16,7 +18,7 @@ import { markGameMedia } from "./media-mark";
 type Stage = 1 | 2 | 3 | 4;
 interface Image {
   id: string; origin: "REAL" | "SLOP"; status: "new" | "approved" | "published" | "trash";
-  revision: number; title: string; description: string; tags: string[];
+  commons_description: string | null; real_description: RealDescription | null; revision: number; title: string; description: string; tags: string[];
   source_url: string; author: string; license_name: string; license_url: string;
   width: number; height: number; file: string;
   copy: { width: number; height: number; bytes: number; crop: Crop | null } | null;
@@ -60,6 +62,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   const COLUMNS_KEY = "ros-real-wizard-columns";
   let columns = 0;
   try { const saved = Number(localStorage.getItem(COLUMNS_KEY)); if (Number.isInteger(saved) && saved >= 1 && saved <= 6) columns = saved; } catch { /* private browsing */ }
+  const editorialDrafts = new Map<string, {id:string;key:string;value:string}>();
   let linksOpen = false;
   let searchPages: { files: Hit[]; next: string | null }[] = [], page = 0, searched = false;
   const knownHits = new Map<string, Hit>();
@@ -167,7 +170,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     (item.license_url ? '<dt>Licenza</dt><dd><a target="_blank" rel="noopener noreferrer" href="' + escape(item.license_url) +
       '">Apri il testo della licenza</a></dd>' : "") + "</dl></details>";
   const second = () => '<div class="rw-actions"><button type="button" data-rw="choose-generation" ' +
-    (!analysis?.enabled ? "disabled" : "") + '>Genera i tag con IA</button><span class="hint">' +
+    (!analysis?.enabled ? "disabled" : "") + '>Genera tag e descrizione con IA</button><span class="hint">' +
     (analysis?.enabled ? 'Modello: ' + escape(analysis.model) + '. Una chiamata a pagamento per immagine, con conferma.' :
       'Generazione non disponibile: ' + escape(analysis?.reason || "configurazione mancante")) + "</span>" +
     (staged().some(i => i.generated) ? '<button type="button" data-rw="choose-reset">Ripristina i tag generati</button>' : "") + "</div>" +
@@ -177,6 +180,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       '<div class="rw-editor-fields"><h3>' + escape(short(item.title, 90)) + '</h3>' +
       '<label class="rw-description">Descrizione <small>(la leggono i giocatori alla fine della partita)</small><textarea data-rw-description="' +
         escape(item.id) + '" maxlength="1000" rows="3" placeholder="Che cosa mostra la foto, dove e quando">' + escape(item.description) + '</textarea></label>' +
+      descriptionFields(item.id, item.real_description, false, item.commons_description || "") +
       '<label>Tag</label><div class="rw-tagbox"><div class="rw-pills">' +
         (item.tags.length ? sortByCategory(item.tags, item.categories).map(t => pill(t, categoryOf(item.categories, t), "rw-pill",
           '<button type="button" data-rw="remove-tag" data-id="' + escape(item.id) + '" data-tag="' +
@@ -209,8 +213,8 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       escape(i.id) + '"> ' + escape(short(i.title)) + '</label>').join("") + '</div><div class="rw-actions">' +
     '<button type="button" data-rw="close-reset">Annulla</button><button type="button" class="primary" data-rw="run-reset">Ripristina</button></div></dialog>';
   /** Step 3: the game copy of each photo, cut to the nearest common format at acquisition; the owner may change format and crop. */
-  const third = () => '<p class="hint">Ogni foto è già ritagliata al formato comune più vicino, centrata. Controlla la copia che vedranno ' +
-    'i giocatori e, se serve, cambia formato o ritaglio. Il giocatore vede sempre la foto intera.</p>' +
+  const third = () => '<p class="hint">Ogni foto ha una copia verticale 4:5 centrata. Controlla che conservi soggetti ed elementi fondamentali per ' +
+    'i giocatori e, se serve, sposta o ridimensiona il ritaglio. Il giocatore vede tutta la copia.</p>' +
     '<div class="rw-preview-grid">' + staged().map(i => '<article class="rw-final rw-crop" data-rw-crop-image="' + escape(i.id) + '">' +
       (i.copy ? '<div class="game-media-surface rw-final-image"><img data-game-media src="' + escape(i.file) + '" alt="' + escape(i.title) + '"></div>'
         : '<p class="hint">Copia di gioco non pronta.</p>') +
@@ -239,6 +243,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     const active = document.activeElement as HTMLElement | null;
     if (!active || !root.contains(active)) return null;
     if (active.id) return "#" + CSS.escape(active.id);
+    if (active.dataset.editorial && active.dataset.editorialId) return `[data-editorial="${CSS.escape(active.dataset.editorial)}"][data-editorial-id="${CSS.escape(active.dataset.editorialId)}"]`;
     for (const name of ["data-rw-new-tag", "data-rw-hit", "data-rw-description"])
       if (active.hasAttribute(name)) return "[" + name + '="' + CSS.escape(active.getAttribute(name)!) + '"]';
     if (active.dataset.rw) return '[data-rw="' + CSS.escape(active.dataset.rw) + '"]' +
@@ -255,6 +260,10 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       (stage === 1 ? first() : stage === 2 ? second() : stage === 3 ? third() : fourth()) +
       '<div class="rw-actions rw-reset"><button type="button" data-rw="new">Inizia un nuovo caricamento</button></div></div>';
     if (stage >= 3) markGameMedia(root);
+    for (const d of editorialDrafts.values()) {
+      const field = [...root.querySelectorAll<HTMLTextAreaElement>("[data-editorial]")].find(t => t.dataset.editorialId === d.id && t.dataset.editorial === d.key);
+      if (field) field.value = d.value;
+    }
     for (const [id, value] of drafts) {
       const field = [...root.querySelectorAll<HTMLTextAreaElement>("[data-rw-description]")].find(t => t.dataset.rwDescription === id);
       if (field) field.value = value;
@@ -392,6 +401,8 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   };
   root.addEventListener("input", event => {
     const target = event.target as HTMLTextAreaElement;
+    if (target.matches("[data-editorial]")) editorialDrafts.set(target.dataset.editorialId!+":"+target.dataset.editorial!,
+      {id:target.dataset.editorialId!,key:target.dataset.editorial!,value:target.value});
     if (target.matches("[data-rw-new-tag]")) {
       // The picker follows what is typed: the vocabulary's category for an existing tag, Time for a decade.
       const checked = tagFromInput(target.value);
@@ -426,6 +437,16 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       else if (pending.size >= 100) { target.checked = false; notice = "Limite di 100 immagini per caricamento raggiunto."; }
       else { pending.set(url, knownHits.get(url) || null); notice = ""; }
       renderSelected();
+      return;
+    }
+    if (target.matches("[data-editorial]")) {
+      const item = staged().find(i => i.id === target.dataset.editorialId);
+      if (item) {
+        const key = item.id+":"+target.dataset.editorial!, value=target.value;
+        void update(item, {real_description:readDescription(root,item.id)}).then(()=>{
+          if(editorialDrafts.get(key)?.value===value)editorialDrafts.delete(key);
+        }).catch(error=>{notice=String(error);render();});
+      }
       return;
     }
     if (target.matches("[data-rw-description]")) {

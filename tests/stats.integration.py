@@ -27,17 +27,17 @@ def sql(command):
 
 assert call('/stats', auth=False)[0] == 401 and call('/settings', auth=False)[0] == 401
 # Quality beside the models.
-status, models = call('/models'); assert status == 200 and models['image_quality'] == 'medium', models
+status, models = call('/models'); assert status == 200 and models['image_quality'] == 'high', models
 assert call('/models', {'image_quality': 'ultra'}, method='PUT')[0] == 400
 status, models = call('/models', {'image_quality': 'xhigh'}, method='PUT'); assert models['image_quality'] == 'xhigh', models
 status, models = call('/models', {'image_model': 'gpt-image-2'}, method='PUT')
-assert models['image_quality'] == 'medium', models  # gpt-image-2 has no «xhigh»: back to medium
+assert models['image_quality'] == 'high', models  # gpt-image-2 has no «xhigh»: back to medium
 assert call('/models', {'image_model': 'gpt-image-2.5-flare', 'image_quality': 'max'}, method='PUT')[1]['image_quality'] == 'max'
 call('/models', {'image_quality': 'medium'}, method='PUT')
 
 # Numbers of Settings: defaults, bounds, used by the SLOP studio.
 status, settings = call('/settings')
-assert settings['values'] == {'slop_section_min_real': 50, 'open_game_hours': 24, 'slop_auto_enabled': 1, 'slop_auto_threshold_percent': 33}, settings
+assert settings['values'] == {'slop_section_min_real': 50, 'open_game_hours': 24, 'slop_auto_enabled': 1, 'slop_auto_threshold_percent': 33, 'max_generation_attempts':3, 'editorial_tolerance':1}, settings
 for wrong in ({'slop_section_min_real': 0}, {'slop_group_min_real': 5}, {'open_game_hours': 1.5}, {'open_game_hours': '24'}, {'other': 1}, {}):
     assert call('/settings', wrong, method='PUT')[0] == 400, wrong
 status, settings = call('/settings', {'slop_section_min_real': 7}, method='PUT')
@@ -75,13 +75,12 @@ try:
     # st-done: REAL 1 of 2 recognised, SLOP 1 of 2 with one timed out: BA 0.5, score 0.
     assert stats['answers']['real']['total'] >= 2 and stats['answers']['timed_out'] >= 1, stats['answers']
     assert set(stats['calls']) == {'totals', 'recent'} and all(set(c) == {'kind', 'model', 'status', 'input_tokens', 'output_tokens', 'created_at'} for c in stats['calls']['recent'])
-    assert {t['kind'] for t in stats['calls']['totals']} <= {'analysis', 'prompts', 'images'}
+    assert {t['kind'] for t in stats['calls']['totals']} <= {'analysis', 'prompts', 'images', 'evaluation'}
     balance = stats['balance']
     assert balance['real']['published'] >= 2 and balance['slop']['published'] >= 2 and [l['id'] for l in balance['levels']] == ['facile', 'medio', 'difficile', 'esperto'], balance
     share = balance['real']['published'] / (balance['real']['published'] + balance['slop']['published'])
     assert abs(balance['real_share_published'] - round(share, 3)) < 0.001 and balance['warning'] == (share < 0.4 or share > 0.6), balance
-    formats = {f['format']: f for f in balance['formats']}
-    assert formats['3:2']['real'] >= 1 and formats['4:5']['real'] >= 1 and formats['4:5']['slop'] >= 2, balance['formats']
+    assert 'formats' not in balance
     assert call('/stats')[1]['period'] == '30' and call('/stats?period=all')[0] == 200
 finally:
     sql("DELETE FROM game_sessions WHERE id IN ('st-now','st-old','st-done','st-expired'); DELETE FROM images WHERE id LIKE 'st-img-%'")

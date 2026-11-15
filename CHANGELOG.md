@@ -1,7 +1,23 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T13:42:00+01:00. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T13:54:58Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.27.0 — 2026-11-15T13:54:58Z (implementazione #139, da rilasciare)
+
+- Una sola analisi multimodale REAL produce tag e descrizione privata, salvati atomici con modello e revisione della copia.
+  La descrizione è correggibile nel wizard e nel Database; testo Commons e tag restano indipendenti. Nessun backfill pagato.
+- Una chiamata testuale per REAL produce brief e prompt; brief congelato con hash al primo tentativo. Processi e tentativi
+  persistono, con rivendicazione atomica prima delle chiamate, snapshot di modelli/qualità/limite/tolleranza e idempotenza.
+- Valutazione della candidata intera, mai del crop: accetta, rigenera, rivede il prompt, riprogetta o sospende per revisione.
+  Stop alla prima accettazione, limite 1–5 (default 3), massimo 2+2N chiamate; nessuna candidata bocciata nella libreria.
+- Copie 4:5, trattamento leggero v3 dalla sola REAL di riferimento; filtro e rifacimento in gruppo delle vecchie copie.
+  Il gioco esclude copie precedenti; approvare e pubblicare restano azioni dell’owner. La rigenerazione diretta della libreria
+  richiede un nuovo processo nello studio, così non può scavalcare la valutazione.
+- Migrazione 0050 con campi e tabelle aggiuntivi, ritiro delle copie pubblicate non 4:5 e nessuna conversione dei batch precedenti: sola revisione. Anteprime temporanee private per sette giorni,
+  pulizia alla cancellazione e in manutenzione; il registro delle chiamate conserva gli esiti senza archiviare immagini eliminate.
+- Verifiche riuscite: lint, 95 test unitari, build, dry-run e suite completa API/browser (desktop e mobile), con API fittizia. Nessuna chiamata reale,
+  migrazione remota, merge o rilascio eseguiti da questa implementazione.
 
 ## Dopo la 1.26.0 — 2026-11-15T13:42:00+01:00 (nuove decisioni editoriali, solo documentazione)
 

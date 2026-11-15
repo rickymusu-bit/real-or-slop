@@ -1,6 +1,4 @@
-/** Game copy made in the owner's browser (spec `copie-di-gioco`, sections 3 and 4): crop, scale, treatment of a SLOP towards its
- * «REAL campione», WebP encoding, measures of the copy, upload to the library; saving «Inquadratura» makes a new copy only when the
- * crop changed. Copies without measures are measured when the dashboard opens. */
+/** Browser 4:5 copies: shared recipe, optional light treatment from the source REAL, and measured WebP uploads. */
 import { centredCrop, copyDimensions, cropQuery, GAME_COPY, viewQuery, type Crop, type View } from "../shared/game-copy";
 import { gap, measure, METRICS_VERSION, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Treatment } from "../shared/copy-treatment";
 
@@ -95,19 +93,11 @@ function lookOf(slot: NonNullable<TreatableItem["generation"]>["slot"]) {
 export async function treatmentPlan(item: TreatableItem, options: { change?: boolean; off?: boolean } = {}): Promise<TreatmentPlan | null> {
   if (item.origin !== "SLOP") return null;
   const stored = item.treatment, slot = item.generation?.slot, look = lookOf(slot);
-  const medium = stored?.medium || look.medium, color = stored?.color || look.color;
-  const off = options.off ?? stored?.off ?? false;
-  if (stored && !options.change) return { off, seed: stored.seed, medium, color, sample: stored.sample };
-  const wantedId = !options.change ? slot?.sample : null;
-  let sample = wantedId ? await sampleOf(wantedId) : null;
-  if (!sample?.metrics) {
-    const labels = [color, medium, look.time].filter(Boolean);
-    const list = labels.length ? await fetch(API + "?status=library&origin=REAL&match=all&tags=" + encodeURIComponent(labels.join(",")), { credentials: "same-origin", cache: "no-store" }) : null;
-    const items = list?.ok ? ((await list.json()) as { items: Sample[] }).items.filter(i => i.metrics && i.id !== stored?.sample.id && i.id !== slot?.source) : [];
-    sample = items.length ? items[Math.floor(Math.random() * items.length)] : slot?.source && !options.change ? await sampleOf(slot.source) : null;
-  }
-  if (!sample?.metrics) return null;
-  return { off, seed: randomSeed(), medium, color, sample: { id: sample.id, metrics: sample.metrics } };
+  if (!slot?.source) return null;
+  const source = await sampleOf(slot.source);
+  if (!source?.metrics) return null;
+  return { off: options.off ?? (stored?.version === TREATMENT_VERSION && stored.sample.id === source.id ? stored.off : false), seed: stored?.version === TREATMENT_VERSION && stored.sample.id === source.id ? stored.seed : randomSeed(),
+    medium: look.medium, color: look.color, sample: { id: source.id, metrics: source.metrics } };
 }
 
 /** Encodes `source` (or, without it, the stored original) along `crop` (nearest format, centred, without it), with the treatment of

@@ -46,6 +46,7 @@ with sync_playwright() as p:
             confirms.append(dialog.message)
             dialog.accept() if dialog.message.startswith(('Analizzare 2 immagini', 'Ripristinare questa versione', 'Spostare', '1 immagine è pubblicata')) else dialog.dismiss()
         page.on('dialog', answer)
+        assert page.request.put(base + '/api/admin/library/models', data={'image_quality':'medium'}, headers={'Origin':base}).status == 200
         page.goto(base + '/admin')
         expect(page.locator('#dashboard-loading')).to_have_count(0, timeout=15000)  # the loading line goes once all sections are in
         expect(page.locator('#real-wizard .admin-loading')).to_have_count(0)
@@ -96,7 +97,7 @@ with sync_playwright() as p:
         expect(page.locator('#library-budget')).to_have_count(0)
         page.locator('#library-models summary').click()
         text_select, image_select = page.locator('#library-models-form [name=text_model]'), page.locator('#library-models-form [name=image_model]')
-        expect(text_select).to_have_value('gpt-6.1-terra')
+        expect(text_select).to_have_value('gpt-6.1-sol')
         expect(image_select).to_have_value('gpt-image-2.5-flare')
         expect(image_select.locator('option[value="gpt-image-2"]')).to_contain_text('dismesso da OpenAI il 10/02/2027')
         expect(image_select.locator('option[value="gpt-image-2.6-flare"]')).to_have_attribute('disabled', '')

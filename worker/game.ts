@@ -21,12 +21,12 @@ interface Session {
 
 /** Published images available to the game, by origin. */
 async function catalog(env: Env) {
-  return (await env.DB.prepare(GAME_IMAGE + " WHERE status='published' AND copy_key IS NOT NULL").all<ImageRow>()).results
+  return (await env.DB.prepare(GAME_IMAGE + " WHERE status='published' AND copy_key IS NOT NULL AND json_extract(copy_crop,'$.format')='4:5'").all<ImageRow>()).results
     .map(row => ({ ...row, status: "approved" }));
 }
 /** A level is playable when every position can be either origin: at least as many REAL and as many SLOP as its photos. */
 export async function levels(env: Env) {
-  const rows = (await env.DB.prepare("SELECT origin,count(*) AS n FROM images WHERE status='published' AND copy_key IS NOT NULL GROUP BY origin")
+  const rows = (await env.DB.prepare("SELECT origin,count(*) AS n FROM images WHERE status='published' AND copy_key IS NOT NULL AND json_extract(copy_crop,'$.format')='4:5' GROUP BY origin")
     .all<{ origin: string; n: number }>()).results;
   const real = rows.find(r => r.origin === "REAL")?.n || 0, slop = rows.find(r => r.origin === "SLOP")?.n || 0;
   return { levels: LEVEL_IDS.map(level => ({ id: level, ...LEVELS[level], available: real >= LEVELS[level].photos && slop >= LEVELS[level].photos })) };

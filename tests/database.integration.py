@@ -125,39 +125,13 @@ held = sql(f"SELECT copy_key FROM images WHERE id='{slop['id']}'")[0]['copy_key'
 status, slop = call(f'{API}/{slop["id"]}/withdraw', {}); assert slop['status'] == 'approved' and slop['in_play'] == 0, slop
 assert not stored(held)
 
-# Regeneration: only a SLOP, not published, confirmed, with an allowed quality and the current revision.
+# Regeneration must start a new reviewed editorial process; no paid bypass remains on the library row.
 openai([])
-assert call(f'{API}/{real["id"]}/regenerate', {'confirm': True, 'prompt': 'x', 'quality': 'medium', 'revision': real['revision']})[0] == 409
-assert call(f'{API}/{slop["id"]}/regenerate', {'prompt': 'x', 'quality': 'medium', 'revision': slop['revision']})[0] == 400
-assert call(f'{API}/{slop["id"]}/regenerate', {'confirm': True, 'prompt': 'x', 'quality': 'ultra', 'revision': slop['revision']})[0] == 400
-assert call(f'{API}/{slop["id"]}/regenerate', {'confirm': True, 'prompt': 'x', 'quality': 'medium', 'revision': slop['revision'] - 1})[0] == 409
-assert not openai(), 'no call before the checks pass'
 old = sql(f"SELECT original_key,copy_key FROM images WHERE id='{slop['id']}'")[0]
-calls_before = sql("SELECT count(*) AS n FROM paid_calls WHERE kind='images'")[0]['n']
-status, regenerated = call(f'{API}/{slop["id"]}/regenerate', {'confirm': True, 'prompt': 'A riot in a square at dusk, 1969', 'quality': 'medium',
-                                                             'revision': slop['revision']})
-assert status == 200, regenerated
-log = openai(); assert len(log) == 1 and log[0]['path'] == '/v1/images/generations', log
-assert set(log[0]['body']) == {'model', 'prompt', 'n', 'size', 'quality'} and log[0]['body']['prompt'] == 'A riot in a square at dusk, 1969'
-assert log[0]['body']['size'] == '1536x1024'  # 3:2, the format of its game copy
-assert regenerated['status'] == 'new' and regenerated['copy'] is None and regenerated['analysis']['status'] == 'none', regenerated
-assert regenerated['prompt'] == 'A riot in a square at dusk, 1969' and regenerated['stats'] == {'views': 0, 'correct': 0}, regenerated
-assert regenerated['tags'] == ['db-riot'] and regenerated['generated'] is None, regenerated
-assert sql("SELECT count(*) AS n FROM paid_calls WHERE kind='images'")[0]['n'] == calls_before + 1
-new = sql(f"SELECT original_key FROM images WHERE id='{slop['id']}'")[0]
-assert new['original_key'] != old['original_key']
-# New copy, a new analysis allowed once, approval.
-status, original = call(f'{API}/{slop["id"]}/original'); assert status == 200
-status, slop = call(f'{API}/{slop["id"]}/copy', raw=webp(original), mime='image/webp'); assert status == 201, slop
-openai([{'tags': ['db-riot', 'db-dusk'], 'caption': 'Ignorata dal Worker.'}])
-status, slop = call(f'{API}/{slop["id"]}/analyze', {'confirm': True}); assert status == 200 and slop['analysis']['status'] == 'done', slop
-assert 'db-dusk' in slop['tags'] and 'caption' not in slop, slop
-assert call(f'{API}/{slop["id"]}/analyze', {'confirm': True})[0] == 409  # once per image
-status, slop = call(f'{API}/{slop["id"]}/approve', {}); assert slop['status'] == 'approved', slop
-# A published SLOP must leave the game first.
-assert call(f'{API}/{slop["id"]}/publish', {})[1]['status'] == 'published'
-status, result = call(f'{API}/{slop["id"]}/regenerate', {'confirm': True, 'prompt': 'x', 'quality': 'medium', 'revision': slop['revision'] + 1})
-assert status == 409 and 'pubblicata' in result['error'], result
+status, result = call(f'{API}/{slop["id"]}/regenerate', {'confirm': True, 'prompt': 'A new scene', 'quality': 'medium', 'revision': slop['revision']})
+assert status == 409 and 'nuovo processo' in result['error'], result
+assert openai() == []
+assert sql(f"SELECT original_key,copy_key FROM images WHERE id='{slop['id']}'")[0] == old
 
 # The game is over: listing sweeps the retired copies no game needs.
 call(API)

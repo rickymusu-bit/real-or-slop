@@ -45,7 +45,9 @@ test("the treatment brings a clean sharp image towards a soft, grainy sample", (
   const after = measure(rgba, 200, 150);
   assert.equal(applied.monochrome, "black-and-white");
   assert.equal(after.saturation, 0);
-  assert.ok(Math.abs(after.contrast - 100) < 25, "contrast " + after.contrast);
+  assert.ok(applied.contrast >= 0.85 && applied.contrast <= 1.2);
+  assert.ok(Math.abs(after.contrast - before.contrast) < before.contrast * 0.25, "light contrast adjustment");
+  assert.ok(applied.blur <= 1 && applied.cast.every(v=>Math.abs(v)<=8));
   assert.ok(after.noise > before.noise + 2, "noise " + after.noise);
   assert.ok(gap(after, target) < gap(before, target), `gap ${gap(after, target)} < ${gap(before, target)}`);
   // Same seed, same pixels.
@@ -58,10 +60,10 @@ test("a blurry sample makes the treatment blur a sharp image", () => {
   assert.ok(applied.blur > 0);
   assert.ok(measure(rgba, 160, 120).sharpness < measure(sharp, 160, 120).sharpness);
 });
-test("long side of a treated copy: the sample's, within the crop and the recipe, at least 160 px", () => {
+test("long side of a treated copy: the sample's, within the crop and the recipe, at least 480 px", () => {
   assert.equal(treatedLong(700, 1536, 1536), 700);
   assert.equal(treatedLong(2400, 1536, 1536), 1536);
-  assert.equal(treatedLong(90, 1536, 1536), 160);
+  assert.equal(treatedLong(90, 1536, 1536), 480);
   assert.equal(treatedLong(700, 500, 1536), 500);
 });
 test("the Worker accepts only well-formed measures and treatments", () => {
@@ -73,6 +75,6 @@ test("the Worker accepts only well-formed measures and treatments", () => {
   const t = { version: 1, off: false, seed: 5, long: 700, medium: "film-still", color: "color", sample: { id: "abc", metrics: m } };
   assert.ok(validTreatment(t));
   assert.ok(validTreatment({ ...t, version: 2 }), "the current version");
-  assert.equal(validTreatment({ ...t, version: 3 }), null);
+  assert.equal(validTreatment({ ...t, version: 4 }), null);
   assert.equal(validTreatment({ ...t, sample: { id: "a b", metrics: m } }), null);
 });

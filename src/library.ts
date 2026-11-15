@@ -3,6 +3,8 @@
  * preview, selection, detail with editing, crop, analysis, regeneration, starting tags of a generated SLOP, distribution) and Settings
  * (spec `statistiche-impostazioni`: models, model context, vocabulary, leaderboard, thresholds, open games). */
 import "./library.css";
+import { descriptionFields, readDescription } from "./editorial-ui";
+import type { RealDescription } from "../shared/editorial";
 import "./admin-navigation.css";
 import "./caption-count.css";
 import "./admin-loading.css";
@@ -27,7 +29,7 @@ import { tagFromInput } from "../shared/tag-input";
 type Status = "new" | "approved" | "published" | "trash";
 interface Item {
   id: string; origin: "REAL" | "SLOP"; status: Status; trashed_from: Status | null; title: string; description: string;
-  explanation: string; source_url: string; author: string; license_name: string; license_url: string;
+  commons_description: string | null; real_description: RealDescription | null; explanation: string; source_url: string; author: string; license_name: string; license_url: string;
   prompt: string; model: string; width: number; height: number; copy: { width: number; height: number; bytes: number; crop: Crop | null; sha256: string | null } | null;
   rights_confirmed: boolean; revision: number; tags: string[]; file: string; updated_at: string; created_at: string;
   analysis: { status: "none" | "running" | "done" | "uncertain" | "failed"; error: string; at: string | null };
@@ -77,7 +79,7 @@ export async function showLibrary() {
   try { const saved = JSON.parse(localStorage.getItem(SORT_KEY) || "null") as typeof sort | null;
     if (saved && ["added", "views", "accuracy"].includes(saved.by) && ["asc", "desc"].includes(saved.order)) sort = saved; } catch { /* private browsing */ }
   let slopStudio: { refresh: () => Promise<void> } = { refresh: async () => {} };
-  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "", group: "", incomplete: false };
+  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "", group: "", redo_copy: false, incomplete: false };
   let measuring = false;
   let autoBox: { refresh: () => Promise<void> } = { refresh: async () => {} };
   let models: Models | null = null;
@@ -110,6 +112,7 @@ export async function showLibrary() {
         <select id="library-tag-match" aria-label="Come combinare i tag"><option value="all">con tutti i tag</option><option value="any">con almeno un tag</option></select></div>
         <div class="rw-pills" id="library-tag-pills"></div></div>
       <label>Gruppo<select id="library-group"><option value="">tutti</option></select></label>
+      <label class="library-check-inline"><input type="checkbox" id="library-redo-copy"> Copia da rifare in 4:5</label>
       <label class="library-check-inline"><input type="checkbox" id="library-incomplete"> Senza Genere, Colore o Supporto</label>
       <label>Ordina per<select id="library-sort"><option value="added">data di aggiunta</option><option value="views">visualizzazioni</option><option value="accuracy">accuratezza</option></select></label>
       <label>Ordine<select id="library-order"><option value="desc">decrescente</option><option value="asc">crescente</option></select></label>
@@ -145,6 +148,7 @@ export async function showLibrary() {
     <details id="library-thresholds" class="library-vocabulary"><summary>Studio SLOP</summary>
       <form id="library-thresholds-form" class="library-inline"><label>REAL approvate o pubblicate per aprire lo studio<input type="number" name="slop_section_min_real" required></label>
         <label>Proposte automatiche<select name="slop_auto_enabled"><option value="1">attive</option><option value="0">spente</option></select></label>
+        <label>Tentativi massimi per SLOP<input type="number" name="max_generation_attempts" required></label><label>Tolleranza (0 rigorosa, 1 normale, 2 permissiva)<input type="number" name="editorial_tolerance" required></label>
         <label>Soglia di proposta (% di spread)<input type="number" name="slop_auto_threshold_percent" required></label><button>Salva</button></form>
       <p class="hint">Stime da verificare sui primi temi reali. Una proposta di generazione compare quando
         100 × (REAL − SLOP gemelle approvate o pubblicate) / REAL raggiunge la soglia (33%: 1,5 REAL per ogni gemella); spegnere le proposte non ferma un batch già avviato.</p></details>
@@ -226,7 +230,7 @@ export async function showLibrary() {
   const load = async () => {
     const seq = ++loadSeq;
     const params = new URLSearchParams({ status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q, batch: filter.batch,
-      group: filter.group, incomplete: filter.incomplete ? "1" : "" });
+      group: filter.group, redo_copy: filter.redo_copy ? "1" : "", incomplete: filter.incomplete ? "1" : "" });
     $("#library-batch-filter").hidden = !filter.batch;
     const data = await call<{ items: Item[]; counts: { status: string; origin: string; n: number }[] }>("?" + params);
     if (seq !== loadSeq) return;
@@ -255,7 +259,7 @@ export async function showLibrary() {
     if (!pills) return "";
     const source = item.generation?.source;
     return `<div class="library-start-tags" data-start-tags><span class="image-preview-label">Tag di partenza</span>
-      <p class="hint">${source ? "Tag della REAL di cui questa SLOP è la gemella" : "Tag da cui è stato scritto il prompt"}; i tag dell'immagine sono quelli dell'analisi.</p>
+      <p class="hint">${source ? "Tag della REAL di riferimento" : "Tag da cui è stato scritto il prompt"}; i tag dell'immagine sono quelli dell'analisi.</p>
       <div class="image-preview-tags">${pills}</div>${source ? `<p><button type="button" data-open-source="${escape(source)}">Apri la REAL di origine</button></p>` : ""}</div>`;
   };
   const preview = (item: Item) => openPreview(item.origin === "REAL"
@@ -276,7 +280,7 @@ export async function showLibrary() {
     const trash = filter.status === "trash";
     bar.innerHTML = `<strong>${n} selezionate</strong>` + (trash
       ? '<button data-bulk="restore">Ripristina</button><button data-bulk="delete" class="danger">Elimina definitivamente</button>'
-      : '<button data-bulk="trash">Sposta nel cestino</button><label><input type="checkbox" id="library-bulk-rights"> Diritti delle REAL verificati</label><button data-bulk="analyze">Analizza con IA</button><button data-bulk="complete">Completa Genere, Colore e Supporto</button><button data-bulk="approve">Approva</button><button data-bulk="publish">Pubblica</button><button data-bulk="withdraw">Ritira dal gioco</button>' +
+      : '<button data-bulk="trash">Sposta nel cestino</button><label><input type="checkbox" id="library-bulk-rights"> Diritti delle REAL verificati</label><button data-bulk="copy-portrait">Rifai la copia in 4:5</button><button data-bulk="analyze">Analizza con IA</button><button data-bulk="complete">Completa Genere, Colore e Supporto</button><button data-bulk="approve">Approva</button><button data-bulk="publish">Pubblica</button><button data-bulk="withdraw">Ritira dal gioco</button>' +
         '<label>Tag<input id="library-bulk-tag" autocomplete="off" autocapitalize="none" spellcheck="false"></label>' + categorySelect('id="library-bulk-category"') + '<button data-bulk="tag-add">Aggiungi tag</button><button data-bulk="tag-remove">Togli tag</button>') +
       '<button data-bulk="none">Deseleziona</button>';
   };
@@ -301,10 +305,15 @@ export async function showLibrary() {
 
   // Detail: every change is saved at once; tags too.
   const detail = $<HTMLDialogElement>("#library-detail");
-  const save = async (item: Item, change: Partial<Record<keyof Item | "tag_categories", unknown>>) => {
-    const updated = await call<Item>("/" + encodeURIComponent(item.id), { method: "PATCH", body: JSON.stringify({ revision: item.revision, ...change }) });
-    items = items.map(i => i.id === updated.id ? updated : i);
-    return updated;
+  let saving: Promise<unknown> = Promise.resolve();
+  const save = (item: Item, change: Partial<Record<keyof Item | "tag_categories", unknown>>): Promise<Item> => {
+    const request = saving.catch(() => {}).then(async () => {
+      const latest = items.find(i=>i.id===item.id) || (open?.id===item.id ? open : item);
+      const updated = await call<Item>("/" + encodeURIComponent(item.id), { method: "PATCH", body: JSON.stringify({ revision: latest.revision, ...change }) });
+      items = items.map(i => i.id === updated.id ? updated : i);
+      return updated;
+    });
+    saving = request; return request;
   };
   const analysisLine = (item: Item) => ({ none: "Non ancora analizzata.", running: "Analisi in corso…",
     done: "Analizzata: tag generati una volta sola, da rivedere prima di approvare.",
@@ -321,10 +330,10 @@ export async function showLibrary() {
   const measuresBlock = (item: Item, editable: boolean) => {
     const t = item.treatment;
     const treatment = item.origin !== "SLOP" ? "" : !t ? '<p class="hint" data-treatment>Copia senza trattamento.</p>'
-      : `<p class="hint" data-treatment>${t.off ? "Trattamento spento" : `Trattamento verso la REAL campione <code>${escape(t.sample.id.slice(0, 8))}</code> (${escape(t.medium || "supporto non indicato")}, ${escape(t.color || "colore non indicato")})` +
+      : `<p class="hint" data-treatment>${t.off ? "Trattamento spento" : `Trattamento verso la REAL di riferimento <code>${escape(t.sample.id.slice(0, 8))}</code> (${escape(t.medium || "supporto non indicato")}, ${escape(t.color || "colore non indicato")})` +
         (t.gap !== undefined ? `, scarto dall'obiettivo ${Math.round(t.gap * 100)}%` : "") + `: ${metricText(t.sample.metrics)}`}.</p>`;
     const commands = item.origin === "SLOP" && editable && item.copy ? `<div class="library-inline" data-treatment-commands>` +
-      (t && !t.off ? '<button type="button" id="library-treatment-change">Altra REAL campione</button><button type="button" id="library-treatment-off">Senza trattamento</button>'
+      (t && !t.off ? '<button type="button" id="library-treatment-off">Senza trattamento</button>'
         : '<button type="button" id="library-treatment-on">Con trattamento</button>') + "</div>" : "";
     return (item.metrics ? `<p class="hint" data-metrics>Misure della copia: ${metricText(item.metrics)}.</p>` : "") + treatment + commands;
   };
@@ -348,6 +357,8 @@ export async function showLibrary() {
       ${fields.map(([key, label, max, area]) => `<label>${label}${area
         ? `<textarea data-field="${key}" maxlength="${max}" rows="3" ${editable ? "" : "readonly"}>${escape(item[key])}</textarea>`
         : `<input data-field="${key}" maxlength="${max}" value="${escape(item[key])}" ${editable ? "" : "readonly"}>`}</label>`).join("")}
+      ${item.origin === "REAL" ? descriptionFields(item.id, item.real_description, item.status === "trash", item.commons_description || "") : ""}
+      ${item.origin === "REAL" && !item.real_description && item.copy && item.status !== "trash" ? '<button type="button" id="library-description-analysis">Analisi combinata tag e descrizione (a pagamento)</button>' : ""}
       <div class="library-tags"><span>Tag</span>${legend()}<ul>${sortByCategory(item.tags, item.categories).map(t => `<li class="tag-cat tag-cat-${categoryOf(item.categories, t)}" title="${escape(CATEGORY_LABELS[categoryOf(item.categories, t)])}">${escape(t)}${editable ? ` <button type="button" data-tag-remove="${escape(t)}" aria-label="Togli ${escape(t)}">×</button>` : ""}</li>`).join("") || "<li>nessuno</li>"}</ul>
         ${item.origin === "REAL" && !item.tags.some(t => categoryOf(item.categories, t) === "time") ? '<p class="hint" data-no-time>Nessun tag di Tempo: aggiungi il decennio se è noto.</p>' : ""}
         ${startTags(item)}
@@ -355,8 +366,7 @@ export async function showLibrary() {
       ${item.status === "new" && item.copy ? `<p class="library-analysis">${analysisLine(item)} ${analysis?.enabled && item.analysis.status !== "running" && item.analysis.status !== "done"
         ? `<button type="button" id="library-analyze">${item.analysis.status === "none" ? "Analizza con IA" : "Riprova l'analisi"} (a pagamento)</button>` : ""}</p>` : ""}
       ${editable && item.generated ? '<p><button type="button" id="library-restore">Ripristina i tag generati</button></p>' : ""}
-      ${editable && item.origin === "SLOP" && analysis?.enabled ? `<div class="db-regenerate"><p class="hint">Rigenera l'immagine dal prompt qui sopra con ${escape(models?.image_model || "il modello di immagini")}, qualità ${escape(models?.image_quality || "medium")} (Impostazioni): il generatore riceve solo il testo. Poi i tag vengono rigenerati dall'analisi. Le statistiche ripartono da zero.</p>
-        <div class="library-inline"><button type="button" id="library-regenerate">Rigenera l'immagine (a pagamento)</button></div></div>` : ""}
+      ${editable && item.origin === "SLOP" ? '<p class="hint">Per rigenerare: cestina questa SLOP e avvia un nuovo processo nello studio, con conferma e valutazione.</p>' : ""}
       <div class="library-actions">${item.status === "new" ? `${item.origin === "REAL" ? `<label><input type="checkbox" id="library-rights" ${item.rights_confirmed ? "checked" : ""}> Ho verificato diritti e licenza</label>` : ""}<button type="button" data-action="approve" class="primary">Approva</button>` : ""}
         ${item.status === "approved" ? '<button type="button" data-action="publish" class="primary">Pubblica nel gioco</button>' : ""}
         ${item.status === "published" ? '<button type="button" data-action="edit" class="primary">Modifica</button><button type="button" data-action="withdraw">Ritira dal gioco</button><button type="button" data-action="remove">Elimina (nel cestino)</button>' : ""}
@@ -369,6 +379,11 @@ export async function showLibrary() {
   detail.addEventListener("close", () => { open = null; });
   const detailMessage = (text: string) => { const el = detail.querySelector("#library-detail-message"); if (el) el.textContent = text; };
   detail.addEventListener("change", async event => {
+    const editorial = (event.target as HTMLElement).closest<HTMLTextAreaElement>("[data-editorial]");
+    if (editorial && open && !editorial.disabled) {
+      try { open = await save(open, {real_description: readDescription(detail, open.id)}); detailMessage("Descrizione privata salvata; tag invariati."); }
+      catch (e) { detailMessage(String(e)); } return;
+    }
     const field = (event.target as HTMLElement).closest<HTMLInputElement | HTMLTextAreaElement>("[data-field]");
     if (!field || !open || field.readOnly) return;
     try { open = await save(open, { [field.dataset.field!]: field.value }); showDetail(open); detailMessage("Salvato."); render(); }
@@ -409,11 +424,15 @@ export async function showLibrary() {
       try { showDetail(await call<Item>("/" + encodeURIComponent(button.dataset.openSource))); } catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
       return;
     }
-    if (!button || !open || busy || !(button.dataset.tagRemove || button.dataset.action || ["library-copy", "library-analyze", "library-restore", "library-regenerate",
+    if (!button || !open || busy || !(button.dataset.tagRemove || button.dataset.action || ["library-description-analysis", "library-copy", "library-analyze", "library-restore", "library-regenerate",
       "library-crop", "library-complete", "library-treatment-change", "library-treatment-off", "library-treatment-on"].includes(button.id))) return;
     busy = true;
     try {
-      if (button.dataset.tagRemove) open = await save(open, { tags: open.tags.filter(t => t !== button.dataset.tagRemove) });
+      if (button.id === "library-description-analysis") {
+        if (!window.confirm(`Analizzare nuovamente tag e descrizione di «${open.title}»? Una chiamata a pagamento con ${analysis?.model}. I tag saranno sostituiti.`)) return;
+        open = await call<Item>(`/${open.id}/analyze`, {method:"POST",body:JSON.stringify({confirm:true,refresh_description:true})});
+      }
+      else if (button.dataset.tagRemove) open = await save(open, { tags: open.tags.filter(t => t !== button.dataset.tagRemove) });
       else if (button.id === "library-copy") { detailMessage("Preparo la copia di gioco…"); open = await prepareItemCopy<Item>(open); }
       else if (button.id === "library-complete" && analysis) {
         if (!window.confirm(`Completare Genere, Colore e Supporto di «${open.title}» con ${analysis.model}? È una chiamata a pagamento, una sola volta per l'immagine; gli altri tag restano.`)) return;
@@ -424,7 +443,7 @@ export async function showLibrary() {
       }
       else if (button.id.startsWith("library-treatment-")) {
         const change = button.id === "library-treatment-change", off = button.id === "library-treatment-off";
-        detailMessage(change ? "Scelgo un'altra REAL campione…" : off ? "Rifaccio la copia senza trattamento…" : "Rifaccio la copia con il trattamento…");
+        detailMessage(change ? "Scelgo un'altra REAL di riferimento…" : off ? "Rifaccio la copia senza trattamento…" : "Rifaccio la copia con il trattamento…");
         open = await prepareItemCopy<Item>(open, undefined, open.copy?.crop || undefined, { change, off: change ? false : off });
         detailMessage(open.treatment && !open.treatment.off ? "Copia trattata." : open.treatment ? "Copia senza trattamento." : "Nessuna REAL misurata nel gruppo: copia senza trattamento.");
       }
@@ -457,20 +476,7 @@ export async function showLibrary() {
         if (!window.confirm(`Eliminare «${open.title}»? Esce dalla pubblicazione e va nel cestino; le partite in corso finiscono con la versione attuale.`)) return;
         open = await call<Item>(`/${encodeURIComponent(open.id)}/trash`, { method: "POST", body: "{}" });
       }
-      else if (button.id === "library-regenerate") {
-        const prompt = detail.querySelector<HTMLTextAreaElement>('[data-field="prompt"]')?.value.trim() || "";
-        const regenQuality = models?.image_quality || "medium";
-        if (!prompt) { detailMessage("Scrivi il prompt."); return; }
-        if (!window.confirm(`Rigenerare «${open.title}» con ${models?.image_model || "il modello di immagini"} (qualità ${regenQuality}) e poi analizzarla con ${analysis?.model || "il modello di testo"}? Sono due chiamate a pagamento. L'immagine attuale viene sostituita, i tag rigenerati, le statistiche ripartono da zero; la foto torna nuova e va approvata.`)) return;
-        detailMessage("Generazione dell'immagine…");
-        open = await call<Item>(`/${encodeURIComponent(open.id)}/regenerate`, { method: "POST", body: JSON.stringify({ confirm: true, prompt, quality: regenQuality, revision: open.revision }) });
-        detailMessage("Copia di gioco…");
-        open = await prepareItemCopy<Item>(open);
-        detailMessage("Analisi…");
-        const analysed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(open.id)}/analyze`, { method: "POST", body: JSON.stringify({ confirm: true }) });
-        open = analysed; detailMessage("Immagine rigenerata e analizzata." + conflictText(analysed.tag_conflicts));
-        void Promise.all([refreshTags(), refreshAnalysis()]);
-      }
+
       else if (button.dataset.action) open = await call<Item>(`/${encodeURIComponent(open.id)}/${button.dataset.action}`, { method: "POST",
         body: JSON.stringify(button.dataset.action === "approve" ? { rights_confirmed: Boolean(detail.querySelector<HTMLInputElement>("#library-rights")?.checked) } : {}) });
       await load();
@@ -521,13 +527,23 @@ export async function showLibrary() {
       if (button.id === "library-empty-trash") {
         const result = await call<{ deleted: number; postponed: number }>("/trash/empty", { method: "POST", body: "{}" });
         await Promise.all([load(), refreshTags()]);
-        message(`${result.deleted} immagini eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} restano nel cestino finché le partite in corso che le usano non finiscono.` : ""));
+        message(`${result.deleted} immagini eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} restano nel cestino finché le partite o le generazioni in corso non finiscono.` : ""));
       } else if (button.dataset.bulk) {
         const action = button.dataset.bulk;
         if (action === "none") { selected.clear(); render(); return; }
         if (action === "trash") {
           const published = items.filter(i => selected.has(i.id) && i.status === "published").length;
           if (published && !window.confirm(`${published} ${published === 1 ? "immagine è pubblicata: esce" : "immagini sono pubblicate: escono"} subito dal gioco e ${published === 1 ? "va" : "vanno"} nel cestino; le partite in corso finiscono con la versione attuale. Continuare?`)) return;
+        }
+        if (action === "copy-portrait") {
+          const pending = items.filter(i=>selected.has(i.id) && i.copy?.crop?.format !== "4:5" && i.status !== "trash");
+          if (pending.some(i=>i.status === "published") && !window.confirm("Le foto pubblicate verranno ritirate e resteranno approvate dopo il nuovo ritaglio. Continuare?")) return;
+          let done = 0;
+          for (let item of pending) {
+            if (item.status === "published") item = await call<Item>(`/${item.id}/withdraw`, {method:"POST",body:"{}"});
+            await prepareItemCopy(item); done++;
+          }
+          await load(); message(`${done} copie rifatte in 4:5. Controlla l’inquadratura prima di pubblicare.`); return;
         }
         if (action === "complete") {
           const ids = items.filter(i => selected.has(i.id) && i.completable).map(i => i.id);
@@ -554,10 +570,11 @@ export async function showLibrary() {
         }
         const result = await call<{ done?: number; deleted?: number; postponed?: number; failed?: { error: string }[] }>("/bulk", { method: "POST",
           body: JSON.stringify({ action, ids: [...selected], tags: tag ? [tag] : [], ...(bulkCategory ? { category: bulkCategory } : {}), rights_confirmed: action === "approve" && Boolean($<HTMLInputElement>("#library-bulk-rights")?.checked) }) });
-        message(result.deleted !== undefined ? `${result.deleted} eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} in partite in corso: restano nel cestino per ora.` : "") :
-          `${result.done} aggiornate.` + (result.failed?.length ? ` ${result.failed.length} non aggiornate: ${[...new Set(result.failed.map(f => f.error))].join("; ")}.` : ""));
+        const completedMessage = result.deleted !== undefined ? `${result.deleted} eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} in partite in corso: restano nel cestino per ora.` : "") :
+          `${result.done} aggiornate.` + (result.failed?.length ? ` ${result.failed.length} non aggiornate: ${[...new Set(result.failed.map(f => f.error))].join("; ")}.` : "");
         if (action !== "tag-add" && action !== "tag-remove") selected.clear();
         await Promise.all([load(), refreshTags()]);
+        message(completedMessage);
       }
     } catch (error) { message(String(error instanceof Error ? error.message : error)); }
     finally { busy = false; }
@@ -575,6 +592,7 @@ export async function showLibrary() {
     else if (target.id === "library-tag") addFilterTag(target);
     else if (target.id === "library-tag-match") { filter.match = target.value; void load(); }
     else if (target.id === "library-group") { filter.group = target.value; void load(); }
+    else if (target.id === "library-redo-copy") { filter.redo_copy = target.checked; void load(); }
     else if (target.id === "library-incomplete") { filter.incomplete = target.checked; void load(); }
   });
   /** A tag typed in the filter, converted like a tag written by hand; an alias is resolved by the server only when saving, so
@@ -707,7 +725,7 @@ export async function showLibrary() {
       settingsMessage(done); await slopStudio.refresh(); await autoBox.refresh();
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
-  numbersForm("#library-thresholds-form", ["slop_section_min_real", "slop_auto_enabled", "slop_auto_threshold_percent"], "Soglie dello studio SLOP salvate.");
+  numbersForm("#library-thresholds-form", ["slop_section_min_real", "slop_auto_enabled", "slop_auto_threshold_percent", "max_generation_attempts", "editorial_tolerance"], "Soglie dello studio SLOP salvate.");
   numbersForm("#library-games-form", ["open_game_hours"], "Durata massima di una partita aperta salvata.");
   await call<Numbers>("/settings").then(renderNumbers).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   statsView = mountStats($<HTMLElement>("#stats-body"), period => call<Stats>("/stats?" + new URLSearchParams({ period })));
@@ -757,6 +775,11 @@ export async function showLibrary() {
   slopStudio = await mountSlopStudio($<HTMLElement>("#slop-studio"));
   // Automatic SLOP batches: proposal, progress and review (spec `generazione-slop`).
   autoBox = mountSlopAuto($<HTMLElement>("#slop-auto"), {
+    loop: async batchId => {
+      sessionStorage.setItem("ros-editorial-studio-v1",batchId);
+      page.querySelector<HTMLButtonElement>('[data-admin-tab="slop"]')!.click();
+      await slopStudio.refresh();
+    },
     review: async batchId => {
       filter.batch = batchId; filter.status = "library"; selected.clear();
       page.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === "library")));

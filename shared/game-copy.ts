@@ -1,17 +1,16 @@
-/** Game copy recipe (spec `copie-di-gioco`): the seven common formats, the nearest one to a photo, centred crops,
- * copy dimensions, the size asked to each image model. The functions of the old 4:5 initial view are still here, unused. */
+/** Common generation formats, fixed 4:5 game copies, geometry validation and generator sizes. */
 export const FORMATS = ["3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "1:1"] as const;
-export type Format = typeof FORMATS[number];
+export type Format = typeof FORMATS[number] | "4:5";
 export const FORMAT_LABELS: Record<Format, string> = {
-  "3:2": "3:2 orizzontale", "2:3": "2:3 verticale", "4:3": "4:3 orizzontale", "3:4": "3:4 verticale",
+  "4:5": "4:5 verticale", "3:2": "3:2 orizzontale", "2:3": "2:3 verticale", "4:3": "4:3 orizzontale", "3:4": "3:4 verticale",
   "16:9": "16:9 orizzontale", "9:16": "9:16 verticale", "1:1": "1:1 quadrato",
 };
 export const GAME_COPY = { mime: "image/webp", maxSide: 1536, quality: 0.85, maxBytes: 4_000_000, minSide: 64, viewRatio: 4 / 5 } as const;
-export const GAME_COPY_RECIPE = `webp-q${GAME_COPY.quality}-format-max${GAME_COPY.maxSide}-srgb-v3`;
+export const GAME_COPY_RECIPE = `webp-q${GAME_COPY.quality}-format-max${GAME_COPY.maxSide}-srgb-v4-portrait`;
 export interface Crop { x: number; y: number; width: number; height: number; format: Format }
 export interface View { x: number; y: number; height: number }
 
-export const isFormat = (value: unknown): value is Format => typeof value === "string" && (FORMATS as readonly string[]).includes(value);
+export const isFormat = (value: unknown): value is Format => typeof value === "string" && [...FORMATS, "4:5"].includes(value);
 /** Width over height of a format. */
 export function ratioOf(format: Format): number {
   const [w, h] = format.split(":").map(Number);
@@ -39,7 +38,7 @@ function largest(format: Format, width: number, height: number): { width: number
 /** The largest crop of `format` (the nearest one without it) centred in the image: the default before the owner moves it. */
 export function centredCrop(width: number, height: number, format?: Format): Crop {
   if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1) throw Error("Dimensioni non valide");
-  const f = format || nearestFormat(width, height), size = largest(f, width, height);
+  const f = format || "4:5", size = largest(f, width, height);
   if (size.width > width || size.height > height) throw Error("Immagine troppo piccola per il formato " + f);
   return { x: Math.floor((width - size.width) / 2), y: Math.floor((height - size.height) / 2), width: size.width, height: size.height, format: f };
 }
@@ -111,7 +110,7 @@ export const viewQuery = (v: View) => [v.x, v.y, v.height].join(",");
 
 /** A stored crop of the current recipe, or null (absent, unreadable, or a 4:5 crop of shared/game-copy.ts). */
 export function storedCrop(value: string | null): Crop | null {
-  try { const crop = value ? JSON.parse(value) as Crop : null; return crop && isFormat(crop.format) && typeof crop.width === "number" ? crop : null; }
+  try { const crop = value ? JSON.parse(value) as Crop : null; return crop && crop.format === "4:5" && typeof crop.width === "number" ? crop : null; }
   catch { return null; }
 }
 export function storedView(value: string | null): View | null {
@@ -129,7 +128,7 @@ export function viewFractions(view: View | null, width: number | null, height: n
  * and 8,294,400 pixels, long side 1536. GPT Image 2, 2.5 and 2.6 accept custom sizes; the other models only the three standard
  * ones, so they are offered only 1:1, 3:2 and 2:3. */
 export const GENERATION_SIZES: Record<Format, string> = {
-  "3:2": "1536x1024", "2:3": "1024x1536", "4:3": "1536x1152", "3:4": "1152x1536", "16:9": "1536x864", "9:16": "864x1536", "1:1": "1536x1536",
+  "4:5": "1232x1536", "3:2": "1536x1024", "2:3": "1024x1536", "4:3": "1536x1152", "3:4": "1152x1536", "16:9": "1536x864", "9:16": "864x1536", "1:1": "1536x1536",
 };
 const STANDARD: Partial<Record<Format, string>> = { "1:1": "1024x1024", "3:2": "1536x1024", "2:3": "1024x1536" };
 export const customSizes = (model: string) => /^gpt-image-2(\.[56]-[a-z]+)?$/.test(model);

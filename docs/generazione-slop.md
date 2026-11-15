@@ -1,6 +1,6 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.2.0
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.3.0
 
-Stato: **decisioni editoriali approvate il 2026-11-15, da implementare** tramite PR successive. Aggiornata: 2026-11-15T13:42:00+01:00.
+Stato: implementata nel ramo app **1.27.0**, da verificare in anteprima e rilasciare con autorizzazione. Aggiornata: 2026-11-15T13:54:58Z.
 In produzione resta l'app 1.26.0; la specifica 4.0.0 e l'issue #136 descrivono una pipeline precedente, **superata su somiglianza alla REAL,
 cambiamento singolo, seconda analisi visiva della REAL nella generazione e numero di generazioni**. Rimangono validi, salvo diversa indicazione qui, il 4:5 e il trattamento leggero di
 `docs/copie-di-gioco.md` 9.1.3; tag e contesti in `docs/libreria-immagini.md`; contenuti in `docs/contenuti-e-trasparenza.md`.
@@ -99,7 +99,7 @@ associata alla REAL e può essere riusata quando occorre riequilibrare il catalo
    Una rigenerazione con lo stesso prompt è appropriata per anomalie occasionali; la revisione per istruzioni ambigue o ricorrenti;
    la riprogettazione per scene sistematicamente troppo difficili. Ogni nuova generazione consuma un tentativo.
 7. **Candidato accettato:** solo **dopo la valutazione dell'immagine intera**, il browser prepara il ritaglio 4:5 e l'eventuale
-   trattamento leggero per la copia di gioco. Solo allora la SLOP entra nella libreria ordinaria come `new`, con originale,
+   trattamento leggero per la copia di gioco. La candidata accettata viene registrata come `new` con originale; il browser prepara subito la copia 4:5. Senza copia non può essere approvata né pubblicata. Conserva
    copia, prompt finale, brief, REAL di riferimento, modello, qualità, configurazione e tracciabilità dell'esito.
    L'analisi dei tag usa la copia che sarà giocata e distingue le evidenze visive dai desideri del prompt. L'owner verifica
    che il ritaglio non comprometta il risultato; eventuali correzioni di crop o trattamento **non producono feedback automatico
@@ -158,21 +158,25 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
 - Concorrenza: impedire che doppio clic, due schede o ripresa dopo refresh inviino la stessa chiamata; sequenza per foto
   idempotente a livello applicativo. Registrare prima dell'invio **non prova** che un esito di rete incerto non abbia consumato
   crediti: comunicarlo senza promesse assolute.
+- Processi `draft`, `prompting`, `ready`, `running`, `retry`, `accepted`, `exhausted`, `review_needed`, `failed`, `uncertain`; una chiamata pendente interrotta resta sospesa e la manutenzione la marca incerta dopo dieci minuti.
 - Ogni tentativo conserva privatamente prompt, modello, qualità, esito, motivi, eventuale bozza di revisione e riferimento alla
   candidata per consentire ripresa e revisione; **i tentativi rifiutati non entrano nella libreria delle immagini e non sono
-  pubblicati**, né generano nuove REAL/SLOP attive. Prevedere pulizia dei file temporanei non più necessari, senza creare
+  pubblicati**, né generano nuove REAL/SLOP attive. Le anteprime temporanee dei processi fermi sono cancellate dopo sette giorni; la cancellazione della REAL o SLOP elimina anche processi, tentativi e file collegati. Non creare
   archivi permanenti delle eliminazioni in contrasto con `AGENTS.md`.
 - Conservare l'esito e l'identità del processo accettato con la nuova SLOP per audit editoriali; le anteprime della libreria
   riportano solo contenuti privati all'owner. Nessun criterio o risposta corretta viene inviato al giocatore prima della scelta.
+- I casi esauriti o sospesi restano in revisione fino a «Chiudi revisione», dopo aver deciso le immagini nuove; i dettagli dei tentativi sono accessibili nello studio.
 - Il batch automatico continua a girare con la dashboard aperta, al massimo uno alla volta. Se una REAL esaurisce i tentativi,
   le altre proseguono; il risultato dell'intero batch mostra accettate, esaurite, sospese e ancora da rivedere.
 
 ## 7. Studio e interfaccia amministrativa
 
-Quattro passaggi evolutivi: **REAL** (scelta da 1 a 10, con tag e descrizione già disponibili), **Brief e prompt** (prodotti insieme in una chiamata testuale e poi revisionabili),
+Quattro passaggi: **REAL** (scelta da 1 a 10, con tag e descrizione già disponibili), **Brief e prompt** (prodotti insieme in una chiamata testuale e poi revisionabili),
 **Generazione e valutazione dell'immagine intera** (avanzamento per foto e per tentativo, decisione, difetti e correzione del prompt),
 **Revisione** (solo candidate accettate automaticamente, più eventuali casi sospesi visibili separatamente).
 Mostrare il numero massimo di tentativi, la tolleranza, il preventivo massimo delle chiamate e il totale effettivo.
+
+Tolleranza: 0 rigorosa (nessun difetto minore), 1 normale (imperfezioni sottili e fotograficamente plausibili), 2 permissiva (difetti minori che non compromettono credibilità). I difetti critici sono sempre bloccanti.
 
 In revisione: originale della SLOP **intero**, poi copia 4:5 preparata dopo l'accettazione (con/senza trattamento), prompt finale, ancoraggi, tag effettivi,
 divergenze tematiche, dettagli della valutazione, Inquadratura, Analizza, Approva, Pubblica, Cestino. Nessun tasto per cestinare
@@ -221,11 +225,11 @@ richiedere un'esplicita scelta operativa. Nessuna migrazione remota, deploy o co
 
 1. **PR A — specifiche:** allineare `AGENTS.md`, `MASTER.md`, `generazione-slop`, `copie-di-gioco` e le specifiche collegate;
    senza modificare codice, database o produzione.
-2. **PR B — backend e persistenza:** **estendere l'analisi REAL per produrre tag+descrizione insieme** e salvare il campo
+2. **Backend e persistenza (implementati 1.27.0, migrazione 0050):** **estendere l'analisi REAL per produrre tag+descrizione insieme** e salvare il campo
    editoriale; **unica chiamata testuale descrizione+tag → brief+prompt**; brief bloccato, processo/tentativi, chiamate
    registrate, valutatore e decisioni strutturate, limiti e compatibilità batch, fake API e test. Migrazione additiva,
    senza conversione delle REAL esistenti.
-3. **PR C — browser e studio:** nel wizard REAL mostrare e correggere la descrizione prodotta coi tag; nello studio usare
+3. **Browser e studio (implementati 1.27.0):** nel wizard REAL mostrare e correggere la descrizione prodotta coi tag; nello studio usare
    descrizione+tag salvati, ciclo visibile, impostazioni dei tentativi/tolleranza, valutazione SLOP integrale e 4:5 dopo
    l'accettazione, avanzamento e revisione owner, test desktop/mobile.
 4. **PR D — rilascio:** solo dopo CI, anteprima esaminata e autorizzazione esplicita dell'owner; valutare la migrazione dei batch in

@@ -4,6 +4,7 @@ import base64
 import io
 import json
 import sys
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 queue, log = [], []
@@ -40,18 +41,30 @@ class Handler(BaseHTTPRequestHandler):
         if self.path not in ('/v1/responses', '/v1/images/generations'): return self.reply(404, {})
         log.append({'authorization': self.headers.get('Authorization'), 'body': data, 'path': self.path})
         behaviour = queue.pop(0) if queue else None
+        if behaviour and behaviour.get('delay'): time.sleep(behaviour['delay'])
         if behaviour and 'status' in behaviour:
             return self.reply(behaviour['status'], {'error': {'message': 'fake', 'type': 'fake', 'code': behaviour.get('code')}})
         if self.path == '/v1/images/generations':
             if behaviour and behaviour.get('garbage'): return self.reply(200, {'data': []})
             return self.reply(200, {'data': [{'b64_json': picture(data.get('size', '1024x1024'))}], 'usage': {'input_tokens': 50, 'output_tokens': 1056}})
-        if behaviour is None and data.get('text', {}).get('format', {}).get('name') == 'slop_prompts':
-            request = json.loads(data['input'][0]['content'][0]['text'])
-            allowed = data['text']['format']['schema']['properties']['prompts']['items']['properties']['format']['enum']
-            labels = lambda item: [l for c in ('time', 'genre', 'color', 'medium', 'place', 'event') for l in item['tags'].get(c, [])]
-            behaviour = {'json': {'prompts': [{'prompt': 'A documentary photograph: ' + ', '.join(labels(item)),
-                                               'used_tags': labels(item), 'format': allowed[i % len(allowed)]}
-                                              for i, item in enumerate(request['items'])]}}
+        schema_name = data.get('text', {}).get('format', {}).get('name')
+        request = json.loads(data['input'][0]['content'][0]['text']) if schema_name in ('slop_brief', 'slop_evaluation') else None
+        if behaviour is None and schema_name == 'slop_brief':
+            labels = [l for values in request['tags'].values() for l in values]
+            behaviour = {'json': {'brief': {'required': labels[:2] or ['documentary photograph'], 'preferred': [], 'flexible': ['scene and viewpoint'], 'exclusions': ['identifiable real people']},
+                                  'prompt': 'A documentary photograph: ' + ', '.join(labels)}}
+        if schema_name == 'slop_evaluation' and (behaviour is None or behaviour.get('evaluation')):
+            decision = (behaviour or {}).get('evaluation', 'accept')
+            behaviour = {'json': {'attempt_id': request['attempt_id'], 'decision': decision, 'critical_findings': [], 'minor_findings': [],
+                                  'editorial_constraints_met': True, 'uncertainty_notes': [], 'action_reason': 'Visible photographic texture and plausible geometry throughout the frame.',
+                                  'revised_prompt': 'A revised documentary scene with a different viewpoint.' if decision in ('revise_prompt', 'replan_scene') else '',
+                                  'preserved_required': request['brief']['required'], 'preserved_exclusions': request['brief']['exclusions']}}
+        if schema_name == 'image_analysis' and (behaviour is None or 'tags' in behaviour):
+            behaviour = behaviour or DEFAULT
+            result = {'tags': behaviour['tags']}
+            if 'real_description' in data['text']['format']['schema']['properties']:
+                result['real_description'] = {'visible': 'People standing in a street; documentary framing.', 'documented_context': 'Context only from supplied Commons metadata.', 'uncertainties': 'Names and exact date cannot be verified from pixels.'}
+            behaviour = {'json': result}
         behaviour = behaviour or DEFAULT
         text = 'not json' if behaviour.get('garbage') else json.dumps(behaviour['json']) if 'json' in behaviour \
             else json.dumps({'tags': behaviour['tags'], 'caption': behaviour['caption']})

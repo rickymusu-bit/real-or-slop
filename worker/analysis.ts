@@ -1,8 +1,6 @@
-/** Paid analysis of an image (spec `libreria-immagini`, section 5): the chosen text model sees the game copy, title and
- * description (REAL) or prompt (SLOP) and the 300 most used tags by category, never the origin; it returns 5 to 15 tags by
- * category, which replace those of the image; Genre, Color and Medium are judged only from the image, Color and Medium from closed
- * lists. Once per image, explicit confirmation, register of calls, uncertain outcomes never resent; a «running» mark older than 10
- * minutes no longer blocks. The completion asks only Genre, Color and Medium of an image analysed before they existed, once. */
+/** Confirmed analysis of the actual 4:5 copy: REAL tags and private description in one atomic result; SLOP tags only.
+ * Contexts never mention synthetic images. Claims and uncertain results prevent automatic paid retries. */
+import { descriptionSchema, realDescription } from "../shared/editorial";
 import { HttpError, id, type Env } from "./core";
 import { categoriesOf, tagRowsOf, tagStatements, viewOf, type Row } from "./library";
 import { chosenModel } from "./models";
@@ -34,12 +32,13 @@ const OUTPUT = "Rispondi solo con JSON conforme allo schema: «tags» con un ele
 const COMPLETE_OUTPUT = "Rispondi solo con JSON conforme allo schema: «tags» con genre (il tipo di fotografia), color e medium (che cosa è " +
   "materialmente l'immagine), uno ciascuno. " + VISUAL_RULE;
 const itemsOf = (c: Category) => c === "color" ? { type: "string", enum: [...COLORS] } : c === "medium" ? { type: "string", enum: [...MEDIA] } : { type: "string" };
-const schemaFor = (categories: readonly Category[]) => ({ type: "json_schema", name: "image_analysis", strict: true, schema: {
-  type: "object", additionalProperties: false, required: ["tags"], properties: {
+const schemaFor = (categories: readonly Category[], describe = false) => ({ type: "json_schema", name: "image_analysis", strict: true, schema: {
+  type: "object", additionalProperties: false, required: describe ? ["tags", "real_description"] : ["tags"], properties: {
+    ...(describe ? { real_description: descriptionSchema } : {}),
     tags: { type: "object", additionalProperties: false, required: [...categories], properties: Object.fromEntries(categories.map(c =>
       [c, { type: "array", items: itemsOf(c), ...(VISUAL.includes(c) ? { minItems: 1 } : {}), maxItems: SINGLE.includes(c) ? 1 : 15 }])) },
   } } });
-const FORMAT = schemaFor(CATEGORIES), COMPLETE_FORMAT = schemaFor(VISUAL);
+const FORMAT = schemaFor(CATEGORIES), REAL_FORMAT = schemaFor(CATEGORIES, true), COMPLETE_FORMAT = schemaFor(VISUAL);
 
 function outputText(value: Record<string, unknown>): string {
   const outputs = Array.isArray(value.output) ? value.output as Array<{ content?: Array<{ type?: string; text?: string }> }> : [];
@@ -83,7 +82,7 @@ async function cleanTags(env: Env, raw: unknown) {
 }
 
 type Usage = { input_tokens?: number; output_tokens?: number };
-type Outcome = { kind: "ok"; result: { tags?: unknown }; usage: Usage } | { kind: "uncertain" | "failed" | "unreadable"; message: string; usage?: Usage };
+type Outcome = { kind: "ok"; result: { tags?: unknown; real_description?: unknown }; usage: Usage } | { kind: "uncertain" | "failed" | "unreadable"; message: string; usage?: Usage };
 
 async function vocabularyText(env: Env, categories: readonly Category[]) {
   const used = (await env.DB.prepare(`SELECT t.label,t.category FROM tags t JOIN image_tags it ON it.tag_id=t.id GROUP BY t.id
@@ -92,7 +91,7 @@ async function vocabularyText(env: Env, categories: readonly Category[]) {
     .map(([c, list]) => c + ": " + list.join(", ")).join("\n");
 }
 const contextOf = (row: Row) => [row.title && "Title: " + row.title, row.description && "Description: " + row.description,
-  row.prompt && "Description: " + row.prompt].filter(Boolean).join("\n");
+  row.commons_description && "Original Commons context: " + row.commons_description, row.prompt && "Description: " + row.prompt].filter(Boolean).join("\n");
 
 /** One call to the text model with the game copy. Never throws for the call itself: the outcome says what happened. */
 async function send(env: Env, model: string, instructions: string, format: unknown, text: string, image: ArrayBuffer): Promise<Outcome> {
@@ -133,15 +132,17 @@ async function send(env: Env, model: string, instructions: string, format: unkno
     return { kind: "unreadable", message: "Risposta del modello non leggibile", usage };
   }
 }
-async function recordCall(env: Env, model: string) {
+async function recordCall(env: Env, model: string, row?: Row) {
   const callId = id(), stamp = new Date().toISOString();
-  await env.DB.prepare("INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at) VALUES(?,'analysis',?,'pending',?,?)")
-    .bind(callId, model, stamp, stamp).run();
+  const process = row?.generation_slot ? (JSON.parse(row.generation_slot) as {process?: string}).process : null;
+  await env.DB.prepare("INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,image_id,process_id) VALUES(?,'analysis',?,'pending',?,?,?,(SELECT id FROM slop_processes WHERE id=?))")
+    .bind(callId, model, stamp, stamp, row?.id ?? null, process ?? null).run();
   return { callId, update: (call: "completed" | "uncertain" | "failed", usage?: Usage) =>
     env.DB.prepare("UPDATE paid_calls SET status=?,input_tokens=?,output_tokens=?,updated_at=? WHERE id=?")
       .bind(call, usage?.input_tokens ?? null, usage?.output_tokens ?? null, new Date().toISOString(), callId) };
 }
 async function gameCopy(env: Env, row: Row) {
+  if (row.copy_crop && JSON.parse(row.copy_crop).format !== "4:5") throw new HttpError(409, "Prepara la copia di gioco 4:5 prima dell’analisi");
   if (!row.copy_key) throw new HttpError(409, "Prepara prima la copia di gioco: il modello analizza ciò che vedrà il giocatore");
   const copy = await env.QUARANTINE?.get(row.copy_key);
   if (!copy) throw new HttpError(409, "Copia di gioco non disponibile");
@@ -153,23 +154,29 @@ const confirmed = (data: Record<string, unknown>) => {
 
 export async function analyze(env: Env, row: Row, data: Record<string, unknown>) {
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
-  confirmed(data);
-  const model = await chosenModel(env, "text_model");
-  if (row.status !== "new") throw new HttpError(409, "Si analizzano solo immagini nuove");
-  if (row.analysis_status === "done") throw new HttpError(409, "Tag già generati per questa immagine: modificali o ripristinali, senza nuove chiamate");
+  if (Object.keys(data).some(k => !["confirm", "refresh_description"].includes(k)) || data.confirm !== true ||
+    (data.refresh_description !== undefined && data.refresh_description !== true)) throw new HttpError(400, "Conferma la chiamata a pagamento");
+  const refresh = data.refresh_description === true && row.origin === "REAL" && !row.real_description;
+  const snapshot = row.generation_slot ? (JSON.parse(row.generation_slot) as {process?:string}).process : null;
+  const process = snapshot ? await env.DB.prepare("SELECT snapshot FROM slop_processes WHERE id=?").bind(snapshot).first<{snapshot:string}>() : null;
+  const model = process ? (JSON.parse(process.snapshot) as {text_model:string}).text_model : await chosenModel(env, "text_model");
+  if (row.status !== "new" && !refresh) throw new HttpError(409, "Si analizzano solo immagini nuove");
+  if (row.analysis_status === "done" && !refresh) throw new HttpError(409, "Tag già generati per questa immagine: modificali o ripristinali, senza nuove chiamate");
   // A «running» mark older than STALE_MS belongs to a Worker that died mid-call: its call stays recorded as pending.
   const staleBefore = new Date(Date.now() - STALE_MS).toISOString();
   if (row.analysis_status === "running" && row.updated_at > staleBefore) throw new HttpError(409, "Analisi già in corso");
   const image = await gameCopy(env, row);
   // Read before the call is recorded: a failure here costs nothing.
   const [baseContext, taskContext] = [await currentContext(env, "base"), await currentContext(env, "analysis")];
-  const instructions = baseContext.body + "\n\n" + taskContext.body + "\n\n" + OUTPUT;
+  const describe = row.origin === "REAL";
+  const instructions = baseContext.body + "\n\n" + taskContext.body + "\n\n" + OUTPUT + (describe ?
+    " Restituisci anche real_description: visible descrive solo elementi osservabili, documented_context solo fatti documentati nel titolo e contesto Commons forniti; uncertainties segnala lacune o dettagli incerti. Testo neutro, senza giudizi di autenticità; non inventare contesto." : "");
   const stamp = new Date().toISOString();
   // The «running» mark comes first: only the request that sets it records and sends the call.
-  const marked = await env.DB.prepare(`UPDATE images SET analysis_status='running',analysis_error='',updated_at=? WHERE id=? AND status='new'
-    AND analysis_status<>'done' AND (analysis_status<>'running' OR updated_at<=?)`).bind(stamp, row.id, staleBefore).run();
+  const marked = await env.DB.prepare(`UPDATE images SET analysis_status='running',analysis_error='',updated_at=? WHERE id=? AND status IN ('new','approved','published')
+    AND (analysis_status<>'done' OR ?=1) AND analysis_status NOT IN ('running','uncertain')`).bind(stamp, row.id, refresh ? 1 : 0).run();
   if (!marked.meta.changes) throw new HttpError(409, "Immagine cambiata o già in analisi: nessuna chiamata inviata");
-  const call = await recordCall(env, model);
+  const call = await recordCall(env, model, row);
   const text = `Existing vocabulary by category:\n${await vocabularyText(env, CATEGORIES) || "(empty)"}\n${contextOf(row) || "No context."}`;
   // The register keeps the outcome and the tokens reported.
   const settle = async (status: "completed" | "uncertain" | "failed", analysis: "done" | "uncertain" | "failed", error = "", usage?: Usage) => {
@@ -178,22 +185,32 @@ export async function analyze(env: Env, row: Row, data: Record<string, unknown>)
       env.DB.prepare("UPDATE images SET analysis_status=?,analysis_error=?,analyzed_at=?,revision=revision+1,updated_at=? WHERE id=?")
         .bind(analysis, error.slice(0, 300), now, now, row.id)]);
   };
-  const outcome = await send(env, model, instructions, FORMAT, text, image);
+  const outcome = await send(env, model, instructions, describe ? REAL_FORMAT : FORMAT, text, image);
   if (outcome.kind !== "ok") {
     const status = outcome.kind === "unreadable" ? "completed" : outcome.kind;
     await settle(status, outcome.kind === "uncertain" ? "uncertain" : "failed", outcome.message, outcome.usage);
     throw new HttpError(502, outcome.kind === "uncertain" ? "Esito incerto dell'analisi: non ripetuta automaticamente" : outcome.message);
+  }
+  const description = describe ? realDescription(outcome.result.real_description) : null;
+  if (describe && !description) {
+    await settle("completed", "failed", "Descrizione editoriale non valida", outcome.usage);
+    throw new HttpError(502, "Descrizione editoriale non valida: nessun tag o testo salvato");
   }
   const { categories, conflicts } = await cleanTags(env, outcome.result.tags);
   const proposed = [...categories.keys()];
   // The generation replaces the tags the owner wrote; the generated ones are kept apart for restoring.
   const wanted = proposed.slice(0, MAX_TAGS);
   await env.DB.batch([
-    env.DB.prepare(`UPDATE images SET generated_tags=?,analysis_base_context=?,analysis_task_context=?,categories_completed_at=?,updated_at=?
-      WHERE id=? AND status='new'`).bind(JSON.stringify(wanted), baseContext.id, taskContext.id, stamp, new Date().toISOString(), row.id),
-    ...tagStatements(env, row.id, wanted, { sql: "EXISTS(SELECT 1 FROM images WHERE id=? AND status='new')", values: [row.id] }, categories),
+    env.DB.prepare(`UPDATE images SET generated_tags=?,analysis_base_context=?,analysis_task_context=?,categories_completed_at=?,updated_at=?,
+      real_description=CASE WHEN ? IS NULL THEN real_description ELSE ? END,
+      real_description_provenance=CASE WHEN ? IS NULL THEN real_description_provenance ELSE ? END
+      WHERE id=? AND analysis_status='running'`).bind(JSON.stringify(wanted), baseContext.id, taskContext.id, stamp, new Date().toISOString(),
+        description ? JSON.stringify(description) : null, description ? JSON.stringify(description) : null,
+        description ? JSON.stringify(description) : null, JSON.stringify({model, copy_sha256: row.copy_sha256, revision: row.revision, at: stamp, generated: description}), row.id),
+    call.update("completed", outcome.usage),
+    ...tagStatements(env, row.id, wanted, { sql: "EXISTS(SELECT 1 FROM images WHERE id=? AND analysis_status='running')", values: [row.id] }, categories),
+    env.DB.prepare("UPDATE images SET analysis_status='done',analysis_error='',analyzed_at=?,revision=revision+1 WHERE id=? AND analysis_status='running'").bind(stamp, row.id),
   ]);
-  await settle("completed", "done", "", outcome.usage);
   return { ...(await viewOf(env, row.id)), proposed_tags: proposed, tag_conflicts: conflicts };
 }
 
@@ -220,7 +237,7 @@ export async function completeCategories(env: Env, row: Row, data: Record<string
   const marked = await env.DB.prepare("UPDATE images SET categories_completed_at=? WHERE id=? AND categories_completed_at IS NULL AND status<>'trash'")
     .bind(stamp, row.id).run();
   if (!marked.meta.changes) throw new HttpError(409, "Completamento già inviato per questa immagine: nessuna chiamata ripetuta");
-  const call = await recordCall(env, model);
+  const call = await recordCall(env, model, row);
   const text = `Existing vocabulary by category:\n${await vocabularyText(env, VISUAL) || "(empty)"}\n${contextOf(row) || "No context."}`;
   const outcome = await send(env, model, instructions, COMPLETE_FORMAT, text, image);
   if (outcome.kind !== "ok") {

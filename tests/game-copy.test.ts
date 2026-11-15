@@ -19,9 +19,9 @@ test("the nearest format follows the proportions of the photo", () => {
 });
 
 test("the centred crop is the largest frame of the format, valid for any image", () => {
-  assert.deepEqual(centredCrop(6000, 4000), { x: 0, y: 0, width: 6000, height: 4000, format: "3:2" });
-  assert.deepEqual(centredCrop(4000, 3200), { x: 0, y: 100, width: 4000, height: 3000, format: "4:3" });
-  assert.deepEqual(centredCrop(1024, 1280), { x: 32, y: 0, width: 960, height: 1280, format: "3:4" });
+  assert.deepEqual(centredCrop(6000, 4000), { x: 1400, y: 0, width: 3200, height: 4000, format: "4:5" });
+  assert.deepEqual(centredCrop(4000, 3200), { x: 720, y: 0, width: 2560, height: 3200, format: "4:5" });
+  assert.deepEqual(centredCrop(1024, 1280), { x: 0, y: 0, width: 1024, height: 1280, format: "4:5" });
   assert.deepEqual(centredCrop(6000, 4000, "1:1"), { x: 1000, y: 0, width: 4000, height: 4000, format: "1:1" });
   for (const [w, h] of [[6000, 4000], [999, 1001], [64, 2000], [2000, 64], [4032, 3024], [1080, 1920]]) {
     for (const format of FORMATS) assert.equal(cropError(w, h, centredCrop(w, h, format)), "", `${w}×${h} ${format}`);
@@ -34,7 +34,7 @@ test("the centred crop is the largest frame of the format, valid for any image",
 test("a crop outside the image, of the wrong shape or format is refused", () => {
   assert.equal(cropError(6000, 4000, { x: 1, y: 0, width: 6000, height: 4000, format: "3:2" }), "Inquadratura fuori dall'immagine");
   assert.equal(cropError(6000, 4000, { x: 0, y: 0, width: 5000, height: 4000, format: "3:2" }), "Inquadratura non nel formato 3:2");
-  assert.equal(cropError(6000, 4000, { x: 0, y: 0, width: 3200, height: 4000, format: "4:5" }), "Formato non previsto");
+  assert.equal(cropError(6000, 4000, { x: 0, y: 0, width: 3200, height: 4000, format: "4:5" }), "");
   assert.equal(cropError(6000, 4000, { x: 0, y: 0, width: 30, height: 20, format: "3:2" }), "Inquadratura troppo piccola o fuori dall'immagine");
   assert.equal(cropError(6000, 4000, { x: 0, y: 0, height: 4000 }), "Formato non previsto");   // a 4:5 crop of v2
   assert.equal(cropError(6000, 4000, null), "Inquadratura mancante");
@@ -62,12 +62,13 @@ test("the initial view is the largest centred 4:5 frame, inside the copy", () =>
 
 test("query forms and stored values", () => {
   assert.deepEqual(parseCrop("0,0,6000,4000,3:2"), { x: 0, y: 0, width: 6000, height: 4000, format: "3:2" });
-  assert.equal(parseCrop("0,0,6000,4000,4:5"), null);
+  assert.deepEqual(parseCrop("0,0,3200,4000,4:5"), {x:0,y:0,width:3200,height:4000,format:"4:5"});
   assert.equal(parseCrop("0,0,4000"), null);
   assert.deepEqual(parseView("358,0,1024"), { x: 358, y: 0, height: 1024 });
   assert.equal(parseView("-1,0,1024"), null);
   assert.equal(storedCrop(JSON.stringify({ x: 0, y: 0, height: 4000 })), null);   // 4:5 copy to be made again
-  assert.deepEqual(storedCrop(JSON.stringify({ x: 0, y: 0, width: 6, height: 4, format: "3:2" })), { x: 0, y: 0, width: 6, height: 4, format: "3:2" });
+  assert.equal(storedCrop(JSON.stringify({ x: 0, y: 0, width: 6, height: 4, format: "3:2" })), null);
+  assert.deepEqual(storedCrop(JSON.stringify({x:0,y:0,width:80,height:100,format:"4:5"})), {x:0,y:0,width:80,height:100,format:"4:5"});
 });
 
 test("generator sizes respect the documented limits; standard-only models get three formats", () => {

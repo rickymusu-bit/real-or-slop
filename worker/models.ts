@@ -29,11 +29,11 @@ export async function chosenModel(env: Env, kind: ModelKind): Promise<string> {
   return row && valid(row.value) ? row.value : kind === "text_model" ? DEFAULT_TEXT_MODEL : DEFAULT_IMAGE_MODEL;
 }
 
-/** The default quality: the stored one if the chosen image model accepts it, otherwise «medium» (or the model's first). */
+/** The default quality: the stored one if the chosen image model accepts it, otherwise «high» (or the model's first). */
 export async function chosenQuality(env: Env): Promise<string> {
   const qualities = IMAGE_MODELS[await chosenModel(env, "image_model")] || [];
   const row = await env.DB.prepare("SELECT value FROM app_settings WHERE key='image_quality'").first<{ value: string }>();
-  return row && qualities.includes(row.value) ? row.value : qualities.includes("medium") ? "medium" : qualities[0] || "medium";
+  return row && qualities.includes(row.value) ? row.value : qualities.includes("high") ? "high" : qualities[0] || "medium";
 }
 
 async function state(env: Env) {

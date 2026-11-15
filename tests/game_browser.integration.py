@@ -55,8 +55,8 @@ try:
             for number in range(1, 11):
                 expect(page.locator('.play-levels')).to_have_attribute('aria-label', f'Foto {number} di 10', timeout=15000)
                 frame = page.locator('.card-media').bounding_box()
-                # Fixtures are 40×50: copies 38×50 (3:4). Every screen: the copy's format, the whole photo.
-                expected = 38 / 50
+                # Fixtures are 40×50: copies 40×50 (4:5). Every screen: the copy's format, the whole photo.
+                expected = 40 / 50
                 assert abs(frame['width'] / frame['height'] - expected) < 0.02, (frame, expected)
                 expect(page.locator('.play-levels .choices [data-choice=REAL]')).to_be_visible()  # also on the phone
                 reset = page.locator('[data-viewer-reset]')
@@ -108,7 +108,7 @@ try:
             page.locator('.credit-image img').first.scroll_into_view_if_needed()
             page.wait_for_function("document.querySelector('.credit-image img').naturalWidth > 0")
             box = page.locator('.credit-image img').first.bounding_box()
-            assert abs(box['width'] / box['height'] - 38 / 50) < 0.03, box
+            assert abs(box['width'] / box['height'] - 40 / 50) < 0.03, box
             page.locator('[name=nickname]').fill(f'Browser {name}'); page.locator('#enter-form button').click()
             expect(page.locator('[data-game-code]')).to_have_count(0)  # the age declaration is required
             page.locator('[name=age_ok]').check()
@@ -128,9 +128,9 @@ try:
             expect(page.locator('#content')).to_contain_text('Le SLOP possono essere anche ridotte, sgranate o sbiadite')
             expect(page.locator('#content')).not_to_contain_text('stessa preparazione')
             page.goto(base + '/crediti')
-            expect(page.locator('#content')).to_contain_text('formato fotografico comune più vicino')
+            expect(page.locator('#content')).to_contain_text('ritagliata in verticale nel rapporto 4:5')
             expect(page.locator('#content')).to_contain_text('possono essere state ridotte, sgranate o sbiadite')
-            expect(page.locator('#content')).not_to_contain_text('4:5')
+            expect(page.locator('#content')).to_contain_text('4:5')
             page.goto(base + '/')
             expect(page.locator('.leaderboard').first.locator('tbody')).to_contain_text(f'Browser {name}')
             expect(page.locator('.leaderboard').first.locator('tbody')).to_contain_text('Facile')

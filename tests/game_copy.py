@@ -15,7 +15,7 @@ def nearest_format(width, height):
     return best
 def format_width(fmt, height): return js_round(height * ratio(fmt))
 def centred_crop(width, height, fmt=None):
-    fmt = fmt or nearest_format(width, height)
+    fmt = fmt or '4:5'
     h = min(height, math.floor(width / ratio(fmt)))
     while h > 1 and format_width(fmt, h) > width: h -= 1
     h = max(h, 1); w = format_width(fmt, h)

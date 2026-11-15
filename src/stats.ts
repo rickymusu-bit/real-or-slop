@@ -5,10 +5,10 @@ import { escape } from "../shared/html";
 
 type Level = "facile" | "medio" | "difficile" | "esperto";
 const LABEL: Record<Level, string> = { facile: "Facile", medio: "Medio", difficile: "Difficile", esperto: "Esperto" };
-const KIND: Record<string, string> = { analysis: "Tag", prompts: "Prompt SLOP", images: "Immagini" };
+const KIND: Record<string, string> = { analysis: "Tag", prompts: "Prompt SLOP", images: "Immagini", evaluation: "Valutazione SLOP" };
 const STATUS: Record<string, string> = { completed: "riuscita", failed: "rifiutata, senza addebito", uncertain: "esito incerto", pending: "in corso" };
 interface Stats {
-  period: string; generated_at: string;
+  processes?: {state:string;n:number;attempts:number}[]; period: string; generated_at: string;
   live: { now: number; by_level: Record<Level, number>; open: number; window_minutes: number };
   games: { level: Level; started: number; completed: number; invalidated: number; unfinished: number; mean_score: number | null }[];
   answers: { concluded_games: number; photos: number; real: { right: number; total: number }; slop: { right: number; total: number }; timed_out: number; balanced_accuracy: number | null };
@@ -39,14 +39,7 @@ function measureTable(rows: NonNullable<Stats["balance"]["measures"]>) {
       `<td class="${r.diverging.includes(k) ? "is-uncertain" : ""}">${value(r.real[k])} / ${value(r.slop[k])}</td>`).join("")}</tr>`).join("")}
     </tbody></table></div>${rows.some(r => r.diverging.length) ? '<p class="stats-warning" role="status">⚠ Alcune misure delle SLOP si scostano di oltre il 25% da quelle delle REAL del gruppo: il trattamento crea un indizio. Avviso non bloccante.</p>' : ""}`;
 }
-function formatTable(rows: { format: string; real: number; slop: number }[]) {
-  const realTotal = rows.reduce((n, r) => n + r.real, 0), slopTotal = rows.reduce((n, r) => n + r.slop, 0);
-  const pct = (n: number, total: number) => total ? Math.round(n / total * 100) + "%" : "—";
-  return `<div class="stats-table-wrap"><table class="stats-table"><caption>Formati delle copie pubblicate (4:5: copie della ricetta precedente)</caption>
-    <thead><tr><th scope="col">Formato</th><th scope="col">REAL</th><th scope="col">SLOP</th></tr></thead><tbody>
-    ${rows.map(r => `<tr><th scope="row">${escape(r.format)}</th><td>${r.real} (${pct(r.real, realTotal)})</td><td>${r.slop} (${pct(r.slop, slopTotal)})</td></tr>`).join("")}
-    </tbody></table></div><p class="hint">Se le percentuali di REAL e SLOP divergono, il formato diventa un indizio: correggi il contesto fisso dei prompt SLOP.</p>`;
-}
+
 const tile = (value: string, label: string, note = "") => `<div class="stat-tile"><strong>${value}</strong><span>${label}</span>${note ? `<small>${note}</small>` : ""}</div>`;
 
 export function mountStats(root: HTMLElement, load: (period: string) => Promise<Stats>) {
@@ -95,7 +88,7 @@ export function mountStats(root: HTMLElement, load: (period: string) => Promise<
         <span class="share-real" style="width:${share * 100}%"></span><span class="share-slop" style="width:${(1 - share) * 100}%"></span><i class="share-band" aria-hidden="true"></i></div>
         <p class="share-legend"><span><i class="share-key share-real"></i>REAL</span><span><i class="share-key share-slop"></i>SLOP</span><span><i class="share-key share-band-key"></i>fascia 40–60%</span></p>`}
       ${b.warning ? '<p class="stats-warning" role="status">⚠ Le pubblicate escono dal rapporto 40–60% tra REAL e SLOP: avviso non bloccante.</p>' : ""}
-      ${b.formats?.length ? formatTable(b.formats) : ""}
+      ${d.processes?.length ? `<p>Processi SLOP: ${d.processes.map(p => `${escape(p.state)} ${p.n} (${p.attempts} tentativi)`).join(" · ")}</p>` : ""}
       ${b.twins ? `<p class="stats-twins">SLOP gemelle: <strong>${b.twins.twinned}</strong> REAL su ${b.twins.real} hanno una gemella approvata o pubblicata; <strong>${b.twins.waiting}</strong> ne aspettano una.</p>` : ""}
       ${b.groups?.length ? groupTable(b.groups) : ""}
       ${b.measures?.length ? measureTable(b.measures) : ""}

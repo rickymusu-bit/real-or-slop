@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 3.5.1
+# Libreria delle immagini, tag e analisi — specifica 3.6.0
 
-Stato: vigente; la 3.0.0 è in produzione con l'app 1.25.0, la 3.1.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T13:42:00+01:00.
+Stato: vigente; la 3.0.0 è in produzione con l'app 1.25.0, la 3.1.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T13:54:58Z.
 La 3.1.0 registra la REAL di origine delle SLOP gemelle (migrazione 0049), il tetto di risposta dell'analisi e il contesto 1.8.0.
 La 3.0.0 sostituisce la categoria Formato con Genere, Colore e Supporto, giudicate solo dall'immagine, e aggiunge il completamento a
 pagamento di queste tre categorie per le immagini già analizzate (decisioni dell'owner del 2026-11-14, sezioni 4 e 5). La 2.0.0 è la
@@ -9,42 +9,7 @@ senza strati `libreria-immagini.v1.8.0`, `categorie-tag.v1.1.0` e le parti su li
 `didascalie-wizard.v1.0.0` e `anteprima-descrizione.v1.2.0`, che restano nella cronologia git. Regole di contenuto delle SLOP e
 trasparenza: specifica `contenuti-e-trasparenza`. Copie di gioco: specifica `copie-di-gioco`.
 
-**Decisioni dell'owner del 2026-11-15, da implementare** (issue #136, aggiornata dalla specifica `generazione-slop` 5.2.0).
-Fino al rilascio il resto di questa specifica descrive il comportamento dell'app 1.26.0: queste decisioni non sono ancora codice.
-Chi implementa aggiorna tutte le sezioni interessate e toglie questo riquadro.
-
-- **Analisi REAL combinata:** l'analisi multimodale effettuata normalmente nel wizard sulla **copia 4:5** della REAL e
-  sul contesto Commons restituisce **insieme tag e descrizione editoriale neutra** (`real_description.visible`,
-  `real_description.documented_context`, `real_description.uncertainties`). Un unico esito a pagamento con la stessa
-  conferma, senza ulteriori chiamate. Non sovrascrive la descrizione di Commons né il testo eventualmente mostrato ai
-  giocatori; la descrizione editoriale è privata e correggibile. Segnalare esplicitamente se mancano informazioni di contesto.
-- **Brief e prompt SLOP in una sola chiamata testuale:** quando serve generare, il modello riceve i tag REAL e la
-  descrizione editoriale **già salvata** e produce `brief` e `prompt` insieme. Il brief resta congelato nel loop; il prompt
-  può cambiare. Non riceve nuovamente i pixel della REAL (specifica `generazione-slop` 5.2.0, sezioni 3 e 8).
-- **REAL storiche:** se prive della nuova descrizione, restano in libreria; l'owner può compilarla a mano o autorizzare
-  una nuova analisi tag+descrizione. Nessun backfill automatico. Gli eventuali campi `visual_description` legacy non
-  vanno cancellati o convertiti senza una migrazione concordata.
-- **Chiamate a pagamento:** l'analisi REAL di caricamento (`analysis`) restituisce **tag+descrizione nella stessa chiamata**.
-  La chiamata `prompt` successiva è **solo testuale** e restituisce `brief+prompt`; `evaluation` giudica la SLOP intera.
-  Nessuna chiamata `description` aggiuntiva. Ogni tentativo genera una candidata e la valuta; registrazione preventiva,
-  mai retry automatici dopo esito incerto. Con REAL già descritta: massimo `2 + 2N` chiamate **nel solo processo SLOP**
-  (brief+prompt, N immagini, N valutazioni e una analisi dei tag SLOP). L'analisi REAL è stata pagata nel caricamento;
-  recuperare una descrizione mancante richiede conferma e preventivo separati.
-- **Contesto dei modelli:** rimangono **tre parti**: base comune, Tag, Prompt per le SLOP. La parte «Tag» istruisce la
-  chiamata REAL a generare anche la descrizione neutra. La parte «Prompt per le SLOP» governa la **chiamata testuale**
-  successiva per brief+prompt. Nessuna quarta parte, nessun riferimento a immagini generate nel contesto di analisi REAL.
-- **Modelli predefiniti:** `gpt-6.1-sol` per analisi REAL, prompt testuale e valutazione SLOP (la visione è richiesta solo
-  per analisi e valutazione), `gpt-image-2.5-flare` in qualità `high` per le immagini.
-- **Campi della REAL:** descrizione editoriale strutturata e modificabile, separata da descrizione Commons, tag, dettagli
-  fonte, modello e revisione della copia di gioco usata nell'analisi. Non esporre il nuovo testo automaticamente nel gioco.
-- **Campi di una SLOP generata:** REAL di riferimento, ancoraggi del brief editoriale, prompt finale, qualità, valutazione
-  positiva **dell'immagine intera prima di ritaglio e trattamento**, e riepilogo dei tentativi; niente REAL campione né `change`
-  obbligatorio. I tentativi rifiutati sono privati e temporanei, **non** immagini della libreria. La copia 4:5 si prepara
-  **dopo l'accettazione**; tag assegnati sulla copia effettivamente destinata al gioco.
-- **Stati:** approvare e pubblicare richiedono una copia di gioco 4:5 (specifica `copie-di-gioco`). Accettazione del loop
-  crea un'immagine `new`: non equivale né all'approvazione né alla pubblicazione. 
-- **Impostazioni:** limite massimo di tentativi (1–5, predefinito 3) e tolleranza qualitativa distinti; snapshot nel processo
-  prima di inviare le chiamate. L'aumento dei tentativi non è una difficoltà misurata del gioco.
+**Stato del ramo 1.27.0:** implementata la pipeline della specifica `generazione-slop` 5.3.0; produzione ancora 1.26.0 fino al rilascio autorizzato.
 
 ## 1. Decisioni dell'owner
 
@@ -82,7 +47,7 @@ Una sola raccolta di immagini REAL e SLOP.
   la rotta `POST /upload`, usata dai test.
 - **Campi.** Origine, titolo (≤200 caratteri), descrizione (≤1000), spiegazione (≤2000, oggi non mostrata nel gioco), fonte, autore e
   licenza (REAL), prompt e modello (SLOP), tag con le categorie, stato, originale e copia di gioco, revisione per le modifiche
-  concorrenti. Per una SLOP generata anche batch, REAL di origine, tag di partenza, REAL campione e qualità della generazione.
+  concorrenti. Per una SLOP generata anche batch, REAL di origine, tag di partenza, REAL di riferimento e qualità della generazione.
 - **Descrizione.** Per le REAL arriva da Commons (testo ripulito, al massimo 500 caratteri) e l'owner la corregge nel passo 2 del wizard
   o nella sezione Database. Il giocatore la legge nella lista di fine partita (specifica `gioco-a-livelli`). Entra anche nel
   contesto dell'analisi.
@@ -92,7 +57,7 @@ Una sola raccolta di immagini REAL e SLOP.
 
 `nuova` → `approvata` → `pubblicata`, più `cestino` (che ricorda lo stato di provenienza).
 
-- **Approvare** (solo una nuova): copia di gioco nel formato della foto, almeno un tag e, per una REAL, la conferma di aver verificato
+- **Approvare** (solo una nuova): copia di gioco in 4:5, almeno un tag e, per una REAL, la conferma di aver verificato
   diritti e licenza. Una REAL con licenza senza opere derivate (ND) è esclusa: il server rifiuta approvazione e pubblicazione.
 - **Pubblicare** (solo un'approvata): la copia passa nel bucket del gioco ed entra nelle partite nuove.
 - **Modificare.** Nuove e approvate si modificano direttamente, con salvataggio immediato; un'approvata resta approvata e deve
@@ -101,7 +66,7 @@ Una sola raccolta di immagini REAL e SLOP.
 - **Ritirare** una pubblicata: torna approvata. La copia lascia il bucket del gioco subito, oppure quando finisce l'ultima partita in
   corso che la usa (`retired_copies`).
 - **Cestino.** Spostare nel cestino, da sola o in gruppo, non chiede conferma, tranne per le pubblicate, che escono subito dal gioco. Ripristinare riporta allo
-  stato di provenienza; una pubblicata torna approvata. «Svuota cestino» ed «Elimina definitivamente» cancellano ogni riga dell'immagine
+  stato di provenienza; una SLOP non si ripristina se la REAL ha già una SLOP attiva o un processo in corso; una pubblicata torna approvata. «Svuota cestino» ed «Elimina definitivamente» cancellano ogni riga dell'immagine
   (tag, round, risposte) e ogni suo file; un'immagine ancora usata da una partita in corso si elimina quando la partita finisce.
 - **Partita in corso:** in preparazione o attiva e iniziata da meno della durata massima delle Impostazioni (24 ore predefinite).
 - Azioni in gruppo: fino a 500 immagini per volta.
@@ -152,15 +117,9 @@ Una sola raccolta di immagini REAL e SLOP.
 
 ## 5. Analisi a pagamento
 
-**Modifica prevista, da implementare:** per una **REAL** la risposta dell'analisi a pagamento contiene **sia** i tag sia
-`real_description` (contenuto visibile, contesto Commons documentato, incertezze); per una **SLOP** mantiene l'analisi dei
-tag della copia giocabile. La chiamata della REAL continua a non ricevere istruzioni su immagini sintetiche. Distinguere
-contenuto osservabile e metadati Commons, non colmare lacune documentali con ipotesi.
+Per una REAL l’unica analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Modello, hash della copia, revisione e data sono conservati come provenienza. La descrizione è privata, modificabile senza alterare tag o testo Commons; quest’ultimo è conservato separatamente per le nuove acquisizioni. Per una SLOP l’analisi restituisce soltanto tag.
 
-L'owner può correggere la descrizione senza rifare i tag e viceversa. Il sistema conserva revisione e modello dell'esito
-originario e non sovrascrive né il campo originale Commons né la descrizione destinata al riepilogo del gioco.
-Le REAL senza descrizione possono essere completate manualmente oppure con analisi combinata **solo dopo conferma**.
-
+Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova generazione richiede compilazione manuale o una nuova analisi combinata confermata (`refresh_description:true`), anche se già approvata/pubblicata. Nessun backfill. La modifica della sola descrizione privata non ritira una pubblicata.
 
 - Su richiesta dell'owner (wizard, dettaglio o gruppo nel Database, studio SLOP), solo per immagini nuove con copia di gioco. Il modello
   di testo scelto nelle Impostazioni, che deve leggere immagini, riceve la copia di gioco, titolo e descrizione (REAL) o il prompt (SLOP)
@@ -183,17 +142,17 @@ Le REAL senza descrizione possono essere completate manualmente oppure con anali
   Non ritira le pubblicate, perché non cambia nulla di ciò che vede il giocatore. Una sola volta per immagine (`categories_completed_at`);
   registrata in `paid_calls` come analisi.
 - **Una generazione per immagine:** dopo un esito riuscito il server rifiuta un'altra analisi. I tag generati restano nel database
-  e «Ripristina i tag generati» li riporta senza costi. Fa eccezione la rigenerazione di una SLOP, che è un'immagine nuova.
-- Una sola analisi alla volta per immagine; un segno «in corso» più vecchio di 10 minuti non blocca più.
+  e «Ripristina i tag generati» li riporta senza costi. Fanno eccezione l’analisi combinata confermata di una REAL storica senza descrizione e una nuova SLOP accettata da un nuovo processo.
+- Una sola analisi alla volta per immagine; un segno interrotto resta sospeso e viene marcato incerto dalla manutenzione.
 
 ## 6. Chiamate a pagamento e modelli
 
-- Tre tipi: analisi, prompt SLOP, immagini SLOP. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
+- Quattro tipi: analisi, brief+prompt SLOP, immagini SLOP, valutazione SLOP intera. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
 - **Esiti:** risposta valida → `completed`; errore 4xx → `failed`, senza addebito; errore 5xx, timeout o rete → `uncertain`, mai
   ripetuta in automatico. Chiave rifiutata, limite di spesa o credito OpenAI esaurito fermano le serie con un messaggio che rimanda a
   platform.openai.com.
-- **Registro** `paid_calls`: tipo, modello, esito, token, date; nessun importo e nessun legame con le immagini.
-- **Modelli:** modello di testo (analisi e prompt SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
+- **Registro** `paid_calls`: tipo, modello, esito, token, date; nessun importo e collegamenti a immagine, processo e tentativo, azzerati alla cancellazione; nessun archivio delle immagini eliminate.
+- **Modelli:** modello di testo (analisi, brief+prompt e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
   elencati nel codice e presenti nel progetto OpenAI (`GET /v1/models`, in cache per un'ora; se l'elenco non si legge si offrono tutti).
   Ogni chiamata registra il modello usato.
 - Senza il segreto `OPENAI_API_KEY` le chiamate a pagamento sono spente. Nei test solo il modello finto `tests/fake_openai.py`.
@@ -225,3 +184,5 @@ Le REAL senza descrizione possono essere completate manualmente oppure con anali
   (`game_rounds`), `copy_view` (`images`).
 - R2: quarantena privata (`library/<id>/`: originale e copia) e bucket del gioco (copie pubblicate).
 - Le statistiche di un'immagine (visualizzazioni e classificazioni corrette) contano solo i round giocati con la copia attuale.
+
+Migrazione 0050: descrizioni e provenienza, contesto Commons originale, `slop_processes` e `slop_attempts`, collegamenti del registro `paid_calls`, versione/snapshot del batch. Nessuna conversione o chiamata sulle REAL storiche.

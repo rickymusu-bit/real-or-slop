@@ -1,8 +1,7 @@
-/** Crop of the game copy (spec `copie-di-gioco`, section 3): the oriented original with the crop in the chosen format
- * (nearest one, centred, at first); drag it or move it with the arrow keys, resize it, change the format. Returns the crop or null. */
+/** Owner-controlled 4:5 framing. Keep the photograph’s fundamental subjects and context inside the crop. */
 import "./crop-editor.css";
 import {
-  centredCrop, cropError, FORMAT_LABELS, FORMATS, formatWidth, isFormat, minimumCropHeight, nearestFormat, ratioOf, type Crop, type Format,
+  centredCrop, cropError, FORMAT_LABELS, formatWidth, isFormat, minimumCropHeight, ratioOf, type Crop, type Format,
 } from "../shared/game-copy";
 import { originalOf } from "./game-copy";
 
@@ -53,14 +52,13 @@ function frameControl(stage: HTMLElement, frame: HTMLElement, size: HTMLInputEle
 export async function chooseFrame(imageId: string, width: number, height: number, current: { crop: Crop | null } | null,
   title = ""): Promise<{ crop: Crop } | null> {
   const blob = await originalOf(imageId), url = URL.createObjectURL(blob);
-  let crop: Crop = current?.crop && !cropError(width, height, current.crop) ? { ...current.crop } : centredCrop(width, height);
+  let crop: Crop = current?.crop?.format === "4:5" && !cropError(width, height, current.crop) ? { ...current.crop } : centredCrop(width, height);
   const dialog = document.createElement("dialog");
   dialog.className = "crop-dialog";
   dialog.setAttribute("aria-label", "Inquadratura della copia di gioco");
   const safeTitle = title.replace(/[<>&"]/g, "");
-  dialog.innerHTML = `<h2>Inquadratura</h2><p class="hint">${safeTitle ? `«${safeTitle}». ` : ""}Il giocatore vede tutta la copia: il formato più vicino
-    alla foto taglia il meno possibile. Trascina il riquadro, oppure usa le frecce; il cursore ne cambia la dimensione.</p>
-    <label class="crop-format">Formato<select>${FORMATS.map(f => `<option value="${f}">${FORMAT_LABELS[f]}${f === nearestFormat(width, height) ? " (il più vicino)" : ""}</option>`).join("")}</select></label>
+  dialog.innerHTML = `<h2>Inquadratura</h2><p class="hint">${safeTitle ? `«${safeTitle}». ` : ""}Il giocatore vede la copia 4:5. Conserva i soggetti e gli elementi fondamentali della fotografia. Trascina il riquadro, oppure usa le frecce; il cursore ne cambia la dimensione.</p>
+    <label class="crop-format">Formato<select>${["4:5" as const].map(f => `<option value="${f}">${FORMAT_LABELS[f]}</option>`).join("")}</select></label>
     <h3>Ritaglio sulla foto originale</h3>
     <div class="crop-stage" data-stage="crop"><img alt="" draggable="false"><div class="crop-frame" tabindex="0" role="slider" aria-label="Posizione del ritaglio, frecce per spostarlo"></div></div>
     <label class="crop-size">Dimensione del ritaglio<input type="range" step="1" data-size="crop"></label>

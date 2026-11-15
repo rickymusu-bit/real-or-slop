@@ -1,21 +1,10 @@
-# Dashboard e wizard REAL — specifica 2.3.1
+# Dashboard e wizard REAL — specifica 2.4.0
 
-Stato: vigente (con decisioni future indicate a parte). Aggiornata: 2026-11-15T13:42:00+01:00. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
+Stato: vigente (con decisioni future indicate a parte). Aggiornata: 2026-11-15T13:54:58Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wizard di `didascalie-wizard.v1.0.0` e
 `anteprima-descrizione.v1.2.0`, che restano nella cronologia git.
 
-**Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
-descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
-
-- **Passo 3, Inquadratura:** il riquadro è sempre 4:5 verticale; il formato non si sceglie più (specifica `copie-di-gioco` 9.0.0).
-- **Tag e descrizione editoriale della REAL** (specifiche `libreria-immagini` 3.5.1, `generazione-slop` 5.2.0): al passo 2
-  **una sola chiamata multimodale** sulla copia 4:5 e sul contesto Commons produce i tag e una descrizione della foto
-  e del contesto. Il testo editoriale è privato, correggibile e separato dalla descrizione Commons mostrata a fine partita.
-  Non presenta indizi dell'esistenza di immagini SLOP. Durante l'analisi non viene creata alcuna immagine sintetica.
-- **Criteri di scelta delle REAL** (issue #138): otto principi qualitativi indipendenti dal generatore: chiarezza del soggetto,
-  complessità semantica, relazioni spaziali/fisiche, precisione dei dettagli, riconoscibilità della scena, coerenza del contesto,
-  compatibilità 4:5, trasformabilità. **Nessun filtro, punteggio o avviso automatico nel wizard**: sono un promemoria editoriale
-  dell'owner. Una REAL è riferimento tematico/fotografico, non una fotografia che la SLOP debba imitare.
+**Stato del ramo 1.27.0:** implementata la pipeline della specifica `generazione-slop` 5.3.0; produzione ancora 1.26.0 fino al rilascio autorizzato.
 
 ## 1. Decisioni dell'owner
 
@@ -108,3 +97,7 @@ alla volta. Dopo un errore quelle già pubblicate non si ripetono; gli errori re
 - La descrizione di Commons è spesso in inglese e tagliata: ora la leggono i giocatori, quindi va riletta. Una descrizione riscritta è un
   testo dell'owner e nel gioco sta in un paragrafo separato dai crediti dell'autore.
 - La pubblicazione di un gruppo non è transazionale: dopo un errore di rete alcune foto possono restare approvate.
+
+## Descrizione editoriale privata
+
+Nel passo dei tag, tre campi modificabili: elementi visibili, contesto Commons documentato e incertezze. La stessa chiamata che genera i tag li compila, sulla copia 4:5 già preparata. Le modifiche si salvano senza rifare i tag e senza sovrascrivere la descrizione destinata ai giocatori. Inquadratura conserva gli elementi fondamentali della REAL.

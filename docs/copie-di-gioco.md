@@ -1,7 +1,7 @@
-# Copie di gioco — specifica 9.1.3
+# Copie di gioco — specifica 9.2.0
 
-Stato: decisioni approvate, **da implementare** (#136 e successivo loop di credibilità in `generazione-slop` 5.2.0); in produzione c'è la 8.0.0
-(app 1.26.0: copia nel formato della foto, trattamento verso un'altra REAL). Aggiornata: 2026-11-15T13:42:00+01:00. La 9.0.0 riporta tutte
+Stato: implementata nel ramo 1.27.0, rilascio da autorizzare; in produzione resta la 8.0.0
+(app 1.26.0: copia nel formato della foto, trattamento verso un'altra REAL). Aggiornata: 2026-11-15T13:54:58Z. La 9.0.0 riporta tutte
 le copie di gioco al formato verticale 4:5 e prende le misure del trattamento dalla REAL di origine. Le versioni precedenti restano
 nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia e il gioco serve esattamente quei byte.
 

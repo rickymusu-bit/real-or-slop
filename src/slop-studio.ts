@@ -1,245 +1,142 @@
-/** SLOP studio (spec `generazione-slop`, sections 3–6): choice of the REAL to twin, prompts with their format, images with
- * their treated copy and analysis, review with what the twin was meant to keep of its REAL and press-and-hold preview. Every paid
- * call is confirmed. */
+/** Editorial studio: textual briefs, bounded full-image evaluation, accepted copies and manual review. */
 import "./slop-studio.css";
-import { prepareItemCopy, type TreatableItem } from "./game-copy";
-import { FORMAT_LABELS, FORMATS, isFormat, type Format } from "../shared/game-copy";
-import { markGameMedia } from "./media-mark";
-import { onLongPress, openPreview } from "./image-preview";
+import { prepareItemCopy, saveFrame, type TreatableItem } from "./game-copy";
+import { chooseFrame } from "./crop-editor";
 import { escape } from "../shared/html";
-import { VISUAL, type Category } from "../shared/tag-categories";
+import { BRIEF_KEYS, type Brief, type Evaluation } from "../shared/editorial";
 import type { TwinItem } from "../shared/twins";
-import { categoryOf as categoryOfImage, pill, sortByCategory, startPills, startTagList, type StartSlot } from "./tag-ui";
-
-interface Waiting { id: string; title: string; tags: { label: string; category: Category }[]; measured: boolean; file: string }
-interface State { thresholds: { section: number; max_batch: number }; real_total: number; slop_total: number; twinned: number; waiting: Waiting[] }
-interface Image { id: string; status: string; revision: number; tags: string[]; categories: Record<string, string>; file: string;
-  copy: unknown; prompt: string; analysis: { status: string; error: string }; generation: { batch: string; slot: StartSlot | null } | null }
-interface Batch { id: string; items: TwinItem[]; prompts: { prompt: string; used: string[]; format?: Format }[]; prompts_status: string; prompts_error: string; images: Image[] }
-interface Models { text_model: string; image_model: string; image_quality: string }
-const API = "/api/admin/library/slop/", LIBRARY = "/api/admin/library", DRAFT = "ros-slop-studio-v3";
-/** What a twin must keep of its REAL: decade, genre, colour and medium (missing: the image missed its aim), event and place. */
-const KEPT: readonly Category[] = ["time", "genre", "color", "medium", "event", "place"], SERIOUS: readonly Category[] = ["time", ...VISUAL];
-
+import { onLongPress, openPreview } from "./image-preview";
+import { startPills } from "./tag-ui";
+interface Config { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string }
+interface Image extends TreatableItem { id: string; status: string; revision: number; tags: string[]; categories: Record<string,string>; file: string; original: string;
+  width: number; height: number; copy: Parameters<typeof chooseFrame>[3]; prompt: string; analysis: { status: string; error: string } }
+interface Attempt {id: string; number: number; prompt: string; status: string; evaluation: Evaluation | null; file: string | null}
+interface Process {id: string; slot: number; state: string; prompt: string; brief: Brief | null; attempts: Attempt[]; error: string; calls: number; image_id: string | null}
+interface Batch {id: string; items: TwinItem[]; prompts: {prompt: string; brief?: Brief}[]; processes: Process[]; config: Config | null; max_calls: number;
+  pipeline_version: number; prompts_status: string; prompts_error: string; images: Image[]}
+interface Waiting {id: string; title: string; file: string; described: boolean; tags: TwinItem["tags"]}
+interface State {thresholds: {section: number; max_batch: number}; real_total: number; waiting: Waiting[]}
+const BRIEF_LABELS = {required:"Ancoraggi obbligatori",preferred:"Preferenze",flexible:"Elementi liberi",exclusions:"Esclusioni"};
+const API = "/api/admin/library/slop/", LIBRARY = "/api/admin/library", DRAFT = "ros-editorial-studio-v1";
 async function call<T>(path: string, body?: unknown, method?: string, base = API): Promise<T> {
-  const response = await fetch(base + path, { credentials: "same-origin", method: method || (body === undefined ? "GET" : "POST"),
-    headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
-  const data = await response.json().catch(() => ({})) as T & { error?: string };
-  if (!response.ok) throw Error(data.error || "Richiesta non riuscita");
-  return data;
+  const response = await fetch(base + path, {credentials: "same-origin", method: method || (body === undefined ? "GET" : "POST"),
+    headers: {"Content-Type":"application/json"}, body: body === undefined ? undefined : JSON.stringify(body)});
+  const data = await response.json() as T & {error?: string};
+  if (!response.ok) throw Error(data.error || "Richiesta non riuscita"); return data;
 }
-const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
-
-export async function mountSlopStudio(root: HTMLElement): Promise<{ refresh: () => Promise<void> }> {
-  let data: State | null = null, page = 1, notice = "", busy = false;
-  let batch: Batch | null = null, batchId = "", models: Models | null = null, quality = "medium", progress = "";
-  let chosen: string[] = [];
-  try {
-    const draft = JSON.parse(sessionStorage.getItem(DRAFT) || "{}") as { chosen?: string[]; page?: number; batch?: string };
-    batchId = typeof draft.batch === "string" ? draft.batch : "";
-    chosen = Array.isArray(draft.chosen) ? draft.chosen.filter(t => typeof t === "string") : [];
-    page = typeof draft.page === "number" && draft.page >= 2 && draft.page <= 4 && batchId ? draft.page : 1;
-  } catch { /* no draft */ }
-  const persist = () => { try { sessionStorage.setItem(DRAFT, JSON.stringify({ chosen, page, batch: batchId })); } catch { /* private browsing */ } };
-  const count = () => batch?.items.length || 0;
-
-  const steps = () => '<ol class="rw-steps slop-steps" aria-label="Fasi della generazione">' +
-    ["REAL", "Prompt", "Immagini", "Revisione"].map((label, i) =>
-      "<li " + (page === i + 1 ? 'aria-current="step"' : "") + "><span>" + (i + 1) + "</span>" + label + "</li>").join("") + "</ol>";
-
-  const first = () => {
-    if (!data) return '<p class="hint">Caricamento…</p>';
-    const closed = data.real_total < data.thresholds.section, max = data.thresholds.max_batch;
-    chosen = chosen.filter(id => data!.waiting.some(w => w.id === id));
-    return '<p class="slop-totals">Ogni SLOP è la gemella di una REAL: un\'altra fotografia dello stesso evento, scritta dai tag e dalla descrizione ' +
-      "di quella REAL. REAL approvate o pubblicate: <strong>" + data.real_total + "</strong>; con una gemella approvata o pubblicata: <strong>" +
-      data.twinned + "</strong>; in attesa di una gemella: <strong>" + data.waiting.length + "</strong>.</p>" +
-      (closed ? '<p class="slop-closed">REAL approvate o pubblicate: ' + data.real_total + " su " + data.thresholds.section +
-        ". La generazione si apre da " + data.thresholds.section + " REAL.</p>" : "") +
-      (data.waiting.length ? '<p class="hint">Scegli fino a ' + max + " REAL. La pressione prolungata apre l'anteprima.</p>" +
-        '<ul class="slop-waiting" aria-label="REAL in attesa di una gemella">' + data.waiting.map(w =>
-          '<li class="' + (chosen.includes(w.id) ? "is-chosen" : "") + '"><label><input type="checkbox" data-slop-pick="' + escape(w.id) + '"' +
-          (chosen.includes(w.id) ? " checked" : "") + (!chosen.includes(w.id) && chosen.length >= max ? " disabled" : "") + ">" +
-          '<img src="' + escape(w.file) + '" alt="" loading="lazy" draggable="false" data-long-press data-slop-waiting="' + escape(w.id) + '">' +
-          '<span class="slop-waiting-title">' + escape(w.title) + "</span></label></li>").join("") + "</ul>"
-        : '<p class="hint">Ogni REAL approvata o pubblicata ha già la sua gemella.</p>') +
-      '<div class="rw-actions rw-bottom"><button type="button" data-slop="first"' + (closed || !data.waiting.length ? " disabled" : "") +
-      ">Scegli le prime " + Math.min(max, data.waiting.length) + '</button><button type="button" class="primary" data-slop="prompts"' +
-      (closed || !chosen.length ? " disabled" : "") + ">Genera " + (chosen.length || "") + " prompt</button></div>" +
-      '<p class="hint">«Genera prompt» è una chiamata a pagamento a ' + escape(models?.text_model || "modello di testo") + ", con conferma.</p>";
+export async function mountSlopStudio(root: HTMLElement): Promise<{refresh: () => Promise<void>}> {
+  let state: State | null = null, batch: Batch | null = null, config: Config | null = null, chosen: string[] = [], page = 1, busy = false, notice = "", progress = "";
+  let batchId = sessionStorage.getItem(DRAFT) || "", recent: {id: string; count: number}[] = [];
+  const loadBatch = async () => { if (batchId) batch = await call<Batch>("batches/" + batchId); };
+  const evaluation = (a: Attempt) => `<details><summary>Tentativo ${a.number}: ${escape(a.evaluation?.decision || a.status)}</summary>` +
+    (a.file ? `<img src="${escape(a.file)}" alt="Candidata intera del tentativo ${a.number}" style="max-width:100%;max-height:360px;object-fit:contain">` : "") +
+    `<p lang="en">${escape(a.prompt)}</p>` + (a.evaluation ? `<p>${escape(a.evaluation.action_reason)}</p><p>Difetti critici: ${escape(a.evaluation.critical_findings.join("; ") || "nessuno")}</p><p>Difetti minori: ${escape(a.evaluation.minor_findings.join("; ") || "nessuno")}</p><p>Incertezze: ${escape(a.evaluation.uncertainty_notes.join("; ") || "nessuna")}</p><p>Vincoli editoriali: ${a.evaluation.editorial_constraints_met ? "rispettati" : "non rispettati"}</p>` : "") + "</details>";
+  const summary = () => batch?.config ? `<p class="hint">${batch.config.max_generation_attempts} tentativi massimi per REAL; tolleranza ${["rigorosa","normale","permissiva"][batch.config.editorial_tolerance]}. Massimo ${batch.max_calls} chiamate (brief+prompt, generazioni, valutazioni e tag dopo accettazione). Effettive: ${batch.processes.reduce((n,p) => n+p.calls,0)}. Modelli: ${escape(batch.config.text_model)}, ${escape(batch.config.image_model)}, qualità ${escape(batch.config.quality)}.</p>` : "";
+  const first = () => `<p>La REAL è un riferimento editoriale. Servono tag e descrizione privata; le REAL storiche si completano nel Database senza backfill automatico.</p>` +
+    `<p>REAL approvate o pubblicate: ${state?.real_total || 0}. Studio disponibile da ${state?.thresholds.section || 50} REAL.</p>` +
+    (config ? `<p>Configurazione: massimo ${config.max_generation_attempts} tentativi, tolleranza ${["rigorosa","normale","permissiva"][config.editorial_tolerance]}. Fino a ${2+2*config.max_generation_attempts} chiamate per REAL; si cambia nelle Impostazioni.</p>` : "") +
+    '<ul class="slop-waiting">' + (state?.waiting || []).map(w => `<li><label><input type="checkbox" data-slop-pick="${escape(w.id)}" ${chosen.includes(w.id) ? "checked" : ""} ${!w.described ? "disabled" : ""}><img src="${escape(w.file)}" alt="" data-slop-waiting="${escape(w.id)}" data-long-press><span>${escape(w.title)}${w.described ? "" : " — descrizione privata mancante"}</span></label></li>`).join("") + '</ul>' +
+    `<div class="rw-actions"><button data-slop="first">Scegli le prime 10</button><button class="primary" data-slop="prompts" ${!chosen.length || (state?.real_total || 0) < (state?.thresholds.section || 50) ? "disabled" : ""}>Genera ${chosen.length || ""} brief e prompt</button></div>` +
+    (recent.length ? `<label>Riprendi un batch<select data-recent><option value="">Scegli…</option>${recent.map(b => `<option value="${b.id}">${escape(b.id.slice(0,8))} · ${b.count} REAL</option>`).join("")}</select></label>` : "");
+  const second = () => summary() + (batch?.pipeline_version !== 2 ? '<p>Batch precedente: sola revisione. Avvia un nuovo batch per la nuova pipeline.</p>' :
+    '<p>Brief e prompt sono revisionabili prima del primo tentativo. Il brief resta poi congelato.</p><ol class="slop-prompts">' + (batch?.processes || []).map(p => {
+      const locked = p.attempts.length > 0 || !["draft","ready","failed"].includes(p.state);
+      return `<li><h3>${escape(batch!.items[p.slot].title)}</h3><div class="rw-pills">${startPills(batch!.items[p.slot])}</div>` +
+        BRIEF_KEYS.map(k => `<label>${BRIEF_LABELS[k]} (una voce per riga)<textarea data-brief="${p.slot}" data-key="${k}" rows="2" ${locked ? "disabled" : ""}>${escape(p.brief?.[k].join("\n") || "")}</textarea></label>`).join("") +
+        `<label>Prompt in inglese<textarea data-prompt="${p.slot}" rows="6" maxlength="4000" ${locked ? "disabled" : ""}>${escape(p.prompt)}</textarea></label><p>${escape(p.state)} ${escape(p.error)}</p>` +
+        (!locked ? `<button data-slop="rewrite" data-slot="${p.slot}">Riscrivi brief e prompt</button>` : "") + '</li>';
+    }).join("") + '</ol><div class="rw-actions"><button data-slop="save">Salva brief e prompt</button><button data-slop="images" class="primary">Genera e valuta</button></div>') + '<button data-slop="to-review">Vai alla revisione</button><button data-slop="new-batch">Nuovo batch</button>';
+  const divergence = (image: Image) => {
+    const anchors = batch?.processes.find(p=>p.image_id===image.id)?.brief?.required || [];
+    const missing = anchors.filter(a=>/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(a) && !image.tags.includes(a));
+    return missing.length ? `<p class="slop-closed">Ancoraggi non rilevati nei tag: ${escape(missing.join(", "))}. Verifica la divergenza; i tag descrivono ciò che si vede.</p>` : "";
   };
-  const second = () => {
-    const prompts = batch?.prompts || [], items = batch?.items || [];
-    return '<p class="hint">Prompt in inglese, uno per immagine, sotto i tag della sua REAL. Puoi modificarli: si salvano uscendo dal campo. ' +
-      "«Riscrivi» chiede al modello un nuovo prompt per quella REAL (a pagamento).</p>" +
-      (batch?.prompts_status === "uncertain" || batch?.prompts_status === "failed" ? '<p class="slop-closed">' + escape(batch.prompts_error) + "</p>" : "") +
-      '<ol class="slop-prompts">' + items.map((item, i) => "<li><p><strong>" + escape(item.title) + '</strong></p><div class="rw-pills">' + startPills(item) + "</div>" +
-        '<textarea data-prompt="' + i + '" rows="6" maxlength="4000" aria-label="Prompt dell\'immagine ' + (i + 1) + '">' + escape(prompts[i]?.prompt || "") + "</textarea>" +
-        (prompts[i] ? '<p class="hint" data-prompt-length="' + i + '">' + prompts[i].prompt.length + " caratteri</p>" +
-          '<label class="slop-format">Formato<select data-prompt-format="' + i + '">' + (prompts[i].format ? "" : '<option value="">3:4 (prompt senza formato)</option>') +
-          FORMATS.map(f => '<option value="' + f + '"' + (prompts[i].format === f ? " selected" : "") + ">" + FORMAT_LABELS[f] + "</option>").join("") + "</select></label>" : "") +
-        '<button type="button" data-slop="rewrite" data-slot="' + i + '">Riscrivi</button></li>').join("") + "</ol>" +
-      '<div class="slop-generate library-inline"><span>Modello di immagini: <strong>' + escape(models?.image_model || "") + "</strong></span>" +
-      "<span>Qualità: <strong>" + escape(quality) + "</strong> (si cambia nelle Impostazioni)</span></div>" +
-      '<div class="rw-actions rw-bottom"><button type="button" data-slop="new-batch">Abbandona il batch</button>' +
-      '<button type="button" class="primary" data-slop="images"' + (items.length && prompts.length === items.length && prompts.every(p => p.prompt) ? "" : " disabled") +
-      ">Genera immagini e analizza</button></div>";
-  };
-  const third = () => '<p class="hint">Per ogni immagine: generazione, trattamento e copia di gioco WebP nel browser, analisi dei tag.</p>' +
-    '<p class="slop-progress" role="status">' + escape(progress) + "</p>" +
-    '<div class="rw-actions rw-bottom"><button type="button" data-slop="to-review"' + (busy ? " disabled" : "") + ">Vai alla revisione</button></div>";
-  /** Tags of the source REAL the twin was meant to keep and the analysis did not find; the serious ones make it miss its aim. */
-  const missing = (image: Image) => {
-    const kept = startTagList(image.generation?.slot).filter(t => KEPT.includes(t.category) || t.note), lost = kept.filter(t => !image.tags.includes(t.label));
-    return { lost: lost.map(t => t.label), serious: lost.filter(t => SERIOUS.includes(t.category) || t.note).map(t => t.label) };
-  };
-  const fourth = () => {
-    const images = batch?.images || [];
-    return '<p class="hint">I tag finali sono quelli dell\'analisi. «Previsti ma non rilevati» confronta decennio, genere, colore, supporto, evento e luogo ' +
-      "della REAL di origine con ciò che l'analisi ha visto: se mancano decennio, genere, colore o supporto la gemella ha mancato l'obiettivo. " +
-      "Approvare non pubblica: la pubblicazione resta un passo separato.</p>" +
-      (images.length ? '<div class="rw-preview-grid">' + images.map(image => {
-        const { lost, serious } = missing(image), index = image.generation?.slot?.index ?? 0;
-        return '<article class="rw-final slop-review" data-image="' + escape(image.id) + '"><div class="game-media-surface rw-final-image" data-long-press data-slop-preview="' +
-          escape(image.id) + '"><img data-game-media draggable="false" src="' +
-          escape(image.file) + '" alt="Immagine ' + (index + 1) + '"></div>' +
-          '<div class="rw-pills">' + sortByCategory(image.tags, image.categories).map(t => pill(t, categoryOfImage(image.categories, t), "rw-pill")).join("") + "</div>" +
-          (lost.length ? '<p class="' + (serious.length ? "slop-closed" : "hint") + '">Previsti ma non rilevati: ' + lost.map(escape).join(", ") + "</p>" : '<p class="hint">Tutti i tag previsti sono stati rilevati.</p>') +
-          '<p class="hint">Immagine ' + (index + 1) + " · " + escape(image.status) + (image.analysis.status !== "done" ? " · analisi: " + escape(image.analysis.status) : "") + "</p>" +
-          '<div class="rw-actions">' +
-          (image.status === "new" && image.copy && image.analysis.status !== "done" ? '<button type="button" data-slop="analyze" data-id="' + escape(image.id) + '">Analizza</button>' : "") +
-          (image.status === "new" ? '<button type="button" class="primary" data-slop="approve" data-id="' + escape(image.id) + '"' + (image.tags.length && image.copy ? "" : " disabled") + ">Approva</button>" : "") +
-          (image.status === "approved" ? '<button type="button" class="primary" data-slop="publish" data-id="' + escape(image.id) + '">Pubblica</button>' : "") +
-          (image.status === "new" || image.status === "approved" ? '<button type="button" data-slop="trash" data-id="' + escape(image.id) + '">Cestino</button>' : "") +
-          (count() ? '<button type="button" data-slop="regenerate" data-slot="' + index + '">Rigenera</button>' : "") + "</div></article>";
-      }).join("") + "</div>" : "<p>Nessuna immagine generata in questo batch.</p>") +
-      '<div class="rw-actions rw-bottom"><button type="button" data-slop="to-prompts">Indietro: prompt</button>' +
-      '<button type="button" data-slop="new-batch">Nuovo batch</button></div>';
-  };
+  const fourth = () => summary() + '<p>Accettazione del modello e approvazione dell’owner sono separate. Controlla l’originale intero e la copia 4:5; pubblica solo dopo revisione.</p>' +
+    (batch?.images || []).map(image => `<article class="rw-final slop-review" data-image="${image.id}"><h3>SLOP ${escape(image.status)}</h3><div class="rw-preview-grid"><figure><img data-slop-original="${image.id}" data-long-press src="${escape(image.original)}" alt="Originale SLOP intero" style="max-width:100%;max-height:420px;object-fit:contain"><figcaption>Originale intero valutato</figcaption></figure><figure><img data-slop-copy="${image.id}" data-long-press src="${escape(image.file)}" alt="Copia di gioco 4:5" style="max-width:100%;max-height:420px;object-fit:contain"><figcaption>Copia 4:5${image.copy ? "" : " da preparare"}</figcaption></figure></div><p>Tag effettivi: ${escape(image.tags.join(", "))}</p>${divergence(image)}<p class="hint">Confronta i tag rilevati con gli ancoraggi del brief qui sotto: eventuali divergenze restano visibili e non modificano i tag.</p><p lang="en">${escape(image.prompt)}</p>` +
+      `<div class="rw-actions">${image.status === "new" || image.status === "approved" ? `<button data-slop="frame" data-id="${image.id}">Inquadratura</button><button data-slop="${image.treatment?.off ? "treatment-on" : "treatment-off"}" data-id="${image.id}">${image.treatment?.off ? "Con trattamento" : "Senza trattamento"}</button>` : ""}` +
+      (image.status === "new" ? `${image.analysis.status === "none" || image.analysis.status === "failed" ? `<button data-slop="analyze" data-id="${image.id}">Analizza</button>` : ""}<button data-slop="approve" data-id="${image.id}" ${image.copy && image.tags.length ? "" : "disabled"}>Approva</button>` : "") +
+      (image.status === "approved" ? `<button data-slop="publish" data-id="${image.id}">Pubblica</button>` : "") +
+      (image.status !== "published" && image.status !== "trash" ? `<button data-slop="trash" data-id="${image.id}">Cestino</button>` : "") + '</div></article>').join("") +
+    (batch?.processes || []).map(p => `<section><h3>${escape(batch!.items[p.slot].title)}: ${escape(p.state)}</h3>${p.error ? `<p role="status">${escape(p.error)}</p>` : ""}${p.brief ? `<p>Ancoraggi obbligatori: ${escape(p.brief.required.join("; "))}. Esclusioni: ${escape(p.brief.exclusions.join("; "))}</p>` : ""}${p.attempts.map(evaluation).join("")}</section>`).join("") +
+    '<div class="rw-actions"><button data-slop="to-prompts">Brief e prompt / ripresa</button><button data-slop="new-batch">Nuovo batch</button></div>';
   const render = () => {
-    root.innerHTML = '<div class="rw slop"><h2>Generazione SLOP</h2>' + steps() +
-      '<p class="slop-message" role="status" aria-live="polite">' + escape(notice) + "</p>" +
-      (busy ? '<p class="rw-busy" role="status">Operazione in corso…</p>' : "") +
-      [first, second, third, fourth][page - 1]() + "</div>";
-    if (page === 4) markGameMedia(root);
+    root.innerHTML = `<div class="rw slop"><h2>Generazione SLOP</h2><ol class="rw-steps">${["REAL","Brief e prompt","Generazione e valutazione","Revisione"].map((l,i) => `<li ${page===i+1?'aria-current="step"':""}>${i+1}. ${l}</li>`).join("")}</ol><p role="status" aria-live="polite">${escape(notice)}</p>` +
+      (busy ? `<p role="status">${escape(progress || "Operazione in corso…")}</p>` : "") + [first, second, () => summary() + `<p role="status">${escape(progress)}</p>`, fourth][page-1]() + '</div>';
+    if (busy) root.querySelectorAll<HTMLButtonElement>("button").forEach(b => b.disabled = true);
   };
-  const loadBatch = async () => { if (batchId) batch = await call<Batch>("batches/" + encodeURIComponent(batchId)); };
   const refresh = async () => {
     try {
-      data = await call<State>("state");
-      models = await call<Models>("/models", undefined, "GET", LIBRARY);
-      quality = models.image_quality;
-      await loadBatch();
-    } catch (error) { notice = errorText(error); }
-    render();
+      batchId = sessionStorage.getItem(DRAFT) || batchId;
+      state = await call<State>("state");
+      const values = await call<{values: {max_generation_attempts: number; editorial_tolerance: number}}>("/settings", undefined, "GET", LIBRARY);
+      const models = await call<{text_model: string; image_model: string; image_quality: string}>("/models", undefined, "GET", LIBRARY);
+      config = {...values.values, ...models, quality: models.image_quality};
+      recent = (await call<{batches: typeof recent}>("batches")).batches;
+      await loadBatch(); if (batch) page = 4;
+    } catch (e) { notice = String(e); } render();
   };
-  /** Treated copy in the browser, then the paid analysis (already confirmed with the generation). */
-  const finish = async (imageId: string) => {
-    await prepareItemCopy(await call<TreatableItem>("/" + encodeURIComponent(imageId), undefined, "GET", LIBRARY));
-    await call("/" + encodeURIComponent(imageId) + "/analyze", { confirm: true }, "POST", LIBRARY);
+  const save = async () => {
+    if (!batch || batch.processes.some(p => p.attempts.length || !["draft","ready","failed"].includes(p.state))) return;
+    const prompts = batch.processes.map(p => root.querySelector<HTMLTextAreaElement>(`[data-prompt="${p.slot}"]`)?.value || p.prompt);
+    const briefs = batch.processes.map(p => Object.fromEntries(BRIEF_KEYS.map(k => [k, (root.querySelector<HTMLTextAreaElement>(`[data-brief="${p.slot}"][data-key="${k}"]`)?.value || "").split("\n").map(s => s.trim()).filter(Boolean)])));
+    batch = await call<Batch>("batches/"+batchId, {prompts, briefs}, "PUT");
   };
-  /** Generates, prepares and analyses the given images, one by one; an OpenAI account problem stops the run. */
-  const produce = async (indexes: number[]) => {
-    const failures: string[] = [];
-    for (const [n, i] of indexes.entries()) {
-      progress = "Immagine " + (i + 1) + " (" + (n + 1) + " di " + indexes.length + "): generazione…"; render();
-      try {
-        const image = await call<Image>("batches/" + encodeURIComponent(batchId) + "/images", { confirm: true, index: i, quality });
-        progress = "Immagine " + (i + 1) + ": copia di gioco e analisi…"; render();
-        await finish(image.id);
-      } catch (error) {
-        failures.push("immagine " + (i + 1) + ": " + errorText(error));
-        if (/OpenAI:/.test(errorText(error))) break;
+  const finish = async (image: Image) => {
+    if (!image.copy) await prepareItemCopy(image);
+    if (image.analysis.status === "none") await call("/"+image.id+"/analyze", {confirm:true}, "POST", LIBRARY);
+  };
+  const produce = async () => {
+    if (!batch?.config) return;
+    for (const p of batch.processes) {
+      if (p.image_id) { const image = batch.images.find(i => i.id === p.image_id); if (image) await finish(image); continue; }
+      if (!["ready","retry"].includes(p.state)) continue;
+      for (let n = p.attempts.length; n < batch.config.max_generation_attempts; n++) {
+        progress = `REAL ${p.slot+1} di ${batch.items.length}: tentativo ${n+1}, generazione e valutazione dell’immagine intera…`; render();
+        try {
+          const result = await call<Image & {process: {state: string}}>("batches/"+batchId+"/images", {confirm:true,index:p.slot,quality:batch.config.quality});
+          if (result.id) { progress = "Candidata accettata: copia 4:5 e analisi tag…"; render(); await finish(result); break; }
+          if (result.process.state !== "retry") break;
+        } catch (e) { notice += " " + String(e); if (/OpenAI:/.test(String(e))) throw e; break; }
       }
     }
     await loadBatch();
-    progress = (indexes.length - failures.length) + " di " + indexes.length + " immagini pronte." + (failures.length ? " Problemi: " + failures.join(" | ") : "");
-    notice = progress;
   };
-
-  // Press and hold: a waiting REAL large, or an image of the review with its prompt, starting tags and tags of the analysis.
-  onLongPress(root, "[data-slop-waiting]", element => {
-    const real = data?.waiting.find(w => w.id === element.dataset.slopWaiting);
-    if (real) openPreview({ src: real.file, alt: real.title, title: real.title,
-      extra: '<div class="image-preview-tags">' + real.tags.map(t => pill(t.label, t.category, "rw-pill")).join("") + "</div>" });
-  });
-  onLongPress(root, "[data-slop-preview]", element => {
-    const image = batch?.images.find(i => i.id === element.dataset.slopPreview);
-    if (!image) return;
-    const start = startPills(image.generation?.slot), index = image.generation?.slot?.index ?? 0;
-    openPreview({ src: image.file, alt: "Immagine " + (index + 1), title: "Immagine " + (index + 1),
-      extra: (image.prompt ? '<p><span class="image-preview-label">Prompt</span><br><q lang="en">' + escape(image.prompt) + "</q></p>" : "") +
-        (start ? '<p class="image-preview-label">Tag di partenza</p><div class="image-preview-tags" data-start-tags>' + start + "</div>" : "") +
-        '<p class="image-preview-label">Tag dell\'analisi</p><div class="image-preview-tags">' +
-        (sortByCategory(image.tags, image.categories).map(t => pill(t, categoryOfImage(image.categories, t), "rw-pill")).join("") || '<span class="hint">Nessuno.</span>') + "</div>" });
-  });
-  root.addEventListener("click", async event => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-slop]");
-    if (!button || busy) return;
-    const action = button.dataset.slop!;
-    if (action === "first" && data) { chosen = data.waiting.slice(0, data.thresholds.max_batch).map(w => w.id); persist(); render(); return; }
-    if (action === "to-prompts") { page = 2; persist(); render(); return; }
-    if (action === "to-review") { page = 4; persist(); await loadBatch(); render(); return; }
-    if (action === "new-batch") { batchId = ""; batch = null; chosen = []; page = 1; notice = ""; persist(); await refresh(); return; }
-    const slot = Number(button.dataset.slot);
-    const paid: Record<string, () => string> = {
-      prompts: () => "Scrivere " + chosen.length + " prompt con " + (models?.text_model || "il modello di testo") + "? È una chiamata a pagamento.",
-      rewrite: () => "Riscrivere il prompt dell'immagine " + (slot + 1) + " con " + (models?.text_model || "il modello di testo") + "? È una chiamata a pagamento.",
-      images: () => "Generare " + count() + " immagini con " + (models?.image_model || "il modello di immagini") + " in qualità " + quality +
-        " e analizzarle con " + (models?.text_model || "il modello di testo") + "? Sono " + count() * 2 + " chiamate a pagamento.",
-      regenerate: () => "Generare un'altra immagine per la REAL " + (slot + 1) + " con " + (models?.image_model || "il modello di immagini") +
-        " in qualità " + quality + " e analizzarla? Sono 2 chiamate a pagamento; l'immagine attuale resta, puoi spostarla nel cestino.",
-      analyze: () => "Analizzare questa immagine con " + (models?.text_model || "il modello di testo") + "? È una chiamata a pagamento.",
-    };
-    if (paid[action] && !window.confirm(paid[action]())) return;
-    busy = true; render();
-    try {
-      if (action === "prompts") {
-        batch = await call<Batch>("batches", { sources: chosen });
-        batchId = batch.id; page = 2; persist();
-        batch = await call<Batch>("batches/" + encodeURIComponent(batchId) + "/prompts", { confirm: true });
-        notice = "Prompt scritti.";
-      } else if (action === "rewrite") {
-        batch = await call<Batch>("batches/" + encodeURIComponent(batchId) + "/prompts", { confirm: true, index: slot });
-        notice = "Prompt dell'immagine " + (slot + 1) + " riscritto.";
-      } else if (action === "images") {
-        page = 3; persist(); await produce((batch?.items || []).map((_, i) => i)); page = 4;
-      } else if (action === "regenerate") {
-        await produce([slot]);
-      } else if (action === "analyze") {
-        await call("/" + encodeURIComponent(button.dataset.id!) + "/analyze", { confirm: true }, "POST", LIBRARY); await loadBatch(); notice = "Analisi completata.";
-      } else if (action === "approve" || action === "publish" || action === "trash") {
-        await call("/" + encodeURIComponent(button.dataset.id!) + "/" + action, {}, "POST", LIBRARY); await loadBatch();
-        notice = { approve: "Immagine approvata.", publish: "Immagine pubblicata.", trash: "Immagine nel cestino." }[action];
-      }
-      persist();
-    } catch (error) { notice = errorText(error); }
-    finally { busy = false; render(); }
+  onLongPress(root, "[data-slop-waiting]", element => {const w = state?.waiting.find(w => w.id === element.dataset.slopWaiting); if(w) openPreview({src:w.file,title:w.title,alt:w.title});});
+  onLongPress(root, "[data-slop-original], [data-slop-copy]", element => {
+    const image = batch?.images.find(i=>i.id===(element.dataset.slopOriginal || element.dataset.slopCopy));
+    if(image) openPreview({src:element.dataset.slopOriginal ? image.original : image.file, title:"SLOP · "+image.status,
+      alt:element.dataset.slopOriginal ? "Originale intero" : "Copia 4:5", extra:`<p lang="en">${escape(image.prompt)}</p><p>Tag effettivi: ${escape(image.tags.join(", "))}</p>`});
   });
   root.addEventListener("change", event => {
-    const target = event.target as HTMLSelectElement & HTMLInputElement;
-    if (target.matches("[data-slop-pick]")) {
-      const id = target.dataset.slopPick!;
-      chosen = target.checked ? [...new Set([...chosen, id])].slice(0, data?.thresholds.max_batch || 10) : chosen.filter(c => c !== id);
-      persist(); render();
-    }
-    else if (target.matches("[data-prompt]") && batch) {
-      // Owner's edit of a prompt: free, saved at once.
-      const texts = batch.items.map((_, i) => root.querySelector<HTMLTextAreaElement>('[data-prompt="' + i + '"]')?.value ?? batch!.prompts[i]?.prompt ?? "");
-      void call<Batch>("batches/" + encodeURIComponent(batchId), { prompts: texts }, "PUT")
-        .then(updated => { batch = updated; notice = "Prompt salvato."; const m = root.querySelector(".slop-message"); if (m) m.textContent = notice; })
-        .catch(error => { notice = errorText(error); render(); });
-    }
-    else if (target.matches("[data-prompt-format]") && batch) {
-      // Owner's choice of a format: free, saved at once.
-      const formats = batch.prompts.map((p, i) => i === Number(target.dataset.promptFormat) ? target.value : p.format || "3:4");
-      if (!formats.every(isFormat)) return;
-      void call<Batch>("batches/" + encodeURIComponent(batchId), { formats }, "PUT")
-        .then(updated => { batch = updated; notice = "Formato salvato."; const m = root.querySelector(".slop-message"); if (m) m.textContent = notice; })
-        .catch(error => { notice = errorText(error); render(); });
-    }
+    const input = event.target as HTMLInputElement;
+    if (input.matches("[data-slop-pick]")) {chosen = input.checked ? [...new Set([...chosen,input.dataset.slopPick!])].slice(0,10) : chosen.filter(id => id !== input.dataset.slopPick); render();}
+    if (input.matches("[data-recent]") && input.value) {batchId=input.value;sessionStorage.setItem(DRAFT,batchId);void loadBatch().then(()=>{page=4;render();});}
   });
-  render();
-  await refresh();
-  return { refresh };
+  root.addEventListener("click", async event => {
+    const button=(event.target as HTMLElement).closest<HTMLButtonElement>("[data-slop]");if(!button||busy)return;
+    const action=button.dataset.slop!, slot=Number(button.dataset.slot), image=batch?.images.find(i=>i.id===button.dataset.id);
+    if(action==="first"){chosen=(state?.waiting||[]).filter(w=>w.described).slice(0,10).map(w=>w.id);render();return;}
+    if(action==="new-batch"){batch=null;batchId="";sessionStorage.removeItem(DRAFT);page=1;notice="";await refresh();return;}
+    if(action==="to-prompts"||action==="to-review"){page=action==="to-prompts"?2:4;render();return;}
+    try {
+      if(action==="images"||action==="save") await save();
+      const messages:Record<string,string>={prompts:`Generare ${chosen.length} brief e prompt con ${config?.text_model}? Massimo ${chosen.length} chiamate testuali a pagamento.`,
+        rewrite:`Riscrivere brief e prompt della REAL ${slot+1}? Una chiamata a pagamento con ${batch?.config?.text_model}.`,
+        images:`Avviare/riprendere il loop? Massimo ${batch?.config ? batch.items.length*(1+2*batch.config.max_generation_attempts) : 0} chiamate ulteriori: generazioni e valutazioni più tag solo dopo accettazione. ${batch?.config?.image_model}, qualità ${batch?.config?.quality}; valutatore e tag ${batch?.config?.text_model}. Stop alla prima accettazione.`,
+        analyze:"Analizzare questa SLOP? Una chiamata a pagamento."};
+      if(messages[action]&&!window.confirm(messages[action]))return;
+      busy=true;notice="";render();
+      if(action==="prompts"){batch=await call<Batch>("batches",{sources:chosen});batchId=batch.id;sessionStorage.setItem(DRAFT,batchId);page=2;batch=await call<Batch>("batches/"+batchId+"/prompts",{confirm:true});}
+      else if(action==="rewrite"){batch=await call<Batch>("batches/"+batchId+"/prompts",{confirm:true,index:slot});}
+      else if(action==="images"){page=3;await produce();page=4;}
+      else if(action==="save")notice="Brief e prompt salvati.";
+      else if(image){
+        if(action==="frame"){const choice=await chooseFrame(image.id,image.width,image.height,image.copy);if(choice)await saveFrame(image,choice);}
+        else if(action==="treatment-off"||action==="treatment-on")await prepareItemCopy(image,undefined, image.copy?.crop || undefined,{off:action==="treatment-off"});
+        else await call("/"+image.id+"/"+action,action==="analyze"?{confirm:true}:{},"POST",LIBRARY);
+        await loadBatch();
+      }
+    }catch(e){notice=String(e);if(page===3)page=4;await loadBatch().catch(()=>{});}finally{busy=false;progress="";render();}
+  });
+  await refresh();return {refresh};
 }
