@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 23.4.0, aggiornata il 2026-11-15T21:51:59Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 24.0.0, aggiornata il 2026-11-15T22:43:46Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -14,8 +14,11 @@ in `CHANGELOG.md`.
   Il primo batch automatico (10 SLOP, 21:45 UTC) si è fermato alla scrittura dei brief: 2 scritti, 1 incerto, 7 da scrivere (vedi 1.30.3).
   Su indicazione dell'owner, alle 17:24 UTC sono stati salvati direttamente nel D1 il contesto «Brief e prompt per le SLOP» proposto
   (pipeline 2) e la soglia dello studio a 20 REAL. Qualità immagini `medium`.
-- **Nel ramo 1.30.3 (PR da unire):** brief e prompt con una richiesta per REAL nello studio e nel batch automatico; un batch rimasto
-  «in scrittura» oltre dieci minuti riprende dai brief mancanti, senza ripetere quello interrotto.
+- **Nel ramo 1.31.0 (PR da unire, comprende la 1.30.3 della PR #146):** il ciclo SLOP gira su Cloudflare in un Workflow (brief,
+  tentativi, tag dopo l'accettazione); la dashboard lo avvia e lo segue. Il batch automatico fermo in produzione si riprende con
+  «Riprendi sul server». Migrazione 0052.
+- **Nella 1.30.3:** brief e prompt con una richiesta per REAL; un batch rimasto «in scrittura» oltre dieci minuti riprende dai brief
+  mancanti, senza ripetere quello interrotto.
 - **Nella 1.30.2:** analisi in gruppo anche per gli esiti incerti o interrotti; nelle Impostazioni un modulo non sovrascrive gli altri.
 - **Nella 1.30.1:** invio dell'immagine ai modelli senza copie in stringhe (memoria), ripetizione dalla scheda
   di un'analisi rimasta «in corso» oltre dieci minuti.
@@ -40,7 +43,7 @@ nome.
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.2.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.5.0 |
-| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.5.1 |
+| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.6.0 |
 | Sezione Database | `docs/database-immagini.md` | 2.7.1 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.8.1 |
@@ -92,8 +95,9 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - Libreria `library.ts` (stati, vocabolario, alias, categorie, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   analisi `analysis.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
-- SLOP: studio `slop.ts`, gemelle `twins.ts`, generazione `slop-generation.ts`, batch automatici `slop-auto.ts`, gruppi e loro misure
-  per Database e Statistiche `slop-groups.ts`.
+- SLOP: studio `slop.ts`, gemelle `twins.ts`, generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
+  `slop-runner.ts`, batch automatici `slop-auto.ts`, gruppi e loro misure per Database e Statistiche `slop-groups.ts`.
+- Corpo delle richieste con un'immagine (analisi e valutazione, base64 scritto nei byte) `image-body.ts`.
 - Gioco `game.ts` con `sampling.ts` e `random.ts`, classifica `leaderboard.ts`.
 
 **Codice condiviso** (`shared/`): tag `tags.ts`, tag scritti a mano `tag-input.ts`, categorie `tag-categories.ts`, modelli OpenAI
@@ -103,7 +107,8 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 immagini `editorial.ts` (descrizioni, brief e valutazioni), `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
 
 **Test** (`tests/`): unitari `*.test.ts` (`npm test`); d'integrazione `*.integration.py`, eseguiti da `scripts/integration.py` con il
-modello finto `fake_openai.py` e gli aiuti `catalog.py`, `game_copy.py`, `long_press.py`.
+modello finto `fake_openai.py` e gli aiuti `catalog.py`, `game_copy.py`, `long_press.py`; `cloudflare-workers.mjs` sostituisce in Node
+il modulo `cloudflare:workers` per i test unitari.
 
 **Dati.** D1 con le migrazioni in `migrations/`:
 
@@ -128,6 +133,7 @@ modello finto `fake_openai.py` e gli aiuti `catalog.py`, `game_copy.py`, `long_p
 | 0049 | REAL di origine di una SLOP gemella |
 | 0050 | descrizione editoriale REAL e provenienza, contesto Commons separato, processi/tentativi privati, chiamate evaluation e collegamenti, snapshot e impostazioni del loop; batch legacy invariati |
 | 0051 | contesto «Valutazione delle SLOP» e pipeline di ogni versione del contesto (testi delle gemelle = 1) |
+| 0052 | runner del ciclo SLOP su Cloudflare per batch: istanza, stato, ultimo passo |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

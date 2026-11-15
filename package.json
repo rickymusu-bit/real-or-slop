@@ -1,6 +1,6 @@
 {
   "name": "real-or-slop",
-  "version": "1.30.3",
+  "version": "1.31.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,7 +10,7 @@
     "dev": "npm run build && wrangler dev --local --env local --ip 0.0.0.0",
     "build": "tsc --noEmit && tsc -p tsconfig.worker.json --noEmit && vite build && node scripts/check-assets.mjs",
     "lint": "eslint src worker shared tests scripts/check-preview.mjs",
-    "test": "node --import tsx --test tests/*.test.ts",
+    "test": "node --import tsx --import ./tests/cloudflare-workers.mjs --test tests/*.test.ts",
     "db:migrate": "wrangler d1 migrations apply DB --local --env local",
     "dry-run": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
     "preview": "node scripts/check-preview.mjs && wrangler preview --ignore-base-config",

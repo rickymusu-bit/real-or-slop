@@ -32,6 +32,15 @@
       "bucket_name": "real-or-slop-approved",
     },
   ],
+  // The SLOP loop runs on Cloudflare (worker/slop-runner.ts, spec `generazione-slop`, section 6), not in the browser (2026-11-15).
+  // Previews and local runs have their own Workflow names, so they never touch the production instances.
+  "workflows": [
+    {
+      "name": "real-or-slop-slop-batch",
+      "binding": "SLOP_RUNNER",
+      "class_name": "SlopBatchWorkflow",
+    },
+  ],
   // Cloudflare Workers Builds, «Previews Base» tab (template of each new preview; an existing branch keeps its own build trigger), Preview command: npx wrangler d1 migrations apply DB --remote --env preview && npm run preview.
   // Previews of the pull requests (npm run preview = scripts/check-preview.mjs, then wrangler preview --ignore-base-config) use only
   // these bindings: their own D1 database and R2 buckets, never the production ones above (2026-11-12, owner request).
@@ -52,6 +61,13 @@
       {
         "binding": "IMAGES",
         "bucket_name": "real-or-slop-preview-approved",
+      },
+    ],
+    "workflows": [
+      {
+        "name": "real-or-slop-slop-batch-preview",
+        "binding": "SLOP_RUNNER",
+        "class_name": "SlopBatchWorkflow",
       },
     ],
   },
@@ -84,7 +100,14 @@
           "binding": "QUARANTINE",
           "bucket_name": "real-or-slop-quarantine-local",
         },
-      ]
+      ],
+      "workflows": [
+        {
+          "name": "real-or-slop-slop-batch-local",
+          "binding": "SLOP_RUNNER",
+          "class_name": "SlopBatchWorkflow",
+        },
+      ],
     },
     // Only to apply the migrations to the preview database before each preview build:
     // npx wrangler d1 migrations apply DB --remote --env preview. Never deployed.

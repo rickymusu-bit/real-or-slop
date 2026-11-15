@@ -1,7 +1,19 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T21:51:59Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T22:43:46Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.31.0 — 2026-11-15T22:43:46Z (decisione dell'owner del 2026-11-15)
+
+- **Il ciclo SLOP gira su Cloudflare:** un Workflow (`worker/slop-runner.ts`) scrive i brief, esegue i tentativi (generazione e
+  valutazione dell'immagine intera) e analizza i tag della SLOP accettata; il browser lo avvia dopo la conferma del massimo e ne segue
+  l'avanzamento. Chiudere la dashboard o cambiare app sul telefono non ferma più nulla. Un runner per batch, con stato e ora
+  dell'ultimo passo (migrazione 0052); un runner fermo da quindici minuti si riprende («Riprendi sul server» per il batch
+  automatico). I passi a pagamento non vengono mai ritentati da Cloudflare e trovano la propria rivendicazione se rieseguiti.
+  «Interrompi» ferma il server prima della chiamata successiva. Workflow separati per anteprime e locale.
+- Studio: «Genera brief e prompt» e «Genera e valuta» avviano il server e mostrano l'avanzamento; le copie 4:5 restano nel browser.
+- `MASTER.md` 24.0.0 (aggiunti `worker/slop-runner.ts` e `worker/image-body.ts`, quest'ultimo mancante dalla 1.30.1),
+  specifica `generazione-slop` 5.6.0.
 
 ## 1.30.3 — 2026-11-15T21:51:59Z
 

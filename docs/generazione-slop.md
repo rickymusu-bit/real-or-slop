@@ -1,6 +1,7 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.5.1
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.6.0
 
-Stato: vigente; la 5.5.0 è in produzione con l'app 1.30.2, la 5.5.1 è per l'app 1.30.3. Aggiornata: 2026-11-15T21:51:59Z. La 5.5.1 scrive brief e
+Stato: vigente; la 5.5.0 è in produzione con l'app 1.30.2, la 5.6.0 è per l'app 1.31.0. Aggiornata: 2026-11-15T22:43:46Z. La 5.6.0 sposta il ciclo
+su Cloudflare (Workflow), fuori dal browser (decisione dell'owner del 2026-11-15). La 5.5.1 scrive brief e
 prompt con una richiesta per REAL e sblocca un batch rimasto «in scrittura».
 La 5.5.0 fa analizzare REAL e SLOP intere invece del ritaglio 4:5, tiene in evidenza, con ogni tentativo, i processi finiti senza
 SLOP finché l'owner non li chiude e con tolleranza 0 fa rigenerare invece di fermare il ciclo (decisioni dell'owner del 2026-11-15). La 5.4.0 rende modificabile il contesto del valutatore, blocca brief e prompt con il contesto delle gemelle e conta nel massimo le
@@ -151,6 +152,23 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
 - Il limite vale per il **numero di generazioni**, non per durata e non per una promessa di successo.
 
 ## 6. Stato, spese, ripresa e conservazione
+
+- **Il ciclo gira su Cloudflare** (decisione dell'owner del 2026-11-15, app 1.31.0): un Workflow (`SlopBatchWorkflow`,
+  `worker/slop-runner.ts`, binding `SLOP_RUNNER`) scrive i brief mancanti, esegue i tentativi (generazione e valutazione
+  dell'immagine intera) una REAL alla volta, si ferma alla prima accettazione e analizza i tag della SLOP accettata
+  sull'originale. Il browser lo avvia dopo la conferma del massimo (`POST batches/:id/run {confirm, phase: briefs|images}` dallo
+  studio; `auto/start` per il batch automatico, che fa tutto) e ne segue l'avanzamento: chiudere la dashboard o cambiare app sul
+  telefono non ferma nulla. Le copie di gioco 4:5 delle SLOP accettate restano nel browser, alla revisione.
+- **Un runner per batch:** il batch registra istanza, stato (`running`, `stopping`, `done`, `stopped`, `failed`) e ora dell'ultimo
+  passo (migrazione 0052); un secondo avvio mentre il runner è vivo è rifiutato. Un runner fermo da oltre quindici minuti è
+  considerato morto: lo studio permette un nuovo avvio e il batch automatico mostra «Riprendi sul server» (`auto/resume`), che
+  riparte da dove si era fermato entro il massimo confermato all'inizio.
+- **Mai una chiamata ripetuta:** ogni passo a pagamento ha la sua rivendicazione (brief, tentativo, analisi) e Cloudflare non lo
+  ritenta; se un passo viene rieseguito dopo un'interruzione trova la rivendicazione e non invia nulla, e quel passo finisce incerto.
+- **Interrompi:** il runner termina prima del passo a pagamento successivo; quello in corso finisce (stato `stopping`, poi
+  `stopped`). Fermare un batch automatico lo porta in revisione.
+- Anteprime e sviluppo locale hanno Workflow con nomi propri (`real-or-slop-slop-batch-preview`, `-local`): non toccano mai le
+  istanze di produzione.
 
 - **Conferma preventiva del tetto massimo** delle chiamate del batch, non del numero esatto effettivo: con una REAL **già
   catalogata e dotata di descrizione**, la generazione SLOP richiede al massimo **`1 brief+prompt testuale + N immagini

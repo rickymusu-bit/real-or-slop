@@ -13,6 +13,7 @@ interface Image extends TreatableItem { id: string; status: string; revision: nu
 interface Attempt {id: string; number: number; prompt: string; status: string; evaluation: Evaluation | null; file: string | null}
 interface Process {id: string; slot: number; state: string; prompt: string; brief: Brief | null; attempts: Attempt[]; error: string; calls: number; image_id: string | null}
 interface Batch {id: string; items: TwinItem[]; prompts: {prompt: string; brief?: Brief}[]; processes: Process[]; config: Config | null; max_calls: number;
+  runner: {id: string; status: string | null; updated_at: string | null; alive: boolean} | null;
   pipeline_version: number; prompts_status: string; prompts_error: string; images: Image[]}
 interface Waiting {id: string; title: string; file: string; described: boolean; tags: TwinItem["tags"]}
 interface Attention extends Process {title: string; batch_id: string; updated_at: string}
@@ -76,8 +77,8 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
   };
   const render = () => {
     root.innerHTML = `<div class="rw slop"><h2>Generazione SLOP</h2>${attentionView()}<ol class="rw-steps">${["REAL","Brief e prompt","Generazione e valutazione","Revisione"].map((l,i) => `<li ${page===i+1?'aria-current="step"':""}>${i+1}. ${l}</li>`).join("")}</ol><p role="status" aria-live="polite">${escape(notice)}</p>` +
-      (busy ? `<p role="status">${escape(progress || "Operazione in corso…")}</p>` : "") + [first, second, () => summary() + `<p role="status">${escape(progress)}</p>`, fourth][page-1]() + '</div>';
-    if (busy) root.querySelectorAll<HTMLButtonElement>("button").forEach(b => b.disabled = true);
+      (busy ? `<p role="status">${escape(progress || "Operazione in corso…")}</p>` : "") + [first, second, () => summary() + `<p role="status">${escape(progress)}</p>` + (working() ? '<p class="hint">La generazione continua sul server anche se chiudi questa pagina.</p><button data-slop="stop-run">Interrompi</button>' : ""), fourth][page-1]() + '</div>';
+    if (busy) root.querySelectorAll<HTMLButtonElement>("button:not([data-slop=stop-run])").forEach(b => b.disabled = true);
   };
   const refresh = async () => {
     try {
@@ -87,8 +88,10 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
       const models = await call<{text_model: string; image_model: string; image_quality: string}>("/models", undefined, "GET", LIBRARY);
       config = {...values.values, ...models, quality: models.image_quality};
       recent = (await call<{batches: typeof recent}>("batches")).batches;
-      await loadBatch(); if (batch) page = 4;
+      await loadBatch(); if (batch) page = working() ? 3 : 4;
     } catch (e) { notice = String(e); } render();
+    if (working()) { busy = true; render(); try { await follow(); } finally {
+      busy = false; page = batch?.processes.some(p => p.attempts.length) ? 4 : 2; state = await call<State>("state").catch(() => state); render(); } }
   };
   const save = async () => {
     if (!batch || batch.processes.some(p => p.attempts.length || !["draft","ready","failed"].includes(p.state))) return;
@@ -100,20 +103,21 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
     if (!image.copy) await prepareItemCopy(image);
     if (image.analysis.status === "none") await call("/"+image.id+"/analyze", {confirm:true}, "POST", LIBRARY);
   };
-  const produce = async () => {
-    if (!batch?.config) return;
-    for (const p of batch.processes) {
-      if (p.image_id) { const image = batch.images.find(i => i.id === p.image_id); if (image) await finish(image); continue; }
-      if (!["ready","retry"].includes(p.state)) continue;
-      for (let n = p.attempts.length; n < batch.config.max_generation_attempts; n++) {
-        progress = `REAL ${p.slot+1} di ${batch.items.length}: tentativo ${n+1}, generazione e valutazione dell’immagine intera…`; render();
-        try {
-          const result = await call<Image & {process: {state: string}}>("batches/"+batchId+"/images", {confirm:true,index:p.slot,quality:batch.config.quality});
-          if (result.id) { progress = "Candidata accettata: copia 4:5 e analisi tag…"; render(); await finish(result); break; }
-          if (result.process.state !== "retry") break;
-        } catch (e) { notice += " " + String(e); if (/OpenAI:/.test(String(e))) throw e; break; }
-      }
+  /** The loop runs on Cloudflare (briefs, attempts, tags): this page only follows it; leaving it stops nothing. */
+  const working = () => !!batch?.runner?.alive;
+  const follow = async () => {
+    while (batch && working()) {
+      const writing = batch.processes.filter(p => p.state === "draft" || p.state === "prompting").length;
+      const attempts = batch.processes.reduce((n, p) => n + p.attempts.length, 0), accepted = batch.processes.filter(p => p.state === "accepted").length;
+      progress = writing ? `Sul server: brief e prompt, ${batch.items.length - writing} di ${batch.items.length}…`
+        : `Sul server: ${attempts} ${attempts === 1 ? "tentativo" : "tentativi"} (generazione e valutazione dell’immagine intera), ${accepted} di ${batch.items.length} ${accepted === 1 ? "accettata" : "accettate"}…`;
+      render();
+      await new Promise(resolve => window.setTimeout(resolve, 2500));
+      await loadBatch();
     }
+    progress = "";
+    // Game copies of the accepted images are made here (browser, free); their tags come from the server.
+    for (const image of batch?.images || []) if (image.status === "new" && !image.copy) await finish(image).catch(e => { notice += " " + String(e); });
     await loadBatch();
   };
   onLongPress(root, "[data-slop-waiting]", element => {const w = state?.waiting.find(w => w.id === element.dataset.slopWaiting); if(w) openPreview({src:w.file,title:w.title,alt:w.title});});
@@ -128,7 +132,9 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
     if (input.matches("[data-recent]") && input.value) {batchId=input.value;sessionStorage.setItem(DRAFT,batchId);void loadBatch().then(()=>{page=4;render();});}
   });
   root.addEventListener("click", async event => {
-    const button=(event.target as HTMLElement).closest<HTMLButtonElement>("[data-slop]");if(!button||busy)return;
+    const button=(event.target as HTMLElement).closest<HTMLButtonElement>("[data-slop]");if(!button)return;
+    if(button.dataset.slop==="stop-run"){button.disabled=true;try{batch=await call<Batch>("batches/"+batchId+"/stop",{});notice="Il server si ferma prima della prossima chiamata.";}catch(e){notice=String(e);}render();return;}
+    if(busy)return;
     const action=button.dataset.slop!, slot=Number(button.dataset.slot), image=batch?.images.find(i=>i.id===button.dataset.id);
     if(action==="first"){chosen=(state?.waiting||[]).filter(w=>w.described).slice(0,10).map(w=>w.id);render();return;}
     if(action==="close-process"){
@@ -146,14 +152,9 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
       if(messages[action]&&!window.confirm(messages[action]))return;
       busy=true;notice="";render();
       if(action==="prompts"){batch=await call<Batch>("batches",{sources:chosen});batchId=batch.id;sessionStorage.setItem(DRAFT,batchId);page=2;
-        // One request per REAL: a closed connection interrupts one brief, never the whole batch.
-        const drafts=batch.processes.filter(p=>p.state==="draft");
-        for(const [n,p] of drafts.entries()){progress=`Brief e prompt ${n+1} di ${drafts.length}…`;render();
-          try{batch=await call<Batch>("batches/"+batchId+"/prompts",{confirm:true,index:p.slot});}
-          catch(e){notice+=" "+String(e);if(/OpenAI:/.test(String(e)))break;}}
-        batch=await call<Batch>("batches/"+batchId);}
+        batch=await call<Batch>("batches/"+batchId+"/run",{confirm:true,phase:"briefs"});await follow();}
       else if(action==="rewrite"){batch=await call<Batch>("batches/"+batchId+"/prompts",{confirm:true,index:slot});}
-      else if(action==="images"){page=3;await produce();page=4;state=await call<State>("state");}
+      else if(action==="images"){page=3;batch=await call<Batch>("batches/"+batchId+"/run",{confirm:true,phase:"images"});await follow();page=4;state=await call<State>("state");}
       else if(action==="save")notice="Brief e prompt salvati.";
       else if(image){
         if(action==="frame"){const choice=await chooseFrame(image.id,image.width,image.height,image.copy);if(choice)await saveFrame(image,choice);}

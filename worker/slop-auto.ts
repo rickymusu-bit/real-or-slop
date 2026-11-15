@@ -5,10 +5,12 @@ import { numberSettings } from "./app-settings";
 import { IGNORE_KEY, MAX_BATCH, proposal, spreadPercent, type Proposal } from "../shared/twins";
 import { initializeBatch, loopSnapshot, processViews, itemsOf } from "./slop-generation";
 import { realRows, twinCounts, twinItems } from "./twins";
+import { runnerView, startRun } from "./slop-runner";
 
 interface AutoRow {
   id: string; slots: string; prompts_status: string; prompts_error: string; auto_status: string;
   auto_size: number; auto_snapshot: string; auto_attempted: string; pipeline_version: number; loop_settings: string; created_at: string; updated_at: string;
+  runner: string | null; runner_status: string | null; runner_updated: string | null;
 }
 const parse = <T>(value: string | null, fallback: T): T => { try { return value ? JSON.parse(value) as T : fallback; } catch { return fallback; } };
 const now = () => new Date().toISOString();
@@ -29,14 +31,14 @@ async function batchView(env: Env, row: AutoRow) {
     ORDER BY created_at,rowid`).bind(row.id).all<{ id: string; status: string; generation_slot: string | null; copy_key: string | null; analysis_status: string }>()).results;
   const processes = await processViews(env, row.id);
   // Reading the processes may have settled a stuck brief claim: the batch fields shown must be the current ones.
-  const fresh = await env.DB.prepare("SELECT prompts_status,prompts_error,updated_at FROM slop_batches WHERE id=?").bind(row.id)
-    .first<{ prompts_status: string; prompts_error: string; updated_at: string }>();
+  const fresh = await env.DB.prepare("SELECT prompts_status,prompts_error,updated_at,runner,runner_status,runner_updated FROM slop_batches WHERE id=?").bind(row.id)
+    .first<{ prompts_status: string; prompts_error: string; updated_at: string; runner: string | null; runner_status: string | null; runner_updated: string | null }>();
   if (fresh) Object.assign(row, fresh);
   // A batch drawn before the twins holds slots of tags: its size is the one recorded at its start.
   return { id: row.id, size: row.auto_size, status: row.auto_status, prompts_status: row.prompts_status,
     prompts_error: row.prompts_error, slots: itemsOf(row).length || row.auto_size, attempted: row.pipeline_version === 2 ? processes.filter(p=>p.attempts.length).map(p=>p.slot) : parse<number[]>(row.auto_attempted, []),
     pipeline_version: row.pipeline_version, config: parse(row.loop_settings, null), processes,
-    snapshot: parse<Proposal | null>(row.auto_snapshot, null), created_at: row.created_at, updated_at: row.updated_at,
+    snapshot: parse<Proposal | null>(row.auto_snapshot, null), created_at: row.created_at, updated_at: row.updated_at, runner: runnerView(row),
     images: images.map(i => ({ id: i.id, status: i.status, index: parse<{ index?: number }>(i.generation_slot, {}).index ?? null,
       copy: !!i.copy_key, analysis: i.analysis_status })),
     undecided: images.filter(i => i.status === "new").length };
@@ -80,6 +82,20 @@ async function start(env: Env, data: Record<string, unknown>) {
       VALUES(?,'[]',?,?,?,'auto',?,'running',?,?)`).bind(batchId, JSON.stringify(items), stamp, stamp, IGNORE_KEY, items.length, JSON.stringify(next)).run();
   } catch { throw new HttpError(409, "C'è già un batch automatico aperto: nessuna chiamata inviata"); }
   await initializeBatch(env, batchId, items, snapshot);
+  // The whole loop runs on Cloudflare from here: briefs, attempts, tags; the dashboard only follows it.
+  await startRun(env, batchId, "all");
+  return autoState(env);
+}
+/** POST auto/resume {confirm}: a batch whose runner died (or that ran in the browser before 1.31.0) goes on from where it stopped,
+ * within the maximum confirmed at its start; claimed or uncertain steps are never resent. */
+async function resume(env: Env, data: Record<string, unknown>) {
+  if (Object.keys(data).some(key => key !== "confirm") || data.confirm !== true) throw new HttpError(400, "Conferma la ripresa del batch");
+  if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
+  const row = await openBatch(env);
+  if (!row || row.auto_status !== "running") throw new HttpError(409, "Nessun batch automatico in generazione");
+  if (row.pipeline_version !== 2) throw new HttpError(409, "Batch precedente: sola revisione; non si riprende automaticamente");
+  await processViews(env, row.id);  // settles claims left by a dead request first
+  await startRun(env, row.id, "all");
   return autoState(env);
 }
 
@@ -104,6 +120,7 @@ export async function autoRoute(env: Env, method: string, rest: string, data: Re
   if (method !== "POST") throw new HttpError(405, "Metodo non consentito");
   if (rest === "start") return start(env, data);
   if (rest === "ignore") return ignore(env, data);
+  if (rest === "resume") return resume(env, data);
   if (rest === "close") {
     if (Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
     const row = await openBatch(env);
@@ -133,6 +150,7 @@ export async function guardBatch(env: Env, method: string, rest: string, data: R
     .first<{ origin: string; auto_status: string; prompts_status: string; slots: string; pipeline_version: number }>();
   if (!row || row.origin !== "auto") return;
   if (method === "PUT") throw new HttpError(409, "I prompt di un batch automatico non si modificano");
+  if (action === "run" || action === "stop") throw new HttpError(409, "Un batch automatico si avvia, si riprende e si ferma dalla sua proposta");
   if (method !== "POST") return;
   if (row.pipeline_version !== 2) throw new HttpError(409, "Batch precedente: sola revisione; non si riprende automaticamente");
   if (row.auto_status !== "running") throw new HttpError(409, "Il batch automatico non è più in generazione: nessuna chiamata inviata");
