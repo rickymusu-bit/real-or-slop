@@ -119,7 +119,7 @@ export async function showLibrary() {
       <label>Ordine<select id="library-order"><option value="desc">decrescente</option><option value="asc">crescente</option></select></label>
       <datalist id="library-tag-list"></datalist>
     </div>
-    <div class="library-add"><button type="button" id="library-empty-trash" hidden>Svuota cestino</button><span id="library-progress" role="status" aria-live="polite"></span></div>
+    <div class="library-add"><button type="button" id="library-select-all" hidden>Seleziona tutte</button><button type="button" id="library-empty-trash" hidden>Svuota cestino</button><span id="library-progress" role="status" aria-live="polite"></span></div>
     <p id="library-batch-filter" class="library-batch-filter" hidden><span>Batch automatico in corso: solo le sue immagini.</span><button type="button" data-batch-clear>Mostra tutte</button></p>
     <div id="library-selection" class="library-selection" hidden></div>
     <p id="library-message" role="status" aria-live="polite"></p>
@@ -301,6 +301,10 @@ export async function showLibrary() {
   };
   const render = () => {
     $("#library-grid").innerHTML = items.length ? sorted().map(card).join("") : `<li class="library-empty">${filter.status === "trash" ? "Il cestino è vuoto." : "Nessuna immagine. Aggiungi le REAL con «Caricamento REAL» e genera le SLOP con «Generazione SLOP»."}</li>`;
+    // «Seleziona tutte» takes every photo shown by the current view and filters, never the hidden ones.
+    const all = $<HTMLButtonElement>("#library-select-all");
+    all.hidden = !items.length || items.every(i => selected.has(i.id));
+    all.textContent = `Seleziona tutte (${items.length})`;
     selectionBar();
   };
 
@@ -528,6 +532,7 @@ export async function showLibrary() {
       return;
     }
     if (!button || busy) return;
+    if (button.id === "library-select-all") { for (const item of items) selected.add(item.id); render(); return; }
     busy = true;
     try {
       if (button.id === "library-empty-trash") {

@@ -1,9 +1,15 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T17:58:54Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T18:25:36Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.29.0 — 2026-11-15T17:58:54Z (decisioni dell'owner del 2026-11-15)
+## 1.30.0 — 2026-11-15T18:25:36Z
+
+- **Seleziona tutte:** nel Database un tasto seleziona tutte e sole le immagini mostrate da vista e filtri (per esempio le REAL senza
+  descrizione, prima dell'analisi combinata in gruppo). Prima la selezione era solo una casella per foto. Specifica
+  `database-immagini` 2.7.0, `MASTER.md` 23.3.0.
+
+## 1.29.0 — 2026-11-15T17:58:54Z (rilasciata il 2026-11-15) (decisioni dell'owner del 2026-11-15)
 
 - **Analisi dell'immagine intera:** tag e descrizione privata della REAL, e i tag della SLOP, nascono dall'originale, non dal
   ritaglio 4:5, così coprono tutta l'immagine. La copia di gioco non serve più all'analisi. La provenienza della descrizione registra

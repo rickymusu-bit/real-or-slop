@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 23.2.0, aggiornata il 2026-11-15T17:58:54Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 23.3.0, aggiornata il 2026-11-15T18:25:36Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,15 +9,16 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **In produzione:** app 1.28.0 (PR rickymusu-bit/real-or-slop#141, unita il 2026-11-15; migrazioni fino alla 0051, applicata alle
-  17:14 UTC). Il 2026-11-15 restano 20 REAL approvate con copia 4:5, tag della vecchia analisi e nessuna descrizione privata, e nessuna
+- **In produzione:** app 1.29.0 (PR rickymusu-bit/real-or-slop#142, deploy il 2026-11-15 alle 18:18 UTC; migrazioni fino alla
+  0051). Il 2026-11-15 restano 20 REAL approvate con copia 4:5, tag della vecchia analisi e nessuna descrizione privata, e nessuna
   immagine pubblicata: nessun livello è giocabile. Su indicazione dell'owner, alle 17:24 UTC sono stati salvati direttamente nel D1
   il contesto «Brief e prompt per le SLOP» proposto (pipeline 2) e la soglia dello studio a 20 REAL. Qualità immagini `medium`.
-- **Nel ramo 1.29.0 (PR da unire):** analisi di REAL e SLOP sull'originale intero invece della copia 4:5; processi senza SLOP in
+- **Nel ramo 1.30.0 (PR da unire):** nel Database il tasto «Seleziona tutte», per le immagini mostrate da vista e filtri.
+- **Nella 1.29.0:** analisi di REAL e SLOP sull'originale intero invece della copia 4:5; processi senza SLOP in
   evidenza nello studio, con immagini, prompt e valutazioni di ogni tentativo, conservati fino alla chiusura dell'owner; con
   tolleranza 0 i difetti minori fanno rigenerare invece di fermare il ciclo; nel Database filtro «REAL senza descrizione» e analisi
   combinata in gruppo; ripetizione confermata degli esiti incerti anche dal wizard. Nessuna migrazione.
-- **Da fare dopo il rilascio della 1.29.0:** l'owner lancia dal Database l'analisi combinata delle 20 REAL (20 chiamate a pagamento).
+- **Da fare:** l'owner lancia dal Database l'analisi combinata delle 20 REAL (20 chiamate a pagamento).
 - **Selezione REAL:** otto principi qualitativi nella issue #138; nessun filtro o scoring automatico.
 - **Da decidere con l'owner:** se e come comunicare al giocatore il processo di generazione dopo la risposta.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
@@ -34,7 +35,7 @@ nome.
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.2.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.5.0 |
 | SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.5.0 |
-| Sezione Database | `docs/database-immagini.md` | 2.6.0 |
+| Sezione Database | `docs/database-immagini.md` | 2.7.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.8.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |

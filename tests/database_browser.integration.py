@@ -2,6 +2,7 @@
 statistics, edit of a published photo, crop, regeneration of a SLOP, trash, «Distribuzione» tab. Seeds rows in the local D1."""
 import io
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -116,6 +117,14 @@ with sync_playwright() as p:
         # REAL without the private description: filter, then the combined analysis of the selection, with the exact maximum.
         page.locator('#library-undescribed').check()
         expect(cards).to_have_count(1)
+        # «Seleziona tutte» takes exactly the photos the filters show.
+        expect(page.locator('#library-select-all')).to_have_text(re.compile(r'^Seleziona tutte \(\d+\)$'))
+        page.locator('#library-select-all').click()
+        expect(page.locator('#library-select-all')).to_be_hidden()
+        expect(page.get_by_role('checkbox', name=f'Seleziona {prefix}-barricate')).to_be_checked()
+        shown = page.locator('#library-grid [data-select]').count()
+        expect(page.locator('#library-selection strong')).to_have_text(f'{shown} selezionate')
+        page.locator('[data-bulk=none]').click(); expect(page.locator('#library-select-all')).to_be_visible()
         page.get_by_role('checkbox', name=f'Seleziona {prefix}-barricate').check()
         openai([{'tags': ['dbb-riot', 'dbb-paris', '1960s']}])
         page.locator('[data-bulk=describe]').click()
