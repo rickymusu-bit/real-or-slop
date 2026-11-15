@@ -1,10 +1,11 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T13:54:58Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T14:21:17Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.27.0 — 2026-11-15T13:54:58Z (implementazione #139, da rilasciare)
+## 1.27.0 — 2026-11-15T14:21:17Z (implementazione #139, da rilasciare)
 
+- **Consegna tramite PR:** registrata in `AGENTS.md` 22.3.0 la preferenza dell’owner di pubblicare sempre il ramo e aprire/aggiornare una PR per i test CI; nessuna consegna limitata ai file locali.
 - Una sola analisi multimodale REAL produce tag e descrizione privata, salvati atomici con modello e revisione della copia.
   La descrizione è correggibile nel wizard e nel Database; testo Commons e tag restano indipendenti. Nessun backfill pagato.
 - Una chiamata testuale per REAL produce brief e prompt; brief congelato con hash al primo tentativo. Processi e tentativi

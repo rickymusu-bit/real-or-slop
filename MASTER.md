@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 23.0.0, aggiornata il 2026-11-15T13:54:58Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 23.0.1, aggiornata il 2026-11-15T14:21:17Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -140,3 +140,5 @@ finto `tests/fake_openai.py`) e `ROS_TEST_BROWSER=1 npm run test:integration` pe
 test d'integrazione eseguiti è in `scripts/integration.py`.
 
 **Verifica locale della 1.27.0:** lint, 95 test unitari, build, dry-run e suite completa con `ROS_TEST_BROWSER=1` riusciti (desktop e mobile). Solo API fittizia, D1 e R2 locali; anteprima remota, CI ospitata, merge e rilascio non eseguiti.
+
+**Consegna del lavoro:** pubblicare sempre il ramo e aprire o aggiornare una PR per avviare i controlli CI (`AGENTS.md` 22.3.0). Commit e patch locali non completano la consegna.
