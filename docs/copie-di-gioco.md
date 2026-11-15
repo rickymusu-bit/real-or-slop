@@ -1,6 +1,6 @@
-# Copie di gioco — specifica 9.1.0
+# Copie di gioco — specifica 9.1.1
 
-Stato: decisioni approvate, **da implementare** (#136 e successivo loop di credibilità in `generazione-slop` 5.0.0); in produzione c'è la 8.0.0
+Stato: decisioni approvate, **da implementare** (#136 e successivo loop di credibilità in `generazione-slop` 5.0.1); in produzione c'è la 8.0.0
 (app 1.26.0: copia nel formato della foto, trattamento verso un'altra REAL). Aggiornata: 2026-11-15T11:08:00Z. La 9.0.0 riporta tutte
 le copie di gioco al formato verticale 4:5 e prende le misure del trattamento dalla REAL di origine. Le versioni precedenti restano
 nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia e il gioco serve esattamente quei byte.
@@ -99,8 +99,10 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
 - **Correzioni leggere.** I limiti dei passi 3–5 sono più stretti della versione 2 (contrasto fino a 1,6, saturazione da 0,3, raggio
   fino a 3): il trattamento ritocca, non stravolge. Niente effetti disegnati: ogni passo segue una misura della REAL.
 - Dopo il trattamento il browser misura la copia e registra lo scarto dall'obiettivo; il dettaglio del Database lo mostra.
-  **Lo scarto metrico non è una misura di realismo.** Nel loop di `generazione-slop` 5.0.0 la valutazione riguarda la copia 4:5
-  effettiva, dopo l'eventuale trattamento, prima che la candidata entri nella libreria ordinaria.
+  **Lo scarto metrico non è una misura di realismo.** Nel loop di `generazione-slop` 5.0.1 il valutatore multimodale vede
+  **l'immagine generata intera, prima del ritaglio e del trattamento**. Solo se la candidata è accettata, il browser prepara
+  la copia 4:5 e applica il trattamento. L'owner controlla la copia risultante nella revisione; il crop non deve condizionare
+  il prompt né innescare una nuova generazione automatica per concentrare i soggetti nel 4:5.
 - **Registro** `copy_treatment`: REAL da cui vengono le misure (identificativo e misure), Colore, parametri di ogni passo, seme,
   versione dell'algoritmo. Una copia fatta con una versione precedente si rifà con quella corrente alla prossima «Inquadratura» o al
   prossimo comando del trattamento.
