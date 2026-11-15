@@ -1,9 +1,9 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.0.0
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.0.1
 
 Stato: **decisioni editoriali approvate il 2026-11-15, da implementare** tramite PR successive. Aggiornata: 2026-11-15T11:08:00Z.
 In produzione resta l'app 1.26.0; la specifica 4.0.0 e l'issue #136 descrivono una pipeline precedente, **superata su somiglianza alla REAL,
 cambiamento singolo e numero di generazioni**. Rimangono validi, salvo diversa indicazione qui, il 4:5 e il trattamento leggero di
-`docs/copie-di-gioco.md` 9.1.0; tag e contesti in `docs/libreria-immagini.md`; contenuti in `docs/contenuti-e-trasparenza.md`.
+`docs/copie-di-gioco.md` 9.1.1; tag e contesti in `docs/libreria-immagini.md`; contenuti in `docs/contenuti-e-trasparenza.md`.
 Le versioni precedenti sono nella cronologia Git.
 
 ## 1. Obiettivo e principi non negoziabili
@@ -42,8 +42,7 @@ Le versioni precedenti sono nella cronologia Git.
 
 ## 3. Pipeline di una REAL
 
-La pipeline è per foto, tracciabile e riprendibile: `REAL → descrizione visiva → brief bloccato → prompt operativo → [genera → copia
-4:5 temporanea → valuta → (accetta | rigenera | correggi prompt)] → tag → nuova SLOP in libreria → revisione owner → pubblicazione`.
+La pipeline è per foto, tracciabile e riprendibile: `REAL → descrizione visiva → brief bloccato → prompt operativo → [genera → valuta immagine INTERA → (accetta | rigenera | correggi prompt)] → copia 4:5 e trattamento → tag → nuova SLOP in libreria → revisione owner → pubblicazione`.
 
 1. **Descrizione visiva della REAL.** Il modello vede soltanto la copia di gioco 4:5 della REAL, senza titolo, tag, origine né
    indicazioni sull'uso delle immagini generate. Descrizione inglese, le sette sezioni già previste (soggetto, persone, scritte,
@@ -58,11 +57,12 @@ La pipeline è per foto, tracciabile e riprendibile: `REAL → descrizione visiv
 3. **Prompt iniziale in inglese.** Il modello inventa una scena plausibile e una resa fotografica specifica. Nessuna imitazione
    obbligatoria della composizione della REAL; niente enfasi cinematografica, cliché o dettagli storici dedotti arbitrariamente.
    Le scritte devono essere poche quando possibile e descritte con precisione solo se essenziali. Il modello non sceglie il formato.
-4. **Generazione e copia temporanea.** Il generatore riceve il prompt operativo e la dimensione scelta da `copie-di-gioco`; produce
-   una candidata completamente sintetica. Il browser crea **prima della valutazione** la copia 4:5 con il trattamento leggero
-   previsto, così il giudizio riguarda ciò che il giocatore vedrebbe davvero; l'originale generato resta privato. Il trattamento
-   non deve essere usato per occultare difetti strutturali.
-5. **Valutazione multimodale.** Vede la copia 4:5, il brief immutabile e il prompt operativo. Distingue: (I) credibilità
+4. **Generazione della candidata integrale.** Il generatore riceve il prompt operativo e la dimensione scelta da `copie-di-gioco`;
+   produce un'immagine completamente sintetica, nel **suo formato originale di generazione**. Il file intero resta privato fino
+   alla decisione. **Non ritagliare né trattare l'immagine prima della valutazione.** Il generatore e il valutatore non devono
+   essere condizionati dal riquadro 4:5 in cui la fotografia sarà successivamente mostrata nel gioco.
+5. **Valutazione multimodale sull'immagine INTERA.** Vede la fotografia generata completa, mai un ritaglio 4:5,
+   e il brief immutabile e il prompt operativo. Distingue: (I) credibilità
    fotografica, (II) plausibilità fisica e contestuale, (III) rispetto dei soli ancoraggi editoriali obbligatori. L'aderenza a
    dettagli secondari del prompt non è un requisito. Deve riportare difetti **osservabili** e incertezze, senza proclamare
    «foto autentica» o dedurre identità, licenze, provenienza o verità storica dai pixel.
@@ -70,10 +70,13 @@ La pipeline è per foto, tracciabile e riprendibile: `REAL → descrizione visiv
    proposti al prompt sono ammessi solo se mantengono il brief; il server verifica almeno struttura, vincoli dichiarati e revisioni.
    Una rigenerazione con lo stesso prompt è appropriata per anomalie occasionali; la revisione per istruzioni ambigue o ricorrenti;
    la riprogettazione per scene sistematicamente troppo difficili. Ogni nuova generazione consuma un tentativo.
-7. **Candidato accettato:** solo dopo una valutazione positiva la foto entra nella libreria ordinaria come SLOP `new`, con
-   originale, copia, prompt finale, brief, REAL di riferimento, modello, qualità, configurazione e tracciabilità dell'esito.
-   L'analisi dei tag usa l'immagine effettiva e distingue le evidenze visive dai desideri del prompt. Approvare e pubblicare
-   restano azioni separate dell'owner. Nessuna pubblicazione automatica.
+7. **Candidato accettato:** solo **dopo la valutazione dell'immagine intera**, il browser prepara il ritaglio 4:5 e l'eventuale
+   trattamento leggero per la copia di gioco. Solo allora la SLOP entra nella libreria ordinaria come `new`, con originale,
+   copia, prompt finale, brief, REAL di riferimento, modello, qualità, configurazione e tracciabilità dell'esito.
+   L'analisi dei tag usa la copia che sarà giocata e distingue le evidenze visive dai desideri del prompt. L'owner verifica
+   che il ritaglio non comprometta il risultato; eventuali correzioni di crop o trattamento **non producono feedback automatico
+   per riscrivere il prompt e non forzano il generatore a comporre per il 4:5**. Approvare e pubblicare restano azioni
+   separate dell'owner. Nessuna pubblicazione automatica.
 
 Il valutatore può proporre la revisione del prompt **nella propria risposta strutturata**, senza obbligare a una chiamata ulteriore.
 Se l'owner cambia il brief tra due esecuzioni, deve partire un processo nuovo (mai mutare retroattivamente un processo in corso).
@@ -92,7 +95,7 @@ La valutazione **non** consiste nella media di tre numeri che compensi un difett
 Output strutturato minimo per tentativo: `attempt_id`, `decision`, `critical_findings[]`, `minor_findings[]`,
 `editorial_constraints_met`, `uncertainty_notes[]`, `action_reason`, `revised_prompt` (solo se pertinente).
 Ogni rilievo cita un punto o una regione dell'immagine e una conseguenza osservabile; niente spiegazioni inventate.
-Il giudizio sulla **naturalità fotografica** va distinto dall'aderenza al brief. Una valutazione effettuata mostrando il brief e
+Il giudizio sulla **naturalità fotografica dell'immagine intera** va distinto dall'aderenza al brief. Una valutazione effettuata mostrando il brief e
 l'immagine nella stessa chiamata può essere influenzata dal testo: non chiamarla «valutazione cieca». Se si vorrà una valutazione
 davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
 
@@ -136,11 +139,11 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
 ## 7. Studio e interfaccia amministrativa
 
 Quattro passaggi evolutivi: **REAL** (scelta da 1 a 10), **Descrizione e brief** (revisione e prompt iniziale),
-**Generazione e valutazione** (avanzamento per foto e per tentativo, decisione, difetti e correzione del prompt),
+**Generazione e valutazione dell'immagine intera** (avanzamento per foto e per tentativo, decisione, difetti e correzione del prompt),
 **Revisione** (solo candidate accettate automaticamente, più eventuali casi sospesi visibili separatamente).
 Mostrare il numero massimo di tentativi, la tolleranza, il preventivo massimo delle chiamate e il totale effettivo.
 
-In revisione: originale della SLOP e copia 4:5 (con/senza trattamento), prompt finale, ancoraggi, tag effettivi,
+In revisione: originale della SLOP **intero**, poi copia 4:5 preparata dopo l'accettazione (con/senza trattamento), prompt finale, ancoraggi, tag effettivi,
 divergenze tematiche, dettagli della valutazione, Inquadratura, Analizza, Approva, Pubblica, Cestino. Nessun tasto per cestinare
 la REAL dalla revisione della SLOP. La rigenerazione manuale non scavalca i controlli e richiede conferma di una nuova esecuzione.
 Una SLOP `new` non è automaticamente una SLOP `published`.
@@ -164,7 +167,8 @@ richiedere un'esplicita scelta operativa. Nessuna migrazione remota, deploy o co
 - Il valutatore non certifica autenticità: non usare una percentuale di «probabilità che sia REAL» come verità.
 - I test usano solo modelli finti; coprire decisioni `accept`, `retry_same_prompt`, `revise_prompt`, `replan_scene`,
   `review_needed`, `exhausted`, vincoli immutabili, massimo tentativi, spesa massima, ripresa e chiamate incerte,
-  immagine finale dopo trattamento, e assenza dei tentativi rifiutati dal catalogo/gioco.
+  **valutazione sempre sull'immagine intera (no crop 4:5)**, preparazione del 4:5 **solo dopo l'accettazione**,
+  revisione dell'inquadratura senza feedback automatico al prompt e assenza dei tentativi rifiutati dal catalogo/gioco.
 
 ## 9. Fuori dallo scopo immediato e decisioni future
 
@@ -180,7 +184,7 @@ richiedere un'esplicita scelta operativa. Nessuna migrazione remota, deploy o co
    senza modificare codice, database o produzione.
 2. **PR B — backend e persistenza:** brief bloccato, processo/tentativi, chiamate registrate, valutatore e decisioni strutturate,
    limiti e compatibilità dei batch, fake API e test. Migrazione additiva, senza conversione delle immagini esistenti.
-3. **PR C — browser e studio:** ciclo visibile, impostazione limite e tolleranza, copia 4:5 valutata, progressi e revisione owner,
+3. **PR C — browser e studio:** ciclo visibile, impostazione limite e tolleranza, immagine integrale valutata e 4:5 preparato dopo, progressi e revisione owner,
    test d'integrazione desktop/mobile.
 4. **PR D — rilascio:** solo dopo CI, anteprima esaminata e autorizzazione esplicita dell'owner; valutare la migrazione dei batch in
    pausa e le impostazioni persistenti in produzione. Un merge su main avvia automaticamente il deploy.
