@@ -1,23 +1,24 @@
-# Statistiche e Impostazioni — specifica 2.5.0
+# Statistiche e Impostazioni — specifica 2.6.0
 
-Stato: vigente; la 2.2.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T11:44:02Z. La 2.2.0 toglie la soglia del gruppo
+Stato: vigente; la 2.2.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T13:42:00+01:00. La 2.2.0 toglie la soglia del gruppo
 (le SLOP sono gemelle di una REAL, specifica `generazione-slop` 3.0.0) e aggiunge il conteggio delle gemelle. La 2.1.0 sostituisce la soglia
 del tema con quella del gruppo e aggiunge i gruppi all'equilibrio del catalogo (specifica `generazione-slop`). La 2.0.0 era la
 versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `statistiche-impostazioni.v1.0.1` e le aggiunte successive (soglie dei batch automatici, formati, cancellazione delle voci
 di classifica), che restano nella cronologia git.
 
-**Decisioni dell'owner del 2026-11-15, da implementare** (issue #136, aggiornata dalla specifica `generazione-slop` 5.1.0). Fino al rilascio il resto di questa specifica
+**Decisioni dell'owner del 2026-11-15, da implementare** (issue #136, aggiornata dalla specifica `generazione-slop` 5.2.0). Fino al rilascio il resto di questa specifica
 descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
 
-- **Impostazioni, Contesto dei modelli:** restano **tre testi**; «Prompt per le SLOP» prepara brief e prompt in
-  **un'unica chiamata multimodale** che vede la REAL intera, tag e contesto Commons. Nessuna sezione autonoma
-  «Descrizione delle REAL».
+- **Impostazioni, Contesto dei modelli:** restano **tre testi**. «Tag» governa l'unica chiamata multimodale durante il
+  caricamento REAL per ottenere tag e descrizione editoriale neutra; «Prompt per le SLOP» governa la successiva chiamata
+  **testuale** che usa quella descrizione e i tag per produrre brief e prompt. Nessun quarto contesto separato.
 - **Impostazioni, Modelli:** predefiniti `gpt-6.1-sol` e `gpt-image-2.5-flare` in qualità `high`.
 - **Studio SLOP:** `max_generation_attempts` da 1 a 5, predefinito 3, e tolleranza editoriale qualitativa separata, con
   snapshot nella conferma del batch. Più tentativi **non** equivalgono a difficoltà di gioco certificata.
-- **Statistiche, chiamate a pagamento:** il tipo esistente `prompt` include immagine REAL e output brief+prompt, e si
-  aggiunge `evaluation`; **non** si aggiunge `description`. Mostrare generazioni per immagine e conteggio degli esiti
+- **Statistiche, chiamate a pagamento:** l'analisi REAL `analysis` comprende tag+descrizione nella stessa chiamata,
+  il tipo `prompt` è solo testuale per brief+prompt, si aggiunge `evaluation` per la SLOP intera.
+  Non si aggiunge `description` come chiamata autonoma; mostrare tentativi per SLOP ed esiti
   (accettate, esaurite, sospese). Nessuna informazione di costo inventata.
 - **Statistiche, equilibrio del catalogo:** la tabella dei formati delle copie pubblicate sparisce (tutte 4:5).
 
