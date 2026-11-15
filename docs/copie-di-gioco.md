@@ -1,126 +1,130 @@
-# Copie di gioco — specifica 8.0.0
+# Copie di gioco — specifica 9.0.0
 
-Stato: approvata dall'owner il 2026-11-14, implementata nell'app 1.26.0 (in revisione). Aggiornata: 2026-11-14T21:30:00Z.
-La 8.0.0 toglie dal trattamento gli effetti disegnati per Supporto, corregge la misura del rumore (versione 2 delle misure), cambia la
-grana e lega la REAL campione alla gemella invece che allo slot (sezione 4).
-La 7.0.1 chiama «REAL campione» la foto da cui il trattamento prende le misure. La 7.0.0 aggiunge le misure di ogni copia e il trattamento delle SLOP, che ne avvicina l'aspetto a quello delle REAL del loro gruppo
-(sezione 4). La 6.0.0 era la versione consolidata (riordino della documentazione dell'owner del 2026-11-14) della 5.0.0,
-senza la storia del passaggio dalle copie 4:5, concluso; le versioni precedenti restano nella cronologia git. Principio invariato dalla
-2.0.0: l'owner approva la copia e il gioco serve esattamente quei byte.
+Stato: approvata dall'owner il 2026-11-15, **da implementare** (issue rickymusu-bit/real-or-slop#136); in produzione c'è la 8.0.0
+(app 1.26.0: copia nel formato della foto, trattamento verso un'altra REAL). Aggiornata: 2026-11-15T09:00:00Z. La 9.0.0 riporta tutte
+le copie di gioco al formato verticale 4:5 e prende le misure del trattamento dalla REAL di origine. Le versioni precedenti restano
+nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia e il gioco serve esattamente quei byte.
 
-## 1. Decisioni dell'owner (2026-11-13)
+## 1. Decisioni dell'owner
 
-- La copia di gioco è la foto ritagliata al più vicino di un insieme di formati comuni: il formato di una REAL è la scelta del fotografo,
-  e quello di una SLOP deve essere adatto al soggetto. Con tutte le foto in 4:5 le REAL apparivano tagliate e le SLOP composte per quel
-  riquadro: un indizio dell'origine.
-- La foto si mostra **intera, nel suo formato, su ogni schermo**; il giocatore la esplora con le dita o il mouse. Niente vista iniziale
-  4:5: metteva in svantaggio chi gioca sul telefono.
-- Niente swipe per rispondere: il dito sposta la foto.
+- **Tutte le copie di gioco in 4:5 verticale** (2026-11-15), REAL e SLOP. Il ritaglio permette di togliere da una SLOP una zona con
+  un errore troppo evidente e le dà un'inquadratura diversa da quella della REAL di riferimento. Annulla la decisione del 2026-11-13
+  (copia nel formato più vicino a quello della foto), presa perché con il 4:5 le REAL apparivano tagliate e le SLOP composte per quel
+  riquadro. Quel difetto non torna: una SLOP si genera nel formato della sua REAL e si ritaglia come lei, quindi sono entrambe ritagli
+  di un'immagine più larga.
+- La foto si mostra **intera su ogni schermo**; il giocatore la esplora con le dita o il mouse; niente swipe per rispondere
+  (2026-11-13, invariato). Nessuna vista iniziale diversa dalla foto intera.
+- Trattamento delle SLOP: copia le REAL, non le supera (2026-11-14). Le misure vengono dalla **REAL di origine** (2026-11-15): prese
+  da un'altra REAL avevano rovinato il lotto del 2026-11-15 (sezione 4.1).
 
 ## 2. Formati
 
-Insieme fisso nel codice:
+- **Copia di gioco:** sempre 4:5 verticale. Altezza al massimo 1536 px, larghezza `round(0,8 × altezza)` (al massimo 1229 × 1536),
+  mai ingrandita.
+- **Generazione delle SLOP:** il generatore riceve la dimensione del formato comune più vicino alle proporzioni dell'originale della
+  REAL di origine; la copia 4:5 si ritaglia da lì. Insieme fisso nel codice:
 
-| Formato | Uso tipico | Dimensione chiesta al generatore |
-|---|---|---|
-| 3:2 orizzontale | reflex e mirrorless | 1536 × 1024 |
-| 2:3 verticale | | 1024 × 1536 |
-| 4:3 orizzontale | telefoni, compatte | 1536 × 1152 |
-| 3:4 verticale | | 1152 × 1536 |
-| 16:9 orizzontale | panoramiche | 1536 × 864 |
-| 9:16 verticale | | 864 × 1536 |
-| 1:1 quadrato | medio formato | 1536 × 1536 |
+| Formato | Dimensione chiesta al generatore |
+|---|---|
+| 3:2 orizzontale | 1536 × 1024 |
+| 2:3 verticale | 1024 × 1536 |
+| 4:3 orizzontale | 1536 × 1152 |
+| 3:4 verticale | 1152 × 1536 |
+| 16:9 orizzontale | 1536 × 864 |
+| 9:16 verticale | 864 × 1536 |
+| 1:1 quadrato | 1536 × 1536 |
 
-Le dimensioni rispettano i vincoli della guida OpenAI per GPT Image 2 e 2.6 (lati multipli di 16, rapporto non oltre 3:1). I modelli
-con sole dimensioni fisse (GPT Image 1.5, 1 mini, `chatgpt-image-latest`) offrono al modello di testo solo 1:1, 3:2 e 2:3.
+Le dimensioni rispettano i vincoli della guida OpenAI per GPT Image 2 e successivi (lati multipli di 16, rapporto non oltre 3:1). I
+modelli con sole dimensioni fisse (GPT Image 1.5, 1 mini, `chatgpt-image-latest`) usano la più vicina tra 1:1, 3:2 e 2:3. Il modello
+di testo non sceglie più il formato.
 
 ## 3. Ricetta
 
-- Uguale per REAL e SLOP, dopo il trattamento delle SLOP (sezione 4): formato più vicino dell'insieme (distanza sul logaritmo del rapporto), ritaglio centrato più grande, WebP
-  qualità 0,85, **lato lungo al massimo 1536 px**, mai ingrandita, sRGB, sfondo bianco per le trasparenze, nessun metadato. Lo stesso
-  massimo per tutte evita che lo zoom riveli l'origine dalla risoluzione.
-- La copia si crea nel browser dell'owner appena l'immagine entra nella libreria; il server verifica formato, dimensioni e
-  corrispondenza con il ritaglio.
-- **Inquadratura** (passo 3 del wizard REAL e dettaglio del Database, per nuove e approvate): un riquadro nel formato scelto, centrato
-  all'inizio, che l'owner sposta o rimpicciolisce; il formato si cambia tra quelli dell'insieme. Salvato in `copy_crop`
-  (`{x, y, width, height, format}`). Salvare lo stesso ritaglio non rifà la copia e lascia le statistiche.
-- Approvare e pubblicare richiedono una copia con formato.
+- Uguale per REAL e SLOP, dopo il trattamento delle SLOP (sezione 4): ritaglio 4:5, WebP qualità 0,85, altezza al massimo 1536 px,
+  mai ingrandita, sRGB, sfondo bianco per le trasparenze, nessun metadato.
+- La copia si crea nel browser dell'owner appena l'immagine entra nella libreria, con il ritaglio 4:5 più grande, centrato; il server
+  verifica formato, dimensioni e corrispondenza con il ritaglio.
+- **Inquadratura** (passo 3 del wizard REAL, revisione dello studio SLOP e dettaglio del Database, per nuove e approvate): un riquadro
+  4:5 che l'owner sposta o rimpicciolisce sull'originale. Salvato in `copy_crop` (`{x, y, width, height, format: "4:5"}`). Salvare lo
+  stesso ritaglio non rifà la copia e lascia le statistiche. Il formato non si sceglie.
+- Approvare e pubblicare richiedono una copia 4:5. Una copia di una ricetta precedente (formato diverso) va rifatta: il server rifiuta
+  di approvarla o pubblicarla, e le pubblicate con una copia non 4:5 escono dal gioco al rilascio (sezione 7).
 - **Licenze ND** escluse dal gioco: il ritaglio è una modifica.
-- Il ritaglio toglie poco a una REAL (al massimo circa il 13% di un lato), tranne alle panoramiche più larghe del 16:9.
+- Il ritaglio toglie molto a una REAL orizzontale: di una 3:2 resta poco più di metà della larghezza. È il costo accettato della
+  decisione; l'owner sceglie l'inquadratura, e una foto che non regge il ritaglio non si carica.
 
 ## 4. SLOP
 
-- Il modello di testo sceglie per ogni prompt il formato più adatto al soggetto (campo `format` della risposta, uno dei sette); il
-  contesto «Prompt per le SLOP» lo chiede. L'owner può cambiarlo nello studio, senza costi.
-- Il generatore riceve il testo del prompt e la dimensione del formato. Rigenerare dal Database usa il formato della copia attuale.
+### 4.1 Perché il trattamento, e da quale REAL
 
-### 4.1 Perché il trattamento (decisione dell'owner del 2026-11-14)
+Le REAL d'epoca hanno l'aspetto che dà loro la strada percorsa (una stampa scansionata a 272 px, un fotogramma a 700 px); le SLOP
+escono dal generatore a 1536 px, nitide ovunque. Chi fa disinformazione riduce e ricomprime le immagini generate; il gioco fa lo
+stesso, copiando le REAL senza superarle (2026-11-14).
 
-Le REAL d'epoca hanno l'aspetto che dà loro la strada percorsa: una pagina di giornale rifotografata, un fotogramma di pellicola a 700 px,
-una piccola stampa scansionata a 272 px. Le SLOP escono dal generatore a 1536 px, nitide ovunque, con un istogramma pulito: nessuna
-fotografia d'epoca è così. Il 2026-11-14 12 REAL su 55 avevano il lato lungo sotto i 1536 px e nessuna SLOP: «piccola e morbida»
-voleva dire REAL. Chi fa disinformazione riduce, ricomprime e sporca le immagini generate; il gioco fa lo stesso, ma copiando le REAL
-e senza superarle, perché «rovinata» non diventi il nuovo indizio.
+Con l'app 1.26.0 le misure venivano da un'altra REAL con lo stesso colore, supporto e decennio. Nel lotto del 2026-11-15 questo ha
+rovinato le copie: saturazione, contrasto e dominante dipendono dalla scena, non dal supporto. Una scena di saccheggio a colori ha
+preso la saturazione di una foto quasi grigia (ridotta a un terzo), un incendio ha perso l'arancione, una scena di strada è stata
+ridotta a 357 px e virata come la foto segnaletica presa a campione. Le REAL di origine avevano invece misure vicine agli originali del
+generatore, o più sature. Le misure vengono quindi dalla **REAL di origine**, che ritrae lo stesso tipo di scena. La REAL campione
+separata serviva a non far somigliare la gemella alla sua REAL: le due non compaiono mai nella stessa partita, quindi non serve più.
 
 ### 4.2 Misure
 
 - Il browser misura **ogni copia di gioco**, REAL e SLOP, quando la crea, senza modelli e senza costi, e le salva in `copy_metrics`:
-  lato lungo in pixel; **rumore** (deviazione standard del residuo ad alta frequenza nelle zone più uniformi); **nitidezza** (energia
-  del laplaciano sulla luminanza); **contrasto** (distanza tra i percentili 2 e 98 della luminanza); **saturazione** media;
-  **dominante** (scarto medio dei canali dal grigio nelle zone neutre); versione dell'algoritmo.
-- **Versione 2 delle misure** (app 1.26.0): il rumore non conta le zone bruciate a bianco o a nero, che sono le più uniformi di tutte
-  e non hanno grana (con la versione 1 un cielo bianco dava rumore zero). Sulle 55 REAL del 2026-11-14 la mediana passa a 0,55 e
-  25 restano sotto 0,5: le copie di gioco delle REAL, ridotte da scansioni grandi e ricompresse, hanno davvero poca grana a questa
-  scala, e le SLOP del primo lotto misuravano valori simili. La differenza che l'occhio vede tra REAL e SLOP non sta quindi nel
-  rumore misurato così: è un limite noto di queste misure.
-- Le copie senza misure, o con misure di una versione precedente, si misurano all'apertura della dashboard, una alla volta, scaricando
-  la copia dalla quarantena (gratuito).
+  lato lungo in pixel; **rumore** (deviazione standard del residuo ad alta frequenza nelle zone più uniformi, escluse quelle bruciate
+  a bianco o a nero); **nitidezza** (energia del laplaciano sulla luminanza); **contrasto** (distanza tra i percentili 2 e 98 della
+  luminanza); **saturazione** media; **dominante** (scarto medio dei canali dal grigio nelle zone neutre); versione dell'algoritmo.
+- Limite noto: le copie delle REAL, ridotte da scansioni grandi e ricompresse, hanno poca grana a questa scala (mediana 0,55 sulle 55
+  REAL del 2026-11-14), come le SLOP: la differenza che l'occhio vede non sta nel rumore misurato così.
+- Le copie senza misure, o con misure di una versione precedente, si misurano all'apertura della dashboard (gratuito).
 - Il codice delle misure è condiviso (`shared/copy-treatment.ts`) e provato con immagini di prova nei test.
 
 ### 4.3 Trattamento
 
-- Si applica a ogni SLOP generata (studio, batch, rigenerazione) prima della copia di gioco: l'originale del generatore resta intatto
+- Si applica a ogni SLOP gemella (studio, batch, rigenerazione) prima della copia di gioco: l'originale del generatore resta intatto
   nella quarantena.
-- **Obiettivo:** le misure della REAL campione della gemella (specifica `generazione-slop`, sezione 2): un'altra REAL con lo stesso
-  Colore, Supporto e decennio della REAL di origine. Per una SLOP rigenerata dal Database, la stessa campione.
-- **Passi** (versione 2 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile:
-  1. ritaglio dell'inquadratura;
-  2. riduzione al lato lungo della REAL campione (mai un ingrandimento, mai sotto 160 px);
-  3. contrasto verso quello della campione;
-  4. bianco e nero o seppia, con la tinta della campione, se il Colore della REAL di origine lo è; altrimenti dominante e saturazione
-     verso quelle della campione;
-  5. sfocatura fino alla nitidezza della campione;
-  6. grana di luminanza fino al rumore della campione, ammorbidita nelle immagini grandi, mai a blocchi;
-  7. una compressione JPEG intermedia a qualità 0,85, come quella che una foto d'archivio ha già subito, poi la ricetta della copia
-     (sezione 3).
-- **Niente effetti disegnati.** Ogni passo segue una misura della campione: il trattamento non aggiunge nulla che le REAL non abbiano.
-  La versione 1 dipingeva anche effetti per Supporto (retino di stampa, vignettatura e ingiallimento, alone sulle alte luci): aspetti
-  inventati, in parte annullati subito dal passo successivo, e possibili indizi dell'origine. Tolti con la 1.26.0. Il Supporto resta
-  registrato e decide solo quale REAL può fare da campione.
+- **Obiettivo:** le misure della copia di gioco della REAL di origine. Senza REAL di origine, o se non è misurata, nessun trattamento.
+- **Passi** (versione 3 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile:
+  1. ritaglio 4:5 dell'inquadratura;
+  2. riduzione all'altezza della copia della REAL di origine (mai un ingrandimento, mai sotto 480 px);
+  3. contrasto verso quello della REAL, con un fattore tra 0,85 e 1,2;
+  4. bianco e nero o seppia, con la tinta della REAL, se il Colore della REAL lo è; altrimenti dominante (al massimo ±8 per canale) e
+     saturazione (fattore tra 0,7 e 1,3) verso quelle della REAL;
+  5. sfocatura fino alla nitidezza della REAL, con raggio al massimo 1;
+  6. grana di luminanza fino al rumore della REAL, ammorbidita nelle immagini grandi, mai a blocchi;
+  7. una compressione JPEG intermedia a qualità 0,85, poi la ricetta della copia (sezione 3).
+- **Correzioni leggere.** I limiti dei passi 3–5 sono più stretti della versione 2 (contrasto fino a 1,6, saturazione da 0,3, raggio
+  fino a 3): il trattamento ritocca, non stravolge. Niente effetti disegnati: ogni passo segue una misura della REAL.
 - Dopo il trattamento il browser misura la copia e registra lo scarto dall'obiettivo; il dettaglio del Database lo mostra.
-- **Registro** `copy_treatment`: REAL campione (identificativo e misure, che restano valide anche se la REAL viene eliminata),
-  Supporto e Colore, parametri di ogni passo, seme, versione dell'algoritmo. Una copia fatta con una versione precedente si rifà con
-  quella corrente alla prossima «Inquadratura» o al prossimo comando del trattamento.
-- **Comandi** nel dettaglio del Database di una SLOP nuova o approvata, gratuiti: «Altra REAL campione» (ne pesca un'altra con lo
-  stesso Colore, Supporto e decennio e rifà la copia), «Senza trattamento» e «Con trattamento». Cambiare il trattamento rifà la copia
-  come «Inquadratura»: azzera le statistiche e, per una pubblicata, passa da «Modifica».
+- **Registro** `copy_treatment`: REAL da cui vengono le misure (identificativo e misure), Colore, parametri di ogni passo, seme,
+  versione dell'algoritmo. Una copia fatta con una versione precedente si rifà con quella corrente alla prossima «Inquadratura» o al
+  prossimo comando del trattamento.
+- **Comandi** nel dettaglio del Database di una SLOP nuova o approvata e nella revisione dello studio, gratuiti: «Senza trattamento» e
+  «Con trattamento». «Altra REAL campione» sparisce. Cambiare il trattamento rifà la copia come «Inquadratura»: azzera le statistiche
+  e, per una pubblicata, passa da «Modifica».
 - «Inquadratura» su una SLOP ritaglia l'originale e riapplica lo stesso trattamento.
 - Le REAL non hanno trattamento: la loro ricetta resta quella della sezione 3.
 
 ## 5. Nella partita
 
-- Il riquadro ha il formato della copia; la foto entra intera nello spazio disponibile, con i pulsanti sempre visibili.
+- Il riquadro è 4:5; la foto entra intera nello spazio disponibile, con i pulsanti sempre visibili.
 - **Esplorare:** trascinare con un dito o il mouse; ingrandire con due dita o la rotella, fino a due pixel CSS per pixel della copia (mai
   meno di 4 volte); un doppio tocco ingrandisce 2,5 volte sul punto toccato e su una foto ingrandita torna alla foto intera; «Foto
   intera» torna all'inizio. Il tempo scorre mentre si esplora.
-- La lista di fine partita mostra le foto intere, nel loro formato.
+- La lista di fine partita mostra le foto intere.
 
 ## 6. Rischi
 
-- **Distribuzione dei formati:** se il modello di testo sceglie formati diversi da quelli dei fotografi, la frequenza diventa un indizio.
-  Le Statistiche mostrano i formati delle copie pubblicate di REAL e SLOP, per correggere il contesto se divergono.
-- **Foto piccole sul telefono:** un 16:9 su un telefono verticale è basso e alcuni indizi si vedono solo ingrandendo; vale per REAL e
-  SLOP allo stesso modo.
-- **Trattamento sbagliato:** un trattamento troppo forte o troppo debole crea un indizio opposto. Le Statistiche confrontano le misure
-  delle copie pubblicate di REAL e SLOP per gruppo di genere e decennio, come fanno con i formati.
-- **Costo:** le dimensioni dei formati hanno tra 1,3 e 2,4 milioni di pixel; il costo di un'immagine cambia con la dimensione.
+- **REAL tagliate:** una REAL orizzontale perde quasi metà della scena; soggetti larghi non reggono il 4:5. Vale per le SLOP allo
+  stesso modo, perché nascono nel formato della loro REAL.
+- **Trattamento sbagliato:** le Statistiche confrontano le misure delle copie pubblicate di REAL e SLOP per gruppo.
+- **Costo:** la dimensione chiesta al generatore dipende dal formato della REAL (tra 1,3 e 2,4 milioni di pixel).
+
+## 7. Passaggio dalle copie nel formato della foto
+
+- Al rilascio le copie esistenti hanno il formato della foto. Una migrazione ritira dal gioco le pubblicate (tornano approvate) e
+  nessuna copia non 4:5 si può approvare o pubblicare.
+- Nel Database il filtro «Copia da rifare in 4:5» e l'azione in gruppo «Rifai la copia in 4:5» (ritaglio centrato, gratis, nel
+  browser) rifanno le copie; l'owner rivede le inquadrature e ripubblica. Le statistiche delle foto ripartono, perché contano solo i
+  round giocati con la copia attuale.
+- Le partite in corso finiscono con le copie con cui sono iniziate.

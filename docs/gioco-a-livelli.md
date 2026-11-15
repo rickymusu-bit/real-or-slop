@@ -1,9 +1,16 @@
-# Partita a livelli e classifica — specifica 2.1.0
+# Partita a livelli e classifica — specifica 2.2.0
 
-Stato: vigente; la 2.1.0 è nell'app 1.26.0 (in revisione). Aggiornata: 2026-11-14T21:30:00Z. La 2.1.0 tiene fuori dalla stessa partita
+Stato: vigente; la 2.1.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T09:00:00Z. La 2.1.0 tiene fuori dalla stessa partita
 una SLOP e la REAL da cui è nata (sezione 3). La 2.0.0 è la versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `gioco-a-livelli.v1.0.1` e le parti sul gioco di `copie-di-gioco.v5.0.0`, `didascalie-wizard.v1.0.0`,
 `anteprima-descrizione.v1.2.0` e `privacy-note-legali.v1.0.4`, che restano nella cronologia git.
+
+**Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
+descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
+
+- **Foto:** tutte le copie di gioco sono 4:5 verticali, mostrate intere (specifica `copie-di-gioco` 9.0.0).
+- **Lista di fine partita:** per le SLOP, accanto al prompt, l'elemento inventato («luogo: da Parigi a Marsiglia»). Proposta ancora
+  da confermare dall'owner: non si implementa senza la sua conferma.
 
 ## 1. Decisioni dell'owner
 

@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 20.0.0, aggiornata il 2026-11-14T21:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 21.0.0, aggiornata il 2026-11-15T09:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -17,12 +17,13 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 ## Principi che non cambiano senza l'owner
 
 - **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta finale
-  e stesso formato massimo per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
-  al browser prima della risposta. Il modello che scrive i tag non sa che esistono immagini generate.
-- **Ogni SLOP è la gemella di una REAL** (decisione del 2026-11-14): il prompt nasce dai tag e dalla descrizione di una sola REAL,
-  mai da tag ricombinati; la copia passa per un trattamento che prende risoluzione, rumore, nitidezza e tono da un'altra REAL con lo
-  stesso colore, supporto e decennio, senza superarla e senza effetti disegnati; una SLOP e la sua REAL non compaiono nella stessa
-  partita (specifiche `generazione-slop`, `copie-di-gioco`, `gioco-a-livelli`).
+  e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
+  al browser prima della risposta. Il modello che scrive i tag o descrive una REAL non sa che esistono immagini generate.
+- **Ogni SLOP è la gemella di una REAL** (decisioni del 2026-11-14 e del 2026-11-15): nasce da una descrizione di quella REAL fatta
+  guardandola, con un solo elemento del fatto cambiato e le persone inventate; la copia passa per un trattamento leggero verso le
+  misure della stessa REAL, senza effetti disegnati; una SLOP e la sua REAL non compaiono nella stessa partita (specifiche
+  `generazione-slop`, `copie-di-gioco`, `gioco-a-livelli`).
+- **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP.
 - **Chiamate a pagamento:** solo con conferma esplicita dell'owner, registrate in `paid_calls` senza importi, esiti incerti mai ripetuti in
   automatico; niente prezzi né budget, il limite è quello del progetto OpenAI. Nei test solo modelli finti.
 - **Libreria come un file system:** nessun lotto, archivio o registro delle eliminazioni; svuotare il cestino cancella ogni riga e ogni

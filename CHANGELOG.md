@@ -1,9 +1,20 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-14T21:30:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T09:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.26.0 — 2026-11-14T21:30:00Z (proposta, migrazione 0049)
+## Dopo la 1.26.0 — 2026-11-15T09:00:00Z (decisioni e operazioni, nessun cambiamento di codice)
+
+- **Produzione, 2026-11-14:** contesto 1.8.0 dei prompt SLOP salvato; soglia di proposta al 10%; modello di immagini
+  `gpt-image-2.6-flare` in qualità `medium`; le 65 copie rimisurate con la versione 2 delle misure.
+- **Primo lotto di gemelle, 2026-11-15** (9 immagini): scene coerenti, ma copie rovinate dal trattamento preso da un'altra REAL e
+  prompt con dettagli inventati senza vedere la foto.
+- **Decisioni dell'owner del 2026-11-15**, da implementare (issue rickymusu-bit/real-or-slop#136): pipeline foto REAL → descrizione
+  → prompt con un solo elemento cambiato → foto SLOP → tag, una chiamata per foto; copie di gioco 4:5 per tutte; trattamento dalle
+  misure della REAL di origine; modelli predefiniti `gpt-6.1-sol` e `gpt-image-2.5-flare` `high`; niente REAL che un generatore non
+  sa disegnare bene (criteri da definire). Specifiche `generazione-slop` 4.0.0 e `copie-di-gioco` 9.0.0.
+
+## 1.26.0 — 2026-11-14T21:30:00Z (in produzione, migrazione 0049)
 
 Dopo il primo lotto per gruppi (2026-11-14: scene incoerenti, bordi da stampa, stessa composizione, luoghi scritti nelle insegne).
 Specifiche `generazione-slop` 3.0.0, `copie-di-gioco` 8.0.0, `gioco-a-livelli` 2.1.0, `libreria-immagini` 3.1.0, `database-immagini`
