@@ -1,9 +1,6 @@
-/** Measures of a game copy and treatment of a SLOP (spec `copie-di-gioco`, section 4). Pure functions on RGBA pixels, used by the
- * browser when it makes a copy and by the tests; the Worker only validates what the browser sends. The treatment brings a SLOP
- * towards the measures of another REAL of the same colour, medium and decade (the «REAL campione»): long side, contrast, colour
- * cast and saturation or black and white, sharpness, grain, then an intermediate JPEG compression made by the browser. */
+/** Measures and light SLOP treatment towards the source REAL: bounded tone/colour, blur and grain, then common encoding. */
 
-export const TREATMENT_VERSION = 2;
+export const TREATMENT_VERSION = 3;
 /** The one JPEG generation a photo from an archive has gone through before the game copy. */
 const JPEG_QUALITY = 0.85;
 /** Version of the measures: 2 leaves burnt-out areas out of the noise. Copies measured before are measured again. */
@@ -135,9 +132,9 @@ export function gap(a: Metrics, b: Metrics): number {
   return round((rel(a.noise, b.noise) + rel(a.sharpness, b.sharpness) + rel(a.contrast, b.contrast) + rel(a.saturation, b.saturation)) / 4);
 }
 
-/** Long side of a treated copy: the sample's, never larger than the crop nor than the recipe's maximum, at least 160 px. */
+/** Long side of a treated copy: the sample's, never larger than the crop nor than the recipe's maximum, at least 480 px. */
 export const treatedLong = (sampleLong: number, cropLong: number, maxSide: number) =>
-  Math.max(Math.min(160, cropLong), Math.min(Math.round(sampleLong), cropLong, maxSide));
+  Math.max(Math.min(480, cropLong), Math.min(Math.round(sampleLong), cropLong, maxSide));
 
 function random(seed: number) {
   let a = seed >>> 0;
@@ -185,7 +182,7 @@ export function treat(rgba: ArrayLike<number>, width: number, height: number, ta
   const monochrome: Applied["monochrome"] = color === "black-and-white" || color === "sepia" ? color : "";
   // Contrast around the median.
   let y = luminance(rgb, n);
-  const [p2, median, p98] = percentiles(y, 0.02, 0.98), contrast = clamp(target.contrast / Math.max(p98 - p2, 1), 0.5, 1.6);
+  const [p2, median, p98] = percentiles(y, 0.02, 0.98), contrast = clamp(target.contrast / Math.max(p98 - p2, 1), 0.85, 1.2);
   for (let i = 0; i < 3 * n; i++) rgb[i] = median + (rgb[i] - median) * contrast;
   y = luminance(rgb, n);
   let saturation = 1, shift: [number, number, number] = [0, 0, 0];
@@ -195,10 +192,10 @@ export function treat(rgba: ArrayLike<number>, width: number, height: number, ta
   } else {
     // The colour cast of the sample, then its saturation.
     const now = chromaStats(rgb, y);
-    shift = target.cast.map((v, k) => clamp(v - now.cast[k], -25, 25)) as [number, number, number];
+    shift = target.cast.map((v, k) => clamp(v - now.cast[k], -8, 8)) as [number, number, number];
     for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] += shift[k];
     y = luminance(rgb, n);
-    saturation = clamp(target.saturation / Math.max(chromaStats(rgb, y).saturation, 1e-3), 0.3, 1.5);
+    saturation = clamp(target.saturation / Math.max(chromaStats(rgb, y).saturation, 1e-3), 0.7, 1.3);
     for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] = y[i] + (rgb[3 * i + k] - y[i]) * saturation;
   }
   for (let i = 0; i < 3 * n; i++) rgb[i] = clamp(rgb[i], 0, 255);
@@ -206,8 +203,8 @@ export function treat(rgba: ArrayLike<number>, width: number, height: number, ta
   y = luminance(rgb, n);
   let sigma = 0;
   if (sharpnessOf(y, width, height) > target.sharpness * 1.05) {
-    sigma = 3;
-    for (const candidate of [0.4, 0.6, 0.8, 1, 1.3, 1.7, 2.2, 3]) {
+    sigma = 1;
+    for (const candidate of [0.4, 0.6, 0.8, 1]) {
       if (sharpnessOf(blur(y, width, height, 1, candidate), width, height) <= target.sharpness * 1.05) { sigma = candidate; break; }
     }
     rgb = blur(rgb, width, height, 3, sigma);

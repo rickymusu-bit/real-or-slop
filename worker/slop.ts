@@ -1,7 +1,7 @@
 /** SLOP studio routes (spec `generazione-slop`): the REAL waiting for a twin, the counts, batches and the automatic batches. */
 import { HttpError, type Env } from "./core";
 import { batchRoute } from "./slop-generation";
-import { autoBatchIds, autoRoute, guardBatch } from "./slop-auto";
+import { autoRoute, guardBatch } from "./slop-auto";
 import { MAX_BATCH } from "../shared/twins";
 import { realRows, twinCounts } from "./twins";
 import { groups } from "./slop-groups";
@@ -13,7 +13,7 @@ async function state(env: Env) {
   const slop = await env.DB.prepare("SELECT count(*) AS n FROM images WHERE origin='SLOP' AND status IN ('approved','published')").first<{ n: number }>();
   return { thresholds: { section: settings.slop_section_min_real, max_batch: MAX_BATCH },
     real_total: counts.real, slop_total: slop?.n || 0, twinned: counts.twinned,
-    waiting: all.filter(r => !r.twin).map(r => ({ id: r.id, title: r.title, tags: r.tags, measured: r.measured, file: `/api/admin/library/${r.id}/file` })),
+    waiting: all.filter(r => !r.twin).map(r => ({ id: r.id, title: r.title, tags: r.tags, measured: r.measured, described: r.described, file: `/api/admin/library/${r.id}/file` })),
     groups: (await groups(env)).map(g => ({ ...g, spread: g.real - g.slop })) };
 }
 
@@ -26,10 +26,6 @@ export async function slopRoute(env: Env, method: string, path: string, data: Re
       throw new HttpError(409, `Servono almeno ${(await numberSettings(env)).slop_section_min_real} REAL approvate o pubblicate`);
     await guardBatch(env, method, rest, data);
     const result = await batchRoute(env, method, rest, data);
-    if (rest === "" && method === "GET") {
-      const auto = await autoBatchIds(env), list = result as { batches: { id: string }[] };
-      return { ...list, batches: list.batches.filter(b => !auto.has(b.id)) };
-    }
     return result;
   }
   throw new HttpError(404, "API dello studio SLOP inesistente");

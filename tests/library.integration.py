@@ -71,17 +71,17 @@ assert upload(b'not an image')[0] == 415
 assert copy(real['id'], game_copy(real_source, size=(40, 64)))[0] == 409
 assert copy(real['id'], game_copy(real_source, fmt='PNG'), 'image/png')[0] == 415
 assert copy(real['id'], b'x' * 4_000_001)[0] == 413
-for wrong in ('?crop=1,0,40,60,2:3', '?crop=0,5,40,60,2:3', '?crop=0,0,20,30,2:3', '?crop=0,0,40,50,4:5', '?crop=0,2,40,60',
+for wrong in ('?crop=1,0,40,60,2:3', '?crop=0,5,40,60,2:3', '?crop=0,0,20,30,2:3', '?crop=0,0,40,50,4:3', '?crop=0,2,40,60',
               '?crop=a'):  # outside, too small, 4:5, old form
     assert copy(real['id'], game_copy(real_source), query=wrong)[0] == 400, wrong
 status, real, _ = copy(real['id'], game_copy(real_source))
-assert status == 201 and (real['copy']['width'], real['copy']['height']) == (40, 60) and real['copy']['crop'] == centred_crop(40, 64), real
-assert real['copy']['crop']['format'] == '2:3' and 'view' not in real['copy'] and 'redo' not in real['copy'], real
+assert status == 201 and (real['copy']['width'], real['copy']['height']) == (40, 50) and real['copy']['crop'] == centred_crop(40, 64), real
+assert real['copy']['crop']['format'] == '4:5' and 'view' not in real['copy'] and 'redo' not in real['copy'], real
 assert sql(f"SELECT copy_view FROM images WHERE id='{real['id']}'")[0]['copy_view'] is None
 assert copy(real['id'], game_copy(real_source))[1]['already_prepared'] is True
 # Another crop remakes the copy: new file, the previous one leaves the quarantine.
 first_copy = sql(f"SELECT copy_key FROM images WHERE id='{real['id']}'")[0]['copy_key']
-frame = {'x': 0, 'y': 4, 'width': 40, 'height': 60, 'format': '2:3'}  # the lowest crop instead of the centred one
+frame = {'x': 0, 'y': 14, 'width': 40, 'height': 50, 'format': '4:5'}  # the lowest crop instead of the centred one
 status, real, _ = copy(real['id'], game_copy(real_source, frame), query=crop_query(frame, {'x': 0, 'y': 0, 'height': 5}))  # view ignored
 assert status == 201 and real['copy']['crop'] == frame and 'view' not in real['copy'], real
 assert not stored(QUARANTINE, first_copy)
@@ -101,7 +101,7 @@ assert patch({**real, 'revision': real['revision'] - 1}, {'title': 'Stale'})[0] 
 # A copy of an earlier recipe (4:5 frame without format, or no frame) and a licence without derivatives block the approval.
 for old in ("'" + json.dumps({'x': 0, 'y': 7, 'height': 50}) + "'", 'NULL'):
     sql(f"UPDATE images SET copy_crop={old} WHERE id='{real['id']}'")
-    status, result, _ = call(f'{API}/{real["id"]}/approve', {'rights_confirmed': True}); assert status == 409 and 'formato della foto' in result['error'], result
+    status, result, _ = call(f'{API}/{real["id"]}/approve', {'rights_confirmed': True}); assert status == 409 and '4:5' in result['error'], result
 sql(f"UPDATE images SET copy_crop='{json.dumps(centred_crop(40, 64))}',license_name='CC BY-ND 4.0' WHERE id='{real['id']}'")
 status, result, _ = call(f'{API}/{real["id"]}/approve', {'rights_confirmed': True}); assert status == 409 and 'ND' in result['error'], result
 status, view, _ = call(f'{API}/{real["id"]}'); assert view['no_derivatives'] is True
@@ -163,7 +163,7 @@ if view['question']: assert 'caption' not in view['question'], view
 if in_game:
     assert real['in_play'] == 1, real
     status, real, _ = call(f'{API}/{real["id"]}/trash', {})
-    status, result, _ = call(f'{API}/{real["id"]}', method='DELETE'); assert status == 409 and 'partite in corso' in result['error'], result
+    status, result, _ = call(f'{API}/{real["id"]}', method='DELETE'); assert status == 409 and 'partite' in result['error'] and 'in corso' in result['error'], result
     status, real, _ = call(f'{API}/{real["id"]}/restore', {})
 # The game ends: nothing holds the copy any more.
 sql(f"UPDATE game_sessions SET phase='completed',completed=1 WHERE id='{session['id']}'")

@@ -30,26 +30,7 @@ Scegli parole con un solo significato («house-fire» per l'evento, «flames» p
   analysis: `Ricevi un'immagine e il suo contesto: titolo e descrizione, oppure la descrizione della scena. Descrivi ciò che si vede.
 
 Tag: da 5 a 15, divisi per categoria. Se l'epoca è ricavabile, indica il decennio. Indica sempre genere, colore e supporto, giudicandoli dall'aspetto dell'immagine: retino di stampa, bordi e grana di una pellicola, carta di una stampa, nitidezza di un sensore digitale. Preferisci i tag del vocabolario esistente, che ricevi diviso per categoria, quando sono adatti; creane di nuovi solo se nessuno lo è.`,
-  slop_prompt: `Scrivi prompt per un generatore di immagini fotorealistiche. Ogni voce è una fotografia vera, data con i suoi tag e la sua descrizione: scrivi il prompt di un'altra fotografia che potrebbe stare accanto a quella nello stesso archivio. Stesso evento o stesso tipo di scena, stesso luogo, decennio, genere, colore e supporto; momento, punto di vista e persone diversi. Descrivi ciò che si vede, mai ciò che manca: niente elenchi di cose da evitare.
-
-Varietà: ogni prompt ha una sua struttura. Cambia da uno all'altro distanza, altezza del punto di vista, obiettivo, luce e formato; non ripetere gli stessi oggetti di scena né lo stesso schema di frase. Rispetta il genere: una scena di folla mostra la folla, da lontano o dall'alto, senza una coppia di protagonisti in primo piano; un ritratto mostra una persona; una foto di cronaca coglie un'azione, anche tagliata o mossa.
-
-Resa: l'immagine riempie tutto il fotogramma, da bordo a bordo. Descrivi solo la resa di ciò che è ripreso, secondo colore e supporto della voce: grana, nitidezza, contrasto, dominante, alte luci, mosso. Mai la fotografia come oggetto: niente carta, margini, angoli, pieghe, graffi o cornici. Stampa in bianco e nero: grana visibile, neri pieni, messa a fuoco imperfetta. Pagina di giornale: retino, alto contrasto, alte luci bruciate. Diapositiva o fotogramma: colori pieni ma d'epoca, con una dominante e poca nitidezza. Foto digitale o di telefono: la resa dei sensori di quel decennio.
-
-Formato: quello che sceglierebbe un fotografo per quel soggetto, orizzontale, verticale o quadrato; non sempre lo stesso.
-
-Persone: gente comune dell'epoca e del luogo, diversa per età, corporatura, espressione, capelli, abiti e gesti; ognuna fa qualcosa di suo. I volti si vedono quando l'inquadratura lo consente.
-
-Scritte: solo dove la scena le ha davvero, poche e brevi, fatte a mano quando lo sono nella realtà e con parole diverse da un cartello all'altro. Un cartello è rivolto dove guarda chi lo tiene: chi è ripreso di spalle ne mostra il retro. Insegne, striscioni e stampati portano nomi di negozi, sigle e parole comuni, mai il nome della città, dello Stato o dell'evento: il luogo si riconosce da edifici, strade e paesaggio.
-
-Epoca: abiti, acconciature, veicoli, segnaletica, luci e oggetti del decennio, con l'usura e il disordine della realtà.
-
-Regole sui contenuti:
-- Persone vive o morte da meno di 50 anni: mai; non nominarle e non descriverne l'aspetto. Nel prompt non scrivere mai che i volti sono indistinti, anonimi, generici o non riconoscibili.
-- Personaggi storici morti da almeno 50 anni: ammessi, anche in eventi mai accaduti; mai crimini o atrocità attribuiti a loro, mai scene degradanti. Foto segnaletiche, arresti e processi solo con persone inventate.
-- Marchi reali: ammessi.
-- Regimi e ideologie: possono comparire come contesto storico (manifesti, bandiere, simboli presenti nella scena); mai immagini che li esaltano, mai manifesti di propaganda creati ex novo.
-- Nudità: nessuna nudità umana, tranne nelle opere d'arte presenti nella scena (statue, dipinti, affreschi); mai contenuti sessuali; mai nudità che riguardi minori.`,
+  slop_prompt: `Scrivi insieme un brief editoriale minimo e un prompt in inglese per una fotografia sintetica credibile. Ricevi i tag e la descrizione editoriale salvata di una REAL, senza i suoi pixel. La REAL è un riferimento tematico e fotografico: nessuna somiglianza obbligatoria, nessun numero di elementi da cambiare. Distingui ancoraggi obbligatori, preferenze, elementi flessibili ed esclusioni. Il brief resterà immutabile nel ciclo di valutazione, mentre prompt e scena possono cambiare. Credibilità, varietà, luce e tecnica concrete; evita enfasi cinematografica e schemi ripetitivi. Persone inventate: nessun nome o descrizione di persone vive o morte da meno di 50 anni. Nessun crimine attribuito a personaggi storici, regimi mai celebrati, niente nudità fuori dalle opere d'arte. Non scegliere formati né comporre per il ritaglio del gioco.`,
 };
 
 export interface ContextVersion { id: string; part: Part; body: string; created_at: string }

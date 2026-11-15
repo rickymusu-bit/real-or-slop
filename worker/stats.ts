@@ -50,9 +50,7 @@ export async function stats(env: Env, period: string) {
     .all<{ origin: "REAL" | "SLOP"; status: "approved" | "published"; n: number }>()).results;
   const count = (origin: string, status: string) => catalogue.find(c => c.origin === origin && c.status === status)?.n || 0;
   const published = count("REAL", "published") + count("SLOP", "published");
-  // Format of each published copy; «4:5» for the copies of the previous recipe (no format in the crop).
-  const formats = (await env.DB.prepare(`SELECT origin,COALESCE(json_extract(copy_crop,'$.format'),'4:5') AS format,count(*) AS n FROM images
-    WHERE status='published' GROUP BY origin,format ORDER BY format`).all<{ origin: "REAL" | "SLOP"; format: string; n: number }>()).results;
+  const processes = (await env.DB.prepare("SELECT state,count(*) AS n,coalesce(sum(attempts),0) AS attempts FROM slop_processes WHERE created_at>=? GROUP BY state").bind(fromIso).all<{state:string;n:number;attempts:number}>()).results;
   const share = published ? count("REAL", "published") / published : null;
 
   return {
@@ -61,13 +59,11 @@ export async function stats(env: Env, period: string) {
       open: open?.n || 0, window_minutes: NOW_MS / 60_000 },
     games, answers: { concluded_games: bySession.size, photos: all.photos, real: all.real, slop: all.slop, timed_out: all.timed_out,
       balanced_accuracy: all.photos ? all.balanced_accuracy : null }, leaderboard: { entries: entries?.n || 0, hidden: entries?.hidden || 0 },
-    calls: { totals: callTotals, recent: calls },
+    calls: { totals: callTotals, recent: calls }, processes,
     balance: { real: { approved: count("REAL", "approved"), published: count("REAL", "published") },
       slop: { approved: count("SLOP", "approved"), published: count("SLOP", "published") },
       real_share_published: share === null ? null : Math.round(share * 1000) / 1000,
       warning: share !== null && (share < 0.4 || share > 0.6), levels: (await levels(env)).levels,
-      formats: [...new Set(formats.map(f => f.format))].map(format => ({ format,
-        real: formats.find(f => f.format === format && f.origin === "REAL")?.n || 0, slop: formats.find(f => f.format === format && f.origin === "SLOP")?.n || 0 })),
       groups: await groupBalance(env), measures: await groupMeasures(env), twins: await twinCounts(env) },
   };
 }

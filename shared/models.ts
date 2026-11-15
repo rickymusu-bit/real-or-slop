@@ -14,7 +14,7 @@ export const IMAGE_MODELS: Record<string, readonly string[]> = {
   "gpt-image-1-mini": ["low", "medium", "high"],
   "chatgpt-image-latest": ["low", "medium", "high"],
 };
-export const DEFAULT_TEXT_MODEL = "gpt-6.1-terra", DEFAULT_IMAGE_MODEL = "gpt-image-2.5-flare";
+export const DEFAULT_TEXT_MODEL = "gpt-6.1-sol", DEFAULT_IMAGE_MODEL = "gpt-image-2.5-flare";
 /** Shutdown dates announced by OpenAI, shown beside the model in the menu. */
 export const SHUTDOWN: Record<string, string> = { "gpt-image-2": "2027-02-10" };
 export type ModelKind = "text_model" | "image_model";

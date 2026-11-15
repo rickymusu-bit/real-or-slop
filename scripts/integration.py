@@ -38,6 +38,10 @@ try:
             if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.integration.py', 'tests/real_wizard.integration.py', 'tests/slop_browser.integration.py', 'tests/database_browser.integration.py', 'tests/game_browser.integration.py'])
             scripts.append('tests/slop_auto.integration.py')
             if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.append('tests/slop_auto_browser.integration.py')
+            if os.environ.get('ROS_TEST_MATCH'):
+                patterns = os.environ['ROS_TEST_MATCH'].split(',')
+                scripts = [script for script in scripts if any(pattern in script for pattern in patterns)]
+                if not scripts: raise RuntimeError('ROS_TEST_MATCH did not select any integration tests')
             for script in scripts: subprocess.run(['python3', script], env=env, check=True)
         finally:
             os.killpg(proc.pid, 15)

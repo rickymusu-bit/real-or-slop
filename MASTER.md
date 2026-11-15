@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 21.0.0, aggiornata il 2026-11-15T09:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 23.0.2, aggiornata il 2026-11-15T14:47:34Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -13,11 +13,13 @@ in `CHANGELOG.md`.
   dal 2026-11-14: contesto 1.8.0 dei prompt SLOP, soglia di proposta al 10%, modello di immagini `gpt-image-2.6-flare` in qualità
   `medium` (da riportare a `gpt-image-2.5-flare` `high` con la prossima versione). Il primo lotto di gemelle (2026-11-15, 9 immagini,
   batch in pausa) ha mostrato copie rovinate dal trattamento e prompt inventati senza vedere la foto.
-- **Da implementare** (issue rickymusu-bit/real-or-slop#136, decisioni dell'owner del 2026-11-15): pipeline foto REAL → descrizione
-  → prompt con un solo elemento cambiato → foto SLOP → tag, una chiamata per foto a ogni passo; copie di gioco 4:5 per tutte;
-  trattamento dalle misure della REAL di origine; modelli predefiniti `gpt-6.1-sol` e `gpt-image-2.5-flare` `high`. Specifiche già
-  scritte: `generazione-slop` 4.0.0 e `copie-di-gioco` 9.0.0; le altre hanno un riquadro con le decisioni da implementare.
-- **Da decidere con l'owner:** criteri di scelta delle REAL; elemento inventato nella lista di fine partita.
+- **Implementato nel ramo 1.27.0, non rilasciato:** analisi REAL con tag e descrizione privata atomici, brief+prompt solo testuali,
+  loop persistente con valutazione dell’immagine intera, massimo 1–5 tentativi e tolleranza indipendente; copie 4:5 dopo accettazione,
+  trattamento leggero dalla REAL di riferimento e approvazione/pubblicazione manuali. Migrazione locale 0050, nessun backfill pagato.
+  I batch precedenti restano in sola revisione; gli esiti incerti non si ripetono. La produzione resta 1.26.0 fino al rilascio autorizzato.
+- **PR #140, correzione CI:** i comandi delle Impostazioni si attivano prima delle richieste iniziali; test desktop/mobile con risposta dei contesti sospesa per verificare il codice partita durante il caricamento.
+- **Selezione REAL:** otto principi qualitativi nella issue #138; nessun filtro o scoring automatico.
+- **Da decidere con l'owner:** se e come comunicare al giocatore il processo di generazione dopo la risposta.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
 
 ## Specifiche vigenti
@@ -27,14 +29,14 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.2.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.6.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.0.0 (da implementare) |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.1.0 |
-| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 4.0.0 (da implementare) |
-| Sezione Database | `docs/database-immagini.md` | 2.4.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.2.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.4.0 |
+| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.3.0 |
+| Sezione Database | `docs/database-immagini.md` | 2.5.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.3.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.7.1 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -52,6 +54,17 @@ commit che li ha cancellati e `git show <commit>^:docs/<nome>` li mostra. Corris
 | `statistiche-impostazioni.v1.0.1` | `statistiche-impostazioni` |
 | `privacy-note-legali.v1.0.4` | `privacy-note-legali` |
 
+## Sequenza delle PR della nuova pipeline
+
+- **Documentazione:** specifiche, istruzioni e mappa, senza codice né rilascio.
+- **Backend (implementato 1.27.0):** estendere la chiamata di catalogazione REAL a **tag+descrizione neutra** in un unico output; poi chiamata
+  **testuale** descrizione+tag → brief+prompt, stati persistenti, brief immutabile, valutazione strutturata,
+  controllo spesa e fake API. Nessuna seconda lettura visiva della REAL nella generazione.
+- **Frontend (implementato 1.27.0):** descrizione della REAL modificabile nel wizard e nel Database; ciclo nel browser, immagine SLOP **intera**
+  sottoposta al valutatore, copia 4:5 **solo dopo** accettazione, configurazioni, anteprime e revisione.
+- **Rilascio:** dopo verifica manuale delle anteprime e autorizzazione owner; il merge su main esegue deploy e migrazioni remote.
+  Consultare `generazione-slop` 5.3.0, sezione 10. I batch della 1.26.0 in pausa **non** vanno ripresi con schema incompatibile.
+
 ## Architettura
 
 Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono solo i file in uso.
@@ -62,7 +75,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
   protezioni `media-privacy.ts`.
 - Dashboard: `library.ts` (sezioni, Database, Impostazioni; CSS `library.css`, `database.css`, `admin-navigation.css`,
   `admin-loading.css`, `model-context.css`, `caption-count.css`), wizard REAL `real-wizard.ts` e `real-wizard.css`, studio SLOP
-  `slop-studio.ts` e `slop-studio.css`, riquadro dei batch automatici `slop-auto.ts` e `slop-auto.css`, statistiche `stats.ts` e
+  `slop-studio.ts` e `slop-studio.css`, campi editoriali `editorial-ui.ts`, riquadro dei batch automatici `slop-auto.ts` e `slop-auto.css`, statistiche `stats.ts` e
   `stats.css`, grafico della distribuzione `database-chart.ts`, anteprima a pressione prolungata `image-preview.ts` e
   `image-preview.css`, pillole e categorie dei tag `tag-ui.ts` e `tag-categories.css`, editor di formato e ritaglio `crop-editor.ts` e
   `crop-editor.css`, copie di gioco nel browser con misure e trattamento delle SLOP `game-copy.ts`.
@@ -71,7 +84,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera).
 - Libreria `library.ts` (stati, vocabolario, alias, categorie, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   analisi `analysis.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
-  `stats.ts`, Commons `commons-editorial.ts`.
+  `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
 - SLOP: studio `slop.ts`, gemelle `twins.ts`, generazione `slop-generation.ts`, batch automatici `slop-auto.ts`, gruppi e loro misure
   per Database e Statistiche `slop-groups.ts`.
 - Gioco `game.ts` con `sampling.ts` e `random.ts`, classifica `leaderboard.ts`.
@@ -80,7 +93,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 `models.ts`, gemelle, proposta dei batch e coppie in partita `twins.ts`, gruppi `slop-groups.ts`, formati e ricetta della copia
 `game-copy.ts`, misure e trattamento `copy-treatment.ts`, licenze ND
 `licenses.ts`, pulizia dei metadati `media-clean.ts`, livelli e punteggio `levels.ts`, costanti legali `legal.ts`, controllo delle
-immagini `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
+immagini `editorial.ts` (descrizioni, brief e valutazioni), `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
 
 **Test** (`tests/`): unitari `*.test.ts` (`npm test`); d'integrazione `*.integration.py`, eseguiti da `scripts/integration.py` con il
 modello finto `fake_openai.py` e gli aiuti `catalog.py`, `game_copy.py`, `long_press.py`.
@@ -106,6 +119,7 @@ modello finto `fake_openai.py` e gli aiuti `catalog.py`, `game_copy.py`, `long_p
 | 0047 | didascalie cancellate, colonne inutilizzate |
 | 0048 | categorie Genere, Colore e Supporto al posto di Formato; completamento, misure, trattamento e gruppo delle immagini; gruppo dei batch; soglia del gruppo |
 | 0049 | REAL di origine di una SLOP gemella |
+| 0050 | descrizione editoriale REAL e provenienza, contesto Commons separato, processi/tentativi privati, chiamate evaluation e collegamenti, snapshot e impostazioni del loop; batch legacy invariati |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 
@@ -125,3 +139,7 @@ R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (
 `npm run lint`, `npm test`, `npm run build`, `npm run dry-run`, `npm run test:integration` (Worker locale con D1 e R2 locali e il modello
 finto `tests/fake_openai.py`) e `ROS_TEST_BROWSER=1 npm run test:integration` per la dashboard, desktop e mobile. L'elenco dei
 test d'integrazione eseguiti è in `scripts/integration.py`.
+
+**Verifica locale della 1.27.0:** lint, 95 test unitari, build, dry-run e suite completa con `ROS_TEST_BROWSER=1` riusciti (desktop e mobile). Solo API fittizia, D1 e R2 locali; anteprima remota, CI ospitata, merge e rilascio non eseguiti.
+
+**Consegna del lavoro:** pubblicare sempre il ramo e aprire o aggiornare una PR per avviare i controlli CI (`AGENTS.md` 22.3.0). Commit e patch locali non completano la consegna.

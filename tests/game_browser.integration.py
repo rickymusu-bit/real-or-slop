@@ -55,8 +55,8 @@ try:
             for number in range(1, 11):
                 expect(page.locator('.play-levels')).to_have_attribute('aria-label', f'Foto {number} di 10', timeout=15000)
                 frame = page.locator('.card-media').bounding_box()
-                # Fixtures are 40×50: copies 38×50 (3:4). Every screen: the copy's format, the whole photo.
-                expected = 38 / 50
+                # Fixtures are 40×50: copies 40×50 (4:5). Every screen: the copy's format, the whole photo.
+                expected = 40 / 50
                 assert abs(frame['width'] / frame['height'] - expected) < 0.02, (frame, expected)
                 expect(page.locator('.play-levels .choices [data-choice=REAL]')).to_be_visible()  # also on the phone
                 reset = page.locator('[data-viewer-reset]')
@@ -108,7 +108,7 @@ try:
             page.locator('.credit-image img').first.scroll_into_view_if_needed()
             page.wait_for_function("document.querySelector('.credit-image img').naturalWidth > 0")
             box = page.locator('.credit-image img').first.bounding_box()
-            assert abs(box['width'] / box['height'] - 38 / 50) < 0.03, box
+            assert abs(box['width'] / box['height'] - 40 / 50) < 0.03, box
             page.locator('[name=nickname]').fill(f'Browser {name}'); page.locator('#enter-form button').click()
             expect(page.locator('[data-game-code]')).to_have_count(0)  # the age declaration is required
             page.locator('[name=age_ok]').check()
@@ -128,9 +128,9 @@ try:
             expect(page.locator('#content')).to_contain_text('Le SLOP possono essere anche ridotte, sgranate o sbiadite')
             expect(page.locator('#content')).not_to_contain_text('stessa preparazione')
             page.goto(base + '/crediti')
-            expect(page.locator('#content')).to_contain_text('formato fotografico comune più vicino')
+            expect(page.locator('#content')).to_contain_text('ritagliata in verticale nel rapporto 4:5')
             expect(page.locator('#content')).to_contain_text('possono essere state ridotte, sgranate o sbiadite')
-            expect(page.locator('#content')).not_to_contain_text('4:5')
+            expect(page.locator('#content')).to_contain_text('4:5')
             page.goto(base + '/')
             expect(page.locator('.leaderboard').first.locator('tbody')).to_contain_text(f'Browser {name}')
             expect(page.locator('.leaderboard').first.locator('tbody')).to_contain_text('Facile')
@@ -149,12 +149,23 @@ try:
             # The owner checks the code in Settings and hides the entry.
             admin = browser.new_context(**options, http_credentials={'username': 'owner', 'password': token})
             page = admin.new_page()
-            page.goto(base + '/admin')
+            # Hold an unrelated startup response: Settings must work before loading finishes.
+            startup_routes = []
+            page.route('**/api/admin/library/contexts', lambda route: startup_routes.append(route))
+            with page.expect_request('**/api/admin/library/contexts'):
+                page.goto(base + '/admin')
             page.get_by_role('button', name='Impostazioni').click()
             page.locator('#library-leaderboard summary').click()
             page.locator('#library-code [name=code]').fill(game_code.lower())
             page.locator('#library-code button').click()
             expect(page.locator('#library-code-result')).to_contain_text(f'Codice valido: Browser {name}')
+            expect(page).to_have_url(base + '/admin')  # no native GET submission exposing the code in the URL
+            expect(page.locator('#dashboard-loading')).to_be_visible()
+            assert startup_routes, 'The initial contexts request must still be pending'
+            for route in startup_routes: route.continue_()
+            page.unroute('**/api/admin/library/contexts')
+            expect(page.locator('#dashboard-loading')).to_have_count(0, timeout=15000)
+            expect(page.get_by_role('button', name='Impostazioni')).to_have_attribute('aria-pressed', 'true')
             entry = page.locator('#library-entries li', has_text=f'Browser {name}')
             entry.get_by_role('button', name='Nascondi').click()
             expect(page.locator('#library-entries li', has_text=f'Browser {name}')).to_contain_text('nascosta')

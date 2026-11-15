@@ -218,10 +218,10 @@ with sync_playwright() as p:
         expect(a.locator('.rw-pill.tag-cat-object', has_text='bridge')).to_have_count(1)
         expect(a.locator('[data-rw-no-time]')).to_be_visible()
         expect(page.locator('.tag-legend')).to_have_count(1)
-        expect(page.get_by_role('button', name='Genera i tag con IA')).to_have_count(1)
+        expect(page.get_by_role('button', name='Genera tag e descrizione con IA')).to_have_count(1)
         expect(page.locator('[data-rw="choose-tags"], [data-rw="choose-caption"]')).to_have_count(0)
         expect(page.locator('[data-rw=choose-reset]')).to_have_count(0)
-        page.get_by_role('button', name='Genera i tag con IA').click()
+        page.get_by_role('button', name='Genera tag e descrizione con IA').click()
         expect(page.locator('#rw-generation-dialog')).to_be_visible()
         expect(page.locator('[data-rw-gen="%s"]' % first['id'])).to_be_checked()
         page.locator('[data-rw-gen="%s"]' % second['id']).uncheck()
@@ -232,10 +232,16 @@ with sync_playwright() as p:
         # Chosen image: owner's texts replaced. The other: untouched.
         expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(1)
         expect(a.locator('.rw-pill', has_text='bridge')).to_have_count(0)
+        expect(a.locator('[data-editorial=visible]')).not_to_have_value('')
+        private = a.locator('[data-editorial=visible]')
+        private.fill('Owner corrected the visible street scene.'); private.blur()
+        expect(a.locator('[data-editorial=visible]')).to_have_value('Owner corrected the visible street scene.')
+        expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(1)
+
         expect(b.locator('.rw-pill', has_text='tower')).to_have_count(1)
         expect(b.locator('.rw-pill', has_text='crowd')).to_have_count(0)
         # Once per image: the generated one cannot be chosen again.
-        page.get_by_role('button', name='Genera i tag con IA').click()
+        page.get_by_role('button', name='Genera tag e descrizione con IA').click()
         expect(page.locator('[data-rw-gen="%s"]' % first['id'])).to_be_disabled()
         expect(page.locator('.rw-gen-list').first).to_contain_text('già generata')
         expect(page.locator('[data-rw-gen="%s"]' % second['id'])).to_be_checked()
@@ -254,22 +260,22 @@ with sync_playwright() as p:
         expect(b.locator('.rw-pill', has_text='tower')).to_have_count(1)
         page.screenshot(path=str(folder / (name + '-step2.png')), full_page=True)
 
-        # Step 3, «Inquadratura»: each copy with its format; the owner changes one to 1:1.
+        # Step 3, «Inquadratura»: each copy with its format; the owner reviews the fixed 4:5 frame.
         page.get_by_role('button', name='Avanti: inquadratura').click()
         expect(page.locator('.rw-message')).to_contain_text('2 immagini non hanno un tag di Tempo')
         expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Inquadratura')
         crop_a = page.locator('[data-rw-crop-image="%s"]' % first['id'])
         expect(page.locator('.rw-crop')).to_have_count(2)
-        expect(crop_a).to_contain_text('3:2 orizzontale')
+        expect(crop_a).to_contain_text('4:5 verticale')
         crop_a.get_by_role('button', name='Cambia inquadratura').click()
         editor = page.locator('dialog.crop-dialog')
         expect(editor.locator('.crop-frame')).to_be_visible()
-        editor.locator('.crop-format select').select_option('1:1')
+        expect(editor.locator('.crop-format select')).to_have_value('4:5')
         editor.locator('[data-crop=ok]').click()
         expect(page.locator('.rw-message')).to_have_text('Inquadratura salvata.')
-        expect(crop_a).to_contain_text('1:1 quadrato')
+        expect(crop_a).to_contain_text('4:5 verticale')
         saved = page.request.get(base + '/api/admin/library/' + first['id']).json()['copy']
-        assert saved['crop']['format'] == '1:1' and saved['width'] == saved['height'], saved
+        assert saved['crop']['format'] == '4:5' and saved['width'] == round(saved['height']*0.8), saved
         page.screenshot(path=str(folder / (name + '-step3-crop.png')), full_page=True)
         page.get_by_role('button', name='Indietro: tag').click()
         expect(page.locator('.rw-editor')).to_have_count(2)

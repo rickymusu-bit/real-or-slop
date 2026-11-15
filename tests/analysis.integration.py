@@ -30,6 +30,10 @@ def sql(command):
     return json.loads(out.stdout)[0]['results']
 def openai(queue=None):
     """Sets the fake model's next answers (and clears its log), or returns the requests it received."""
+    if queue is not None:
+        for entry in queue:
+            if entry and 'json' in entry and 'tags' in entry['json'] and not entry.get('invalid_description'):
+                entry['json'].setdefault('real_description', {'visible':'Visible street scene', 'documented_context':'', 'uncertainties':'Context not supplied'})
     req = urllib.request.Request(fake + '/control', data=json.dumps({'queue': queue}).encode() if queue is not None else None,
                                  headers={'Content-Type': 'application/json'})
     with urllib.request.urlopen(req) as r: return json.loads(r.read()).get('log')
@@ -49,7 +53,7 @@ def analysis_state(): return call(f'{API}/analysis')[1]
 def labels(): return {t['label']: t for t in call(f'{API}/tags')[1]['tags']}
 
 info = analysis_state()
-assert info['enabled'] and info['model'] == 'gpt-6.1-terra' and info['calls_30_days']['total'] == 0, info
+assert info['enabled'] and info['model'] == 'gpt-6.1-sol' and info['calls_30_days']['total'] == 0, info
 assert 'cap_usd' not in info and 'call_usd' not in info and call(f'{API}/budget', {'cap_usd': 5}, method='PUT')[0] == 404, info
 assert 'platform.openai.com' in info['note']
 # No call without the game copy, nor without the exact cost confirmation.
@@ -75,24 +79,31 @@ assert place['tags'] == ['barricade', 'place-de-la-republique', 'police-car', 'r
 assert sorted(place['proposed_tags']) == ['barricade', 'place-de-la-republique', 'police-car', 'riot'], place
 assert 'caption' not in place and 'proposed_caption' not in place and place['analysis']['status'] == 'done', place
 assert sorted(place['generated']['tags']) == place['tags'] and place['generated'] == {'tags': place['generated']['tags']}, place
+assert place['real_description']['visible'] and place['real_description_provenance']['model']=='gpt-6.1-sol'
+assert place['real_description_provenance']['copy_sha256']==place['copy']['sha256']
+assert place['description']=='Manifestanti e polizia in place de la République.'
+original_description=place['real_description']
+place=patch(place, {'real_description': {**original_description,'visible':'Owner corrected visible content.'}})
+assert place['tags']==['barricade','place-de-la-republique','police-car','riot'] and place['real_description_provenance']['generated']==original_description
+
 assert 'mine' not in labels()  # the owner's tag went with its only image
 [sent] = openai()
-assert sent['authorization'] == 'Bearer test-openai-key' and sent['body']['model'] == 'gpt-6.1-terra' and sent['body']['max_output_tokens'] == 8000, sent['authorization']
+assert sent['authorization'] == 'Bearer test-openai-key' and sent['body']['model'] == 'gpt-6.1-sol' and sent['body']['max_output_tokens'] == 8000, sent['authorization']
 text, picture = sent['body']['input'][0]['content'][0]['text'], sent['body']['input'][0]['content'][1]['image_url']
 assert 'barricade' in text and 'riot' in text and 'Title: Place de la République, 1968' in text, text
 assert picture.startswith('data:image/webp;base64,UklGR'), picture[:40]  # the game copy, as the player will see it
 assert not any(word in json.dumps(sent['body']) for word in ('REAL', 'SLOP', '"AI"')), 'the model must not know the origin'
 # The instructions are the editable context (base, then analysis) plus the fixed line on the JSON output.
 assert sent['body']['instructions'].startswith('Lavori per un archivio fotografico italiano') and 'Didascalia' not in sent['body']['instructions'], sent['body']['instructions'][:200]
-assert sent['body']['instructions'].endswith('mai dal titolo, dalla descrizione o da altro testo.') and 'time: un decennio' in sent['body']['instructions']
+assert 'mai dal titolo, dalla descrizione o da altro testo.' in sent['body']['instructions'] and 'time: un decennio' in sent['body']['instructions']
 assert 'genre: il tipo di fotografia' in sent['body']['instructions'] and 'medium: che cosa è materialmente' in sent['body']['instructions']
-assert sent['body']['text']['format']['schema']['required'] == ['tags'] and 'caption' not in sent['body']['text']['format']['schema']['properties']
+assert sent['body']['text']['format']['schema']['required'] == ['tags', 'real_description'] and 'caption' not in sent['body']['text']['format']['schema']['properties']
 schema_tags = sent['body']['text']['format']['schema']['properties']['tags']
 assert schema_tags['required'] == ['time', 'genre', 'color', 'medium', 'place', 'setting', 'event', 'people', 'object', 'other'], schema_tags['required']
 assert schema_tags['properties']['color']['items']['enum'] == ['color', 'black-and-white', 'sepia', 'hand-colored']
 assert 'newspaper-print' in schema_tags['properties']['medium']['items']['enum'] and schema_tags['properties']['genre']['minItems'] == 1
 assert 'generat' not in sent['body']['instructions'], 'the base and the tag rules must not mention generated images'
-assert spend() == [{'kind': 'analysis', 'model': 'gpt-6.1-terra', 'status': 'completed', 'input_tokens': 1200, 'output_tokens': 60}], spend()
+assert spend() == [{'kind': 'analysis', 'model': 'gpt-6.1-sol', 'status': 'completed', 'input_tokens': 1200, 'output_tokens': 60}], spend()
 # Once per image: a second generation is refused before anything is sent or held.
 openai([])
 status, result = analyze(place); assert status == 409 and 'già generati' in result['error'], result
@@ -113,6 +124,8 @@ status, result = analyze(other); assert status == 502, result
 assert len(openai()) == 1
 status, other = call(f'{API}/{other["id"]}'); assert other['analysis']['status'] == 'uncertain' and 'addebitata' in other['analysis']['error'], other
 openai([{'status': 400}])
+assert analyze(other)[0] == 409  # uncertain outcomes cannot be resent
+sql(f"UPDATE images SET analysis_status='failed' WHERE id='{other['id']}'")
 assert analyze(other)[0] == 502
 status, other = call(f'{API}/{other["id"]}'); assert other['analysis']['status'] == 'failed', other
 # OpenAI's own spend limit or credit reached first: refused there, nothing charged, a message the dashboard stops on.
@@ -128,6 +141,8 @@ sql(f"UPDATE images SET analysis_status='running' WHERE id='{other['id']}'")
 code, result = analyze(other); assert code == 409 and 'in corso' in result['error'], result
 assert len(spend()) == 5  # refused before anything is recorded or sent
 sql(f"UPDATE images SET updated_at='2000-01-01T00:00:00.000Z' WHERE id='{other['id']}'")
+assert analyze(other)[0] == 409  # stale claim stays suspended
+sql(f"UPDATE images SET analysis_status='failed' WHERE id='{other['id']}'")
 openai([])
 status, other = analyze(other); assert status == 200 and other['tags'] == ['crowd', 'street'] and len(spend()) == 6, other
 status, result = analyze(other); assert status == 409 and 'già generati' in result['error'] and len(spend()) == 6, result
@@ -156,7 +171,7 @@ assert labels()['riot']['aliases'] == []
 status, contexts = call(f'{API}/contexts'); assert status == 200 and contexts['max'] == 4000, contexts
 parts = {p['part']: p for p in contexts['parts']}
 assert set(parts) == {'base', 'analysis', 'slop_prompt'} and all(len(p['history']) == 1 for p in parts.values()), contexts
-assert parts['slop_prompt']['current']['body'].count('Nudità: nessuna nudità umana') == 1
+assert 'brief editoriale' in parts['slop_prompt']['current']['body'] and 'nessuna somiglianza obbligatoria' in parts['slop_prompt']['current']['body']
 first_analysis = parts['analysis']['current']
 for wrong in ({'part': 'other', 'body': 'x'}, {'part': 'base', 'body': '   '}, {'part': 'base', 'body': 'x' * 4001}, {'part': 'base'}, {'part': 'base', 'body': 'x', 'extra': 1}):
     assert call(f'{API}/contexts', wrong)[0] == 400, wrong
@@ -242,7 +257,7 @@ for item in (x, y):
     call(f'{API}/{item["id"]}/trash', {}); assert call(f'{API}/{item["id"]}', method='DELETE')[1]['deleted'] == 1
 assert 'bicycle' not in labels() and 'black-and-white' not in labels()
 # Model selectors in Settings: lists from the code, availability from the OpenAI project; the analysis uses the text model.
-code, models = call(f'{API}/models'); assert code == 200 and models['text_model'] == 'gpt-6.1-terra' and models['image_model'] == 'gpt-image-2.5-flare', models
+code, models = call(f'{API}/models'); assert code == 200 and models['text_model'] == 'gpt-6.1-sol' and models['image_model'] == 'gpt-image-2.5-flare', models
 available = {m['id']: m['available'] for m in models['image_models']}
 assert available['gpt-image-2'] is True and available['gpt-image-2.5-flare'] is True and available['gpt-image-2.6-flare'] is False, available
 assert len(models['text_models']) == 27 and all(m['available'] for m in models['text_models'])
@@ -259,5 +274,24 @@ assert analyze(z)[0] == 200
 [sent] = openai(); assert sent['body']['model'] == 'gpt-5-mini', sent['body']['model']
 assert spend()[-1]['model'] == 'gpt-5-mini' and analysis_state()["model"] == 'gpt-5-mini'
 call(f'{API}/{z["id"]}/trash', {}); call(f'{API}/{z["id"]}', method='DELETE')
-assert call(f'{API}/models', {'text_model': 'gpt-6.1-terra', 'image_model': 'gpt-image-2.5-flare'}, method='PUT')[0] == 200
-print('Analysis integration 1.9.0 passed: tags only, no captions; confirmation of each paid call, register of calls, model selectors, uncertain not resent, OpenAI limit, ASCII tags, aliases, texts replaced once and restorable, caption soft limit and ceiling, editable model context, tag categories (Genre, Color, Medium), paid completion of the three, merge, tags removed with their last image.')
+assert call(f'{API}/models', {'text_model': 'gpt-6.1-sol', 'image_model': 'gpt-image-2.5-flare'}, method='PUT')[0] == 200
+# A valid tags JSON with a missing private description must not partially replace the REAL's tags.
+legacy, legacy_copy = image(175, 'Historical combined analysis', 'Original Commons source text.')
+_, legacy = call(f'{API}/{legacy["id"]}/copy', raw=legacy_copy, mime='image/webp')
+legacy = patch(legacy, {'tags':['preserved-tag']})
+openai([{'json':{'tags':['new-tag']}, 'invalid_description':True}])
+code, failed = analyze(legacy); assert code == 502 and 'Descrizione' in failed['error'], failed
+_, legacy = call(f'{API}/{legacy["id"]}')
+assert legacy['tags']==['preserved-tag'] and legacy['real_description'] is None and legacy['generated'] is None
+assert spend()[-1]['status']=='completed'  # invalid output was still a paid completed call
+# Legacy REAL: a separately confirmed combined analysis is allowed after approval, without an implicit backfill.
+_, legacy = call(f'{API}/{legacy["id"]}/approve', {'rights_confirmed':True})
+openai([])
+code, legacy = call(f'{API}/{legacy["id"]}/analyze', {'confirm':True,'refresh_description':True})
+assert code == 200 and legacy['status']=='approved' and legacy['real_description']['visible'], legacy
+assert len(openai())==1 and legacy['description']=='Original Commons source text.'
+_, legacy = call(f'{API}/{legacy["id"]}/publish', {})
+legacy = patch(legacy, {'real_description':{**legacy['real_description'],'visible':'Privately corrected while published.'}})
+assert legacy['status']=='published' and legacy['tags']==['crowd','street']
+call(f'{API}/{legacy["id"]}/trash', {});call(f'{API}/{legacy["id"]}',method='DELETE')
+print('Analysis integration passed: atomic REAL tags+description, independent private edits, confirmed legacy recovery, no partial output, model contexts, aliases, categories and paid-call outcomes.')

@@ -1,22 +1,14 @@
-# Sezione Database — specifica 2.4.0
+# Sezione Database — specifica 2.5.0
 
-Stato: vigente; la 2.3.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T09:00:00Z. La 2.3.0: i tag di partenza di una SLOP
+Stato: vigente; la 2.3.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T13:54:58Z. La 2.3.0: i tag di partenza di una SLOP
 sono quelli della REAL di cui è la gemella, con «Apri la REAL di origine»; il filtro per categoria della Distribuzione torna a
-comprendere Tempo e Genere, persi con la 1.25.0. La 2.2.0 mostra i conflitti di categoria dopo analisi e completamento (app 1.25.1). La 2.1.1 chiama «REAL campione» la foto delle misure del trattamento. La 2.1.0 aggiunge il filtro
+comprendere Tempo e Genere, persi con la 1.25.0. La 2.2.0 mostra i conflitti di categoria dopo analisi e completamento (app 1.25.1). La 2.1.1 chiama «REAL di riferimento» la foto delle misure del trattamento. La 2.1.0 aggiunge il filtro
 per gruppo, il completamento di Genere, Colore e Supporto, le misure della copia e i comandi del trattamento delle SLOP (specifiche
 `libreria-immagini` 3.0.0, `copie-di-gioco` 7.0.0, `generazione-slop` 2.0.0). La 2.0.0 era la versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `database-immagini.v1.0.1` e le modifiche delle app 1.17–1.24 (cestino, schede, ordinamento, anteprima, tag di partenza),
 che restano nella cronologia git. Stati e regole della libreria: specifica `libreria-immagini`.
 
-**Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
-descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
-
-- **Dettaglio di una REAL:** descrizione visiva, modificabile, con «Riscrivi la descrizione» (a pagamento, con conferma).
-- **Dettaglio di una SLOP:** elemento cambiato accanto ai tag di partenza; comandi del trattamento «Senza trattamento» e «Con
-  trattamento» («Altra REAL campione» sparisce); Inquadratura con riquadro 4:5.
-- **Scheda «Immagini»:** filtro «Copia da rifare in 4:5» e azione in gruppo «Rifai la copia in 4:5» (specifica `copie-di-gioco`,
-  sezione 7).
-- **Rigenerare una SLOP:** dal prompt del campo, nella dimensione del formato della REAL di origine.
+**Stato del ramo 1.27.0:** implementata la pipeline della specifica `generazione-slop` 5.3.0; produzione ancora 1.26.0 fino al rilascio autorizzato.
 
 ## 1. Decisioni dell'owner
 
@@ -51,17 +43,16 @@ descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le
 
 - Origine, stato, dimensioni dell'originale, copia di gioco con formato e peso; visualizzazioni e classificazioni corrette con la
   percentuale; partite in corso che la includono; avvisi (licenza ND, copia mancante con «Prepara la copia di gioco», immagine fuori
-  dai gruppi); gruppo; misure della copia e, per una SLOP trattata, REAL campione e scarto dall'obiettivo.
+  dai gruppi); gruppo; misure della copia e, per una SLOP trattata, REAL di riferimento e scarto dall'obiettivo.
 - **Campi:** titolo, descrizione, spiegazione, fonte, autore, licenza e, per le SLOP, prompt e modello; tag per categoria con aggiunta e
   rimozione; «Tag di partenza» per le SLOP generate (i tag della REAL di origine, con «Apri la REAL di origine»); avviso se una REAL non ha il tag di Tempo. Ogni modifica si salva subito.
 - **Azioni:** Inquadratura (nuove e approvate), comandi del trattamento per le SLOP (specifica `copie-di-gioco`, sezione 4.3),
   Completa Genere, Colore e Supporto, Analizza con IA (nuove con copia, mai analizzate o non riuscite), Ripristina i tag
   generati, Approva, Pubblica nel gioco, Modifica e Ritira dal gioco (pubblicate), Elimina (nel cestino), Ripristina ed Elimina
   definitivamente (cestino).
-- **Rigenerare una SLOP** (nuova o approvata): dal prompt del campo, con modello e qualità delle Impostazioni, nel formato della copia
-  attuale; una conferma copre generazione e analisi. L'immagine torna nuova senza copia, il browser prepara la copia, parte una nuova
-  analisi; le statistiche ripartono da zero. Il trattamento usa la stessa REAL campione, se esiste ancora. I file precedenti escono dalla quarantena; la vecchia copia resta nel bucket del gioco finché
-  le partite in corso la usano.
+- **Rigenerare una SLOP:** richiede un nuovo processo nello studio con conferma, brief ed esame dell’immagine intera. Prima cestinare la SLOP attiva della REAL; nessuna sostituzione diretta che scavalchi la valutazione.
+- **Descrizione REAL privata:** elementi visibili, contesto documentato e incertezze, modificabili indipendentemente dai tag, anche per una pubblicata. Per una REAL storica senza descrizione, compilazione manuale o analisi combinata tag+descrizione con conferma separata.
+- **Vecchie copie:** filtro «Copia da rifare in 4:5», azione in gruppo «Rifai la copia in 4:5». Le pubblicate sono ritirate con conferma e restano approvate; le partite in corso mantengono i propri byte. Controllare il nuovo crop prima di ripubblicare.
 
 ## 4. Statistiche delle foto
 

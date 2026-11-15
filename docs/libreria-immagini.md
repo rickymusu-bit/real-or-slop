@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 3.2.0
+# Libreria delle immagini, tag e analisi — specifica 3.6.0
 
-Stato: vigente; la 3.0.0 è in produzione con l'app 1.25.0, la 3.1.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T09:00:00Z.
+Stato: vigente; la 3.0.0 è in produzione con l'app 1.25.0, la 3.1.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T13:54:58Z.
 La 3.1.0 registra la REAL di origine delle SLOP gemelle (migrazione 0049), il tetto di risposta dell'analisi e il contesto 1.8.0.
 La 3.0.0 sostituisce la categoria Formato con Genere, Colore e Supporto, giudicate solo dall'immagine, e aggiunge il completamento a
 pagamento di queste tre categorie per le immagini già analizzate (decisioni dell'owner del 2026-11-14, sezioni 4 e 5). La 2.0.0 è la
@@ -9,19 +9,7 @@ senza strati `libreria-immagini.v1.8.0`, `categorie-tag.v1.1.0` e le parti su li
 `didascalie-wizard.v1.0.0` e `anteprima-descrizione.v1.2.0`, che restano nella cronologia git. Regole di contenuto delle SLOP e
 trasparenza: specifica `contenuti-e-trasparenza`. Copie di gioco: specifica `copie-di-gioco`.
 
-**Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
-descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
-
-- **Descrizione visiva delle REAL:** un nuovo campo della REAL (`visual_description`, con modello e data), scritto da una chiamata a
-  pagamento che guarda la copia di gioco, modificabile dall'owner; è l'ingresso del prompt della gemella (specifica
-  `generazione-slop`, sezioni 3 e 4). Non è una didascalia: non compare mai nel gioco.
-- **Chiamate a pagamento:** un quarto tipo, `description`, accanto ad analisi, prompt e immagini; una chiamata per foto a ogni passo.
-- **Contesto dei modelli:** una quarta parte, «Descrizione delle REAL», con versioni e ripristino come le altre; proposte del codice
-  1.9.0 per questa parte e per «Prompt per le SLOP».
-- **Modelli predefiniti:** `gpt-6.1-sol` per il testo (deve leggere immagini), `gpt-image-2.5-flare` in qualità `high` per le immagini.
-- **Campi di una SLOP generata:** REAL di origine, tag di partenza, elemento cambiato (`place`, `time`, `object` o `action`, da che cosa
-  a che cosa), qualità; niente più REAL campione.
-- **Stati:** approvare e pubblicare richiedono una copia di gioco 4:5 (specifica `copie-di-gioco`).
+**Stato del ramo 1.27.0:** implementata la pipeline della specifica `generazione-slop` 5.3.0; produzione ancora 1.26.0 fino al rilascio autorizzato.
 
 ## 1. Decisioni dell'owner
 
@@ -59,7 +47,7 @@ Una sola raccolta di immagini REAL e SLOP.
   la rotta `POST /upload`, usata dai test.
 - **Campi.** Origine, titolo (≤200 caratteri), descrizione (≤1000), spiegazione (≤2000, oggi non mostrata nel gioco), fonte, autore e
   licenza (REAL), prompt e modello (SLOP), tag con le categorie, stato, originale e copia di gioco, revisione per le modifiche
-  concorrenti. Per una SLOP generata anche batch, REAL di origine, tag di partenza, REAL campione e qualità della generazione.
+  concorrenti. Per una SLOP generata anche batch, REAL di origine, tag di partenza, REAL di riferimento e qualità della generazione.
 - **Descrizione.** Per le REAL arriva da Commons (testo ripulito, al massimo 500 caratteri) e l'owner la corregge nel passo 2 del wizard
   o nella sezione Database. Il giocatore la legge nella lista di fine partita (specifica `gioco-a-livelli`). Entra anche nel
   contesto dell'analisi.
@@ -69,7 +57,7 @@ Una sola raccolta di immagini REAL e SLOP.
 
 `nuova` → `approvata` → `pubblicata`, più `cestino` (che ricorda lo stato di provenienza).
 
-- **Approvare** (solo una nuova): copia di gioco nel formato della foto, almeno un tag e, per una REAL, la conferma di aver verificato
+- **Approvare** (solo una nuova): copia di gioco in 4:5, almeno un tag e, per una REAL, la conferma di aver verificato
   diritti e licenza. Una REAL con licenza senza opere derivate (ND) è esclusa: il server rifiuta approvazione e pubblicazione.
 - **Pubblicare** (solo un'approvata): la copia passa nel bucket del gioco ed entra nelle partite nuove.
 - **Modificare.** Nuove e approvate si modificano direttamente, con salvataggio immediato; un'approvata resta approvata e deve
@@ -78,7 +66,7 @@ Una sola raccolta di immagini REAL e SLOP.
 - **Ritirare** una pubblicata: torna approvata. La copia lascia il bucket del gioco subito, oppure quando finisce l'ultima partita in
   corso che la usa (`retired_copies`).
 - **Cestino.** Spostare nel cestino, da sola o in gruppo, non chiede conferma, tranne per le pubblicate, che escono subito dal gioco. Ripristinare riporta allo
-  stato di provenienza; una pubblicata torna approvata. «Svuota cestino» ed «Elimina definitivamente» cancellano ogni riga dell'immagine
+  stato di provenienza; una SLOP non si ripristina se la REAL ha già una SLOP attiva o un processo in corso; una pubblicata torna approvata. «Svuota cestino» ed «Elimina definitivamente» cancellano ogni riga dell'immagine
   (tag, round, risposte) e ogni suo file; un'immagine ancora usata da una partita in corso si elimina quando la partita finisce.
 - **Partita in corso:** in preparazione o attiva e iniziata da meno della durata massima delle Impostazioni (24 ore predefinite).
 - Azioni in gruppo: fino a 500 immagini per volta.
@@ -129,10 +117,15 @@ Una sola raccolta di immagini REAL e SLOP.
 
 ## 5. Analisi a pagamento
 
+Per una REAL l’unica analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Modello, hash della copia, revisione e data sono conservati come provenienza. La descrizione è privata, modificabile senza alterare tag o testo Commons; quest’ultimo è conservato separatamente per le nuove acquisizioni. Per una SLOP l’analisi restituisce soltanto tag.
+
+Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova generazione richiede compilazione manuale o una nuova analisi combinata confermata (`refresh_description:true`), anche se già approvata/pubblicata. Nessun backfill. La modifica della sola descrizione privata non ritira una pubblicata.
+
 - Su richiesta dell'owner (wizard, dettaglio o gruppo nel Database, studio SLOP), solo per immagini nuove con copia di gioco. Il modello
   di testo scelto nelle Impostazioni, che deve leggere immagini, riceve la copia di gioco, titolo e descrizione (REAL) o il prompt (SLOP)
-  e i 300 tag più usati divisi per categoria; mai l'origine. Istruzioni identiche per REAL e SLOP: base comune e parte «Tag» del
-  contesto dei modelli (sezione 7).
+  e i 300 tag più usati divisi per categoria; mai l'origine. La base comune e la parte «Tag» si applicano ad entrambe
+  senza menzionare immagini sintetiche; **per le REAL** si richiede in più la descrizione editoriale neutra, **per le SLOP**
+  rimane l'output dei soli tag. Schemi diversi per tipo non devono introdurre istruzioni che rivelino la natura dell'altra categoria.
 - Risposta JSON con schema rigido: da 5 a 15 tag divisi per categoria, al massimo uno di Tempo; esattamente un Genere, un Colore e un
   Supporto, questi ultimi due tra i valori della lista chiusa (enumerazione nello schema). I tag vengono resi conformi, risolti per alias
   e **sostituiscono** quelli presenti. Un tag proposto in una categoria diversa da quella del vocabolario mantiene la categoria del
@@ -149,17 +142,17 @@ Una sola raccolta di immagini REAL e SLOP.
   Non ritira le pubblicate, perché non cambia nulla di ciò che vede il giocatore. Una sola volta per immagine (`categories_completed_at`);
   registrata in `paid_calls` come analisi.
 - **Una generazione per immagine:** dopo un esito riuscito il server rifiuta un'altra analisi. I tag generati restano nel database
-  e «Ripristina i tag generati» li riporta senza costi. Fa eccezione la rigenerazione di una SLOP, che è un'immagine nuova.
-- Una sola analisi alla volta per immagine; un segno «in corso» più vecchio di 10 minuti non blocca più.
+  e «Ripristina i tag generati» li riporta senza costi. Fanno eccezione l’analisi combinata confermata di una REAL storica senza descrizione e una nuova SLOP accettata da un nuovo processo.
+- Una sola analisi alla volta per immagine; un segno interrotto resta sospeso e viene marcato incerto dalla manutenzione.
 
 ## 6. Chiamate a pagamento e modelli
 
-- Tre tipi: analisi, prompt SLOP, immagini SLOP. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
+- Quattro tipi: analisi, brief+prompt SLOP, immagini SLOP, valutazione SLOP intera. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
 - **Esiti:** risposta valida → `completed`; errore 4xx → `failed`, senza addebito; errore 5xx, timeout o rete → `uncertain`, mai
   ripetuta in automatico. Chiave rifiutata, limite di spesa o credito OpenAI esaurito fermano le serie con un messaggio che rimanda a
   platform.openai.com.
-- **Registro** `paid_calls`: tipo, modello, esito, token, date; nessun importo e nessun legame con le immagini.
-- **Modelli:** modello di testo (analisi e prompt SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
+- **Registro** `paid_calls`: tipo, modello, esito, token, date; nessun importo e collegamenti a immagine, processo e tentativo, azzerati alla cancellazione; nessun archivio delle immagini eliminate.
+- **Modelli:** modello di testo (analisi, brief+prompt e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
   elencati nel codice e presenti nel progetto OpenAI (`GET /v1/models`, in cache per un'ora; se l'elenco non si legge si offrono tutti).
   Ogni chiamata registra il modello usato.
 - Senza il segreto `OPENAI_API_KEY` le chiamate a pagamento sono spente. Nei test solo il modello finto `tests/fake_openai.py`.
@@ -191,3 +184,5 @@ Una sola raccolta di immagini REAL e SLOP.
   (`game_rounds`), `copy_view` (`images`).
 - R2: quarantena privata (`library/<id>/`: originale e copia) e bucket del gioco (copie pubblicate).
 - Le statistiche di un'immagine (visualizzazioni e classificazioni corrette) contano solo i round giocati con la copia attuale.
+
+Migrazione 0050: descrizioni e provenienza, contesto Commons originale, `slop_processes` e `slop_attempts`, collegamenti del registro `paid_calls`, versione/snapshot del batch. Nessuna conversione o chiamata sulle REAL storiche.

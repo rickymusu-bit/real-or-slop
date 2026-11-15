@@ -132,19 +132,9 @@ with sync_playwright() as p:
         prompt = dialog.locator('[data-field=prompt]')
         prompt.fill('A riot in a square at dusk, 1968'); prompt.blur()
         expect(dialog.locator('#library-detail-message')).to_have_text('Salvato.')
-        expect(dialog.locator('.db-regenerate')).to_contain_text('qualità medium (Impostazioni)')
+        expect(dialog.locator('#library-regenerate')).to_have_count(0)
+        expect(dialog).to_contain_text('nuovo processo nello studio')
         dialog.screenshot(path=str(folder / f'{name}-edit.png'))
-        # The analysis after the regeneration proposes «dbb-paris» as an Event, while the vocabulary has it as a Place: the owner is told.
-        openai([{}, {'json': {'tags': {'event': ['dbb-paris'], 'setting': ['dbb-dusk']}}}])
-        dialog.locator('#library-regenerate').click()
-        expect(dialog).to_contain_text('SLOP · nuova', timeout=30000)
-        expect(dialog.locator('.library-analysis')).to_contain_text('Analizzata', timeout=30000)
-        expect(dialog.locator('#library-detail-message')).to_contain_text('«dbb-paris» proposto come Evento, nel vocabolario è Luogo')
-        assert 'due chiamate a pagamento' in confirms[-1] and 'statistiche ripartono da zero' in confirms[-1] and '$' not in confirms[-1], confirms
-        expect(dialog.locator('[data-stats]')).to_have_text('Vista 0 volte · classificata correttamente 0')
-        expect(dialog.locator('[data-field=prompt]')).to_have_value('A riot in a square at dusk, 1968')
-        dialog.locator('[data-action=approve]').click()
-        expect(dialog).to_contain_text('SLOP · approvata')
         dialog.locator('.library-detail-close button').click()
 
         # Delete a published photo: confirmation, out of publication, into the trash.
@@ -158,27 +148,27 @@ with sync_playwright() as p:
         page.locator('#library-tag-match').select_option('any')
         tag_input.fill('dbb-beach'); tag_input.press('Enter')
         page.get_by_role('button', name=f'Apri {prefix}-spiaggia').click()
-        expect(dialog).to_contain_text('copia di gioco WebP 60×40, 3:2 orizzontale')
+        expect(dialog).to_contain_text('copia di gioco WebP 32×40, 4:5 verticale')
         dialog.locator('#library-crop').click()
         editor = page.locator('dialog.crop-dialog')
         crop_frame = editor.locator('.crop-frame')
         expect(crop_frame).to_have_count(1)
         expect(crop_frame).to_be_visible()
-        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 0, y 0, altezza 40 px')
-        editor.locator('.crop-format select').select_option('1:1')
-        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 10, y 0, altezza 40 px')
+        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 14, y 0, altezza 40 px')
+        expect(editor.locator('.crop-format select')).to_have_value('4:5')
+        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 14, y 0, altezza 40 px')
         for _ in range(3): crop_frame.press('ArrowLeft')
-        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 7, y 0, altezza 40 px')
+        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 0, altezza 40 px')
         editor.screenshot(path=str(folder / f'{name}-crop.png'))
         editor.locator('[data-crop=ok]').click()
         expect(page.locator('dialog.crop-dialog')).to_have_count(0)
         expect(dialog.locator('#library-detail-message')).to_have_text('Inquadratura salvata.')
         saved = call(f'{API}/{beach["id"]}')['copy']
-        assert saved['crop'] == {'x': 7, 'y': 0, 'width': 40, 'height': 40, 'format': '1:1'} and 'view' not in saved, saved
+        assert saved['crop'] == {'x': 11, 'y': 0, 'width': 32, 'height': 40, 'format': '4:5'} and 'view' not in saved, saved
         # The same crop: nothing sent, same copy file.
         kept = saved['sha256']
         dialog.locator('#library-crop').click()
-        expect(editor.locator('.crop-frame')).to_have_attribute('aria-valuetext', 'x 7, y 0, altezza 40 px')
+        expect(editor.locator('.crop-frame')).to_have_attribute('aria-valuetext', 'x 11, y 0, altezza 40 px')
         editor.locator('[data-crop=ok]').click()
         expect(dialog.locator('#library-detail-message')).to_have_text('Inquadratura salvata.')
         saved = call(f'{API}/{beach["id"]}')['copy']; assert saved['sha256'] == kept, saved

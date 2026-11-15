@@ -1,7 +1,48 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T09:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T14:47:34Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.27.0 — 2026-11-15T14:47:34Z (implementazione #139, da rilasciare)
+
+- **Correzione CI #140:** comandi delle Impostazioni attivi prima del caricamento iniziale; la verifica del codice partita non provoca più un invio nativo e un ricaricamento della dashboard. Test browser desktop/mobile con caricamento dei contesti sospeso.
+- **Consegna tramite PR:** registrata in `AGENTS.md` 22.3.0 la preferenza dell’owner di pubblicare sempre il ramo e aprire/aggiornare una PR per i test CI; nessuna consegna limitata ai file locali.
+- Una sola analisi multimodale REAL produce tag e descrizione privata, salvati atomici con modello e revisione della copia.
+  La descrizione è correggibile nel wizard e nel Database; testo Commons e tag restano indipendenti. Nessun backfill pagato.
+- Una chiamata testuale per REAL produce brief e prompt; brief congelato con hash al primo tentativo. Processi e tentativi
+  persistono, con rivendicazione atomica prima delle chiamate, snapshot di modelli/qualità/limite/tolleranza e idempotenza.
+- Valutazione della candidata intera, mai del crop: accetta, rigenera, rivede il prompt, riprogetta o sospende per revisione.
+  Stop alla prima accettazione, limite 1–5 (default 3), massimo 2+2N chiamate; nessuna candidata bocciata nella libreria.
+- Copie 4:5, trattamento leggero v3 dalla sola REAL di riferimento; filtro e rifacimento in gruppo delle vecchie copie.
+  Il gioco esclude copie precedenti; approvare e pubblicare restano azioni dell’owner. La rigenerazione diretta della libreria
+  richiede un nuovo processo nello studio, così non può scavalcare la valutazione.
+- Migrazione 0050 con campi e tabelle aggiuntivi, ritiro delle copie pubblicate non 4:5 e nessuna conversione dei batch precedenti: sola revisione. Anteprime temporanee private per sette giorni,
+  pulizia alla cancellazione e in manutenzione; il registro delle chiamate conserva gli esiti senza archiviare immagini eliminate.
+- Verifiche riuscite: lint, 95 test unitari, build, dry-run e suite completa API/browser (desktop e mobile), con API fittizia. Nessuna chiamata reale,
+  migrazione remota, merge o rilascio eseguiti da questa implementazione.
+
+## Dopo la 1.26.0 — 2026-11-15T13:42:00+01:00 (nuove decisioni editoriali, solo documentazione)
+
+- **REAL come riferimento editoriale:** la nuova SLOP non deve assomigliare alla REAL di origine né cambiare un solo elemento.
+  Il riferimento serve a bilanciare temi e linguaggio fotografico; i tag finali derivano dalla candidata accettata.
+- **Descrizione REAL già durante i tag:** una sola chiamata multimodale del wizard, sulla copia 4:5 e sul contesto Commons,
+  genera **tag e descrizione editoriale neutra** (osservazioni visive, contesto documentato, incertezze) senza conoscere le SLOP;
+  il testo è modificabile e non sovrascrive Commons o la descrizione mostrata nel gioco.
+- **Generazione di brief e prompt:** più avanti una sola chiamata **testuale** usa i tag e la descrizione salvati per restituire
+  brief e prompt iniziale. Nessuna nuova lettura visiva della REAL nella pipeline SLOP; restano tre contesti dei modelli.
+  Massimo **2 + 2N** chiamate per generare una SLOP quando la REAL ha già la descrizione; le REAL storiche senza descrizione
+  richiedono un intervento manuale o un'analisi esplicitamente autorizzata.
+- **Loop orientato alla credibilità:** una candidata viene generata e valutata **per intero**, prima di preparare il ritaglio 4:5; si accetta, si
+  rigenera con lo stesso prompt, si riscrive il prompt o si riprogetta la scena, entro un massimo configurabile di 1–5
+  generazioni (predefinito 3). Tolleranza editoriale separata, difetti critici mai compensati, stop anticipato alla prima
+  accettazione, sospensione degli esiti incerti e nessun inserimento automatico nella libreria delle candidate bocciate.
+- **Difficoltà del giocatore:** più tentativi possono aumentare la qualità media, ma non definiscono una difficoltà verificata.
+- **Valutazione senza crop:** il valutatore vede la fotografia generata completa; ritaglio 4:5 e trattamento si applicano
+  **dopo l'accettazione**, senza vincolare il modello a concentrare tutti i soggetti nel riquadro del gioco.
+- **Protocollo REAL:** selezione editoriale qualitativa con otto principi (issue #138), nessun filtro automatico nel wizard.
+- **Specifica:** `generazione-slop` 5.2.0, `copie-di-gioco` 9.1.3, `libreria-immagini` 3.5.1,
+  `dashboard-admin-wizard-real` 2.3.1, `statistiche-impostazioni` 2.6.0, `AGENTS.md` 22.2.0 e `MASTER.md` 22.2.1.
+  Il codice e la produzione 1.26.0 sono **invariati**. La specifica #136 va riallineata prima delle PR applicative.
 
 ## Dopo la 1.26.0 — 2026-11-15T09:00:00Z (decisioni e operazioni, nessun cambiamento di codice)
 
