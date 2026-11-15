@@ -1,6 +1,7 @@
-# Statistiche e Impostazioni — specifica 2.8.0
+# Statistiche e Impostazioni — specifica 2.8.1
 
-Stato: vigente; la 2.7.1 è in produzione con l'app 1.27.0, la 2.8.0 è per l'app 1.28.0. Aggiornata: 2026-11-15T17:00:44Z. La 2.8.0 porta a quattro i
+Stato: vigente; la 2.8.0 è in produzione con l'app 1.30.1, la 2.8.1 è per l'app 1.30.2. Aggiornata: 2026-11-15T21:27:29Z. La 2.8.1: salvare un modulo
+numerico aggiorna solo i propri campi. La 2.8.0 porta a quattro i
 testi del contesto dei modelli e segnala il testo dei prompt scritto per le gemelle. La 2.2.0 toglie la soglia del gruppo
 (le SLOP sono gemelle di una REAL, specifica `generazione-slop` 3.0.0) e aggiunge il conteggio delle gemelle. La 2.1.0 sostituisce la soglia
 del tema con quella del gruppo e aggiunge i gruppi all'equilibrio del catalogo (specifica `generazione-slop`). La 2.0.0 era la
@@ -18,7 +19,8 @@ di classifica), che restano nella cronologia git.
 
 ## 2. Impostazioni (solo comandi)
 
-I gestori dei comandi sono attivi prima delle richieste iniziali della dashboard. La verifica del codice partita funziona anche mentre
+I gestori dei comandi sono attivi prima delle richieste iniziali della dashboard. Salvare un modulo numerico (soglie dello studio SLOP,
+partite) riscrive solo i campi di quel modulo con i valori salvati: un valore scritto e non ancora salvato in un altro modulo resta. La verifica del codice partita funziona anche mentre
 si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ricaricare la pagina né inserire il codice nell’URL.
 
 - **Modelli:** modello di testo, modello di immagini (con la data di dismissione dove nota) e qualità delle immagini tra quelle ammesse;

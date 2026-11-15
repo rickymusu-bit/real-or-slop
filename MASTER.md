@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 23.3.2, aggiornata il 2026-11-15T21:07:23Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 23.3.3, aggiornata il 2026-11-15T21:27:29Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -14,7 +14,8 @@ in `CHANGELOG.md`.
   il Worker ha superato il limite di memoria, e si ripetono dalla scheda o, con la 1.30.2, in gruppo. Nessuna immagine pubblicata: nessun livello è giocabile. Su indicazione dell'owner, alle 17:24 UTC sono stati salvati direttamente nel D1
   il contesto «Brief e prompt per le SLOP» proposto (pipeline 2) e la soglia dello studio a 20 REAL. Qualità immagini `medium`.
 - **Nel ramo 1.30.2 (PR da unire):** le analisi in gruppo includono le immagini con esito incerto o interrotto, nominate nella
-  conferma; messaggio corretto quando nessuna selezionata è senza descrizione.
+  conferma; messaggio corretto quando nessuna selezionata è senza descrizione. Nelle Impostazioni, salvare un modulo numerico non
+  cancella più i valori non salvati degli altri (causa del controllo `verify` fallito sulla PR #145).
 - **Nella 1.30.1:** invio dell'immagine ai modelli senza copie in stringhe (memoria), ripetizione dalla scheda
   di un'analisi rimasta «in corso» oltre dieci minuti.
 - **Nella 1.30.0:** nel Database il tasto «Seleziona tutte», per le immagini mostrate da vista e filtri.
@@ -41,7 +42,7 @@ nome.
 | SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.5.0 |
 | Sezione Database | `docs/database-immagini.md` | 2.7.1 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.8.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.8.1 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note

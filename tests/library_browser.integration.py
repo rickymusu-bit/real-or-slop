@@ -116,9 +116,14 @@ with sync_playwright() as p:
         expect(page.locator('[name=slop_section_min_real]')).to_have_value('50')
         page.locator('[name=slop_section_min_real]').fill('40'); page.locator('#library-thresholds-form button').click()
         expect(page.locator('#library-settings-message')).to_have_text('Soglie dello studio SLOP salvate.')
-        page.locator('[name=slop_section_min_real]').fill('50'); page.locator('#library-thresholds-form button').click()
+        # Saving one form never overwrites what is typed, and not yet saved, in another one.
         page.locator('#library-games summary').click()
         expect(page.locator('[name=open_game_hours]')).to_have_value('24')
+        page.locator('[name=open_game_hours]').fill('30')
+        page.locator('#library-settings-message').evaluate('m => m.textContent = ""')
+        page.locator('[name=slop_section_min_real]').fill('50'); page.locator('#library-thresholds-form button').click()
+        expect(page.locator('#library-settings-message')).to_have_text('Soglie dello studio SLOP salvate.')
+        expect(page.locator('[name=open_game_hours]')).to_have_value('30')
         page.locator('[name=open_game_hours]').fill('0'); page.locator('#library-games-form button').click()
         expect(page.locator('[name=open_game_hours]')).to_have_value('0')  # the browser stops it: minimum 1
         page.locator('[name=open_game_hours]').fill('24')

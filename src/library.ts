@@ -735,8 +735,11 @@ export async function showLibrary() {
   });
   // Thresholds of the SLOP studio and hours of an open game: numbers checked by the server.
   interface Numbers { values: Record<string, number>; limits: Record<string, { min: number; max: number; default: number }> }
-  const renderNumbers = (n: Numbers) => {
+  /** Writes the stored numbers into the fields; after a save only those of the saved form, so that a slower answer never
+   * overwrites what the owner is typing in another form. */
+  const renderNumbers = (n: Numbers, only?: string[]) => {
     for (const [key, value] of Object.entries(n.values)) {
+      if (only && !only.includes(key)) continue;
       const input = page.querySelector<HTMLInputElement>(`[name="${key}"]`);
       if (input) { input.value = String(value); input.min = String(n.limits[key].min); input.max = String(n.limits[key].max); }
     }
@@ -745,7 +748,7 @@ export async function showLibrary() {
     event.preventDefault();
     const form = event.target as HTMLFormElement;
     try {
-      renderNumbers(await call<Numbers>("/settings", { method: "PUT", body: JSON.stringify(Object.fromEntries(fields.map(f => [f, Number((form.elements.namedItem(f) as HTMLInputElement).value)]))) }));
+      renderNumbers(await call<Numbers>("/settings", { method: "PUT", body: JSON.stringify(Object.fromEntries(fields.map(f => [f, Number((form.elements.namedItem(f) as HTMLInputElement).value)]))) }), fields);
       settingsMessage(done); await slopStudio.refresh(); await autoBox.refresh();
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
@@ -801,7 +804,7 @@ export async function showLibrary() {
   await Promise.all([load(), refreshTags(), refreshAnalysis(), refreshGroups()]).catch(error => message(String(error instanceof Error ? error.message : error)));
   await refreshContexts().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   await refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
-  await call<Numbers>("/settings").then(renderNumbers).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
+  await call<Numbers>("/settings").then(n => renderNumbers(n)).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   tagPills();
   slopStudio = await mountSlopStudio($<HTMLElement>("#slop-studio"), n => { $("#slop-attention-count").textContent = n ? ` · ${n} da vedere` : ""; });
   // Automatic SLOP batches: proposal, progress and review (spec `generazione-slop`).
