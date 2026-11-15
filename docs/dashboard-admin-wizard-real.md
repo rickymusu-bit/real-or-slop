@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 2.1.0
+# Dashboard e wizard REAL — specifica 2.2.0
 
-Stato: vigente. Aggiornata: 2026-11-15T09:00:00Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
+Stato: vigente (con decisioni future indicate a parte). Aggiornata: 2026-11-15T11:08:00Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wizard di `didascalie-wizard.v1.0.0` e
 `anteprima-descrizione.v1.2.0`, che restano nella cronologia git.
 
@@ -8,9 +8,10 @@ senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wiza
 descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
 
 - **Passo 3, Inquadratura:** il riquadro è sempre 4:5 verticale; il formato non si sceglie più (specifica `copie-di-gioco` 9.0.0).
-- **Criteri di scelta delle REAL:** è una scelta editoriale non caricare REAL che un generatore non sa disegnare bene. I criteri sono
-  da definire con l'owner (specifica `generazione-slop`, sezione 9); quando ci saranno, entrano in questa specifica come promemoria
-  del passo 1.
+- **Criteri di scelta delle REAL** (issue #138): otto principi qualitativi indipendenti dal generatore: chiarezza del soggetto,
+  complessità semantica, relazioni spaziali/fisiche, precisione dei dettagli, riconoscibilità della scena, coerenza del contesto,
+  compatibilità 4:5, trasformabilità. **Nessun filtro, punteggio o avviso automatico nel wizard**: sono un promemoria editoriale
+  dell'owner. Una REAL è riferimento tematico/fotografico, non una fotografia che la SLOP debba imitare.
 
 ## 1. Decisioni dell'owner
 
