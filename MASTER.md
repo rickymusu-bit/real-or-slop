@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 22.1.1, aggiornata il 2026-11-15T11:44:02Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 22.2.0, aggiornata il 2026-11-15T13:42:00+01:00. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -13,14 +13,15 @@ in `CHANGELOG.md`.
   dal 2026-11-14: contesto 1.8.0 dei prompt SLOP, soglia di proposta al 10%, modello di immagini `gpt-image-2.6-flare` in qualità
   `medium` (da riportare a `gpt-image-2.5-flare` `high` con la prossima versione). Il primo lotto di gemelle (2026-11-15, 9 immagini,
   batch in pausa) ha mostrato copie rovinate dal trattamento e prompt inventati senza vedere la foto.
-- **Da implementare, specifiche aggiornate il 2026-11-15:** #136 mantiene formato comune 4:5 e trattamento leggero dalla REAL di
-  riferimento; la successiva decisione dell'owner sostituisce **la variazione di un singolo elemento** con un brief semantico e
-  fotografico **non imitativo**, creati **insieme in un'unica chiamata multimodale** che vede direttamente la REAL intera, i
-  tag e il contesto Commons, senza una descrizione intermedia obbligatoria. Il loop generatore ↔ valutatore privilegia la
-  credibilità fotografica. Candidato in libreria
-  solo dopo esito positivo, poi revisione e pubblicazione manuali. Fino a 1–5 tentativi (3 predefiniti), tolleranza qualitativa
-  separata, chiamate registrate, ripresa senza duplicazioni automatiche. Specifiche: `generazione-slop` 5.1.0,
-  `copie-di-gioco` 9.1.2, `libreria-immagini` 3.4.0; **nessun codice di questa fase è ancora in produzione**.
+- **Da implementare, specifiche aggiornate il 2026-11-15:** #136 mantiene copie di gioco 4:5 e trattamento leggero
+  dalla REAL di riferimento. Durante il **caricamento REAL**, la stessa chiamata multimodale di analisi produce **tag e
+  descrizione editoriale neutra** (elementi visibili, contesto Commons documentato, incertezze). Quando occorre una SLOP,
+  **una sola chiamata testuale** trasforma tag+descrizione in **brief e prompt iniziale**; la REAL non deve essere imitata,
+  né deve cambiare solo un elemento. Il loop generatore ↔ valutatore privilegia la credibilità della **SLOP intera**;
+  il crop 4:5 viene **dopo** l'accettazione, poi revisione e pubblicazione manuali. Fino a 1–5 tentativi (3 predefiniti),
+  tolleranza separata, chiamate registrate, ripresa senza duplicazioni automatiche. Le REAL storiche senza descrizione
+  non vengono analizzate a pagamento automaticamente. Specifiche: `generazione-slop` 5.2.0,
+  `copie-di-gioco` 9.1.3, `libreria-immagini` 3.5.0; **nessun codice di questa fase è ancora in produzione**.
 - **Selezione REAL:** otto principi qualitativi nella issue #138; nessun filtro o scoring automatico.
 - **Da decidere con l'owner:** se e come comunicare al giocatore il processo di generazione dopo la risposta.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
@@ -32,14 +33,14 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.4.0 (decisioni da implementare) |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.5.0 (decisioni da implementare) |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.1.2 (da implementare) |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.2.0 (criteri editoriali, UI invariata) |
-| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.1.0 (da implementare) |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.1.3 (da implementare) |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.3.0 (criteri editoriali, UI invariata) |
+| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.2.0 (da implementare) |
 | Sezione Database | `docs/database-immagini.md` | 2.4.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.5.0 (decisioni da implementare) |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.6.0 (decisioni da implementare) |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -60,11 +61,13 @@ commit che li ha cancellati e `git show <commit>^:docs/<nome>` li mostra. Corris
 ## Sequenza delle PR della nuova pipeline
 
 - **Documentazione:** specifiche, istruzioni e mappa, senza codice né rilascio.
-- **Backend:** **unica chiamata multimodale REAL intera → brief+prompt**, stati persistenti del processo e dei tentativi,
-  brief immutabile, valutazione strutturata, controllo spesa e fake API. La descrizione visiva autonoma non è un prerequisito.
-- **Frontend:** ciclo nel browser, immagine generata **intera** sottoposta al valutatore, copia 4:5 **solo dopo** accettazione, configurazioni, anteprime e revisione.
+- **Backend:** estendere la chiamata di catalogazione REAL a **tag+descrizione neutra** in un unico output; poi chiamata
+  **testuale** descrizione+tag → brief+prompt, stati persistenti, brief immutabile, valutazione strutturata,
+  controllo spesa e fake API. Nessuna seconda lettura visiva della REAL nella generazione.
+- **Frontend:** descrizione della REAL modificabile nel wizard e nel Database; ciclo nel browser, immagine SLOP **intera**
+  sottoposta al valutatore, copia 4:5 **solo dopo** accettazione, configurazioni, anteprime e revisione.
 - **Rilascio:** dopo verifica manuale delle anteprime e autorizzazione owner; il merge su main esegue deploy e migrazioni remote.
-  Consultare `generazione-slop` 5.1.0, sezione 10. I batch della 1.26.0 in pausa **non** vanno ripresi con schema incompatibile.
+  Consultare `generazione-slop` 5.2.0, sezione 10. I batch della 1.26.0 in pausa **non** vanno ripresi con schema incompatibile.
 
 ## Architettura
 
