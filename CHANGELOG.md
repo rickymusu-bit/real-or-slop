@@ -1,12 +1,15 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T11:08:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T11:44:02Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## Dopo la 1.26.0 — 2026-11-15T11:08:00Z (nuove decisioni editoriali, solo documentazione)
+## Dopo la 1.26.0 — 2026-11-15T11:44:02Z (nuove decisioni editoriali, solo documentazione)
 
 - **REAL come riferimento editoriale:** la nuova SLOP non deve assomigliare alla REAL di origine né cambiare un solo elemento.
   Il riferimento serve a bilanciare temi e linguaggio fotografico; i tag finali derivano dalla candidata accettata.
+- **Generazione del brief e del prompt:** un'unica chiamata multimodale vede la REAL **intera**, i tag e il contesto Commons e
+  restituisce brief editoriale e prompt iniziale; non è prevista la descrizione visiva intermediaria né una seconda chiamata
+  testuale. Restano tre contesti di modello. Il massimo di chiamate per REAL con N tentativi è **2 + 2N**.
 - **Loop orientato alla credibilità:** una candidata viene generata e valutata **per intero**, prima di preparare il ritaglio 4:5; si accetta, si
   rigenera con lo stesso prompt, si riscrive il prompt o si riprogetta la scena, entro un massimo configurabile di 1–5
   generazioni (predefinito 3). Tolleranza editoriale separata, difetti critici mai compensati, stop anticipato alla prima
@@ -15,8 +18,8 @@ I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella c
 - **Valutazione senza crop:** il valutatore vede la fotografia generata completa; ritaglio 4:5 e trattamento si applicano
   **dopo l'accettazione**, senza vincolare il modello a concentrare tutti i soggetti nel riquadro del gioco.
 - **Protocollo REAL:** selezione editoriale qualitativa con otto principi (issue #138), nessun filtro automatico nel wizard.
-- **Specifica:** `generazione-slop` 5.0.1, `copie-di-gioco` 9.1.1, `libreria-immagini` 3.3.1,
-  `dashboard-admin-wizard-real` 2.2.0, `statistiche-impostazioni` 2.4.0, `AGENTS.md` e `MASTER.md` 22.0.1.
+- **Specifica:** `generazione-slop` 5.1.0, `copie-di-gioco` 9.1.1, `libreria-immagini` 3.4.0,
+  `dashboard-admin-wizard-real` 2.2.0, `statistiche-impostazioni` 2.5.0, `AGENTS.md` e `MASTER.md` 22.1.0.
   Il codice e la produzione 1.26.0 sono **invariati**. La specifica #136 va riallineata prima delle PR applicative.
 
 ## Dopo la 1.26.0 — 2026-11-15T09:00:00Z (decisioni e operazioni, nessun cambiamento di codice)
