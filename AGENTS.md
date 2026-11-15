@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 22.0.1, aggiornata il 2026-11-15T11:08:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 22.1.0, aggiornata il 2026-11-15T11:44:02Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -18,10 +18,15 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 
 - **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta finale
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
-  al browser prima della risposta. Il modello che scrive i tag o descrive una REAL non sa che esistono immagini generate.
-- **Ogni SLOP nasce da una REAL di riferimento** (decisione del 2026-11-15, specifica `generazione-slop` 5.0.1): il riferimento
+  al browser prima della risposta. Il modello che **analizza una REAL per i tag o per una descrizione editoriale autonoma**
+  non sa che esistono immagini generate. **Eccezione circoscritta:** il modello distinto che prepara il brief e il prompt SLOP
+  deve sapere lo scopo della generazione e può ricevere la REAL come input visivo; non riutilizzare queste istruzioni per
+  l'analisi delle REAL.
+- **Ogni SLOP nasce da una REAL di riferimento** (decisione del 2026-11-15, specifica `generazione-slop` 5.1.0): il riferimento
   assicura ancoraggi editoriali tematici e fotografici, **non** somiglianza visiva né il cambiamento di un solo elemento.
-  Il brief editoriale del processo resta immutabile; il prompt e la scena possono cambiare. Le persone sono inventate.
+  **Una sola chiamata multimodale** vede la REAL intera insieme a tag e contesto Commons e restituisce **brief e prompt iniziale**,
+  senza descrizione visiva dedicata. Il brief editoriale del processo resta immutabile; il prompt e la scena possono cambiare.
+  Le persone sono inventate.
   Una SLOP e la propria REAL non compaiono nella stessa partita (specifiche `copie-di-gioco`, `gioco-a-livelli`).
 - **Credibilità prima dell'aderenza letterale al prompt.** Il valutatore esamina **l'immagine generata intera**, senza crop
   né trattamento 4:5; decide accettazione, nuovo tentativo, revisione del prompt o revisione umana. Il ritaglio 4:5 è preparato
