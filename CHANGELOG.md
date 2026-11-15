@@ -7,14 +7,16 @@ I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella c
 
 - **REAL come riferimento editoriale:** la nuova SLOP non deve assomigliare alla REAL di origine né cambiare un solo elemento.
   Il riferimento serve a bilanciare temi e linguaggio fotografico; i tag finali derivano dalla candidata accettata.
-- **Loop orientato alla credibilità:** una candidata viene generata, preparata come copia 4:5 e valutata; si accetta, si
+- **Loop orientato alla credibilità:** una candidata viene generata e valutata **per intero**, prima di preparare il ritaglio 4:5; si accetta, si
   rigenera con lo stesso prompt, si riscrive il prompt o si riprogetta la scena, entro un massimo configurabile di 1–5
   generazioni (predefinito 3). Tolleranza editoriale separata, difetti critici mai compensati, stop anticipato alla prima
   accettazione, sospensione degli esiti incerti e nessun inserimento automatico nella libreria delle candidate bocciate.
 - **Difficoltà del giocatore:** più tentativi possono aumentare la qualità media, ma non definiscono una difficoltà verificata.
+- **Valutazione senza crop:** il valutatore vede la fotografia generata completa; ritaglio 4:5 e trattamento si applicano
+  **dopo l'accettazione**, senza vincolare il modello a concentrare tutti i soggetti nel riquadro del gioco.
 - **Protocollo REAL:** selezione editoriale qualitativa con otto principi (issue #138), nessun filtro automatico nel wizard.
-- **Specifica:** `generazione-slop` 5.0.0, `copie-di-gioco` 9.1.0, `libreria-immagini` 3.3.0,
-  `dashboard-admin-wizard-real` 2.2.0, `statistiche-impostazioni` 2.4.0, `AGENTS.md` e `MASTER.md` 22.0.0.
+- **Specifica:** `generazione-slop` 5.0.1, `copie-di-gioco` 9.1.1, `libreria-immagini` 3.3.1,
+  `dashboard-admin-wizard-real` 2.2.0, `statistiche-impostazioni` 2.4.0, `AGENTS.md` e `MASTER.md` 22.0.1.
   Il codice e la produzione 1.26.0 sono **invariati**. La specifica #136 va riallineata prima delle PR applicative.
 
 ## Dopo la 1.26.0 — 2026-11-15T09:00:00Z (decisioni e operazioni, nessun cambiamento di codice)
