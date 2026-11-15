@@ -1,8 +1,16 @@
-# Dashboard e wizard REAL — specifica 2.0.0
+# Dashboard e wizard REAL — specifica 2.1.0
 
-Stato: vigente. Aggiornata: 2026-11-14T12:00:00Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
+Stato: vigente. Aggiornata: 2026-11-15T09:00:00Z. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wizard di `didascalie-wizard.v1.0.0` e
 `anteprima-descrizione.v1.2.0`, che restano nella cronologia git.
+
+**Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
+descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
+
+- **Passo 3, Inquadratura:** il riquadro è sempre 4:5 verticale; il formato non si sceglie più (specifica `copie-di-gioco` 9.0.0).
+- **Criteri di scelta delle REAL:** è una scelta editoriale non caricare REAL che un generatore non sa disegnare bene. I criteri sono
+  da definire con l'owner (specifica `generazione-slop`, sezione 9); quando ci saranno, entrano in questa specifica come promemoria
+  del passo 1.
 
 ## 1. Decisioni dell'owner
 

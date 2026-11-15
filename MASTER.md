@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 20.0.0, aggiornata il 2026-11-14T21:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 21.0.0, aggiornata il 2026-11-15T09:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,14 +9,15 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **In produzione:** app 1.25.1 (PR rickymusu-bit/real-or-slop#133 e #134, unite il 2026-11-14; migrazioni fino alla 0048). Operazioni fatte
-  in produzione il 2026-11-14 su richiesta dell'owner: contesto 1.7.0 salvato (base, analisi, prompt SLOP); Genere, Colore e Supporto
-  completati per le 55 REAL (55 chiamate a pagamento, tutte riuscite); misure delle 55 copie; `mugshot` spostato da Altro a Genere;
-  decennio aggiunto alle 9 REAL che non lo avevano, dalla data EXIF dell'originale o dalla pagina Commons. Gruppi oltre la soglia:
-  `crowd-scene/1960s`, `press-photo/2020s`, `press-photo/1960s`.
-- **Proposta aperta:** app 1.26.0, migrazione 0049: SLOP gemelle al posto di gruppi e slot (una REAL per il prompt, un'altra per
-  l'aspetto), coppia mai nella stessa partita, contesto 1.8.0 proposto, trattamento senza effetti disegnati, misure versione 2, tetto
-  di risposta dell'analisi a 8000 token, e le correzioni della revisione del codice della 1.25 (voce 1.26.0 del `CHANGELOG.md`).
+- **In produzione:** app 1.26.0 (PR rickymusu-bit/real-or-slop#135, unita il 2026-11-14; migrazioni fino alla 0049). In produzione
+  dal 2026-11-14: contesto 1.8.0 dei prompt SLOP, soglia di proposta al 10%, modello di immagini `gpt-image-2.6-flare` in qualità
+  `medium` (da riportare a `gpt-image-2.5-flare` `high` con la prossima versione). Il primo lotto di gemelle (2026-11-15, 9 immagini,
+  batch in pausa) ha mostrato copie rovinate dal trattamento e prompt inventati senza vedere la foto.
+- **Da implementare** (issue rickymusu-bit/real-or-slop#136, decisioni dell'owner del 2026-11-15): pipeline foto REAL → descrizione
+  → prompt con un solo elemento cambiato → foto SLOP → tag, una chiamata per foto a ogni passo; copie di gioco 4:5 per tutte;
+  trattamento dalle misure della REAL di origine; modelli predefiniti `gpt-6.1-sol` e `gpt-image-2.5-flare` `high`. Specifiche già
+  scritte: `generazione-slop` 4.0.0 e `copie-di-gioco` 9.0.0; le altre hanno un riquadro con le decisioni da implementare.
+- **Da decidere con l'owner:** criteri di scelta delle REAL; elemento inventato nella lista di fine partita.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
 
 ## Specifiche vigenti
@@ -26,15 +27,15 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.1.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.2.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 8.0.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.0.0 |
-| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 3.0.0 |
-| Sezione Database | `docs/database-immagini.md` | 2.3.0 |
-| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.1.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.2.0 |
-| Privacy e note legali | `docs/privacy-note-legali.md` | 1.2.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 9.0.0 (da implementare) |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.1.0 |
+| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 4.0.0 (da implementare) |
+| Sezione Database | `docs/database-immagini.md` | 2.4.0 |
+| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.3.0 |
+| Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
 delle vecchie pipeline e le snapshot di `AGENTS.md` e `MASTER.md`. Restano nella cronologia git: `git log -- docs/<nome>` trova il

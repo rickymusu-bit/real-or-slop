@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 3.1.0
+# Libreria delle immagini, tag e analisi — specifica 3.2.0
 
-Stato: vigente; la 3.0.0 è in produzione con l'app 1.25.0, la 3.1.0 è nell'app 1.26.0 (in revisione). Aggiornata: 2026-11-14T21:30:00Z.
+Stato: vigente; la 3.0.0 è in produzione con l'app 1.25.0, la 3.1.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T09:00:00Z.
 La 3.1.0 registra la REAL di origine delle SLOP gemelle (migrazione 0049), il tetto di risposta dell'analisi e il contesto 1.8.0.
 La 3.0.0 sostituisce la categoria Formato con Genere, Colore e Supporto, giudicate solo dall'immagine, e aggiunge il completamento a
 pagamento di queste tre categorie per le immagini già analizzate (decisioni dell'owner del 2026-11-14, sezioni 4 e 5). La 2.0.0 è la
@@ -8,6 +8,20 @@ versione consolidata (riordino della documentazione dell'owner del 2026-11-14): 
 senza strati `libreria-immagini.v1.8.0`, `categorie-tag.v1.1.0` e le parti su libreria, tag e analisi di `database-immagini.v1.0.1`,
 `didascalie-wizard.v1.0.0` e `anteprima-descrizione.v1.2.0`, che restano nella cronologia git. Regole di contenuto delle SLOP e
 trasparenza: specifica `contenuti-e-trasparenza`. Copie di gioco: specifica `copie-di-gioco`.
+
+**Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
+descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
+
+- **Descrizione visiva delle REAL:** un nuovo campo della REAL (`visual_description`, con modello e data), scritto da una chiamata a
+  pagamento che guarda la copia di gioco, modificabile dall'owner; è l'ingresso del prompt della gemella (specifica
+  `generazione-slop`, sezioni 3 e 4). Non è una didascalia: non compare mai nel gioco.
+- **Chiamate a pagamento:** un quarto tipo, `description`, accanto ad analisi, prompt e immagini; una chiamata per foto a ogni passo.
+- **Contesto dei modelli:** una quarta parte, «Descrizione delle REAL», con versioni e ripristino come le altre; proposte del codice
+  1.9.0 per questa parte e per «Prompt per le SLOP».
+- **Modelli predefiniti:** `gpt-6.1-sol` per il testo (deve leggere immagini), `gpt-image-2.5-flare` in qualità `high` per le immagini.
+- **Campi di una SLOP generata:** REAL di origine, tag di partenza, elemento cambiato (`place`, `time`, `object` o `action`, da che cosa
+  a che cosa), qualità; niente più REAL campione.
+- **Stati:** approvare e pubblicare richiedono una copia di gioco 4:5 (specifica `copie-di-gioco`).
 
 ## 1. Decisioni dell'owner
 

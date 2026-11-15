@@ -1,6 +1,6 @@
-# Privacy e note legali — specifica 1.2.0
+# Privacy e note legali — specifica 1.3.0
 
-Stato: vigente, la 1.2.0 in produzione con l'app 1.25.0. Aggiornata: 2026-11-14T19:00:00Z.
+Stato: vigente, la 1.2.0 in produzione con l'app 1.25.0. Aggiornata: 2026-11-15T09:00:00Z.
 1.2.0: su richiesta dell'owner del 2026-11-14 i Termini d'uso (aggiornati il 14 novembre 2026) dicono che le SLOP sono generate «senza
 parti di fotografie vere, e spesso ridotte, sfocate, sgranate o sbiadite come lo sono le immagini che circolano», al posto di «generate
 integralmente», per il trattamento delle SLOP (specifica `copie-di-gioco`, sezione 4); «Fonti e crediti» lo dice allo stesso modo.
@@ -12,6 +12,12 @@ Privacy e Termini non cambiano.
 **Verifica legale.** I testi delle pagine Privacy e Termini, scritti a partire da ciò che il codice fa, sono stati verificati da un legale
 (comunicazione dell'owner del 2026-11-13); le due frasi dei termini cambiate con la tolta delle didascalie sono state approvate il
 2026-11-14, la frase sul trattamento delle SLOP lo stesso giorno. Ogni modifica a quei testi va fatta verificare di nuovo.
+
+**Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
+descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
+
+- **Fonti e crediti, Come funziona, crediti di fine partita:** la copia di gioco è ritagliata in formato verticale 4:5, non più «al
+  formato comune più vicino». Sono testi descrittivi, fuori da Privacy e Termini: i testi di Privacy e Termini non cambiano.
 
 ## 1. Decisioni dell'owner (2026-11-12)
 
