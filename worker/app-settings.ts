@@ -1,7 +1,7 @@
 /** Numeric settings of the dashboard (spec `statistiche-impostazioni`, section 2): thresholds of the SLOP studio and of
  * the automatic proposals, hours of an open game. A missing row is the default of the code. */
 import { HttpError, type Env } from "./core";
-import { AUTO_DEFAULT_THRESHOLD, SECTION_MIN_REAL } from "../shared/twins";
+import { AUTO_DEFAULT_THRESHOLD, SECTION_MIN_REAL } from "../shared/slop-proposals";
 
 export const LIMITS = {
   max_generation_attempts: { min: 1, max: 5, default: 3 },
@@ -44,3 +44,4 @@ export async function settingsRoute(env: Env, method: string, data: Record<strin
   await env.DB.batch(writes);
   return view();
 }
+

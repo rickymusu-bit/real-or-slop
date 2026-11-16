@@ -1,3 +1,7 @@
+# 1.36.0
+
+SLOP indipendenti: nessun legame persistente con la REAL, coesistenza in partita, conteggi del catalogo e trattamento da misure anonime. Migrazione 0053 preserva tentativi e chiamate. Revisione tecnica e ripartizione Sol/Astra in docs/revisione-codice.md.
+
 # Registro delle versioni
 
 Aggiornato: 2026-11-16T18:16:17Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
@@ -837,3 +841,4 @@ Fase 1 dei lotti editoriali (`docs/lotti-editoriali.v1.3.1.md`, AGENTS/MASTER 14
 - PvP due giocatori su Durable Objects SQLite e WebSocket hibernation, reveal comune, scadenze e audit D1.
 - Riconnessione HTTP/WebSocket, rate limit, abbandono e test con due client reali.
 - Backup/restore locali verificabili, configurazione preview fail-closed e piano di rilascio separato dalla produzione.
+

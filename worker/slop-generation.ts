@@ -1,14 +1,15 @@
 /** Editorial SLOP pipeline: one textual brief per REAL, bounded full-image evaluation loop, private attempts.
  * All paid steps are claimed before sending. Interrupted/uncertain steps are never automatically repeated. */
 import { HttpError, id, type Env } from "./core";
-import { create, viewOf, find, tagRowsOf } from "./library";
+import { create, viewOf, find } from "./library";
 import { chosenModel, chosenQuality } from "./models";
 import { currentContext, PIPELINE } from "./model-context";
+import type { Metrics } from "../shared/copy-treatment";
 import { numberSettings } from "./app-settings";
 import { generationSize, nearestFormat, type Format } from "../shared/game-copy";
-import { MAX_BATCH, type TwinItem } from "../shared/twins";
-import { briefSchema, realDescription, validBrief, validEvaluation, DECISIONS, type Brief, type Evaluation } from "../shared/editorial";
-import { byCategory, twinItems } from "./twins";
+import { MAX_BATCH, type InspirationItem } from "../shared/slop-proposals";
+import { briefSchema, realDescription, validBrief, validEvaluation, DECISIONS, type Brief, type Evaluation, type RealDescription } from "../shared/editorial";
+import { byCategory, inspirationItems } from "./slop-references";
 import { paid, PaidError, responseJson } from "./paid";
 import { IMAGE_MARK, jsonWithImage } from "./image-body";
 import { imageMime } from "../shared/image-format";
@@ -18,13 +19,13 @@ import { analyze } from "./analysis";
 
 const now = () => new Date().toISOString();
 const parse = <T>(s: string | null, fallback: T): T => { try { return s ? JSON.parse(s) as T : fallback; } catch { return fallback; } };
-interface Snapshot { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string }
+interface Snapshot { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string; source_description?: RealDescription; source_tags?: ReturnType<typeof byCategory>; width?: number; height?: number; target_metrics?: Metrics | null }
 interface Batch { id: string; slots: string; prompts: string; prompts_status: string; prompts_error: string; pipeline_version: number; loop_settings: string; created_at: string; updated_at: string; runner: string | null; runner_status: string | null; runner_updated: string | null }
-interface Process { id: string; batch_id: string; slot: number; source_id: string; image_id: string | null; state: string; brief: string | null; brief_hash: string | null; prompt: string; snapshot: string; attempts: number; error: string; updated_at: string }
+interface Process { id: string; batch_id: string; slot: number; image_id: string | null; state: string; brief: string | null; brief_hash: string | null; prompt: string; snapshot: string; attempts: number; error: string; updated_at: string }
 interface Attempt { id: string; process_id: string; number: number; prompt: string; status: string; candidate_key: string | null; evaluation: string | null }
 export interface PromptEntry { prompt: string; used: string[]; brief?: Brief; format?: Format }
-export const itemsOf = (row: { slots: string }): TwinItem[] => parse<unknown[]>(row.slots, []).filter((i): i is TwinItem =>
-  !!i && typeof (i as TwinItem).source === "string" && Array.isArray((i as TwinItem).tags));
+export const itemsOf = (row: { slots: string }): InspirationItem[] => parse<unknown[]>(row.slots, []).filter((i): i is InspirationItem =>
+  !!i && Array.isArray((i as InspirationItem).tags));
 const confirmOnly = (data: Record<string, unknown>, allowed: string[]) => {
   if (Object.keys(data).some(k => !["confirm", ...allowed].includes(k))) throw new HttpError(400, "Campi non previsti");
   if (data.confirm !== true) throw new HttpError(400, "Conferma il massimo delle chiamate a pagamento");
@@ -82,21 +83,30 @@ async function show(env: Env, batchId: string) {
     prompts_status: row.prompts_status, prompts_error: row.prompts_error, created_at: row.created_at, updated_at: row.updated_at, runner: runnerView(row),
     images: await Promise.all(ids.map(i => viewOf(env, i.id))) };
 }
-export async function initializeBatch(env: Env, batchId: string, items: TwinItem[], snapshot: Snapshot) {
+export async function initializeBatch(env: Env, batchId: string, items: InspirationItem[], snapshot: Snapshot) {
   const stamp = now();
-  await env.DB.batch([env.DB.prepare("UPDATE slop_batches SET pipeline_version=2,loop_settings=? WHERE id=?").bind(JSON.stringify(snapshot), batchId),
-    ...items.map((item, slot) => env.DB.prepare(`INSERT INTO slop_processes(id,batch_id,slot,source_id,snapshot,created_at,updated_at) VALUES(?,?,?,?,?,?,?)`)
-      .bind(id(), batchId, slot, item.source, JSON.stringify(snapshot), stamp, stamp))]);
+  const configs = await Promise.all(items.map(async item => {
+    const source = await find(env, item.source!);
+    const description = realDescription(parse(source.real_description, null));
+    if (!description || !["approved", "published"].includes(source.status)) throw new HttpError(409, "REAL non disponibile o descrizione mancante");
+    return {...snapshot, source_description: description, source_tags: byCategory(item.tags), width: source.width, height: source.height,
+      target_metrics: parse<Metrics | null>(source.copy_metrics, null)};
+  }));
+  const anonymous = items.map((item, slot) => ({title: `Proposta ${slot + 1}`, tags: item.tags}));
+  await env.DB.batch([env.DB.prepare("UPDATE slop_batches SET slots=?,pipeline_version=2,loop_settings=? WHERE id=?")
+    .bind(JSON.stringify(anonymous), JSON.stringify(snapshot), batchId),
+    ...items.map((_, slot) => env.DB.prepare(`INSERT INTO slop_processes(id,batch_id,slot,snapshot,created_at,updated_at) VALUES(?,?,?,?,?,?)`)
+      .bind(id(), batchId, slot, JSON.stringify(configs[slot]), stamp, stamp))]);
 }
 async function createBatch(env: Env, data: Record<string, unknown>) {
   if (Object.keys(data).some(k => k !== "sources")) throw new HttpError(400, "Campi non previsti");
   const sources = Array.isArray(data.sources) ? [...new Set(data.sources)] : [];
   if (!sources.length || sources.length > MAX_BATCH || sources.some(s => typeof s !== "string" || !/^[\w-]{1,64}$/.test(s))) throw new HttpError(400, `Scegli da 1 a ${MAX_BATCH} REAL`);
-  const items = await twinItems(env, sources as string[]);
-  for (const item of items) if (!realDescription(parse((await find(env, item.source)).real_description, null)))
+  const items = await inspirationItems(env, sources as string[]);
+  for (const item of items) if (!realDescription(parse((await find(env, item.source!)).real_description, null)))
     throw new HttpError(409, `«${item.title}»: aggiungi la descrizione editoriale manualmente o autorizza un'analisi combinata nel Database`);
   const batchId = id(), stamp = now(), snapshot = await loopSnapshot(env);
-  await env.DB.prepare("INSERT INTO slop_batches(id,theme,slots,created_at,updated_at) VALUES(?,'[]',?,?,?)").bind(batchId, JSON.stringify(items), stamp, stamp).run();
+  await env.DB.prepare("INSERT INTO slop_batches(id,theme,slots,created_at,updated_at) VALUES(?,'[]',?,?,?)").bind(batchId, "[]", stamp, stamp).run();
   await initializeBatch(env, batchId, items, snapshot);
   return show(env, batchId);
 }
@@ -132,12 +142,11 @@ export async function writePrompts(env: Env, batchId: string, data: Record<strin
   const wanted = (await env.DB.prepare("SELECT * FROM slop_processes WHERE batch_id=? ORDER BY slot").bind(batchId).all<Process>()).results.filter(p => index === undefined ? !p.prompt : p.slot === index);
   if (!wanted.length) throw new HttpError(409, "Brief e prompt già salvati");
   if (wanted.some(p => p.attempts || !["draft", "ready", "failed"].includes(p.state))) throw new HttpError(409, "Processo bloccato: nessuna chiamata ripetuta");
-  const inputs = await Promise.all(wanted.map(async p => {
-    const source = await find(env, p.source_id), description = realDescription(parse(source.real_description, null));
-    if (!description) throw new HttpError(409, "Descrizione REAL mancante: nessun backfill automatico");
-    if (!["approved","published"].includes(source.status)) throw new HttpError(409, "REAL non più approvata o pubblicata");
-    return { description, tags: byCategory((await tagRowsOf(env, [source.id])).get(source.id) || []) };
-  }));
+  const inputs = wanted.map(p => {
+    const snapshot = parse<Snapshot>(p.snapshot, {} as Snapshot), description = realDescription(snapshot.source_description);
+    if (!description) throw new HttpError(409, "Descrizione del processo mancante: crea un nuovo batch");
+    return {description, tags: snapshot.source_tags || {}};
+  });
   // Read before the claim: a refusal here costs nothing. A text written for the twin prompts would contradict the brief.
   const base = await currentContext(env, "base"), context = await currentContext(env, "slop_prompt");
   if (context.pipeline < PIPELINE) throw new HttpError(409, "Il contesto «Brief e prompt per le SLOP» in vigore è stato scritto per le SLOP gemelle: " +
@@ -147,7 +156,7 @@ export async function writePrompts(env: Env, batchId: string, data: Record<strin
   try {
     const failures: string[] = [];
     for (const [i, p] of wanted.entries()) {
-      const marked = await env.DB.prepare("UPDATE slop_processes SET state='prompting',updated_at=? WHERE id=? AND attempts=0 AND state IN ('draft','ready','failed') AND EXISTS(SELECT 1 FROM images WHERE id=slop_processes.source_id AND status IN ('approved','published'))").bind(now(), p.id).run();
+      const marked = await env.DB.prepare("UPDATE slop_processes SET state='prompting',updated_at=? WHERE id=? AND attempts=0 AND state IN ('draft','ready','failed')").bind(now(), p.id).run();
       if (!marked.meta.changes) throw new HttpError(409, "Processo occupato");
       try {
         const config = parse<Snapshot>(p.snapshot, {} as Snapshot);
@@ -187,10 +196,10 @@ async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array
   // Reuse a saved accepted result if the Worker was interrupted after inserting the library row.
   const existing = await env.DB.prepare("SELECT id FROM images WHERE generation_batch=? AND json_extract(generation_slot,'$.process')=?").bind(batch.id, p.id).first<{id: string}>();
   const config = parse<Snapshot>(p.snapshot, {} as Snapshot), item = itemsOf(batch)[p.slot];
-  const image = existing ? await viewOf(env, existing.id) : await create(env, { origin: "SLOP", title: ("Da REAL: " + item.title).slice(0, 200),
+  const image = existing ? await viewOf(env, existing.id) : await create(env, { origin: "SLOP", title: "SLOP " + (p.slot + 1),
     bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, prompt: p.prompt, model: config.image_model,
-    generation: {batch: batch.id, source: p.source_id, quality: config.quality,
-      slot: {index: p.slot, source: p.source_id, sample: p.source_id, tags: item.tags, process: p.id, brief: parse(p.brief, null), brief_hash: p.brief_hash, evaluation, attempts: p.attempts}} });
+    generation: {batch: batch.id, quality: config.quality,
+      slot: {index: p.slot, target_metrics: config.target_metrics || null, tags: item.tags, process: p.id, brief: parse(p.brief, null), brief_hash: p.brief_hash, evaluation, attempts: p.attempts}} });
   await env.DB.prepare("UPDATE slop_processes SET image_id=?,state='accepted',updated_at=? WHERE id=?").bind(image.id, now(), p.id).run();
   return {...image, process: {id: p.id, state: "accepted", attempts: p.attempts}};
 }
@@ -207,24 +216,20 @@ export async function generateImage(env: Env, batchId: string, data: Record<stri
   if (p.image_id) return {...await viewOf(env, p.image_id), process: {id: p.id, state: p.state, attempts: p.attempts}};
   if (!["ready", "retry"].includes(p.state) || !brief) throw new HttpError(409, `Processo ${p.state}: nessuna chiamata ripetuta; serve revisione o un nuovo processo`);
   if (p.attempts >= config.max_generation_attempts) throw new HttpError(409, "Tentativi esauriti");
-  const source = await find(env, p.source_id);
-  if (!["approved", "published"].includes(source.status)) throw new HttpError(409, "REAL non più approvata o pubblicata");
-  const live = await env.DB.prepare("SELECT id FROM images WHERE generation_source=? AND status IN ('new','approved','published')").bind(p.source_id).first();
-  if (live) throw new HttpError(409, "La REAL ha già una SLOP attiva");
   const briefHash = await hash(brief);
   if (p.brief_hash && p.brief_hash !== briefHash) throw new HttpError(409, "Brief modificato dopo l'avvio");
   // Read before the attempt is claimed: a failure here costs nothing.
   const [base, context] = [await currentContext(env, "base"), await currentContext(env, "slop_evaluation")];
   let marked;
-  try { marked = await env.DB.prepare("UPDATE slop_processes SET state='running',brief_hash=?,attempts=attempts+1,updated_at=? WHERE id=? AND state=? AND attempts=? AND EXISTS(SELECT 1 FROM slop_batches WHERE id=? AND prompts_status='done') AND EXISTS(SELECT 1 FROM images WHERE id=slop_processes.source_id AND status IN ('approved','published')) AND NOT EXISTS(SELECT 1 FROM images s WHERE s.generation_source=slop_processes.source_id AND s.status IN ('new','approved','published'))")
+  try { marked = await env.DB.prepare("UPDATE slop_processes SET state='running',brief_hash=?,attempts=attempts+1,updated_at=? WHERE id=? AND state=? AND attempts=? AND EXISTS(SELECT 1 FROM slop_batches WHERE id=? AND prompts_status='done')")
     .bind(briefHash, now(), p.id, p.state, p.attempts, batchId).run(); }
-  catch { throw new HttpError(409, "Un altro processo sta usando questa REAL"); }
+  catch { throw new HttpError(409, "Impossibile acquisire il processo"); }
   if (!marked.meta.changes) throw new HttpError(409, "Tentativo già inviato: nessuna chiamata ripetuta");
   p.attempts++; p.brief_hash = briefHash;
   const attemptId = id(), key = `slop-temporary/${p.id}/${attemptId}`, stamp = now();
   await env.DB.prepare("INSERT INTO slop_attempts(id,process_id,number,prompt,created_at,updated_at) VALUES(?,?,?,?,?,?)").bind(attemptId, p.id, p.attempts, p.prompt, stamp, stamp).run();
   try {
-    const size = generationSize(config.image_model, nearestFormat(source.width, source.height));
+    const size = generationSize(config.image_model, nearestFormat(config.width || 1024, config.height || 1024));
     const payload = await paid(env, "images", config.image_model, {model: config.image_model, prompt: p.prompt, n: 1, size, quality: config.quality}, {process: p.id, attempt: attemptId});
     const encoded = (payload.data as {b64_json?: string}[] | undefined)?.[0]?.b64_json;
     if (!encoded) throw new HttpError(502, "Risposta del generatore non leggibile");
@@ -275,7 +280,7 @@ export async function attention(env: Env) {
   for (const b of batches) {
     const items = itemsOf(b);
     for (const p of await processViews(env, b.batch_id))
-      if ((ATTENTION as readonly string[]).includes(p.state)) out.push({...p, title: items[p.slot]?.title || "", source_id: p.source_id});
+      if ((ATTENTION as readonly string[]).includes(p.state)) out.push({...p, title: items[p.slot]?.title || ""});
   }
   return out.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
 }
@@ -301,11 +306,9 @@ export async function acceptProcess(env: Env, processId: string, data: Record<st
   // doubt, which the owner settles (owner decision of 2026-11-16).
   if (evaluation.critical_findings.length) throw new HttpError(409, "Difetti critici: la candidata non si può accettare");
   const batch = await load(env, p.batch_id);
-  const source = await find(env, p.source_id);
-  if (!["approved", "published"].includes(source.status)) throw new HttpError(409, "REAL non più approvata o pubblicata");
-  const claimed = await env.DB.prepare("UPDATE slop_processes SET state='running',updated_at=? WHERE id=? AND state='review_needed' AND NOT EXISTS(SELECT 1 FROM images s WHERE s.generation_source=slop_processes.source_id AND s.status IN ('new','approved','published'))")
+  const claimed = await env.DB.prepare("UPDATE slop_processes SET state='running',updated_at=? WHERE id=? AND state='review_needed'")
     .bind(now(), p.id).run().catch(() => ({meta: {changes: 0}}));
-  if (!claimed.meta.changes) throw new HttpError(409, "La REAL ha già una SLOP attiva o il processo è già stato deciso");
+  if (!claimed.meta.changes) throw new HttpError(409, "Il processo è già stato deciso");
   let image;
   try {
     const file = await env.QUARANTINE.get(a.candidate_key);
@@ -371,3 +374,4 @@ export async function batchRoute(env: Env, method: string, rest: string, data: R
   if (action === "stop" && method === "POST") return stopBatch(env, batchId, data);
   throw new HttpError(405, "Metodo non consentito");
 }
+

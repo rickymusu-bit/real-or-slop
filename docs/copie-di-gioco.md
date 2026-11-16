@@ -1,4 +1,4 @@
-# Copie di gioco — specifica 11.1.0
+# Copie di gioco — specifica 12.0.0
 
 Stato: vigente; la 11.0.0 è per l'app 1.34.0, la 11.1.0 per l'app 1.35.0. Aggiornata: 2026-11-16T16:40:52Z. La 11.1.0 distingue il seppia dal bianco e nero (richiesta dell'owner del 2026-11-16): tinta sui mezzitoni, misurata su tutti i pixel delle REAL, e tinta seppia di partenza nel riquadro. La 11.0.0 riporta la
 preparazione delle copie nel browser (decisione dell'owner del 2026-11-16: il Worker gestisce ciò che riguarda OpenAI, il browser
@@ -100,10 +100,9 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
 
 ### 4.3 Trattamento
 
-- Si applica a ogni SLOP gemella (studio, batch, rigenerazione) prima della copia di gioco: l'originale del generatore resta intatto
+- Si applica a ogni SLOP (studio, batch, rigenerazione) prima della copia di gioco: l'originale del generatore resta intatto
   nella quarantena.
-- **Obiettivo indicativo:** le misure della copia di gioco della REAL di riferimento, con i limiti descritti. Senza REAL di riferimento,
-  o se non è misurata, nessun trattamento. Se il trattamento crea artefatti, colori o illuminazione incoerenti, usare la versione
+- **Obiettivo indicativo:** le misure anonime salvate nel processo, con i limiti descritti. Nessun identificativo della REAL viene conservato. Senza misure, nessun trattamento. Se il trattamento crea artefatti, colori o illuminazione incoerenti, usare la versione
   senza trattamento o riprogettare la scena; **non** sacrificare la credibilità per la somiglianza delle metriche.
 - **Passi** (versione 5 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile. Ogni valore è
   proposto dalle misure della REAL; l'owner può sostituirli tutti con i cursori (sezione 4.4), che applicano gli stessi passi con i
@@ -188,3 +187,4 @@ Decisione dell'owner del 2026-11-16: il trattamento della copia si modifica come
   rifanno le copie; l'owner rivede le inquadrature e ripubblica. Le statistiche delle foto ripartono, perché contano solo i
   round giocati con la copia attuale.
 - Le partite in corso finiscono con le copie con cui sono iniziate.
+

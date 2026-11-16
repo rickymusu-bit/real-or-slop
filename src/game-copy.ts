@@ -38,7 +38,7 @@ export async function measureBlob(blob: Blob): Promise<Metrics> {
 /** What the treatment of a SLOP needs: the source REAL and its measures, the slot's Medium and Color, the seed, and the owner's
  * settings when chosen with the sliders (else proposed from the measures). */
 export interface TreatmentPlan {
-  off: boolean; seed: number; medium: string; color: string; sample: { id: string; metrics: Metrics }; settings?: Settings | null;
+  off: boolean; seed: number; medium: string; color: string; sample: { metrics: Metrics }; settings?: Settings | null;
 }
 
 /** The crop of an oriented original drawn at the size of the copy (`side` long): the pixels the treatment starts from. */
@@ -108,7 +108,7 @@ export async function originalOf(imageId: string): Promise<Blob> {
 /** Items of the library a treatment plan is built from. */
 export interface TreatableItem {
   id: string; origin: string;
-  generation?: { source?: string | null; slot?: { tags?: { label: string; category: string }[] | Record<string, string>; source?: string | null } | null } | null;
+  generation?: { slot?: { tags?: { label: string; category: string }[] | Record<string, string>; target_metrics?: Metrics | null } | null } | null;
   treatment?: Treatment | null;
   copy?: { crop: Crop | null } | null;
 }
@@ -128,14 +128,12 @@ export async function treatmentPlan(listed: TreatableItem, asked: { off?: boolea
     const response = await fetch(API + encodeURIComponent(id), { credentials: "same-origin", cache: "no-store" });
     return response.ok ? await response.json() as R : null;
   };
-  const item = await read<TreatableItem>(listed.id) || listed, sourceId = item.generation?.source || item.generation?.slot?.source;
-  if (!sourceId) return null;
-  const source = await read<{ id: string; metrics: Metrics | null }>(sourceId);
-  if (!source?.metrics) return null;
-  const stored = item.treatment, same = !!stored && stored.sample.id === source.id;
-  const settings = asked.settings !== undefined ? asked.settings : same && stored!.version >= 4 ? stored!.settings || null : null;
-  return { off: asked.off ?? (asked.settings ? false : same ? stored!.off : false), seed: same ? stored!.seed : randomSeed(),
-    ...lookOf(item.generation?.slot), sample: { id: source.id, metrics: source.metrics }, settings };
+  const item = await read<TreatableItem>(listed.id) || listed;
+  const stored = item.treatment, metrics = stored?.sample.metrics || item.generation?.slot?.target_metrics;
+  if (!metrics) return null;
+  const settings = asked.settings !== undefined ? asked.settings : stored && stored.version >= 4 ? stored.settings || null : null;
+  return { off: asked.off ?? (asked.settings ? false : stored?.off || false), seed: stored?.seed ?? randomSeed(),
+    ...lookOf(item.generation?.slot), sample: {metrics}, settings };
 }
 /** The settings a plan gives on these pixels: the owner's, or the proposal (what the sliders start from). */
 export function proposalOf(base: ImageData, plan: TreatmentPlan, long: number): Settings {
@@ -209,3 +207,4 @@ export async function measureMissing(items: { id: string; metrics?: Metrics | nu
   }
   return done;
 }
+

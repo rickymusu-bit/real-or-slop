@@ -39,7 +39,7 @@ export interface Row {
   real_description: string | null; real_description_provenance: string | null; commons_description: string | null;
   generation_batch: string | null; generation_slot: string | null; generation_quality: string | null;
   analysis_base_context: string | null; analysis_task_context: string | null; copy_crop: string | null; copy_view: string | null;
-  categories_completed_at: string | null; copy_metrics: string | null; copy_treatment: string | null; generation_group: string | null; generation_source: string | null;
+  categories_completed_at: string | null; copy_metrics: string | null; copy_treatment: string | null; generation_group: string | null;
 }
 const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
@@ -142,8 +142,7 @@ function view(row: Row, rows: TagRow[], extra: Extra = {}) {
     analysis: { status: row.analysis_status, error: row.analysis_error, at: row.analyzed_at,
       context: row.analysis_task_context ? { base: row.analysis_base_context, task: row.analysis_task_context } : null },
     generated: generatedOf(row),
-    generation: row.generation_batch || row.generation_source ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality,
-      source: row.generation_source } : null,
+    generation: row.generation_batch ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality } : null,
     group, missing_categories: VISUAL.filter(c => !rows.some(r => r.category === c)),
     completable: completable(row, rows.map(r => r.category)),
     metrics: validMetrics(parseJson(row.copy_metrics)), treatment: validTreatment(parseJson(row.copy_treatment)),
@@ -194,7 +193,7 @@ export function tagStatements(env: Env, imageIdValue: string, wanted: string[], 
 /** Adds a new image to the library. The original goes to quarantine; the browser then uploads its game copy. */
 export async function create(env: Env, input: { origin: Origin; title: string; description?: string; bytes: ArrayBuffer;
   source_url?: string; author?: string; license_name?: string; license_url?: string; prompt?: string; model?: string;
-  generation?: { batch: string; slot: unknown; quality: string; source?: string | null } }) {
+  generation?: { batch: string; slot: unknown; quality: string } }) {
   if (!env.QUARANTINE) throw new HttpError(503, "Quarantena privata non configurata");
   const bytes = new Uint8Array(input.bytes);
   if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new HttpError(413, "File vuoto o oltre 12 MB");
@@ -211,13 +210,13 @@ export async function create(env: Env, input: { origin: Origin; title: string; d
   await env.QUARANTINE.put(key, bytes, { httpMetadata: { contentType: mime }, customMetadata: { sha256: hash } });
   try {
     await env.DB.prepare(`INSERT INTO images(id,origin,title,description,source_url,author,license_name,license_url,prompt,model,
-      original_key,original_sha256,original_mime,width,height,created_at,updated_at,generation_batch,generation_slot,generation_quality,generation_source,commons_description)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      original_key,original_sha256,original_mime,width,height,created_at,updated_at,generation_batch,generation_slot,generation_quality,commons_description)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(imageIdValue, input.origin, text(input.title, "title", true), text(input.description, "description"),
         text(input.source_url, "source_url"), text(input.author, "author"), text(input.license_name, "license_name"),
         text(input.license_url, "license_url"), text(input.prompt, "prompt"), text(input.model, "model"),
         key, hash, mime, width, height, stamp, stamp, input.generation?.batch ?? null,
-        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null, input.generation?.source ?? null, input.origin === "REAL" ? input.description || "" : null).run();
+        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null, input.origin === "REAL" ? input.description || "" : null).run();
   } catch (error) {
     await env.QUARANTINE.delete(key);
     if (error instanceof HttpError) throw error;
@@ -228,7 +227,7 @@ export async function create(env: Env, input: { origin: Origin; title: string; d
 
 /** What makes two treatments give the same copy. */
 const treatmentKey = (t: ReturnType<typeof validTreatment>) =>
-  t ? JSON.stringify([t.version, t.off, t.seed, t.long, t.medium, t.color, t.sample.id, t.settings || null]) : "";
+  t ? JSON.stringify([t.version, t.off, t.seed, t.long, t.medium, t.color, t.sample.metrics, t.settings || null]) : "";
 
 /** POST /:id/copy?crop=…[&force=1]: stores the WebP game copy made in the owner's browser from the original (spec `copie-di-gioco`; owner
  * decision of 2026-11-16: the Worker handles what concerns OpenAI, the browser everything else). The crop is «x,y,width,height,4:5»
@@ -253,8 +252,6 @@ async function storeCopy(request: Request, env: Env, row: Row) {
   const treatment = treatmentHeader === null ? null : validTreatment(readJson(treatmentHeader));
   if (treatmentHeader !== null && !treatment) throw new HttpError(400, "Trattamento non valido");
   if (treatment && row.origin !== "SLOP") throw new HttpError(400, "Il trattamento vale solo per le SLOP");
-  if (treatment && !treatment.off && treatment.sample.id !== row.generation_source)
-    throw new HttpError(400, "Il trattamento deve usare la REAL di riferimento");
   const cropLong = Math.max(crop.width, crop.height);
   if (treatment?.settings && !validSettings(treatment.settings, cropLong)) throw new HttpError(400, "Impostazioni del trattamento fuori dai limiti");
   // The long side: the owner's (sliders), else the one proposed from the source REAL, else the recipe's.
@@ -362,12 +359,8 @@ export async function transition(env: Env, row: Row, action: string, data: Recor
     if (result.meta.changes && row.status === "published" && row.copy_key) await retireCopy(env, row.copy_key, row.id);
   } else if (action === "restore") {
     if (row.status !== "trash") return;
-    const restored = await env.DB.prepare(`UPDATE images SET status=trashed_from,trashed_from=NULL,trashed_at=NULL,revision=revision+1,updated_at=? WHERE id=? AND status='trash'
-      AND (origin<>'SLOP' OR generation_source IS NULL OR (
-        NOT EXISTS(SELECT 1 FROM images other WHERE other.generation_source=images.generation_source AND other.id<>images.id AND other.status IN ('new','approved','published'))
-        AND NOT EXISTS(SELECT 1 FROM slop_processes p WHERE p.source_id=images.generation_source AND p.state IN ('running','retry'))))`)
+    await env.DB.prepare(`UPDATE images SET status=trashed_from,trashed_from=NULL,trashed_at=NULL,revision=revision+1,updated_at=? WHERE id=? AND status='trash'`)
       .bind(stamp, row.id).run();
-    if (!restored.meta.changes) throw new HttpError(409, "La REAL ha già una SLOP attiva o un processo in corso: impossibile ripristinare un'altra SLOP");
   } else throw new HttpError(404, "Azione inesistente");
 }
 
@@ -376,15 +369,13 @@ export async function transition(env: Env, row: Row, action: string, data: Recor
 async function destroy(env: Env, ids: readonly string[]): Promise<{ deleted: number; postponed: number }> {
   if (!ids.length) return { deleted: 0, postponed: 0 };
   const playing = await gamesInPlay(env, ids);
-  const generating = (await env.DB.prepare("SELECT DISTINCT source_id FROM slop_processes WHERE state IN ('running','prompting') AND source_id IN (SELECT value FROM json_each(?))")
-    .bind(JSON.stringify(ids)).all<{source_id:string}>()).results;
-  const blocked = new Set([...playing.keys(), ...generating.map(p=>p.source_id)]);
+  const blocked = new Set(playing.keys());
   const rows = (await env.DB.prepare(`SELECT id,original_key,copy_key FROM images WHERE status='trash'
     AND id IN (SELECT value FROM json_each(?))`).bind(JSON.stringify(ids.filter(i => !blocked.has(i)))).all<{ id: string; original_key: string; copy_key: string | null }>()).results;
   const postponed = ids.filter(i => blocked.has(i)).length;
   if (!rows.length) return { deleted: 0, postponed };
   const temporary = (await env.DB.prepare(`SELECT a.candidate_key FROM slop_attempts a JOIN slop_processes p ON p.id=a.process_id
-    WHERE (p.source_id IN (SELECT value FROM json_each(?1)) OR p.image_id IN (SELECT value FROM json_each(?1))) AND a.candidate_key IS NOT NULL`)
+    WHERE p.image_id IN (SELECT value FROM json_each(?1)) AND a.candidate_key IS NOT NULL`)
     .bind(JSON.stringify(rows.map(r=>r.id))).all<{candidate_key:string}>()).results;
   for (const a of temporary) await env.QUARANTINE?.delete(a.candidate_key);
   await env.DB.prepare("DELETE FROM images WHERE status='trash' AND id IN (SELECT value FROM json_each(?))").bind(JSON.stringify(rows.map(r => r.id))).run();
@@ -621,3 +612,4 @@ async function vocabulary(request: Request, env: Env, path: string): Promise<Res
   }
   throw new HttpError(404, "API dei tag inesistente");
 }
+

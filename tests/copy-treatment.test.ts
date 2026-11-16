@@ -74,7 +74,7 @@ test("the Worker accepts only well-formed measures and treatments", () => {
   assert.deepEqual(validMetrics({ ...m, v: 2 }), m, "measures of an earlier version are measured again");
   assert.equal(validMetrics({ ...m, saturation: 2 }), null);
   assert.equal(validMetrics({ ...m, cast: [1, 2] }), null);
-  const t = { version: 1, off: false, seed: 5, long: 700, medium: "film-still", color: "color", sample: { id: "abc", metrics: m } };
+  const t = { version: 1, off: false, seed: 5, long: 700, medium: "film-still", color: "color", sample: { metrics: m } };
   assert.ok(validTreatment(t));
   assert.ok(validTreatment({ ...t, version: 4 }), "an earlier version");
   assert.ok(validTreatment({ ...t, version: 5 }), "the current version");
@@ -155,3 +155,4 @@ test("changing «Colore» in the editor: the proposal's tint if it has that colo
   assert.deepEqual(castFor("sepia", { ...proposed, monochrome: "sepia", cast: [25, 3, -30] }), [25, 3, -30]);
   assert.ok(Math.abs(0.299 * SEPIA_TINT[0] + 0.587 * SEPIA_TINT[1] + 0.114 * SEPIA_TINT[2]) < 2, "about neutral in luminance");
 });
+

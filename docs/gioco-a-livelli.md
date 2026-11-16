@@ -1,9 +1,6 @@
-# Partita a livelli e classifica — specifica 2.2.0
+# Partita a livelli e classifica — specifica 3.0.0
 
-Stato: vigente; la 2.1.0 è in produzione con l'app 1.26.0. Aggiornata: 2026-11-15T09:00:00Z. La 2.1.0 tiene fuori dalla stessa partita
-una SLOP e la REAL da cui è nata (sezione 3). La 2.0.0 è la versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
-senza strati `gioco-a-livelli.v1.0.1` e le parti sul gioco di `copie-di-gioco.v5.0.0`, `didascalie-wizard.v1.0.0`,
-`anteprima-descrizione.v1.2.0` e `privacy-note-legali.v1.0.4`, che restano nella cronologia git.
+Stato: vigente per il ramo 1.36.0. Aggiornata: 2026-11-16T20:00:00Z.
 
 **Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
 descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
@@ -41,10 +38,7 @@ sono le sue foto, altrimenti resta disattivato con il motivo.
 ## 3. Partita
 
 1. Il giocatore sceglie il livello (`/gioca`); il server estrae il lotto e registra per ogni round la copia di gioco da servire.
-   **Gemelle** (decisione dell'owner del 2026-11-14, specifica `generazione-slop`): una SLOP e la REAL da cui è stata scritta non
-   compaiono nella stessa partita, perché vederle entrambe suggerirebbe la risposta. Se l'estrazione le contiene tutte e due, una
-   delle due, scelta a sorte, lascia il posto a un'altra foto pubblicata della stessa origine che non sia nella partita e la cui
-   gemella non lo sia: la sequenza delle origini estratta non cambia. Senza una sostituta la coppia resta (catalogo molto piccolo).
+   REAL e SLOP sono indipendenti: nessuna esclusione tra una SLOP e la foto che l’ha ispirata (decisione del 2026-11-16).
 2. Il browser scarica la prima foto; «Inizia» avvia la partita entro il tempo di preparazione.
 3. Il server consegna **una foto alla volta**, mai una successiva. Il tempo parte quando il browser la mostra e lo segnala.
 4. **Foto:** intera nel suo formato, esplorabile con dita, mouse, rotella o doppio tocco, «Foto intera» per tornare all'inizio
@@ -86,3 +80,4 @@ caso, pari alle foto del livello senza errori.
 - Il codice prova il possesso di una schermata, non l'identità.
 - Con un catalogo piccolo chi gioca spesso riconosce le foto; la difesa scelta è il numero di foto pubblicate.
 - Sul telefono le foto orizzontali sono piccole e alcuni indizi si vedono solo ingrandendo, per REAL e SLOP allo stesso modo.
+

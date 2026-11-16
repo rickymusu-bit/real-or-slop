@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 24.0.0, aggiornata il 2026-11-16T12:40:03Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 25.0.0, aggiornata il 2026-11-16T19:41:37Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -30,7 +30,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   documentato da Commons e incertezze, senza inventare fatti né sovrascrivere il testo originale di Commons.
   Il brief editoriale del processo resta immutabile; il prompt e la scena possono cambiare.
   Le persone sono inventate.
-  Una SLOP e la propria REAL non compaiono nella stessa partita (specifiche `copie-di-gioco`, `gioco-a-livelli`).
+  La REAL è solo ispirazione: nessun legame identificativo viene conservato nei processi o nelle SLOP. Possono comparire nella stessa partita.
 - **Credibilità prima dell'aderenza letterale al prompt.** Il valutatore esamina **l'immagine generata intera**, senza crop
   né trattamento 4:5; decide accettazione, nuovo tentativo, revisione del prompt o revisione umana. Il ritaglio 4:5 è preparato
   **soltanto dopo l'accettazione** e non dà feedback al generatore. I difetti critici non sono compensabili con altri punti forti; tentativi
@@ -85,3 +85,4 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
    `npx wrangler d1 migrations apply DB --remote && npm run deploy`): il merge è l'autorizzazione dell'owner a entrambi. Le anteprime delle
    PR usano solo il database `real-or-slop-preview` e i bucket `real-or-slop-preview-*` (blocco `previews`, ambiente `preview` per le
    migrazioni), mai quelli di produzione.
+

@@ -38,7 +38,7 @@ interface Item {
   categories: Record<string, string>;
   stats: { views: number; correct: number }; in_play: number; no_derivatives: boolean;
   /** A generated SLOP: its batch, the REAL it is the twin of and what its prompt was written from. */
-  generation?: { batch: string; slot: StartSlot | null; quality: string | null; source?: string | null } | null;
+  generation?: { batch: string; slot: StartSlot | null; quality: string | null } | null;
   group: { key: string; genre: string; time: string } | null; missing_categories: string[]; completable: boolean;
   metrics: Metrics | null; treatment: Treatment | null; copy_sha?: string;
 }
@@ -153,7 +153,7 @@ export async function showLibrary() {
         <label>Tentativi massimi per SLOP<input type="number" name="max_generation_attempts" required></label><label>Tolleranza (0 rigorosa, 1 normale, 2 permissiva)<input type="number" name="editorial_tolerance" required></label>
         <label>Soglia di proposta (% di spread)<input type="number" name="slop_auto_threshold_percent" required></label><button>Salva</button></form>
       <p class="hint">Stime da verificare sui primi temi reali. Una proposta di generazione compare quando
-        100 × (REAL − SLOP gemelle approvate o pubblicate) / REAL raggiunge la soglia (33%: 1,5 REAL per ogni gemella); spegnere le proposte non ferma un batch già avviato.</p></details>
+        100 × (REAL − SLOP approvate o pubblicate) / REAL raggiunge la soglia (33%: 1,5 REAL per ogni SLOP); spegnere le proposte non ferma un batch già avviato.</p></details>
     <details id="library-games" class="library-vocabulary"><summary>Partite</summary>
       <form id="library-games-form" class="library-inline"><label>Durata massima di una partita aperta (ore)<input type="number" name="open_game_hours" required></label><button>Salva</button></form>
       <p class="hint">Oltre questo tempo una partita non conclusa non trattiene più le copie delle foto ritirate o modificate, e la sua foto può non essere più disponibile. I livelli del gioco sono fissi nel codice.</p></details></section>
@@ -264,10 +264,9 @@ export async function showLibrary() {
   const startTags = (item: Item) => {
     const pills = item.origin === "SLOP" ? startPills(item.generation?.slot) : "";
     if (!pills) return "";
-    const source = item.generation?.source;
     return `<div class="library-start-tags" data-start-tags><span class="image-preview-label">Tag di partenza</span>
-      <p class="hint">${source ? "Tag della REAL di riferimento" : "Tag da cui è stato scritto il prompt"}; i tag dell'immagine sono quelli dell'analisi.</p>
-      <div class="image-preview-tags">${pills}</div>${source ? `<p><button type="button" data-open-source="${escape(source)}">Apri la REAL di origine</button></p>` : ""}</div>`;
+      <p class="hint">Tag da cui è stato scritto il prompt; i tag dell'immagine sono quelli dell'analisi.</p>
+      <div class="image-preview-tags">${pills}</div></div>`;
   };
   const preview = (item: Item) => openPreview(item.origin === "REAL"
     ? { src: item.file, alt: item.title, title: item.title, description: item.description,
@@ -345,7 +344,7 @@ export async function showLibrary() {
   const measuresBlock = (item: Item, editable: boolean) => {
     const t = item.treatment;
     const treatment = item.origin !== "SLOP" ? "" : !t ? '<p class="hint" data-treatment>Copia senza trattamento.</p>'
-      : `<p class="hint" data-treatment>${t.off ? "Trattamento spento" : `Trattamento verso la REAL di riferimento <code>${escape(t.sample.id.slice(0, 8))}</code> (${escape(t.medium || "supporto non indicato")}, ${escape(t.color || "colore non indicato")})` +
+      : `<p class="hint" data-treatment>${t.off ? "Trattamento spento" : `Trattamento fotografico (${escape(t.medium || "supporto non indicato")}, ${escape(t.color || "colore non indicato")})` +
         (t.settings ? ", regolato dall'owner" : "") + (t.gap !== undefined ? `, scarto dall'obiettivo ${Math.round(t.gap * 100)}%` : "") + `: ${metricText(t.sample.metrics)}`}.</p>`;
     const commands = item.origin === "SLOP" && editable && item.copy ? `<div class="library-inline" data-treatment-commands>` +
       (t && !t.off ? '<button type="button" id="library-treatment-off">Senza trattamento</button>'
@@ -833,3 +832,4 @@ export async function showLibrary() {
   await autoBox.refresh();
   $("#dashboard-loading").remove();
 }
+

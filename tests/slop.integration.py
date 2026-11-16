@@ -63,7 +63,7 @@ try:
     sid=result['id'];crop=copy['copy']['crop'];long=max(crop['width'],crop['height'])
     m={'long':long,'noise':2.0,'sharpness':5.0,'contrast':120,'saturation':0.1,'cast':[1,0,-1],'tint':[0,0,0],'v':3}
     chosen={'contrast':1.1,'saturation':0.9,'cast':[3,0,-3],'monochrome':'sepia','blur':0.5,'grain':4,'grainSize':1,'jpeg':0.8,'long':long}
-    record={'version':5,'off':False,'seed':7,'long':long,'medium':'','color':'','sample':{'id':historical['id'],'metrics':m},'settings':chosen}
+    record={'version':5,'off':False,'seed':7,'long':long,'medium':'','color':'','sample':{'metrics':m},'settings':chosen}
     def upload(treatment):
         q=f"?crop={crop['x']},{crop['y']},{crop['width']},{crop['height']},4:5"
         req=urllib.request.Request(LIBRARY+'/'+sid+'/copy'+q,data=game_copy(original,crop),method='POST',
@@ -74,7 +74,7 @@ try:
     assert upload({**record,'settings':{**chosen,'blur':9}})[0]==400
     assert upload({**record,'settings':{**chosen,'long':long+1},'long':long+1})[0]==400  # longer than the crop
     assert upload({**record,'long':long-1})[0]==400  # the record's long side differs from the settings'
-    assert upload({**record,'sample':{'id':'another-real','metrics':m}})[0]==400  # only the source REAL
+    assert upload({**record,'sample':{'id':'another-real','metrics':m}})[0]==400  # identifying treatment payloads are rejected
     code,manual=upload(record);assert code==201 and manual['treatment']['settings']==chosen,manual
     assert upload(record)[1]['already_prepared'] is True
     assert call('/'+result['id']+'/analyze',{'confirm':True},library=True)[0]==200
@@ -184,22 +184,21 @@ try:
     with urllib.request.urlopen(req) as r:assert r.status==201
     remove([source['id']])
     assert call('/'+accepted['id']+'/analyze',{'confirm':True},library=True)[0]==200
-    # A source in an in-flight process stays in the trash until that operation settles.
+    # Deleting an inspiration never deletes or blocks its independent process.
     source=real();sources.append(source['id']);pending=batch(source);pid=pending['processes'][0]['id']
     sql(f"UPDATE slop_processes SET state='running' WHERE id='{pid}'")
     call('/'+source['id']+'/trash',{},library=True)
-    assert call('/'+source['id'],method='DELETE',library=True)[0]==409
-    assert call('/bulk',{'action':'delete','ids':[source['id']]},library=True)[1]=={'deleted':0,'postponed':1}
-    sql(f"UPDATE slop_processes SET state='failed' WHERE id='{pid}'")
     assert call('/'+source['id'],method='DELETE',library=True)[1]['deleted']==1
-    # A replacement process cannot be bypassed by restoring its trashed predecessor.
+    assert load(pending)['processes'][0]['id']==pid
+
+    # Independent generations from the same inspiration coexist, including restored images.
     predecessor=images[0];call('/'+predecessor+'/trash',{},library=True)
     replacement=batch(historical);pid=replacement['processes'][0]['id']
     sql(f"UPDATE slop_processes SET state='running' WHERE id='{pid}'")
-    assert call('/'+predecessor+'/restore',{},library=True)[0]==409
+    assert call('/'+predecessor+'/restore',{},library=True)[0]==200
     sql(f"UPDATE slop_processes SET state='ready' WHERE id='{pid}'")
     code,replaced=generate(replacement);assert code==200,replaced;images.append(replaced['id'])
-    assert call('/'+predecessor+'/restore',{},library=True)[0]==409
+    assert call('/'+predecessor+'/restore',{},library=True)[0]==200
     # A Worker that died after recording a claim is suspended, including its paid ledger, after ten minutes.
     source=real();sources.append(source['id']);stale=batch(source);pid=stale['processes'][0]['id']
     sql(f"UPDATE slop_processes SET state='running',updated_at='2000-01-01' WHERE id='{pid}'; INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,process_id) VALUES('editorial-stale-call','images','fake','pending','2000-01-01','2000-01-01','{pid}')")
@@ -267,3 +266,4 @@ finally:
     remove(images+sources)
     call('/settings',settings['values'],method='PUT',library=True)
 print('Editorial loop: combined contracts, text-only brief, all evaluator decisions, attempts/call cap, full image, private candidates, idempotency and legacy guards passed.')
+
