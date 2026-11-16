@@ -29,7 +29,7 @@ try:
     b=call('batches/'+bid)[1]
     assert [p['state'] for p in b['processes']]==['exhausted','review_needed','accepted'] and len(b['images'])==1,b
     image=b['images'][0];generated.append(image['id'])
-    assert image['status']=='new' and image['analysis']['status']=='done' and image['copy']['crop']['format']=='4:5',image  # tags and copy on the server
+    assert image['status']=='new' and image['analysis']['status']=='done' and image['copy'] is None,image  # tags on the server, copy in the browser
     log=control();assert len(log)==12,[(r['path'],r['body'].get('text',{}).get('format',{}).get('name')) for r in log]
     assert b['runner']['status']=='done' and not b['runner']['alive'],b['runner']
     control([]);assert call('batches/'+bid+'/prompts',{'confirm':True,'index':0})[0]==409
@@ -44,9 +44,9 @@ try:
     code,auto=call('auto/resume',{'confirm':True});assert code==200 and auto['batch']['status']=='running',auto
     auto=wait_auto();b=call('batches/'+bid)[1]
     assert auto['batch']['status']=='review' and b['processes'][0]['state']=='accepted' and b['runner']['status']=='done',b
-    resumed=[i for i in b['images'] if i['id'] not in generated];assert len(resumed)==1 and resumed[0]['copy']['crop']['format']=='4:5',resumed
+    resumed=[i for i in b['images'] if i['id'] not in generated];assert len(resumed)==1 and resumed[0]['copy'] is None,resumed  # made in the browser at the review
     generated+=[i['id'] for i in resumed]
-    assert len(control())==3  # generation, evaluation, tags; the copy, in its own step, is free
+    assert len(control())==3  # generation, evaluation, tags
     control([]);remove(generated);generated=[]
     assert call('auto')[1]['batch']['status']=='review'  # suspended cases require acknowledgement
     assert call('auto/close',{})[1]['batch'] is None

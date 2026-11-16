@@ -1,6 +1,7 @@
 /** Editorial studio: textual briefs, bounded full-image evaluation, accepted copies and manual review. */
 import "./slop-studio.css";
 import { prepareItemCopy, saveFrame, type TreatableItem } from "./game-copy";
+import { chooseTreatment } from "./treatment-editor";
 import { chooseFrame } from "./crop-editor";
 import { escape } from "../shared/html";
 import { BRIEF_KEYS, type Brief, type Evaluation } from "../shared/editorial";
@@ -57,7 +58,7 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
   };
   const fourth = () => summary() + '<p>Accettazione del modello e approvazione dell’owner sono separate. Controlla l’originale intero e la copia 4:5; pubblica solo dopo revisione.</p>' +
     (batch?.images || []).map(image => `<article class="rw-final slop-review" data-image="${image.id}"><h3>SLOP ${escape(image.status)}</h3><div class="rw-preview-grid"><figure><img data-slop-original="${image.id}" data-long-press src="${escape(image.original)}" alt="Originale SLOP intero" style="max-width:100%;max-height:420px;object-fit:contain"><figcaption>Originale intero valutato</figcaption></figure><figure><img data-slop-copy="${image.id}" data-long-press src="${escape(image.file)}" alt="Copia di gioco 4:5" style="max-width:100%;max-height:420px;object-fit:contain"><figcaption>Copia 4:5${image.copy ? "" : " da preparare"}</figcaption></figure></div><p>Tag effettivi: ${escape(image.tags.join(", "))}</p>${divergence(image)}<p class="hint">Confronta i tag rilevati con gli ancoraggi del brief qui sotto: eventuali divergenze restano visibili e non modificano i tag.</p><p lang="en">${escape(image.prompt)}</p>` +
-      `<div class="rw-actions">${image.status === "new" || image.status === "approved" ? `<button data-slop="frame" data-id="${image.id}">Inquadratura</button><button data-slop="${image.treatment?.off ? "treatment-on" : "treatment-off"}" data-id="${image.id}">${image.treatment?.off ? "Con trattamento" : "Senza trattamento"}</button>` : ""}` +
+      `<div class="rw-actions">${image.status === "new" || image.status === "approved" ? `<button data-slop="frame" data-id="${image.id}">Inquadratura</button><button data-slop="${image.treatment?.off ? "treatment-on" : "treatment-off"}" data-id="${image.id}">${image.treatment?.off ? "Con trattamento" : "Senza trattamento"}</button>${image.treatment ? `<button data-slop="treatment-edit" data-id="${image.id}">Regola il trattamento</button>` : ""}` : ""}` +
       (image.status === "new" ? `${image.analysis.status === "none" || image.analysis.status === "failed" ? `<button data-slop="analyze" data-id="${image.id}">Analizza</button>` : ""}<button data-slop="approve" data-id="${image.id}" ${image.copy && image.tags.length ? "" : "disabled"}>Approva</button>` : "") +
       (image.status === "approved" ? `<button data-slop="publish" data-id="${image.id}">Pubblica</button>` : "") +
       (image.status !== "published" && image.status !== "trash" ? `<button data-slop="trash" data-id="${image.id}">Cestino</button>` : "") + '</div></article>').join("") +
@@ -158,6 +159,7 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
       else if(action==="save")notice="Brief e prompt salvati.";
       else if(image){
         if(action==="frame"){const choice=await chooseFrame(image.id,image.width,image.height,image.copy);if(choice)await saveFrame(image,choice);}
+        else if(action==="treatment-edit"){const choice=await chooseTreatment(image);if(choice)await prepareItemCopy(image,image.copy?.crop || undefined,choice);}
         else if(action==="treatment-off"||action==="treatment-on")await prepareItemCopy(image,image.copy?.crop || undefined,{off:action==="treatment-off"});
         else await call("/"+image.id+"/"+action,action==="analyze"?{confirm:true}:{},"POST",LIBRARY);
         await loadBatch();

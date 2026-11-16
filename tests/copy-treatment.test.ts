@@ -1,7 +1,7 @@
 /** Measures of a game copy and treatment of a SLOP (shared/copy-treatment.ts). */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { gap, measure, treat, treatedLong, validMetrics, validTreatment, type Metrics } from "../shared/copy-treatment";
+import { gap, measure, settingsOf, treat, treatedLong, validMetrics, validSettings, validTreatment, type Metrics, type Settings } from "../shared/copy-treatment";
 
 /** A synthetic photo: a smooth gradient with a sharp edge and optional Gaussian noise of `sigma`, reproducible. */
 function photo(width: number, height: number, sigma = 0, seed = 1, colour = true): Uint8ClampedArray {
@@ -47,7 +47,8 @@ test("the treatment brings a clean sharp image towards a soft, grainy sample", (
   assert.equal(after.saturation, 0);
   assert.ok(applied.contrast >= 0.85 && applied.contrast <= 1.2);
   assert.ok(Math.abs(after.contrast - before.contrast) < before.contrast * 0.25, "light contrast adjustment");
-  assert.ok(applied.blur <= 1 && applied.cast.every(v=>Math.abs(v)<=8));
+  assert.ok(applied.blur <= 1);
+  assert.deepEqual(applied.cast, target.cast, "a monochrome copy takes the tint of the sample");
   assert.ok(after.noise > before.noise + 2, "noise " + after.noise);
   assert.ok(gap(after, target) < gap(before, target), `gap ${gap(after, target)} < ${gap(before, target)}`);
   // Same seed, same pixels.
@@ -74,7 +75,38 @@ test("the Worker accepts only well-formed measures and treatments", () => {
   assert.equal(validMetrics({ ...m, cast: [1, 2] }), null);
   const t = { version: 1, off: false, seed: 5, long: 700, medium: "film-still", color: "color", sample: { id: "abc", metrics: m } };
   assert.ok(validTreatment(t));
-  assert.ok(validTreatment({ ...t, version: 2 }), "the current version");
-  assert.equal(validTreatment({ ...t, version: 4 }), null);
+  assert.ok(validTreatment({ ...t, version: 4 }), "the current version");
+  assert.equal(validTreatment({ ...t, version: 5 }), null);
+  const settings: Settings = { contrast: 1, saturation: 1, cast: [0, 0, 0], monochrome: "", blur: 0, grain: 0, grainSize: 1, jpeg: 0.85, long: 700 };
+  assert.ok(validTreatment({ ...t, version: 4, settings }));
+  assert.equal(validTreatment({ ...t, version: 4, settings: { ...settings, blur: 9 } }), null);
   assert.equal(validTreatment({ ...t, sample: { id: "a b", metrics: m } }), null);
+});
+
+test("the owner's settings are applied as they are; the proposal applied as settings gives the same pixels", () => {
+  const target: Metrics = { long: 200, noise: 4, sharpness: 5, contrast: 150, saturation: 0.1, cast: [2, 0, -2] };
+  const source = photo(200, 150, 0, 3);
+  const proposed = treat(source, 200, 150, target, "film", "color", 11);
+  const again = treat(source, 200, 150, target, "film", "color", 11, settingsOf(proposed.applied, 200));
+  assert.deepEqual(again.rgba, proposed.rgba);
+  const none: Settings = { contrast: 1, saturation: 1, cast: [0, 0, 0], monochrome: "", blur: 0, grain: 0, grainSize: 1, jpeg: 0.9, long: 200 };
+  const untouched = treat(source, 200, 150, target, "film", "color", 11, none);
+  let worst = 0;
+  for (let i = 0; i < source.length; i++) worst = Math.max(worst, Math.abs(untouched.rgba[i] - source[i]));
+  assert.ok(worst <= 1, "neutral settings leave the pixels, " + worst);
+  assert.equal(untouched.applied.jpeg, 0.9);
+  const strong = treat(source, 200, 150, target, "film", "color", 11, { ...none, grain: 12, saturation: 0, monochrome: "sepia", cast: [20, 8, -12] });
+  assert.ok(measure(strong.rgba, 200, 150).noise > 2, "grain " + measure(strong.rgba, 200, 150).noise);
+  const soft = treat(source, 200, 150, target, "film", "color", 11, { ...none, blur: 1.5 });
+  assert.ok(measure(soft.rgba, 200, 150).sharpness < measure(source, 200, 150).sharpness);
+  assert.equal(strong.applied.monochrome, "sepia");
+});
+test("settings outside the sliders' limits, or longer than the crop, are refused", () => {
+  const s: Settings = { contrast: 1.1, saturation: 0.9, cast: [3, 0, -3], monochrome: "black-and-white", blur: 0.6, grain: 4, grainSize: 2, jpeg: 0.8, long: 900 };
+  assert.deepEqual(validSettings(s), s);
+  assert.equal(validSettings({ ...s, long: 900 }, 800), null);
+  assert.equal(validSettings({ ...s, contrast: 3 }), null);
+  assert.equal(validSettings({ ...s, monochrome: "red" }), null);
+  assert.equal(validSettings({ ...s, extra: 1 }), null);
+  assert.equal(validSettings({ ...s, long: 900.5 }), null);
 });

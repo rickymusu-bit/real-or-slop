@@ -53,53 +53,42 @@ def photo(color, size=(64, 40), exif=True, fmt='JPEG'):
     return out.getvalue()
 def upload(source, origin='REAL', title='Fixture photo'):
     return call(f'{API}/upload?' + urllib.parse.urlencode({'origin': origin, 'title': title}), raw=source, mime='image/jpeg')
-def copy(item_id, crop=None, **extra):
-    """The game copy is made by the Worker (owner decision of 2026-11-15): the request carries only the crop."""
-    return call(f'{API}/{item_id}/copy', {**({'crop': crop} if crop else {}), **extra})
-def crop_text(frame): return ','.join(str(frame[k]) for k in ('x', 'y', 'width', 'height', 'format'))
+def copy(item_id, data, mime='image/webp', query=''):
+    return call(f'{API}/{item_id}/copy' + query, raw=data, mime=mime)
 def patch(item, change):
     return call(f'{API}/{item["id"]}', {'revision': item['revision'], **change}, method='PATCH')
 
 # Access
 assert call(API, auth=False)[0] == 401
-# Add a REAL photo: original kept as it is; the Worker makes the game copy at once (4:5, centred).
+# Add a REAL photo: original kept as it is, game copy still missing.
 real_source = photo((200, 0, 0))
 status, real, _ = upload(real_source, title='Rue de Rivoli, 1968')
-assert status == 201 and real['status'] == 'new' and real['copy']['crop'] == centred_crop(40, 64) and real['origin'] == 'REAL', real
+assert status == 201 and real['status'] == 'new' and real['copy'] is None and real['origin'] == 'REAL', real
 assert (real['width'], real['height']) == (40, 64)  # EXIF orientation 6: displayed portrait
 assert upload(real_source)[0] == 409  # the same file twice
 assert upload(b'not an image')[0] == 415
-# Game copy: made by the Worker from the original, 4:5, cut along a crop (stored, else centred); a copy made elsewhere is refused.
-assert call(f'{API}/{real["id"]}/copy', raw=game_copy(real_source), mime='image/webp')[0] == 415
-for wrong in ('1,0,40,60,2:3', '0,5,40,60,2:3', '0,0,20,30,2:3', '0,0,40,50,4:3', '0,2,40,60', 'a'):  # outside, too small, not 4:5, old form
-    assert copy(real['id'], wrong)[0] == 400, wrong
-assert copy(real['id'], extra=1)[0] == 400
-status, real, _ = copy(real['id'], force=True)
+# Game copy: nearest format (2:3 for the 40×64 photo), cut along a crop (centred by default); dimensions, format and size are checked.
+assert copy(real['id'], game_copy(real_source, size=(40, 64)))[0] == 409
+assert copy(real['id'], game_copy(real_source, fmt='PNG'), 'image/png')[0] == 415
+assert copy(real['id'], b'x' * 4_000_001)[0] == 413
+for wrong in ('?crop=1,0,40,60,2:3', '?crop=0,5,40,60,2:3', '?crop=0,0,20,30,2:3', '?crop=0,0,40,50,4:3', '?crop=0,2,40,60',
+              '?crop=a'):  # outside, too small, 4:5, old form
+    assert copy(real['id'], game_copy(real_source), query=wrong)[0] == 400, wrong
+status, real, _ = copy(real['id'], game_copy(real_source))
 assert status == 201 and (real['copy']['width'], real['copy']['height']) == (40, 50) and real['copy']['crop'] == centred_crop(40, 64), real
 assert real['copy']['crop']['format'] == '4:5' and 'view' not in real['copy'] and 'redo' not in real['copy'], real
 assert sql(f"SELECT copy_view FROM images WHERE id='{real['id']}'")[0]['copy_view'] is None
-assert copy(real['id'])[1]['already_prepared'] is True
-assert copy(real['id'], force=True)[1]['already_prepared'] is False  # made again on request (copies of an earlier recipe)
+assert copy(real['id'], game_copy(real_source))[1]['already_prepared'] is True
 # Another crop remakes the copy: new file, the previous one leaves the quarantine.
 first_copy = sql(f"SELECT copy_key FROM images WHERE id='{real['id']}'")[0]['copy_key']
 frame = {'x': 0, 'y': 14, 'width': 40, 'height': 50, 'format': '4:5'}  # the lowest crop instead of the centred one
-status, real, _ = copy(real['id'], crop_text(frame))
+status, real, _ = copy(real['id'], game_copy(real_source, frame), query=crop_query(frame, {'x': 0, 'y': 0, 'height': 5}))  # view ignored
 assert status == 201 and real['copy']['crop'] == frame and 'view' not in real['copy'], real
 assert not stored(QUARANTINE, first_copy)
 frame = centred_crop(40, 64)
-status, real, _ = copy(real['id'], crop_text(frame)); assert status == 201, real
+status, real, _ = copy(real['id'], game_copy(real_source, frame), query=crop_query(frame)); assert status == 201, real
 # No view any more: the route is gone.
 assert call(f'{API}/{real["id"]}/view', {'revision': real['revision'], 'view': {'x': 0, 'y': 10, 'height': 50}})[0] == 404
-# «Rifai la copia di gioco» for a selection: a job on Cloudflare (Workflow), followed by the dashboard; measures made there too.
-status, job, _ = call(f'{API}/copies', {'ids': [real['id']]}); assert status == 202 and job['count'] == 1, job
-for _ in range(120):
-    status, progress, _ = call(f'{API}/copies/' + job['job'])
-    if progress['status'] in ('complete', 'errored', 'terminated'): break
-    time.sleep(0.25)
-assert progress['status'] == 'complete' and progress['output'] == {'done': 1, 'failed': []}, progress
-assert call(f'{API}/copies', {'ids': []})[0] == 400 and call(f'{API}/copies/nothing')[0] == 404
-status, measured, _ = call(f'{API}/{real["id"]}/metrics', {}); assert status == 200 and measured['metrics']['long'] == 50, measured
-status, real, _ = call(f'{API}/{real["id"]}')
 status, served, headers = call(base + real['file'])
 assert status == 200 and served[:4] == b'RIFF' and b'Canon' not in served
 # Edit in place: fields, caption length, ASCII tags, optimistic revision.
@@ -128,8 +117,8 @@ slop_source = photo((0, 0, 200), (48, 48), exif=False, fmt='PNG')
 status, slop, _ = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': 'SLOP', 'title': 'Generated street scene', 'prompt': 'A street in 1968'}),
                        raw=slop_source, mime='image/png')
 assert status == 201 and slop['prompt'] == 'A street in 1968', slop
-assert slop['copy'] and slop['copy']['crop']['format'] == '4:5', slop  # made at upload
-status, slop, _ = copy(slop['id']); assert status == 200 and slop['already_prepared'] is True
+assert call(f'{API}/{slop["id"]}/approve', {})[0] == 409  # no copy
+status, slop, _ = copy(slop['id'], game_copy(slop_source)); assert status == 201
 assert call(f'{API}/{slop["id"]}/approve', {})[0] == 409  # no tag
 status, slop, _ = patch(slop, {'tags': ['riot', 'street']})
 status, slop, _ = call(f'{API}/{slop["id"]}/approve', {}); assert slop['status'] == 'approved', slop

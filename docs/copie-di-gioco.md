@@ -1,9 +1,11 @@
-# Copie di gioco — specifica 10.0.0
+# Copie di gioco — specifica 11.0.0
 
-Stato: vigente; la 9.2.0 è in produzione con l'app 1.30.2, la 10.0.0 è per l'app 1.32.0. Aggiornata: 2026-11-15T23:09:52Z. La 10.0.0 sposta la
-preparazione delle copie dal browser al Worker (decisione dell'owner del 2026-11-15: il browser è solo un'interfaccia). La 9.0.0 riporta tutte
-le copie di gioco al formato verticale 4:5 e prende le misure del trattamento dalla REAL di origine. Le versioni precedenti restano
-nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia e il gioco serve esattamente quei byte.
+Stato: vigente; la 10.0.0 è in produzione con l'app 1.33.0, la 11.0.0 è per l'app 1.34.0. Aggiornata: 2026-11-16T12:40:03Z. La 11.0.0 riporta la
+preparazione delle copie nel browser (decisione dell'owner del 2026-11-16: il Worker gestisce ciò che riguarda OpenAI, il browser
+tutto il resto) e rende il trattamento delle SLOP regolabile con i cursori (sezione 4.4). La 10.0.0 aveva spostato le copie sul Worker
+con il binding Images. La 9.0.0 riporta tutte le copie di gioco al formato verticale 4:5 e prende le misure del trattamento dalla REAL
+di origine. Le versioni precedenti restano nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia e il gioco
+serve esattamente quei byte.
 
 ## 1. Decisioni dell'owner
 
@@ -16,6 +18,11 @@ nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia 
 - Trattamento delle SLOP: copia le REAL, non le supera (2026-11-14). Le misure vengono dalla **REAL di riferimento** (2026-11-15): prese
   da un'altra REAL avevano rovinato il lotto del 2026-11-15 (sezione 4.1). Il trattamento è un suggerimento fotografico leggero,
   **non** un vincolo a rendere la scena simile alla REAL; la credibilità della copia finale prevale (specifica `generazione-slop` 5.2.0).
+- **Trattamento regolabile dall'owner** (2026-11-16), come l'inquadratura: cursori per ogni parametro, che partono dal trattamento
+  proposto in base alla REAL di riferimento (sezione 4.4).
+- **Le copie le prepara il browser** (2026-11-16): inquadratura, trattamento, conversione in WebP e misure; il Worker controlla e
+  conserva. Annulla la decisione del 2026-11-15, che le aveva affidate al Worker. Decodifica, ricampionamento e codifica sono quelli
+  del browser (canvas), non codice scritto per il progetto.
 
 ## 2. Formati
 
@@ -42,15 +49,18 @@ di testo non sceglie più il formato.
 
 - Uguale per REAL e SLOP, dopo il trattamento delle SLOP (sezione 4): ritaglio 4:5, WebP qualità 0,85, altezza al massimo 1536 px,
   mai ingrandita, sRGB, sfondo bianco per le trasparenze, nessun metadato.
-- **La copia la prepara il Worker** (`worker/copy-maker.ts`), appena l'immagine entra nella libreria (caricamento o acquisizione da
-  Commons di una REAL, accettazione di una SLOP), con il ritaglio 4:5 più grande, centrato. Passi: il binding Images di Cloudflare
-  decodifica l'originale (orientamento applicato) e lo riduce a un'immagine di lavoro di al massimo sei megapixel, in PNG; il Worker
-  ritaglia e ricampiona per aree alla dimensione della copia, applica alle SLOP il trattamento (sezione 4) con la compressione JPEG
-  intermedia fatta da Images, poi Images codifica il WebP (qualità 85); la copia viene misurata decodificandola di nuovo. Il browser
-  sceglie soltanto l'inquadratura e chiede la copia (`POST /:id/copy {crop?, treatment?: {off}, force?}`); un file inviato dal browser
-  è rifiutato. Le stesse inquadratura e trattamento non rifanno la copia, salvo `force`.
-- In sviluppo locale e nei test il binding Images è emulato da Wrangler con sharp (ridimensionamento e codifica; la qualità del WebP
-  non viene applicata): basta per verificare il percorso, non la resa esatta.
+- **La copia la prepara il browser** (`src/game-copy.ts`) dall'originale privato: orientamento applicato, ritaglio 4:5 (il più grande,
+  centrato, se l'owner non ne ha scelto uno), ridimensionamento del canvas in qualità alta, trattamento delle SLOP (sezione 4) con la
+  compressione JPEG intermedia del browser, WebP qualità 85, misure della copia decodificata di nuovo. Il browser la carica
+  (`POST /:id/copy?crop=…`, misure e trattamento nelle intestazioni `X-Copy-Metrics` e `X-Copy-Treatment`); il Worker toglie i
+  metadati e rifiuta un file non WebP, con dimensioni diverse da quelle della ricetta (o del lato lungo del trattamento), oltre 4 MB,
+  o un trattamento non valido (sezione 4). Le stesse inquadratura e trattamento non rifanno la copia, salvo `force=1`.
+- **Quando nasce:** al passo 1 del wizard REAL, subito dopo l'acquisizione; per una SLOP accettata, all'apertura della revisione
+  nello studio o del batch automatico (il Workflow del ciclo non la prepara più); con «Prepara la copia di gioco» nel dettaglio del
+  Database per un'immagine senza copia. Le copie senza misure della versione corrente si misurano in background aprendo il Database.
+- **Un solo codificatore** per REAL e SLOP, quello del browser dell'owner: due codificatori diversi (Images sul server per alcune,
+  il browser per altre) potrebbero distinguere l'origine dalla compressione. Usare sempre lo stesso browser (Chrome, Edge o Firefox:
+  Safari non esporta WebP). Le copie preparate dal Worker con la 1.32–1.33 vanno rifatte con «Rifai la copia di gioco».
 - **Inquadratura** (passo 3 del wizard REAL, revisione dello studio SLOP e dettaglio del Database, per nuove e approvate): un riquadro
   4:5 che l'owner sposta o rimpicciolisce sull'originale. Salvato in `copy_crop` (`{x, y, width, height, format: "4:5"}`). Salvare lo
   stesso ritaglio non rifà la copia e lascia le statistiche. Il formato non si sceglie.
@@ -78,8 +88,8 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
 
 ### 4.2 Misure
 
-- Il Worker misura **ogni copia di gioco**, REAL e SLOP, quando la crea, senza modelli, e le salva in `copy_metrics` (`POST /:id/metrics`
-  misura di nuovo una copia esistente):
+- Il browser misura **ogni copia di gioco**, REAL e SLOP, quando la crea, senza modelli, e il Worker le salva in `copy_metrics`
+  (`POST /:id/metrics {metrics, sha256}` registra le misure di una copia esistente, fatte nel browser aprendo il Database):
   lato lungo in pixel; **rumore** (deviazione standard del residuo ad alta frequenza nelle zone più uniformi, escluse quelle bruciate
   a bianco o a nero); **nitidezza** (energia del laplaciano sulla luminanza); **contrasto** (distanza tra i percentili 2 e 98 della
   luminanza); **saturazione** media; **dominante** (scarto medio dei canali dal grigio nelle zone neutre); versione dell'algoritmo.
@@ -95,30 +105,53 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
 - **Obiettivo indicativo:** le misure della copia di gioco della REAL di riferimento, con i limiti descritti. Senza REAL di riferimento,
   o se non è misurata, nessun trattamento. Se il trattamento crea artefatti, colori o illuminazione incoerenti, usare la versione
   senza trattamento o riprogettare la scena; **non** sacrificare la credibilità per la somiglianza delle metriche.
-- **Passi** (versione 3 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile:
+- **Passi** (versione 4 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile. Ogni valore è
+  proposto dalle misure della REAL; l'owner può sostituirli tutti con i cursori (sezione 4.4), che applicano gli stessi passi con i
+  suoi valori:
   1. ritaglio 4:5 dell'inquadratura;
   2. riduzione all'altezza della copia della REAL di origine (mai un ingrandimento, mai sotto 480 px);
   3. contrasto verso quello della REAL, con un fattore tra 0,85 e 1,2;
-  4. bianco e nero o seppia, con la tinta della REAL, se il Colore della REAL lo è; altrimenti dominante (al massimo ±8 per canale) e
+  4. bianco e nero o seppia, con la tinta della REAL (registrata come dominante), se il Colore della REAL lo è; altrimenti dominante (al massimo ±8 per canale) e
      saturazione (fattore tra 0,7 e 1,3) verso quelle della REAL;
   5. sfocatura fino alla nitidezza della REAL, con raggio al massimo 1;
   6. grana di luminanza fino al rumore della REAL, ammorbidita nelle immagini grandi, mai a blocchi;
   7. una compressione JPEG intermedia a qualità 0,85, poi la ricetta della copia (sezione 3).
+  I valori proposti sono arrotondati prima di essere applicati, così la proposta riapplicata come impostazione dà gli stessi pixel.
 - **Correzioni leggere.** I limiti dei passi 3–5 sono più stretti della versione 2 (contrasto fino a 1,6, saturazione da 0,3, raggio
   fino a 3): il trattamento ritocca, non stravolge. Niente effetti disegnati: ogni passo segue una misura della REAL.
-- Dopo il trattamento il Worker misura la copia e registra lo scarto dall'obiettivo; il dettaglio del Database lo mostra.
+- Dopo il trattamento il browser misura la copia e registra lo scarto dall'obiettivo; il dettaglio del Database lo mostra.
   **Lo scarto metrico non è una misura di realismo.** Nel loop di `generazione-slop` 5.2.0 il valutatore multimodale vede
-  **l'immagine generata intera, prima del ritaglio e del trattamento**. Solo se la candidata è accettata, il Worker prepara
+  **l'immagine generata intera, prima del ritaglio e del trattamento**. Solo se la candidata è accettata, il browser prepara
   la copia 4:5 e applica il trattamento. L'owner controlla la copia risultante nella revisione; il crop non deve condizionare
   il prompt né innescare una nuova generazione automatica per concentrare i soggetti nel 4:5.
-- **Registro** `copy_treatment`: REAL da cui vengono le misure (identificativo e misure), Colore, parametri di ogni passo, seme,
-  versione dell'algoritmo. Una copia fatta con una versione precedente si rifà con quella corrente alla prossima «Inquadratura» o al
+- **Registro** `copy_treatment`: REAL da cui vengono le misure (identificativo e misure), Colore, parametri applicati di ogni passo,
+  seme, versione dell'algoritmo e, se l'owner ha regolato il trattamento, le sue impostazioni (`settings`). Il Worker accetta il
+  registro solo se le misure vengono dalla REAL di riferimento della SLOP, le impostazioni sono entro i limiti dei cursori e il lato
+  lungo coincide con quello delle impostazioni o, senza, con quello proposto. Una copia fatta con una versione precedente si rifà con quella corrente alla prossima «Inquadratura» o al
   prossimo comando del trattamento.
 - **Comandi** nel dettaglio del Database di una SLOP nuova o approvata e nella revisione dello studio, gratuiti: «Senza trattamento» e
   «Con trattamento». «Altra REAL campione» sparisce. Cambiare il trattamento rifà la copia come «Inquadratura»: azzera le statistiche
   e, per una pubblicata, passa da «Modifica».
 - «Inquadratura» su una SLOP ritaglia l'originale e riapplica lo stesso trattamento.
 - Le REAL non hanno trattamento: la loro ricetta resta quella della sezione 3.
+
+### 4.4 Trattamento regolato dall'owner
+
+Decisione dell'owner del 2026-11-16: il trattamento della copia si modifica come l'inquadratura.
+
+- **«Regola il trattamento»**, accanto a «Senza/Con trattamento» nel dettaglio del Database e nella revisione dello studio, per una
+  SLOP nuova o approvata con una REAL di riferimento misurata. Apre un riquadro con l'anteprima della copia, la copia della REAL di
+  riferimento con le sue misure, e i cursori: Colore (a colori, bianco e nero, seppia), contrasto (0,5–1,6), saturazione (0–1,8,
+  nascosta per le copie monocrome), dominante o tinta rosso, verde, blu (±40), sfocatura (0–3 px), grana (0–25), dimensione della
+  grana (1–3), qualità del JPEG intermedio (0,4–1), lato lungo (480–1536 px, mai oltre il ritaglio).
+- **I cursori partono dalla proposta** calcolata nel browser dalle misure della REAL di riferimento sull'inquadratura salvata. Se
+  l'owner ha già regolato la copia, partono dalle sue impostazioni; «Torna alla proposta» le riporta ai valori proposti.
+- **Anteprima nella pagina:** ogni modifica, dopo una breve pausa, ridisegna la copia con quelle impostazioni (trattamento e JPEG
+  intermedio, come la copia), con le sue misure e lo scarto dalla REAL; nulla viene salvato. Manca solo la codifica WebP finale.
+- **Salvare** rifà la copia con le impostazioni dell'owner e la carica, come «Inquadratura»: azzera le statistiche. Salvare i valori
+  proposti torna al trattamento proposto. Le impostazioni restano quando la copia si rifà («Rifai la copia di gioco», nuova
+  inquadratura, «Senza/Con trattamento»), finché la REAL di riferimento è la stessa.
+- Tutto è gratuito: nessun modello è chiamato.
 
 ## 5. Nella partita
 
@@ -132,6 +165,10 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
 
 - **REAL tagliate:** una REAL orizzontale perde quasi metà della scena; soggetti larghi non reggono il 4:5. Vale per le SLOP allo
   stesso modo, perché nascono nel formato della loro REAL.
+- **Trattamento forzato a mano:** con i cursori si possono ottenere copie molto più degradate delle REAL (grana, sfocatura, JPEG
+  basso), cioè un indizio dell'origine. L'anteprima mostra le misure della REAL accanto a quelle della copia proprio per evitarlo.
+- **Browser diversi:** il codificatore WebP e il ridimensionamento dipendono dal browser; copie fatte con browser diversi possono
+  differire nella compressione. Preparare le copie sempre con lo stesso browser.
 - **Trattamento sbagliato:** le Statistiche confrontano le misure delle copie pubblicate di REAL e SLOP per gruppo; non correggere
   automaticamente le copie solo per ridurre quella distanza, che può essere naturale per scene diverse.
 - **Costo:** la dimensione chiesta al generatore dipende dal formato della REAL (tra 1,3 e 2,4 milioni di pixel).
@@ -140,8 +177,8 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
 
 - Al rilascio le copie esistenti hanno il formato della foto. Una migrazione ritira dal gioco le pubblicate (tornano approvate) e
   nessuna copia non 4:5 si può approvare o pubblicare.
-- Nel Database il filtro «Copia da rifare in 4:5» e l'azione in gruppo «Rifai la copia di gioco» (un Workflow su Cloudflare,
-  `POST /copies`, gratis: il ritaglio 4:5 salvato o, per un formato precedente, quello centrato; le pubblicate tornano approvate)
+- Nel Database il filtro «Copia da rifare in 4:5» e l'azione in gruppo «Rifai la copia di gioco» (nella pagina, una foto alla volta,
+  gratis: il ritaglio 4:5 salvato o, per un formato precedente, quello centrato; le pubblicate tornano approvate)
   rifanno le copie; l'owner rivede le inquadrature e ripubblica. Le statistiche delle foto ripartono, perché contano solo i
   round giocati con la copia attuale.
 - Le partite in corso finiscono con le copie con cui sono iniziate.

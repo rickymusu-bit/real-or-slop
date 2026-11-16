@@ -1,6 +1,9 @@
-/** Measures and light SLOP treatment towards the source REAL: bounded tone/colour, blur and grain, then common encoding. */
+/** Measures and light SLOP treatment towards the source REAL: bounded tone/colour, blur and grain, then common encoding.
+ * The treatment is proposed from the measures of the source REAL and can be set by the owner with sliders (owner request of
+ * 2026-11-16): the same steps, with the owner's values in place of the proposed ones. */
 
-export const TREATMENT_VERSION = 3;
+/** 4: the parameters are settings the owner can change (`settings`), the tint of a monochrome copy is in `cast`. */
+export const TREATMENT_VERSION = 4;
 /** The one JPEG generation a photo from an archive has gone through before the game copy. */
 const JPEG_QUALITY = 0.85;
 /** Version of the measures: 2 leaves burnt-out areas out of the noise. Copies measured before are measured again. */
@@ -14,14 +17,32 @@ export interface Metrics {
   /** Mean deviation of R, G, B from the luminance in neutral areas. */ cast: [number, number, number];
   /** Version of the algorithm; absent on the first measures. */ v?: number;
 }
-export interface Applied {
-  medium: string; contrast: number; cast: [number, number, number]; saturation: number; monochrome: "" | "black-and-white" | "sepia";
-  blur: number; grain: number; grainSize: number; jpeg: number;
+export type Monochrome = "" | "black-and-white" | "sepia";
+/** The parameters of a treatment, proposed or chosen by the owner. */
+export interface Settings {
+  /** Contrast around the median luminance (1 unchanged). */ contrast: number;
+  /** Saturation (1 unchanged); ignored in a monochrome copy. */ saturation: number;
+  /** R, G, B added to every pixel: the shift of the colour cast, or the tint of a monochrome copy over its luminance. */ cast: [number, number, number];
+  monochrome: Monochrome;
+  /** Sigma of the Gaussian blur, in pixels of the copy (0 none). */ blur: number;
+  /** Standard deviation of the luminance grain (0–255 scale); none at 0.3 or less. */ grain: number;
+  /** Size of the grain: 1 a pixel, larger softened. */ grainSize: number;
+  /** Quality of the intermediate JPEG (0–1). */ jpeg: number;
+  /** Long side of the copy in pixels. */ long: number;
 }
+export interface Applied extends Omit<Settings, "long"> { medium: string }
 export interface Treatment {
   version: number; off: boolean; seed: number; long: number; medium: string; color: string;
   sample: { id: string; metrics: Metrics }; applied?: Applied; result?: Metrics; gap?: number;
+  /** Settings chosen by the owner (version 4); absent when the copy follows the proposal. */ settings?: Settings;
 }
+/** Range and step of each slider; the Worker refuses settings outside. */
+export const SETTING_LIMITS = {
+  contrast: { min: 0.5, max: 1.6, step: 0.01 }, saturation: { min: 0, max: 1.8, step: 0.01 }, cast: { min: -40, max: 40, step: 0.5 },
+  blur: { min: 0, max: 3, step: 0.05 }, grain: { min: 0, max: 25, step: 0.1 }, grainSize: { min: 1, max: 3, step: 0.5 },
+  jpeg: { min: 0.4, max: 1, step: 0.01 }, long: { min: 480, max: 1536, step: 1 },
+} as const;
+const MONOCHROME: Monochrome[] = ["", "black-and-white", "sepia"];
 
 const round = (n: number, digits = 3) => Math.round(n * 10 ** digits) / 10 ** digits;
 const clamp = (n: number, low: number, high: number) => Math.min(high, Math.max(low, n));
@@ -149,84 +170,119 @@ function random(seed: number) {
 function gaussian(next: () => number) {
   return () => Math.sqrt(-2 * Math.log(Math.max(next(), 1e-12))) * Math.cos(2 * Math.PI * next());
 }
-/** Separable Gaussian blur of `channels` interleaved channels. */
-function blur(data: Float32Array, width: number, height: number, channels: number, sigma: number): Float32Array {
+/** Separable Gaussian blur of `channels` interleaved channels, in place: one line of the image at a time is copied aside, so a copy of
+ * 1229 × 1536 needs no second 23 MB buffer (the Worker has 128 MB in all). */
+function blurInPlace(data: Float32Array, width: number, height: number, channels: number, sigma: number): Float32Array {
   if (sigma <= 0) return data;
   const radius = Math.max(1, Math.ceil(3 * sigma)), kernel = new Float32Array(2 * radius + 1);
   let total = 0;
   for (let k = -radius; k <= radius; k++) { kernel[k + radius] = Math.exp(-(k * k) / (2 * sigma * sigma)); total += kernel[k + radius]; }
   for (let k = 0; k < kernel.length; k++) kernel[k] /= total;
-  const pass = (source: Float32Array, horizontal: boolean) => {
-    const out = new Float32Array(source.length);
-    for (let r = 0; r < height; r++) for (let c = 0; c < width; c++) for (let ch = 0; ch < channels; ch++) {
+  const line = new Float32Array(Math.max(width, height) * channels);
+  // Horizontal, row by row.
+  for (let r = 0; r < height; r++) {
+    line.set(data.subarray(r * width * channels, (r + 1) * width * channels));
+    for (let c = 0; c < width; c++) for (let ch = 0; ch < channels; ch++) {
       let sum = 0;
-      for (let k = -radius; k <= radius; k++) {
-        const rr = horizontal ? r : clamp(r + k, 0, height - 1), cc = horizontal ? clamp(c + k, 0, width - 1) : c;
-        sum += source[(rr * width + cc) * channels + ch] * kernel[k + radius];
-      }
-      out[(r * width + c) * channels + ch] = sum;
+      for (let k = -radius; k <= radius; k++) sum += line[clamp(c + k, 0, width - 1) * channels + ch] * kernel[k + radius];
+      data[(r * width + c) * channels + ch] = sum;
     }
-    return out;
-  };
-  return pass(pass(data, true), false);
+  }
+  // Vertical, column by column.
+  for (let c = 0; c < width; c++) {
+    for (let r = 0; r < height; r++) for (let ch = 0; ch < channels; ch++) line[r * channels + ch] = data[(r * width + c) * channels + ch];
+    for (let r = 0; r < height; r++) for (let ch = 0; ch < channels; ch++) {
+      let sum = 0;
+      for (let k = -radius; k <= radius; k++) sum += line[clamp(r + k, 0, height - 1) * channels + ch] * kernel[k + radius];
+      data[(r * width + c) * channels + ch] = sum;
+    }
+  }
+  return data;
 }
+/** The same blur on a copy. */
+const blur = (data: Float32Array, width: number, height: number, channels: number, sigma: number) =>
+  blurInPlace(data.slice(), width, height, channels, sigma);
 
-/** Applies the treatment to RGBA pixels already reduced to the sample's long side; returns the new pixels and what was applied
- * (the JPEG quality is for the browser, which compresses afterwards). Deterministic for a given seed. Every step follows a measure
- * of the sample: nothing is drawn that the REAL do not have. Version 1 also painted effects by medium (halftone screen, vignette,
- * glow): invented looks, some undone at once by the next step, and possible signs of the origin. */
-export function treat(rgba: ArrayLike<number>, width: number, height: number, target: Metrics, medium: string, color: string, seed: number):
-  { rgba: Uint8ClampedArray<ArrayBuffer>; applied: Applied } {
+/** Applies the treatment to RGBA pixels already reduced to the copy's long side; returns the new pixels and what was applied (the
+ * JPEG quality is for the caller, which compresses afterwards). Without `settings` every value is proposed from the measures of the
+ * sample (the source REAL); with them, the owner's values are applied as they are. Deterministic for a given seed. Every proposed step
+ * follows a measure of the sample: nothing is drawn that the REAL do not have. Version 1 also painted effects by medium (halftone
+ * screen, vignette, glow): invented looks, some undone at once by the next step, and possible signs of the origin. */
+export function treat(rgba: ArrayLike<number>, width: number, height: number, target: Metrics, medium: string, color: string, seed: number,
+  settings?: Omit<Settings, "long">): { rgba: Uint8ClampedArray<ArrayBuffer>; applied: Applied } {
   const n = width * height;
-  let rgb = toRgb(rgba, width, height);
-  const monochrome: Applied["monochrome"] = color === "black-and-white" || color === "sepia" ? color : "";
+  const rgb = toRgb(rgba, width, height);
+  const monochrome: Monochrome = settings ? settings.monochrome : color === "black-and-white" || color === "sepia" ? color : "";
   // Contrast around the median.
   let y = luminance(rgb, n);
-  const [p2, median, p98] = percentiles(y, 0.02, 0.98), contrast = clamp(target.contrast / Math.max(p98 - p2, 1), 0.85, 1.2);
+  const [p2, median, p98] = percentiles(y, 0.02, 0.98);
+  const contrast = settings ? settings.contrast : round(clamp(target.contrast / Math.max(p98 - p2, 1), 0.85, 1.2));
   for (let i = 0; i < 3 * n; i++) rgb[i] = median + (rgb[i] - median) * contrast;
   y = luminance(rgb, n);
-  let saturation = 1, shift: [number, number, number] = [0, 0, 0];
+  let saturation = 1, cast: [number, number, number];
   if (monochrome) {
-    // Black and white or sepia when the source REAL is: the tint of the sample on the luminance.
-    for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] = y[i] + target.cast[k];
+    // Black and white or sepia (proposed when the source REAL is): a tint on the luminance, the sample's when proposed.
+    cast = settings ? settings.cast : target.cast.map(v => round(v, 2)) as [number, number, number];
+    for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] = y[i] + cast[k];
+    saturation = settings ? settings.saturation : 1;
   } else {
     // The colour cast of the sample, then its saturation.
     const now = chromaStats(rgb, y);
-    shift = target.cast.map((v, k) => clamp(v - now.cast[k], -8, 8)) as [number, number, number];
-    for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] += shift[k];
+    cast = settings ? settings.cast : target.cast.map((v, k) => round(clamp(v - now.cast[k], -8, 8), 2)) as [number, number, number];
+    for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] += cast[k];
     y = luminance(rgb, n);
-    saturation = clamp(target.saturation / Math.max(chromaStats(rgb, y).saturation, 1e-3), 0.7, 1.3);
+    saturation = settings ? settings.saturation : round(clamp(target.saturation / Math.max(chromaStats(rgb, y).saturation, 1e-3), 0.7, 1.3));
     for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] = y[i] + (rgb[3 * i + k] - y[i]) * saturation;
   }
   for (let i = 0; i < 3 * n; i++) rgb[i] = clamp(rgb[i], 0, 255);
   // Blur: the smallest of a few radii that brings the sharpness down to the sample's, tried on the luminance only.
   y = luminance(rgb, n);
-  let sigma = 0;
-  if (sharpnessOf(y, width, height) > target.sharpness * 1.05) {
+  let sigma = settings ? settings.blur : 0;
+  if (!settings && sharpnessOf(y, width, height) > target.sharpness * 1.05) {
     sigma = 1;
     for (const candidate of [0.4, 0.6, 0.8, 1]) {
       if (sharpnessOf(blur(y, width, height, 1, candidate), width, height) <= target.sharpness * 1.05) { sigma = candidate; break; }
     }
-    rgb = blur(rgb, width, height, 3, sigma);
   }
+  if (sigma > 0) blurInPlace(rgb, width, height, 3, sigma);
   // Luminance grain up to the sample's noise. In larger images the grain is softened, as film grain is at that scale, and brought
   // back to its strength; never drawn as blocks.
   y = luminance(rgb, n);
-  const current = noiseOf(y, width, height), grain = Math.sqrt(Math.max(0, target.noise ** 2 - current ** 2));
-  const grainSize = Math.max(width, height) >= 1000 ? 2 : 1;
+  const grain = settings ? settings.grain : round(Math.sqrt(Math.max(0, target.noise ** 2 - noiseOf(y, width, height) ** 2)), 2);
+  const grainSize = settings ? settings.grainSize : Math.max(width, height) >= 1000 ? 2 : 1;
   if (grain > 0.3) {
     const normal = gaussian(random(seed));
-    let field = new Float32Array(n);
+    const field = new Float32Array(n);
     for (let i = 0; i < n; i++) field[i] = normal();
-    if (grainSize > 1) field = blur(field, width, height, 1, 0.7) as Float32Array<ArrayBuffer>;
+    if (grainSize > 1) blurInPlace(field, width, height, 1, 0.7 * (grainSize - 1));
     let sum = 0;
     for (let i = 0; i < n; i++) sum += field[i] * field[i];
     const scale = grain / Math.max(Math.sqrt(sum / n), 1e-6);
     for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] = clamp(rgb[3 * i + k] + field[i] * scale, 0, 255);
   }
   return { rgba: toRgba(rgb, width, height),
-    applied: { medium, contrast: round(contrast), cast: shift.map(v => round(v, 2)) as [number, number, number], saturation: round(saturation),
-      monochrome, blur: sigma, grain: round(grain), grainSize, jpeg: JPEG_QUALITY } };
+    applied: { medium, contrast, cast: [...cast] as [number, number, number], saturation,
+      monochrome, blur: sigma, grain, grainSize, jpeg: settings ? settings.jpeg : JPEG_QUALITY } };
+}
+
+/** The settings of an applied treatment and its long side (what the sliders start from). */
+export const settingsOf = (applied: Applied, long: number): Settings => ({ contrast: applied.contrast, saturation: applied.saturation,
+  cast: [...applied.cast] as [number, number, number], monochrome: applied.monochrome, blur: applied.blur, grain: applied.grain,
+  grainSize: applied.grainSize, jpeg: applied.jpeg, long });
+
+/** Settings as the Worker accepts them (within SETTING_LIMITS, `long` also within the crop), or null. */
+export function validSettings(value: unknown, cropLong: number = SETTING_LIMITS.long.max): Settings | null {
+  if (!value || typeof value !== "object") return null;
+  const s = value as Record<string, unknown>, L = SETTING_LIMITS;
+  const inside = (v: unknown, limit: { min: number; max: number }) => typeof v === "number" && Number.isFinite(v) && v >= limit.min && v <= limit.max;
+  if (Object.keys(s).some(k => !["contrast", "saturation", "cast", "monochrome", "blur", "grain", "grainSize", "jpeg", "long"].includes(k))) return null;
+  if (!inside(s.contrast, L.contrast) || !inside(s.saturation, L.saturation) || !Array.isArray(s.cast) || s.cast.length !== 3
+    || !s.cast.every(v => inside(v, L.cast)) || !MONOCHROME.includes(s.monochrome as Monochrome) || !inside(s.blur, L.blur)
+    || !inside(s.grain, L.grain) || !inside(s.grainSize, L.grainSize) || !inside(s.jpeg, L.jpeg)
+    || !Number.isInteger(s.long) || !inside(s.long, { min: Math.min(L.long.min, cropLong), max: Math.min(L.long.max, cropLong) })) return null;
+  return { contrast: s.contrast as number, saturation: s.saturation as number, cast: [...s.cast] as [number, number, number],
+    monochrome: s.monochrome as Monochrome, blur: s.blur as number, grain: s.grain as number, grainSize: s.grainSize as number,
+    jpeg: s.jpeg as number, long: s.long as number };
 }
 
 /** A stored treatment as the Worker accepts it, or null. */
@@ -238,5 +294,6 @@ export function validTreatment(value: unknown): Treatment | null {
     || typeof t.color !== "string" || t.color.length > 40 || !sample || typeof sample.id !== "string" || !/^[\w-]{1,64}$/.test(sample.id)
     || !validMetrics(sample.metrics)) return null;
   if (t.result !== undefined && !validMetrics(t.result)) return null;
+  if (t.settings !== undefined && !validSettings(t.settings, Math.max(t.long, (t.settings as { long?: number } | null)?.long ?? 0))) return null;
   return value as Treatment;
 }

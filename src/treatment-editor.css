@@ -1,0 +1,18 @@
+/* Treatment editor of a SLOP's game copy. */
+.treatment-dialog { width: min(980px, 96vw); max-height: 96svh; }
+.treatment-dialog h2 { margin: 0 0 6px; }
+.treatment-views { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0; }
+.treatment-views figure { margin: 0; }
+.treatment-views img, .treatment-views canvas { display: block; width: 100%; aspect-ratio: 4 / 5; max-height: 52svh; object-fit: contain; background: var(--surface, #111); }
+.treatment-views figcaption { font-size: 13px; margin-top: 4px; }
+.treatment-controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 18px; }
+.treatment-slider { display: grid; grid-template-columns: 11em 1fr 3.5em; align-items: center; gap: 8px; margin: 0; min-height: 36px; }
+.treatment-slider input, .treatment-slider select { margin: 0; }
+.treatment-slider[hidden] { display: none; }
+.treatment-slider select { width: auto; }
+.treatment-slider output { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+  .treatment-views { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .treatment-slider { grid-template-columns: 8em 1fr 3em; }
+}
+.treatment-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 10px; }

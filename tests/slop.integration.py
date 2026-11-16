@@ -4,6 +4,8 @@ import concurrent.futures
 import io
 from PIL import Image
 from editorial_helpers import *
+from game_copy import game_copy
+import urllib.error
 import urllib.request
 
 code,settings=call('/settings',library=True);assert code==200
@@ -32,9 +34,7 @@ try:
         if expected!='accepted':
             assert load(b)['images']==[]
             assert call('batches/'+b['id'],{'briefs':[BRIEF]},method='PUT')[0]==409
-    images.append(result['id']);assert result['status']=='new' and result['copy']['crop']['format']=='4:5',result
-    # The Worker made the copy at acceptance: 4:5, treated towards the measures of the source REAL (copy made there too).
-    t=result['treatment'];assert t and not t['off'] and t['sample']['id']==historical['id'] and t['applied'] and t['result'],t
+    images.append(result['id']);assert result['status']=='new' and result['copy'] is None
     b=load(b);assert b['processes'][0]['brief']==original_brief and len(b['processes'][0]['attempts'])==3
     assert b['processes'][0]['calls']==7 and len(b['images'])==1
     logs=control();assert len(logs)==6
@@ -53,9 +53,27 @@ try:
     assert call('/'+result['id']+'/regenerate',{'confirm':True,'revision':result['revision'],'prompt':'test','quality':'high'},library=True)[0]==409
     req=urllib.request.Request(LIBRARY+'/'+result['id']+'/original',headers={'Authorization':'Bearer '+TOKEN})
     with urllib.request.urlopen(req) as r:original=r.read()
-    req=urllib.request.Request(LIBRARY+'/'+result['id']+'/copy',data=b'{}',method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'})
+    req=urllib.request.Request(LIBRARY+'/'+result['id']+'/copy',data=game_copy(original),method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'image/webp'})
     with urllib.request.urlopen(req) as r:copy=__import__('json').loads(r.read())
     assert copy['copy']['crop']['format']=='4:5'
+    # Treatment set with the sliders, in the browser (owner decisions of 2026-11-16): the Worker checks the record it receives.
+    sid=result['id'];crop=copy['copy']['crop'];long=max(crop['width'],crop['height'])
+    m={'long':long,'noise':2.0,'sharpness':5.0,'contrast':120,'saturation':0.1,'cast':[1,0,-1],'v':2}
+    chosen={'contrast':1.1,'saturation':0.9,'cast':[3,0,-3],'monochrome':'sepia','blur':0.5,'grain':4,'grainSize':1,'jpeg':0.8,'long':long}
+    record={'version':4,'off':False,'seed':7,'long':long,'medium':'','color':'','sample':{'id':historical['id'],'metrics':m},'settings':chosen}
+    def upload(treatment):
+        q=f"?crop={crop['x']},{crop['y']},{crop['width']},{crop['height']},4:5"
+        req=urllib.request.Request(LIBRARY+'/'+sid+'/copy'+q,data=game_copy(original,crop),method='POST',
+            headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'image/webp','X-Copy-Treatment':__import__('json').dumps(treatment)})
+        try:
+            with urllib.request.urlopen(req) as r:return r.status,__import__('json').loads(r.read())
+        except urllib.error.HTTPError as e:return e.code,__import__('json').loads(e.read())
+    assert upload({**record,'settings':{**chosen,'blur':9}})[0]==400
+    assert upload({**record,'settings':{**chosen,'long':long+1},'long':long+1})[0]==400  # longer than the crop
+    assert upload({**record,'long':long-1})[0]==400  # the record's long side differs from the settings'
+    assert upload({**record,'sample':{'id':'another-real','metrics':m}})[0]==400  # only the source REAL
+    code,manual=upload(record);assert code==201 and manual['treatment']['settings']==chosen,manual
+    assert upload(record)[1]['already_prepared'] is True
     assert call('/'+result['id']+'/analyze',{'confirm':True},library=True)[0]==200
     assert load(b)['processes'][0]['calls']==8  # 2+2N, including the final tags
     analysed=control()[-1];assert analysed['body']['text']['format']['schema']['required']==['tags']
@@ -138,8 +156,8 @@ try:
     code,accepted=generate(fresh);assert code==200,accepted;images.append(accepted['id'])
     req=urllib.request.Request(LIBRARY+'/'+accepted['id']+'/original',headers={'Authorization':'Bearer '+TOKEN})
     with urllib.request.urlopen(req) as r:original=r.read()
-    req=urllib.request.Request(LIBRARY+'/'+accepted['id']+'/copy',data=b'{}',method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'})
-    with urllib.request.urlopen(req) as r:assert r.status in (200,201)
+    req=urllib.request.Request(LIBRARY+'/'+accepted['id']+'/copy',data=game_copy(original),method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'image/webp'})
+    with urllib.request.urlopen(req) as r:assert r.status==201
     remove([source['id']])
     assert call('/'+accepted['id']+'/analyze',{'confirm':True},library=True)[0]==200
     # A source in an in-flight process stays in the trash until that operation settles.

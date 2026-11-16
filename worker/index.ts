@@ -5,7 +5,6 @@ import { library } from "./library";
 import { admin, body, HttpError, json, sameOrigin, type Env } from "./core";
 import { maintenance } from "./maintenance";
 export { SlopBatchWorkflow } from "./slop-runner";
-export { CopiesWorkflow } from "./copies-runner";
 export default {
   /** Daily Cron Trigger (wrangler.jsonc): games older than 12 months and other expired rows go (spec `privacy-note-legali`). */
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
@@ -32,6 +31,8 @@ export default {
         throw new HttpError(404, "API inesistente");
       return env.ASSETS.fetch(request);
     } catch (error) {
+      // Unexpected errors reach the Workers Logs with their stack; the owner sees «Errore del server».
+      if (!(error instanceof HttpError)) console.error("unexpected", request.method, new URL(request.url).pathname, error instanceof Error ? error.stack || error.message : String(error));
       const response = json(
         {
           error:

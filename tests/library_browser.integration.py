@@ -8,6 +8,7 @@ import urllib.parse
 from pathlib import Path
 from PIL import Image
 from playwright.sync_api import expect, sync_playwright
+from game_copy import game_copy
 
 base = os.environ['ROS_TEST_BASE']
 token = Path('.dev.vars').read_text().strip().split('=', 1)[1]
@@ -28,7 +29,7 @@ def add(page, picture_file, origin):
                                  data=picture_file['buffer'], headers={'Content-Type': picture_file['mimeType']})
     assert response.ok, response.text()
     item = response.json()
-    response = page.request.post(base + f'/api/admin/library/{item["id"]}/copy', data='{}', headers={'Content-Type': 'application/json'})
+    response = page.request.post(base + f'/api/admin/library/{item["id"]}/copy', data=game_copy(picture_file['buffer']), headers={'Content-Type': 'image/webp'})
     assert response.ok, response.text()
     return response.json()
 

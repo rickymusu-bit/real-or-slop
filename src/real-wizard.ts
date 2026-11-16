@@ -10,7 +10,7 @@ import { escape } from "../shared/html";
 import { CATEGORY_LABELS, isCategory, type Category } from "../shared/tag-categories";
 import { categoryOf, categorySelect, legend, pill, sortByCategory, suggestedCategory } from "./tag-ui";
 import { tagFromInput } from "../shared/tag-input";
-import { requestCopy, saveFrame } from "./game-copy";
+import { prepareLibraryCopy, saveFrame } from "./game-copy";
 import { chooseFrame } from "./crop-editor";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
@@ -318,11 +318,9 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         render();
         const item = await api<Image>("/commons", { method: "POST", body: JSON.stringify({ url }) });
         images.push(item); pending.delete(url); persist(); done++;
-        // The Worker made the copy with the acquisition; a missing one is asked for again (made there, not here).
-        if (!item.copy) {
-          try { replace(await requestCopy<Image>(item.id)); }
-          catch (copyError) { failures.push(short(item.title, 40) + ": copia di gioco non pronta (" + errorText(copyError) + ")"); }
-        }
+        // The game copy (4:5, centred) is made here, in the browser, from the stored original.
+        try { replace(await prepareLibraryCopy<Image>(item.id)); }
+        catch (copyError) { failures.push(short(item.title, 40) + ": copia di gioco non pronta (" + errorText(copyError) + ")"); }
       } catch (error) { failures.push(short(url, 40) + ": " + errorText(error)); }
     }
     stage = staged().length ? 2 : 1;
@@ -585,8 +583,8 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         root.querySelector<HTMLDialogElement>("#rw-reset-dialog")?.close();
         await restore(ids);
       } else if (action === "copy") {
-        notice = "Il server prepara la copia di gioco…"; render();
-        const copy = await requestCopy<Image>(id);
+        notice = "Preparo la copia di gioco…"; render();
+        const copy = await prepareLibraryCopy<Image>(id);
         replace(copy); notice = "Copia di gioco pronta."; render();
       } else if (action === "crop") {
         const item = images.find(i => i.id === id)!;
