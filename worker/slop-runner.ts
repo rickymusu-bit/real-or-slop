@@ -7,7 +7,7 @@ import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloud
 import { HttpError, type Env } from "./core";
 import { generateImage, writePrompts } from "./slop-generation";
 import { analyze } from "./analysis";
-import { find, storeCopy } from "./library";
+import { find } from "./library";
 
 export type Phase = "briefs" | "images" | "all";
 export interface RunParams { batchId: string; phase: Phase }
@@ -85,15 +85,14 @@ export class SlopBatchWorkflow extends WorkflowEntrypoint<Env, RunParams> {
         for (let n = 0; n < work.max; n++) {
           if (!await live(`live-${slot}-${n}`)) { outcome = "stopped"; return; }
           const result = await safely(`attempt-${slot}-${n}`, () => attempt(async () => {
-            const done = await generateImage(env, batchId, { confirm: true, index: slot, quality: work.quality }, { copy: false }) as { id?: string; process?: { state: string } };
+            const done = await generateImage(env, batchId, { confirm: true, index: slot, quality: work.quality }) as { id?: string; process?: { state: string } };
             return { id: done.id ?? null, state: done.process?.state };
           }));
           if (result.account) { outcome = "failed"; reason = result.error || ""; return; }
           if (result.id) {
-            // Tags of the accepted SLOP, from its whole original: one paid call, claimed like any analysis. Then its game copy,
-            // in a step of its own (free, the heaviest computation of the run).
+            // Tags of the accepted SLOP, from its whole original: one paid call, claimed like any analysis. Its game copy is made
+            // in the owner's browser at the review (owner decision of 2026-11-16).
             await safely(`tags-${slot}`, () => attempt(async () => { await analyze(env, await find(env, result.id!), { confirm: true }); return {}; }));
-            await safely(`copy-${slot}`, () => attempt(async () => { await storeCopy(env, await find(env, result.id!), {}); return {}; }));
             break;
           }
           if (!result.ok || result.state !== "retry") break;

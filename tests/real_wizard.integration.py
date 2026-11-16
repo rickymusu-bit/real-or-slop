@@ -10,6 +10,7 @@ from pathlib import Path
 
 from PIL import Image
 from playwright.sync_api import expect, sync_playwright
+from game_copy import game_copy
 from long_press import long_press
 
 base = os.environ['ROS_TEST_BASE']
@@ -164,7 +165,7 @@ with sync_playwright() as p:
         for f in (image_file(title + '-a', seed), image_file(title + '-b', seed + 40), image_file(title + '-c', seed + 80), image_file(title + '-d', seed + 120)):
             r = page.request.post(base + '/api/admin/library/upload?' + urllib.parse.urlencode({'origin': 'REAL', 'title': f['name'].rsplit('.', 1)[0]}),
                                   data=f['buffer'], headers={'Content-Type': f['mimeType']}); assert r.ok, r.text()
-            r = page.request.post(base + f"/api/admin/library/{r.json()['id']}/copy", data='{}', headers={'Content-Type': 'application/json'}); assert r.ok, r.text()
+            r = page.request.post(base + f"/api/admin/library/{r.json()['id']}/copy", data=game_copy(f['buffer']), headers={'Content-Type': 'image/webp'}); assert r.ok, r.text()
         response = page.request.get(base + '/api/admin/library?status=new&origin=REAL&q=' + title)
         assert response.ok, response.text()
         found = {i['title']: i for i in response.json()['items']}

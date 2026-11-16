@@ -182,20 +182,19 @@ const evaluationSchema = { type: "object", additionalProperties: false,
 /** The part of the evaluator's instructions that the code enforces, after the editable context «slop_evaluation». */
 const EVALUATE_RULE = `Evaluate the ENTIRE unprocessed generated photograph. Choose accept, retry_same_prompt, revise_prompt, replan_scene or review_needed; for uncertainty choose review_needed. Critical defects are never accepted at any tolerance. Tolerance 0 accepts no minor defects: with only minor defects choose retry_same_prompt or revise_prompt, never review_needed; 1 accepts subtle photographically plausible imperfections; 2 tolerates minor defects only while credibility holds. If revising or replanning, give the revised prompt in this same response and copy every required anchor and exclusion of the brief verbatim into preserved_required and preserved_exclusions. Never compose for a later crop.`;
 async function hash(brief: Brief) { return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(brief))))].map(b => b.toString(16).padStart(2, "0")).join(""); }
-async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array, evaluation: Evaluation, copy: boolean) {
+async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array, evaluation: Evaluation) {
   // Reuse a saved accepted result if the Worker was interrupted after inserting the library row.
   const existing = await env.DB.prepare("SELECT id FROM images WHERE generation_batch=? AND json_extract(generation_slot,'$.process')=?").bind(batch.id, p.id).first<{id: string}>();
   const config = parse<Snapshot>(p.snapshot, {} as Snapshot), item = itemsOf(batch)[p.slot];
   const image = existing ? await viewOf(env, existing.id) : await create(env, { origin: "SLOP", title: ("Da REAL: " + item.title).slice(0, 200),
     bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, prompt: p.prompt, model: config.image_model,
-    copy,  // the runner makes it in a step of its own, after the tags
     generation: {batch: batch.id, source: p.source_id, quality: config.quality,
       slot: {index: p.slot, source: p.source_id, sample: p.source_id, tags: item.tags, process: p.id, brief: parse(p.brief, null), brief_hash: p.brief_hash, evaluation, attempts: p.attempts}} });
   await env.DB.prepare("UPDATE slop_processes SET image_id=?,state='accepted',updated_at=? WHERE id=?").bind(image.id, now(), p.id).run();
   return {...image, process: {id: p.id, state: "accepted", attempts: p.attempts}};
 }
-/** One attempt of a REAL. `options.copy` false: the caller (the Workflow) makes the game copy of an accepted SLOP in its own step. */
-export async function generateImage(env: Env, batchId: string, data: Record<string, unknown>, options: { copy?: boolean } = {}) {
+/** One attempt of a REAL. The game copy of an accepted SLOP is made later in the owner's browser (spec `copie-di-gioco`). */
+export async function generateImage(env: Env, batchId: string, data: Record<string, unknown>) {
   confirmOnly(data, ["index", "quality"]);
   if (!env.OPENAI_API_KEY || !env.QUARANTINE) throw new HttpError(503, "Chiave OpenAI o quarantena mancante");
   const batch = await load(env, batchId); compatible(batch);
@@ -253,7 +252,7 @@ export async function generateImage(env: Env, batchId: string, data: Record<stri
     // The stored evaluation records the context versions it was made with.
     await env.DB.prepare("UPDATE slop_attempts SET status='completed',evaluation=?,updated_at=? WHERE id=?")
       .bind(JSON.stringify({...evaluation, contexts: {base: base.id, evaluation: context.id}}), now(), attemptId).run();
-    if (evaluation.decision === "accept") return await materialize(env, p, batch, bytes, evaluation, options.copy !== false);
+    if (evaluation.decision === "accept") return await materialize(env, p, batch, bytes, evaluation);
     const state = evaluation.decision === "review_needed" ? "review_needed" : p.attempts >= config.max_generation_attempts ? "exhausted" : "retry";
     const prompt = ["revise_prompt", "replan_scene"].includes(evaluation.decision) ? evaluation.revised_prompt.trim() : p.prompt;
     await env.DB.prepare("UPDATE slop_processes SET state=?,prompt=?,updated_at=? WHERE id=?").bind(state, prompt, now(), p.id).run();

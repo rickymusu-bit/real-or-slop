@@ -1,26 +1,32 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-16T11:54:19Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-16T12:40:03Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.34.0 — 2026-11-16T11:54:19Z
+## 1.34.0 — 2026-11-16T12:40:03Z
 
-- **Librerie già fatte per le immagini** (richiesta dell'owner del 2026-11-16): il decodificatore PNG e il ricampionamento scritti per
-  il progetto non ci sono più. I pixel li legge fast-png (MIT, JavaScript); il ricampionamento lo fa Cloudflare Images, che riduce
-  l'originale direttamente alla scala della copia, così il Worker ritaglia senza ricampionare; JPEG intermedio e WebP restano a Images.
-  I codec di Squoosh in WebAssembly (jSquash) sono stati provati e scartati: misurati in locale, tengono la memoria per tutta la vita
-  dell'isolate (ricampionatore 142 MB per una copia, libpng 50 MB, mozjpeg e libwebp 16 MiB ciascuno) contro i 128 MB di un Worker.
-  La sfocatura del trattamento lavora sul posto, senza un secondo buffer da 23 MB. L'originale ridotto resta sotto i cinque megapixel
-  (prima sei): una foto più larga di circa 2:1 ha una copia più piccola di 1536 px.
+- **Il Worker gestisce ciò che riguarda OpenAI, il browser tutto il resto** (decisione dell'owner del 2026-11-16, che sostituisce
+  quella del 2026-11-15 sul browser come sola interfaccia). Le copie di gioco tornano a prepararle il browser: ritaglio 4:5,
+  ridimensionamento, trattamento delle SLOP, JPEG intermedio, WebP e misure, poi il caricamento, che il Worker controlla (WebP,
+  dimensioni, misure, trattamento) e conserva. Spariscono il binding Images, il Workflow delle copie (`CopiesWorkflow`, `POST /copies`)
+  e il decodificatore PNG scritto per il Worker; «Rifai la copia di gioco» gira nella pagina, una foto alla volta. Il Workflow del
+  ciclo SLOP non prepara più la copia: la prepara il browser all'apertura della revisione. Le copie senza misure si misurano di
+  nuovo nel browser aprendo il Database.
+- **Un solo codificatore per REAL e SLOP**, quello del browser: le copie delle SLOP preparate dal Worker con la 1.32–1.33 vanno
+  rifatte con «Rifai la copia di gioco», altrimenti la compressione di Images potrebbe distinguerle dalle REAL fatte nel browser.
 - **Trattamento regolabile con i cursori** (richiesta dell'owner del 2026-11-16): «Regola il trattamento» nel dettaglio del Database
   e nella revisione dello studio apre i cursori di colore, contrasto, saturazione, dominante o tinta, sfocatura, grana, dimensione
-  della grana, qualità JPEG e lato lungo, posizionati sulla proposta calcolata dalla REAL di riferimento. Ogni modifica chiede al
-  Worker un'anteprima non salvata, mostrata accanto alla copia della REAL con le misure di entrambe; «Torna alla proposta» riporta i
-  valori proposti. Le impostazioni salvate restano quando la copia si rifà. Nuove API `GET /:id/treatment` e
-  `POST /:id/treatment/preview`; `POST /:id/copy` accetta `treatment.settings`.
-- Versione 4 dell'algoritmo del trattamento: stessi passi, valori proposti arrotondati prima di applicarli, tinta delle copie
-  monocrome registrata. Le copie esistenti restano valide; seme e trattamento si conservano quando si rifanno.
-- Specifica `copie-di-gioco` 10.1.0, `MASTER.md` 25.2.0.
+  della grana, qualità JPEG e lato lungo, posizionati sulla proposta calcolata dalla REAL di riferimento. L'anteprima si ridisegna
+  nella pagina a ogni modifica, accanto alla copia della REAL con le misure di entrambe; «Torna alla proposta» riporta i valori
+  proposti. Le impostazioni salvate restano quando la copia si rifà. Il Worker accetta il registro solo con impostazioni entro i
+  limiti, misure della REAL di riferimento e lato lungo coerente.
+- Versione 4 dell'algoritmo del trattamento: stessi passi, valori proposti arrotondati prima di applicarli (la proposta riapplicata
+  dà gli stessi pixel), tinta delle copie monocrome registrata, sfocatura senza un secondo buffer.
+- Provate e scartate prima della decisione, mai rilasciate: la copia sul Worker con i codec di Squoosh in WebAssembly (jSquash), la
+  cui memoria resta per tutta la vita dell'isolate (ricampionatore 142 MB per una copia, libpng 50 MB) contro i 128 MB di un Worker,
+  e poi con fast-png e Images.
+- `AGENTS.md` 24.0.0; specifiche `copie-di-gioco` 11.0.0, `database-immagini` 2.9.0, `dashboard-admin-wizard-real` 2.7.0,
+  `generazione-slop` 5.9.0; `MASTER.md` 26.0.0.
 
 ## 1.33.1 — 2026-11-16T08:40:56Z
 

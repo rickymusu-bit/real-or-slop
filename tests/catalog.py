@@ -6,6 +6,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from PIL import Image
+from game_copy import game_copy
 
 def _call(api, token, path, data=None, raw=None, mime='application/json', method=None):
     body = raw if raw is not None else (json.dumps(data).encode() if data is not None else None)
@@ -23,7 +24,7 @@ def publish(api, token, prefix, real=10, slop=10, seed=0):
         item = _call(api, token, '/upload?' + urllib.parse.urlencode({'origin': origin, 'title': f'{prefix}-{origin}-{index}',
                      'prompt': f'A street scene number {index}, 1960s' if origin == 'SLOP' else '',
                      'description': f'Descrizione della foto {index}' if origin == 'REAL' else ''}), raw=out.getvalue(), mime='image/png')
-        item = _call(api, token, f'/{item["id"]}/copy', data={})
+        item = _call(api, token, f'/{item["id"]}/copy', raw=game_copy(out.getvalue()), mime='image/webp')
         item = _call(api, token, f'/{item["id"]}', {'revision': item['revision'], 'tags': [f'{prefix}-tag'],
                      'tag_categories': {f'{prefix}-tag': 'other'}}, method='PATCH')
         _call(api, token, f'/{item["id"]}/approve', {'rights_confirmed': True})

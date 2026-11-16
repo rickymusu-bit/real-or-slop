@@ -19,9 +19,9 @@ import { categoryOf, categorySelect, legend, pill, sortByCategory, startPills, s
 import { mountRealWizard, type RealWizard } from "./real-wizard";
 import { onLongPress, openPreview } from "./image-preview";
 import { content, escape } from "./main";
-import { prepareItemCopy, remakeCopies, saveFrame } from "./game-copy";
+import { measureMissing, prepareItemCopy, remakeCopies, saveFrame } from "./game-copy";
 import { chooseTreatment } from "./treatment-editor";
-import type { Metrics, Treatment } from "../shared/copy-treatment";
+import { METRICS_VERSION, type Metrics, type Treatment } from "../shared/copy-treatment";
 import { chooseFrame } from "./crop-editor";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
@@ -79,6 +79,7 @@ export async function showLibrary() {
   let sort = { by: "added", order: "desc" };
   try { const saved = JSON.parse(localStorage.getItem(SORT_KEY) || "null") as typeof sort | null;
     if (saved && ["added", "views", "accuracy"].includes(saved.by) && ["asc", "desc"].includes(saved.order)) sort = saved; } catch { /* private browsing */ }
+  let measuring = false;
   let slopStudio: { refresh: () => Promise<void> } = { refresh: async () => {} };
   const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "", group: "", redo_copy: false, incomplete: false, undescribed: false };
   let autoBox: { refresh: () => Promise<void> } = { refresh: async () => {} };
@@ -246,6 +247,11 @@ export async function showLibrary() {
     $("#library-counts").textContent = `${count("new")} nuove · ${count("approved")} approvate · ${count("published")} pubblicate · ${count("trash")} nel cestino`;
     $("#library-empty-trash").hidden = filter.status !== "trash" || !count("trash");
     render();
+    // Copies without measures of the current version are measured in this page, in the background, one at a time (free).
+    if (!measuring && items.some(i => i.metrics?.v !== METRICS_VERSION && i.copy)) {
+      measuring = true;
+      void measureMissing(items.map(i => ({ id: i.id, metrics: i.metrics, copy: i.copy ? { sha256: i.copy.sha256 } : null }))).finally(() => { measuring = false; });
+    }
   };
   const rate = (item: Item) => item.stats.views ? ` (${Math.round(item.stats.correct / item.stats.views * 100)}%)` : "";
   const statsLine = (item: Item) => `<span class="db-stats" data-stats>Vista <strong>${item.stats.views}</strong> ${item.stats.views === 1 ? "volta" : "volte"} · classificata correttamente <strong>${item.stats.correct}</strong>${rate(item)}</span>`;
@@ -444,7 +450,7 @@ export async function showLibrary() {
         open = await call<Item>(`/${open.id}/analyze`, {method:"POST",body:JSON.stringify(repeat ? {confirm:true,refresh_description:true,repeat_uncertain:true} : {confirm:true,refresh_description:true})});
       }
       else if (button.dataset.tagRemove) open = await save(open, { tags: open.tags.filter(t => t !== button.dataset.tagRemove) });
-      else if (button.id === "library-copy") { detailMessage("Il server prepara la copia di gioco…"); open = await prepareItemCopy<Item>(open); }
+      else if (button.id === "library-copy") { detailMessage("Preparo la copia di gioco…"); open = await prepareItemCopy<Item>(open); }
       else if (button.id === "library-complete" && analysis) {
         if (!window.confirm(`Completare Genere, Colore e Supporto di «${open.title}» con ${analysis.model}? È una chiamata a pagamento, una sola volta per l'immagine; gli altri tag restano.`)) return;
         detailMessage("Completamento in corso…");
@@ -453,22 +459,22 @@ export async function showLibrary() {
         void Promise.all([refreshTags(), refreshAnalysis(), refreshGroups()]);
       }
       else if (button.id === "library-treatment-edit") {
-        const choice = await chooseTreatment(open.id, open.title);
+        const choice = await chooseTreatment(open, open.title);
         if (!choice) return;
-        detailMessage("Il server rifà la copia con il trattamento scelto…");
+        detailMessage("Rifaccio la copia con il trattamento scelto…");
         open = await prepareItemCopy<Item>(open, open.copy?.crop || undefined, choice);
         detailMessage(choice.settings ? "Trattamento regolato salvato." : "Trattamento proposto salvato.");
       }
       else if (button.id.startsWith("library-treatment-")) {
         const off = button.id === "library-treatment-off";
-        detailMessage(off ? "Il server rifà la copia senza trattamento…" : "Il server rifà la copia con il trattamento…");
+        detailMessage(off ? "Rifaccio la copia senza trattamento…" : "Rifaccio la copia con il trattamento…");
         open = await prepareItemCopy<Item>(open, open.copy?.crop || undefined, { off });
         detailMessage(open.treatment && !open.treatment.off ? "Copia trattata." : open.treatment ? "Copia senza trattamento." : "Nessuna REAL misurata nel gruppo: copia senza trattamento.");
       }
       else if (button.id === "library-crop") {
         const choice = await chooseFrame(open.id, open.width, open.height, open.copy ? { crop: open.copy.crop } : null, open.title);
         if (!choice) return;
-        detailMessage("Il server rifà la copia con la nuova inquadratura…");
+        detailMessage("Rifaccio la copia con la nuova inquadratura…");
         open = await saveFrame<Item>(open, choice);
         detailMessage("Inquadratura salvata.");
       }
@@ -556,13 +562,13 @@ export async function showLibrary() {
           if (published && !window.confirm(`${published} ${published === 1 ? "immagine è pubblicata: esce" : "immagini sono pubblicate: escono"} subito dal gioco e ${published === 1 ? "va" : "vanno"} nel cestino; le partite in corso finiscono con la versione attuale. Continuare?`)) return;
         }
         if (action === "copy-portrait") {
-          // Every selected copy is made again on Cloudflare, with its 4:5 crop (centred for an earlier format); free.
+          // Every selected copy is made again in this page, with its 4:5 crop (centred for an earlier format); free.
           const pending = items.filter(i => selected.has(i.id) && i.status !== "trash");
           if (!pending.length) { message("Nessuna immagine selezionata fuori dal cestino."); return; }
           if (pending.some(i=>i.status === "published") && !window.confirm("Le foto pubblicate verranno ritirate e resteranno approvate con la nuova copia. Continuare?")) return;
-          const result = await remakeCopies(pending.map(i => i.id), progress);
+          const result = await remakeCopies(pending, progress);
           progress(""); await load();
-          message(`${result.done} di ${pending.length} copie rifatte sul server. Controlla l’inquadratura prima di pubblicare.` + (result.failed.length ? " Non riuscite: " + result.failed.map(f => f.error).join(" · ") : "")); return;
+          message(`${result.done} di ${pending.length} copie rifatte. Controlla l’inquadratura prima di pubblicare.` + (result.failed.length ? " Non riuscite: " + result.failed.map(f => f.error).join(" · ") : "")); return;
         }
         if (action === "complete") {
           const ids = items.filter(i => selected.has(i.id) && i.completable).map(i => i.id);

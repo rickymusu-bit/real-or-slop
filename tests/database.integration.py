@@ -11,6 +11,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from PIL import Image
+from game_copy import game_copy
 
 base = os.environ['ROS_TEST_BASE']; assert base.startswith('http://127.0.0.1:')
 state, fake = os.environ['ROS_TEST_STATE'], os.environ['ROS_TEST_FAKE_OPENAI']
@@ -45,11 +46,12 @@ def openai(queue=None):
 def picture(seed, size=(48, 32)):
     image = Image.new('RGB', size); image.putdata([(seed % 256, (x * 7 + seed) % 256, (y * 11) % 256) for y in range(size[1]) for x in range(size[0])])
     out = io.BytesIO(); image.save(out, 'PNG'); return out.getvalue()
+def webp(source): return game_copy(source)
 def add(origin, title, seed, tags, prompt=''):
     source = picture(seed)
     status, item = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': origin, 'title': title, 'prompt': prompt}), raw=source, mime='image/png')
     assert status == 201, item
-    status, item = call(f'{API}/{item["id"]}/copy', {}); assert status in (200, 201), item
+    status, item = call(f'{API}/{item["id"]}/copy', raw=webp(source), mime='image/webp'); assert status == 201, item
     status, item = call(f'{API}/{item["id"]}', {'revision': item['revision'], 'tags': tags,
                                                 'tag_categories': {t: 'event' if t == 'db-riot' else 'place' if t == 'db-paris' else 'setting' for t in tags}}, method='PATCH')
     assert status == 200, item

@@ -6,14 +6,13 @@ import { browseCommonsCategory, browseCommonsSearch, commonsFile, MAX_IMAGE_BYTE
 import { imageMime } from "../shared/image-format";
 import { imageGeometry } from "../shared/image-geometry";
 import { cleanImage } from "../shared/media-clean";
-import { centredCrop, cropError, GAME_COPY, parseCrop, storedCrop, type Crop } from "../shared/game-copy";
+import { centredCrop, copyDimensions, cropError, GAME_COPY, parseCrop, storedCrop } from "../shared/game-copy";
+import { imageDimensions } from "../shared/image-dimensions";
 import { isNoDerivatives } from "../shared/licenses";
 import { checkTag } from "../shared/tags";
 import { contextRoute } from "./model-context";
 import { categoryError, forcedCategory, isCategory, limitError, SINGLE, VISUAL, type Category } from "../shared/tag-categories";
-import { SETTING_LIMITS, TREATMENT_VERSION, validMetrics, validSettings, validTreatment, type Settings } from "../shared/copy-treatment";
-import { makeCopy, measureCopy, settingsOfCopy, type Plan } from "./copy-maker";
-import { copiesStatus, startCopies } from "./copies-runner";
+import { treatedLong, validMetrics, validSettings, validTreatment } from "../shared/copy-treatment";
 import { groupOf, parseGroup } from "../shared/slop-groups";
 import { analysisStatus, analyze, completable, completeCategories } from "./analysis";
 import { modelsRoute } from "./models";
@@ -143,7 +142,7 @@ function view(row: Row, rows: TagRow[], extra: Extra = {}) {
     analysis: { status: row.analysis_status, error: row.analysis_error, at: row.analyzed_at,
       context: row.analysis_task_context ? { base: row.analysis_base_context, task: row.analysis_task_context } : null },
     generated: generatedOf(row),
-    generation: row.generation_batch ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality,
+    generation: row.generation_batch || row.generation_source ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality,
       source: row.generation_source } : null,
     group, missing_categories: VISUAL.filter(c => !rows.some(r => r.category === c)),
     completable: completable(row, rows.map(r => r.category)),
@@ -195,7 +194,7 @@ export function tagStatements(env: Env, imageIdValue: string, wanted: string[], 
 /** Adds a new image to the library. The original goes to quarantine; the browser then uploads its game copy. */
 export async function create(env: Env, input: { origin: Origin; title: string; description?: string; bytes: ArrayBuffer;
   source_url?: string; author?: string; license_name?: string; license_url?: string; prompt?: string; model?: string;
-  generation?: { batch: string; slot: unknown; quality: string; source?: string | null }; copy?: boolean }) {
+  generation?: { batch: string; slot: unknown; quality: string; source?: string | null } }) {
   if (!env.QUARANTINE) throw new HttpError(503, "Quarantena privata non configurata");
   const bytes = new Uint8Array(input.bytes);
   if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new HttpError(413, "File vuoto o oltre 12 MB");
@@ -224,134 +223,67 @@ export async function create(env: Env, input: { origin: Origin; title: string; d
     if (error instanceof HttpError) throw error;
     throw new HttpError(409, "Immagine già presente o caricamento concorrente");
   }
-  // The game copy is made here at once (4:5, centred; a SLOP treated towards its source REAL): the browser is only an interface.
-  // A failure leaves the image without a copy, which the owner can ask for again; the image itself is kept.
-  if (input.copy !== false) {
-    try { await storeCopy(env, await find(env, imageIdValue), {}); }
-    catch (error) { console.log("copy", imageIdValue, error instanceof Error ? error.message : String(error)); }
-  }
   return viewOf(env, imageIdValue);
 }
 
-/** Measures the stored copy of an image (copies made before the measures existed): saved only if the copy is still the same. */
-export async function measureStored(env: Env, row: Row) {
-  const file = row.copy_key ? await env.QUARANTINE?.get(row.copy_key) : null;
-  if (!file || !row.copy_sha256) throw new HttpError(409, "Copia di gioco non disponibile");
-  const metrics = await measureCopy(env, new Uint8Array(await file.arrayBuffer()));
-  const result = await env.DB.prepare("UPDATE images SET copy_metrics=? WHERE id=? AND copy_sha256=?").bind(JSON.stringify(metrics), row.id, row.copy_sha256).run();
-  if (!result.meta.changes) throw new HttpError(409, "Copia cambiata: misure non salvate");
-  return metrics;
-}
-/** Colour, medium and decade a SLOP was asked for, from the tags of its source REAL kept in its slot. */
-function lookOf(slot: unknown) {
-  const tags = (slot as { tags?: unknown } | null)?.tags;
-  const of = (category: string) => (Array.isArray(tags) ? (tags as { label?: string; category?: string }[]).find(t => t?.category === category)?.label
-    : tags && typeof tags === "object" ? (tags as Record<string, string>)[category] : "") || "";
-  return { color: of("color"), medium: of("medium") };
-}
-/** The treatment plan of a SLOP: its source REAL's measures; the stored seed, on/off and the owner's settings are kept unless asked
- * otherwise (`settings` null goes back to the proposal). Null for a REAL, or for a SLOP whose source REAL has no measures (its copy
- * is then untreated). */
-async function planOf(env: Env, row: Row, asked: { off?: boolean; settings?: Settings | null } = {}): Promise<Plan | null> {
-  if (row.origin !== "SLOP" || !row.generation_source) return null;
-  const source = await env.DB.prepare("SELECT id,copy_metrics FROM images WHERE id=?").bind(row.generation_source).first<{ id: string; copy_metrics: string | null }>();
-  const metrics = validMetrics(parseJson(source?.copy_metrics ?? null));
-  if (!source || !metrics) return null;
-  const stored = validTreatment(parseJson(row.copy_treatment)), same = !!stored && stored.sample.id === source.id;
-  const settings = asked.settings !== undefined ? asked.settings : same && stored!.version === TREATMENT_VERSION ? stored!.settings || null : null;
-  return { off: asked.off ?? (asked.settings ? false : same ? stored!.off : false),
-    seed: same ? stored!.seed : crypto.getRandomValues(new Uint32Array(1))[0] & 0x7fffffff,
-    ...lookOf(parseSlot(row.generation_slot)), sample: { id: source.id, metrics }, settings };
-}
-/** The crop of a request («x,y,width,height,4:5»), else the stored one, else centred; 400 when invalid. */
-function cropFor(row: Row, value: unknown): Crop {
-  let crop: Crop | null;
-  try { crop = typeof value === "string" ? parseCrop(value) : value === undefined ? cropOf(row) || centredCrop(row.width, row.height) : null; }
-  catch { throw new HttpError(400, "Immagine troppo piccola per una copia di gioco"); }
-  const invalid = crop ? cropError(row.width, row.height, crop) : "Inquadratura non valida";
-  if (!crop || crop.format !== "4:5" || invalid) throw new HttpError(400, invalid || "Copia di gioco richiesta in 4:5");
-  return crop;
-}
-/** The treatment asked by a request: {off?, settings?} (settings null: back to the proposal). */
-function askedTreatment(row: Row, value: unknown, crop: Crop): { off?: boolean; settings?: Settings | null } {
-  if (value === undefined) return {};
-  const asked = value as Record<string, unknown> | null;
-  if (typeof asked !== "object" || !asked || Object.keys(asked).some(k => k !== "off" && k !== "settings")
-    || (asked.off !== undefined && typeof asked.off !== "boolean")) throw new HttpError(400, "Trattamento non valido");
-  if (row.origin !== "SLOP") throw new HttpError(400, "Il trattamento vale solo per le SLOP");
-  if (asked.settings === undefined || asked.settings === null) return { off: asked.off as boolean | undefined, settings: asked.settings as null | undefined };
-  const settings = validSettings(asked.settings, Math.max(crop.width, crop.height));
-  if (!settings) throw new HttpError(400, "Impostazioni del trattamento fuori dai limiti");
-  if (asked.off === true) throw new HttpError(400, "Trattamento spento: impostazioni non applicabili");
-  return { off: false, settings };
-}
-async function originalBytes(env: Env, row: Row): Promise<Uint8Array> {
-  const original = await env.QUARANTINE!.get(row.original_key);
-  if (!original) throw new HttpError(409, "Originale non disponibile");
-  return new Uint8Array(await original.arrayBuffer());
-}
+/** What makes two treatments give the same copy. */
+const treatmentKey = (t: ReturnType<typeof validTreatment>) =>
+  t ? JSON.stringify([t.version, t.off, t.seed, t.long, t.medium, t.color, t.sample.id, t.settings || null]) : "";
 
-/** GET /:id/treatment: what the sliders of a SLOP start from (owner request of 2026-11-16): the settings proposed from the source
- * REAL on the stored crop, the current ones (the owner's, or the proposal), their limits and the source REAL. The proposal of a
- * copy made with this version of the treatment is read from it; otherwise it is computed here (free: no model is called). */
-async function treatmentOf(env: Env, row: Row) {
-  if (row.origin !== "SLOP") throw new HttpError(400, "Il trattamento vale solo per le SLOP");
-  const crop = cropFor(row, undefined), stored = validTreatment(parseJson(row.copy_treatment));
-  const plan = await planOf(env, row, { off: false, settings: null });
-  if (!plan) throw new HttpError(409, "La REAL di riferimento non ha misure: copia senza trattamento");
-  const current = stored && stored.version === TREATMENT_VERSION && stored.sample.id === plan.sample.id ? stored : null;
-  let proposed = current && !current.off && !current.settings && row.copy_crop === JSON.stringify(crop) ? settingsOfCopy(current) : null;
-  if (!proposed) {
-    if (!env.QUARANTINE) throw new HttpError(503, "Quarantena privata non configurata");
-    proposed = settingsOfCopy((await makeCopy(env, await originalBytes(env, row), row.width, row.height, crop, plan)).treatment);
-  }
-  return { id: row.id, proposed, current: current?.settings || proposed, off: !!stored?.off, manual: !!current?.settings,
-    limits: { ...SETTING_LIMITS, long: { min: Math.min(SETTING_LIMITS.long.min, Math.max(crop.width, crop.height)), max: Math.min(SETTING_LIMITS.long.max as number, Math.max(crop.width, crop.height)), step: 1 } },
-    sample: { id: plan.sample.id, metrics: plan.sample.metrics }, medium: plan.medium, color: plan.color };
-}
-/** POST /:id/treatment/preview {crop?, settings}: the copy with these settings, made here and not saved (WebP), with its measures
- * and the gap from the source REAL in headers. */
-async function previewTreatment(env: Env, row: Row, data: Record<string, unknown>) {
+/** POST /:id/copy?crop=…[&force=1]: stores the WebP game copy made in the owner's browser from the original (spec `copie-di-gioco`; owner
+ * decision of 2026-11-16: the Worker handles what concerns OpenAI, the browser everything else). The crop is «x,y,width,height,4:5»
+ * on the oriented original (centred if absent); the copy has the size of the recipe, or the long side of the SLOP's treatment. Its
+ * measures and, for a SLOP, its treatment come in headers. A new or approved image may change its copy: the new copy replaces the
+ * old one, which leaves the quarantine; the image keeps its state (owner decision of 2026-11-11 on edits). Its statistics restart.
+ * The same crop and treatment are «already prepared», unless «force» asks to store the new bytes (a copy of an earlier recipe). */
+async function storeCopy(request: Request, env: Env, row: Row) {
   if (!env.QUARANTINE) throw new HttpError(503, "Quarantena privata non configurata");
-  if (Object.keys(data).some(key => !["crop", "settings"].includes(key))) throw new HttpError(400, "Campi non previsti");
-  if (data.settings === undefined) throw new HttpError(400, "Impostazioni mancanti");
-  const crop = cropFor(row, data.crop);
-  const plan = await planOf(env, row, askedTreatment(row, { settings: data.settings }, crop));
-  if (!plan) throw new HttpError(409, "La REAL di riferimento non ha misure: copia senza trattamento");
-  const made = await makeCopy(env, await originalBytes(env, row), row.width, row.height, crop, plan);
-  return new Response(made.bytes, { headers: { "Content-Type": GAME_COPY.mime, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
-    "X-Copy-Metrics": JSON.stringify(made.metrics), "X-Copy-Gap": String(made.treatment?.gap ?? ""), "X-Copy-Size": `${made.width}x${made.height}` } });
-}
-
-/** POST /:id/copy {crop?, treatment?: {off?, settings?}, force?}: the game copy is made here, on Cloudflare (spec `copie-di-gioco`; the browser
- * only chooses the crop). The crop is «x,y,width,height,4:5» on the oriented original (the stored 4:5 crop, else centred, if absent).
- * A new or approved image may change its copy: the new copy replaces the old one, which leaves the quarantine; the image keeps its
- * state (owner decision of 2026-11-11 on edits). Its statistics restart. The same crop and treatment give the same copy, unless
- * «force» asks to make it again (copies of an earlier recipe). */
-export async function storeCopy(env: Env, row: Row, data: Record<string, unknown>) {
-  if (!env.QUARANTINE) throw new HttpError(503, "Quarantena privata non configurata");
-  if (Object.keys(data).some(key => !["crop", "treatment", "force"].includes(key))) throw new HttpError(400, "Campi non previsti");
   if (row.status !== "new" && row.status !== "approved") throw new HttpError(409, row.status === "published"
     ? "Immagine pubblicata: avvia la modifica, che la ritira dal gioco" : "Immagine nel cestino: ripristinala per cambiarne la copia");
-  const crop = cropFor(row, data.crop);
-  const plan = await planOf(env, row, askedTreatment(row, data.treatment, crop));
-  const sameTreatment = (row.origin !== "SLOP" || !plan) || (() => {
-    const t = validTreatment(parseJson(row.copy_treatment));
-    return !!t && t.version === TREATMENT_VERSION && t.off === plan.off && t.seed === plan.seed && t.sample.id === plan.sample.id
-      && JSON.stringify(t.settings || null) === JSON.stringify(plan.settings || null);
-  })();
-  if (data.force !== true && row.copy_key && row.copy_crop === JSON.stringify(crop) && sameTreatment)
+  const query = new URL(request.url).searchParams, asked = query.get("crop"), force = query.get("force") === "1";
+  let crop;
+  try { crop = asked === null ? centredCrop(row.width, row.height) : parseCrop(asked); } catch { throw new HttpError(400, "Immagine troppo piccola per una copia di gioco"); }
+  const invalid = cropError(row.width, row.height, crop);
+  if (!crop || crop.format !== "4:5" || invalid) throw new HttpError(400, invalid || "Copia di gioco richiesta in 4:5");
+  // Measures of the copy and, for a SLOP, its treatment (spec `copie-di-gioco`, section 4), sent by the browser in headers.
+  const metricsHeader = request.headers.get("X-Copy-Metrics"), treatmentHeader = request.headers.get("X-Copy-Treatment");
+  const readJson = (value: string | null) => { try { return value && value.length <= 4000 ? JSON.parse(value) : undefined; } catch { return undefined; } };
+  const metrics = metricsHeader === null ? null : validMetrics(readJson(metricsHeader));
+  if (metricsHeader !== null && !metrics) throw new HttpError(400, "Misure della copia non valide");
+  const treatment = treatmentHeader === null ? null : validTreatment(readJson(treatmentHeader));
+  if (treatmentHeader !== null && !treatment) throw new HttpError(400, "Trattamento non valido");
+  if (treatment && row.origin !== "SLOP") throw new HttpError(400, "Il trattamento vale solo per le SLOP");
+  if (treatment && !treatment.off && treatment.sample.id !== row.generation_source)
+    throw new HttpError(400, "Il trattamento deve usare la REAL di riferimento");
+  const cropLong = Math.max(crop.width, crop.height);
+  if (treatment?.settings && !validSettings(treatment.settings, cropLong)) throw new HttpError(400, "Impostazioni del trattamento fuori dai limiti");
+  // The long side: the owner's (sliders), else the one proposed from the source REAL, else the recipe's.
+  const maxSide = !treatment || treatment.off ? GAME_COPY.maxSide : treatment.settings ? Math.min(treatment.settings.long, cropLong, GAME_COPY.maxSide)
+    : treatedLong(treatment.sample.metrics.long, cropLong, GAME_COPY.maxSide);
+  if (treatment && !treatment.off && treatment.long !== maxSide) throw new HttpError(400, `Lato lungo del trattamento ${treatment.long}, atteso ${maxSide}`);
+  const expected = copyDimensions(crop, maxSide);
+  const sameTreatment = treatmentKey(validTreatment(parseJson(row.copy_treatment))) === treatmentKey(treatment) || (!treatment && row.origin === "SLOP");
+  if (!force && row.copy_key && row.copy_crop === JSON.stringify(crop) && sameTreatment)
     return json({ ...(await viewOf(env, row.id)), already_prepared: true });
-  const made = await makeCopy(env, await originalBytes(env, row), row.width, row.height, crop, plan);
+  if (Number(request.headers.get("content-length") || 0) > GAME_COPY.maxBytes) throw new HttpError(413, "Copia di gioco oltre 4 MB");
+  const upload = new Uint8Array(await request.arrayBuffer());
+  if (!upload.length || upload.length > GAME_COPY.maxBytes) throw new HttpError(413, "Copia di gioco vuota o oltre 4 MB");
   let copy;
-  try { copy = cleanImage(made.bytes); } catch { throw new HttpError(502, "Copia di gioco non leggibile"); }
-  if (copy.mime !== GAME_COPY.mime) throw new HttpError(502, "La copia di gioco deve essere WebP");
-  const hash = await sha256(copy.bytes), key = `library/${row.id}/copy-${hash.slice(0, 16)}.webp`, sameFile = key === row.copy_key;
+  try { copy = cleanImage(upload); } catch { throw new HttpError(415, "Copia di gioco non leggibile"); }
+  if (copy.mime !== GAME_COPY.mime) throw new HttpError(415, "La copia di gioco deve essere WebP");
+  const actual = imageDimensions(copy.bytes);
+  if (actual.width !== expected.width || actual.height !== expected.height)
+    throw new HttpError(409, `Dimensioni della copia ${actual.width}×${actual.height}, attese ${expected.width}×${expected.height}`);
+  const hash = await sha256(copy.bytes), key = `library/${row.id}/copy-${hash.slice(0, 16)}.webp`;
+  // The same bytes with another crop or treatment record (a treatment that changed nothing): only the record changes.
+  const sameFile = key === row.copy_key;
+  if (sameFile && row.copy_crop === JSON.stringify(crop) && sameTreatment) return json({ ...(await viewOf(env, row.id)), already_prepared: true });
   if (!sameFile) await env.QUARANTINE.put(key, copy.bytes, { httpMetadata: { contentType: GAME_COPY.mime }, customMetadata: { sha256: hash } });
+  // The record describes the bytes just uploaded; absence of a treatment cannot preserve a previous treatment record.
   const result = await env.DB.prepare(`UPDATE images SET copy_key=?,copy_sha256=?,copy_width=?,copy_height=?,copy_bytes=?,copy_crop=?,copy_view=NULL,
     copy_metrics=?,copy_treatment=?,revision=revision+1,updated_at=? WHERE id=? AND revision=? AND status IN ('new','approved')`)
-    .bind(key, hash, made.width, made.height, copy.bytes.length, JSON.stringify(crop), JSON.stringify(made.metrics),
-      made.treatment ? JSON.stringify(made.treatment) : null, now(), row.id, row.revision).run();
+    .bind(key, hash, actual.width, actual.height, copy.bytes.length, JSON.stringify(crop), metrics ? JSON.stringify(metrics) : null,
+      treatment ? JSON.stringify(treatment) : null, now(), row.id, row.revision).run();
   if (!result.meta.changes) { if (!sameFile) await env.QUARANTINE.delete(key); throw new HttpError(409, "Immagine modificata altrove: ricaricare"); }
   if (row.copy_key && !sameFile) await env.QUARANTINE.delete(row.copy_key);
   return json({ ...(await viewOf(env, row.id)), already_prepared: false }, 201);
@@ -555,15 +487,6 @@ export async function library(request: Request, env: Env, path: string): Promise
     const ids = (await env.DB.prepare("SELECT id FROM images WHERE status='trash'").all<{ id: string }>()).results.map(r => r.id);
     return json(await destroy(env, ids));
   }
-  // «Rifai la copia di gioco» for a selection: a Workflow on Cloudflare; the dashboard follows the job.
-  if (path === base + "/copies" && request.method === "POST") {
-    const data = await body(request, 40_000);
-    if (Object.keys(data).some(key => key !== "ids")) throw new HttpError(400, "Campi non previsti");
-    const ids = Array.isArray(data.ids) ? [...new Set(data.ids.map(String))].map(imageId) : [];
-    if (!ids.length || ids.length > 500) throw new HttpError(400, "Selezione vuota o oltre 500 immagini");
-    return json(await startCopies(env, ids), 202);
-  }
-  if (path.startsWith(base + "/copies/") && request.method === "GET") return json(await copiesStatus(env, path.slice((base + "/copies/").length)));
   if (path === base + "/bulk" && request.method === "POST") {
     const data = await body(request, 40_000);
     const ids = Array.isArray(data.ids) ? [...new Set(data.ids.map(String))].map(imageId) : [];
@@ -585,7 +508,7 @@ export async function library(request: Request, env: Env, path: string): Promise
     }
     return json({ done: done.length, failed });
   }
-  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|analyze|regenerate|categories|metrics|treatment|treatment\/preview))?$/);
+  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|analyze|regenerate|categories|metrics))?$/);
   if (!match) throw new HttpError(404, "API della libreria inesistente");
   const row = await find(env, match[1]);
   if (match[2] === "file" || match[2] === "original") {
@@ -604,29 +527,21 @@ export async function library(request: Request, env: Env, path: string): Promise
     return json(await completeCategories(env, row, await body(request, 1000)));
   }
   if (match[2] === "metrics") {
-    // Measures of an existing copy, made here from that copy: free, any state, the copy must still be the same when they are saved.
+    // Measures of an existing copy, made by the browser from that copy: free, any state, the copy must still be the same.
     if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
-    if (Object.keys(await body(request, 100)).length) throw new HttpError(400, "Campi non previsti");
-    return json({ id: row.id, metrics: await measureStored(env, row) });
+    const data = await body(request, 2000), metrics = validMetrics(data.metrics);
+    if (Object.keys(data).some(key => key !== "metrics" && key !== "sha256") || !metrics || typeof data.sha256 !== "string") throw new HttpError(400, "Misure non valide");
+    const result = await env.DB.prepare("UPDATE images SET copy_metrics=? WHERE id=? AND copy_sha256=?").bind(JSON.stringify(metrics), row.id, data.sha256).run();
+    if (!result.meta.changes) throw new HttpError(409, "Copia cambiata: misure non salvate");
+    return json({ id: row.id, metrics });
   }
   if (match[2] === "regenerate") {
     if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
     return json(await regenerate(env, row, await body(request, 20_000)));
   }
-  if (match[2] === "treatment") {
-    if (request.method !== "GET") throw new HttpError(405, "Metodo non consentito");
-    return json(await treatmentOf(env, row));
-  }
-  if (match[2] === "treatment/preview") {
-    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
-    return previewTreatment(env, row, await body(request, 2000));
-  }
   if (match[2] === "copy") {
     if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
-    // The browser no longer sends copies: it only asks for one (owner decision of 2026-11-15).
-    if (!(request.headers.get("Content-Type") || "").startsWith("application/json"))
-      throw new HttpError(415, "La copia di gioco la prepara il server: invia solo l'inquadratura");
-    return storeCopy(env, row, await body(request, 2000));
+    return storeCopy(request, env, row);
   }
   if (match[2]) {
     if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");

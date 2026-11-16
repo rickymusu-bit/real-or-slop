@@ -5,7 +5,6 @@ import { library } from "./library";
 import { admin, body, HttpError, json, sameOrigin, type Env } from "./core";
 import { maintenance } from "./maintenance";
 export { SlopBatchWorkflow } from "./slop-runner";
-export { CopiesWorkflow } from "./copies-runner";
 export default {
   /** Daily Cron Trigger (wrangler.jsonc): games older than 12 months and other expired rows go (spec `privacy-note-legali`). */
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {

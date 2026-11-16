@@ -10,6 +10,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from PIL import Image
+from game_copy import game_copy
 from playwright.sync_api import expect, sync_playwright
 from long_press import long_press
 
@@ -32,11 +33,12 @@ def openai(queue):
 def png(seed, size):
     image = Image.new('RGB', size); image.putdata([((seed * 41) % 256, (x * 5 + seed) % 256, (y * 9) % 256) for y in range(size[1]) for x in range(size[0])])
     out = io.BytesIO(); image.save(out, 'PNG'); return out.getvalue()
+def webp(source): return game_copy(source)
 CATEGORIES = {'dbb-riot': 'event', 'dbb-paris': 'place', 'dbb-beach': 'setting', '1960s': 'time'}
 def seed(prefix, origin, title, number, tags, publish, prompt='', description=''):
     source = png(number, (60, 40))
     item = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': origin, 'title': f'{prefix}-{title}', 'prompt': prompt, 'description': description}), raw=source, mime='image/png')
-    item = call(f'{API}/{item["id"]}/copy', {})
+    item = call(f'{API}/{item["id"]}/copy', raw=webp(source), mime='image/webp')
     item = call(f'{API}/{item["id"]}', {'revision': item['revision'], 'tags': tags,
                                         'tag_categories': {t: CATEGORIES[t] for t in tags}}, method='PATCH')
     item = call(f'{API}/{item["id"]}/approve', {'rights_confirmed': True})
@@ -225,9 +227,10 @@ with sync_playwright() as p:
         saved = call(f'{API}/{beach["id"]}')['copy']; assert saved['sha256'] == kept, saved
         dialog.locator('.library-detail-close button').click()
 
-        # Treatment with sliders: the SLOP gets the REAL as its source; the sliders start on the proposal, a change asks the server
-        # for a preview, saving makes the copy with the owner's settings.
-        sql(f"UPDATE images SET generation_source='{real['id']}' WHERE id='{beach['id']}'")
+        # Treatment with sliders: the SLOP gets the REAL (measured) as its source; the sliders start on the proposal, a change
+        # redraws the preview in the page, saving makes the copy here with the owner's settings and uploads it.
+        metrics = json.dumps({'long': 40, 'noise': 3.0, 'sharpness': 6.0, 'contrast': 120, 'saturation': 0.2, 'cast': [2, 0, -2], 'v': 2})
+        sql(f"UPDATE images SET generation_source='{real['id']}' WHERE id='{beach['id']}'; UPDATE images SET copy_metrics='{metrics}' WHERE id='{real['id']}'")
         page.get_by_role('button', name=f'Apri {prefix}-spiaggia').click()
         dialog.locator('#library-treatment-on').click()
         expect(dialog.locator('#library-detail-message')).to_have_text('Copia trattata.')
@@ -238,7 +241,7 @@ with sync_playwright() as p:
         sliders.locator('[data-key=grain]').fill('8')
         expect(sliders.locator('[data-out=grain]')).to_have_text('8.0')
         expect(sliders.locator('[data-status]')).to_have_text('Trattamento modificato, non ancora salvato.')
-        expect(sliders.locator('[data-view=preview]')).to_have_attribute('src', re.compile('^blob:'))
+        expect(sliders.locator('[data-caption=preview]')).to_contain_text('scarto dalla REAL')
         sliders.screenshot(path=str(folder / f'{name}-treatment.png'))
         sliders.locator('[data-treatment=ok]').click()
         expect(page.locator('dialog.treatment-dialog')).to_have_count(0)

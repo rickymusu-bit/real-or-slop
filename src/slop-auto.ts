@@ -92,7 +92,7 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
 
   /** Copy (when missing), then the analysis (only if never asked: uncertain or failed outcomes are not resent). */
   const finish = async (image: { id: string; copy: boolean; analysis: string }) => {
-    if (!image.copy) await prepareItemCopy(await call<TreatableItem>(LIBRARY + "/" + encodeURIComponent(image.id)));  // made by the Worker
+    if (!image.copy) await prepareItemCopy(await call<TreatableItem>(LIBRARY + "/" + encodeURIComponent(image.id)));
     if (image.analysis === "none") await call(LIBRARY + "/" + encodeURIComponent(image.id) + "/analyze", { confirm: true });
   };
 

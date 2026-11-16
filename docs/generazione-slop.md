@@ -1,6 +1,6 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.8.0
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.9.0
 
-Stato: vigente; la 5.7.0 è in produzione con l'app 1.32.0, la 5.8.0 è per l'app 1.33.0. Aggiornata: 2026-11-16T07:50:00Z. La 5.8.0: un passo
+Stato: vigente; la 5.8.0 è in produzione con l'app 1.33.0, la 5.9.0 è per l'app 1.34.0. Aggiornata: 2026-11-16T12:40:03Z. La 5.9.0: la copia di gioco della SLOP accettata la prepara il browser alla revisione, non più il Workflow (decisione dell'owner del 2026-11-16). La 5.8.0: un passo
 fermato dalla piattaforma chiude solo la sua REAL, un batch in revisione con SLOP ancora da generare si riprende, copia della SLOP in un passo
 a sé, limite di CPU di cinque minuti. La 5.7.0: copia della SLOP
 accettata preparata dal Worker. La 5.6.0 sposta il ciclo
@@ -109,8 +109,9 @@ associata alla REAL e può essere riusata quando occorre riequilibrare il catalo
    proposti al prompt sono ammessi solo se mantengono il brief; il server verifica almeno struttura, vincoli dichiarati e revisioni.
    Una rigenerazione con lo stesso prompt è appropriata per anomalie occasionali; la revisione per istruzioni ambigue o ricorrenti;
    la riprogettazione per scene sistematicamente troppo difficili. Ogni nuova generazione consuma un tentativo.
-7. **Candidato accettato:** solo **dopo la valutazione dell'immagine intera**, il Worker prepara il ritaglio 4:5 e il trattamento
-   leggero per la copia di gioco. La candidata accettata viene registrata come `new` con originale; il Worker prepara subito la copia 4:5. Senza copia non può essere approvata né pubblicata. Conserva
+7. **Candidato accettato:** solo **dopo la valutazione dell'immagine intera**, la candidata accettata viene registrata come `new` con
+   originale. Il ritaglio 4:5 e il trattamento leggero della copia di gioco li prepara il browser, all'apertura della revisione
+   (studio o batch automatico). Senza copia non può essere approvata né pubblicata. Conserva
    copia, prompt finale, brief, REAL di riferimento, modello, qualità, configurazione e tracciabilità dell'esito.
    L'analisi dei tag usa l'immagine SLOP intera (l'originale accettato, non la copia 4:5: decisione dell'owner del 2026-11-15) e distingue le evidenze visive dai desideri del prompt. L'owner verifica
    che il ritaglio non comprometta il risultato; eventuali correzioni di crop o trattamento **non producono feedback automatico
@@ -161,7 +162,8 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
   dell'immagine intera) una REAL alla volta, si ferma alla prima accettazione e analizza i tag della SLOP accettata
   sull'originale. Il browser lo avvia dopo la conferma del massimo (`POST batches/:id/run {confirm, phase: briefs|images}` dallo
   studio; `auto/start` per il batch automatico, che fa tutto) e ne segue l'avanzamento: chiudere la dashboard o cambiare app sul
-  telefono non ferma nulla. Anche la copia di gioco 4:5 della SLOP accettata la prepara il Worker (specifica `copie-di-gioco`).
+  telefono non ferma nulla. La copia di gioco 4:5 della SLOP accettata la prepara invece il browser, alla revisione (decisione
+  dell'owner del 2026-11-16: il Worker gestisce ciò che riguarda OpenAI, il browser tutto il resto; specifica `copie-di-gioco`).
 - **Un runner per batch:** il batch registra istanza, stato (`running`, `stopping`, `done`, `stopped`, `failed`) e ora dell'ultimo
   passo (migrazione 0052); un secondo avvio mentre il runner è vivo è rifiutato. Un runner fermo da oltre quindici minuti è
   considerato morto: lo studio permette un nuovo avvio e il batch automatico mostra «Riprendi sul server» (`auto/resume`), che
@@ -172,7 +174,7 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
   dieci minuti diventa incerto, tra i processi «Da vedere»; le altre REAL proseguono. Solo un problema dell'account OpenAI ferma
   l'intera esecuzione. Il 2026-11-16 un passo interrotto per CPU aveva fermato tutto il batch, lasciando 6 REAL mai tentate.
 - **Passi del runner per una SLOP accettata:** tentativo (generazione, valutazione, registrazione nella libreria), poi analisi dei
-  tag, poi copia di gioco in un passo a sé, il calcolo più pesante. Limite di CPU di cinque minuti per passo (Workers Paid,
+  tag. La copia di gioco la prepara il browser alla revisione (dal 2026-11-16; nella 1.33 era un passo del runner). Limite di CPU di cinque minuti per passo (Workers Paid,
   `limits.cpu_ms` in `wrangler.jsonc`, dal 2026-11-16).
 - **Mai una chiamata ripetuta:** ogni passo a pagamento ha la sua rivendicazione (brief, tentativo, analisi) e Cloudflare non lo
   ritenta; se un passo viene rieseguito dopo un'interruzione trova la rivendicazione e non invia nulla, e quel passo finisce incerto.
