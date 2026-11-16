@@ -8,8 +8,9 @@ I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella c
 - **Un passo fermato dalla piattaforma non ferma più il batch:** il 2026-11-16 un tentativo è stato interrotto da Cloudflare per
   CPU dopo la generazione e il Workflow ha messo in revisione l'intero batch, lasciando 6 REAL con brief mai tentate. Ora quella REAL
   resta incerta (tra i processi «Da vedere») e le altre proseguono; solo un problema dell'account OpenAI ferma l'esecuzione.
-- **Ripresa di un batch in revisione:** «Riprendi sul server» compare anche quando restano REAL da generare; la ripresa resta entro il
-  massimo confermato all'avvio e non ripete chiamate già inviate. Una revisione con REAL in sospeso non si chiude da sola.
+- **Ripresa di un batch in revisione:** «Riprendi sul server» compare anche quando restano SLOP da generare (REAL di riferimento con
+  brief da scrivere, pronto o da ritentare); la ripresa resta entro il massimo confermato all'avvio e non ripete chiamate già inviate.
+  Una revisione con SLOP ancora da generare non si chiude da sola.
 - **Copia della SLOP accettata in un passo a sé** del Workflow, dopo i tag: il calcolo più pesante non condivide più il passo della
   generazione. Il percorso diretto dello studio la prepara come prima.
 - **Limite di CPU di cinque minuti** per richiesta e per passo (`limits.cpu_ms`), possibile con Workers Paid, attivato dall'owner il

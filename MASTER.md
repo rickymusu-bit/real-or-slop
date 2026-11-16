@@ -17,7 +17,7 @@ in `CHANGELOG.md`.
   tentate; batch in revisione. Su indicazione dell'owner, il 2026-11-15 alle 17:24 UTC sono stati salvati direttamente nel D1 il
   contesto «Brief e prompt per le SLOP» proposto e la soglia dello studio a 20 REAL. Qualità immagini `medium`.
 - **Nel ramo 1.33.0 (PR #147 da unire, comprende la 1.32.1):** Workers Logs attivi; un passo fermato dalla piattaforma chiude solo
-  la sua REAL; «Riprendi sul server» anche per un batch in revisione con REAL in sospeso; copia della SLOP accettata in un passo a sé;
+  la sua REAL; «Riprendi sul server» anche per un batch in revisione con SLOP ancora da generare; copia della SLOP accettata in un passo a sé;
   limite di CPU di cinque minuti (`limits.cpu_ms`). Dopo il rilascio: «Riprendi sul server» sul batch fermo.
 - **Nella 1.32.0:** il browser è solo un'interfaccia: copie di gioco preparate dal Worker con il binding Images, «Rifai la copia di
   gioco» come Workflow.

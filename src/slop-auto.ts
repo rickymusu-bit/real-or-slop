@@ -64,7 +64,7 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
       html = `<p><strong>Batch automatico</strong> di SLOP gemelle: ${batch.undecided} di ${batch.images.length} ${batch.images.length === 1 ? "immagine" : "immagini"} da decidere.
         Nessuna nuova proposta finché non sono tutte approvate, pubblicate o nel cestino. Esaurite: ${batch.processes.filter(p=>p.state==="exhausted").length}; sospese: ${batch.processes.filter(p=>["review_needed","uncertain","failed"].includes(p.state)).length}.</p>
         ${(() => { const left = batch.processes.filter(p => ["draft", "ready", "retry"].includes(p.state)).length;
-          return left ? `<p class="hint">${left} ${left === 1 ? "REAL non è stata ancora generata" : "REAL non sono state ancora generate"}: il batch si è interrotto prima.</p>` : ""; })()}
+          return left ? `<p class="hint">${left} SLOP ancora da generare dalle REAL di riferimento del batch: il batch si è interrotto prima.</p>` : ""; })()}
         <div class="slop-auto-actions">${batch.processes.some(p => ["draft", "ready", "retry"].includes(p.state)) && !batch.runner?.alive ? '<button type="button" class="primary" data-auto="resume">Riprendi sul server</button>' : ""}<button type="button" data-auto="review">Rivedi nel Database</button><button type="button" data-auto="loop">Dettagli dei tentativi</button>${batch.undecided ? "" : '<button type="button" data-auto="close">Chiudi revisione</button>'}</div>`;
     } else if (next && dismissed !== "twins:" + next.size) {
       html = `<p><strong>Proposta di generazione</strong>: ${next.n_real} REAL, ${next.n_slop} con una SLOP gemella approvata o pubblicata,

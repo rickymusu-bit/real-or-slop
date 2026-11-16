@@ -97,7 +97,7 @@ async function resume(env: Env, data: Record<string, unknown>) {
   if (row.pipeline_version !== 2) throw new HttpError(409, "Batch precedente: sola revisione; non si riprende automaticamente");
   await processViews(env, row.id);  // settles claims left by a dead request first
   const left = await env.DB.prepare("SELECT count(*) AS n FROM slop_processes WHERE batch_id=? AND state IN ('draft','ready','retry')").bind(row.id).first<{ n: number }>();
-  if (!left?.n) throw new HttpError(409, "Nessuna REAL da generare in questo batch");
+  if (!left?.n) throw new HttpError(409, "Nessuna SLOP da generare in questo batch");
   await env.DB.prepare("UPDATE slop_batches SET auto_status='running',updated_at=? WHERE id=? AND auto_status IN ('running','review')").bind(now(), row.id).run();
   await startRun(env, row.id, "all");
   return autoState(env);
