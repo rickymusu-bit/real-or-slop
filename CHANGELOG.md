@@ -1,7 +1,18 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-16T12:40:03Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-16T15:54:31Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.35.0 — 2026-11-16T15:54:31Z
+
+- **Accettare una candidata dopo la revisione** (decisione dell'owner del 2026-11-16): nei processi «Da vedere» in cui il valutatore
+  chiede la revisione, «Accetta il tentativo N» registra la candidata come SLOP nuova nel suo batch e analizza i tag con una
+  chiamata a pagamento confermata (`POST processes/:id/accept`). Rifiutati i tentativi con difetti critici, ancoraggi mancanti o
+  senza candidata salvata, il doppio invio e la REAL con una SLOP già attiva. Prima l'unica scelta era chiudere il processo.
+- **Le note d'incertezza non fermano più l'accettazione:** il server trasformava in revisione ogni `accept` con almeno una nota,
+  e il valutatore annota sempre che luogo, data e identità non si verificano dai pixel. La parte fissa delle istruzioni del
+  valutatore chiede ora la revisione solo per un dubbio concreto su qualcosa di visibile.
+- Specifica `generazione-slop` 5.10.0; `MASTER.md` 26.1.0.
 
 ## 1.34.0 — 2026-11-16T12:40:03Z
 

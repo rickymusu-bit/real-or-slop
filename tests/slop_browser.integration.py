@@ -30,6 +30,16 @@ try:
                 card.locator('[data-slop=close-process]').click();expect(card).to_have_count(0)
                 assert 'Chiudere questo processo' in confirmations[-1]
                 assert sql("SELECT state FROM slop_processes WHERE id='"+stuck['processes'][0]['id']+"'")[0]['state']=='closed'
+                # The owner accepts a candidate the evaluator sent to review: one paid call, for its tags.
+                review_source=real('browser-review-'+name);generated.append(review_source['id']);review=batch(review_source)
+                control([None,{'evaluation':'review_needed'}]);assert generate(review)[1]['process']['state']=='review_needed'
+                page.reload();page.locator('[data-admin-tab=slop]').click()
+                card=studio.locator('[data-attention="'+review['processes'][0]['id']+'"]')
+                control([]);card.locator('[data-slop=accept-process]').click();expect(card).to_have_count(0,timeout=20000)
+                assert 'Accettare questa candidata' in confirmations[-1] and len(control())==1
+                expect(studio.get_by_role('status').first).to_contain_text('SLOP accettata')
+                reviewed=sql("SELECT state,image_id FROM slop_processes WHERE id='"+review['processes'][0]['id']+"'")[0]
+                assert reviewed['state']=='accepted' and reviewed['image_id'];generated.append(reviewed['image_id'])
                 studio.locator('[data-slop-pick="'+source['id']+'"]').check()
                 control([]);studio.locator('[data-slop=prompts]').click()
                 expect(studio.locator('[data-prompt="0"]')).not_to_have_value('', timeout=20000)  # written: one request per REAL

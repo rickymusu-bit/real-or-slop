@@ -1,6 +1,6 @@
 /** SLOP studio routes (spec `generazione-slop`): the REAL waiting for a twin, the counts, batches and the automatic batches. */
 import { HttpError, type Env } from "./core";
-import { attention, batchRoute, closeProcess } from "./slop-generation";
+import { acceptProcess, attention, batchRoute, closeProcess } from "./slop-generation";
 import { autoRoute, guardBatch } from "./slop-auto";
 import { MAX_BATCH } from "../shared/twins";
 import { realRows, twinCounts } from "./twins";
@@ -22,6 +22,8 @@ export async function slopRoute(env: Env, method: string, path: string, data: Re
   if (path === "attention" && method === "GET") return {attention: await attention(env)};
   const closing = /^processes\/([\w-]{1,64})\/close$/.exec(path);
   if (closing && method === "POST") return closeProcess(env, closing[1], data);
+  const accepting = /^processes\/([\w-]{1,64})\/accept$/.exec(path);
+  if (accepting && method === "POST") return acceptProcess(env, accepting[1], data);
   if (path === "auto" || path.startsWith("auto/")) return autoRoute(env, method, path.slice("auto".length).replace(/^\//, ""), data);
   if (path === "batches" || path.startsWith("batches/")) {
     const rest = path.slice("batches".length).replace(/^\//, "");

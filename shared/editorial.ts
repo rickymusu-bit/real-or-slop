@@ -35,7 +35,7 @@ export function validEvaluation(value: unknown, attemptId: string, brief: Brief)
     typeof v.revised_prompt !== "string" || v.revised_prompt.length > 4000 ||
     [v.critical_findings, v.minor_findings, v.uncertainty_notes, v.preserved_required, v.preserved_exclusions].some(a =>
       !Array.isArray(a) || a.length > 30 || a.some(s => typeof s !== "string" || !s.trim() || s.length > 3000))) return null;
-  if (v.decision === "accept" && (v.critical_findings.length || !v.editorial_constraints_met || v.uncertainty_notes.length))
+  if (v.decision === "accept" && (v.critical_findings.length || !v.editorial_constraints_met))
     return { ...v, decision: "review_needed" };
   if (["revise_prompt", "replan_scene"].includes(v.decision) && (!v.revised_prompt.trim() ||
     JSON.stringify(v.preserved_required) !== JSON.stringify(brief.required) || JSON.stringify(v.preserved_exclusions) !== JSON.stringify(brief.exclusions)))

@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 26.0.0, aggiornata il 2026-11-16T12:40:03Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 26.1.0, aggiornata il 2026-11-16T15:54:31Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -14,7 +14,10 @@ in `CHANGELOG.md`.
   08:32: 4 SLOP accettate (3 con copia; quella in bianco e nero accettata alle 05:38 senza copia, vedi 1.33.1), 4 revisioni chieste,
   2 incerti. Su indicazione dell'owner, il 2026-11-15 sono stati salvati direttamente nel D1 il contesto «Brief e prompt per le SLOP»
   proposto e la soglia dello studio a 20 REAL. Qualità immagini `medium`.
-- **Nel ramo 1.34.0 (PR da unire, include la 1.33.1):** il Worker gestisce ciò che riguarda OpenAI, il browser tutto il resto
+- **Nel ramo 1.35.0 (PR da unire):** «Accetta il tentativo N» per i processi in revisione, con l'analisi dei tag; le note
+  d'incertezza su luogo, data e identità non fermano più l'accettazione. Dei 6 processi senza SLOP del primo batch, i 4 in revisione
+  si possono accettare; i 2 incerti (un brief, un'immagine pagata ma mai salvata) si chiudono e si rigenerano in un nuovo batch.
+- **Nella 1.34.0 (include la 1.33.1):** il Worker gestisce ciò che riguarda OpenAI, il browser tutto il resto
   (decisione dell'owner del 2026-11-16): copie di gioco, misure e «Rifai la copia di gioco» tornano nel browser, senza binding
   Images né Workflow delle copie; trattamento delle SLOP regolabile con i cursori e anteprima nella pagina. Dopo il rilascio vanno
   rifatte nel browser le copie delle SLOP preparate dal Worker (le 3 a colori del primo batch) e preparata quella in bianco e nero.
@@ -50,7 +53,7 @@ nome.
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 11.0.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.7.0 |
-| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.9.0 |
+| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.10.0 |
 | Sezione Database | `docs/database-immagini.md` | 2.9.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.8.1 |

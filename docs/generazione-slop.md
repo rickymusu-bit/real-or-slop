@@ -1,6 +1,6 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.9.0
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.10.0
 
-Stato: vigente; la 5.8.0 è in produzione con l'app 1.33.0, la 5.9.0 è per l'app 1.34.0. Aggiornata: 2026-11-16T12:40:03Z. La 5.9.0: la copia di gioco della SLOP accettata la prepara il browser alla revisione, non più il Workflow (decisione dell'owner del 2026-11-16). La 5.8.0: un passo
+Stato: vigente; la 5.9.0 è per l'app 1.34.0, la 5.10.0 per l'app 1.35.0. Aggiornata: 2026-11-16T15:54:31Z. La 5.10.0: le incertezze su ciò che i pixel non possono verificare non bloccano l'accettazione e l'owner può accettare la candidata di un processo in revisione (decisioni dell'owner del 2026-11-16). La 5.9.0: la copia di gioco della SLOP accettata la prepara il browser alla revisione, non più il Workflow (decisione dell'owner del 2026-11-16). La 5.8.0: un passo
 fermato dalla piattaforma chiude solo la sua REAL, un batch in revisione con SLOP ancora da generare si riprende, copia della SLOP in un passo
 a sé, limite di CPU di cinque minuti. La 5.7.0: copia della SLOP
 accettata preparata dal Worker. La 5.6.0 sposta il ciclo
@@ -129,8 +129,11 @@ La valutazione **non** consiste nella media di tre numeri che compensi un difett
   rispetto di un ancoraggio editoriale obbligatorio.
 - **Difetti minori (tollerabili):** imperfezioni sottili che potrebbero esistere in una fotografia genuina e non compromettono
   credibilità, plausibilità né ancoraggi. La soglia di tolleranza editoriale è configurabile, separatamente dai tentativi.
-- **Incertezza:** quando il giudizio dipende da testo illeggibile, dettagli non verificabili o scarsa affidabilità del modello,
-  usare `review_needed`, non accettare automaticamente.
+- **Incertezza** (decisione dell'owner del 2026-11-16): `review_needed` solo per un dubbio concreto su qualcosa di **visibile**
+  che il valutatore non riesce a risolvere (per esempio un monumento o un'insegna che forse contraddice il luogo). I fatti che i
+  pixel non possono mai verificare (luogo esatto, data, identità, persone inventate) vanno in `uncertainty_notes` e non fermano
+  l'accettazione: il server non trasforma più in `review_needed` un `accept` con sole note d'incertezza. Il primo batch automatico
+  ne aveva fermati 4 su 10 senza alcun difetto, solo per queste note. Difetti critici e ancoraggi mancanti restano bloccanti.
 
 Output strutturato minimo per tentativo: `attempt_id`, `decision`, `critical_findings[]`, `minor_findings[]`,
 `editorial_constraints_met`, `uncertainty_notes[]`, `action_reason`, `revised_prompt` (solo se pertinente).
@@ -152,7 +155,8 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
   residui. Nessuna chiamata superflua per «migliorare comunque» un'immagine già accettata.
 - **Esaurimento tentativi:** il processo termina `exhausted`, senza SLOP nuova/approvata/pubblicata e senza occupare la REAL;
   anteprima e motivazioni all'owner, eventuale riavvio solo con una **nuova conferma di spesa**. `review_needed` blocca il processo
-  fino alla decisione umana, non consuma automaticamente nuovi tentativi.
+  fino alla decisione umana, non consuma automaticamente nuovi tentativi. L'owner decide tra «Accetta il tentativo N» e «Chiudi: ho
+  visto» (sezione 6).
 - Il limite vale per il **numero di generazioni**, non per durata e non per una promessa di successo.
 
 ## 6. Stato, spese, ripresa e conservazione
@@ -218,6 +222,14 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
   (`POST processes/:id/close`, stato `closed`); la manutenzione non cancella le loro candidate. Sette giorni dopo la chiusura,
   o dopo un'accettazione, la manutenzione cancella le candidate e, per i chiusi, il processo. Cancellare la REAL dal cestino
   elimina subito processi, tentativi e file.
+- **Accettare dopo la revisione** (decisione dell'owner del 2026-11-16): per un processo `review_needed`, «Accetta il tentativo N»
+  (`POST processes/:id/accept {confirm, attempt}`) registra la candidata come SLOP `new` nel batch del processo, come
+  un'accettazione automatica, con la valutazione segnata «Accettata dall'owner dopo la revisione»; poi una chiamata a pagamento
+  analizza i tag dell'originale intero (la conferma dichiara quella chiamata). Solo un tentativo valutato, con la candidata intera
+  ancora salvata, senza difetti critici e con gli ancoraggi rispettati; mai due volte, mai se la REAL ha già una SLOP attiva. Se
+  l'analisi non riesce la SLOP resta accettata e l'analisi si ripete dal Database. La copia 4:5 la prepara il browser alla revisione
+  del batch. Un tentativo la cui immagine è stata pagata ma non salvata (passo interrotto prima della quarantena) non ha nulla da
+  accettare: si chiude.
 - Un batch automatico in revisione si chiude con «Chiudi revisione» dopo aver deciso le immagini nuove; i suoi processi senza SLOP
   restano comunque tra quelli «Da vedere».
 - Il batch automatico continua a girare con la dashboard aperta, al massimo uno alla volta. Se una REAL esaurisce i tentativi,
