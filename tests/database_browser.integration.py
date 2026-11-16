@@ -229,7 +229,7 @@ with sync_playwright() as p:
 
         # Treatment with sliders: the SLOP gets the REAL (measured) as its source; the sliders start on the proposal, a change
         # redraws the preview in the page, saving makes the copy here with the owner's settings and uploads it.
-        metrics = json.dumps({'long': 40, 'noise': 3.0, 'sharpness': 6.0, 'contrast': 120, 'saturation': 0.2, 'cast': [2, 0, -2], 'v': 2})
+        metrics = json.dumps({'long': 40, 'noise': 3.0, 'sharpness': 6.0, 'contrast': 120, 'saturation': 0.2, 'cast': [2, 0, -2], 'tint': [0, 0, 0], 'v': 3})
         sql(f"UPDATE images SET generation_source='{real['id']}' WHERE id='{beach['id']}'; UPDATE images SET copy_metrics='{metrics}' WHERE id='{real['id']}'")
         page.get_by_role('button', name=f'Apri {prefix}-spiaggia').click()
         dialog.locator('#library-treatment-on').click()
@@ -242,12 +242,19 @@ with sync_playwright() as p:
         expect(sliders.locator('[data-out=grain]')).to_have_text('8.0')
         expect(sliders.locator('[data-status]')).to_have_text('Trattamento modificato, non ancora salvato.')
         expect(sliders.locator('[data-caption=preview]')).to_contain_text('scarto dalla REAL')
+        # «Seppia» starts from a sepia tint, «Bianco e nero» from none: the two never look alike by accident.
+        sliders.locator('[data-key=monochrome]').select_option('sepia')
+        expect(sliders.locator('[data-out=cast0]')).to_have_text('15.0');expect(sliders.locator('[data-out=cast2]')).to_have_text('-24.0')
+        sliders.locator('[data-key=monochrome]').select_option('black-and-white')
+        expect(sliders.locator('[data-out=cast0]')).to_have_text('0.0')
+        sliders.locator('[data-key=monochrome]').select_option('sepia')
         sliders.screenshot(path=str(folder / f'{name}-treatment.png'))
         sliders.locator('[data-treatment=ok]').click()
         expect(page.locator('dialog.treatment-dialog')).to_have_count(0)
         expect(dialog.locator('#library-detail-message')).to_have_text('Trattamento regolato salvato.')
         treatment = call(f'{API}/{beach["id"]}')['treatment']
         assert treatment['settings']['grain'] == 8 and treatment['applied']['grain'] == 8, treatment
+        assert treatment['settings']['monochrome'] == 'sepia' and treatment['settings']['cast'] == [15, -1, -24] and treatment['version'] == 5, treatment
         expect(dialog).to_contain_text("regolato dall'owner")
         dialog.locator('.library-detail-close button').click()
 

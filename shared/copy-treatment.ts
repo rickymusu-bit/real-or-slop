@@ -2,12 +2,17 @@
  * The treatment is proposed from the measures of the source REAL and can be set by the owner with sliders (owner request of
  * 2026-11-16): the same steps, with the owner's values in place of the proposed ones. */
 
-/** 4: the parameters are settings the owner can change (`settings`), the tint of a monochrome copy is in `cast`. */
-export const TREATMENT_VERSION = 4;
+/** 4: the parameters are settings the owner can change (`settings`), the tint of a monochrome copy is in `cast`.
+ * 5: the tint of a monochrome copy is strongest in the midtones and fades towards black and white, as in a toned print; until 4
+ * it was the same on every pixel, so blacks and whites took it too. */
+export const TREATMENT_VERSION = 5;
+/** Tint at the midtones that «Seppia» starts from when the source REAL is not sepia: warm, about neutral in luminance. */
+export const SEPIA_TINT: [number, number, number] = [15, -1, -24];
 /** The one JPEG generation a photo from an archive has gone through before the game copy. */
 const JPEG_QUALITY = 0.85;
-/** Version of the measures: 2 leaves burnt-out areas out of the noise. Copies measured before are measured again. */
-export const METRICS_VERSION = 2;
+/** Version of the measures: 2 leaves burnt-out areas out of the noise; 3 adds the tint of a monochrome image. Copies measured
+ * before are measured again. */
+export const METRICS_VERSION = 3;
 export interface Metrics {
   /** Long side in pixels. */ long: number;
   /** Standard deviation of the noise of the luminance in uniform areas (0–255 scale). */ noise: number;
@@ -15,6 +20,8 @@ export interface Metrics {
   /** Distance between the 2nd and 98th percentiles of the luminance (0–255). */ contrast: number;
   /** Mean chroma, (max − min) / 255. */ saturation: number;
   /** Mean deviation of R, G, B from the luminance in neutral areas. */ cast: [number, number, number];
+  /** Tint at the midtones, fitted on every pixel (`tintWeight`): what a sepia or toned print has; near zero in a neutral black and
+   * white. Measured from version 3. */ tint?: [number, number, number];
   /** Version of the algorithm; absent on the first measures. */ v?: number;
 }
 export type Monochrome = "" | "black-and-white" | "sepia";
@@ -114,6 +121,20 @@ function percentiles(y: Float32Array, low: number, high: number): [number, numbe
   };
   return [at(low), at(0.5), at(high)];
 }
+/** Weight of the tint of a monochrome copy at luminance y: 1 at the midtones, 0 at pure black and white. */
+export const tintWeight = (y: number) => { const t = clamp(y / 255, 0, 1); return 4 * t * (1 - t); };
+/** Tint at the midtones of a monochrome image: least-squares fit of each channel's deviation from the luminance to `tintWeight`, on
+ * every pixel. The cast only looks at nearly grey pixels, which in a sepia print are the least toned. */
+function tintOf(rgb: Float32Array, y: Float32Array): [number, number, number] {
+  const tint = [0, 0, 0];
+  let weights = 0;
+  for (let i = 0; i < y.length; i++) {
+    const w = tintWeight(y[i]);
+    weights += w * w;
+    for (let k = 0; k < 3; k++) tint[k] += w * (rgb[3 * i + k] - y[i]);
+  }
+  return tint.map(v => weights ? v / weights : 0) as [number, number, number];
+}
 function chromaStats(rgb: Float32Array, y: Float32Array): { saturation: number; cast: [number, number, number] } {
   const n = y.length;
   let chroma = 0, neutral = 0;
@@ -130,7 +151,8 @@ function chromaStats(rgb: Float32Array, y: Float32Array): { saturation: number; 
 function measureRgb(rgb: Float32Array, width: number, height: number): Metrics {
   const y = luminance(rgb, width * height), [p2, , p98] = percentiles(y, 0.02, 0.98), { saturation, cast } = chromaStats(rgb, y);
   return { long: Math.max(width, height), noise: round(noiseOf(y, width, height)), sharpness: round(sharpnessOf(y, width, height)),
-    contrast: p98 - p2, saturation: round(saturation), cast: cast.map(v => round(v, 2)) as [number, number, number], v: METRICS_VERSION };
+    contrast: p98 - p2, saturation: round(saturation), cast: cast.map(v => round(v, 2)) as [number, number, number],
+    tint: tintOf(rgb, y).map(v => round(v, 2)) as [number, number, number], v: METRICS_VERSION };
 }
 /** Measures of an image given as RGBA bytes. */
 export function measure(rgba: ArrayLike<number>, width: number, height: number): Metrics {
@@ -144,8 +166,10 @@ export function validMetrics(value: unknown): Metrics | null {
   const finite = (v: unknown, low: number, high: number) => typeof v === "number" && Number.isFinite(v) && v >= low && v <= high;
   if (!finite(m.long, 1, 100_000) || !finite(m.noise, 0, 255) || !finite(m.sharpness, 0, 2000) || !finite(m.contrast, 0, 255)
     || !finite(m.saturation, 0, 1) || !Array.isArray(m.cast) || m.cast.length !== 3 || !m.cast.every(v => finite(v, -255, 255))) return null;
+  const tint = m.tint === undefined ? undefined : Array.isArray(m.tint) && m.tint.length === 3 && m.tint.every(v => finite(v, -255, 255)) ? m.tint as [number, number, number] : null;
+  if (tint === null) return null;
   return { long: Math.round(m.long as number), noise: m.noise as number, sharpness: m.sharpness as number, contrast: m.contrast as number,
-    saturation: m.saturation as number, cast: m.cast as [number, number, number], ...(m.v === METRICS_VERSION ? { v: METRICS_VERSION } : {}) };
+    saturation: m.saturation as number, cast: m.cast as [number, number, number], ...(tint ? { tint } : {}), ...(m.v === METRICS_VERSION ? { v: METRICS_VERSION } : {}) };
 }
 /** Relative distance between two measures: the mean of the relative differences of noise, sharpness, contrast and saturation. */
 export function gap(a: Metrics, b: Metrics): number {
@@ -221,9 +245,10 @@ export function treat(rgba: ArrayLike<number>, width: number, height: number, ta
   y = luminance(rgb, n);
   let saturation = 1, cast: [number, number, number];
   if (monochrome) {
-    // Black and white or sepia (proposed when the source REAL is): a tint on the luminance, the sample's when proposed.
-    cast = settings ? settings.cast : target.cast.map(v => round(v, 2)) as [number, number, number];
-    for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] = y[i] + cast[k];
+    // Black and white or sepia (proposed when the source REAL is): a tint on the luminance, strongest in the midtones, the sample's
+    // when proposed (its cast when it was measured before the tint existed).
+    cast = settings ? settings.cast : (target.tint || target.cast).map(v => round(v, 2)) as [number, number, number];
+    for (let i = 0; i < n; i++) { const w = tintWeight(y[i]); for (let k = 0; k < 3; k++) rgb[3 * i + k] = y[i] + cast[k] * w; }
     saturation = settings ? settings.saturation : 1;
   } else {
     // The colour cast of the sample, then its saturation.
@@ -264,6 +289,11 @@ export function treat(rgba: ArrayLike<number>, width: number, height: number, ta
     applied: { medium, contrast, cast: [...cast] as [number, number, number], saturation,
       monochrome, blur: sigma, grain, grainSize, jpeg: settings ? settings.jpeg : JPEG_QUALITY } };
 }
+
+/** The colour sliders when the owner changes «Colore»: the proposal's if it has that colour; otherwise the sepia tint for «Seppia»
+ * and none for the others, so that «Seppia» and «Bianco e nero» never look alike by accident. */
+export const castFor = (monochrome: Monochrome, proposed: Settings): [number, number, number] =>
+  proposed.monochrome === monochrome ? [...proposed.cast] as [number, number, number] : monochrome === "sepia" ? [...SEPIA_TINT] as [number, number, number] : [0, 0, 0];
 
 /** The settings of an applied treatment and its long side (what the sliders start from). */
 export const settingsOf = (applied: Applied, long: number): Settings => ({ contrast: applied.contrast, saturation: applied.saturation,

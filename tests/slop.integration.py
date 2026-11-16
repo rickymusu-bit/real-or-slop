@@ -58,9 +58,9 @@ try:
     assert copy['copy']['crop']['format']=='4:5'
     # Treatment set with the sliders, in the browser (owner decisions of 2026-11-16): the Worker checks the record it receives.
     sid=result['id'];crop=copy['copy']['crop'];long=max(crop['width'],crop['height'])
-    m={'long':long,'noise':2.0,'sharpness':5.0,'contrast':120,'saturation':0.1,'cast':[1,0,-1],'v':2}
+    m={'long':long,'noise':2.0,'sharpness':5.0,'contrast':120,'saturation':0.1,'cast':[1,0,-1],'tint':[0,0,0],'v':3}
     chosen={'contrast':1.1,'saturation':0.9,'cast':[3,0,-3],'monochrome':'sepia','blur':0.5,'grain':4,'grainSize':1,'jpeg':0.8,'long':long}
-    record={'version':4,'off':False,'seed':7,'long':long,'medium':'','color':'','sample':{'id':historical['id'],'metrics':m},'settings':chosen}
+    record={'version':5,'off':False,'seed':7,'long':long,'medium':'','color':'','sample':{'id':historical['id'],'metrics':m},'settings':chosen}
     def upload(treatment):
         q=f"?crop={crop['x']},{crop['y']},{crop['width']},{crop['height']},4:5"
         req=urllib.request.Request(LIBRARY+'/'+sid+'/copy'+q,data=game_copy(original,crop),method='POST',

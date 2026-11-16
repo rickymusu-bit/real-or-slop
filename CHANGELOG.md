@@ -1,9 +1,9 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-16T15:54:31Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-16T16:40:52Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.35.0 — 2026-11-16T15:54:31Z
+## 1.35.0 — 2026-11-16T16:40:52Z
 
 - **Accettare una candidata dopo la revisione** (decisione dell'owner del 2026-11-16): nei processi «Da vedere» in cui il valutatore
   chiede la revisione, «Accetta il tentativo N» registra la candidata come SLOP nuova nel suo batch e analizza i tag con una
@@ -12,7 +12,13 @@ I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella c
 - **Le note d'incertezza non fermano più l'accettazione:** il server trasformava in revisione ogni `accept` con almeno una nota,
   e il valutatore annota sempre che luogo, data e identità non si verificano dai pixel. La parte fissa delle istruzioni del
   valutatore chiede ora la revisione solo per un dubbio concreto su qualcosa di visibile.
-- Specifica `generazione-slop` 5.10.0; `MASTER.md` 26.1.0.
+- **Seppia distinto dal bianco e nero** (richiesta dell'owner del 2026-11-16): i due seguivano lo stesso calcolo, luminanza più la
+  tinta dei cursori, e scegliendo «Seppia» la tinta restava quella che c'era (quasi zero), quindi il risultato era grigio. Ora la
+  tinta è piena nei mezzitoni e nulla al nero e al bianco (algoritmo del trattamento 5); «Seppia» parte da una tinta seppia, «Bianco
+  e nero» da nessuna. Le REAL hanno una nuova misura, la tinta su tutti i pixel (misure 3), perché la dominante, presa solo sui pixel
+  quasi grigi, sottostima il viraggio di una seppia. Le copie si rimisurano nel browser all'apertura della dashboard; le
+  impostazioni salvate con la versione 4 restano valide.
+- Specifiche `generazione-slop` 5.10.0 e `copie-di-gioco` 11.1.0; `MASTER.md` 26.2.0.
 
 ## 1.34.0 — 2026-11-16T12:40:03Z
 

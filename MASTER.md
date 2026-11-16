@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 26.1.0, aggiornata il 2026-11-16T15:54:31Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 26.2.0, aggiornata il 2026-11-16T16:40:52Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -17,6 +17,8 @@ in `CHANGELOG.md`.
 - **Nel ramo 1.35.0 (PR da unire):** «Accetta il tentativo N» per i processi in revisione, con l'analisi dei tag; le note
   d'incertezza su luogo, data e identità non fermano più l'accettazione. Dei 6 processi senza SLOP del primo batch, i 4 in revisione
   si possono accettare; i 2 incerti (un brief, un'immagine pagata ma mai salvata) si chiudono e si rigenerano in un nuovo batch.
+  Seppia distinto dal bianco e nero: tinta sui mezzitoni (algoritmo 5), misurata sulle REAL (misure 3: al primo accesso il
+  browser rimisura le copie, gratis), tinta seppia di partenza nel riquadro dei cursori.
 - **Nella 1.34.0 (include la 1.33.1):** il Worker gestisce ciò che riguarda OpenAI, il browser tutto il resto
   (decisione dell'owner del 2026-11-16): copie di gioco, misure e «Rifai la copia di gioco» tornano nel browser, senza binding
   Images né Workflow delle copie; trattamento delle SLOP regolabile con i cursori e anteprima nella pagina. Dopo il rilascio vanno
@@ -51,7 +53,7 @@ nome.
 |---|---|---|
 | Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.9.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 11.0.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 11.1.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.7.0 |
 | SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.10.0 |
 | Sezione Database | `docs/database-immagini.md` | 2.9.0 |

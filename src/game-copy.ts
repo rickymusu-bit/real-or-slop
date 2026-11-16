@@ -133,7 +133,7 @@ export async function treatmentPlan(listed: TreatableItem, asked: { off?: boolea
   const source = await read<{ id: string; metrics: Metrics | null }>(sourceId);
   if (!source?.metrics) return null;
   const stored = item.treatment, same = !!stored && stored.sample.id === source.id;
-  const settings = asked.settings !== undefined ? asked.settings : same && stored!.version === TREATMENT_VERSION ? stored!.settings || null : null;
+  const settings = asked.settings !== undefined ? asked.settings : same && stored!.version >= 4 ? stored!.settings || null : null;
   return { off: asked.off ?? (asked.settings ? false : same ? stored!.off : false), seed: same ? stored!.seed : randomSeed(),
     ...lookOf(item.generation?.slot), sample: { id: source.id, metrics: source.metrics }, settings };
 }
