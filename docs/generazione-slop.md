@@ -1,6 +1,6 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.10.1
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.11.0
 
-Stato: vigente; la 5.10.0 è in produzione con l'app 1.35.0, la 5.10.1 è per l'app 1.35.1. Aggiornata: 2026-11-16T18:02:22Z. La 5.10.1: si accetta dopo la revisione anche un tentativo con i vincoli editoriali non confermati ma senza difetti critici. La 5.10.0: le incertezze su ciò che i pixel non possono verificare non bloccano l'accettazione e l'owner può accettare la candidata di un processo in revisione (decisioni dell'owner del 2026-11-16). La 5.9.0: la copia di gioco della SLOP accettata la prepara il browser alla revisione, non più il Workflow (decisione dell'owner del 2026-11-16). La 5.8.0: un passo
+Stato: vigente; la 5.10.0 è in produzione con l'app 1.35.0, la 5.11.0 è per l'app 1.35.1. Aggiornata: 2026-11-16T18:16:17Z. La 5.11.0: edifici e luoghi reali nominati o inventati caso per caso, mai riprodotti fedelmente (decisione dell'owner del 2026-11-16). La 5.10.1: si accetta dopo la revisione anche un tentativo con i vincoli editoriali non confermati ma senza difetti critici. La 5.10.0: le incertezze su ciò che i pixel non possono verificare non bloccano l'accettazione e l'owner può accettare la candidata di un processo in revisione (decisioni dell'owner del 2026-11-16). La 5.9.0: la copia di gioco della SLOP accettata la prepara il browser alla revisione, non più il Workflow (decisione dell'owner del 2026-11-16). La 5.8.0: un passo
 fermato dalla piattaforma chiude solo la sua REAL, un batch in revisione con SLOP ancora da generare si riprende, copia della SLOP in un passo
 a sé, limite di CPU di cinque minuti. La 5.7.0: copia della SLOP
 accettata preparata dal Worker. La 5.6.0 sposta il ciclo
@@ -28,6 +28,14 @@ Le versioni precedenti sono nella cronologia Git.
   massimizzare. Se la fotografia è credibile e rispetta questi vincoli, si può accettare anche quando differisce dal prompt operativo.
 - **SLOP integralmente sintetiche;** niente editing parziale della REAL per produrre il contenuto. Le persone della SLOP sono
   inventate secondo `contenuti-e-trasparenza`. Nessuna SLOP e la propria REAL di origine compaiono nella stessa partita.
+- **Edifici e luoghi reali** (decisione dell'owner del 2026-11-16): il brief decide caso per caso se nominare un luogo reale o
+  inventarne uno dello stesso tipo, stile, epoca e regione (la gemella della REAL di Brown Chapel a Selma può essere un'altra
+  chiesa, fittizia e simile). Non chiede mai di riprodurre fedelmente un edificio reale, la sua architettura esatta o le sue
+  iscrizioni: un ancoraggio obbligatorio può nominare un luogo, non la fedeltà del suo aspetto. Il valutatore non giudica la
+  fedeltà all'aspetto reale e non la chiede nei prompt rivisti: un edificio plausibile di quel tipo, stile, epoca e regione rispetta
+  l'ancoraggio, e una differenza da quello reale non è un difetto, né un motivo di revisione, né rende falsi i vincoli editoriali.
+  Il 2026-11-16 un brief aveva reso obbligatoria la chiesa reale e il valutatore ne aveva chiesto l'architettura esatta, poi
+  aveva mandato in revisione la candidata per i mattoni rossi. La regola è nella parte fissa delle istruzioni, nel codice.
 - **Selezione REAL qualitativa:** usare gli otto principi della issue #138 (non filtri rigidi, soggetti centrati obbligatori o
   benchmark per singolo generatore). La selezione editoriale rimane all'owner; per ora nessun avviso nel wizard.
 - **Tutte le chiamate API a pagamento richiedono autorizzazione esplicita** e registrazione; nessun retry automatico di chiamate

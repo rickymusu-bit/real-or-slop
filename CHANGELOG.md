@@ -1,15 +1,19 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-16T18:02:22Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-16T18:16:17Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.35.1 — 2026-11-16T18:02:22Z
+## 1.35.1 — 2026-11-16T18:16:17Z
 
 - **Accettare dopo la revisione anche con i vincoli non confermati** (decisione dell'owner del 2026-11-16): nel secondo batch 2 SLOP
   su 10 erano in revisione con `editorial_constraints_met` falso ma senza difetti critici, e «Accetta il tentativo N» non compariva.
   Un ancoraggio mancante è un difetto critico ed è elencato come tale: senza difetti critici il valore falso esprime un dubbio del
   valutatore, che decide l'owner. La conferma avverte di rileggere le incertezze. I tentativi con difetti critici restano esclusi.
-- Specifica `generazione-slop` 5.10.1; `MASTER.md` 26.3.0.
+- **Edifici e luoghi reali** (decisione dell'owner del 2026-11-16): la parte fissa delle istruzioni del brief lascia decidere caso
+  per caso se nominare un luogo reale o inventarne uno simile, ma vieta di chiedere la riproduzione fedele di un edificio reale; il
+  valutatore non giudica la fedeltà all'aspetto reale e non la chiede nei prompt rivisti. Nel secondo batch il brief aveva reso
+  obbligatoria Brown Chapel e il valutatore ne aveva chiesto l'architettura esatta.
+- Specifica `generazione-slop` 5.11.0; `MASTER.md` 26.4.0.
 
 ## 1.35.0 — 2026-11-16T16:40:52Z
 

@@ -20,6 +20,8 @@ try:
     assert code==200 and changed['tags']==historical['tags'] and changed['description']=='Original Commons text',changed
     b=batch(changed);[prompt]=control()
     assert prompt['path']=='/v1/responses' and prompt['body']['text']['format']['name']=='slop_brief'
+    # Real buildings: named or invented, never reproduced faithfully (owner decision of 2026-11-16).
+    assert 'never require or ask for a faithful reproduction of a specific real building' in prompt['body']['instructions']
     assert not any(c['type']=='input_image' for c in prompt['body']['input'][0]['content'])
     inp=__import__('json').loads(prompt['body']['input'][0]['content'][0]['text'])
     assert inp['description']==DESCRIPTION and inp['tags']['genre']==['street-scene']
@@ -44,6 +46,7 @@ try:
     # The evaluator gets the base, its editable context and the rules fixed in the code; the attempt records the versions.
     instructions=logs[1]['body']['instructions']
     assert instructions.startswith('Lavori per un archivio') and 'credibilità fotografica' in instructions and 'ENTIRE unprocessed' in instructions,instructions[:300]
+    assert 'fidelity to the real appearance of a named building' in instructions
     assert set(b['processes'][0]['attempts'][0]['evaluation']['contexts'])=={'base','evaluation'}
     attempt=b['processes'][0]['attempts'][0]
     path=attempt['file'].split('/slop/')[1]

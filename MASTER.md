@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 26.3.0, aggiornata il 2026-11-16T18:02:22Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 26.4.0, aggiornata il 2026-11-16T18:16:17Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -16,7 +16,8 @@ in `CHANGELOG.md`.
   proposto e la soglia dello studio a 20 REAL. Qualità immagini `medium`. Il secondo batch automatico (2026-11-16, 10 REAL): 8
   accettate con le note d'incertezza, 2 in revisione con i vincoli non confermati e senza difetti critici.
 - **Nel ramo 1.35.1 (PR da unire):** «Accetta il tentativo N» anche per i tentativi con i vincoli editoriali non confermati ma
-  senza difetti critici; la conferma avverte di rileggere le incertezze.
+  senza difetti critici; la conferma avverte di rileggere le incertezze. Edifici e luoghi reali nominati o inventati dal brief
+  caso per caso, mai riprodotti fedelmente; il valutatore non giudica la fedeltà all'aspetto reale.
 - **Nella 1.35.0:** «Accetta il tentativo N» per i processi in revisione, con l'analisi dei tag; le note
   d'incertezza su luogo, data e identità non fermano più l'accettazione. Dei 6 processi senza SLOP del primo batch, i 4 in revisione
   si possono accettare; i 2 incerti (un brief, un'immagine pagata ma mai salvata) si chiudono e si rigenerano in un nuovo batch.
@@ -58,7 +59,7 @@ nome.
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 11.1.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.7.0 |
-| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.10.1 |
+| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.11.0 |
 | Sezione Database | `docs/database-immagini.md` | 2.9.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.8.1 |
