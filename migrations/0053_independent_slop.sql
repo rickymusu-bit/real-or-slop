@@ -2,7 +2,10 @@
 -- Preserve process IDs, attempts, paid calls and all existing image bytes.
 UPDATE slop_processes SET snapshot=json_set(snapshot,
  '$.source_description',json(coalesce(json_extract(snapshot,'$.source_description'),(SELECT real_description FROM images WHERE id=source_id),'null')),
- '$.source_tags',json(coalesce(json_extract(snapshot,'$.source_tags'),'{}')),
+ '$.source_tags',json(coalesce(json_extract(snapshot,'$.source_tags'),
+   (SELECT json_group_object(category,json(labels)) FROM
+     (SELECT t.category,json_group_array(t.label) AS labels FROM image_tags it JOIN tags t ON t.id=it.tag_id
+      WHERE it.image_id=slop_processes.source_id GROUP BY t.category)), '{}')),
  '$.width',(SELECT width FROM images WHERE id=source_id),
  '$.height',(SELECT height FROM images WHERE id=source_id),
  '$.target_metrics',json(coalesce((SELECT copy_metrics FROM images WHERE id=source_id),'null')));
