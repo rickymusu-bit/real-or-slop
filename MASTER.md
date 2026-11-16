@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 27.0.0, aggiornata il 2026-11-16T19:41:37Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 27.0.1, aggiornata il 2026-11-16T21:28:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,7 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.36.0:** SLOP indipendenti, migrazione 0053, proposte sullo spread del catalogo; revisione tecnica in `docs/revisione-codice.md`. Nessun rilascio eseguito.
+- **Ramo 1.36.0 (PR #151):** SLOP indipendenti, migrazione 0053, proposte sullo spread del catalogo; revisione tecnica in `docs/revisione-codice.md`. Validazione del trattamento anonimo anche per campioni malformati, con test di regressione in `tests/copy-treatment.test.ts`. Nessun rilascio eseguito.
 
 - **In produzione:** app 1.35.0 (PR rickymusu-bit/real-or-slop#149; migrazioni fino alla 0052), Workers Paid dal 2026-11-16,
   Workers Logs attivi. 20 REAL approvate con tag e descrizione; copie fatte nel browser (con la 1.34.0 restano valide). Nessuna immagine pubblicata. Il primo batch automatico, ripreso sul server il 2026-11-16 alle 08:24 UTC, è finito alle
@@ -59,7 +59,7 @@ nome.
 |---|---|---|
 | Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 4.0.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.0.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.0.1 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.7.0 |
 | SLOP indipendenti, studio e batch automatici | `docs/generazione-slop.md` | 6.0.0 |
 | Sezione Database | `docs/database-immagini.md` | 2.9.0 |
