@@ -7,6 +7,7 @@ I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella c
 
 - Dashboard riprogettata in tutte le sezioni: ricerca catalogo, navigazione persistente, impostazioni raggruppate, revisioni progressive. Proposte automatiche dal fabbisogno globale, con campione casuale di REAL e nessuna soglia di spread o gruppo. Migrazione 0054.
 - Allineamento a main dopo la #151, conservando i controlli del trattamento anonimo; verifica browser aggiornata alla nuova presentazione dei conteggi.
+- Ricerca del catalogo effettiva anche su descrizione e prompt, combinata con gli altri filtri; test della migrazione 0054 e rifiuto delle impostazioni obsolete.
 
 ## 1.36.0 — 2026-11-16T21:28:00Z
 

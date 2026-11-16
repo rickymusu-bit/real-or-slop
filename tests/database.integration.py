@@ -67,8 +67,17 @@ real = add('REAL', 'Barricate', 3, ['db-riot', 'db-paris'])
 slop = add('SLOP', 'Scontri', 5, ['db-riot'], prompt='A riot in a square, 1969')
 beach = add('SLOP', 'Spiaggia', 7, ['db-beach'], prompt='A crowded beach, 1975')
 ours = {real['id'], slop['id'], beach['id']}
+status, real = call(f'{API}/{real["id"]}', {'revision': real['revision'], 'description': 'Catalog description searchable-marker'}, method='PATCH')
+assert status == 200, real
 for item in (real, slop): assert call(f'{API}/{item["id"]}/publish', {})[1]['status'] == 'published'
 
+# Text search and filters remain combined across title, description and prompt.
+assert set(listing(q='barrICATE', tags='db-riot')) == {real['id']}
+assert set(listing(q='searchable-marker', tags='db-riot')) == {real['id']}
+assert set(listing(q='crowded beach', tags='db-beach')) == {beach['id']}
+assert not listing(q='crowded beach', origin='REAL')
+assert not listing(q='crowded beach', status='published')
+assert not listing(q='no-such-catalogue-text')
 # Filters: one tag, all of several tags, any of several tags, origin.
 assert set(listing(tags='db-riot')) == {real['id'], slop['id']}
 assert set(listing(tags='db-riot,db-paris')) == {real['id']}

@@ -78,7 +78,7 @@ with sync_playwright() as p:
         # Tags in category order: on mobile «street» is already in Ambiente (moved during the desktop run), so it comes first.
         expect(detail.locator('.library-tags li.tag-cat').first).to_contain_text('crowd' if name == 'desktop' else 'street')
         expect(detail.locator('.library-tags li.tag-cat')).to_have_count(2)
-        expect(detail.locator('[data-stats]')).to_have_text('Vista 0 volte · classificata correttamente 0')
+        expect(detail.locator('[data-stats]')).to_have_text('Vista 0 volte / classificata correttamente 0')
         detail.locator('.library-detail-close button').click()
         add(page, picture(f'{name}-street.jpg', (40, 40, 190), (300, 300)), 'SLOP')
         page.locator('[data-view=library]').click()  # reload the list

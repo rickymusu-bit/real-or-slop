@@ -1,6 +1,6 @@
-# Sezione Database — specifica 3.0.0
+# Sezione Database — specifica 3.0.1
 
-Stato: vigente; la 2.8.0 è in produzione con l'app 1.33.0, la 2.9.0 è per l'app 1.34.0. Aggiornata: 2026-11-16T20:00:00Z. La 2.9.0: copie, misure e
+Stato: vigente; la 2.8.0 è in produzione con l'app 1.33.0, la 2.9.0 è per l'app 1.34.0. Aggiornata: 2026-11-16T22:03:33Z. La 2.9.0: copie, misure e
 «Rifai la copia di gioco» tornano nel browser (decisione dell'owner del 2026-11-16); «Regola il trattamento» per le SLOP. La 2.8.0: copie e misure
 le preparava il Worker; «Rifai la copia di gioco» era un lavoro su Cloudflare. La 2.7.1 include nelle analisi
 in gruppo le immagini con esito incerto o interrotto, nominate nella conferma. La 2.7.0 aggiunge «Seleziona
@@ -27,7 +27,7 @@ che restano nella cronologia git. Stati e regole della libreria: specifica `libr
 
 ## 2. Scheda «Immagini»
 
-Ricerca per titolo, descrizione o prompt; filtri e ordinamento richiudibili. Griglia 4:5 a due colonne su mobile; barra delle azioni massive durante lo scorrimento.
+Ricerca in titolo, descrizione o prompt, combinata con i filtri di origine, stato e tag; filtri e ordinamento richiudibili. Griglia 4:5 a due colonne su mobile; barra delle azioni massive durante lo scorrimento.
 
 
 - **Viste:** Tutte, Nuove, Approvate, Pubblicate, Cestino, con i conteggi; «Svuota cestino» nella vista Cestino.

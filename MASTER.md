@@ -9,7 +9,7 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.37.0:** dashboard riprogettata nelle cinque sezioni e proposte dai conteggi grezzi, con campione casuale senza soglie. `src/admin-workspace.ts` e `src/admin-workspace.css`: struttura e stile. Migrazione 0054: conteggi delle proposte ignorate e rimozione delle impostazioni obsolete. Allineata a main dopo il merge della #151; nessun rilascio della 1.37.0 eseguito.
+- **Ramo 1.37.0:** dashboard riprogettata nelle cinque sezioni e proposte dai conteggi grezzi, con campione casuale senza soglie. `src/admin-workspace.ts` e `src/admin-workspace.css`: struttura e stile. Migrazione 0054: conteggi delle proposte ignorate e rimozione delle impostazioni obsolete. Ricerca estesa a descrizione e prompt in `worker/library.ts`; test di upgrade 0054 in `tests/slop-proposals.test.ts`. Allineata a main dopo il merge della #151; nessun rilascio della 1.37.0 eseguito.
 
 - **Integrata in main la 1.36.0 (PR #151):** SLOP indipendenti e migrazione 0053, inclusa la validazione del trattamento anonimo per campioni malformati. Revisione tecnica in `docs/revisione-codice.md`. Stato del deploy non verificato in questa sessione.
 
@@ -64,7 +64,7 @@ nome.
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.0.1 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 3.0.0 |
 | SLOP indipendenti, studio e batch automatici | `docs/generazione-slop.md` | 6.1.0 |
-| Sezione Database | `docs/database-immagini.md` | 3.0.0 |
+| Sezione Database | `docs/database-immagini.md` | 3.0.1 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.0.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 3.0.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |

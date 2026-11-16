@@ -1,5 +1,5 @@
-/** Numeric settings of the dashboard (spec `statistiche-impostazioni`, section 2): thresholds of the SLOP studio and of
- * the automatic proposals, hours of an open game. A missing row is the default of the code. */
+/** Numeric settings of the dashboard: SLOP proposals, attempt limits, tolerance and hours of an open game.
+ * A missing row is the default of the code (spec `statistiche-impostazioni`, section 2). */
 import { HttpError, type Env } from "./core";
 
 export const LIMITS = {
@@ -23,7 +23,7 @@ export async function numberSettings(env: Env): Promise<Record<NumberSetting, nu
 }
 export async function numberSetting(env: Env, key: NumberSetting) { return (await numberSettings(env))[key]; }
 
-/** GET /settings; PUT /settings {slop_section_min_real?, open_game_hours?, slop_auto_enabled?, slop_auto_threshold_percent?}. */
+/** GET /settings; PUT /settings accepts only keys in LIMITS. */
 export async function settingsRoute(env: Env, method: string, data: Record<string, unknown>) {
   const view = async () => ({ values: await numberSettings(env), limits: LIMITS });
   if (method === "GET") return view();
