@@ -1,6 +1,6 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.10.0
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.10.1
 
-Stato: vigente; la 5.9.0 è per l'app 1.34.0, la 5.10.0 per l'app 1.35.0. Aggiornata: 2026-11-16T15:54:31Z. La 5.10.0: le incertezze su ciò che i pixel non possono verificare non bloccano l'accettazione e l'owner può accettare la candidata di un processo in revisione (decisioni dell'owner del 2026-11-16). La 5.9.0: la copia di gioco della SLOP accettata la prepara il browser alla revisione, non più il Workflow (decisione dell'owner del 2026-11-16). La 5.8.0: un passo
+Stato: vigente; la 5.10.0 è in produzione con l'app 1.35.0, la 5.10.1 è per l'app 1.35.1. Aggiornata: 2026-11-16T18:02:22Z. La 5.10.1: si accetta dopo la revisione anche un tentativo con i vincoli editoriali non confermati ma senza difetti critici. La 5.10.0: le incertezze su ciò che i pixel non possono verificare non bloccano l'accettazione e l'owner può accettare la candidata di un processo in revisione (decisioni dell'owner del 2026-11-16). La 5.9.0: la copia di gioco della SLOP accettata la prepara il browser alla revisione, non più il Workflow (decisione dell'owner del 2026-11-16). La 5.8.0: un passo
 fermato dalla piattaforma chiude solo la sua REAL, un batch in revisione con SLOP ancora da generare si riprende, copia della SLOP in un passo
 a sé, limite di CPU di cinque minuti. La 5.7.0: copia della SLOP
 accettata preparata dal Worker. La 5.6.0 sposta il ciclo
@@ -226,7 +226,10 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
   (`POST processes/:id/accept {confirm, attempt}`) registra la candidata come SLOP `new` nel batch del processo, come
   un'accettazione automatica, con la valutazione segnata «Accettata dall'owner dopo la revisione»; poi una chiamata a pagamento
   analizza i tag dell'originale intero (la conferma dichiara quella chiamata). Solo un tentativo valutato, con la candidata intera
-  ancora salvata, senza difetti critici e con gli ancoraggi rispettati; mai due volte, mai se la REAL ha già una SLOP attiva. Se
+  ancora salvata e senza difetti critici; mai due volte, mai se la REAL ha già una SLOP attiva. Un ancoraggio mancante è un difetto
+  critico ed è elencato come tale; i vincoli editoriali «non rispettati» senza difetti critici sono un dubbio del valutatore (un
+  edificio forse diverso da quello reale, un monumento forse fuori posto), che decide l'owner: la conferma lo avverte di rileggere le
+  incertezze (decisione dell'owner del 2026-11-16, dopo il secondo batch, in cui 2 SLOP su 10 erano bloccate così). Se
   l'analisi non riesce la SLOP resta accettata e l'analisi si ripete dal Database. La copia 4:5 la prepara il browser alla revisione
   del batch. Un tentativo la cui immagine è stata pagata ma non salvata (passo interrotto prima della quarantena) non ha nulla da
   accettare: si chiude.

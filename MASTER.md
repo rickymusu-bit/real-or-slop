@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 26.2.0, aggiornata il 2026-11-16T16:40:52Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 26.3.0, aggiornata il 2026-11-16T18:02:22Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,12 +9,15 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **In produzione:** app 1.33.0 (PR rickymusu-bit/real-or-slop#147; migrazioni fino alla 0052), Workers Paid dal 2026-11-16,
+- **In produzione:** app 1.35.0 (PR rickymusu-bit/real-or-slop#149; migrazioni fino alla 0052), Workers Paid dal 2026-11-16,
   Workers Logs attivi. 20 REAL approvate con tag e descrizione; copie fatte nel browser (con la 1.34.0 restano valide). Nessuna immagine pubblicata. Il primo batch automatico, ripreso sul server il 2026-11-16 alle 08:24 UTC, è finito alle
   08:32: 4 SLOP accettate (3 con copia; quella in bianco e nero accettata alle 05:38 senza copia, vedi 1.33.1), 4 revisioni chieste,
   2 incerti. Su indicazione dell'owner, il 2026-11-15 sono stati salvati direttamente nel D1 il contesto «Brief e prompt per le SLOP»
-  proposto e la soglia dello studio a 20 REAL. Qualità immagini `medium`.
-- **Nel ramo 1.35.0 (PR da unire):** «Accetta il tentativo N» per i processi in revisione, con l'analisi dei tag; le note
+  proposto e la soglia dello studio a 20 REAL. Qualità immagini `medium`. Il secondo batch automatico (2026-11-16, 10 REAL): 8
+  accettate con le note d'incertezza, 2 in revisione con i vincoli non confermati e senza difetti critici.
+- **Nel ramo 1.35.1 (PR da unire):** «Accetta il tentativo N» anche per i tentativi con i vincoli editoriali non confermati ma
+  senza difetti critici; la conferma avverte di rileggere le incertezze.
+- **Nella 1.35.0:** «Accetta il tentativo N» per i processi in revisione, con l'analisi dei tag; le note
   d'incertezza su luogo, data e identità non fermano più l'accettazione. Dei 6 processi senza SLOP del primo batch, i 4 in revisione
   si possono accettare; i 2 incerti (un brief, un'immagine pagata ma mai salvata) si chiudono e si rigenerano in un nuovo batch.
   Seppia distinto dal bianco e nero: tinta sui mezzitoni (algoritmo 5), misurata sulle REAL (misure 3: al primo accesso il
@@ -55,7 +58,7 @@ nome.
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 11.1.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.7.0 |
-| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.10.0 |
+| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.10.1 |
 | Sezione Database | `docs/database-immagini.md` | 2.9.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.8.1 |

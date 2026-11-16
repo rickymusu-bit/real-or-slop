@@ -64,8 +64,9 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
       (image.status !== "published" && image.status !== "trash" ? `<button data-slop="trash" data-id="${image.id}">Cestino</button>` : "") + '</div></article>').join("") +
     (batch?.processes || []).map(p => `<section><h3>${escape(batch!.items[p.slot].title)}: ${escape(p.state)}</h3>${p.error ? `<p role="status">${escape(p.error)}</p>` : ""}${p.brief ? `<p>Ancoraggi obbligatori: ${escape(p.brief.required.join("; "))}. Esclusioni: ${escape(p.brief.exclusions.join("; "))}</p>` : ""}${p.attempts.map(a => evaluation(a)).join("")}</section>`).join("") +
     '<div class="rw-actions"><button data-slop="to-prompts">Brief e prompt / ripresa</button><button data-slop="new-batch">Nuovo batch</button></div>';
-  /** A candidate the owner may accept after a review: evaluated, saved whole, with no critical defect or missing anchor. */
-  const acceptable = (a: Attempt) => a.status === "completed" && !!a.file && !!a.evaluation && !a.evaluation.critical_findings.length && a.evaluation.editorial_constraints_met;
+  /** A candidate the owner may accept after a review: evaluated, saved whole, with no critical defect. Constraints the evaluator
+   * could not confirm, without a critical defect, are a doubt for the owner to settle, not a defect. */
+  const acceptable = (a: Attempt) => a.status === "completed" && !!a.file && !!a.evaluation && !a.evaluation.critical_findings.length;
   // Processes that ended without a SLOP are exceptional: they stay on top, with every attempt, until the owner closes them.
   const attentionView = () => {
     const list = state?.attention || [];
@@ -142,7 +143,8 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
     const action=button.dataset.slop!, slot=Number(button.dataset.slot), image=batch?.images.find(i=>i.id===button.dataset.id);
     if(action==="first"){chosen=(state?.waiting||[]).filter(w=>w.described).slice(0,10).map(w=>w.id);render();return;}
     if(action==="accept-process"){
-      if(!window.confirm("Accettare questa candidata? Entra nella libreria come SLOP nuova, da approvare dopo la copia 4:5; poi una chiamata a pagamento per i tag."))return;
+      const doubt=state?.attention.find(p=>p.id===button.dataset.process)?.attempts.find(a=>a.id===button.dataset.attempt)?.evaluation?.editorial_constraints_met===false;
+      if(!window.confirm((doubt?"Il valutatore non ha potuto confermare i vincoli editoriali: rileggi le sue incertezze. ":"")+"Accettare questa candidata? Entra nella libreria come SLOP nuova, da approvare dopo la copia 4:5; poi una chiamata a pagamento per i tag."))return;
       busy=true;notice="Accettazione e analisi dei tag…";render();
       try{const done=await call<{attention: Attention[]; tags_error: string}>("processes/"+button.dataset.process+"/accept",{confirm:true,attempt:button.dataset.attempt});
         state={...state!,attention:done.attention};notice=done.tags_error?`SLOP accettata; analisi dei tag non riuscita: ${done.tags_error}. Si ripete dal Database.`:"SLOP accettata: la trovi nella revisione del suo batch.";}

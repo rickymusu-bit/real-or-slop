@@ -288,8 +288,7 @@ export async function closeProcess(env: Env, processId: string, data: Record<str
   return {attention: await attention(env)};
 }
 /** POST processes/:id/accept {confirm, attempt}: the owner accepts the candidate of a process whose evaluator asked for review.
- * Only a completed attempt with its whole candidate saved and no critical defect or missing anchor (critical defects are never
- * compensable). The candidate enters the library as new, like an automatic acceptance; then one paid call analyses its tags. */
+ * Only a completed attempt with its whole candidate saved and no critical defect (critical defects are never compensable). The candidate enters the library as new, like an automatic acceptance; then one paid call analyses its tags. */
 export async function acceptProcess(env: Env, processId: string, data: Record<string, unknown>) {
   confirmOnly(data, ["attempt"]);
   if (!env.QUARANTINE) throw new HttpError(503, "Quarantena mancante");
@@ -298,8 +297,9 @@ export async function acceptProcess(env: Env, processId: string, data: Record<st
   const a = await env.DB.prepare("SELECT * FROM slop_attempts WHERE id=? AND process_id=?").bind(typeof data.attempt === "string" ? data.attempt : "", p.id).first<Attempt>();
   const evaluation = parse<Evaluation | null>(a?.evaluation ?? null, null);
   if (!a || a.status !== "completed" || !a.candidate_key || !evaluation) throw new HttpError(409, "Tentativo senza candidata valutata");
-  if (evaluation.critical_findings.length || !evaluation.editorial_constraints_met)
-    throw new HttpError(409, "Difetti critici o ancoraggi mancanti: la candidata non si può accettare");
+  // A missing anchor is a critical defect and is listed as one; «constraints not met» with no critical defect is the evaluator's
+  // doubt, which the owner settles (owner decision of 2026-11-16).
+  if (evaluation.critical_findings.length) throw new HttpError(409, "Difetti critici: la candidata non si può accettare");
   const batch = await load(env, p.batch_id);
   const source = await find(env, p.source_id);
   if (!["approved", "published"].includes(source.status)) throw new HttpError(409, "REAL non più approvata o pubblicata");

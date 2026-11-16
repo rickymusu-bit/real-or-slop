@@ -1,7 +1,15 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-16T16:40:52Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-16T18:02:22Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.35.1 — 2026-11-16T18:02:22Z
+
+- **Accettare dopo la revisione anche con i vincoli non confermati** (decisione dell'owner del 2026-11-16): nel secondo batch 2 SLOP
+  su 10 erano in revisione con `editorial_constraints_met` falso ma senza difetti critici, e «Accetta il tentativo N» non compariva.
+  Un ancoraggio mancante è un difetto critico ed è elencato come tale: senza difetti critici il valore falso esprime un dubbio del
+  valutatore, che decide l'owner. La conferma avverte di rileggere le incertezze. I tentativi con difetti critici restano esclusi.
+- Specifica `generazione-slop` 5.10.1; `MASTER.md` 26.3.0.
 
 ## 1.35.0 — 2026-11-16T16:40:52Z
 
