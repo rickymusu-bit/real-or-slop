@@ -225,6 +225,29 @@ with sync_playwright() as p:
         saved = call(f'{API}/{beach["id"]}')['copy']; assert saved['sha256'] == kept, saved
         dialog.locator('.library-detail-close button').click()
 
+        # Treatment with sliders: the SLOP gets the REAL as its source; the sliders start on the proposal, a change asks the server
+        # for a preview, saving makes the copy with the owner's settings.
+        sql(f"UPDATE images SET generation_source='{real['id']}' WHERE id='{beach['id']}'")
+        page.get_by_role('button', name=f'Apri {prefix}-spiaggia').click()
+        dialog.locator('#library-treatment-on').click()
+        expect(dialog.locator('#library-detail-message')).to_have_text('Copia trattata.')
+        dialog.locator('#library-treatment-edit').click()
+        sliders = page.locator('dialog.treatment-dialog')
+        expect(sliders.locator('[data-status]')).to_have_text('Trattamento proposto.')
+        expect(sliders.locator('input[type=range]')).to_have_count(10)
+        sliders.locator('[data-key=grain]').fill('8')
+        expect(sliders.locator('[data-out=grain]')).to_have_text('8.0')
+        expect(sliders.locator('[data-status]')).to_have_text('Trattamento modificato, non ancora salvato.')
+        expect(sliders.locator('[data-view=preview]')).to_have_attribute('src', re.compile('^blob:'))
+        sliders.screenshot(path=str(folder / f'{name}-treatment.png'))
+        sliders.locator('[data-treatment=ok]').click()
+        expect(page.locator('dialog.treatment-dialog')).to_have_count(0)
+        expect(dialog.locator('#library-detail-message')).to_have_text('Trattamento regolato salvato.')
+        treatment = call(f'{API}/{beach["id"]}')['treatment']
+        assert treatment['settings']['grain'] == 8 and treatment['applied']['grain'] == 8, treatment
+        expect(dialog).to_contain_text("regolato dall'owner")
+        dialog.locator('.library-detail-close button').click()
+
         # Distribution tab.
         page.locator('[data-db-tab=distribution]').click()
         chart = page.locator('#db-distribution')

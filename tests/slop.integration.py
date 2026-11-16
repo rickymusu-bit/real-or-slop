@@ -56,6 +56,26 @@ try:
     req=urllib.request.Request(LIBRARY+'/'+result['id']+'/copy',data=b'{}',method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'})
     with urllib.request.urlopen(req) as r:copy=__import__('json').loads(r.read())
     assert copy['copy']['crop']['format']=='4:5'
+    # Sliders of the treatment (owner request of 2026-11-16): they start on the proposal from the source REAL; a preview is made
+    # on the server and not saved; the owner's settings are saved, kept when the copy is remade, and «null» goes back to the proposal.
+    sid=result['id'];code,tr=call('/'+sid+'/treatment',library=True)
+    assert code==200 and tr['current']==tr['proposed'] and not tr['manual'] and tr['sample']['id']==historical['id'],tr
+    assert tr['limits']['long']['max']<=max(copy['copy']['crop']['width'],copy['copy']['crop']['height']),tr['limits']
+    chosen={**tr['proposed'],'contrast':1.2,'blur':0.8,'grain':6.0,'monochrome':'sepia','cast':[12.0,4.0,-10.0],'jpeg':0.7}
+    code,shown=call('/'+sid+'/treatment/preview',{'settings':chosen},library=True)
+    assert code==200 and shown[:4]==b'RIFF' and shown[8:12]==b'WEBP',(code,shown[:40])
+    assert call('/'+sid,library=True)[1]['copy']['sha256']==copy['copy']['sha256']  # the preview is not saved
+    assert call('/'+sid+'/treatment/preview',{'settings':{**chosen,'blur':9}},library=True)[0]==400
+    assert call('/'+sid+'/treatment/preview',{'settings':{**chosen,'long':5000}},library=True)[0]==400
+    code,manual=call('/'+sid+'/copy',{'treatment':{'settings':chosen}},library=True)
+    assert code==201 and manual['treatment']['settings']['grain']==6.0 and manual['treatment']['applied']['monochrome']=='sepia',manual.get('treatment')
+    assert manual['copy']['sha256']!=copy['copy']['sha256']
+    code,tr2=call('/'+sid+'/treatment',library=True);assert tr2['manual'] and tr2['current']['grain']==6.0 and tr2['proposed']==tr['proposed'],tr2
+    code,again=call('/'+sid+'/copy',{'force':True},library=True)
+    assert code==201 and again['treatment']['settings']==manual['treatment']['settings'] and again['copy']['sha256']==manual['copy']['sha256'],again.get('treatment')
+    code,back=call('/'+sid+'/copy',{'treatment':{'settings':None}},library=True)
+    assert code==201 and 'settings' not in back['treatment'] and back['copy']['sha256']==copy['copy']['sha256'],back.get('treatment')
+    assert call('/'+historical['id']+'/treatment',library=True)[0]==400  # a REAL has no treatment
     assert call('/'+result['id']+'/analyze',{'confirm':True},library=True)[0]==200
     assert load(b)['processes'][0]['calls']==8  # 2+2N, including the final tags
     analysed=control()[-1];assert analysed['body']['text']['format']['schema']['required']==['tags']

@@ -1,19 +1,21 @@
 /** The game copy, made on Cloudflare (spec `copie-di-gioco`; owner decision of 2026-11-15: the browser is only an interface, every
  * long photo processing runs in the Worker). One recipe for REAL and SLOP:
- * 1. the Images binding decodes the original (orientation applied) and scales it down to a working size, as PNG;
- * 2. here, in JavaScript: crop on the oriented original, area resampling to the copy's size, then, for a SLOP, the light treatment
- *    towards the measures of its source REAL with the intermediate JPEG of a photo that has travelled (through Images again);
+ * 1. the Images binding decodes the original (orientation applied) and scales it so that the crop has the copy's size, as PNG;
+ * 2. fast-png (worker/codecs.ts) gives the pixels; the crop is cut out of them at that scale, without resampling here; a SLOP gets the
+ *    light treatment towards the measures of its source REAL (or the owner's settings) with the intermediate JPEG of a photo that has
+ *    travelled, encoded by Images;
  * 3. Images encodes the WebP of the copy; the copy is measured as the player will see it (decoded again).
- * The Worker never holds a full-size original as pixels: the working image stays under six megapixels. */
+ * The Worker never holds a full-size original as pixels: the scaled original stays under five megapixels. */
 import { HttpError, type Env } from "./core";
 import { centredCrop, copyDimensions, cropError, GAME_COPY, type Crop } from "../shared/game-copy";
-import { gap, measure, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Treatment } from "../shared/copy-treatment";
-import { decodePng, encodePng, type Pixels } from "./png";
+import { gap, measure, settingsOf, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Settings, type Treatment } from "../shared/copy-treatment";
+import { crop as cut, decodePng, encodePng, type Picture } from "./codecs";
 
-/** Working image at most six megapixels: its PNG, the inflated lines and the RGBA stay well under the Worker's 128 MB (24 MB of
- * pixels), while a 4:5 crop of the whole height still has more pixels than the copy (1229 × 1536). */
-const WORK_PIXELS = 6_000_000;
+/** The scaled original at most five megapixels: its PNG, the inflated lines and the RGBA stay well under the Worker's 128 MB. A 16:9
+ * photo scaled to a copy 1536 px high is 4.2 megapixels; wider panoramas get a smaller copy. */
+const WORK_PIXELS = 5_000_000;
 
+const reason = (error: unknown) => (error instanceof Error ? error.message : String(error)).slice(0, 200);
 /** One pass through the Images binding: input bytes, optional resize, output in the given format. */
 async function photo(env: Env, bytes: Uint8Array, output: ImageOutputOptions, transform?: ImageTransform): Promise<Uint8Array> {
   if (!env.PHOTO) throw new HttpError(503, "Elaborazione delle immagini non configurata (binding Images)");
@@ -22,43 +24,22 @@ async function photo(env: Env, bytes: Uint8Array, output: ImageOutputOptions, tr
     if (transform) work = work.transform(transform);
     const result = await work.output(output);
     return new Uint8Array(await result.response().arrayBuffer());
-  } catch (error) { throw new HttpError(502, "Cloudflare Images: " + (error instanceof Error ? error.message : String(error)).slice(0, 200)); }
+  } catch (error) { throw new HttpError(502, "Cloudflare Images: " + reason(error)); }
 }
-/** Pixels of an image through Images, as PNG. A PNG this Worker cannot read is a 502 with its reason, not an internal error. */
-const pixelsOf = async (env: Env, bytes: Uint8Array, transform?: ImageTransform) => {
+/** Pixels of an image through Images and fast-png. A PNG that cannot be read is a 502 with its reason, not an internal error. */
+async function pixelsOf(env: Env, bytes: Uint8Array, transform?: ImageTransform): Promise<Picture> {
   const png = await photo(env, bytes, { format: "image/png" }, transform);
-  try { return await decodePng(png); }
-  catch (error) { throw new HttpError(502, "Copia di gioco: " + (error instanceof Error ? error.message : String(error)).slice(0, 200)); }
-};
-
-/** Area (box) resampling of the rectangle `rect` of `source` (float coordinates) into width × height: each output pixel is the
- * average of the source pixels it covers, weighted by the covered fraction. Never enlarges detail: a smaller source is spread. */
-export function resample(source: Pixels, rect: { x: number; y: number; width: number; height: number }, width: number, height: number): Uint8ClampedArray {
-  const out = new Uint8ClampedArray(width * height * 4), sx = rect.width / width, sy = rect.height / height;
-  for (let oy = 0; oy < height; oy++) {
-    const y0 = rect.y + oy * sy, y1 = y0 + sy;
-    for (let ox = 0; ox < width; ox++) {
-      const x0 = rect.x + ox * sx, x1 = x0 + sx;
-      let r = 0, g = 0, b = 0, w = 0;
-      for (let y = Math.floor(y0); y < Math.ceil(y1); y++) {
-        const wy = Math.min(y + 1, y1) - Math.max(y, y0), row = Math.min(source.height - 1, Math.max(0, y)) * source.width;
-        if (wy <= 0) continue;
-        for (let x = Math.floor(x0); x < Math.ceil(x1); x++) {
-          const wx = Math.min(x + 1, x1) - Math.max(x, x0);
-          if (wx <= 0) continue;
-          const i = (row + Math.min(source.width - 1, Math.max(0, x))) * 4, weight = wx * wy;
-          r += source.rgba[i] * weight; g += source.rgba[i + 1] * weight; b += source.rgba[i + 2] * weight; w += weight;
-        }
-      }
-      const o = (oy * width + ox) * 4;
-      out[o] = r / w; out[o + 1] = g / w; out[o + 2] = b / w; out[o + 3] = 255;
-    }
-  }
-  return out;
+  try { return decodePng(png); } catch (error) { throw new HttpError(502, "Copia di gioco: " + reason(error)); }
 }
+/** Pixels encoded by Images in `format` at `quality` (0–1). */
+const encoded = async (env: Env, p: Picture, format: "image/jpeg" | "image/webp", quality: number) =>
+  photo(env, encodePng(p), { format, quality: Math.round(quality * 100) });
 
-/** The treatment of a SLOP: its source REAL's measures, the slot's Medium and Color, a seed (kept when the copy is remade). */
-export interface Plan { off: boolean; seed: number; medium: string; color: string; sample: { id: string; metrics: Metrics } }
+/** The treatment of a SLOP: its source REAL's measures, the slot's Medium and Color, a seed (kept when the copy is remade), the
+ * owner's settings when chosen (else proposed from the measures). */
+export interface Plan {
+  off: boolean; seed: number; medium: string; color: string; sample: { id: string; metrics: Metrics }; settings?: Settings | null;
+}
 
 export interface Made { bytes: Uint8Array; width: number; height: number; metrics: Metrics; treatment: Treatment | null }
 
@@ -67,33 +48,47 @@ export async function makeCopy(env: Env, original: Uint8Array, width: number, he
   const frame = crop || centredCrop(width, height);
   const invalid = cropError(width, height, frame);
   if (invalid || frame.format !== "4:5") throw new HttpError(400, invalid || "Copia di gioco richiesta in 4:5");
-  const long = plan && !plan.off ? treatedLong(plan.sample.metrics.long, Math.max(frame.width, frame.height), GAME_COPY.maxSide) : GAME_COPY.maxSide;
-  const size = copyDimensions(frame, long);
-  // Working image: one and a half times the pixels the copy needs in the crop, never more than six megapixels (or the original).
-  const want = Math.max(size.width / frame.width, size.height / frame.height);
-  const scale = Math.min(1, want * 1.5, Math.sqrt(WORK_PIXELS / (width * height)));
-  const work = scale < 1
-    ? await pixelsOf(env, original, { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)), fit: "scale-down" })
-    : await pixelsOf(env, original);
-  const fx = work.width / width, fy = work.height / height;
-  let rgba = resample(work, { x: frame.x * fx, y: frame.y * fy, width: frame.width * fx, height: frame.height * fy }, size.width, size.height);
-  let treatment: Treatment | null = plan ? { version: TREATMENT_VERSION, off: plan.off, seed: plan.seed, long, medium: plan.medium, color: plan.color, sample: plan.sample } : null;
-  if (plan && !plan.off) {
-    const treated = treat(rgba, size.width, size.height, plan.sample.metrics, plan.medium, plan.color, plan.seed);
+  const treated = !!plan && !plan.off, cropLong = Math.max(frame.width, frame.height);
+  const proposedLong = treated ? treatedLong(plan.sample.metrics.long, cropLong, GAME_COPY.maxSide) : GAME_COPY.maxSide;
+  const long = treated && plan.settings ? Math.min(plan.settings.long, cropLong, GAME_COPY.maxSide) : proposedLong;
+  // Images scales the whole original so that the crop has the copy's size (one resampling, by Images); a scaled original over five
+  // megapixels makes the copy smaller instead. The box asked is one pixel larger, so that rounding never leaves the crop short.
+  let size = copyDimensions(frame, long);
+  if (width * height * (size.height / frame.height) ** 2 > WORK_PIXELS)
+    size = copyDimensions(frame, Math.max(1, Math.floor(frame.height * Math.sqrt(WORK_PIXELS / (width * height)))));
+  const s = size.height / frame.height;
+  // In a function of its own, so that the scaled original can be freed before the treatment.
+  let picture = await (async () => {
+    const work = s < 1
+      ? await pixelsOf(env, original, { width: Math.min(width, Math.ceil(width * s) + 1), height: Math.min(height, Math.ceil(height * s) + 1), fit: "scale-down" })
+      : await pixelsOf(env, original);
+    const fx = work.width / width, fy = work.height / height;
+    if (size.width > work.width || size.height > work.height) size = copyDimensions(frame, Math.min(size.height, work.height, Math.floor(work.width * 5 / 4)));
+    const x = Math.max(0, Math.min(work.width - size.width, Math.round(frame.x * fx))), y = Math.max(0, Math.min(work.height - size.height, Math.round(frame.y * fy)));
+    return cut(work, x, y, size.width, size.height);
+  })();
+  const made = treated ? Math.max(size.width, size.height) : long;
+  let treatment: Treatment | null = plan ? { version: TREATMENT_VERSION, off: plan.off, seed: plan.seed, long: made, medium: plan.medium, color: plan.color,
+    sample: plan.sample, ...(plan.settings ? { settings: { ...plan.settings, long: treated ? made : plan.settings.long } } : {}) } : null;
+  if (treated) {
+    const done = treat(picture.data, size.width, size.height, plan.sample.metrics, plan.medium, plan.color, plan.seed, plan.settings || undefined);
     // The intermediate JPEG compression of a photo that has travelled, then the recipe of every copy.
-    const jpeg = await photo(env, await encodePng(treated.rgba, size.width, size.height), { format: "image/jpeg", quality: Math.round(treated.applied.jpeg * 100) });
-    rgba = (await pixelsOf(env, jpeg)).rgba;
-    treatment = { ...treatment!, applied: treated.applied };
+    picture = await pixelsOf(env, await encoded(env, { data: done.rgba, width: size.width, height: size.height }, "image/jpeg", done.applied.jpeg));
+    treatment = { ...treatment!, applied: done.applied };
   }
-  const bytes = await photo(env, await encodePng(rgba, size.width, size.height), { format: "image/webp", quality: Math.round(GAME_COPY.quality * 100) });
+  const bytes = await encoded(env, picture, "image/webp", GAME_COPY.quality);
   if (bytes.length > GAME_COPY.maxBytes) throw new HttpError(413, "Copia di gioco oltre 4 MB");
   const metrics = await measureCopy(env, bytes);
   if (treatment && !treatment.off) treatment = { ...treatment, result: metrics, gap: gap(metrics, plan!.sample.metrics) };
   return { bytes, width: size.width, height: size.height, metrics, treatment };
 }
 
+/** The settings of a made copy (what the sliders show), or null for a copy without treatment. */
+export const settingsOfCopy = (treatment: Treatment | null): Settings | null =>
+  treatment && !treatment.off && treatment.applied ? treatment.settings || settingsOf(treatment.applied, treatment.long) : null;
+
 /** Measures of an encoded copy, as the player will see it. */
 export async function measureCopy(env: Env, copy: Uint8Array): Promise<Metrics> {
   const pixels = await pixelsOf(env, copy);
-  return measure(pixels.rgba, pixels.width, pixels.height);
+  return measure(pixels.data, pixels.width, pixels.height);
 }

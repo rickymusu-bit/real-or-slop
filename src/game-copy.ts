@@ -1,7 +1,7 @@
 /** Game copies from the dashboard: the browser only chooses the crop and asks; the Worker makes the copy (crop, size, treatment of a
  * SLOP, WebP, measures: worker/copy-maker.ts), owner decision of 2026-11-15: every long photo processing runs on Cloudflare. */
 import { cropQuery, type Crop } from "../shared/game-copy";
-import type { Treatment } from "../shared/copy-treatment";
+import type { Settings, Treatment } from "../shared/copy-treatment";
 
 const API = "/api/admin/library/";
 
@@ -17,12 +17,14 @@ export async function originalOf(imageId: string): Promise<Blob> {
 export interface TreatableItem { id: string; origin: string; treatment?: Treatment | null }
 
 /** Asks the Worker for the copy of `imageId`: along `crop` (the stored 4:5 crop, else centred, if absent), with the treatment of a
- * SLOP turned off or on (`off`), made again even if unchanged (`force`). Returns the item. */
-export async function requestCopy<T>(imageId: string, options: { crop?: Crop; off?: boolean; force?: boolean } = {}): Promise<T> {
+ * SLOP turned off or on (`off`) or set by the owner (`settings`, null for the proposal), made again even if unchanged (`force`).
+ * Returns the item. */
+export async function requestCopy<T>(imageId: string, options: { crop?: Crop; off?: boolean; settings?: Settings | null; force?: boolean } = {}): Promise<T> {
   if (!/^[\w-]{1,64}$/.test(imageId)) throw Error("Immagine non valida");
   const body: Record<string, unknown> = {};
   if (options.crop) body.crop = cropQuery(options.crop);
-  if (options.off !== undefined) body.treatment = { off: options.off };
+  if (options.off !== undefined || options.settings !== undefined)
+    body.treatment = { ...(options.off !== undefined ? { off: options.off } : {}), ...(options.settings !== undefined ? { settings: options.settings } : {}) };
   if (options.force) body.force = true;
   const response = await fetch(API + encodeURIComponent(imageId) + "/copy", { method: "POST", credentials: "same-origin",
     headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -32,7 +34,7 @@ export async function requestCopy<T>(imageId: string, options: { crop?: Crop; of
 }
 
 /** The copy of a library item (a fallback: the Worker makes it when the image enters the library). */
-export const prepareItemCopy = <T>(item: TreatableItem, crop?: Crop, options: { off?: boolean } = {}) => requestCopy<T>(item.id, { crop, ...options });
+export const prepareItemCopy = <T>(item: TreatableItem, crop?: Crop, options: { off?: boolean; settings?: Settings | null } = {}) => requestCopy<T>(item.id, { crop, ...options });
 
 /** Saves the owner's choice from the frame editor: a new copy when the crop changed; the same item when it did not. */
 export async function saveFrame<T>(item: T & TreatableItem & { copy: { crop: Crop | null } | null }, choice: { crop: Crop }): Promise<T> {

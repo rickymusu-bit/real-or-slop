@@ -20,6 +20,7 @@ import { mountRealWizard, type RealWizard } from "./real-wizard";
 import { onLongPress, openPreview } from "./image-preview";
 import { content, escape } from "./main";
 import { prepareItemCopy, remakeCopies, saveFrame } from "./game-copy";
+import { chooseTreatment } from "./treatment-editor";
 import type { Metrics, Treatment } from "../shared/copy-treatment";
 import { chooseFrame } from "./crop-editor";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
@@ -339,10 +340,11 @@ export async function showLibrary() {
     const t = item.treatment;
     const treatment = item.origin !== "SLOP" ? "" : !t ? '<p class="hint" data-treatment>Copia senza trattamento.</p>'
       : `<p class="hint" data-treatment>${t.off ? "Trattamento spento" : `Trattamento verso la REAL di riferimento <code>${escape(t.sample.id.slice(0, 8))}</code> (${escape(t.medium || "supporto non indicato")}, ${escape(t.color || "colore non indicato")})` +
-        (t.gap !== undefined ? `, scarto dall'obiettivo ${Math.round(t.gap * 100)}%` : "") + `: ${metricText(t.sample.metrics)}`}.</p>`;
+        (t.settings ? ", regolato dall'owner" : "") + (t.gap !== undefined ? `, scarto dall'obiettivo ${Math.round(t.gap * 100)}%` : "") + `: ${metricText(t.sample.metrics)}`}.</p>`;
     const commands = item.origin === "SLOP" && editable && item.copy ? `<div class="library-inline" data-treatment-commands>` +
       (t && !t.off ? '<button type="button" id="library-treatment-off">Senza trattamento</button>'
-        : '<button type="button" id="library-treatment-on">Con trattamento</button>') + "</div>" : "";
+        : '<button type="button" id="library-treatment-on">Con trattamento</button>') +
+      (t ? '<button type="button" id="library-treatment-edit">Regola il trattamento</button>' : "") + "</div>" : "";
     return (item.metrics ? `<p class="hint" data-metrics>Misure della copia: ${metricText(item.metrics)}.</p>` : "") + treatment + commands;
   };
   const showDetail = (item: Item) => {
@@ -433,7 +435,7 @@ export async function showLibrary() {
       return;
     }
     if (!button || !open || busy || !(button.dataset.tagRemove || button.dataset.action || ["library-description-analysis", "library-copy", "library-analyze", "library-restore", "library-regenerate",
-      "library-crop", "library-complete", "library-treatment-off", "library-treatment-on"].includes(button.id))) return;
+      "library-crop", "library-complete", "library-treatment-off", "library-treatment-on", "library-treatment-edit"].includes(button.id))) return;
     busy = true;
     try {
       if (button.id === "library-description-analysis") {
@@ -449,6 +451,13 @@ export async function showLibrary() {
         const completed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(open.id)}/categories`, { method: "POST", body: JSON.stringify({ confirm: true }) });
         open = completed; detailMessage("Completamento fatto." + conflictText(completed.tag_conflicts));
         void Promise.all([refreshTags(), refreshAnalysis(), refreshGroups()]);
+      }
+      else if (button.id === "library-treatment-edit") {
+        const choice = await chooseTreatment(open.id, open.title);
+        if (!choice) return;
+        detailMessage("Il server rifà la copia con il trattamento scelto…");
+        open = await prepareItemCopy<Item>(open, open.copy?.crop || undefined, choice);
+        detailMessage(choice.settings ? "Trattamento regolato salvato." : "Trattamento proposto salvato.");
       }
       else if (button.id.startsWith("library-treatment-")) {
         const off = button.id === "library-treatment-off";
