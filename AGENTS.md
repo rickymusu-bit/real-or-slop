@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 22.4.0, aggiornata il 2026-11-15T17:58:54Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 23.0.0, aggiornata il 2026-11-15T23:09:52Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -41,6 +41,10 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 - **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP. Tag e descrizione della REAL, e i tag della
   SLOP, descrivono l'immagine intera (l'originale); il ritaglio non deve eliminare elementi **fondamentali** per il significato della fotografia; in caso contrario
   l'owner corregge l'inquadratura. Le SLOP si valutano **intere** prima di creare la copia 4:5.
+- **Il browser è solo un'interfaccia** (decisione del 2026-11-15): ogni elaborazione lunga, di foto o di modelli, gira su
+  Cloudflare. Le copie di gioco (ritaglio, dimensione, trattamento delle SLOP, WebP, misure) le prepara il Worker con il binding
+  Images; il ciclo SLOP e i lavori in gruppo sulle copie girano in Workflow che continuano anche se la dashboard si chiude. Il
+  browser sceglie, conferma, mostra lo stato; non elabora pixel e non guida sequenze lunghe di richieste.
 - **Chiamate a pagamento:** solo con conferma esplicita dell'owner del **numero massimo** previsto per un loop, registrate in
   `paid_calls` senza importi, esiti incerti mai ripetuti in automatico; niente prezzi né budget, il limite è quello del progetto
   OpenAI. Il massimo di tentativi di generazione è configurabile, ogni tentativo include la sua valutazione. Nei test solo modelli finti.

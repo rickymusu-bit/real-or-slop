@@ -59,7 +59,7 @@ assert 'platform.openai.com' in info['note']
 # No call without the exact cost confirmation. A REAL is analysed whole: its 4:5 game copy plays no part.
 place, place_copy = image(170, 'Place de la République, 1968', 'Manifestanti e polizia in place de la République.')
 openai([])
-status, place = call(f'{API}/{place["id"]}/copy', raw=place_copy, mime='image/webp'); assert status == 201, place
+status, place = call(f'{API}/{place["id"]}/copy', {}); assert status in (200, 201), place
 for confirm in (None, False, 'true', 1):
     code, result = analyze(place, confirm); assert code == 400 and 'Conferma' in result['error'], result
 assert call(f'{API}/{place["id"]}/analyze', {'confirm': True, 'model': 'other'})[0] == 400
@@ -118,7 +118,7 @@ status, result = call(f'{API}/{place["id"]}', {'revision': place['revision'], 'c
 assert status == 400 and 'Campi non previsti' in result['error'], result
 # Failures and limits on a second image.
 other, other_copy = image(90, 'Corteo', 'Un corteo in città.')
-status, other = call(f'{API}/{other["id"]}/copy', raw=other_copy, mime='image/webp'); assert status == 201, other
+status, other = call(f'{API}/{other["id"]}/copy', {}); assert status in (200, 201), other
 # Server error or no answer: uncertain, recorded, never resent. Client error: failed.
 openai([{'status': 500}])
 status, result = analyze(other); assert status == 502, result
@@ -186,7 +186,7 @@ analysis_part = next(p for p in contexts['parts'] if p['part'] == 'analysis')
 assert analysis_part['current']['body'] == custom and len(analysis_part['history']) == 2, analysis_part
 assert len(next(p for p in call(f'{API}/contexts', {'part': 'analysis', 'body': custom})[1]['parts'] if p['part'] == 'analysis')['history']) == 2  # unchanged text: no new version
 item, item_copy = image(80, 'Contesto')
-status, item = call(f'{API}/{item["id"]}/copy', raw=item_copy, mime='image/webp'); assert status == 201, item
+status, item = call(f'{API}/{item["id"]}/copy', {}); assert status in (200, 201), item
 openai([{'tags': ['square'], 'caption': 'Una piazza.'}])
 status, item = analyze(item); assert status == 200, item
 [sent] = openai(); assert 'Contesto di prova 42.' in sent['body']['instructions'], sent['body']['instructions'][-300:]
@@ -200,7 +200,7 @@ call(f'{API}/{item["id"]}/trash', {}); assert call(f'{API}/{item["id"]}', method
 assert all(t['category'] == 'other' for t in labels().values() if t['label'] in ('riot', 'crowd', 'street')), labels()
 def categorized(**tags): return {c: tags.get(c, []) for c in ('time', 'genre', 'color', 'medium', 'place', 'setting', 'event', 'people', 'object', 'other')}
 x, x_copy = image(110, 'Categorie X', 'Parigi, 1968.')
-status, x = call(f'{API}/{x["id"]}/copy', raw=x_copy, mime='image/webp'); assert status == 201, x
+status, x = call(f'{API}/{x["id"]}/copy', {}); assert status in (200, 201), x
 openai([{'tags': categorized(time=['1960s', '1970s'], color=['Black and White'], place=['Paris'], event=['riot'], people=['Students'],
                              object=['1950s', 'Lamp Post'], setting=['night']), 'caption': 'Parigi, 1968. Studenti in strada.'}])
 status, x = analyze(x); assert status == 200, x
@@ -222,7 +222,7 @@ assert labels()['riot']['category'] == 'event'
 assert call(f'{API}/tags/category', {'label': 'paris', 'category': 'time'}, method='PUT')[0] == 400
 assert call(f'{API}/tags/category', {'label': 'missing-tag', 'category': 'event'}, method='PUT')[0] == 404
 y, y_copy = image(130, 'Categorie Y')
-status, y = call(f'{API}/{y["id"]}/copy', raw=y_copy, mime='image/webp'); assert status == 201, y
+status, y = call(f'{API}/{y["id"]}/copy', {}); assert status in (200, 201), y
 y = patch(y, {'tags': ['sepia', '1970s', 'retro']})
 assert y['categories'] == {'sepia': 'color', '1970s': 'time', 'retro': 'other'}, y['categories']  # a Color of the closed list is Color by itself
 x = patch(x, {'tags': x['tags'] + ['retro', 'press-photo'], 'tag_categories': {'press-photo': 'genre'}})
@@ -272,7 +272,7 @@ for change, code_wanted in (({'image_model': 'gpt-image-2.6-flare'}, 409), ({'te
 code, models = call(f'{API}/models', {'image_model': 'gpt-image-2', 'text_model': 'gpt-5-mini'}, method='PUT')
 assert code == 200 and models['image_model'] == 'gpt-image-2' and models['text_model'] == 'gpt-5-mini', models
 z, z_copy = image(150, 'Modello scelto')
-code, z = call(f'{API}/{z["id"]}/copy', raw=z_copy, mime='image/webp'); assert code == 201, z
+code, z = call(f'{API}/{z["id"]}/copy', {}); assert code in (200, 201), z
 openai([])
 assert analyze(z)[0] == 200
 [sent] = openai(); assert sent['body']['model'] == 'gpt-5-mini', sent['body']['model']
@@ -281,7 +281,7 @@ call(f'{API}/{z["id"]}/trash', {}); call(f'{API}/{z["id"]}', method='DELETE')
 assert call(f'{API}/models', {'text_model': 'gpt-6.1-sol', 'image_model': 'gpt-image-2.5-flare'}, method='PUT')[0] == 200
 # A valid tags JSON with a missing private description must not partially replace the REAL's tags.
 legacy, legacy_copy = image(175, 'Historical combined analysis', 'Original Commons source text.')
-_, legacy = call(f'{API}/{legacy["id"]}/copy', raw=legacy_copy, mime='image/webp')
+_, legacy = call(f'{API}/{legacy["id"]}/copy', {})
 legacy = patch(legacy, {'tags':['preserved-tag']})
 openai([{'json':{'tags':['new-tag']}, 'invalid_description':True}])
 code, failed = analyze(legacy); assert code == 502 and 'Descrizione' in failed['error'], failed

@@ -4,7 +4,6 @@ import concurrent.futures
 import io
 from PIL import Image
 from editorial_helpers import *
-from game_copy import game_copy
 import urllib.request
 
 code,settings=call('/settings',library=True);assert code==200
@@ -33,7 +32,9 @@ try:
         if expected!='accepted':
             assert load(b)['images']==[]
             assert call('batches/'+b['id'],{'briefs':[BRIEF]},method='PUT')[0]==409
-    images.append(result['id']);assert result['status']=='new' and result['copy'] is None
+    images.append(result['id']);assert result['status']=='new' and result['copy']['crop']['format']=='4:5',result
+    # The Worker made the copy at acceptance: 4:5, treated towards the measures of the source REAL (copy made there too).
+    t=result['treatment'];assert t and not t['off'] and t['sample']['id']==historical['id'] and t['applied'] and t['result'],t
     b=load(b);assert b['processes'][0]['brief']==original_brief and len(b['processes'][0]['attempts'])==3
     assert b['processes'][0]['calls']==7 and len(b['images'])==1
     logs=control();assert len(logs)==6
@@ -52,7 +53,7 @@ try:
     assert call('/'+result['id']+'/regenerate',{'confirm':True,'revision':result['revision'],'prompt':'test','quality':'high'},library=True)[0]==409
     req=urllib.request.Request(LIBRARY+'/'+result['id']+'/original',headers={'Authorization':'Bearer '+TOKEN})
     with urllib.request.urlopen(req) as r:original=r.read()
-    req=urllib.request.Request(LIBRARY+'/'+result['id']+'/copy',data=game_copy(original),method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'image/webp'})
+    req=urllib.request.Request(LIBRARY+'/'+result['id']+'/copy',data=b'{}',method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'})
     with urllib.request.urlopen(req) as r:copy=__import__('json').loads(r.read())
     assert copy['copy']['crop']['format']=='4:5'
     assert call('/'+result['id']+'/analyze',{'confirm':True},library=True)[0]==200
@@ -137,8 +138,8 @@ try:
     code,accepted=generate(fresh);assert code==200,accepted;images.append(accepted['id'])
     req=urllib.request.Request(LIBRARY+'/'+accepted['id']+'/original',headers={'Authorization':'Bearer '+TOKEN})
     with urllib.request.urlopen(req) as r:original=r.read()
-    req=urllib.request.Request(LIBRARY+'/'+accepted['id']+'/copy',data=game_copy(original),method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'image/webp'})
-    with urllib.request.urlopen(req) as r:assert r.status==201
+    req=urllib.request.Request(LIBRARY+'/'+accepted['id']+'/copy',data=b'{}',method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'})
+    with urllib.request.urlopen(req) as r:assert r.status in (200,201)
     remove([source['id']])
     assert call('/'+accepted['id']+'/analyze',{'confirm':True},library=True)[0]==200
     # A source in an in-flight process stays in the trash until that operation settles.
@@ -163,6 +164,58 @@ try:
     control([]);assert load(stale)['processes'][0]['state']=='uncertain'
     assert generate(stale)[0]==409 and control()==[]
     assert sql("SELECT status FROM paid_calls WHERE id='editorial-stale-call'")[0]['status']=='uncertain'
+    # A brief request that died with the browser connection: after ten minutes the batch follows its processes again.
+    three=[real()['id'] for _ in range(3)];sources.extend(three)
+    code,cut=call('batches',{'sources':three});assert code==200,cut
+    control([]);assert call('batches/'+cut['id']+'/prompts',{'confirm':True,'index':0})[0]==200
+    second=cut['processes'][1]['id']
+    sql(f"UPDATE slop_batches SET prompts_status='running',updated_at='2000-01-01' WHERE id='{cut['id']}'; UPDATE slop_processes SET state='prompting',updated_at='2000-01-01' WHERE id='{second}'; INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,process_id) VALUES('editorial-cut-call','prompts','fake','pending','2000-01-01','2000-01-01','{second}')")
+    cut=load(cut);assert [p['state'] for p in cut['processes']]==['ready','uncertain','draft'] and cut['prompts_status']=='none',cut
+    assert sql("SELECT status FROM paid_calls WHERE id='editorial-cut-call'")[0]['status']=='uncertain'
+    assert call('batches/'+cut['id']+'/prompts',{'confirm':True,'index':1})[0]==409  # never resent
+    code,cut=call('batches/'+cut['id']+'/prompts',{'confirm':True,'index':2});assert code==200 and cut['prompts_status']=='done',cut
+    assert len(control())==2 and any(p['id']==second for p in call('attention')[1]['attention'])
+    # The loop on Cloudflare (Workflow) from the studio: briefs first, then attempts and tags; the page only follows it.
+    def wait_run(b, seconds=90):
+        for _ in range(seconds*4):
+            b=load(b)
+            if not (b['runner'] or {}).get('alive'):return b
+            __import__('time').sleep(.25)
+        raise AssertionError('the batch is still running on the server')
+    source=real();sources.append(source['id'])
+    code,run=call('batches',{'sources':[source['id']]});assert code==200,run
+    control([])
+    assert call('batches/'+run['id']+'/run',{'confirm':True,'phase':'images'})[0]==409  # briefs first
+    assert call('batches/'+run['id']+'/run',{'phase':'briefs'})[0]==400  # the owner's confirmation
+    code,run=call('batches/'+run['id']+'/run',{'confirm':True,'phase':'briefs'});assert code==200 and run['runner']['status'] in ('running','done'),run
+    run=wait_run(run);assert run['processes'][0]['state']=='ready' and run['prompts_status']=='done' and run['runner']['status']=='done',run
+    assert len(control())==1
+    control([{'delay':1.5},{'evaluation':'retry_same_prompt'},None,{'evaluation':'accept'}])
+    code,run=call('batches/'+run['id']+'/run',{'confirm':True,'phase':'images'});assert code==200,run
+    assert call('batches/'+run['id']+'/run',{'confirm':True,'phase':'images'})[0]==409  # one runner per batch
+    run=wait_run(run);p=run['processes'][0]
+    assert p['state']=='accepted' and len(p['attempts'])==2 and run['runner']['status']=='done',run
+    images.append(run['images'][0]['id']);assert run['images'][0]['analysis']['status']=='done'
+    assert [r['path'] for r in control()]==['/v1/images/generations','/v1/responses']*2+['/v1/responses']  # 2 attempts, then the tags
+    # «Interrompi»: the step in progress ends, no further paid step starts.
+    source=real();sources.append(source['id'])
+    code,halt=call('batches',{'sources':[source['id']]});control([])
+    call('batches/'+halt['id']+'/run',{'confirm':True,'phase':'briefs'});halt=wait_run(halt)
+    control([{'delay':2},{'evaluation':'retry_same_prompt'}]+[None,{'evaluation':'retry_same_prompt'}]*4)
+    code,halt=call('batches/'+halt['id']+'/run',{'confirm':True,'phase':'images'});assert code==200,halt
+    for _ in range(200):
+        if any(r['path']=='/v1/images/generations' for r in control()):break
+        __import__('time').sleep(.05)
+    code,halt=call('batches/'+halt['id']+'/stop',{});assert code==200
+    halt=wait_run(halt);assert halt['runner']['status']=='stopped' and len(halt['processes'][0]['attempts'])==1,halt
+    log=control();assert len(log)==2,[(r['path'],r['body'].get('text',{}).get('format',{}).get('name')) for r in log]
+    # A runner silent for fifteen minutes is dead: the batch can be run again, and goes on from where it stopped.
+    sql(f"UPDATE slop_batches SET runner_status='running',runner_updated='2000-01-01' WHERE id='{halt['id']}'")
+    assert not load(halt)['runner']['alive']
+    control([None,{'evaluation':'accept'}])
+    code,halt=call('batches/'+halt['id']+'/run',{'confirm':True,'phase':'images'});assert code==200,halt
+    halt=wait_run(halt);assert halt['processes'][0]['state']=='accepted' and len(halt['processes'][0]['attempts'])==2,halt
+    images.append(halt['images'][0]['id'])
     # Legacy batches are readable; no automatic conversion or paid resume.
     legacy='editorial-legacy'
     sql("INSERT INTO slop_batches(id,theme,slots,prompts,prompts_status,created_at,updated_at) VALUES('editorial-legacy','[]','[]','[]','done','x','x')")

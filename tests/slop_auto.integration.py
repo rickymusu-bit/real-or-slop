@@ -4,30 +4,37 @@ sql("UPDATE images SET trashed_from=CASE status WHEN 'new' THEN 'new' ELSE 'appr
 code,settings=call('/settings',library=True);assert code==200
 call('/settings',{'slop_section_min_real':1,'max_generation_attempts':2},method='PUT',library=True)
 ids=[];generated=[]
+def wait_auto(seconds=90):
+    for _ in range(seconds*4):
+        auto=call('auto')[1]
+        if not auto['batch'] or auto['batch']['status']!='running' or not (auto['batch']['runner'] or {}).get('alive'):return auto
+        __import__('time').sleep(.25)
+    raise AssertionError('the automatic batch is still running on the server')
 try:
     ids=[real('auto-loop')['id'] for _ in range(3)]
     code,auto=call('auto');assert code==200 and auto['proposal']['size']==3,auto
     assert auto['config']['max_generation_attempts']==2
-    control([])
+    # The whole loop runs on Cloudflare (Workflow): briefs, attempts, tags. First photo exhausts, second is suspended, third accepted.
+    control([None]*3+[None,{'evaluation':'retry_same_prompt'},None,{'evaluation':'retry_same_prompt'},None,{'evaluation':'review_needed'},None,{'evaluation':'accept'}])
     assert call('auto/start',{'size':3})[0]==400
     assert call('auto/start',{'size':2,'confirm':True})[0]==409
     code,auto=call('auto/start',{'size':3,'confirm':True});assert code==200,auto
-    b=auto['batch'];bid=b['id'];assert b['pipeline_version']==2 and b['config']['max_generation_attempts']==2
-    assert call('auto/start',{'size':3,'confirm':True})[0]==409 and control()==[]
+    b=auto['batch'];bid=b['id'];assert b['pipeline_version']==2 and b['config']['max_generation_attempts']==2 and b['runner']['status'] in ('running','done'),b
+    assert call('auto/start',{'size':3,'confirm':True})[0]==409
+    assert call('auto/resume',{'confirm':True})[0]==409  # alive or finished: never a second runner
     assert call('batches/'+bid,{'prompts':['x']*3},method='PUT')[0]==409
-    code,b=call('batches/'+bid+'/prompts',{'confirm':True});assert code==200 and len(control())==3,b
-    assert call('batches/'+bid+'/prompts',{'confirm':True})[0]==409
-    # First photo exhausts, second is suspended, third accepted. Others continue independently.
-    control([None,{'evaluation':'retry_same_prompt'},None,{'evaluation':'retry_same_prompt'},None,{'evaluation':'review_needed'},None,{'evaluation':'accept'}])
-    def gen(index):return call('batches/'+bid+'/images',{'confirm':True,'index':index,'quality':b['config']['quality']})
-    assert gen(0)[1]['process']['state']=='retry'
-    assert gen(0)[1]['process']['state']=='exhausted'
-    assert gen(1)[1]['process']['state']=='review_needed'
-    code,image=gen(2);assert code==200 and image['status']=='new';generated.append(image['id'])
+    assert call('batches/'+bid+'/run',{'confirm':True,'phase':'images'})[0]==409  # automatic batches run from their proposal
+    auto=wait_auto()
+    assert auto['batch']['status']=='review',auto
     b=call('batches/'+bid)[1]
-    assert [p['state'] for p in b['processes']]==['exhausted','review_needed','accepted'] and len(b['images'])==1
-    assert call('auto/finish',{})[1]['batch']['status']=='review'
-    control([]);assert gen(0)[0]==409 and control()==[]
+    assert [p['state'] for p in b['processes']]==['exhausted','review_needed','accepted'] and len(b['images'])==1,b
+    image=b['images'][0];generated.append(image['id'])
+    assert image['status']=='new' and image['analysis']['status']=='done' and image['copy']['crop']['format']=='4:5',image  # tags and copy on the server
+    log=control();assert len(log)==12,[(r['path'],r['body'].get('text',{}).get('format',{}).get('name')) for r in log]
+    assert b['runner']['status']=='done' and not b['runner']['alive'],b['runner']
+    control([]);assert call('batches/'+bid+'/prompts',{'confirm':True,'index':0})[0]==409
+    def gen(index):return call('batches/'+bid+'/images',{'confirm':True,'index':index,'quality':b['config']['quality']})
+    assert gen(0)[0]==409 and control()==[]
     remove(generated);generated=[]
     assert call('auto')[1]['batch']['status']=='review'  # suspended cases require acknowledgement
     assert call('auto/close',{})[1]['batch'] is None

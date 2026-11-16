@@ -10,7 +10,6 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from PIL import Image
-from game_copy import game_copy
 from playwright.sync_api import expect, sync_playwright
 from long_press import long_press
 
@@ -33,12 +32,11 @@ def openai(queue):
 def png(seed, size):
     image = Image.new('RGB', size); image.putdata([((seed * 41) % 256, (x * 5 + seed) % 256, (y * 9) % 256) for y in range(size[1]) for x in range(size[0])])
     out = io.BytesIO(); image.save(out, 'PNG'); return out.getvalue()
-def webp(source): return game_copy(source)
 CATEGORIES = {'dbb-riot': 'event', 'dbb-paris': 'place', 'dbb-beach': 'setting', '1960s': 'time'}
 def seed(prefix, origin, title, number, tags, publish, prompt='', description=''):
     source = png(number, (60, 40))
     item = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': origin, 'title': f'{prefix}-{title}', 'prompt': prompt, 'description': description}), raw=source, mime='image/png')
-    item = call(f'{API}/{item["id"]}/copy', raw=webp(source), mime='image/webp')
+    item = call(f'{API}/{item["id"]}/copy', {})
     item = call(f'{API}/{item["id"]}', {'revision': item['revision'], 'tags': tags,
                                         'tag_categories': {t: CATEGORIES[t] for t in tags}}, method='PATCH')
     item = call(f'{API}/{item["id"]}/approve', {'rights_confirmed': True})

@@ -1,7 +1,7 @@
-/** Automatic SLOP batches in the dashboard (spec `generazione-slop`, section 8): the proposal box (Genera, Ignora, Chiudi),
- * the batch run in the browser (prompts once, then for each slot image, copy and analysis; the server records each slot before
- * sending it, so a resumed batch never resends a call), «Interrompi», «Rivedi nel Database». The proposal is read again after every
- * change to the library made from the dashboard. */
+/** Automatic SLOP batches in the dashboard (spec `generazione-slop`, section 8): the proposal box (Genera, Ignora, Chiudi), the
+ * progress of the batch that runs on Cloudflare (worker/slop-runner.ts: briefs, attempts, tags), «Riprendi sul server» when its
+ * runner died, «Interrompi», «Rivedi nel Database»; game copies of accepted images are made here. The proposal is read again after
+ * every change to the library made from the dashboard. */
 import "./slop-auto.css";
 import { prepareItemCopy, type TreatableItem } from "./game-copy";
 import { escape } from "../shared/html";
@@ -11,13 +11,14 @@ interface AutoImage { id: string; status: string; index: number | null; copy: bo
 interface Config { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string }
 interface AutoBatch {
   pipeline_version: number; config: Config; processes: {slot: number; state: string; updated_at: string; attempts: unknown[]}[];
+  runner: { id: string; status: string | null; updated_at: string | null; alive: boolean } | null;
   id: string; size: number; status: "running" | "review"; prompts_status: string; prompts_error: string; slots: number;
   attempted: number[]; snapshot: Proposal | null; images: AutoImage[]; undecided: number; updated_at: string;
 }
 export interface AutoState { config: Config; enabled: boolean; threshold_percent: number; max_batch: number; paid_calls: boolean; batch: AutoBatch | null; proposal: Proposal | null; reason: string | null }
 interface Hooks { loop: (batchId:string) => void | Promise<void>; review: (batchId: string) => void | Promise<void>; changed: () => Promise<void>; indicator: (proposals: number) => void }
 
-const LIBRARY = "/api/admin/library", SLOP = LIBRARY + "/slop/", STALE_MS = 10 * 60_000;
+const LIBRARY = "/api/admin/library", SLOP = LIBRARY + "/slop/";
 const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
 const percent = (value: number) => Math.round(value) + "%";
 
@@ -46,7 +47,7 @@ function observeLibrary(changed: () => void) {
 }
 
 export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () => Promise<void> } {
-  let state: AutoState | null = null, running = false, stopping = false, dismissed = "", progress = "", notice = "", timer = 0;
+  let state: AutoState | null = null, running = false, dismissed = "", progress = "", notice = "", timer = 0;
 
   const render = () => {
     const batch = state?.batch, next = state?.proposal;
@@ -57,8 +58,8 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
     } else if (batch && batch.status === "running") {
       const ready = batch.images.filter(i => i.analysis === "done").length;
       html = `<p><strong>Batch automatico</strong> di SLOP gemelle: ${batch.attempted.length} di ${batch.slots} immagini inviate al generatore, ${ready} pronte.</p>
-        <p class="slop-auto-progress" role="status">${escape(running ? progress : "In pausa: riprende da qui.")}</p>
-        <div class="slop-auto-actions"><button type="button" data-auto="stop">Interrompi</button></div>`;
+        <p class="slop-auto-progress" role="status">${escape(batch.runner?.alive ? progress || "Generazione in corso sul server…" : "Generazione ferma sul server: si riprende da dove si è interrotta, senza ripetere chiamate già inviate.")}</p>
+        <div class="slop-auto-actions">${batch.runner?.alive ? "" : '<button type="button" class="primary" data-auto="resume">Riprendi sul server</button>'}<button type="button" data-auto="stop">Interrompi</button></div>`;
     } else if (batch) {
       html = `<p><strong>Batch automatico</strong> di SLOP gemelle: ${batch.undecided} di ${batch.images.length} ${batch.images.length === 1 ? "immagine" : "immagini"} da decidere.
         Nessuna nuova proposta finché non sono tutte approvate, pubblicate o nel cestino. Esaurite: ${batch.processes.filter(p=>p.state==="exhausted").length}; sospese: ${batch.processes.filter(p=>["review_needed","uncertain","failed"].includes(p.state)).length}.</p>
@@ -83,80 +84,43 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
   };
   const refresh = async () => {
     await load();
-    if (state?.batch?.pipeline_version === 2 && state.batch.status === "running" && !running) void run();
+    if (state?.batch?.pipeline_version === 2 && state.batch.status === "running" && state.batch.runner?.alive) void follow();
+    else if (state?.batch?.status === "review") void pickup().then(load);
   };
 
   /** Copy (when missing), then the analysis (only if never asked: uncertain or failed outcomes are not resent). */
   const finish = async (image: { id: string; copy: boolean; analysis: string }) => {
-    if (!image.copy) await prepareItemCopy(await call<TreatableItem>(LIBRARY + "/" + encodeURIComponent(image.id)));
+    if (!image.copy) await prepareItemCopy(await call<TreatableItem>(LIBRARY + "/" + encodeURIComponent(image.id)));  // made by the Worker
     if (image.analysis === "none") await call(LIBRARY + "/" + encodeURIComponent(image.id) + "/analyze", { confirm: true });
   };
 
-  const run = async () => {
-    if (running || !state?.batch || state.batch.pipeline_version !== 2 || state.batch.status !== "running") return;
-    running = true; stopping = false;
-    const batchId = state.batch.id, problems: string[] = [];
-    let account = false;
-    const step = (text: string) => { progress = text; render(); };
-    try {
-      const quality = state.batch.config.quality;
-      let batch = state.batch;
-      if (batch.prompts_status === "none") {
-        step("Scrittura dei prompt…");
-        try { await call(SLOP + "batches/" + encodeURIComponent(batchId) + "/prompts", { confirm: true }); }
-        catch (error) { problems.push("prompt: " + errorText(error)); }
-        await load(); batch = state?.batch?.id === batchId ? state.batch : batch;
-      }
-      if (batch.prompts_status === "running") {
-        if (Date.now() - Date.parse(batch.updated_at) < STALE_MS) { notice = "Prompt in scrittura: il batch riprende alla prossima apertura della dashboard."; return; }
-        problems.push("scrittura dei prompt interrotta, esito incerto: non ripetuta");
-      }
-      if (batch.prompts_status !== "done") {
-        await call(SLOP + "auto/stop", {}).catch(() => {});
-        notice = "Batch fermato: prompt non scritti" + (batch.prompts_error ? " (" + batch.prompts_error + ")" : "") + (problems.length ? ". " + problems.join(" | ") : "") + ".";
-        return;
-      }
-      if (batch.processes.some(p=>["running","prompting"].includes(p.state))) {
-        notice = "Un tentativo è già in corso: attendo l’esito senza ripetere chiamate.";
-        window.setTimeout(()=>{if(!running)void refresh();},2000);
-        return;
-      }
-      const todo = batch.processes.filter(p => ["ready","retry"].includes(p.state)).map(p => p.slot);
-      for (const [n, index] of todo.entries()) {
-        if (stopping) break;
-        step(`Immagine ${batch.attempted.length + n + 1} di ${batch.slots}: generazione…`);
-        try {
-          const process = batch.processes.find(p=>p.slot===index)!;
-          for(let n=process.attempts.length;n<batch.config.max_generation_attempts;n++) {
-            if(stopping) break;
-            step(`REAL ${index+1}: tentativo ${n+1}, generazione e valutazione integrale…`);
-            const image = await call<{ id?: string; process: {state:string} }>(SLOP + "batches/" + encodeURIComponent(batchId) + "/images", { confirm: true, index, quality });
-            if(image.id) {await finish({id:image.id,copy:false,analysis:"none"});break;}
-            if(image.process.state!=="retry")break;
-          }
-        } catch (error) {
-          problems.push("immagine " + (index + 1) + ": " + errorText(error));
-          if (/OpenAI:/.test(errorText(error))) { account = true; break; }
-          if (/non è più in generazione/.test(errorText(error))) break;
-        }
-      }
-      // Picked up again: images generated earlier but still without copy or analysis.
-      await load();
-      for (const image of state?.batch?.id === batchId ? state.batch.images : []) {
-        if (image.status !== "new" || (image.copy && image.analysis !== "none")) continue;
-        step("Copia di gioco e analisi di un'immagine del batch…");
-        try { await finish(image); } catch (error) { problems.push(errorText(error)); if (/OpenAI:/.test(errorText(error))) { account = true; break; } }
-      }
-      if (!stopping) await call(SLOP + "auto/" + (account ? "stop" : "finish"), {}).catch(() => {});
-      notice = (stopping ? "Batch interrotto." : account ? "Batch fermato da un problema dell'account OpenAI." : "Batch generato: le immagini sono tra le nuove da decidere.") +
-        (problems.length ? " Problemi: " + problems.join(" | ") : "");
-    } catch (error) {
-      notice = "Batch automatico: " + errorText(error);
-    } finally {
-      running = false; progress = "";
-      await load();
-      await hooks.changed();
+  /** Copies of the images the server accepted (made in the browser, free), and the tags only if never asked. */
+  const pickup = async () => {
+    const batch = state?.batch;
+    if (!batch || batch.pipeline_version !== 2 || running) return;
+    for (const image of batch.images) {
+      if (image.status !== "new" || (image.copy && image.analysis !== "none")) continue;
+      progress = "Copia di gioco di un'immagine del batch…"; render();
+      try { await finish(image); } catch (error) { notice = errorText(error); break; }
     }
+    progress = "";
+  };
+  /** The loop runs on Cloudflare: the dashboard only follows it, and closing it stops nothing. */
+  const follow = async () => {
+    if (running) return;
+    running = true;
+    try {
+      while (state?.batch?.status === "running" && state.batch.runner?.alive) {
+        const b = state.batch, briefs = b.processes.filter(p => p.state !== "draft" && p.state !== "prompting").length;
+        const attempts = b.processes.reduce((n, p) => n + p.attempts.length, 0), accepted = b.processes.filter(p => p.state === "accepted").length;
+        progress = briefs < b.slots ? `Sul server: brief e prompt ${briefs} di ${b.slots}…` : `Sul server: ${attempts} ${attempts === 1 ? "tentativo" : "tentativi"}, ${accepted} ${accepted === 1 ? "SLOP accettata" : "SLOP accettate"} su ${b.slots}…`;
+        render();
+        await new Promise(resolve => window.setTimeout(resolve, 3000));
+        await load();
+      }
+    } finally { running = false; progress = ""; }
+    if (state?.batch?.status === "review") { await pickup(); notice = notice || "Batch generato: le immagini sono tra le nuove da decidere."; }
+    await load(); await hooks.changed();
   };
 
   root.addEventListener("click", async event => {
@@ -169,7 +133,11 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
       if (action === "loop" && state.batch) { await hooks.loop(state.batch.id); return; }
       if (action === "close") { state = await call<AutoState>(SLOP + "auto/close", {}); render(); return; }
       if (action === "review" && state.batch) { await hooks.review(state.batch.id); return; }
-      if (action === "stop") { stopping = true; await call(SLOP + "auto/stop", {}); await load(); return; }
+      if (action === "stop") { await call(SLOP + "auto/stop", {}); notice = "Batch interrotto: il server si ferma prima della prossima chiamata."; await load(); return; }
+      if (action === "resume") {
+        if (!window.confirm("Riprendere il batch sul server? Continua da dove si è interrotto, entro il massimo di chiamate confermato all'avvio; le chiamate già inviate o con esito incerto non si ripetono.")) return;
+        button.disabled = true; state = await call<AutoState>(SLOP + "auto/resume", { confirm: true }); render(); void follow(); return;
+      }
       if (action === "ignore" && next) { state = await call<AutoState>(SLOP + "auto/ignore", {}); render(); return; }
       if (action === "start" && next) {
         const c = state.config;
@@ -177,7 +145,7 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
         button.disabled = true;
         state = await call<AutoState>(SLOP + "auto/start", { size: next.size, confirm: true, config: c });
         render();
-        void run();
+        void follow();
       }
     } catch (error) { notice = errorText(error); await load(); }
   });

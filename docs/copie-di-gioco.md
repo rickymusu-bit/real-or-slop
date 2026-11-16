@@ -1,7 +1,7 @@
-# Copie di gioco — specifica 9.2.0
+# Copie di gioco — specifica 10.0.0
 
-Stato: implementata nel ramo 1.27.0, rilascio da autorizzare; in produzione resta la 8.0.0
-(app 1.26.0: copia nel formato della foto, trattamento verso un'altra REAL). Aggiornata: 2026-11-15T13:54:58Z. La 9.0.0 riporta tutte
+Stato: vigente; la 9.2.0 è in produzione con l'app 1.30.2, la 10.0.0 è per l'app 1.32.0. Aggiornata: 2026-11-15T23:09:52Z. La 10.0.0 sposta la
+preparazione delle copie dal browser al Worker (decisione dell'owner del 2026-11-15: il browser è solo un'interfaccia). La 9.0.0 riporta tutte
 le copie di gioco al formato verticale 4:5 e prende le misure del trattamento dalla REAL di origine. Le versioni precedenti restano
 nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia e il gioco serve esattamente quei byte.
 
@@ -42,8 +42,15 @@ di testo non sceglie più il formato.
 
 - Uguale per REAL e SLOP, dopo il trattamento delle SLOP (sezione 4): ritaglio 4:5, WebP qualità 0,85, altezza al massimo 1536 px,
   mai ingrandita, sRGB, sfondo bianco per le trasparenze, nessun metadato.
-- La copia si crea nel browser dell'owner appena l'immagine entra nella libreria, con il ritaglio 4:5 più grande, centrato; il server
-  verifica formato, dimensioni e corrispondenza con il ritaglio.
+- **La copia la prepara il Worker** (`worker/copy-maker.ts`), appena l'immagine entra nella libreria (caricamento o acquisizione da
+  Commons di una REAL, accettazione di una SLOP), con il ritaglio 4:5 più grande, centrato. Passi: il binding Images di Cloudflare
+  decodifica l'originale (orientamento applicato) e lo riduce a un'immagine di lavoro di al massimo sei megapixel, in PNG; il Worker
+  ritaglia e ricampiona per aree alla dimensione della copia, applica alle SLOP il trattamento (sezione 4) con la compressione JPEG
+  intermedia fatta da Images, poi Images codifica il WebP (qualità 85); la copia viene misurata decodificandola di nuovo. Il browser
+  sceglie soltanto l'inquadratura e chiede la copia (`POST /:id/copy {crop?, treatment?: {off}, force?}`); un file inviato dal browser
+  è rifiutato. Le stesse inquadratura e trattamento non rifanno la copia, salvo `force`.
+- In sviluppo locale e nei test il binding Images è emulato da Wrangler con sharp (ridimensionamento e codifica; la qualità del WebP
+  non viene applicata): basta per verificare il percorso, non la resa esatta.
 - **Inquadratura** (passo 3 del wizard REAL, revisione dello studio SLOP e dettaglio del Database, per nuove e approvate): un riquadro
   4:5 che l'owner sposta o rimpicciolisce sull'originale. Salvato in `copy_crop` (`{x, y, width, height, format: "4:5"}`). Salvare lo
   stesso ritaglio non rifà la copia e lascia le statistiche. Il formato non si sceglie.
@@ -71,7 +78,8 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
 
 ### 4.2 Misure
 
-- Il browser misura **ogni copia di gioco**, REAL e SLOP, quando la crea, senza modelli e senza costi, e le salva in `copy_metrics`:
+- Il Worker misura **ogni copia di gioco**, REAL e SLOP, quando la crea, senza modelli, e le salva in `copy_metrics` (`POST /:id/metrics`
+  misura di nuovo una copia esistente):
   lato lungo in pixel; **rumore** (deviazione standard del residuo ad alta frequenza nelle zone più uniformi, escluse quelle bruciate
   a bianco o a nero); **nitidezza** (energia del laplaciano sulla luminanza); **contrasto** (distanza tra i percentili 2 e 98 della
   luminanza); **saturazione** media; **dominante** (scarto medio dei canali dal grigio nelle zone neutre); versione dell'algoritmo.
@@ -98,9 +106,9 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
   7. una compressione JPEG intermedia a qualità 0,85, poi la ricetta della copia (sezione 3).
 - **Correzioni leggere.** I limiti dei passi 3–5 sono più stretti della versione 2 (contrasto fino a 1,6, saturazione da 0,3, raggio
   fino a 3): il trattamento ritocca, non stravolge. Niente effetti disegnati: ogni passo segue una misura della REAL.
-- Dopo il trattamento il browser misura la copia e registra lo scarto dall'obiettivo; il dettaglio del Database lo mostra.
+- Dopo il trattamento il Worker misura la copia e registra lo scarto dall'obiettivo; il dettaglio del Database lo mostra.
   **Lo scarto metrico non è una misura di realismo.** Nel loop di `generazione-slop` 5.2.0 il valutatore multimodale vede
-  **l'immagine generata intera, prima del ritaglio e del trattamento**. Solo se la candidata è accettata, il browser prepara
+  **l'immagine generata intera, prima del ritaglio e del trattamento**. Solo se la candidata è accettata, il Worker prepara
   la copia 4:5 e applica il trattamento. L'owner controlla la copia risultante nella revisione; il crop non deve condizionare
   il prompt né innescare una nuova generazione automatica per concentrare i soggetti nel 4:5.
 - **Registro** `copy_treatment`: REAL da cui vengono le misure (identificativo e misure), Colore, parametri di ogni passo, seme,
@@ -132,7 +140,8 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
 
 - Al rilascio le copie esistenti hanno il formato della foto. Una migrazione ritira dal gioco le pubblicate (tornano approvate) e
   nessuna copia non 4:5 si può approvare o pubblicare.
-- Nel Database il filtro «Copia da rifare in 4:5» e l'azione in gruppo «Rifai la copia in 4:5» (ritaglio centrato, gratis, nel
-  browser) rifanno le copie; l'owner rivede le inquadrature e ripubblica. Le statistiche delle foto ripartono, perché contano solo i
+- Nel Database il filtro «Copia da rifare in 4:5» e l'azione in gruppo «Rifai la copia di gioco» (un Workflow su Cloudflare,
+  `POST /copies`, gratis: il ritaglio 4:5 salvato o, per un formato precedente, quello centrato; le pubblicate tornano approvate)
+  rifanno le copie; l'owner rivede le inquadrature e ripubblica. Le statistiche delle foto ripartono, perché contano solo i
   round giocati con la copia attuale.
 - Le partite in corso finiscono con le copie con cui sono iniziate.

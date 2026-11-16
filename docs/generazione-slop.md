@@ -1,6 +1,9 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.5.0
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.7.0
 
-Stato: vigente; la 5.4.0 è in produzione con l'app 1.28.0 (rilasciata il 2026-11-15), la 5.5.0 è per l'app 1.29.0. Aggiornata: 2026-11-15T17:58:54Z.
+Stato: vigente; la 5.5.0 è in produzione con l'app 1.30.2, la 5.7.0 è per l'app 1.32.0. Aggiornata: 2026-11-15T23:09:52Z. La 5.7.0: copia della SLOP
+accettata preparata dal Worker. La 5.6.0 sposta il ciclo
+su Cloudflare (Workflow), fuori dal browser (decisione dell'owner del 2026-11-15). La 5.5.1 scrive brief e
+prompt con una richiesta per REAL e sblocca un batch rimasto «in scrittura».
 La 5.5.0 fa analizzare REAL e SLOP intere invece del ritaglio 4:5, tiene in evidenza, con ogni tentativo, i processi finiti senza
 SLOP finché l'owner non li chiude e con tolleranza 0 fa rigenerare invece di fermare il ciclo (decisioni dell'owner del 2026-11-15). La 5.4.0 rende modificabile il contesto del valutatore, blocca brief e prompt con il contesto delle gemelle e conta nel massimo le
 riscritture confermate di brief e prompt. La specifica 4.0.0 e l'issue #136 descrivono una pipeline precedente, **superata su somiglianza alla REAL,
@@ -104,8 +107,8 @@ associata alla REAL e può essere riusata quando occorre riequilibrare il catalo
    proposti al prompt sono ammessi solo se mantengono il brief; il server verifica almeno struttura, vincoli dichiarati e revisioni.
    Una rigenerazione con lo stesso prompt è appropriata per anomalie occasionali; la revisione per istruzioni ambigue o ricorrenti;
    la riprogettazione per scene sistematicamente troppo difficili. Ogni nuova generazione consuma un tentativo.
-7. **Candidato accettato:** solo **dopo la valutazione dell'immagine intera**, il browser prepara il ritaglio 4:5 e l'eventuale
-   trattamento leggero per la copia di gioco. La candidata accettata viene registrata come `new` con originale; il browser prepara subito la copia 4:5. Senza copia non può essere approvata né pubblicata. Conserva
+7. **Candidato accettato:** solo **dopo la valutazione dell'immagine intera**, il Worker prepara il ritaglio 4:5 e il trattamento
+   leggero per la copia di gioco. La candidata accettata viene registrata come `new` con originale; il Worker prepara subito la copia 4:5. Senza copia non può essere approvata né pubblicata. Conserva
    copia, prompt finale, brief, REAL di riferimento, modello, qualità, configurazione e tracciabilità dell'esito.
    L'analisi dei tag usa l'immagine SLOP intera (l'originale accettato, non la copia 4:5: decisione dell'owner del 2026-11-15) e distingue le evidenze visive dai desideri del prompt. L'owner verifica
    che il ritaglio non comprometta il risultato; eventuali correzioni di crop o trattamento **non producono feedback automatico
@@ -151,6 +154,23 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
 
 ## 6. Stato, spese, ripresa e conservazione
 
+- **Il ciclo gira su Cloudflare** (decisione dell'owner del 2026-11-15, app 1.31.0): un Workflow (`SlopBatchWorkflow`,
+  `worker/slop-runner.ts`, binding `SLOP_RUNNER`) scrive i brief mancanti, esegue i tentativi (generazione e valutazione
+  dell'immagine intera) una REAL alla volta, si ferma alla prima accettazione e analizza i tag della SLOP accettata
+  sull'originale. Il browser lo avvia dopo la conferma del massimo (`POST batches/:id/run {confirm, phase: briefs|images}` dallo
+  studio; `auto/start` per il batch automatico, che fa tutto) e ne segue l'avanzamento: chiudere la dashboard o cambiare app sul
+  telefono non ferma nulla. Anche la copia di gioco 4:5 della SLOP accettata la prepara il Worker (specifica `copie-di-gioco`).
+- **Un runner per batch:** il batch registra istanza, stato (`running`, `stopping`, `done`, `stopped`, `failed`) e ora dell'ultimo
+  passo (migrazione 0052); un secondo avvio mentre il runner è vivo è rifiutato. Un runner fermo da oltre quindici minuti è
+  considerato morto: lo studio permette un nuovo avvio e il batch automatico mostra «Riprendi sul server» (`auto/resume`), che
+  riparte da dove si era fermato entro il massimo confermato all'inizio.
+- **Mai una chiamata ripetuta:** ogni passo a pagamento ha la sua rivendicazione (brief, tentativo, analisi) e Cloudflare non lo
+  ritenta; se un passo viene rieseguito dopo un'interruzione trova la rivendicazione e non invia nulla, e quel passo finisce incerto.
+- **Interrompi:** il runner termina prima del passo a pagamento successivo; quello in corso finisce (stato `stopping`, poi
+  `stopped`). Fermare un batch automatico lo porta in revisione.
+- Anteprime e sviluppo locale hanno Workflow con nomi propri (`real-or-slop-slop-batch-preview`, `-local`): non toccano mai le
+  istanze di produzione.
+
 - **Conferma preventiva del tetto massimo** delle chiamate del batch, non del numero esatto effettivo: con una REAL **già
   catalogata e dotata di descrizione**, la generazione SLOP richiede al massimo **`1 brief+prompt testuale + N immagini
   + N valutazioni + 1 analisi tag SLOP = 2 + 2N`** chiamate (N=3 → al massimo 8). L'analisi congiunta tag+descrizione REAL
@@ -166,6 +186,13 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
   idempotente a livello applicativo. Registrare prima dell'invio **non prova** che un esito di rete incerto non abbia consumato
   crediti: comunicarlo senza promesse assolute.
 - Processi `draft`, `prompting`, `ready`, `running`, `retry`, `accepted`, `exhausted`, `review_needed`, `failed`, `uncertain`, `closed`; una chiamata pendente interrotta resta sospesa e la manutenzione la marca incerta dopo dieci minuti.
+- **Una richiesta per REAL anche per brief e prompt** (app 1.30.3): studio e batch automatico chiedono brief e prompt di ogni REAL con
+  una richiesta separata, come già i tentativi. Il 2026-11-15 un batch di 10 scritto con un'unica richiesta di circa tre minuti si è
+  interrotto quando il browser del telefono ha chiuso la connessione («clientDisconnected»): 2 brief scritti, uno incerto, 7 mai
+  iniziati e il batch bloccato su «in scrittura». Lo stato dei brief del batch segue ora i suoi processi: qualcuno da scrivere →
+  `none`; almeno uno utilizzabile → `done`; altrimenti `failed`; un brief fallito o incerto non blocca gli altri. Una scrittura
+  rimasta `running` per oltre dieci minuti torna a seguire i processi alla lettura del batch: il brief interrotto resta `uncertain`
+  (mai ripetuto, tra quelli «Da vedere») e gli altri si possono scrivere. Nel batch automatico ogni brief si scrive una sola volta.
 - Ogni tentativo conserva privatamente prompt, modello, qualità, esito, motivi, eventuale bozza di revisione e riferimento alla
   candidata per consentire ripresa e revisione; **i tentativi rifiutati non entrano nella libreria delle immagini e non sono
   pubblicati**, né generano nuove REAL/SLOP attive. Le anteprime temporanee sono cancellate sette giorni dopo l'accettazione o la chiusura del processo; la cancellazione della REAL o SLOP elimina anche processi, tentativi e file collegati. Non creare

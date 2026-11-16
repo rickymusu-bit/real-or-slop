@@ -8,7 +8,6 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from PIL import Image
-from game_copy import game_copy
 BASE = os.environ['ROS_TEST_BASE']; assert BASE.startswith('http://127.0.0.1:')
 LIBRARY = BASE + '/api/admin/library'
 API = LIBRARY + '/slop/'
@@ -45,8 +44,8 @@ def real(prefix='editorial', described=True):
     img=Image.new('RGB',(180,120),(counter%256,80,110));img.putpixel((0,0),(counter%256,20,210))
     out=io.BytesIO();img.save(out,'PNG')
     code,item=call('/upload?'+urllib.parse.urlencode({'origin':'REAL','title':f'{prefix}-{counter}','description':'Original Commons text'}), raw=out.getvalue(),library=True); assert code==201,item
-    # Match the production browser's WebP upload.
-    req=urllib.request.Request(LIBRARY+'/'+item['id']+'/copy',data=game_copy(out.getvalue()),method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'image/webp'})
+    # The game copy is made by the Worker: the request carries no image.
+    req=urllib.request.Request(LIBRARY+'/'+item['id']+'/copy',data=b'{}',method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'})
     with urllib.request.urlopen(req) as r:item=json.loads(r.read())
     patch={'revision':item['revision'],'tags':['street-scene','1960s'],'tag_categories':{'street-scene':'genre','1960s':'time'}}
     if described:patch['real_description']=DESCRIPTION

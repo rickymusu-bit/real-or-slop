@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 2.5.0
+# Dashboard e wizard REAL — specifica 2.6.0
 
-Stato: vigente (con decisioni future indicate a parte). Aggiornata: 2026-11-15T17:35:03Z. La 2.5.0 fa analizzare la REAL intera invece della copia 4:5. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
+Stato: vigente (con decisioni future indicate a parte). Aggiornata: 2026-11-15T23:09:52Z. La 2.6.0: la copia di gioco la prepara il Worker. La 2.5.0 fa analizzare la REAL intera invece della copia 4:5. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wizard di `didascalie-wizard.v1.0.0` e
 `anteprima-descrizione.v1.2.0`, che restano nella cronologia git.
 
@@ -57,7 +57,8 @@ acquisite sono comunque nella libreria privata.
   caricamento». Al massimo 100 immagini.
 - Le selezionate sono miniature senza titolo che aprono la loro pagina di Commons in una nuova scheda.
 - «Aggiungi link di Wikimedia Commons», chiuso all'inizio: più link incollati, uno per riga.
-- «Avanti: tag» acquisisce ogni immagine nella quarantena privata e ne prepara la copia di gioco nel browser. Duplicati, link non validi
+- «Avanti: tag» acquisisce ogni immagine nella quarantena privata; il Worker ne prepara subito la copia di gioco (specifica
+  `copie-di-gioco`, sezione 3). Duplicati, link non validi
   e licenze ND vengono rifiutati con il motivo; una copia fallita si ripete dal passo 3.
 
 **2. Tag.**

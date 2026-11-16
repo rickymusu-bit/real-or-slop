@@ -1,9 +1,43 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T21:27:29Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-15T23:09:52Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.30.2 — 2026-11-15T21:27:29Z
+## 1.32.0 — 2026-11-15T23:09:52Z (decisione dell'owner del 2026-11-15: il browser è solo un'interfaccia)
+
+- **Copie di gioco preparate dal Worker:** ritaglio 4:5, ricampionamento, trattamento delle SLOP verso la REAL di riferimento con la
+  compressione JPEG intermedia, WebP e misure non avvengono più nel browser. Il binding Images di Cloudflare decodifica e riduce
+  l'originale (al massimo sei megapixel di lavoro) e codifica il WebP; ritaglio, ricampionamento per aree, trattamento e misure sono
+  in JavaScript nel Worker (`worker/copy-maker.ts`, `worker/png.ts`). La copia nasce al caricamento o all'acquisizione di una REAL e
+  all'accettazione di una SLOP; il browser sceglie solo l'inquadratura e chiede (`POST /:id/copy` in JSON; un file inviato è rifiutato).
+- **«Rifai la copia di gioco»** per una selezione è un Workflow (`CopiesWorkflow`, `POST /copies`, `GET /copies/:job`), gratis; le
+  pubblicate tornano approvate. Le misure di una copia esistente le fa il Worker (`POST /:id/metrics`); niente più misure in
+  background nella dashboard.
+- Principio in `AGENTS.md` 23.0.0; specifiche `copie-di-gioco` 10.0.0, `database-immagini` 2.8.0, `dashboard-admin-wizard-real`
+  2.6.0, `generazione-slop` 5.7.0; `MASTER.md` 25.0.0. Nuovi test unitari del PNG e del ricampionamento.
+
+## 1.31.0 — 2026-11-15T22:43:46Z (decisione dell'owner del 2026-11-15)
+
+- **Il ciclo SLOP gira su Cloudflare:** un Workflow (`worker/slop-runner.ts`) scrive i brief, esegue i tentativi (generazione e
+  valutazione dell'immagine intera) e analizza i tag della SLOP accettata; il browser lo avvia dopo la conferma del massimo e ne segue
+  l'avanzamento. Chiudere la dashboard o cambiare app sul telefono non ferma più nulla. Un runner per batch, con stato e ora
+  dell'ultimo passo (migrazione 0052); un runner fermo da quindici minuti si riprende («Riprendi sul server» per il batch
+  automatico). I passi a pagamento non vengono mai ritentati da Cloudflare e trovano la propria rivendicazione se rieseguiti.
+  «Interrompi» ferma il server prima della chiamata successiva. Workflow separati per anteprime e locale.
+- Studio: «Genera brief e prompt» e «Genera e valuta» avviano il server e mostrano l'avanzamento; le copie 4:5 restano nel browser.
+- `MASTER.md` 24.0.0 (aggiunti `worker/slop-runner.ts` e `worker/image-body.ts`, quest'ultimo mancante dalla 1.30.1),
+  specifica `generazione-slop` 5.6.0.
+
+## 1.30.3 — 2026-11-15T21:51:59Z
+
+- **Brief e prompt una REAL per volta:** il primo batch automatico (10 SLOP) scriveva tutti i brief in un'unica richiesta di circa tre
+  minuti; il browser del telefono ha chiuso la connessione dopo 48 secondi e Cloudflare ha interrotto il Worker («clientDisconnected»):
+  2 brief scritti, uno incerto, 7 mai iniziati, batch bloccato su «in scrittura». Studio e batch automatico chiedono ora un brief per
+  richiesta. Lo stato dei brief del batch segue i suoi processi, e un brief fallito o incerto non blocca più gli altri; una scrittura
+  rimasta in corso oltre dieci minuti si sblocca alla lettura del batch, senza ripetere il brief interrotto. Specifica
+  `generazione-slop` 5.5.1, `MASTER.md` 23.4.0.
+
+## 1.30.2 — 2026-11-15T21:27:29Z (rilasciata il 2026-11-15)
 
 - **Analisi in gruppo con esiti incerti o interrotti:** l'azione «Analisi combinata tag e descrizione» (e «Analizza con IA») scartava
   in silenzio le immagini con un'analisi interrotta o incerta e rispondeva «Nessuna REAL senza descrizione tra le selezionate», come se

@@ -32,7 +32,7 @@ try:
                 assert sql("SELECT state FROM slop_processes WHERE id='"+stuck['processes'][0]['id']+"'")[0]['state']=='closed'
                 studio.locator('[data-slop-pick="'+source['id']+'"]').check()
                 control([]);studio.locator('[data-slop=prompts]').click()
-                expect(studio.locator('[data-prompt="0"]')).to_be_visible(timeout=20000)
+                expect(studio.locator('[data-prompt="0"]')).not_to_have_value('', timeout=20000)  # written: one request per REAL
                 assert len(control())==1 and 'Massimo 1' in confirmations[-1]
                 studio.locator('[data-brief="0"][data-key=required]').fill('street-scene')
                 studio.locator('[data-prompt="0"]').fill('A credible street photograph in ordinary daylight.')

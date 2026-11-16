@@ -9,6 +9,12 @@ export interface Env {
   OPENAI_API_KEY?: string;
   OPENAI_BASE_URL?: string;
   ANALYSIS_MODEL?: string;
+  /** Cloudflare Images: decoding, scaling and encoding of the game copies (worker/copy-maker.ts). */
+  PHOTO?: ImagesBinding;
+  /** «Rifai la copia di gioco» for a selection, on Cloudflare (worker/copies-runner.ts). */
+  COPIES?: Workflow<{ ids: string[] }>;
+  /** The SLOP loop on Cloudflare (worker/slop-runner.ts, wrangler.jsonc «workflows»). */
+  SLOP_RUNNER?: Workflow<{ batchId: string; phase: "briefs" | "images" | "all" }>;
 }
 export class HttpError extends Error {
   constructor(
