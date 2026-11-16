@@ -82,7 +82,7 @@ with sync_playwright() as p:
         card.locator('.library-open').click()
         expect(page.locator('#library-detail .library-tags li.tag-cat')).to_have_count(3)
         for i, tag in enumerate(['1960s', 'dbb-paris', 'dbb-riot']): expect(page.locator('#library-detail .library-tags li.tag-cat').nth(i)).to_contain_text(tag)
-        expect(page.locator('#library-detail [data-stats]')).to_have_text('Vista 1 volta · classificata correttamente 1 (100%)')
+        expect(page.locator('#library-detail [data-stats]')).to_have_text('Vista 1 volta / classificata correttamente 1 (100%)')
         page.locator('#library-detail .library-detail-close button').click()
         # Press and hold: the large preview, not the detail; it stays open until its ×.
         long_press(page, card.locator('.library-open'))
@@ -173,15 +173,15 @@ with sync_playwright() as p:
         expect(dialog.locator('.db-edit-note')).to_be_visible()
         expect(dialog.locator('[data-field=caption]')).to_have_count(0)
         expect(dialog.locator('[data-field=description]')).to_have_attribute('readonly', '')
-        expect(dialog.locator('[data-stats]')).to_have_text('Vista 1 volta · classificata correttamente 0 (0%)')
+        expect(dialog.locator('[data-stats]')).to_have_text('Vista 1 volta / classificata correttamente 0 (0%)')
         dialog.locator('[data-action=edit]').click()
         expect(dialog.locator('#library-detail-message')).to_have_text('Modifica avviata: la foto non è più pubblicata.')
         assert 'Esce subito dalla pubblicazione' in confirms[-1], confirms
-        expect(dialog).to_contain_text('SLOP · approvata')
+        expect(dialog).to_contain_text('SLOP / approvata')
         description = dialog.locator('[data-field=description]')
         description.fill('Scontri in piazza, 1968.'); description.blur()
         expect(dialog.locator('#library-detail-message')).to_have_text('Salvato.')
-        expect(dialog).to_contain_text('SLOP · approvata')
+        expect(dialog).to_contain_text('SLOP / approvata')
         prompt = dialog.locator('[data-field=prompt]')
         prompt.fill('A riot in a square at dusk, 1968'); prompt.blur()
         expect(dialog.locator('#library-detail-message')).to_have_text('Salvato.')
@@ -193,7 +193,7 @@ with sync_playwright() as p:
         # Delete a published photo: confirmation, out of publication, into the trash.
         page.get_by_role('button', name=f'Apri {prefix}-barricate').click()
         dialog.locator('[data-action=remove]').click()
-        expect(dialog).to_contain_text('REAL · nel cestino')
+        expect(dialog).to_contain_text('REAL / nel cestino')
         assert 'va nel cestino' in confirms[-1], confirms
         dialog.locator('.library-detail-close button').click()
 

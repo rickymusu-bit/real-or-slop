@@ -236,6 +236,18 @@ with sync_playwright() as p:
         page.locator('[data-bulk=withdraw]').click()
         expect(page.locator('#library-message')).to_contain_text('2 aggiornate')
         expect(page.locator(f'.library-card:has([aria-label="Apri {name}-rivoli"])')).to_have_count(0)
+        # The redesigned workspace remains usable in both viewports; capture every section.
+        for section in ('real','slop','database','stats','settings'):
+            page.locator('[data-admin-tab="'+section+'"]').click()
+            expect(page.locator('#admin-'+section)).to_be_visible()
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), section
+            page.screenshot(path=str(folder / f'{name}-workspace-{section}.png'), full_page=True)
+        page.locator('[data-admin-tab=stats]').click()
+        page.locator('[data-stats-view=calls]').click()
+        expect(page.locator('[aria-labelledby=stats-calls]')).to_be_visible()
+        expect(page.locator('[aria-labelledby=stats-games]')).to_be_hidden()
+        page.locator('[data-stats-view=all]').click()
+        expect(page.locator('[aria-labelledby=stats-games]')).to_be_visible()
         assert not errors, errors
         context.close()
         print('Library browser E2E 1.14.0 passed (loading indicator, no captions, no upload in the Database, sorting, trash of a published photo):', name)
