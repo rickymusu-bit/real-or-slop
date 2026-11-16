@@ -1,3 +1,7 @@
+# 1.37.0
+
+Dashboard riprogettata in tutte le sezioni: ricerca catalogo, navigazione persistente, impostazioni raggruppate, revisioni progressive. Proposte automatiche dal fabbisogno globale, con campione casuale di REAL e nessuna soglia di spread o gruppo. Migrazione 0054.
+
 # 1.36.0
 
 SLOP indipendenti: nessun legame persistente con la REAL, coesistenza in partita, conteggi del catalogo e trattamento da misure anonime. Migrazione 0053 preserva tentativi e chiamate. Revisione tecnica e ripartizione Sol/Astra in docs/revisione-codice.md.

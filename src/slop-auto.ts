@@ -15,12 +15,11 @@ interface AutoBatch {
   id: string; size: number; status: "running" | "review"; prompts_status: string; prompts_error: string; slots: number;
   attempted: number[]; snapshot: Proposal | null; images: AutoImage[]; undecided: number; updated_at: string;
 }
-export interface AutoState { config: Config; enabled: boolean; threshold_percent: number; max_batch: number; paid_calls: boolean; batch: AutoBatch | null; proposal: Proposal | null; reason: string | null }
+export interface AutoState { config: Config; enabled: boolean; max_batch: number; paid_calls: boolean; batch: AutoBatch | null; proposal: Proposal | null; reason: string | null }
 interface Hooks { loop: (batchId:string) => void | Promise<void>; review: (batchId: string) => void | Promise<void>; changed: () => Promise<void>; indicator: (proposals: number) => void }
 
 const LIBRARY = "/api/admin/library", SLOP = LIBRARY + "/slop/";
 const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
-const percent = (value: number) => Math.round(value) + "%";
 
 async function call<T>(url: string, body?: unknown): Promise<T> {
   const response = await fetch(url, { credentials: "same-origin", method: body === undefined ? "GET" : "POST",
@@ -68,7 +67,7 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
         <div class="slop-auto-actions">${batch.processes.some(p => ["draft", "ready", "retry"].includes(p.state)) && !batch.runner?.alive ? '<button type="button" class="primary" data-auto="resume">Riprendi sul server</button>' : ""}<button type="button" data-auto="review">Rivedi nel Database</button><button type="button" data-auto="loop">Dettagli dei tentativi</button>${batch.undecided ? "" : '<button type="button" data-auto="close">Chiudi revisione</button>'}</div>`;
     } else if (next && dismissed !== "catalog:" + next.size) {
       html = `<p><strong>Proposta di generazione</strong>: ${next.n_real} REAL, ${next.n_slop} SLOP approvate o pubblicate,
-        ${next.n_new} SLOP nuove da decidere; spread ${percent(next.spread_percent)}, ${next.missing} SLOP mancanti.
+        ${next.n_new} SLOP nuove da decidere; ${next.missing} SLOP mancanti.
         Generare un batch di <strong>${next.size} SLOP</strong>? Per ogni REAL: brief e prompt testuali, fino a ${state!.config.max_generation_attempts} generazioni e valutazioni, poi copia 4:5 e tag solo dopo accettazione. Massimo ${next.size*(2+2*state!.config.max_generation_attempts)} chiamate.</p>
         ${state!.paid_calls ? "" : '<p class="hint">Chiamate a pagamento spente: manca la chiave OpenAI.</p>'}
         <div class="slop-auto-actions"><button type="button" class="primary" data-auto="start" ${state!.paid_calls ? "" : "disabled"}>Genera ${next.size} SLOP</button>

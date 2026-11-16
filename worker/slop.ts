@@ -5,13 +5,12 @@ import { autoRoute, guardBatch } from "./slop-auto";
 import { MAX_BATCH } from "../shared/slop-proposals";
 import { realRows, catalogCounts } from "./slop-references";
 import { groups } from "./slop-groups";
-import { numberSettings } from "./app-settings";
 
 /** Independent SLOP catalogue and anonymous editorial inputs. */
 async function state(env: Env) {
-  const [settings, counts, all] = [await numberSettings(env), await catalogCounts(env), await realRows(env)];
+  const [counts, all] = [await catalogCounts(env), await realRows(env)];
   const slop = await env.DB.prepare("SELECT count(*) AS n FROM images WHERE origin='SLOP' AND status IN ('approved','published')").first<{ n: number }>();
-  return { thresholds: { section: settings.slop_section_min_real, max_batch: MAX_BATCH },
+  return { thresholds: { section: 1, max_batch: MAX_BATCH },
     real_total: counts.real, slop_total: slop?.n || 0,
     waiting: all.map(r => ({ id: r.id, title: r.title, tags: r.tags, measured: r.measured, described: r.described, file: `/api/admin/library/${r.id}/file` })),
     groups: (await groups(env)).map(g => ({ ...g, spread: g.real - g.slop })), attention: await attention(env) };
@@ -27,8 +26,6 @@ export async function slopRoute(env: Env, method: string, path: string, data: Re
   if (path === "auto" || path.startsWith("auto/")) return autoRoute(env, method, path.slice("auto".length).replace(/^\//, ""), data);
   if (path === "batches" || path.startsWith("batches/")) {
     const rest = path.slice("batches".length).replace(/^\//, "");
-    if (rest === "" && method === "POST" && (await catalogCounts(env)).real < (await numberSettings(env)).slop_section_min_real)
-      throw new HttpError(409, `Servono almeno ${(await numberSettings(env)).slop_section_min_real} REAL approvate o pubblicate`);
     await guardBatch(env, method, rest, data);
     const result = await batchRoute(env, method, rest, data);
     return result;

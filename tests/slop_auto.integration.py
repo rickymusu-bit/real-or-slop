@@ -2,7 +2,7 @@
 from editorial_helpers import *
 sql("UPDATE images SET trashed_from=CASE status WHEN 'new' THEN 'new' ELSE 'approved' END,status='trash' WHERE status<>'trash'; DELETE FROM slop_batches; DELETE FROM slop_proposal_ignored")
 code,settings=call('/settings',library=True);assert code==200
-call('/settings',{'slop_section_min_real':1,'max_generation_attempts':2},method='PUT',library=True)
+call('/settings',{'max_generation_attempts':2},method='PUT',library=True)
 ids=[];generated=[]
 def wait_auto(seconds=90):
     for _ in range(seconds*4):

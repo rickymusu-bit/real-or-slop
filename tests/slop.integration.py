@@ -9,7 +9,7 @@ import urllib.error
 import urllib.request
 
 code,settings=call('/settings',library=True);assert code==200
-assert call('/settings',{'slop_section_min_real':1},method='PUT',library=True)[0]==200
+assert 'slop_section_min_real' not in settings['values']
 sources=[];images=[]
 try:
     historical=real(described=False);sources.append(historical['id']);control([])

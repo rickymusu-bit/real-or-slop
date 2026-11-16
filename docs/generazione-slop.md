@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 6.0.0
+# Generazione SLOP — specifica 6.1.0
 
-Stato: vigente per il ramo 1.36.0. Aggiornata: 2026-11-16T19:41:37Z.
+Stato: vigente per il ramo 1.37.0. Aggiornata: 2026-11-16T20:00:00Z.
 
 ## Ispirazione, non coppie
 
@@ -32,7 +32,7 @@ Accettazione automatica, approvazione dell'owner e pubblicazione sono distinte. 
 
 ## Proposte automatiche
 
-Studio disponibile dalla soglia configurata (default 50 REAL). Spread: 100 × (REAL approvate/pubblicate − SLOP approvate/pubblicate) / REAL. Le SLOP nuove da decidere riducono il fabbisogno prima di proporre altre generazioni. Soglia default 33%; massimo dieci immagini per batch e una selezione distinta di REAL disponibili in ciascun batch. Le stesse REAL sono riutilizzabili nei batch successivi. Nessuna proposta con fabbisogno nullo, nessun riferimento descritto, studio chiuso o altro batch automatico aperto. Una proposta ignorata ritorna dopo altri dieci punti di spread. L'avvio richiede conferma esplicita del massimo delle chiamate.
+Decisione dell'owner del 2026-11-16: conta solo la differenza numerica complessiva. Fabbisogno = max(0, REAL approvate/pubblicate − SLOP approvate/pubblicate − SLOP nuove da decidere). Nessuna soglia di spread, di gruppo o minima di 50 REAL. Basta una REAL approvata/pubblicata con descrizione. Una proposta genera al massimo dieci SLOP, limitate al fabbisogno e al numero di REAL disponibili; sceglie senza ripetizioni un campione casuale uniforme delle REAL disponibili. I riferimenti sono riutilizzabili in batch successivi. Ignorare una proposta la nasconde finché il fabbisogno aumenta; chiudere il riquadro la nasconde nella sessione. Le statistiche per gruppi restano diagnostiche. Un batch automatico aperto impedisce nuove proposte. L'avvio richiede conferma esplicita del massimo delle chiamate. Lo spegnimento delle proposte non interrompe il lavoro già autorizzato.
 
 Un batch automatico concluso passa in revisione e si chiude quando tutti gli esiti sono decisi, oppure con il comando esplicito. I batch della pipeline precedente restano consultabili senza riprese a pagamento incompatibili.
 

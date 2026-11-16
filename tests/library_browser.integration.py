@@ -53,9 +53,13 @@ with sync_playwright() as p:
         expect(page.locator('#real-wizard .rw-steps li')).to_have_count(4)
         page.get_by_role('button', name='Database immagini').click()
         expect(page.get_by_role('heading', name='Database immagini')).to_be_visible()
-        # No upload, title search, copy filter, «Da Commons» or drop zone in the Database section any more.
-        for gone in ('#library-files', '#library-search', '#library-copy-filter', '#library-commons-toggle', '#library-drop'):
+        # No upload, copy filter, «Da Commons» or drop zone in the Database section any more.
+        for gone in ('#library-files', '#library-copy-filter', '#library-commons-toggle', '#library-drop'):
             expect(page.locator(gone)).to_have_count(0)
+        expect(page.locator('#library-search')).to_be_visible()
+        page.locator('#library-search').fill('no-such-dashboard-image')
+        expect(page.locator('#library-grid .library-card')).to_have_count(0)
+        page.locator('#library-search').fill('')
         # Two REAL photos added through the API, then analysed together from the selection; then one SLOP.
         for picture_file in (picture(f'{name}-rivoli.jpg', (180, 40, 30), (320, 200)), picture(f'{name}-spare.jpg', (30, 160, 40), (200, 320))):
             add(page, picture_file, 'REAL')
@@ -113,15 +117,15 @@ with sync_playwright() as p:
         quality.select_option('medium')
         expect(page.locator('#library-settings-message')).to_have_text('Qualità delle immagini: medium.')
         page.locator('#library-thresholds summary').click()
-        expect(page.locator('[name=slop_section_min_real]')).to_have_value('50')
-        page.locator('[name=slop_section_min_real]').fill('40'); page.locator('#library-thresholds-form button').click()
+        expect(page.locator('[name=max_generation_attempts]')).to_have_value('3')
+        page.locator('[name=max_generation_attempts]').fill('4'); page.locator('#library-thresholds-form button').click()
         expect(page.locator('#library-settings-message')).to_have_text('Soglie dello studio SLOP salvate.')
         # Saving one form never overwrites what is typed, and not yet saved, in another one.
         page.locator('#library-games summary').click()
         expect(page.locator('[name=open_game_hours]')).to_have_value('24')
         page.locator('[name=open_game_hours]').fill('30')
         page.locator('#library-settings-message').evaluate('m => m.textContent = ""')
-        page.locator('[name=slop_section_min_real]').fill('50'); page.locator('#library-thresholds-form button').click()
+        page.locator('[name=max_generation_attempts]').fill('3'); page.locator('#library-thresholds-form button').click()
         expect(page.locator('#library-settings-message')).to_have_text('Soglie dello studio SLOP salvate.')
         expect(page.locator('[name=open_game_hours]')).to_have_value('30')
         page.locator('[name=open_game_hours]').fill('0'); page.locator('#library-games-form button').click()
