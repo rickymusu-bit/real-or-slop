@@ -1,6 +1,8 @@
-# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.7.0
+# Generazione delle SLOP: riferimenti REAL, valutazione e batch — specifica 5.8.0
 
-Stato: vigente; la 5.5.0 è in produzione con l'app 1.30.2, la 5.7.0 è per l'app 1.32.0. Aggiornata: 2026-11-15T23:09:52Z. La 5.7.0: copia della SLOP
+Stato: vigente; la 5.7.0 è in produzione con l'app 1.32.0, la 5.8.0 è per l'app 1.33.0. Aggiornata: 2026-11-16T07:50:00Z. La 5.8.0: un passo
+fermato dalla piattaforma chiude solo la sua REAL, un batch in revisione con REAL in sospeso si riprende, copia della SLOP in un passo
+a sé, limite di CPU di cinque minuti. La 5.7.0: copia della SLOP
 accettata preparata dal Worker. La 5.6.0 sposta il ciclo
 su Cloudflare (Workflow), fuori dal browser (decisione dell'owner del 2026-11-15). La 5.5.1 scrive brief e
 prompt con una richiesta per REAL e sblocca un batch rimasto «in scrittura».
@@ -163,7 +165,15 @@ davvero cieca, servono richieste separate o un disegno sperimentale esplicito.
 - **Un runner per batch:** il batch registra istanza, stato (`running`, `stopping`, `done`, `stopped`, `failed`) e ora dell'ultimo
   passo (migrazione 0052); un secondo avvio mentre il runner è vivo è rifiutato. Un runner fermo da oltre quindici minuti è
   considerato morto: lo studio permette un nuovo avvio e il batch automatico mostra «Riprendi sul server» (`auto/resume`), che
-  riparte da dove si era fermato entro il massimo confermato all'inizio.
+  riparte da dove si era fermato entro il massimo confermato all'inizio. «Riprendi sul server» compare anche per un batch
+  automatico in revisione che ha ancora REAL da generare (brief da scrivere, pronte o da ritentare): una revisione con REAL in
+  sospeso non si chiude da sola.
+- **Un passo fermato dalla piattaforma** (limite di CPU, interruzione) chiude solo la sua REAL: il tentativo resta in corso e dopo
+  dieci minuti diventa incerto, tra i processi «Da vedere»; le altre REAL proseguono. Solo un problema dell'account OpenAI ferma
+  l'intera esecuzione. Il 2026-11-16 un passo interrotto per CPU aveva fermato tutto il batch, lasciando 6 REAL mai tentate.
+- **Passi del runner per una SLOP accettata:** tentativo (generazione, valutazione, registrazione nella libreria), poi analisi dei
+  tag, poi copia di gioco in un passo a sé, il calcolo più pesante. Limite di CPU di cinque minuti per passo (Workers Paid,
+  `limits.cpu_ms` in `wrangler.jsonc`, dal 2026-11-16).
 - **Mai una chiamata ripetuta:** ogni passo a pagamento ha la sua rivendicazione (brief, tentativo, analisi) e Cloudflare non lo
   ritenta; se un passo viene rieseguito dopo un'interruzione trova la rivendicazione e non invia nulla, e quel passo finisce incerto.
 - **Interrompi:** il runner termina prima del passo a pagamento successivo; quello in corso finisce (stato `stopping`, poi

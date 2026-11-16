@@ -1,7 +1,20 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-16T06:48:38Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-16T07:50:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.33.0 — 2026-11-16T07:50:00Z
+
+- **Un passo fermato dalla piattaforma non ferma più il batch:** il 2026-11-16 un tentativo è stato interrotto da Cloudflare per
+  CPU dopo la generazione e il Workflow ha messo in revisione l'intero batch, lasciando 6 REAL con brief mai tentate. Ora quella REAL
+  resta incerta (tra i processi «Da vedere») e le altre proseguono; solo un problema dell'account OpenAI ferma l'esecuzione.
+- **Ripresa di un batch in revisione:** «Riprendi sul server» compare anche quando restano REAL da generare; la ripresa resta entro il
+  massimo confermato all'avvio e non ripete chiamate già inviate. Una revisione con REAL in sospeso non si chiude da sola.
+- **Copia della SLOP accettata in un passo a sé** del Workflow, dopo i tag: il calcolo più pesante non condivide più il passo della
+  generazione. Il percorso diretto dello studio la prepara come prima.
+- **Limite di CPU di cinque minuti** per richiesta e per passo (`limits.cpu_ms`), possibile con Workers Paid, attivato dall'owner il
+  2026-11-16; si paga solo la CPU usata.
+- Specifica `generazione-slop` 5.8.0, `MASTER.md` 25.1.0.
 
 ## 1.32.1 — 2026-11-16T06:48:38Z
 

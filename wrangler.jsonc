@@ -21,6 +21,9 @@
     "redact_query_string": true,
     "logs": { "enabled": true, "invocation_logs": true },
   },
+  // CPU per request and per Workflow step (Workers Paid, subscribed by the owner on 2026-11-16): up to five minutes, billed only as
+  // used. A game copy takes about two seconds; on 2026-11-16 a step of the SLOP loop was stopped by the 30-second default.
+  "limits": { "cpu_ms": 300000 },
   // Daily maintenance at 03:17 UTC: games older than 12 months are deleted (spec `privacy-note-legali`).
   "triggers": { "crons": ["17 3 * * *"] },
   "d1_databases": [

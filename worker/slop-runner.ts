@@ -7,7 +7,7 @@ import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloud
 import { HttpError, type Env } from "./core";
 import { generateImage, writePrompts } from "./slop-generation";
 import { analyze } from "./analysis";
-import { find } from "./library";
+import { find, storeCopy } from "./library";
 
 export type Phase = "briefs" | "images" | "all";
 export interface RunParams { batchId: string; phase: Phase }
@@ -56,6 +56,12 @@ export class SlopBatchWorkflow extends WorkflowEntrypoint<Env, RunParams> {
       await env.DB.prepare("UPDATE slop_batches SET runner_updated=? WHERE id=? AND runner=?").bind(now(), batchId, runner).run();
       return true;
     });
+    /** A paid step that the platform itself stops (CPU limit, eviction) throws: that REAL ends there (its claim turns uncertain
+     * after ten minutes), the others go on. Only a problem of the OpenAI account stops the whole run. */
+    const safely = async (name: string, work: () => Promise<Outcome>): Promise<Outcome> => {
+      try { return await step.do(name, ONCE, work); }
+      catch (error) { return { ok: false, error: (error instanceof Error ? error.message : String(error)).slice(0, 300) }; }
+    };
     let outcome = "done", reason = "";
     try {
       if (phase !== "images") {
@@ -63,7 +69,7 @@ export class SlopBatchWorkflow extends WorkflowEntrypoint<Env, RunParams> {
           .bind(batchId).all<{ slot: number }>()).results.map(r => r.slot));
         for (const slot of drafts) {
           if (!await live(`live-brief-${slot}`)) { outcome = "stopped"; return; }
-          const result = await step.do(`brief-${slot}`, ONCE, () => attempt(async () => { await writePrompts(env, batchId, { confirm: true, index: slot }); return {}; }));
+          const result = await safely(`brief-${slot}`, () => attempt(async () => { await writePrompts(env, batchId, { confirm: true, index: slot }); return {}; }));
           if (result.account) { outcome = "failed"; reason = result.error || ""; return; }
         }
       }
@@ -78,14 +84,16 @@ export class SlopBatchWorkflow extends WorkflowEntrypoint<Env, RunParams> {
       for (const slot of work.slots) {
         for (let n = 0; n < work.max; n++) {
           if (!await live(`live-${slot}-${n}`)) { outcome = "stopped"; return; }
-          const result = await step.do(`attempt-${slot}-${n}`, ONCE, () => attempt(async () => {
-            const done = await generateImage(env, batchId, { confirm: true, index: slot, quality: work.quality }) as { id?: string; process?: { state: string } };
+          const result = await safely(`attempt-${slot}-${n}`, () => attempt(async () => {
+            const done = await generateImage(env, batchId, { confirm: true, index: slot, quality: work.quality }, { copy: false }) as { id?: string; process?: { state: string } };
             return { id: done.id ?? null, state: done.process?.state };
           }));
           if (result.account) { outcome = "failed"; reason = result.error || ""; return; }
           if (result.id) {
-            // Tags of the accepted SLOP, from its whole original (no game copy needed): one paid call, claimed like any analysis.
-            await step.do(`tags-${slot}`, ONCE, () => attempt(async () => { await analyze(env, await find(env, result.id!), { confirm: true }); return {}; }));
+            // Tags of the accepted SLOP, from its whole original: one paid call, claimed like any analysis. Then its game copy,
+            // in a step of its own (free, the heaviest computation of the run).
+            await safely(`tags-${slot}`, () => attempt(async () => { await analyze(env, await find(env, result.id!), { confirm: true }); return {}; }));
+            await safely(`copy-${slot}`, () => attempt(async () => { await storeCopy(env, await find(env, result.id!), {}); return {}; }));
             break;
           }
           if (!result.ok || result.state !== "retry") break;

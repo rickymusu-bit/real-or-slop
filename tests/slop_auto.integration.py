@@ -35,7 +35,19 @@ try:
     control([]);assert call('batches/'+bid+'/prompts',{'confirm':True,'index':0})[0]==409
     def gen(index):return call('batches/'+bid+'/images',{'confirm':True,'index':index,'quality':b['config']['quality']})
     assert gen(0)[0]==409 and control()==[]
-    remove(generated);generated=[]
+    # A batch in review that still has REAL to generate (a run that ended early) is resumed on the server, within its maximum.
+    assert call('auto/resume',{'confirm':True})[0]==409  # nothing left to generate
+    pid=b['processes'][0]['id']
+    sql(f"DELETE FROM slop_attempts WHERE process_id='{pid}'; UPDATE slop_processes SET state='ready',attempts=0 WHERE id='{pid}'; UPDATE slop_batches SET runner_status='failed' WHERE id='{bid}'")
+    assert call('auto/resume',{})[0]==400
+    control([None,{'evaluation':'accept'}])
+    code,auto=call('auto/resume',{'confirm':True});assert code==200 and auto['batch']['status']=='running',auto
+    auto=wait_auto();b=call('batches/'+bid)[1]
+    assert auto['batch']['status']=='review' and b['processes'][0]['state']=='accepted' and b['runner']['status']=='done',b
+    resumed=[i for i in b['images'] if i['id'] not in generated];assert len(resumed)==1 and resumed[0]['copy']['crop']['format']=='4:5',resumed
+    generated+=[i['id'] for i in resumed]
+    assert len(control())==3  # generation, evaluation, tags; the copy, in its own step, is free
+    control([]);remove(generated);generated=[]
     assert call('auto')[1]['batch']['status']=='review'  # suspended cases require acknowledgement
     assert call('auto/close',{})[1]['batch'] is None
     # Legacy paused batch is inspectable; no speculative paid resume.

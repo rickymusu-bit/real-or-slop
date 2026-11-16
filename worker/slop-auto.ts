@@ -20,7 +20,7 @@ async function openBatch(env: Env): Promise<AutoRow | null> {
   const row = await env.DB.prepare("SELECT * FROM slop_batches WHERE origin='auto' AND auto_status IN ('running','review') LIMIT 1").first<AutoRow>();
   if (!row || row.auto_status !== "review") return row;
   const pending = await env.DB.prepare("SELECT count(*) AS n FROM images WHERE generation_batch=? AND status='new'").bind(row.id).first<{ n: number }>();
-  const unresolved = await env.DB.prepare("SELECT count(*) AS n FROM slop_processes WHERE batch_id=? AND state IN ('review_needed','uncertain','failed','exhausted','running','prompting','retry')").bind(row.id).first<{n:number}>();
+  const unresolved = await env.DB.prepare("SELECT count(*) AS n FROM slop_processes WHERE batch_id=? AND state IN ('review_needed','uncertain','failed','exhausted','running','prompting','retry','ready','draft')").bind(row.id).first<{n:number}>();
   if (pending?.n || unresolved?.n) return row;
   await env.DB.prepare("UPDATE slop_batches SET auto_status='closed',updated_at=? WHERE id=? AND auto_status='review'").bind(now(), row.id).run();
   return null;
@@ -86,15 +86,19 @@ async function start(env: Env, data: Record<string, unknown>) {
   await startRun(env, batchId, "all");
   return autoState(env);
 }
-/** POST auto/resume {confirm}: a batch whose runner died (or that ran in the browser before 1.31.0) goes on from where it stopped,
- * within the maximum confirmed at its start; claimed or uncertain steps are never resent. */
+/** POST auto/resume {confirm}: a batch whose runner died (or that ran in the browser before 1.31.0), or one in review that still has
+ * REAL to generate (a run that ended early), goes on from where it stopped, within the maximum confirmed at its start; claimed or
+ * uncertain steps are never resent. */
 async function resume(env: Env, data: Record<string, unknown>) {
   if (Object.keys(data).some(key => key !== "confirm") || data.confirm !== true) throw new HttpError(400, "Conferma la ripresa del batch");
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
   const row = await openBatch(env);
-  if (!row || row.auto_status !== "running") throw new HttpError(409, "Nessun batch automatico in generazione");
+  if (!row || !["running", "review"].includes(row.auto_status)) throw new HttpError(409, "Nessun batch automatico da riprendere");
   if (row.pipeline_version !== 2) throw new HttpError(409, "Batch precedente: sola revisione; non si riprende automaticamente");
   await processViews(env, row.id);  // settles claims left by a dead request first
+  const left = await env.DB.prepare("SELECT count(*) AS n FROM slop_processes WHERE batch_id=? AND state IN ('draft','ready','retry')").bind(row.id).first<{ n: number }>();
+  if (!left?.n) throw new HttpError(409, "Nessuna REAL da generare in questo batch");
+  await env.DB.prepare("UPDATE slop_batches SET auto_status='running',updated_at=? WHERE id=? AND auto_status IN ('running','review')").bind(now(), row.id).run();
   await startRun(env, row.id, "all");
   return autoState(env);
 }
