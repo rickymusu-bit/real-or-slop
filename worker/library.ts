@@ -195,7 +195,7 @@ export function tagStatements(env: Env, imageIdValue: string, wanted: string[], 
 /** Adds a new image to the library. The original goes to quarantine; the browser then uploads its game copy. */
 export async function create(env: Env, input: { origin: Origin; title: string; description?: string; bytes: ArrayBuffer;
   source_url?: string; author?: string; license_name?: string; license_url?: string; prompt?: string; model?: string;
-  generation?: { batch: string; slot: unknown; quality: string; source?: string | null } }) {
+  generation?: { batch: string; slot: unknown; quality: string; source?: string | null }; copy?: boolean }) {
   if (!env.QUARANTINE) throw new HttpError(503, "Quarantena privata non configurata");
   const bytes = new Uint8Array(input.bytes);
   if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new HttpError(413, "File vuoto o oltre 12 MB");
@@ -226,8 +226,10 @@ export async function create(env: Env, input: { origin: Origin; title: string; d
   }
   // The game copy is made here at once (4:5, centred; a SLOP treated towards its source REAL): the browser is only an interface.
   // A failure leaves the image without a copy, which the owner can ask for again; the image itself is kept.
-  try { await storeCopy(env, await find(env, imageIdValue), {}); }
-  catch (error) { console.log("copy", imageIdValue, error instanceof Error ? error.message : String(error)); }
+  if (input.copy !== false) {
+    try { await storeCopy(env, await find(env, imageIdValue), {}); }
+    catch (error) { console.log("copy", imageIdValue, error instanceof Error ? error.message : String(error)); }
+  }
   return viewOf(env, imageIdValue);
 }
 

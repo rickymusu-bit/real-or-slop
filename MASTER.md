@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 25.0.0, aggiornata il 2026-11-15T23:09:52Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 25.1.0, aggiornata il 2026-11-16T07:50:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,16 +9,18 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **In produzione:** app 1.30.2 (PR rickymusu-bit/real-or-slop#145; migrazioni fino alla 0051). Il 2026-11-15 alle 21:42 UTC
-  tutte le 20 REAL approvate hanno tag e descrizione dall'originale intero. Nessuna immagine pubblicata: nessun livello è giocabile.
-  Il primo batch automatico (10 SLOP, 21:45 UTC) si è fermato alla scrittura dei brief: 2 scritti, 1 incerto, 7 da scrivere (vedi 1.30.3).
-  Su indicazione dell'owner, alle 17:24 UTC sono stati salvati direttamente nel D1 il contesto «Brief e prompt per le SLOP» proposto
-  (pipeline 2) e la soglia dello studio a 20 REAL. Qualità immagini `medium`.
-- **Nel ramo 1.32.0 (PR #146 da unire, comprende 1.30.3 e 1.31.0):** il browser è solo un'interfaccia (decisione dell'owner del
-  2026-11-15). Il ciclo SLOP gira in un Workflow (1.31.0, migrazione 0052); le copie di gioco le prepara il Worker con il binding
-  Images (caricamento, acquisizione, accettazione di una SLOP, inquadratura, trattamento); «Rifai la copia di gioco» è un Workflow.
-  Dopo il rilascio: rifare le copie delle 20 REAL (fatte nel browser) per avere la stessa ricetta delle SLOP; riprendere il batch
-  automatico fermo con «Riprendi sul server».
+- **In produzione:** app 1.32.0 (PR rickymusu-bit/real-or-slop#146, rilasciata il 2026-11-16 alle 04:36 UTC; migrazioni fino alla
+  0052). Account Cloudflare su Workers Paid dal 2026-11-16. 20 REAL approvate con tag e descrizione; copie ancora fatte nel browser
+  (da rifare con «Rifai la copia di gioco»). Nessuna immagine pubblicata: nessun livello è giocabile. Il primo batch automatico,
+  ripreso alle 05:35, si è fermato alle 05:40 per un passo interrotto per CPU («Worker exceeded CPU time limit»): 1 SLOP accettata
+  senza copia, 1 revisione chiesta, 1 brief incerto, 1 tentativo interrotto (generazione pagata e persa), 6 REAL con brief mai
+  tentate; batch in revisione. Su indicazione dell'owner, il 2026-11-15 alle 17:24 UTC sono stati salvati direttamente nel D1 il
+  contesto «Brief e prompt per le SLOP» proposto e la soglia dello studio a 20 REAL. Qualità immagini `medium`.
+- **Nel ramo 1.33.0 (PR #147 da unire, comprende la 1.32.1):** Workers Logs attivi; un passo fermato dalla piattaforma chiude solo
+  la sua REAL; «Riprendi sul server» anche per un batch in revisione con SLOP ancora da generare; copia della SLOP accettata in un passo a sé;
+  limite di CPU di cinque minuti (`limits.cpu_ms`). Dopo il rilascio: «Riprendi sul server» sul batch fermo.
+- **Nella 1.32.0:** il browser è solo un'interfaccia: copie di gioco preparate dal Worker con il binding Images, «Rifai la copia di
+  gioco» come Workflow.
 - **Nella 1.31.0:** il ciclo SLOP gira su Cloudflare in un Workflow; la dashboard lo avvia e lo segue.
 - **Nella 1.30.3:** brief e prompt con una richiesta per REAL; un batch rimasto «in scrittura» oltre dieci minuti riprende dai brief
   mancanti, senza ripetere quello interrotto.
@@ -152,6 +154,9 @@ R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (
 - Tag: al merge su `main` il workflow `release-tag` (`.github/workflows/release-tag.yml`) crea `vX.Y.Z` con la versione di
   `package.json`, se non esiste già.
 - Manutenzione giornaliera: Cron Trigger alle 03:17 UTC.
+- Log: Workers Logs attivi (`observability` in `wrangler.jsonc`, dal 2026-11-16, su richiesta dell'owner): errori e messaggi di
+  richieste, passi dei Workflow e manutenzione, conservati da Cloudflare per pochi giorni, URL senza query string. Vanno scritti nel
+  file perché ogni rilascio applica la configurazione del file e spegnerebbe quella impostata dalla dashboard.
 
 ## Verifiche
 
