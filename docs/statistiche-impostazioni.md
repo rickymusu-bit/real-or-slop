@@ -1,6 +1,6 @@
 # Statistiche e Impostazioni — specifica 2.8.1
 
-Stato: vigente; la 2.8.0 è in produzione con l'app 1.30.1, la 2.8.1 è per l'app 1.30.2. Aggiornata: 2026-11-15T21:27:29Z. La 2.8.1: salvare un modulo
+Stato: vigente; la 2.8.0 è in produzione con l'app 1.30.1, la 2.8.1 è per l'app 1.30.2. Aggiornata: 2026-11-16T19:41:37Z. La 2.8.1: salvare un modulo
 numerico aggiorna solo i propri campi. La 2.8.0 porta a quattro i
 testi del contesto dei modelli e segnala il testo dei prompt scritto per le gemelle. La 2.2.0 toglie la soglia del gruppo
 (le SLOP sono gemelle di una REAL, specifica `generazione-slop` 3.0.0) e aggiunge il conteggio delle gemelle. La 2.1.0 sostituisce la soglia
@@ -32,7 +32,7 @@ si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ri
 - **Classifica:** verifica di un codice partita (soprannome, livello, punteggio, data), Nascondi, Mostra, Cancella (per sempre, per le
   richieste di cancellazione).
 - **Studio SLOP:** REAL per aprire lo studio (predefinito 50, da 1 a 1000), proposte
-  automatiche attive o spente, tentativi massimi (1–5, default 3), tolleranza qualitativa (0–2, default 1), soglia di proposta in percentuale di spread (33%, da 1 a 100): 100 × (REAL − REAL con una gemella approvata o pubblicata) / REAL.
+  automatiche attive o spente, tentativi massimi (1–5, default 3), tolleranza qualitativa (0–2, default 1), soglia di proposta in percentuale di spread (33%, da 1 a 100): 100 × (REAL − SLOP approvate o pubblicate) / REAL.
 - **Partite:** durata massima di una partita aperta in ore (24, da 1 a 168): oltre, una partita non conclusa non trattiene più le copie
   ritirate e non conta tra le aperte.
 - Dati in `app_settings`; una riga mancante vale il predefinito del codice.
@@ -50,7 +50,7 @@ Periodo: ultimi 7 giorni, ultimi 30 (predefinito) o da sempre; «Aggiorna». API
   le ultime 200 chiamate del periodo con filtri per tipo ed esito. Nessun importo.
 - **Equilibrio del catalogo:** REAL e SLOP pubblicate e approvate, quota di REAL tra le pubblicate con la fascia 40–60% e un avviso non
   bloccante fuori fascia, livelli giocabili e foto mancanti agli altri. Le copie nuove sono tutte 4:5.
-- **Gemelle:** REAL con una SLOP gemella approvata o pubblicata e REAL in attesa.
+- **Equilibrio:** conteggi indipendenti di REAL e SLOP approvate/pubblicate e SLOP nuove da decidere.
 - **Gruppi** (genere e decennio): REAL, SLOP, nuove, spread; per i gruppi con SLOP pubblicate, le medie
   delle misure delle copie (lato lungo, rumore, nitidezza, contrasto, saturazione) di REAL e SLOP affiancate, con un avviso non
   bloccante quando divergono di oltre il 25%.
@@ -63,3 +63,4 @@ Periodo: ultimi 7 giorni, ultimi 30 (predefinito) o da sempre; «Aggiorna». API
 ## Ciclo editoriale SLOP
 
 Impostazioni `max_generation_attempts` (1–5, default 3) ed `editorial_tolerance` (0 rigorosa, 1 normale, 2 permissiva; default 1). Snapshot prima delle chiamate. Default testo `gpt-6.1-sol`, immagini `gpt-image-2.5-flare` qualità `high`, preservando le scelte già salvate. Quattro contesti dalla 1.28.0: base, Tag, Brief e prompt per le SLOP, Valutazione delle SLOP. Statistiche includono evaluation, processi accettati/esauriti/sospesi e tentativi; la tabella dei formati sparisce perché le copie nuove sono tutte 4:5. Nessun punteggio di difficoltà derivato dai tentativi.
+

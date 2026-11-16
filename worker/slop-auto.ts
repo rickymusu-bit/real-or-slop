@@ -2,9 +2,9 @@
  * Legacy batches remain inspectable; no incompatible paid resume. */
 import { HttpError, type Env } from "./core";
 import { numberSettings } from "./app-settings";
-import { IGNORE_KEY, MAX_BATCH, proposal, spreadPercent, type Proposal } from "../shared/twins";
+import { IGNORE_KEY, MAX_BATCH, proposal, spreadPercent, type Proposal } from "../shared/slop-proposals";
 import { initializeBatch, loopSnapshot, processViews, itemsOf } from "./slop-generation";
-import { realRows, twinCounts, twinItems } from "./twins";
+import { realRows, catalogCounts, inspirationItems } from "./slop-references";
 import { runnerView, startRun } from "./slop-runner";
 
 interface AutoRow {
@@ -45,7 +45,7 @@ async function batchView(env: Env, row: AutoRow) {
 }
 
 async function current(env: Env) {
-  const [v, open, counts] = [await numberSettings(env), await openBatch(env), await twinCounts(env)];
+  const [v, open, counts] = [await numberSettings(env), await openBatch(env), await catalogCounts(env)];
   const ignored = await env.DB.prepare("SELECT spread_percent FROM slop_proposal_ignored WHERE tag=?").bind(IGNORE_KEY).first<{ spread_percent: number }>();
   const result = proposal({ ...counts, sectionMin: v.slop_section_min_real, thresholdPercent: v.slop_auto_threshold_percent,
     enabled: v.slop_auto_enabled === 1, openBatch: !!open, ignoredAt: ignored?.spread_percent ?? null });
@@ -74,12 +74,12 @@ async function start(env: Env, data: Record<string, unknown>) {
   if (open) throw new HttpError(409, "C'è già un batch automatico aperto: nessuna chiamata inviata");
   if (!next || next.size !== data.size)
     throw new HttpError(409, "La proposta è cambiata nel frattempo: nessun batch avviato. Controlla la nuova proposta");
-  const waiting = (await realRows(env)).filter(r => !r.twin && r.described).map(r => r.id);
+  const waiting = (await realRows(env)).filter(r => r.described).map(r => r.id);
   if (waiting.length < next.size) throw new HttpError(409, "Descrizioni REAL mancanti: completale manualmente o autorizza l'analisi nel Database");
-  const items = await twinItems(env, draw(waiting, next.size)), stamp = now(), batchId = crypto.randomUUID();
+  const items = await inspirationItems(env, draw(waiting, next.size)), stamp = now(), batchId = crypto.randomUUID();
   try {
     await env.DB.prepare(`INSERT INTO slop_batches(id,theme,slots,created_at,updated_at,origin,auto_tag,auto_status,auto_size,auto_snapshot)
-      VALUES(?,'[]',?,?,?,'auto',?,'running',?,?)`).bind(batchId, JSON.stringify(items), stamp, stamp, IGNORE_KEY, items.length, JSON.stringify(next)).run();
+      VALUES(?,'[]',?,?,?,'auto',?,'running',?,?)`).bind(batchId, "[]", stamp, stamp, IGNORE_KEY, items.length, JSON.stringify(next)).run();
   } catch { throw new HttpError(409, "C'è già un batch automatico aperto: nessuna chiamata inviata"); }
   await initializeBatch(env, batchId, items, snapshot);
   // The whole loop runs on Cloudflare from here: briefs, attempts, tags; the dashboard only follows it.
@@ -105,7 +105,7 @@ async function resume(env: Env, data: Record<string, unknown>) {
 
 async function ignore(env: Env, data: Record<string, unknown>) {
   if (Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
-  const counts = await twinCounts(env), percent = spreadPercent(counts.real, counts.twinned);
+  const counts = await catalogCounts(env), percent = spreadPercent(counts.real, counts.slop);
   if (percent === null) throw new HttpError(404, "Nessuna REAL approvata o pubblicata");
   await env.DB.prepare(`INSERT INTO slop_proposal_ignored(tag,spread_percent,created_at) VALUES(?,?,?)
     ON CONFLICT(tag) DO UPDATE SET spread_percent=excluded.spread_percent,created_at=excluded.created_at`).bind(IGNORE_KEY, percent, now()).run();
@@ -168,3 +168,4 @@ export async function guardBatch(env: Env, method: string, rest: string, data: R
   }
   if (action === "images" && row.prompts_status !== "done") throw new HttpError(409, "Prima completa brief e prompt");
 }
+

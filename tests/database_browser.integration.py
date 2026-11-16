@@ -230,7 +230,7 @@ with sync_playwright() as p:
         # Treatment with sliders: the SLOP gets the REAL (measured) as its source; the sliders start on the proposal, a change
         # redraws the preview in the page, saving makes the copy here with the owner's settings and uploads it.
         metrics = json.dumps({'long': 40, 'noise': 3.0, 'sharpness': 6.0, 'contrast': 120, 'saturation': 0.2, 'cast': [2, 0, -2], 'tint': [0, 0, 0], 'v': 3})
-        sql(f"UPDATE images SET generation_source='{real['id']}' WHERE id='{beach['id']}'; UPDATE images SET copy_metrics='{metrics}' WHERE id='{real['id']}'")
+        sql(f"UPDATE images SET generation_batch='test-treatment',generation_slot=json_object('target_metrics',json('{metrics}')) WHERE id='{beach['id']}'")
         page.get_by_role('button', name=f'Apri {prefix}-spiaggia').click()
         dialog.locator('#library-treatment-on').click()
         expect(dialog.locator('#library-detail-message')).to_have_text('Copia trattata.')
@@ -289,3 +289,4 @@ with sync_playwright() as p:
         sql(f"DELETE FROM game_sessions WHERE id='{session}'")
         print('Database browser E2E 1.7.0 passed (press-and-hold preview, no captions, cards without tags and title; format and crop, no view):', name)
     browser.close()
+

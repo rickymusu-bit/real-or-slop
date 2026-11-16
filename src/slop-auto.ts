@@ -57,18 +57,18 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
       html = '<p>Batch precedente in pausa: sola revisione. Nessuna chiamata verrà ripetuta.</p><button data-auto="stop">Chiudi generazione precedente</button><button data-auto="review">Rivedi nel Database</button>';
     } else if (batch && batch.status === "running") {
       const ready = batch.images.filter(i => i.analysis === "done").length;
-      html = `<p><strong>Batch automatico</strong> di SLOP gemelle: ${batch.attempted.length} di ${batch.slots} immagini inviate al generatore, ${ready} pronte.</p>
+      html = `<p><strong>Batch automatico</strong> di SLOP: ${batch.attempted.length} di ${batch.slots} immagini inviate al generatore, ${ready} pronte.</p>
         <p class="slop-auto-progress" role="status">${escape(batch.runner?.alive ? progress || "Generazione in corso sul server…" : "Generazione ferma sul server: si riprende da dove si è interrotta, senza ripetere chiamate già inviate.")}</p>
         <div class="slop-auto-actions">${batch.runner?.alive ? "" : '<button type="button" class="primary" data-auto="resume">Riprendi sul server</button>'}<button type="button" data-auto="stop">Interrompi</button></div>`;
     } else if (batch) {
-      html = `<p><strong>Batch automatico</strong> di SLOP gemelle: ${batch.undecided} di ${batch.images.length} ${batch.images.length === 1 ? "immagine" : "immagini"} da decidere.
+      html = `<p><strong>Batch automatico</strong> di SLOP: ${batch.undecided} di ${batch.images.length} ${batch.images.length === 1 ? "immagine" : "immagini"} da decidere.
         Nessuna nuova proposta finché non sono tutte approvate, pubblicate o nel cestino. Esaurite: ${batch.processes.filter(p=>p.state==="exhausted").length}; sospese: ${batch.processes.filter(p=>["review_needed","uncertain","failed"].includes(p.state)).length}.</p>
         ${(() => { const left = batch.processes.filter(p => ["draft", "ready", "retry"].includes(p.state)).length;
           return left ? `<p class="hint">${left} SLOP ancora da generare dalle REAL di riferimento del batch: il batch si è interrotto prima.</p>` : ""; })()}
         <div class="slop-auto-actions">${batch.processes.some(p => ["draft", "ready", "retry"].includes(p.state)) && !batch.runner?.alive ? '<button type="button" class="primary" data-auto="resume">Riprendi sul server</button>' : ""}<button type="button" data-auto="review">Rivedi nel Database</button><button type="button" data-auto="loop">Dettagli dei tentativi</button>${batch.undecided ? "" : '<button type="button" data-auto="close">Chiudi revisione</button>'}</div>`;
-    } else if (next && dismissed !== "twins:" + next.size) {
-      html = `<p><strong>Proposta di generazione</strong>: ${next.n_real} REAL, ${next.n_slop} con una SLOP gemella approvata o pubblicata,
-        ${next.n_new} con una gemella nuova da decidere; spread ${percent(next.spread_percent)}, ${next.missing} REAL senza gemella.
+    } else if (next && dismissed !== "catalog:" + next.size) {
+      html = `<p><strong>Proposta di generazione</strong>: ${next.n_real} REAL, ${next.n_slop} SLOP approvate o pubblicate,
+        ${next.n_new} SLOP nuove da decidere; spread ${percent(next.spread_percent)}, ${next.missing} SLOP mancanti.
         Generare un batch di <strong>${next.size} SLOP</strong>? Per ogni REAL: brief e prompt testuali, fino a ${state!.config.max_generation_attempts} generazioni e valutazioni, poi copia 4:5 e tag solo dopo accettazione. Massimo ${next.size*(2+2*state!.config.max_generation_attempts)} chiamate.</p>
         ${state!.paid_calls ? "" : '<p class="hint">Chiamate a pagamento spente: manca la chiave OpenAI.</p>'}
         <div class="slop-auto-actions"><button type="button" class="primary" data-auto="start" ${state!.paid_calls ? "" : "disabled"}>Genera ${next.size} SLOP</button>
@@ -131,7 +131,7 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
     const action = button.dataset.auto!, next = state.proposal;
     notice = "";
     try {
-      if (action === "dismiss" && next) { dismissed = "twins:" + next.size; render(); return; }
+      if (action === "dismiss" && next) { dismissed = "catalog:" + next.size; render(); return; }
       if (action === "loop" && state.batch) { await hooks.loop(state.batch.id); return; }
       if (action === "close") { state = await call<AutoState>(SLOP + "auto/close", {}); render(); return; }
       if (action === "review" && state.batch) { await hooks.review(state.batch.id); return; }
@@ -155,3 +155,4 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
   observeLibrary(() => { window.clearTimeout(timer); timer = window.setTimeout(() => { if (!running) void load(); }, 400); });
   return { refresh };
 }
+

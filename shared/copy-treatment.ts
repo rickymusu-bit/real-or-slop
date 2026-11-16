@@ -40,7 +40,7 @@ export interface Settings {
 export interface Applied extends Omit<Settings, "long"> { medium: string }
 export interface Treatment {
   version: number; off: boolean; seed: number; long: number; medium: string; color: string;
-  sample: { id: string; metrics: Metrics }; applied?: Applied; result?: Metrics; gap?: number;
+  sample: { metrics: Metrics }; applied?: Applied; result?: Metrics; gap?: number;
   /** Settings chosen by the owner (version 4); absent when the copy follows the proposal. */ settings?: Settings;
 }
 /** Range and step of each slider; the Worker refuses settings outside. */
@@ -321,9 +321,10 @@ export function validTreatment(value: unknown): Treatment | null {
   const t = value as Record<string, unknown>, sample = t.sample as Record<string, unknown> | undefined;
   if (typeof t.version !== "number" || t.version < 1 || t.version > TREATMENT_VERSION || typeof t.off !== "boolean" || typeof t.seed !== "number" || !Number.isSafeInteger(t.seed)
     || typeof t.long !== "number" || !Number.isSafeInteger(t.long) || t.long < 1 || typeof t.medium !== "string" || t.medium.length > 40
-    || typeof t.color !== "string" || t.color.length > 40 || !sample || typeof sample.id !== "string" || !/^[\w-]{1,64}$/.test(sample.id)
+    || typeof t.color !== "string" || t.color.length > 40 || !sample || typeof sample !== "object" || Array.isArray(sample) || "id" in sample
     || !validMetrics(sample.metrics)) return null;
   if (t.result !== undefined && !validMetrics(t.result)) return null;
   if (t.settings !== undefined && !validSettings(t.settings, Math.max(t.long, (t.settings as { long?: number } | null)?.long ?? 0))) return null;
   return value as Treatment;
 }
+

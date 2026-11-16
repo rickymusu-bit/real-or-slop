@@ -4,7 +4,7 @@ import { HttpError, type Env } from "./core";
 import { since as openSince } from "./in-play";
 import { levels } from "./game";
 import { groupMeasures, groups } from "./slop-groups";
-import { twinCounts } from "./twins";
+import { catalogCounts } from "./slop-references";
 import { LEVEL_IDS, scoreOf, type Level, type Outcome } from "../shared/levels";
 
 const NOW_MS = 5 * 60_000, DAY_MS = 86_400_000;
@@ -64,11 +64,12 @@ export async function stats(env: Env, period: string) {
       slop: { approved: count("SLOP", "approved"), published: count("SLOP", "published") },
       real_share_published: share === null ? null : Math.round(share * 1000) / 1000,
       warning: share !== null && (share < 0.4 || share > 0.6), levels: (await levels(env)).levels,
-      groups: await groupBalance(env), measures: await groupMeasures(env), twins: await twinCounts(env) },
+      groups: await groupBalance(env), measures: await groupMeasures(env), balance: await catalogCounts(env) },
   };
 }
 
-/** Groups of genre and decade with their counts, and the twins: REAL, REAL with an approved or published twin, REAL waiting. */
+/** Independent SLOP catalogue and anonymous editorial inputs. */
 async function groupBalance(env: Env) {
   return (await groups(env)).map(g => ({ group: g.key, real: g.real, slop: g.slop, fresh: g.fresh, spread: g.real - g.slop }));
 }
+

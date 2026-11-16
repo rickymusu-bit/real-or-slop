@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 26.4.0, aggiornata il 2026-11-16T18:16:17Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 27.0.1, aggiornata il 2026-11-16T21:28:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -8,6 +8,8 @@ rilascia. Le regole di lavoro sono in `AGENTS.md`, la storia delle versioni
 in `CHANGELOG.md`.
 
 ## Stato
+
+- **Ramo 1.36.0 (PR #151):** SLOP indipendenti, migrazione 0053, proposte sullo spread del catalogo; revisione tecnica in `docs/revisione-codice.md`. Validazione del trattamento anonimo anche per campioni malformati, con test di regressione in `tests/copy-treatment.test.ts`. Nessun rilascio eseguito.
 
 - **In produzione:** app 1.35.0 (PR rickymusu-bit/real-or-slop#149; migrazioni fino alla 0052), Workers Paid dal 2026-11-16,
   Workers Logs attivi. 20 REAL approvate con tag e descrizione; copie fatte nel browser (con la 1.34.0 restano valide). Nessuna immagine pubblicata. Il primo batch automatico, ripreso sul server il 2026-11-16 alle 08:24 UTC, è finito alle
@@ -55,13 +57,13 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.9.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 4.0.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 11.1.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.0.1 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.7.0 |
-| SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.11.0 |
+| SLOP indipendenti, studio e batch automatici | `docs/generazione-slop.md` | 6.0.0 |
 | Sezione Database | `docs/database-immagini.md` | 2.9.0 |
-| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 2.2.0 |
+| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.0.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.8.1 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
 
@@ -111,14 +113,14 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - Libreria `library.ts` (stati, vocabolario, alias, categorie, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   analisi `analysis.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
-- SLOP: studio `slop.ts`, gemelle `twins.ts`, generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
+- SLOP: studio `slop.ts`, riferimenti editoriali temporanei `slop-references.ts`, generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
   `slop-runner.ts`, batch automatici `slop-auto.ts`, gruppi e loro misure per Database e Statistiche `slop-groups.ts`.
 - Corpo delle richieste con un'immagine (analisi e valutazione, base64 scritto nei byte) `image-body.ts`.
 - Copie di gioco: controllo e conservazione della copia caricata dal browser in `library.ts` (`POST /:id/copy`).
 - Gioco `game.ts` con `sampling.ts` e `random.ts`, classifica `leaderboard.ts`.
 
 **Codice condiviso** (`shared/`): tag `tags.ts`, tag scritti a mano `tag-input.ts`, categorie `tag-categories.ts`, modelli OpenAI
-`models.ts`, gemelle, proposta dei batch e coppie in partita `twins.ts`, gruppi `slop-groups.ts`, formati e ricetta della copia
+`models.ts`, proposta dei batch `slop-proposals.ts`, gruppi `slop-groups.ts`, formati e ricetta della copia
 `game-copy.ts`, misure e trattamento `copy-treatment.ts`, licenze ND
 `licenses.ts`, pulizia dei metadati `media-clean.ts`, livelli e punteggio `levels.ts`, costanti legali `legal.ts`, controllo delle
 immagini `editorial.ts` (descrizioni, brief e valutazioni), `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
@@ -150,6 +152,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0049 | REAL di origine di una SLOP gemella |
 | 0050 | descrizione editoriale REAL e provenienza, contesto Commons separato, processi/tentativi privati, chiamate evaluation e collegamenti, snapshot e impostazioni del loop; batch legacy invariati |
 | 0051 | contesto «Valutazione delle SLOP» e pipeline di ogni versione del contesto (testi delle gemelle = 1) |
+| 0053 | snapshot editoriali anonimi, rimozione dei legami REAL/SLOP; conservazione di processi, tentativi e chiamate |
 | 0052 | runner del ciclo SLOP su Cloudflare per batch: istanza, stato, ultimo passo |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
@@ -178,3 +181,4 @@ test d'integrazione eseguiti è in `scripts/integration.py`.
 il modulo Python `playwright`: `pip install playwright` e `ROS_CHROMIUM_PATH` sul Chromium installato.
 
 **Consegna del lavoro:** pubblicare sempre il ramo e aprire o aggiornare una PR per avviare i controlli CI (`AGENTS.md` 22.3.0). Commit e patch locali non completano la consegna.
+

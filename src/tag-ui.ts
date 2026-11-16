@@ -25,10 +25,9 @@ export const suggestedCategory = (label: string, vocabulary: Map<string, Categor
 /** Legend of the colours. */
 export const legend = () => '<p class="tag-legend">' + CATEGORIES.map(c => pill(CATEGORY_LABELS[c], c, "tag-legend-item")).join("") + "</p>";
 
-/** What a generated SLOP started from, as stored with it: a twin keeps the tags of its source REAL; a SLOP drawn before the twins
- * keeps a group, a theme and one tag per category. */
+/** Independent SLOP catalogue and anonymous editorial inputs. */
 export interface StartSlot {
-  index?: number; source?: string | null; sample?: string | null; group?: string | null; theme?: string[];
+  index?: number; group?: string | null; theme?: string[];
   tags?: { label: string; category: string }[] | Record<string, string>;
 }
 /** The starting tags of a slot with their category and, for the old slots, a note («gruppo», «tema»). */
@@ -44,3 +43,4 @@ export function startTagList(slot: StartSlot | null | undefined): { label: strin
 }
 export const startPills = (slot: StartSlot | null | undefined) =>
   startTagList(slot).map(t => pill(t.label, t.category, "rw-pill", t.note ? " <small>" + t.note + "</small>" : "")).join("");
+

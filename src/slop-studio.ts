@@ -5,7 +5,7 @@ import { chooseTreatment } from "./treatment-editor";
 import { chooseFrame } from "./crop-editor";
 import { escape } from "../shared/html";
 import { BRIEF_KEYS, type Brief, type Evaluation } from "../shared/editorial";
-import type { TwinItem } from "../shared/twins";
+import type { InspirationItem } from "../shared/slop-proposals";
 import { onLongPress, openPreview } from "./image-preview";
 import { startPills } from "./tag-ui";
 interface Config { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string }
@@ -13,10 +13,10 @@ interface Image extends TreatableItem { id: string; status: string; revision: nu
   width: number; height: number; copy: Parameters<typeof chooseFrame>[3]; prompt: string; analysis: { status: string; error: string } }
 interface Attempt {id: string; number: number; prompt: string; status: string; evaluation: Evaluation | null; file: string | null}
 interface Process {id: string; slot: number; state: string; prompt: string; brief: Brief | null; attempts: Attempt[]; error: string; calls: number; image_id: string | null}
-interface Batch {id: string; items: TwinItem[]; prompts: {prompt: string; brief?: Brief}[]; processes: Process[]; config: Config | null; max_calls: number;
+interface Batch {id: string; items: InspirationItem[]; prompts: {prompt: string; brief?: Brief}[]; processes: Process[]; config: Config | null; max_calls: number;
   runner: {id: string; status: string | null; updated_at: string | null; alive: boolean} | null;
   pipeline_version: number; prompts_status: string; prompts_error: string; images: Image[]}
-interface Waiting {id: string; title: string; file: string; described: boolean; tags: TwinItem["tags"]}
+interface Waiting {id: string; title: string; file: string; described: boolean; tags: InspirationItem["tags"]}
 interface Attention extends Process {title: string; batch_id: string; updated_at: string}
 interface State {thresholds: {section: number; max_batch: number}; real_total: number; waiting: Waiting[]; attention: Attention[]}
 const STATE_LABELS: Record<string, string> = {exhausted: "tentativi esauriti senza SLOP", review_needed: "il valutatore chiede la tua revisione",
@@ -179,3 +179,4 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
   });
   await refresh();return {refresh};
 }
+

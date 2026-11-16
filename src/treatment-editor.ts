@@ -19,7 +19,7 @@ const safe = (text: string) => text.replace(/[<>&"]/g, "");
 /** Opens the editor for a SLOP. Resolves with the settings to save (null: the proposal) or undefined if cancelled. */
 export async function chooseTreatment(item: TreatableItem, title = ""): Promise<{ settings: Settings | null } | undefined> {
   const plan = await treatmentPlan(item, { off: false });
-  if (!plan) throw Error("La REAL di riferimento non ha misure: copia senza trattamento");
+  if (!plan) throw Error("Il processo non ha misure fotografiche: copia senza trattamento");
   const bitmap = await createImageBitmap(await originalOf(item.id), { imageOrientation: "from-image" });
   const frame = item.copy?.crop || centredCrop(bitmap.width, bitmap.height), cropLong = Math.max(frame.width, frame.height);
   // The proposal on the stored crop, at the long side proposed from the source REAL.
@@ -35,9 +35,9 @@ export async function chooseTreatment(item: TreatableItem, title = ""): Promise<
     const limit = key.startsWith("cast") ? limits.cast : limits[key as Scalar];
     return `<label class="treatment-slider" data-row="${key}"><span>${label}</span><input type="range" data-key="${key}" min="${limit.min}" max="${limit.max}" step="${limit.step}"><output data-out="${key}"></output></label>`;
   };
-  dialog.innerHTML = `<h2>Trattamento</h2><p class="hint">${title ? `«${safe(title)}». ` : ""}I cursori partono dal trattamento proposto in base alla REAL di riferimento (${safe(plan.medium || "supporto non indicato")}, ${safe(plan.color || "colore non indicato")}). L'anteprima è calcolata in questa pagina e non viene salvata finché non scegli «Salva il trattamento».</p>
+  dialog.innerHTML = `<h2>Trattamento</h2><p class="hint">${title ? `«${safe(title)}». ` : ""}I cursori partono dal trattamento proposto in base alle misure fotografiche salvate (${safe(plan.medium || "supporto non indicato")}, ${safe(plan.color || "colore non indicato")}). L'anteprima è calcolata in questa pagina e non viene salvata finché non scegli «Salva il trattamento».</p>
     <div class="treatment-views"><figure><canvas data-view="preview" aria-label="Anteprima della copia trattata"></canvas><figcaption data-caption="preview">Anteprima</figcaption></figure>
-    <figure><img data-view="sample" alt="Copia di gioco della REAL di riferimento" src="/api/admin/library/${encodeURIComponent(plan.sample.id)}/file"><figcaption>REAL di riferimento: ${metricText(plan.sample.metrics)}</figcaption></figure></div>
+    <aside class="treatment-target"><h3>Obiettivo fotografico</h3><p>${metricText(plan.sample.metrics)}</p><p>Misure salvate nel processo, indipendenti dalla foto di ispirazione.</p></aside></div>
     <p class="hint" role="status" data-status></p>
     <div class="treatment-controls"><label class="treatment-slider"><span>Colore</span><select data-key="monochrome">${MONOCHROME.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select><output></output></label>
     ${SLIDERS.map(([key, label]) => field(key, label)).join("")}</div>
@@ -103,3 +103,4 @@ export async function chooseTreatment(item: TreatableItem, title = ""): Promise<
     dialog.close(); dialog.remove();
   }
 }
+

@@ -1,4 +1,4 @@
-# Libreria delle immagini, tag e analisi — specifica 3.9.0
+# Libreria delle immagini, tag e analisi — specifica 4.0.0
 
 Stato: vigente; la 3.8.1 è in produzione con l'app 1.30.1, la 3.9.0 è per l'app 1.30.2. Aggiornata: 2026-11-15T21:07:23Z. La 3.9.0 ammette nelle azioni
 in gruppo la ripetizione confermata degli esiti incerti o interrotti (decisione dell'owner del 2026-11-15). La 3.8.1 corregge la
@@ -203,7 +203,7 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
   `leaderboard`, `rate_limits`). Elenco delle migrazioni in `MASTER.md`.
 - Migrazione 0048 (`images`): `categories_completed_at` (completamento delle tre categorie), `copy_metrics` (misure della copia di
   gioco) e `copy_treatment` (trattamento di una SLOP), specifica `copie-di-gioco`, sezione 4; `generation_group`, oggi inutilizzata.
-- Migrazione 0049 (`images`): `generation_source`, la REAL di cui una SLOP è la gemella (specifica `generazione-slop`).
+- Migrazione 0053: rimuove `generation_source` e `source_id`, anonimizza slot e trattamento e preserva tentativi e chiamate. La migrazione storica 0049 aveva introdotto il legame, ora eliminato.
 - Colonne inutilizzate, lasciate per non ricostruire le tabelle: `caption`, `generated_caption` (`images`), `caption` e `copy_view`
   (`game_rounds`), `copy_view` (`images`).
 - R2: quarantena privata (`library/<id>/`: originale e copia) e bucket del gioco (copie pubblicate).
@@ -211,3 +211,4 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
 
 Migrazione 0050: descrizioni e provenienza, contesto Commons originale, `slop_processes` e `slop_attempts`, collegamenti del registro `paid_calls`, versione/snapshot del batch. Nessuna conversione o chiamata sulle REAL storiche.
 Migrazione 0051 (`model_contexts`): parte `slop_evaluation` e colonna `pipeline` (sezione 7); testi, date e identificativi conservati.
+
