@@ -32,6 +32,8 @@ export default {
         throw new HttpError(404, "API inesistente");
       return env.ASSETS.fetch(request);
     } catch (error) {
+      // Unexpected errors reach the Workers Logs with their stack; the owner sees «Errore del server».
+      if (!(error instanceof HttpError)) console.error("unexpected", request.method, new URL(request.url).pathname, error instanceof Error ? error.stack || error.message : String(error));
       const response = json(
         {
           error:

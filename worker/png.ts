@@ -7,50 +7,83 @@ async function through(bytes: Uint8Array, stream: CompressionStream | Decompress
   return new Uint8Array(await out.arrayBuffer());
 }
 const SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
-const CHANNELS: Record<number, number> = { 0: 1, 2: 3, 4: 2, 6: 4 };
+const CHANNELS: Record<number, number> = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 };
+const DEPTHS: Record<number, number[]> = { 0: [1, 2, 4, 8, 16], 2: [8, 16], 3: [1, 2, 4, 8], 4: [8, 16], 6: [8, 16] };
+/** Adam7 passes: start x, start y, step x, step y. */
+const ADAM7 = [[0, 0, 8, 8], [4, 0, 8, 8], [0, 4, 4, 8], [2, 0, 4, 4], [0, 2, 2, 4], [1, 0, 2, 2], [0, 1, 1, 2]];
 
 export interface Pixels { width: number; height: number; rgba: Uint8ClampedArray }
 
+/** Any standard PNG: grey, RGB, palette, grey+alpha, RGBA; 1 to 16 bits; interlaced or not. Transparency is flattened on white
+ * (the recipe of the copies), the result is opaque RGBA. The Images binding may return any of these, depending on the image: a black
+ * and white picture can come back as grey or palette PNG (2026-11-16: the copy of a black and white SLOP failed on it). */
 export async function decodePng(bytes: Uint8Array): Promise<Pixels> {
   if (bytes.length < 33 || SIGNATURE.some((b, i) => bytes[i] !== b)) throw Error("PNG non valido");
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let at = 8, width = 0, height = 0, depth = 0, type = -1, interlace = 0;
+  let palette = new Uint8Array(), alphas = new Uint8Array();
   const data: Uint8Array[] = [];
   while (at + 8 <= bytes.length) {
     const length = view.getUint32(at), name = String.fromCharCode(...bytes.subarray(at + 4, at + 8)), body = bytes.subarray(at + 8, at + 8 + length);
     if (name === "IHDR") { width = view.getUint32(at + 8); height = view.getUint32(at + 12); depth = body[8]; type = body[9]; interlace = body[12]; }
+    else if (name === "PLTE") palette = body.slice();
+    else if (name === "tRNS") alphas = body.slice();
     else if (name === "IDAT") data.push(body);
     else if (name === "IEND") break;
     at += 12 + length;
   }
   const channels = CHANNELS[type];
-  if (!width || !height || depth !== 8 || !channels || interlace) throw Error("PNG non supportato");
+  if (!width || !height || !channels || !DEPTHS[type].includes(depth) || interlace > 1 || (type === 3 && !palette.length))
+    throw Error(`PNG non supportato (tipo ${type}, ${depth} bit, interlacciamento ${interlace})`);
   const joined = new Uint8Array(data.reduce((n, d) => n + d.length, 0));
   let offset = 0; for (const d of data) { joined.set(d, offset); offset += d.length; }
   const raw = await through(joined, new DecompressionStream("deflate"));
-  const stride = width * channels;
-  if (raw.length < (stride + 1) * height) throw Error("PNG troncato");
-  const rgba = new Uint8ClampedArray(width * height * 4), line = new Uint8Array(stride), previous = new Uint8Array(stride);
-  for (let y = 0; y < height; y++) {
-    const filter = raw[y * (stride + 1)], row = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
-    for (let i = 0; i < stride; i++) {
-      const left = i >= channels ? line[i - channels] : 0, up = previous[i], corner = i >= channels ? previous[i - channels] : 0;
-      let value = row[i];
-      if (filter === 1) value += left;
-      else if (filter === 2) value += up;
-      else if (filter === 3) value += (left + up) >> 1;
-      else if (filter === 4) {
-        const p = left + up - corner, pa = Math.abs(p - left), pb = Math.abs(p - up), pc = Math.abs(p - corner);
-        value += pa <= pb && pa <= pc ? left : pb <= pc ? up : corner;
-      } else if (filter !== 0) throw Error("Filtro PNG sconosciuto");
-      line[i] = value & 255;
+  const bits = channels * depth, unit = Math.max(1, bits >> 3), max = (1 << Math.min(depth, 8)) - 1;
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  // One sample of a line: value scaled to 0–255 (16 bits: the high byte).
+  const sample = (line: Uint8Array, index: number) => {
+    if (depth === 8) return line[index];
+    if (depth === 16) return line[index * 2];
+    const bit = index * depth, value = (line[bit >> 3] >> (8 - depth - (bit & 7))) & max;
+    return type === 3 ? value : Math.round(value * 255 / max);
+  };
+  const put = (line: Uint8Array, column: number, x: number, y: number) => {
+    const o = (y * width + x) * 4, base = column * channels;
+    let r: number, g: number, b: number, a = 255;
+    if (type === 3) {
+      const index = sample(line, base);
+      r = palette[index * 3] ?? 0; g = palette[index * 3 + 1] ?? 0; b = palette[index * 3 + 2] ?? 0; a = index < alphas.length ? alphas[index] : 255;
+    } else if (channels <= 2) { r = g = b = sample(line, base); if (channels === 2) a = sample(line, base + 1); }
+    else { r = sample(line, base); g = sample(line, base + 1); b = sample(line, base + 2); if (channels === 4) a = sample(line, base + 3); }
+    // Transparency on white, then opaque.
+    rgba[o] = r + (255 - r) * (1 - a / 255); rgba[o + 1] = g + (255 - g) * (1 - a / 255); rgba[o + 2] = b + (255 - b) * (1 - a / 255); rgba[o + 3] = 255;
+  };
+  let position = 0;
+  const passes = interlace ? ADAM7 : [[0, 0, 1, 1]];
+  for (const [x0, y0, dx, dy] of passes) {
+    const columns = Math.ceil((width - x0) / dx), rows = Math.ceil((height - y0) / dy);
+    if (columns <= 0 || rows <= 0) continue;
+    const stride = Math.ceil(columns * bits / 8);
+    if (raw.length < position + (stride + 1) * rows) throw Error("PNG troncato");
+    let previous = new Uint8Array(stride), line = new Uint8Array(stride);
+    for (let row = 0; row < rows; row++) {
+      const filter = raw[position], input = raw.subarray(position + 1, position + 1 + stride);
+      position += stride + 1;
+      for (let i = 0; i < stride; i++) {
+        const left = i >= unit ? line[i - unit] : 0, up = previous[i], corner = i >= unit ? previous[i - unit] : 0;
+        let value = input[i];
+        if (filter === 1) value += left;
+        else if (filter === 2) value += up;
+        else if (filter === 3) value += (left + up) >> 1;
+        else if (filter === 4) {
+          const p = left + up - corner, pa = Math.abs(p - left), pb = Math.abs(p - up), pc = Math.abs(p - corner);
+          value += pa <= pb && pa <= pc ? left : pb <= pc ? up : corner;
+        } else if (filter !== 0) throw Error("Filtro PNG sconosciuto");
+        line[i] = value & 255;
+      }
+      for (let column = 0; column < columns; column++) put(line, column, x0 + column * dx, y0 + row * dy);
+      [previous, line] = [line, previous];
     }
-    for (let x = 0, o = y * width * 4; x < width; x++, o += 4) {
-      const i = x * channels;
-      if (channels >= 3) { rgba[o] = line[i]; rgba[o + 1] = line[i + 1]; rgba[o + 2] = line[i + 2]; rgba[o + 3] = channels === 4 ? line[i + 3] : 255; }
-      else { rgba[o] = rgba[o + 1] = rgba[o + 2] = line[i]; rgba[o + 3] = channels === 2 ? line[i + 1] : 255; }
-    }
-    previous.set(line);
   }
   return { width, height, rgba };
 }

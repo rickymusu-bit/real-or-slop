@@ -1,6 +1,7 @@
-# Copie di gioco — specifica 10.0.0
+# Copie di gioco — specifica 10.0.1
 
-Stato: vigente; la 9.2.0 è in produzione con l'app 1.30.2, la 10.0.0 è per l'app 1.32.0. Aggiornata: 2026-11-15T23:09:52Z. La 10.0.0 sposta la
+Stato: vigente; la 10.0.0 è in produzione con l'app 1.33.0, la 10.0.1 è per l'app 1.33.1. Aggiornata: 2026-11-16T08:40:56Z. La 10.0.1: il Worker legge
+ogni PNG restituito da Images (palette, grigio, 1–16 bit, interlacciato). La 10.0.0 sposta la
 preparazione delle copie dal browser al Worker (decisione dell'owner del 2026-11-15: il browser è solo un'interfaccia). La 9.0.0 riporta tutte
 le copie di gioco al formato verticale 4:5 e prende le misure del trattamento dalla REAL di origine. Le versioni precedenti restano
 nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia e il gioco serve esattamente quei byte.
@@ -46,7 +47,9 @@ di testo non sceglie più il formato.
   Commons di una REAL, accettazione di una SLOP), con il ritaglio 4:5 più grande, centrato. Passi: il binding Images di Cloudflare
   decodifica l'originale (orientamento applicato) e lo riduce a un'immagine di lavoro di al massimo sei megapixel, in PNG; il Worker
   ritaglia e ricampiona per aree alla dimensione della copia, applica alle SLOP il trattamento (sezione 4) con la compressione JPEG
-  intermedia fatta da Images, poi Images codifica il WebP (qualità 85); la copia viene misurata decodificandola di nuovo. Il browser
+  intermedia fatta da Images, poi Images codifica il WebP (qualità 85); la copia viene misurata decodificandola di nuovo. Images
+  sceglie il tipo di PNG secondo l'immagine (una foto in bianco e nero può tornare in grigio o a palette): il Worker li legge tutti
+  (`worker/png.ts`), con le trasparenze su fondo bianco; un errore di Images o di lettura arriva all'owner con il suo motivo. Il browser
   sceglie soltanto l'inquadratura e chiede la copia (`POST /:id/copy {crop?, treatment?: {off}, force?}`); un file inviato dal browser
   è rifiutato. Le stesse inquadratura e trattamento non rifanno la copia, salvo `force`.
 - In sviluppo locale e nei test il binding Images è emulato da Wrangler con sharp (ridimensionamento e codifica; la qualità del WebP

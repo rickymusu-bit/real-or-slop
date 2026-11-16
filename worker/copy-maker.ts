@@ -17,12 +17,19 @@ const WORK_PIXELS = 6_000_000;
 /** One pass through the Images binding: input bytes, optional resize, output in the given format. */
 async function photo(env: Env, bytes: Uint8Array, output: ImageOutputOptions, transform?: ImageTransform): Promise<Uint8Array> {
   if (!env.PHOTO) throw new HttpError(503, "Elaborazione delle immagini non configurata (binding Images)");
-  let work = env.PHOTO.input(new Blob([bytes]).stream());
-  if (transform) work = work.transform(transform);
-  const result = await work.output(output);
-  return new Uint8Array(await result.response().arrayBuffer());
+  try {
+    let work = env.PHOTO.input(new Blob([bytes]).stream());
+    if (transform) work = work.transform(transform);
+    const result = await work.output(output);
+    return new Uint8Array(await result.response().arrayBuffer());
+  } catch (error) { throw new HttpError(502, "Cloudflare Images: " + (error instanceof Error ? error.message : String(error)).slice(0, 200)); }
 }
-const pixelsOf = async (env: Env, bytes: Uint8Array, transform?: ImageTransform) => decodePng(await photo(env, bytes, { format: "image/png" }, transform));
+/** Pixels of an image through Images, as PNG. A PNG this Worker cannot read is a 502 with its reason, not an internal error. */
+const pixelsOf = async (env: Env, bytes: Uint8Array, transform?: ImageTransform) => {
+  const png = await photo(env, bytes, { format: "image/png" }, transform);
+  try { return await decodePng(png); }
+  catch (error) { throw new HttpError(502, "Copia di gioco: " + (error instanceof Error ? error.message : String(error)).slice(0, 200)); }
+};
 
 /** Area (box) resampling of the rectangle `rect` of `source` (float coordinates) into width × height: each output pixel is the
  * average of the source pixels it covers, weighted by the covered fraction. Never enlarges detail: a smaller source is spread. */

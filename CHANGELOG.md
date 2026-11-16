@@ -1,9 +1,21 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-16T07:50:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-16T08:40:56Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.33.0 — 2026-11-16T07:50:00Z
+## 1.33.1 — 2026-11-16T08:40:56Z
+
+- **Copia delle SLOP in bianco e nero:** la copia della SLOP in bianco e nero accettata il 2026-11-16 non si creava («Errore del
+  server», cinque tentativi dalla scheda, 3–4 s di CPU ciascuno nei Workers Logs). Il trattamento funziona (riprodotto in locale con
+  l'immagine vera); il decodificatore PNG del Worker accettava solo PNG RGB o grigi a 8 bit, mentre Cloudflare Images restituisce il
+  tipo di PNG adatto all'immagine (grigio o a palette per un bianco e nero). Ora legge palette, grigio, 1–16 bit, interlacciato e
+  trasparenze (su fondo bianco); test unitario su PNG prodotti da sharp in tutte queste varianti. Causa dedotta, non osservata: la
+  risposta di Images non è stata registrata.
+- Un errore di Images o della lettura del PNG arriva all'owner con il suo motivo (502), non come errore generico; ogni eccezione
+  imprevista del Worker finisce nei Workers Logs con la sua traccia.
+- Specifica `copie-di-gioco` 10.0.1, `MASTER.md` 25.1.1.
+
+## 1.33.0 — 2026-11-16T07:50:00Z (rilasciata il 2026-11-16)
 
 - **Un passo fermato dalla piattaforma non ferma più il batch:** il 2026-11-16 un tentativo è stato interrotto da Cloudflare per
   CPU dopo la generazione e il Workflow ha messo in revisione l'intero batch, lasciando 6 REAL con brief mai tentate. Ora quella REAL

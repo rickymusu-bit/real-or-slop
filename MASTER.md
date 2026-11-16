@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 25.1.0, aggiornata il 2026-11-16T07:50:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 25.1.1, aggiornata il 2026-11-16T08:40:56Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,16 +9,16 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **In produzione:** app 1.32.0 (PR rickymusu-bit/real-or-slop#146, rilasciata il 2026-11-16 alle 04:36 UTC; migrazioni fino alla
-  0052). Account Cloudflare su Workers Paid dal 2026-11-16. 20 REAL approvate con tag e descrizione; copie ancora fatte nel browser
-  (da rifare con «Rifai la copia di gioco»). Nessuna immagine pubblicata: nessun livello è giocabile. Il primo batch automatico,
-  ripreso alle 05:35, si è fermato alle 05:40 per un passo interrotto per CPU («Worker exceeded CPU time limit»): 1 SLOP accettata
-  senza copia, 1 revisione chiesta, 1 brief incerto, 1 tentativo interrotto (generazione pagata e persa), 6 REAL con brief mai
-  tentate; batch in revisione. Su indicazione dell'owner, il 2026-11-15 alle 17:24 UTC sono stati salvati direttamente nel D1 il
-  contesto «Brief e prompt per le SLOP» proposto e la soglia dello studio a 20 REAL. Qualità immagini `medium`.
-- **Nel ramo 1.33.0 (PR #147 da unire, comprende la 1.32.1):** Workers Logs attivi; un passo fermato dalla piattaforma chiude solo
-  la sua REAL; «Riprendi sul server» anche per un batch in revisione con SLOP ancora da generare; copia della SLOP accettata in un passo a sé;
-  limite di CPU di cinque minuti (`limits.cpu_ms`). Dopo il rilascio: «Riprendi sul server» sul batch fermo.
+- **In produzione:** app 1.33.0 (PR rickymusu-bit/real-or-slop#147; migrazioni fino alla 0052), Workers Paid dal 2026-11-16,
+  Workers Logs attivi. 20 REAL approvate con tag e descrizione; copie ancora fatte nel browser (da rifare con «Rifai la copia di
+  gioco»). Nessuna immagine pubblicata. Il primo batch automatico, ripreso sul server il 2026-11-16 alle 08:24 UTC, è finito alle
+  08:32: 4 SLOP accettate (3 con copia; quella in bianco e nero accettata alle 05:38 senza copia, vedi 1.33.1), 4 revisioni chieste,
+  2 incerti. Su indicazione dell'owner, il 2026-11-15 sono stati salvati direttamente nel D1 il contesto «Brief e prompt per le SLOP»
+  proposto e la soglia dello studio a 20 REAL. Qualità immagini `medium`.
+- **Nel ramo 1.33.1 (PR da unire):** il Worker legge ogni tipo di PNG restituito da Images (la copia della SLOP in bianco e nero
+  falliva con «Errore del server»); errori di Images con il loro motivo; eccezioni impreviste scritte nei log.
+- **Nella 1.33.0:** un passo fermato dalla piattaforma chiude solo la sua REAL; «Riprendi sul server» anche per un batch in
+  revisione; copia della SLOP in un passo a sé; limite di CPU di cinque minuti; Workers Logs (1.32.1).
 - **Nella 1.32.0:** il browser è solo un'interfaccia: copie di gioco preparate dal Worker con il binding Images, «Rifai la copia di
   gioco» come Workflow.
 - **Nella 1.31.0:** il ciclo SLOP gira su Cloudflare in un Workflow; la dashboard lo avvia e lo segue.
@@ -46,7 +46,7 @@ nome.
 |---|---|---|
 | Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 3.9.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 10.0.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 10.0.1 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.6.0 |
 | SLOP gemelle, studio e batch automatici | `docs/generazione-slop.md` | 5.7.0 |
 | Sezione Database | `docs/database-immagini.md` | 2.8.0 |

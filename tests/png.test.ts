@@ -38,3 +38,29 @@ test("area resampling averages the covered pixels and keeps a uniform image unif
   // A crop of the white half, enlarged: still white.
   assert.ok([...resample(source, { x: 2, y: 0, width: 2, height: 2 }, 3, 3)].every((v, i) => i % 4 === 3 || v === 255));
 });
+
+test("palette, grey, 1–16 bit, interlaced and transparent PNG decode like a reference (sharp), flattened on white", async () => {
+  const { default: sharp } = await import("sharp");
+  const width = 33, height = 21, colour = Buffer.alloc(width * height * 4);
+  for (let i = 0; i < width * height; i++) { colour[i * 4] = (i * 7) & 255; colour[i * 4 + 1] = (i * 13) & 255; colour[i * 4 + 2] = (i * 29) & 255; colour[i * 4 + 3] = i % 5 ? 255 : 128; }
+  const source = sharp(colour, { raw: { width, height, channels: 4 } });
+  const variants: Record<string, Buffer> = {
+    rgba: await source.clone().png().toBuffer(),
+    palette: await source.clone().png({ palette: true, colours: 64, dither: 0 }).toBuffer(),
+    twoColours: await source.clone().png({ palette: true, colours: 2, dither: 0 }).toBuffer(),
+    grey: await source.clone().flatten({ background: "#ffffff" }).toColourspace("b-w").png().toBuffer(),
+    greyAlpha: await source.clone().toColourspace("b-w").png().toBuffer(),
+    sixteen: await source.clone().flatten({ background: "#ffffff" }).toColourspace("rgb16").png().toBuffer(),
+    interlaced: await source.clone().png({ progressive: true }).toBuffer(),
+  };
+  for (const [name, png] of Object.entries(variants)) {
+    const decoded = await decodePng(new Uint8Array(png));
+    const expected = await sharp(png).flatten({ background: "#ffffff" }).toColourspace("srgb").raw().toBuffer({ resolveWithObject: true });
+    assert.equal(decoded.width, width, name); assert.equal(decoded.height, height, name);
+    const channels = expected.info.channels;
+    let worst = 0;
+    for (let i = 0; i < width * height; i++) for (let k = 0; k < 3; k++)
+      worst = Math.max(worst, Math.abs(decoded.rgba[i * 4 + k] - expected.data[i * channels + (channels >= 3 ? k : 0)]));
+    assert.ok(worst <= 2, `${name}: largest difference ${worst}`);
+  }
+});
