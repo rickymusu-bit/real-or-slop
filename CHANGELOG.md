@@ -1,15 +1,17 @@
-# 1.37.0
-
-Dashboard riprogettata in tutte le sezioni: ricerca catalogo, navigazione persistente, impostazioni raggruppate, revisioni progressive. Proposte automatiche dal fabbisogno globale, con campione casuale di REAL e nessuna soglia di spread o gruppo. Migrazione 0054.
-
-# 1.36.0
-
-SLOP indipendenti: nessun legame persistente con la REAL, coesistenza in partita, conteggi del catalogo e trattamento da misure anonime. Migrazione 0053 preserva tentativi e chiamate. Revisione tecnica e ripartizione Sol/Astra in docs/revisione-codice.md.
-
 # Registro delle versioni
 
-Aggiornato: 2026-11-16T18:16:17Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-16T22:03:33Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.37.0 — 2026-11-16T22:03:33Z
+
+- Dashboard riprogettata in tutte le sezioni: ricerca catalogo, navigazione persistente, impostazioni raggruppate, revisioni progressive. Proposte automatiche dal fabbisogno globale, con campione casuale di REAL e nessuna soglia di spread o gruppo. Migrazione 0054.
+- Allineamento a main dopo la #151, conservando i controlli del trattamento anonimo; verifica browser aggiornata alla nuova presentazione dei conteggi.
+
+## 1.36.0 — 2026-11-16T21:28:00Z
+
+- SLOP indipendenti: nessun legame persistente con la REAL, coesistenza in partita, conteggi del catalogo e trattamento da misure anonime. Migrazione 0053 preserva tentativi e chiamate. Revisione tecnica e ripartizione Sol/Astra in `docs/revisione-codice.md`.
+- Campioni malformati nel trattamento anonimo rifiutati senza errore interno; test di regressione per valori JSON primitivi e campioni incompleti.
 
 ## 1.35.1 — 2026-11-16T18:16:17Z
 

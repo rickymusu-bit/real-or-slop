@@ -321,7 +321,7 @@ export function validTreatment(value: unknown): Treatment | null {
   const t = value as Record<string, unknown>, sample = t.sample as Record<string, unknown> | undefined;
   if (typeof t.version !== "number" || t.version < 1 || t.version > TREATMENT_VERSION || typeof t.off !== "boolean" || typeof t.seed !== "number" || !Number.isSafeInteger(t.seed)
     || typeof t.long !== "number" || !Number.isSafeInteger(t.long) || t.long < 1 || typeof t.medium !== "string" || t.medium.length > 40
-    || typeof t.color !== "string" || t.color.length > 40 || !sample || "id" in sample
+    || typeof t.color !== "string" || t.color.length > 40 || !sample || typeof sample !== "object" || Array.isArray(sample) || "id" in sample
     || !validMetrics(sample.metrics)) return null;
   if (t.result !== undefined && !validMetrics(t.result)) return null;
   if (t.settings !== undefined && !validSettings(t.settings, Math.max(t.long, (t.settings as { long?: number } | null)?.long ?? 0))) return null;

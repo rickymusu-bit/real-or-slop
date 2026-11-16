@@ -87,6 +87,13 @@ test("the Worker accepts only well-formed measures and treatments", () => {
   assert.equal(validTreatment({ ...t, sample: { id: "a b", metrics: m } }), null);
 });
 
+test("anonymous treatment rejects malformed samples without throwing", () => {
+  const t = { version: 5, off: false, seed: 7, long: 700, medium: "", color: "" };
+  for (const sample of [undefined, null, false, true, 0, 1, "invalid", [], {}]) {
+    assert.equal(validTreatment({ ...t, sample }), null);
+  }
+});
+
 test("the owner's settings are applied as they are; the proposal applied as settings gives the same pixels", () => {
   const target: Metrics = { long: 200, noise: 4, sharpness: 5, contrast: 150, saturation: 0.1, cast: [2, 0, -2] };
   const source = photo(200, 150, 0, 3);

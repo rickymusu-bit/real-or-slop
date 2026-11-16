@@ -1,6 +1,6 @@
-# Copie di gioco — specifica 12.0.0
+# Copie di gioco — specifica 12.0.1
 
-Stato: vigente; la 11.0.0 è per l'app 1.34.0, la 11.1.0 per l'app 1.35.0. Aggiornata: 2026-11-16T16:40:52Z. La 11.1.0 distingue il seppia dal bianco e nero (richiesta dell'owner del 2026-11-16): tinta sui mezzitoni, misurata su tutti i pixel delle REAL, e tinta seppia di partenza nel riquadro. La 11.0.0 riporta la
+Stato: vigente per il ramo 1.36.0. Aggiornata: 2026-11-16T21:28:00Z. La 12.0.0 usa misure anonime senza legami persistenti alla REAL. La 12.0.1 precisa la validazione dei dati del trattamento. La 11.1.0 distingue il seppia dal bianco e nero (richiesta dell'owner del 2026-11-16): tinta sui mezzitoni, misurata su tutti i pixel delle REAL, e tinta seppia di partenza nel riquadro. La 11.0.0 riporta la
 preparazione delle copie nel browser (decisione dell'owner del 2026-11-16: il Worker gestisce ciò che riguarda OpenAI, il browser
 tutto il resto) e rende il trattamento delle SLOP regolabile con i cursori (sezione 4.4). La 10.0.0 aveva spostato le copie sul Worker
 con il binding Images. La 9.0.0 riporta tutte le copie di gioco al formato verticale 4:5 e prende le misure del trattamento dalla REAL
@@ -104,6 +104,7 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
   nella quarantena.
 - **Obiettivo indicativo:** le misure anonime salvate nel processo, con i limiti descritti. Nessun identificativo della REAL viene conservato. Senza misure, nessun trattamento. Se il trattamento crea artefatti, colori o illuminazione incoerenti, usare la versione
   senza trattamento o riprogettare la scena; **non** sacrificare la credibilità per la somiglianza delle metriche.
+- Il Worker rifiuta con errore 400 un trattamento con campione malformato o identificativo della REAL; il controllo non deve generare eccezioni per valori JSON primitivi.
 - **Passi** (versione 5 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile. Ogni valore è
   proposto dalle misure della REAL; l'owner può sostituirli tutti con i cursori (sezione 4.4), che applicano gli stessi passi con i
   suoi valori:
