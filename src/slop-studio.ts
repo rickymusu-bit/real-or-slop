@@ -97,8 +97,15 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
       recent = (await call<{batches: typeof recent}>("batches")).batches;
       await loadBatch(); if (batch) page = working() ? 3 : 4;
     } catch (e) { notice = String(e); } render();
-    if (working()) { busy = true; render(); try { await follow(); } finally {
-      busy = false; page = batch?.processes.some(p => p.attempts.length) ? 4 : 2; state = await call<State>("state").catch(() => state); render(); } }
+    // Following an existing server job must not hold the dashboard's initial loading promise.
+    // busy also prevents a second polling loop when the owner reopens this section.
+    if (working() && !busy) {
+      busy = true; render();
+      void follow().catch(error => { notice = String(error); }).finally(async () => {
+        busy = false; page = batch?.processes.some(p => p.attempts.length) ? 4 : 2;
+        state = await call<State>("state").catch(() => state); render();
+      });
+    }
   };
   const save = async () => {
     if (!batch || batch.processes.some(p => p.attempts.length || !["draft","ready","failed"].includes(p.state))) return;
