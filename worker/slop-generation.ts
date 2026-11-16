@@ -121,7 +121,7 @@ async function editBatch(env: Env, batchId: string, data: Record<string, unknown
 }
 const PROMPT_RULE = `Write a new plausible photograph in English (600–1000 characters). Return a minimal editorial brief and prompt together.
 Use ONLY the supplied saved description and tags as editorial context, not as a scene to imitate. No required visual resemblance or single changed element.
-Separate required anchors, preferred, flexible and exclusions. Credibility takes priority over literal prompt details. Invent all people; never name or describe living people or people dead less than 50 years. Never attribute crimes to historical figures, celebrate regimes, or depict nudity outside artworks.
+Separate required anchors, preferred, flexible and exclusions. Credibility takes priority over literal prompt details. Real buildings and places: decide case by case whether to name a real place or invent one of the same kind, style, period and region, but never require or ask for a faithful reproduction of a specific real building, its exact architecture or its inscriptions; a required anchor may name a place, never the fidelity of its appearance. Invent all people; never name or describe living people or people dead less than 50 years. Never attribute crimes to historical figures, celebrate regimes, or depict nudity outside artworks.
 Concrete natural photographic technique and light, no cinematic clichés. Never compose for a later game crop. Do not choose a format.`;
 export async function writePrompts(env: Env, batchId: string, data: Record<string, unknown>) {
   confirmOnly(data, ["index"]);
@@ -181,7 +181,7 @@ const evaluationSchema = { type: "object", additionalProperties: false,
   properties: {attempt_id: {type: "string"}, decision: {type: "string", enum: [...DECISIONS]}, critical_findings: strings, minor_findings: strings,
     editorial_constraints_met: {type: "boolean"}, uncertainty_notes: strings, action_reason: {type: "string"}, revised_prompt: {type: "string"}, preserved_required: strings, preserved_exclusions: strings} };
 /** The part of the evaluator's instructions that the code enforces, after the editable context «slop_evaluation». */
-const EVALUATE_RULE = `Evaluate the ENTIRE unprocessed generated photograph. Choose accept, retry_same_prompt, revise_prompt, replan_scene or review_needed; choose review_needed only for a concrete doubt about something visible in the image that you cannot settle (for example a landmark or a sign that may contradict the place); facts that pixels alone can never verify (exact place, date, identity, whether the people are invented) are not a reason for review_needed: write them in uncertainty_notes and decide on the visible evidence. Critical defects are never accepted at any tolerance. Tolerance 0 accepts no minor defects: with only minor defects choose retry_same_prompt or revise_prompt, never review_needed; 1 accepts subtle photographically plausible imperfections; 2 tolerates minor defects only while credibility holds. If revising or replanning, give the revised prompt in this same response and copy every required anchor and exclusion of the brief verbatim into preserved_required and preserved_exclusions. Never compose for a later crop.`;
+const EVALUATE_RULE = `Evaluate the ENTIRE unprocessed generated photograph. Choose accept, retry_same_prompt, revise_prompt, replan_scene or review_needed; choose review_needed only for a concrete doubt about something visible in the image that you cannot settle (for example a landmark or a sign that may contradict the place); facts that pixels alone can never verify (exact place, date, identity, whether the people are invented) are not a reason for review_needed: write them in uncertainty_notes and decide on the visible evidence. Never judge, and never ask in a revised prompt for, fidelity to the real appearance of a named building or place: a plausible building of that kind, style, period and region meets the anchor; a difference from the real one is neither a defect nor a reason for review_needed, nor makes editorial_constraints_met false. Critical defects are never accepted at any tolerance. Tolerance 0 accepts no minor defects: with only minor defects choose retry_same_prompt or revise_prompt, never review_needed; 1 accepts subtle photographically plausible imperfections; 2 tolerates minor defects only while credibility holds. If revising or replanning, give the revised prompt in this same response and copy every required anchor and exclusion of the brief verbatim into preserved_required and preserved_exclusions. Never compose for a later crop.`;
 async function hash(brief: Brief) { return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(brief))))].map(b => b.toString(16).padStart(2, "0")).join(""); }
 async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array, evaluation: Evaluation) {
   // Reuse a saved accepted result if the Worker was interrupted after inserting the library row.
@@ -288,8 +288,7 @@ export async function closeProcess(env: Env, processId: string, data: Record<str
   return {attention: await attention(env)};
 }
 /** POST processes/:id/accept {confirm, attempt}: the owner accepts the candidate of a process whose evaluator asked for review.
- * Only a completed attempt with its whole candidate saved and no critical defect or missing anchor (critical defects are never
- * compensable). The candidate enters the library as new, like an automatic acceptance; then one paid call analyses its tags. */
+ * Only a completed attempt with its whole candidate saved and no critical defect (critical defects are never compensable). The candidate enters the library as new, like an automatic acceptance; then one paid call analyses its tags. */
 export async function acceptProcess(env: Env, processId: string, data: Record<string, unknown>) {
   confirmOnly(data, ["attempt"]);
   if (!env.QUARANTINE) throw new HttpError(503, "Quarantena mancante");
@@ -298,8 +297,9 @@ export async function acceptProcess(env: Env, processId: string, data: Record<st
   const a = await env.DB.prepare("SELECT * FROM slop_attempts WHERE id=? AND process_id=?").bind(typeof data.attempt === "string" ? data.attempt : "", p.id).first<Attempt>();
   const evaluation = parse<Evaluation | null>(a?.evaluation ?? null, null);
   if (!a || a.status !== "completed" || !a.candidate_key || !evaluation) throw new HttpError(409, "Tentativo senza candidata valutata");
-  if (evaluation.critical_findings.length || !evaluation.editorial_constraints_met)
-    throw new HttpError(409, "Difetti critici o ancoraggi mancanti: la candidata non si può accettare");
+  // A missing anchor is a critical defect and is listed as one; «constraints not met» with no critical defect is the evaluator's
+  // doubt, which the owner settles (owner decision of 2026-11-16).
+  if (evaluation.critical_findings.length) throw new HttpError(409, "Difetti critici: la candidata non si può accettare");
   const batch = await load(env, p.batch_id);
   const source = await find(env, p.source_id);
   if (!["approved", "published"].includes(source.status)) throw new HttpError(409, "REAL non più approvata o pubblicata");

@@ -20,6 +20,8 @@ try:
     assert code==200 and changed['tags']==historical['tags'] and changed['description']=='Original Commons text',changed
     b=batch(changed);[prompt]=control()
     assert prompt['path']=='/v1/responses' and prompt['body']['text']['format']['name']=='slop_brief'
+    # Real buildings: named or invented, never reproduced faithfully (owner decision of 2026-11-16).
+    assert 'never require or ask for a faithful reproduction of a specific real building' in prompt['body']['instructions']
     assert not any(c['type']=='input_image' for c in prompt['body']['input'][0]['content'])
     inp=__import__('json').loads(prompt['body']['input'][0]['content'][0]['text'])
     assert inp['description']==DESCRIPTION and inp['tags']['genre']==['street-scene']
@@ -44,6 +46,7 @@ try:
     # The evaluator gets the base, its editable context and the rules fixed in the code; the attempt records the versions.
     instructions=logs[1]['body']['instructions']
     assert instructions.startswith('Lavori per un archivio') and 'credibilità fotografica' in instructions and 'ENTIRE unprocessed' in instructions,instructions[:300]
+    assert 'fidelity to the real appearance of a named building' in instructions
     assert set(b['processes'][0]['attempts'][0]['evaluation']['contexts'])=={'base','evaluation'}
     attempt=b['processes'][0]['attempts'][0]
     path=attempt['file'].split('/slop/')[1]
@@ -123,6 +126,11 @@ try:
     reviewed=load(b);assert reviewed['processes'][0]['state']=='accepted' and len(reviewed['images'])==1,reviewed['processes'][0]
     images.append(reviewed['images'][0]['id']);assert reviewed['images'][0]['status']=='new'
     assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']})[0]==409 and len(control())==1
+    # Constraints the evaluator could not confirm, with no critical defect, are a doubt the owner settles (2026-11-16).
+    source=real();sources.append(source['id']);b=batch(source);control([None,{'evaluation':'review_needed','constraints':False}])
+    assert generate(b)[1]['process']['state']=='review_needed';proc=load(b)['processes'][0];control([])
+    code,doubted=call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':proc['attempts'][0]['id']});assert code==200,doubted
+    images.append(doubted['image']['id']);assert load(b)['processes'][0]['state']=='accepted' and len(control())==1
     source=real();sources.append(source['id']);b=batch(source);control([None,{'evaluation':'review_needed','critical':['Centre: a hand with six fingers']}])
     assert generate(b)[1]['process']['state']=='review_needed';proc=load(b)['processes'][0]
     assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':proc['attempts'][0]['id']})[0]==409 and len(control())==2
