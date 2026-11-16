@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 25.0.0, aggiornata il 2026-11-15T23:09:52Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 25.0.1, aggiornata il 2026-11-16T06:48:38Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -152,6 +152,9 @@ R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (
 - Tag: al merge su `main` il workflow `release-tag` (`.github/workflows/release-tag.yml`) crea `vX.Y.Z` con la versione di
   `package.json`, se non esiste già.
 - Manutenzione giornaliera: Cron Trigger alle 03:17 UTC.
+- Log: Workers Logs attivi (`observability` in `wrangler.jsonc`, dal 2026-11-16, su richiesta dell'owner): errori e messaggi di
+  richieste, passi dei Workflow e manutenzione, conservati da Cloudflare per pochi giorni, URL senza query string. Vanno scritti nel
+  file perché ogni rilascio applica la configurazione del file e spegnerebbe quella impostata dalla dashboard.
 
 ## Verifiche
 

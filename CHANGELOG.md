@@ -1,9 +1,17 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-15T23:09:52Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-16T06:48:38Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.32.0 — 2026-11-15T23:09:52Z (decisione dell'owner del 2026-11-15: il browser è solo un'interfaccia)
+## 1.32.1 — 2026-11-16T06:48:38Z
+
+- **Workers Logs attivi** in `wrangler.jsonc` (richiesta dell'owner del 2026-11-16): l'attivazione dalla dashboard non risultava
+  salvata sul Worker e il rilascio successivo l'avrebbe comunque spenta. Errori e messaggi di richieste, passi dei Workflow e
+  manutenzione restano visibili per pochi giorni; le query string non vengono registrate. Serve a capire, per esempio, perché il
+  2026-11-16 un passo del batch automatico ha superato il limite di CPU e perché una copia di SLOP non è stata creata.
+  `MASTER.md` 25.0.1.
+
+## 1.32.0 — 2026-11-15T23:09:52Z (decisione dell'owner del 2026-11-15: il browser è solo un'interfaccia) (rilasciata il 2026-11-16)
 
 - **Copie di gioco preparate dal Worker:** ritaglio 4:5, ricampionamento, trattamento delle SLOP verso la REAL di riferimento con la
   compressione JPEG intermedia, WebP e misure non avvengono più nel browser. Il binding Images di Cloudflare decodifica e riduce

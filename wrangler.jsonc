@@ -12,6 +12,15 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/admin", "/admin/*"],
   },
+  // Workers Logs (owner request of 2026-11-16): errors and console messages of requests, Workflow steps and the daily maintenance,
+  // kept by Cloudflare for a few days, to see why a step fails. Written here because every deploy applies this file and would
+  // otherwise turn off what the dashboard enabled. Query strings are left out of the logged URLs. Previews inherit it.
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "redact_query_string": true,
+    "logs": { "enabled": true, "invocation_logs": true },
+  },
   // Daily maintenance at 03:17 UTC: games older than 12 months are deleted (spec `privacy-note-legali`).
   "triggers": { "crons": ["17 3 * * *"] },
   "d1_databases": [
