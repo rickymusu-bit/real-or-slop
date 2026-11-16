@@ -64,6 +64,8 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
       (image.status !== "published" && image.status !== "trash" ? `<button data-slop="trash" data-id="${image.id}">Cestino</button>` : "") + '</div></article>').join("") +
     (batch?.processes || []).map(p => `<section><h3>${escape(batch!.items[p.slot].title)}: ${escape(p.state)}</h3>${p.error ? `<p role="status">${escape(p.error)}</p>` : ""}${p.brief ? `<p>Ancoraggi obbligatori: ${escape(p.brief.required.join("; "))}. Esclusioni: ${escape(p.brief.exclusions.join("; "))}</p>` : ""}${p.attempts.map(a => evaluation(a)).join("")}</section>`).join("") +
     '<div class="rw-actions"><button data-slop="to-prompts">Brief e prompt / ripresa</button><button data-slop="new-batch">Nuovo batch</button></div>';
+  /** A candidate the owner may accept after a review: evaluated, saved whole, with no critical defect or missing anchor. */
+  const acceptable = (a: Attempt) => a.status === "completed" && !!a.file && !!a.evaluation && !a.evaluation.critical_findings.length && a.evaluation.editorial_constraints_met;
   // Processes that ended without a SLOP are exceptional: they stay on top, with every attempt, until the owner closes them.
   const attentionView = () => {
     const list = state?.attention || [];
@@ -74,7 +76,8 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
         `<p>${p.attempts.length} ${p.attempts.length === 1 ? "tentativo" : "tentativi"}, ${p.calls} chiamate registrate.${p.error ? " " + escape(p.error) : ""}</p>` +
         (p.brief ? `<p>Ancoraggi obbligatori: ${escape(p.brief.required.join("; "))}. Esclusioni: ${escape(p.brief.exclusions.join("; ") || "nessuna")}</p>` : "") +
         p.attempts.map(a => evaluation(a, true)).join("") +
-        `<div class="rw-actions"><button data-slop="close-process" data-process="${escape(p.id)}">Chiudi: ho visto</button></div></article>`).join("") + "</section>";
+        `<div class="rw-actions">${p.state === "review_needed" ? p.attempts.filter(acceptable).map(a => `<button data-slop="accept-process" data-process="${escape(p.id)}" data-attempt="${escape(a.id)}">Accetta il tentativo ${a.number}</button>`).join("") : ""}` +
+        `<button data-slop="close-process" data-process="${escape(p.id)}">Chiudi: ho visto</button></div></article>`).join("") + "</section>";
   };
   const render = () => {
     root.innerHTML = `<div class="rw slop"><h2>Generazione SLOP</h2>${attentionView()}<ol class="rw-steps">${["REAL","Brief e prompt","Generazione e valutazione","Revisione"].map((l,i) => `<li ${page===i+1?'aria-current="step"':""}>${i+1}. ${l}</li>`).join("")}</ol><p role="status" aria-live="polite">${escape(notice)}</p>` +
@@ -138,6 +141,12 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
     if(busy)return;
     const action=button.dataset.slop!, slot=Number(button.dataset.slot), image=batch?.images.find(i=>i.id===button.dataset.id);
     if(action==="first"){chosen=(state?.waiting||[]).filter(w=>w.described).slice(0,10).map(w=>w.id);render();return;}
+    if(action==="accept-process"){
+      if(!window.confirm("Accettare questa candidata? Entra nella libreria come SLOP nuova, da approvare dopo la copia 4:5; poi una chiamata a pagamento per i tag."))return;
+      busy=true;notice="Accettazione e analisi dei tag…";render();
+      try{const done=await call<{attention: Attention[]; tags_error: string}>("processes/"+button.dataset.process+"/accept",{confirm:true,attempt:button.dataset.attempt});
+        state={...state!,attention:done.attention};notice=done.tags_error?`SLOP accettata; analisi dei tag non riuscita: ${done.tags_error}. Si ripete dal Database.`:"SLOP accettata: la trovi nella revisione del suo batch.";}
+      catch(e){notice=String(e);}finally{busy=false;} render();return;}
     if(action==="close-process"){
       if(!window.confirm("Chiudere questo processo? Sparisce dall'elenco e le immagini dei suoi tentativi vengono cancellate dopo sette giorni."))return;
       try{state={...state!,...await call<{attention: Attention[]}>("processes/"+button.dataset.process+"/close",{})};notice="Processo chiuso.";}

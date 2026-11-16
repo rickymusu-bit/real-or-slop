@@ -2,7 +2,7 @@
  * the source REAL; the preview is made here, in the browser, with the same steps as the copy (treatment and intermediate JPEG). */
 import "./treatment-editor.css";
 import { centredCrop } from "../shared/game-copy";
-import { gap, measure, SETTING_LIMITS, type Metrics, type Settings } from "../shared/copy-treatment";
+import { castFor, gap, measure, SETTING_LIMITS, type Metrics, type Settings } from "../shared/copy-treatment";
 import { drawBase, longOf, originalOf, proposalOf, treatedCanvas, treatmentPlan, type TreatableItem } from "./game-copy";
 
 type Scalar = "contrast" | "saturation" | "blur" | "grain" | "grainSize" | "jpeg" | "long";
@@ -81,7 +81,7 @@ export async function chooseTreatment(item: TreatableItem, title = ""): Promise<
     const input = (event.target as HTMLElement).closest<HTMLInputElement | HTMLSelectElement>("[data-key]");
     if (!input) return;
     const key = input.dataset.key!;
-    if (key === "monochrome") settings.monochrome = input.value as Settings["monochrome"];
+    if (key === "monochrome") { settings.monochrome = input.value as Settings["monochrome"]; settings.cast = castFor(settings.monochrome, proposed); }
     else if (key.startsWith("cast")) settings.cast[Number(key[4])] = Number(input.value);
     else settings[key as Scalar] = Number(input.value);
     show(); later();

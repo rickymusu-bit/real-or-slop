@@ -1,4 +1,5 @@
-/** Server-side contracts: uncertainty and critical defects cannot be averaged into acceptance. */
+/** Server-side contracts: critical defects and missing anchors cannot be averaged into acceptance; notes on what pixels cannot
+ * verify do not stop it (owner decision of 2026-11-16). */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { realDescription, validBrief, validEvaluation, type Brief, type Evaluation } from "../shared/editorial";
@@ -11,10 +12,11 @@ test("descriptions and briefs reject incomplete or fabricated structure",()=>{
   assert.ok(realDescription({visible:"street",documented_context:"",uncertainties:"unknown date"}));
   assert.equal(validBrief({...brief,required:[]}),null); assert.ok(validBrief(brief));
 });
-test("critical defects, missing anchors and uncertainty stop acceptance",()=>{
+test("critical defects and missing anchors stop acceptance, uncertainty notes do not",()=>{
   assert.equal(validEvaluation(result,"a",brief)?.decision,"accept");
-  for(const change of [{critical_findings:["Upper right: floating vehicle"]},{editorial_constraints_met:false},{uncertainty_notes:["Central sign illegible"]}])
+  for(const change of [{critical_findings:["Upper right: floating vehicle"]},{editorial_constraints_met:false}])
     assert.equal(validEvaluation({...result,...change},"a",brief)?.decision,"review_needed");
+  assert.equal(validEvaluation({...result,uncertainty_notes:["Exact place and date cannot be verified from pixels"]},"a",brief)?.decision,"accept");
   assert.equal(validEvaluation(result,"wrong-attempt",brief),null);
 });
 test("prompt revisions must declare preservation of immutable anchors and exclusions",()=>{

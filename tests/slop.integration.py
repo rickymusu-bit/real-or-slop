@@ -58,9 +58,9 @@ try:
     assert copy['copy']['crop']['format']=='4:5'
     # Treatment set with the sliders, in the browser (owner decisions of 2026-11-16): the Worker checks the record it receives.
     sid=result['id'];crop=copy['copy']['crop'];long=max(crop['width'],crop['height'])
-    m={'long':long,'noise':2.0,'sharpness':5.0,'contrast':120,'saturation':0.1,'cast':[1,0,-1],'v':2}
+    m={'long':long,'noise':2.0,'sharpness':5.0,'contrast':120,'saturation':0.1,'cast':[1,0,-1],'tint':[0,0,0],'v':3}
     chosen={'contrast':1.1,'saturation':0.9,'cast':[3,0,-3],'monochrome':'sepia','blur':0.5,'grain':4,'grainSize':1,'jpeg':0.8,'long':long}
-    record={'version':4,'off':False,'seed':7,'long':long,'medium':'','color':'','sample':{'id':historical['id'],'metrics':m},'settings':chosen}
+    record={'version':5,'off':False,'seed':7,'long':long,'medium':'','color':'','sample':{'id':historical['id'],'metrics':m},'settings':chosen}
     def upload(treatment):
         q=f"?crop={crop['x']},{crop['y']},{crop['width']},{crop['height']},4:5"
         req=urllib.request.Request(LIBRARY+'/'+sid+'/copy'+q,data=game_copy(original,crop),method='POST',
@@ -111,6 +111,22 @@ try:
     # review_needed stops early, even with attempts available.
     source=real();sources.append(source['id']);b=batch(source);control([None,{'evaluation':'review_needed'}])
     assert generate(b)[1]['process']['state']=='review_needed';assert generate(b)[0]==409 and len(control())==2
+    # The owner accepts the candidate after the review (owner decision of 2026-11-16): it enters the library as new, then one
+    # paid call analyses its tags; never twice, never without confirmation, never a candidate with critical defects.
+    proc=load(b)['processes'][0];att=proc['attempts'][0]
+    assert call('processes/'+proc['id']+'/accept',{'attempt':att['id']})[0]==400
+    assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':'another'})[0]==409
+    control([])
+    code,accepted=call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']});assert code==200 and not accepted['tags_error'],accepted
+    assert all(p['id']!=proc['id'] for p in accepted['attention'])
+    logs=control();assert len(logs)==1 and logs[0]['body']['text']['format']['name']=='image_analysis',logs
+    reviewed=load(b);assert reviewed['processes'][0]['state']=='accepted' and len(reviewed['images'])==1,reviewed['processes'][0]
+    images.append(reviewed['images'][0]['id']);assert reviewed['images'][0]['status']=='new'
+    assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']})[0]==409 and len(control())==1
+    source=real();sources.append(source['id']);b=batch(source);control([None,{'evaluation':'review_needed','critical':['Centre: a hand with six fingers']}])
+    assert generate(b)[1]['process']['state']=='review_needed';proc=load(b)['processes'][0]
+    assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':proc['attempts'][0]['id']})[0]==409 and len(control())==2
+    assert load(b)['processes'][0]['state']=='review_needed' and load(b)['images']==[]
     # Network uncertainty in evaluation preserves the private image and never resends.
     source=real();sources.append(source['id']);b=batch(source);control([None,{'status':503}])
     assert generate(b)[0]==502 and load(b)['processes'][0]['state']=='uncertain'

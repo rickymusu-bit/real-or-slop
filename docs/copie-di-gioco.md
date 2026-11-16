@@ -1,6 +1,6 @@
-# Copie di gioco — specifica 11.0.0
+# Copie di gioco — specifica 11.1.0
 
-Stato: vigente; la 10.0.0 è in produzione con l'app 1.33.0, la 11.0.0 è per l'app 1.34.0. Aggiornata: 2026-11-16T12:40:03Z. La 11.0.0 riporta la
+Stato: vigente; la 11.0.0 è per l'app 1.34.0, la 11.1.0 per l'app 1.35.0. Aggiornata: 2026-11-16T16:40:52Z. La 11.1.0 distingue il seppia dal bianco e nero (richiesta dell'owner del 2026-11-16): tinta sui mezzitoni, misurata su tutti i pixel delle REAL, e tinta seppia di partenza nel riquadro. La 11.0.0 riporta la
 preparazione delle copie nel browser (decisione dell'owner del 2026-11-16: il Worker gestisce ciò che riguarda OpenAI, il browser
 tutto il resto) e rende il trattamento delle SLOP regolabile con i cursori (sezione 4.4). La 10.0.0 aveva spostato le copie sul Worker
 con il binding Images. La 9.0.0 riporta tutte le copie di gioco al formato verticale 4:5 e prende le misure del trattamento dalla REAL
@@ -92,7 +92,7 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
   (`POST /:id/metrics {metrics, sha256}` registra le misure di una copia esistente, fatte nel browser aprendo il Database):
   lato lungo in pixel; **rumore** (deviazione standard del residuo ad alta frequenza nelle zone più uniformi, escluse quelle bruciate
   a bianco o a nero); **nitidezza** (energia del laplaciano sulla luminanza); **contrasto** (distanza tra i percentili 2 e 98 della
-  luminanza); **saturazione** media; **dominante** (scarto medio dei canali dal grigio nelle zone neutre); versione dell'algoritmo.
+  luminanza); **saturazione** media; **dominante** (scarto medio dei canali dal grigio nelle zone neutre); **tinta** ai mezzitoni (dalla versione 3 delle misure: scarto di ogni canale dalla luminanza su tutti i pixel, in proporzione al peso dei mezzitoni; quella di una seppia, quasi zero in un bianco e nero neutro); versione dell'algoritmo. La dominante guarda solo i pixel quasi grigi, che in una seppia sono i meno virati: per questo la tinta si misura a parte.
 - Limite noto: le copie delle REAL, ridotte da scansioni grandi e ricompresse, hanno poca grana a questa scala (mediana 0,55 sulle 55
   REAL del 2026-11-14), come le SLOP: la differenza che l'occhio vede non sta nel rumore misurato così.
 - Le copie senza misure, o con misure di una versione precedente, si misurano all'apertura della dashboard (gratuito).
@@ -105,13 +105,15 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
 - **Obiettivo indicativo:** le misure della copia di gioco della REAL di riferimento, con i limiti descritti. Senza REAL di riferimento,
   o se non è misurata, nessun trattamento. Se il trattamento crea artefatti, colori o illuminazione incoerenti, usare la versione
   senza trattamento o riprogettare la scena; **non** sacrificare la credibilità per la somiglianza delle metriche.
-- **Passi** (versione 4 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile. Ogni valore è
+- **Passi** (versione 5 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile. Ogni valore è
   proposto dalle misure della REAL; l'owner può sostituirli tutti con i cursori (sezione 4.4), che applicano gli stessi passi con i
   suoi valori:
   1. ritaglio 4:5 dell'inquadratura;
   2. riduzione all'altezza della copia della REAL di origine (mai un ingrandimento, mai sotto 480 px);
   3. contrasto verso quello della REAL, con un fattore tra 0,85 e 1,2;
-  4. bianco e nero o seppia, con la tinta della REAL (registrata come dominante), se il Colore della REAL lo è; altrimenti dominante (al massimo ±8 per canale) e
+  4. bianco e nero o seppia, con la tinta della REAL (registrata come dominante; la sua dominante se è stata misurata prima della tinta), se il Colore della REAL lo è.
+     La tinta pesa 4·t·(1−t) con t la luminanza da 0 a 1: piena nei mezzitoni, nulla al nero e al bianco, come in una stampa virata;
+     fino alla versione 4 era uguale su ogni pixel, e una seppia senza tinta misurata restava grigia come il bianco e nero; altrimenti dominante (al massimo ±8 per canale) e
      saturazione (fattore tra 0,7 e 1,3) verso quelle della REAL;
   5. sfocatura fino alla nitidezza della REAL, con raggio al massimo 1;
   6. grana di luminanza fino al rumore della REAL, ammorbidita nelle immagini grandi, mai a blocchi;
@@ -145,7 +147,11 @@ Decisione dell'owner del 2026-11-16: il trattamento della copia si modifica come
   nascosta per le copie monocrome), dominante o tinta rosso, verde, blu (±40), sfocatura (0–3 px), grana (0–25), dimensione della
   grana (1–3), qualità del JPEG intermedio (0,4–1), lato lungo (480–1536 px, mai oltre il ritaglio).
 - **I cursori partono dalla proposta** calcolata nel browser dalle misure della REAL di riferimento sull'inquadratura salvata. Se
-  l'owner ha già regolato la copia, partono dalle sue impostazioni; «Torna alla proposta» le riporta ai valori proposti.
+  l'owner ha già regolato la copia, partono dalle sue impostazioni (anche se salvate con la versione 4); «Torna alla proposta» le riporta ai valori proposti.
+- **Cambiare il Colore** reimposta i cursori della tinta (richiesta dell'owner del 2026-11-16): quelli della proposta se ha quel colore;
+  altrimenti, per «Seppia», una tinta seppia di partenza (rosso +15, verde −1, blu −24 ai mezzitoni, circa neutra in luminanza) e,
+  per «Bianco e nero» e «A colori», nessuna. Prima la tinta restava quella che c'era, quasi zero, e seppia e bianco e nero davano lo
+  stesso grigio.
 - **Anteprima nella pagina:** ogni modifica, dopo una breve pausa, ridisegna la copia con quelle impostazioni (trattamento e JPEG
   intermedio, come la copia), con le sue misure e lo scarto dalla REAL; nulla viene salvato. Manca solo la codifica WebP finale.
 - **Salvare** rifà la copia con le impostazioni dell'owner e la carica, come «Inquadratura»: azzera le statistiche. Salvare i valori
