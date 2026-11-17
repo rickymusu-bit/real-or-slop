@@ -27,23 +27,23 @@ const MAX_PIXELS = 32_000_000;
 type Origin = "REAL" | "SLOP";
 type Status = "new" | "approved" | "published" | "trash";
 export interface Row {
-  id: string; origin: Origin; status: Status; trashed_from: Status | null; title: string; description: string; caption: string;
-  explanation: string; source_url: string; author: string; license_name: string; license_url: string; prompt: string; model: string;
+  id: string; origin: Origin; status: Status; trashed_from: Status | null; title: string; description: string;
+  source_url: string; author: string; license_name: string; license_url: string; prompt: string; model: string;
   original_key: string; original_sha256: string; original_mime: string; width: number; height: number;
   copy_key: string | null; copy_sha256: string | null; copy_width: number | null; copy_height: number | null; copy_bytes: number | null;
   rights_confirmed: number; revision: number; created_at: string; updated_at: string; approved_at: string | null;
   published_at: string | null; trashed_at: string | null;
   analysis_status: "none" | "running" | "done" | "uncertain" | "failed"; analysis_error: string; analyzed_at: string | null;
-  generated_caption: string | null; generated_tags: string | null;
+  generated_tags: string | null;
   real_description: string | null; real_description_provenance: string | null; commons_description: string | null;
   generation_batch: string | null; generation_slot: string | null; generation_quality: string | null;
-  analysis_base_context: string | null; analysis_task_context: string | null; copy_crop: string | null; copy_view: string | null;
+  analysis_base_context: string | null; analysis_task_context: string | null; copy_crop: string | null;
   categories_completed_at: string | null; copy_metrics: string | null; copy_treatment: string | null;
 }
 const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
   [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map(x => x.toString(16).padStart(2, "0")).join("");
-const TEXT_FIELDS: Record<string, number> = { title: 200, description: 1000, explanation: 2000, source_url: 1000,
+const TEXT_FIELDS: Record<string, number> = { title: 200, description: 1000, source_url: 1000,
   author: 300, license_name: 200, license_url: 1000, prompt: 4000, model: 100 };
 
 function text(value: unknown, field: string, required = false): string {
@@ -130,8 +130,10 @@ function view(row: Row, rows: TagRow[], extra: Extra = {}) {
   return {
     id: row.id, origin: row.origin, status: row.status, trashed_from: row.trashed_from, title: row.title,
     real_description: parseJson(row.real_description), real_description_provenance: parseJson(row.real_description_provenance),
-    commons_description: row.commons_description, description: row.description, explanation: row.explanation, source_url: row.source_url,
-    author: row.author, license_name: row.license_name, license_url: row.license_url, prompt: row.prompt, model: row.model,
+    description: row.description,
+    ...(row.origin === "REAL" ? { commons_description: row.commons_description, source_url: row.source_url,
+      author: row.author, license_name: row.license_name, license_url: row.license_url }
+      : { prompt: row.prompt, model: row.model }),
     width: row.width, height: row.height, original_mime: row.original_mime, original_sha256: row.original_sha256,
     copy: row.copy_key ? { sha256: row.copy_sha256, width: row.copy_width, height: row.copy_height, bytes: row.copy_bytes, crop: cropOf(row) } : null,
     no_derivatives: row.origin === "REAL" && isNoDerivatives(row.license_name, row.license_url),
@@ -276,7 +278,7 @@ async function storeCopy(request: Request, env: Env, row: Row) {
   if (sameFile && row.copy_crop === JSON.stringify(crop) && sameTreatment) return json({ ...(await viewOf(env, row.id)), already_prepared: true });
   if (!sameFile) await env.QUARANTINE.put(key, copy.bytes, { httpMetadata: { contentType: GAME_COPY.mime }, customMetadata: { sha256: hash } });
   // The record describes the bytes just uploaded; absence of a treatment cannot preserve a previous treatment record.
-  const result = await env.DB.prepare(`UPDATE images SET copy_key=?,copy_sha256=?,copy_width=?,copy_height=?,copy_bytes=?,copy_crop=?,copy_view=NULL,
+  const result = await env.DB.prepare(`UPDATE images SET copy_key=?,copy_sha256=?,copy_width=?,copy_height=?,copy_bytes=?,copy_crop=?,
     copy_metrics=?,copy_treatment=?,revision=revision+1,updated_at=? WHERE id=? AND revision=? AND status IN ('new','approved')`)
     .bind(key, hash, actual.width, actual.height, copy.bytes.length, JSON.stringify(crop), metrics ? JSON.stringify(metrics) : null,
       treatment ? JSON.stringify(treatment) : null, now(), row.id, row.revision).run();
@@ -286,7 +288,9 @@ async function storeCopy(request: Request, env: Env, row: Row) {
 }
 
 async function edit(env: Env, row: Row, data: Record<string, unknown>) {
-  const allowed = ["revision", "tags", "tag_categories", "real_description", ...Object.keys(TEXT_FIELDS)];
+  const applicable = Object.keys(TEXT_FIELDS).filter(key => row.origin === "REAL"
+    ? !["prompt", "model"].includes(key) : !["source_url", "author", "license_name", "license_url"].includes(key));
+  const allowed = ["revision", "tags", "tag_categories", ...(row.origin === "REAL" ? ["real_description"] : []), ...applicable];
   if (Object.keys(data).some(key => !allowed.includes(key))) throw new HttpError(400, "Campi non previsti");
   if (data.revision !== row.revision) throw new HttpError(409, "Immagine modificata altrove: ricaricare");
   if (row.status === "published" && !(row.origin === "REAL" && "real_description" in data && Object.keys(data).every(k => ["revision","real_description"].includes(k)))) throw new HttpError(409, "Immagine pubblicata: avvia la modifica, che la ritira dal gioco");
@@ -428,10 +432,7 @@ async function distribution(env: Env) {
   };
 }
 
-/** POST /:id/regenerate {confirm, prompt, quality, revision}: a new image for a SLOP from its prompt, with the image model chosen in
- * Settings. Paid and confirmed; the generator receives only the text. The image keeps its row, tags and caption until the new
- * analysis; it goes back to «new» without a game copy, its analysis can run once more, and its statistics restart, since they
- * count only rounds played with the current copy. A published image must first leave the game (start of the edit). */
+/** Legacy direct regeneration is refused: all new SLOP must pass the editorial process. */
 async function regenerate(env: Env, row: Row, data: Record<string, unknown>) {
   void env; void row; void data;
   throw new HttpError(409, "La rigenerazione richiede un nuovo processo nello studio SLOP, con brief, valutazione e conferma del tetto di chiamate");

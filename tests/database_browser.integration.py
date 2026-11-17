@@ -52,7 +52,7 @@ with sync_playwright() as p:
         # Statistics: three rounds of the REAL (two right), one of the SLOP (wrong), played on the current copies.
         session = f'{prefix}-session'
         sql(f"INSERT INTO game_sessions(id,mode,created_at,owner_hash,phase,completed) VALUES('{session}','training',0,'x','completed',1); " +
-            "; ".join(f"INSERT INTO game_rounds(id,session_id,image_id,position,presented_at,caption,copy_key) SELECT '{prefix}-r{i}','{session}',id,{i},1,caption,copy_key FROM images WHERE id='{image}'"
+            "; ".join(f"INSERT INTO game_rounds(id,session_id,image_id,position,presented_at,copy_key) SELECT '{prefix}-r{i}','{session}',id,{i},1,copy_key FROM images WHERE id='{image}'"
                       for i, image in enumerate((real['id'], slop['id']))) + "; " +
             f"INSERT INTO answers(round_id,choice,correct,answered_at,elapsed_ms) VALUES('{prefix}-r0','REAL',1,1,10),('{prefix}-r1','REAL',0,1,10)")
         context = browser.new_context(**options, http_credentials={'username': 'owner', 'password': token})

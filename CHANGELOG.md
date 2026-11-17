@@ -1,15 +1,17 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-17T18:23:22Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-17T18:33:16Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.39.0 — 2026-11-17T18:23:22Z
+## 1.39.0 — 2026-11-17T18:33:16Z
 
 - Database: rimossi i checkbox «Copia da rifare in 4:5», «REAL senza descrizione» e «Senza Genere, Colore o Supporto», con lo stato e i parametri obsoleti inviati dal browser. Le analisi in gruppo si eseguono sulla selezione esplicita.
 - Generazione automatica in due passaggi: estrazione gratuita delle REAL, con miniature, titoli, tag e anteprima dell'originale intero con descrizione; poi conferma del massimo e avvio. Riestrazione e annullamento senza chiamate.
 - L'avvio usa le stesse REAL mostrate, con configurazione firmata, scadenza di quindici minuti e controllo di revisioni/disponibilità nella transazione. Token già usati, selezioni scadute o modificate non avviano chiamate.
 
 - Rimossi i gruppi di genere/decennio da interfaccia, API, statistiche e database. Migrazione 0056: elimina colonne e impostazioni obsolete, converte il contesto storico in normali tag e conserva immagini, copie, tentativi, chiamate e registro madre–figlia. Bilanciamento solo per numero di foto e REAL madri disponibili.
+
+- Pulizia dei campi foto: migrazione 0057 elimina didascalie, vista iniziale e spiegazione mai letta dal gioco. Fonte/autore/licenza solo per le REAL; prompt/modello solo per le SLOP, anche nelle modifiche API. Conservati descrizioni, contesto editoriale, copie, analisi e legami madre–figlia. Query di estrazione del gioco ridotta ai campi realmente usati; crediti finali invariati.
 
 ## 1.38.0 — 2026-11-17T10:19:38Z
 

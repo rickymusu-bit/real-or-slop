@@ -31,7 +31,7 @@ import { tagFromInput } from "../shared/tag-input";
 type Status = "new" | "approved" | "published" | "trash";
 interface Item {
   id: string; origin: "REAL" | "SLOP"; status: Status; trashed_from: Status | null; title: string; description: string;
-  commons_description: string | null; real_description: RealDescription | null; explanation: string; source_url: string; author: string; license_name: string; license_url: string;
+  commons_description: string | null; real_description: RealDescription | null; source_url: string; author: string; license_name: string; license_url: string;
   prompt: string; model: string; width: number; height: number; copy: { width: number; height: number; bytes: number; crop: Crop | null; sha256: string | null } | null;
   rights_confirmed: boolean; revision: number; tags: string[]; file: string; updated_at: string; created_at: string;
   analysis: { status: "none" | "running" | "done" | "uncertain" | "failed"; error: string; at: string | null };
@@ -55,7 +55,7 @@ const STATE_LABEL: Record<Status, string> = { new: "nuova", approved: "approvata
 /** A section still loading: a short line with a spinner (src/admin-loading.css). */
 const loading = (text = "Caricamento…") => `<p class="admin-loading" role="status">${text}</p>`;
 const FIELDS: [keyof Item, string, number, boolean][] = [
-  ["title", "Titolo", 200, false], ["description", "Descrizione", 1000, true], ["explanation", "Spiegazione (dopo la risposta)", 2000, true], ["source_url", "Pagina della fonte", 1000, false],
+  ["title", "Titolo", 200, false], ["description", "Descrizione", 1000, true], ["source_url", "Pagina della fonte", 1000, false],
   ["author", "Autore", 300, false], ["license_name", "Licenza", 200, false], ["license_url", "Indirizzo della licenza", 1000, false],
   ["prompt", "Prompt (SLOP)", 4000, true], ["model", "Modello (SLOP)", 100, false],
 ];
@@ -359,7 +359,7 @@ export async function showLibrary() {
   const showDetail = (item: Item) => {
     open = item;
     const editable = item.status === "new" || item.status === "approved";
-    const fields = FIELDS.filter(([key]) => item.origin === "SLOP" || (key !== "prompt" && key !== "model"));
+    const fields = FIELDS.filter(([key]) => item.origin === "REAL" ? key !== "prompt" && key !== "model" : !["source_url", "author", "license_name", "license_url"].includes(key));
     detail.innerHTML = `<form method="dialog" class="library-detail-close"><button aria-label="Chiudi">×</button></form>
       <h2 id="library-detail-title">${escape(item.title)}</h2>
       <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / originale ${item.width}×${item.height}${item.copy ? ` / copia di gioco WebP ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}: è ciò che vedranno i giocatori` : " / copia di gioco non pronta"}</p>

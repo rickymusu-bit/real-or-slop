@@ -1,6 +1,6 @@
-# Sezione Database — specifica 4.0.0
+# Sezione Database — specifica 5.0.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:23:22Z.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:33:16Z.
 
 ## 1. Decisioni dell'owner
 
@@ -39,8 +39,8 @@ Ricerca in titolo, descrizione o prompt, combinata con i filtri di origine, stat
 
 - Origine, stato, dimensioni dell'originale, copia di gioco con formato e peso; visualizzazioni e classificazioni corrette con la
   percentuale; partite in corso che la includono; avvisi (licenza ND, copia mancante con «Prepara la copia di gioco», categorie mancanti); misure della copia e, per una SLOP trattata, misure anonime di riferimento e scarto dall'obiettivo.
-- **Campi:** titolo, descrizione, spiegazione, fonte, autore, licenza e, per le SLOP, prompt e modello; tag per categoria con aggiunta e
-  rimozione; «Tag di partenza» per le SLOP generate (i tag della REAL di origine, senza un collegamento alla REAL); avviso se una REAL non ha il tag di Tempo. Ogni modifica si salva subito.
+- **Campi:** titolo e descrizione per entrambe le origini; fonte, autore e licenza solo per le REAL; prompt e modello solo per le SLOP; tag per categoria con aggiunta e
+  rimozione; «Tag di partenza» per le SLOP generate (i tag della REAL di origine, senza un collegamento alla REAL); avviso se una REAL non ha il tag di Tempo. Ogni modifica si salva subito. Rimossa «Spiegazione dopo la risposta», inutilizzata dal gioco; l’API rifiuta il campo e i metadati dell’origine sbagliata. La migrazione 0057 elimina anche le colonne obsolete di didascalie e vista iniziale.
 - **Azioni:** Inquadratura (nuove e approvate), comandi del trattamento per le SLOP (specifica `copie-di-gioco`, sezione 4.3),
   Completa Genere, Colore e Supporto, Analizza con IA (nuove con copia, mai analizzate o non riuscite), Ripristina i tag
   generati, Approva, Pubblica nel gioco, Modifica e Ritira dal gioco (pubblicate), Elimina (nel cestino), Ripristina ed Elimina

@@ -175,7 +175,11 @@ with sync_playwright() as p:
             dialog = page.locator('#library-detail')
             expect(dialog).to_contain_text('copia di gioco WebP')
             if real: expect(dialog.locator('.library-analysis')).to_contain_text('Analizzata')
-            expect(dialog.locator('[data-field=caption]')).to_have_count(0)
+            expect(dialog.locator('[data-field=caption], [data-field=explanation]')).to_have_count(0)
+            for key in ('source_url', 'author', 'license_name', 'license_url'):
+                expect(dialog.locator(f'[data-field={key}]')).to_have_count(1 if real else 0)
+            for key in ('prompt', 'model'):
+                expect(dialog.locator(f'[data-field={key}]')).to_have_count(0 if real else 1)
             field = dialog.locator('[data-field=description]')
             field.fill(description); field.blur()
             expect(dialog.locator('#library-detail-message')).to_contain_text('Salvato')

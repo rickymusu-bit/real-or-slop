@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 5.0.0
+# Libreria delle immagini, tag e analisi — specifica 6.0.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:23:22Z.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:33:16Z.
 
 ## 1. Decisioni dell'owner
 
@@ -35,13 +35,34 @@ Una sola raccolta di immagini REAL e SLOP.
 - **Ingresso.** Le REAL entrano dal wizard REAL (Wikimedia Commons, specifica `dashboard-admin-wizard-real`), le SLOP dallo studio
   e dai batch automatici (specifica `generazione-slop`). La sezione Database non carica file né cerca su Commons. Esiste ancora
   la rotta `POST /upload`, usata dai test.
-- **Campi.** Origine, titolo (≤200 caratteri), descrizione (≤1000), spiegazione (≤2000, oggi non mostrata nel gioco), fonte, autore e
+- **Campi.** Origine, titolo (≤200 caratteri), descrizione (≤1000), fonte, autore e
   licenza (REAL), prompt e modello (SLOP), tag con le categorie, stato, originale e copia di gioco, revisione per le modifiche
   concorrenti. Per una SLOP generata anche batch, REAL di origine, tag di partenza, REAL di riferimento e qualità della generazione.
 - **Descrizione.** Per le REAL arriva da Commons (testo ripulito, al massimo 500 caratteri) e l'owner la corregge nel passo 2 del wizard
   o nella sezione Database. Il giocatore la legge nella lista di fine partita (specifica `gioco-a-livelli`). Entra anche nel
   contesto dell'analisi.
 - **Limiti dei file.** JPEG, PNG o WebP fino a 12 MB e 32 megapixel; copia di gioco WebP fino a 4 MB.
+
+### Campi utili per origine (decisione del 2026-11-17)
+
+| Campi | REAL | SLOP | Funzione attuale |
+|---|---|---|---|
+| Titolo e descrizione | sì | sì | Catalogo e contesto dell'analisi; la descrizione REAL appare nei crediti finali |
+| Fonte, autore, nome e URL licenza | sì | no | Provenienza, diritti, controllo ND e attribuzione della REAL |
+| Prompt e modello | no | sì | Analisi, ricostruzione della generazione e prompt nei crediti finali |
+| Descrizione editoriale, provenienza dell'analisi e contesto Commons | sì | no | Brief automatico, correzioni private e contesto documentato |
+| Tag correnti e generati, contesti/esito dell'analisi | sì | sì | Ricerca, controllo dell'analisi e ripristino gratuito dei tag |
+| Originale/copia, hash, dimensioni, MIME, crop e misure | sì | sì | Archivio, verifica file, copie identiche nel gioco e rifacimento nel browser |
+| Batch, slot, qualità e trattamento | no | sì | Revisione, idempotenza e rifacimento delle copie SLOP |
+| Stato, date, revisione e disponibilità madre–figlia | sì | sì | Transizioni, concorrenza e campionamento delle REAL libere |
+
+Il dettaglio e l'API non espongono fonte/autore/licenza sulle SLOP né prompt/modello sulle REAL. Le modifiche di quei campi
+sull'origine sbagliata sono rifiutate. Le colonne restano nella tabella condivisa perché servono all'altra origine; non si cancella
+la provenienza delle REAL. La descrizione aggiuntiva delle SLOP resta un contesto per l'analisi, distinto dal prompt, e non appare nei crediti.
+
+Didascalie e vista iniziale sono già state ritirate; «Spiegazione dopo la risposta» non è mai letta dal gioco. La 0057 ne elimina
+le sei colonne residue, il controllo API e il campo del dettaglio. Il gioco carica soltanto identificativo, origine interna e riferimenti
+alla copia per estrarre le foto; i crediti REAL e il prompt SLOP vengono letti nella query dedicata di fine partita.
 
 ## 3. Stati
 
@@ -190,8 +211,7 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
   gioco) e `copy_treatment` (trattamento di una SLOP), specifica `copie-di-gioco`, sezione 4.
 - Migrazione 0053: rimuove `generation_source` e `source_id`, anonimizza slot e trattamento e preserva tentativi e chiamate. La migrazione storica 0049 aveva introdotto il legame, poi eliminato. La 0055 introduce il solo registro privato di disponibilità `slop_reference_uses` per le nuove generazioni: madre occupata finché la figlia esiste in qualsiasi stato; eliminare definitivamente la figlia libera la madre. Nessun legame viene inferito per le generazioni pregresse. La disponibilità non interviene nel campionamento del gioco.
 - Migrazione 0056: elimina `images.generation_group`, `slop_batches.group_key`, `slop_batches.auto_tag` e le impostazioni obsolete dei gruppi. Ripulisce gli snapshot e converte il contesto storico di genere/decennio in tag di partenza ordinari, conservando immagini, tag, copie, processi, tentativi, chiamate e registro madre–figlia. Nessuna chiamata a pagamento.
-- Colonne inutilizzate, lasciate per non ricostruire le tabelle: `caption`, `generated_caption` (`images`), `caption` e `copy_view`
-  (`game_rounds`), `copy_view` (`images`).
+- Migrazione 0057: elimina `caption`, `generated_caption`, `copy_view` ed `explanation` da `images`; `caption` e `copy_view` da `game_rounds`. Ogni altra colonna e ogni collegamento sono conservati. Le vecchie spiegazioni, mai lette dal gioco, vengono eliminate; descrizioni, tag e contesto editoriale restano.
 - R2: quarantena privata (`library/<id>/`: originale e copia) e bucket del gioco (copie pubblicate).
 - Le statistiche di un'immagine (visualizzazioni e classificazioni corrette) contano solo i round giocati con la copia attuale.
 
