@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 7.0.0
+# Generazione SLOP — specifica 7.1.0
 
-Stato: implementata nel ramo 1.38.0, da rilasciare. Aggiornata: 2026-11-17T10:19:38Z.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T17:42:44Z.
 
 ## Due modalità e avviso sul dataset
 
@@ -15,7 +15,20 @@ nello snapshot; i tag finali descrivono l'originale prodotto, con la normale ana
 
 **Automatica:** l'owner sceglie da una a dieci SLOP, entro il numero di REAL libere con descrizione. La quantità può essere diversa
 dallo sbilanciamento, anche quando il catalogo è in pareggio. Campione casuale uniforme, senza ripetizioni. Una chiamata testuale
-per REAL scrive brief e prompt dai tag e dalla descrizione salvati. La conferma mostra il massimo di chiamate del numero scelto.
+per REAL scrive brief e prompt dai tag e dalla descrizione salvati.
+
+Prima di avviare, «Estrai le REAL» mostra miniature, titoli e tag delle fotografie selezionate. Un tocco o una pressione prolungata
+apre l'originale intero con descrizione editoriale, contesto documentato e incertezze. Si può riestrarre o annullare, gratuitamente.
+Solo «Conferma e avvia N SLOP», seguito dalla conferma esplicita del massimo di chiamate, avvia il processo. Cambiare la quantità
+invalida l'anteprima corrente; la risposta di un'estrazione precedente non sostituisce una selezione più recente.
+
+`POST auto/preview {size}` non crea batch, non prenota REAL e non invia chiamate al modello. Restituisce un token firmato con ID,
+revisioni, ordine delle REAL e configurazione mostrata, valido quindici minuti. `POST auto/start {preview,confirm:true}` usa esattamente
+quelle REAL, senza un secondo campionamento. Un riferimento cambiato, occupato o eliminato, un cambio della configurazione o una
+scadenza richiedono una nuova estrazione prima di qualsiasi chiamata. Il controllo delle revisioni e della disponibilità è ripetuto
+nella transazione che crea processi e prenotazioni. L'ID dell'estrazione diventa l'ID univoco del batch: una selezione già avviata
+non si riusa, anche dopo la chiusura e la cancellazione delle figlie. L'anteprima non è conservata ricaricando la pagina.
+Non occorrono nuove migrazioni.
 
 ## Ispirazione e disponibilità
 

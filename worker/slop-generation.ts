@@ -84,11 +84,14 @@ async function show(env: Env, batchId: string) {
     prompts_status: row.prompts_status, prompts_error: row.prompts_error, created_at: row.created_at, updated_at: row.updated_at, runner: runnerView(row),
     images: await Promise.all(ids.map(i => viewOf(env, i.id))) };
 }
-export async function initializeBatch(env: Env, batchId: string, items: InspirationItem[], snapshot: Snapshot) {
+export async function initializeBatch(env: Env, batchId: string, items: InspirationItem[], snapshot: Snapshot, reviewedRevisions?: readonly number[]) {
   const stamp = now();
   const sequence = await env.DB.prepare("SELECT count(*) AS n FROM slop_processes").first<{n: number}>();
+  const revisions: number[] = [];
   const configs = await Promise.all(items.map(async (item, slot) => {
     const source = await find(env, item.source!);
+    if (reviewedRevisions && source.revision !== reviewedRevisions[slot]) throw new HttpError(409, "REAL modificata dopo l’estrazione");
+    revisions[slot] = source.revision;
     const description = realDescription(parse(source.real_description, null));
     if (!description || !["approved", "published"].includes(source.status)) throw new HttpError(409, "REAL non disponibile o descrizione mancante");
     return {...snapshot, mode: "automatic" as const, composition: compositionAt((sequence?.n || 0) + slot), source_description: description, source_tags: byCategory(item.tags), width: source.width, height: source.height,
@@ -101,7 +104,10 @@ export async function initializeBatch(env: Env, batchId: string, items: Inspirat
       const processId = id();
       return [env.DB.prepare(`INSERT INTO slop_processes(id,batch_id,slot,snapshot,created_at,updated_at) VALUES(?,?,?,?,?,?)`)
         .bind(processId, batchId, slot, JSON.stringify(configs[slot]), stamp, stamp),
-      env.DB.prepare("INSERT INTO slop_reference_uses(source_id,process_id,created_at) VALUES(?,?,?)").bind(item.source!, processId, stamp)];
+      // NOT NULL rejects a changed reference and rolls back every process/reservation in this D1 transaction.
+      env.DB.prepare(`INSERT INTO slop_reference_uses(source_id,process_id,created_at) VALUES(?,?,
+        CASE WHEN EXISTS(SELECT 1 FROM images WHERE id=? AND revision=? AND origin='REAL' AND status IN ('approved','published')) THEN ? ELSE NULL END)`)
+        .bind(item.source!, processId, item.source!, revisions[slot], stamp)];
     })]);
 }
 /** A manual draft is free: the owner supplies the whole prompt, target tags and immutable anchors. */
