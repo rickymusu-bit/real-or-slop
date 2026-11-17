@@ -241,6 +241,18 @@ with sync_playwright() as p:
             page.locator('[data-admin-tab="'+section+'"]').click()
             expect(page.locator('#admin-'+section)).to_be_visible()
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), section
+            if name == 'desktop':
+                assert page.evaluate('''() => {
+                    const nav = document.querySelector('.admin-tabs').getBoundingClientRect();
+                    const panel = document.querySelector('.admin-workspace-body').getBoundingClientRect();
+                    return nav.right < panel.left && [...document.querySelectorAll('[data-admin-tab]')].every(button =>
+                        button.getBoundingClientRect().right <= nav.right + 1);
+                }'''), 'navigation overlaps ' + section
+            assert page.locator('.slop-waiting label span').evaluate_all('''labels => labels.every(label => {
+                const text = label.getBoundingClientRect(), card = label.closest('label').getBoundingClientRect();
+                return text.right <= card.right + 1;
+            })'''), 'inspiration title overflows its card'
+            page.evaluate('window.scrollTo(0, 0)')
             page.screenshot(path=str(folder / f'{name}-workspace-{section}.png'), full_page=True)
         page.locator('[data-admin-tab=stats]').click()
         page.locator('[data-stats-view=calls]').click()
