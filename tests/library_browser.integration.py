@@ -54,7 +54,7 @@ with sync_playwright() as p:
         page.get_by_role('button', name='Database immagini').click()
         expect(page.get_by_role('heading', name='Database immagini')).to_be_visible()
         # No upload, copy filter, «Da Commons» or drop zone in the Database section any more.
-        for gone in ('#library-files', '#library-copy-filter', '#library-commons-toggle', '#library-drop', '#library-redo-copy', '#library-undescribed', '#library-incomplete'):
+        for gone in ('#library-files', '#library-copy-filter', '#library-commons-toggle', '#library-drop', '#library-redo-copy', '#library-undescribed', '#library-incomplete', '#library-group'):
             expect(page.locator(gone)).to_have_count(0)
         expect(page.locator('#library-search')).to_be_visible()
         page.locator('#library-search').fill('no-such-dashboard-image')
@@ -261,6 +261,7 @@ with sync_playwright() as p:
             page.evaluate('window.scrollTo(0, 0)')
             page.screenshot(path=str(folder / f'{name}-workspace-{section}.png'), full_page=True)
         page.locator('[data-admin-tab=stats]').click()
+        expect(page.locator('.stats-groups, .stats-measures')).to_have_count(0)
         page.locator('[data-stats-view=calls]').click()
         expect(page.locator('[aria-labelledby=stats-calls]')).to_be_visible()
         expect(page.locator('[aria-labelledby=stats-games]')).to_be_hidden()

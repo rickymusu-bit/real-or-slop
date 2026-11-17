@@ -30,6 +30,9 @@ def call(url, data=None, method=None, raw=None, mime='application/json', auth=Tr
             return r.status, (json.loads(payload) if r.headers.get('Content-Type', '').startswith('application/json') else payload)
     except urllib.error.HTTPError as e:
         return e.code, json.loads(e.read() or b'{}')
+# The removed catalogue grouping cannot narrow a request silently.
+assert call(API + '?group=press-photo%2F1960s')[0] == 400
+
 def stored(key):
     with tempfile.TemporaryDirectory() as folder:
         target = Path(folder) / 'f'

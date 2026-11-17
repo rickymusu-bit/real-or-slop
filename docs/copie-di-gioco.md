@@ -1,11 +1,6 @@
-# Copie di gioco — specifica 12.0.2
+# Copie di gioco — specifica 12.1.0
 
-Stato: vigente per il ramo 1.36.0. Aggiornata: 2026-11-17T17:58:46Z. La 12.0.0 usa misure anonime senza legami persistenti alla REAL. La 12.0.1 precisa la validazione dei dati del trattamento. La 11.1.0 distingue il seppia dal bianco e nero (richiesta dell'owner del 2026-11-16): tinta sui mezzitoni, misurata su tutti i pixel delle REAL, e tinta seppia di partenza nel riquadro. La 11.0.0 riporta la
-preparazione delle copie nel browser (decisione dell'owner del 2026-11-16: il Worker gestisce ciò che riguarda OpenAI, il browser
-tutto il resto) e rende il trattamento delle SLOP regolabile con i cursori (sezione 4.4). La 10.0.0 aveva spostato le copie sul Worker
-con il binding Images. La 9.0.0 riporta tutte le copie di gioco al formato verticale 4:5 e prende le misure del trattamento dalla REAL
-di origine. Le versioni precedenti restano nella cronologia git. Principio invariato dalla 2.0.0: l'owner approva la copia e il gioco
-serve esattamente quei byte.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:23:22Z.
 
 ## 1. Decisioni dell'owner
 
@@ -175,8 +170,8 @@ Decisione dell'owner del 2026-11-16: il trattamento della copia si modifica come
   basso), cioè un indizio dell'origine. L'anteprima mostra le misure della REAL accanto a quelle della copia proprio per evitarlo.
 - **Browser diversi:** il codificatore WebP e il ridimensionamento dipendono dal browser; copie fatte con browser diversi possono
   differire nella compressione. Preparare le copie sempre con lo stesso browser.
-- **Trattamento sbagliato:** le Statistiche confrontano le misure delle copie pubblicate di REAL e SLOP per gruppo; non correggere
-  automaticamente le copie solo per ridurre quella distanza, che può essere naturale per scene diverse.
+- **Trattamento sbagliato:** confrontare nell’anteprima le misure della copia con quelle di riferimento salvate e correggere con i cursori.
+  Non esistono confronti aggregati per gruppi; la credibilità della singola copia prevale sulla distanza numerica.
 - **Costo:** la dimensione chiesta al generatore dipende dal formato della REAL (tra 1,3 e 2,4 milioni di pixel).
 
 ## 7. Passaggio dalle copie nel formato della foto

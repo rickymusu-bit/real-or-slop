@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 // @ts-expect-error JavaScript CI entry point has no generated declarations.
 import {ALL, select} from '../scripts/select-integration.mjs';
 test('unknown dependencies, migrations and CI changes never skip integration coverage', () => {
-  for (const path of ['worker/library.ts', 'shared/game-copy.ts', 'shared/editorial.ts', 'worker/slop-groups.ts', 'migrations/0055_test.sql', '.github/workflows/checks.yml', 'tests/fake_openai.py'])
+  for (const path of ['worker/library.ts', 'shared/game-copy.ts', 'shared/editorial.ts', 'worker/unknown-catalogue.ts', 'migrations/0055_test.sql', '.github/workflows/checks.yml', 'tests/fake_openai.py'])
     assert.deepEqual(select([path]), ALL);
   assert.deepEqual(select(['src/play.ts'], true), ALL);
 });

@@ -13,7 +13,6 @@ import { checkTag } from "../shared/tags";
 import { contextRoute } from "./model-context";
 import { categoryError, forcedCategory, isCategory, limitError, SINGLE, VISUAL, type Category } from "../shared/tag-categories";
 import { treatedLong, validMetrics, validSettings, validTreatment } from "../shared/copy-treatment";
-import { groupOf, parseGroup } from "../shared/slop-groups";
 import { analysisStatus, analyze, completable, completeCategories } from "./analysis";
 import { modelsRoute } from "./models";
 import { settingsRoute } from "./app-settings";
@@ -39,7 +38,7 @@ export interface Row {
   real_description: string | null; real_description_provenance: string | null; commons_description: string | null;
   generation_batch: string | null; generation_slot: string | null; generation_quality: string | null;
   analysis_base_context: string | null; analysis_task_context: string | null; copy_crop: string | null; copy_view: string | null;
-  categories_completed_at: string | null; copy_metrics: string | null; copy_treatment: string | null; generation_group: string | null;
+  categories_completed_at: string | null; copy_metrics: string | null; copy_treatment: string | null;
 }
 const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
@@ -126,7 +125,7 @@ function parseSlot(value: string | null): unknown {
 const parseJson = (value: string | null): unknown => { try { return value ? JSON.parse(value) : null; } catch { return null; } };
 interface Extra { stats?: { views: number; correct: number }; in_play?: number }
 function view(row: Row, rows: TagRow[], extra: Extra = {}) {
-  const tags = rows.map(r => r.label), group = groupOf(rows);
+  const tags = rows.map(r => r.label);
   const v = row.copy_sha256 ? row.copy_sha256.slice(0, 12) : row.original_sha256.slice(0, 12);
   return {
     id: row.id, origin: row.origin, status: row.status, trashed_from: row.trashed_from, title: row.title,
@@ -143,7 +142,7 @@ function view(row: Row, rows: TagRow[], extra: Extra = {}) {
       context: row.analysis_task_context ? { base: row.analysis_base_context, task: row.analysis_task_context } : null },
     generated: generatedOf(row),
     generation: row.generation_batch ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality } : null,
-    group, missing_categories: VISUAL.filter(c => !rows.some(r => r.category === c)),
+    missing_categories: VISUAL.filter(c => !rows.some(r => r.category === c)),
     completable: completable(row, rows.map(r => r.category)),
     metrics: validMetrics(parseJson(row.copy_metrics)), treatment: validTreatment(parseJson(row.copy_treatment)),
     file: `${base}/${row.id}/file?v=${v}`, original: `${base}/${row.id}/original`,
@@ -391,9 +390,8 @@ async function destroy(env: Env, ids: readonly string[]): Promise<{ deleted: num
 async function list(env: Env, url: URL) {
   const status = url.searchParams.get("status") || "library", originFilter = url.searchParams.get("origin") || "all";
   const q = (url.searchParams.get("q") || "").trim().slice(0, 100), match = url.searchParams.get("match") || "all";
-  const batch = url.searchParams.get("batch") || "", groupFilter = url.searchParams.get("group") || "", incomplete = url.searchParams.get("incomplete") === "1" ? 1 : 0;
-  const group = groupFilter ? parseGroup(groupFilter) : null;
-  if (groupFilter && !group) throw new HttpError(400, "Filtro non valido");
+  const batch = url.searchParams.get("batch") || "", incomplete = url.searchParams.get("incomplete") === "1" ? 1 : 0;
+  if (url.searchParams.has("group")) throw new HttpError(400, "Il filtro per gruppi non è più disponibile");
   const wanted = [...new Set([url.searchParams.get("tag") || "", ...(url.searchParams.get("tags") || "").split(",")].map(t => t.trim()).filter(Boolean))];
   if (!["library", "new", "approved", "published", "trash"].includes(status) || !["all", "REAL", "SLOP"].includes(originFilter)
     || !["all", "any"].includes(match) || wanted.length > 20 || (batch && !/^[\w-]{1,64}$/.test(batch))) throw new HttpError(400, "Filtro non valido");
@@ -401,13 +399,11 @@ async function list(env: Env, url: URL) {
     `(?3='[]' OR id IN (SELECT it.image_id FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE t.label IN (SELECT value FROM json_each(?3))
       GROUP BY it.image_id HAVING count(DISTINCT t.label)>=CASE ?5 WHEN 'any' THEN 1 ELSE json_array_length(?3) END))`,
     "(?4='' OR title LIKE '%'||?4||'%' COLLATE NOCASE OR description LIKE '%'||?4||'%' COLLATE NOCASE OR prompt LIKE '%'||?4||'%' COLLATE NOCASE)", "(?6='' OR generation_batch=?6)",
-    `(?7='' OR (EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id AND t.category='genre' AND t.label=?7)
-      AND EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id AND t.category='time' AND t.label=?8)))`,
-    `(?9=0 OR (SELECT count(DISTINCT t.category) FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id
-      AND t.category IN ('genre','color','medium'))<3)`, `(?10=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, "(?11=0 OR (origin='REAL' AND real_description IS NULL))"].join(" AND ");
+    `(?7=0 OR (SELECT count(DISTINCT t.category) FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id
+      AND t.category IN ('genre','color','medium'))<3)`, `(?8=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, "(?9=0 OR (origin='REAL' AND real_description IS NULL))"].join(" AND ");
   await sweepRetired(env);
   const rows = (await env.DB.prepare(`SELECT * FROM images WHERE ${where} ORDER BY updated_at DESC,id LIMIT 500`)
-    .bind(status, originFilter, JSON.stringify(wanted), q, match, batch, group?.genre || "", group?.time || "", incomplete, url.searchParams.get("redo_copy") === "1" ? 1 : 0, url.searchParams.get("undescribed") === "1" ? 1 : 0).all<Row>()).results;
+    .bind(status, originFilter, JSON.stringify(wanted), q, match, batch, incomplete, url.searchParams.get("redo_copy") === "1" ? 1 : 0, url.searchParams.get("undescribed") === "1" ? 1 : 0).all<Row>()).results;
   const ids = rows.map(r => r.id), [tags, more] = await Promise.all([tagRowsOf(env, ids), extras(env, ids)]);
   const counts = (await env.DB.prepare("SELECT status,origin,count(*) AS n FROM images GROUP BY status,origin").all<{ status: string; origin: string; n: number }>()).results;
   return json({ items: rows.map(r => view(r, tags.get(r.id) || [], more.get(r.id))), counts });

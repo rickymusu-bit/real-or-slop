@@ -1,20 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 4.1.1
+# Libreria delle immagini, tag e analisi — specifica 5.0.0
 
-Stato: vigente; la 3.8.1 è in produzione con l'app 1.30.1, la 3.9.0 è per l'app 1.30.2. Aggiornata: 2026-11-17T17:58:46Z. La 3.9.0 ammette nelle azioni
-in gruppo la ripetizione confermata degli esiti incerti o interrotti (decisione dell'owner del 2026-11-15). La 3.8.1 corregge la
-memoria usata per inviare l'originale e la ripetizione di un'analisi interrotta dalla dashboard.
-La 3.8.0 fa analizzare REAL e SLOP intere (l'originale, non la copia 4:5: decisioni dell'owner del 2026-11-15) e aggiunge
-l'analisi combinata in gruppo delle REAL senza descrizione. La 3.7.0 aggiunge il contesto «Valutazione delle SLOP», blocca brief e prompt finché il contesto in vigore è quello delle
-gemelle (migrazione 0051) e riammette la ripetizione confermata di un'analisi con esito incerto.
-La 3.1.0 registra la REAL di origine delle SLOP gemelle (migrazione 0049), il tetto di risposta dell'analisi e il contesto 1.8.0.
-La 3.0.0 sostituisce la categoria Formato con Genere, Colore e Supporto, giudicate solo dall'immagine, e aggiunge il completamento a
-pagamento di queste tre categorie per le immagini già analizzate (decisioni dell'owner del 2026-11-14, sezioni 4 e 5). La 2.0.0 è la
-versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
-senza strati `libreria-immagini.v1.8.0`, `categorie-tag.v1.1.0` e le parti su libreria, tag e analisi di `database-immagini.v1.0.1`,
-`didascalie-wizard.v1.0.0` e `anteprima-descrizione.v1.2.0`, che restano nella cronologia git. Regole di contenuto delle SLOP e
-trasparenza: specifica `contenuti-e-trasparenza`. Copie di gioco: specifica `copie-di-gioco`.
-
-**Stato del ramo 1.27.0:** implementata la pipeline della specifica `generazione-slop` 5.3.0; produzione ancora 1.26.0 fino al rilascio autorizzato.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:23:22Z.
 
 ## 1. Decisioni dell'owner
 
@@ -35,8 +21,7 @@ trasparenza: specifica `contenuti-e-trasparenza`. Copie di gioco: specifica `cop
   2026-11-13).
 - I tag descrivono anche che tipo di fotografia è un'immagine (**Genere**), il suo colore (**Colore**) e che cosa è materialmente
   (**Supporto**: stampa, pagina di giornale, fotogramma di pellicola, foto digitale…). Sostituiscono la categoria Formato, che ammetteva
-  un solo tag e lasciava posto a `color` o `black-and-white` e a nient'altro. Genere e decennio definiscono i gruppi con cui Database
-  e Statistiche confrontano REAL e SLOP (2026-11-14).
+  un solo tag e lasciava posto a `color` o `black-and-white` e a nient'altro. Genere e decennio sono normali tag descrittivi; nessun gruppo o quota interviene nel bilanciamento (decisione del 2026-11-17).
 - Genere, Colore e Supporto si giudicano **solo dall'immagine**, per tutte le immagini: l'analisi di una SLOP riceve il prompt, che
   dichiara ciò che si voleva e non ciò che il generatore ha prodotto (batch del 2026-11-14: «1960s» e `color` copiati dal prompt su
   immagini dall'aspetto digitale) (2026-11-14).
@@ -103,7 +88,7 @@ Una sola raccolta di immagini REAL e SLOP.
 - **Genere** (lista aperta): il tipo di fotografia, riconoscibile da inquadratura, posa e scopo, indipendente dal soggetto. Esempi:
   `mugshot`, `studio-portrait`, `group-portrait`, `snapshot`, `street-scene`, `crowd-scene`, `press-photo`, `aerial-view`, `landscape`,
   `architecture`, `interior`, `still-life`, `sports-action`, `stage-performance`, `ceremony`. Non dice che cosa accade (Evento) né
-  dove (Luogo). Le varianti di un genere si uniscono con gli alias, perché frammentano i gruppi.
+  dove (Luogo). Le varianti di un genere si uniscono con gli alias per mantenere coerente il vocabolario.
 - **Colore** (lista chiusa nel codice): `color`, `black-and-white`, `sepia`, `hand-colored`.
 - **Supporto** (lista chiusa nel codice): `photo-print`, `newspaper-print`, `magazine-print`, `postcard`, `slide`, `film-still`,
   `instant-photo`, `digital-photo`, `phone-photo`, `screen-capture`, `poster`, `painting`, `drawing`, `illustration`. Dice che cosa si vede
@@ -118,7 +103,7 @@ Una sola raccolta di immagini REAL e SLOP.
 - **Vocabolario:** contiene solo tag in uso; un tag esce con l'ultima immagine che lo usa, insieme ai suoi alias.
 - **Alias:** etichetta alternativa che rimanda a un tag e non si attacca mai a un'immagine; ogni tag, scritto o generato, passa per gli
   alias prima del salvataggio. «Unisci A in B» sposta immagini e alias di A su B, che conserva la sua categoria, e fa di A un alias.
-- **Avvisi** non bloccanti: una REAL senza tag di Tempo; un'immagine senza Genere, Colore o Supporto (fuori dai gruppi).
+- **Avvisi** non bloccanti: una REAL senza tag di Tempo; un'immagine senza Genere, Colore o Supporto.
 
 ## 5. Analisi a pagamento
 
@@ -202,8 +187,9 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
   `slop_reference_uses`, `slop_processes`, `slop_attempts`, `retired_copies`, tabelle del gioco (`game_sessions`, `game_rounds`, `answers`, `media_events`,
   `leaderboard`, `rate_limits`). Elenco delle migrazioni in `MASTER.md`.
 - Migrazione 0048 (`images`): `categories_completed_at` (completamento delle tre categorie), `copy_metrics` (misure della copia di
-  gioco) e `copy_treatment` (trattamento di una SLOP), specifica `copie-di-gioco`, sezione 4; `generation_group`, oggi inutilizzata.
+  gioco) e `copy_treatment` (trattamento di una SLOP), specifica `copie-di-gioco`, sezione 4.
 - Migrazione 0053: rimuove `generation_source` e `source_id`, anonimizza slot e trattamento e preserva tentativi e chiamate. La migrazione storica 0049 aveva introdotto il legame, poi eliminato. La 0055 introduce il solo registro privato di disponibilità `slop_reference_uses` per le nuove generazioni: madre occupata finché la figlia esiste in qualsiasi stato; eliminare definitivamente la figlia libera la madre. Nessun legame viene inferito per le generazioni pregresse. La disponibilità non interviene nel campionamento del gioco.
+- Migrazione 0056: elimina `images.generation_group`, `slop_batches.group_key`, `slop_batches.auto_tag` e le impostazioni obsolete dei gruppi. Ripulisce gli snapshot e converte il contesto storico di genere/decennio in tag di partenza ordinari, conservando immagini, tag, copie, processi, tentativi, chiamate e registro madre–figlia. Nessuna chiamata a pagamento.
 - Colonne inutilizzate, lasciate per non ricostruire le tabelle: `caption`, `generated_caption` (`images`), `caption` e `copy_view`
   (`game_rounds`), `copy_view` (`images`).
 - R2: quarantena privata (`library/<id>/`: originale e copia) e bucket del gioco (copie pubblicate).

@@ -38,9 +38,9 @@ interface Item {
   generated: { tags: string[] } | null;
   categories: Record<string, string>;
   stats: { views: number; correct: number }; in_play: number; no_derivatives: boolean;
-  /** A generated SLOP: its batch, the REAL it is the twin of and what its prompt was written from. */
+  /** A generated SLOP: its batch and the saved starting context of its prompt. */
   generation?: { batch: string; slot: StartSlot | null; quality: string | null } | null;
-  group: { key: string; genre: string; time: string } | null; missing_categories: string[]; completable: boolean;
+  missing_categories: string[]; completable: boolean;
   metrics: Metrics | null; treatment: Treatment | null; copy_sha?: string;
 }
 interface Analysis { enabled: boolean; reason: string; model: string; calls_30_days: { total: number; uncertain: number; input_tokens: number; output_tokens: number }; note: string }
@@ -82,7 +82,7 @@ export async function showLibrary() {
     if (saved && ["added", "views", "accuracy"].includes(saved.by) && ["asc", "desc"].includes(saved.order)) sort = saved; } catch { /* private browsing */ }
   let measuring = false;
   let slopStudio: { refresh: () => Promise<void> } = { refresh: async () => {} };
-  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "", group: "" };
+  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "" };
   let autoBox: { refresh: () => Promise<void> } = { refresh: async () => {} };
   let models: Models | null = null;
   let statsView: { refresh: () => Promise<void> } = { refresh: async () => {} };
@@ -113,7 +113,6 @@ export async function showLibrary() {
       <div class="db-tag-filter"><span>Tag</span><div class="db-tag-entry"><input id="library-tag" list="library-tag-list" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="es. riot, Invio" aria-label="Aggiungi un tag al filtro">
         <select id="library-tag-match" aria-label="Come combinare i tag"><option value="all">con tutti i tag</option><option value="any">con almeno un tag</option></select></div>
         <div class="rw-pills" id="library-tag-pills"></div></div>
-      <label>Gruppo<select id="library-group"><option value="">tutti</option></select></label>
       <label>Ordina per<select id="library-sort"><option value="added">data di aggiunta</option><option value="views">visualizzazioni</option><option value="accuracy">accuratezza</option></select></label>
       <label>Ordine<select id="library-order"><option value="desc">decrescente</option><option value="asc">crescente</option></select></label>
       <datalist id="library-tag-list"></datalist>
@@ -212,16 +211,9 @@ export async function showLibrary() {
       }
       catch (error) { errors.push(error instanceof Error ? error.message : String(error)); if (/OpenAI:/.test(String(error))) break; }
     }
-    await Promise.all([load(), refreshTags(), refreshAnalysis(), refreshGroups()]);
+    await Promise.all([load(), refreshTags(), refreshAnalysis()]);
     progress("");
     message(`${done} di ${ids.length} completate.` + conflictText(conflicts) + (errors.length ? " " + [...new Set(errors)].join(" / ") : ""));
-  };
-  const refreshGroups = async () => {
-    try {
-      const { groups } = await call<{ groups: { key: string; real: number; slop: number }[] }>("/slop/state");
-      const select = $<HTMLSelectElement>("#library-group");
-      select.innerHTML = '<option value="">tutti</option>' + groups.map(g => `<option value="${escape(g.key)}"${g.key === filter.group ? " selected" : ""}>${escape(g.key)} (${g.real} REAL, ${g.slop} SLOP)</option>`).join("");
-    } catch { /* the filter stays as it is */ }
   };
   /** Analyses images one by one after an explicit confirmation of the total estimate. */
   const analyzeMany = async (ids: string[], describe = false) => {
@@ -250,8 +242,7 @@ export async function showLibrary() {
   let loadSeq = 0;
   const load = async () => {
     const seq = ++loadSeq;
-    const params = new URLSearchParams({ status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q, batch: filter.batch,
-      group: filter.group });
+    const params = new URLSearchParams({ status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q, batch: filter.batch });
     $("#library-batch-filter").hidden = !filter.batch;
     const data = await call<{ items: Item[]; counts: { status: string; origin: string; n: number }[] }>("?" + params);
     if (seq !== loadSeq) return;
@@ -347,11 +338,10 @@ export async function showLibrary() {
     done: "Analizzata: tag generati una volta sola, da rivedere prima di approvare.",
     uncertain: "Esito incerto: " + item.analysis.error, failed: "Analisi non riuscita: " + item.analysis.error })[item.analysis.status];
   const metricText = (m: Metrics) => `lato ${m.long} px / rumore ${m.noise.toFixed(1)} / nitidezza ${m.sharpness.toFixed(1)} / contrasto ${m.contrast} / saturazione ${m.saturation.toFixed(2)}`;
-  /** Group, missing categories and the paid completion. */
-  const groupBlock = (item: Item) => {
+  /** Missing categories and the paid completion. */
+  const categoriesBlock = (item: Item) => {
     const missing = item.missing_categories.map(c => CATEGORY_LABELS[c as Category] || c);
-    return `<p class="hint" data-group>${item.group ? `Gruppo: <strong>${escape(item.group.genre)}</strong>, <strong>${escape(item.group.time)}</strong>.` : "Fuori dai gruppi del bilanciamento (servono Genere e Tempo)."}` +
-      (missing.length ? ` Mancano: ${escape(missing.join(", "))}.` : "") + "</p>" +
+    return (missing.length ? `<p class="hint" data-missing-categories>Mancano: ${escape(missing.join(", "))}.</p>` : "") +
       (item.completable && analysis?.enabled ? '<p><button type="button" id="library-complete">Completa Genere, Colore e Supporto (a pagamento)</button></p>' : "");
   };
   /** Measures of the copy and, for a SLOP, its treatment with the commands (free; they make the copy again). */
@@ -381,7 +371,7 @@ export async function showLibrary() {
       ${item.no_derivatives ? '<p class="db-edit-note">Licenza senza opere derivate (ND): la foto è esclusa dal gioco, perché la copia di gioco la ritaglia.</p>' : ""}
       ${!item.copy && item.status === "new" ? '<p><button type="button" id="library-copy">Prepara la copia di gioco</button></p>' : ""}
       ${editable ? '<p><button type="button" id="library-crop">Inquadratura</button></p>' : ""}
-      ${groupBlock(item)}
+      ${categoriesBlock(item)}
       ${measuresBlock(item, editable)}
       ${fields.map(([key, label, max, area]) => `<label>${label}${area
         ? `<textarea data-field="${key}" maxlength="${max}" rows="3" ${editable ? "" : "readonly"}>${escape(item[key])}</textarea>`
@@ -469,7 +459,7 @@ export async function showLibrary() {
         detailMessage("Completamento in corso…");
         const completed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(open.id)}/categories`, { method: "POST", body: JSON.stringify({ confirm: true }) });
         open = completed; detailMessage("Completamento fatto." + conflictText(completed.tag_conflicts));
-        void Promise.all([refreshTags(), refreshAnalysis(), refreshGroups()]);
+        void Promise.all([refreshTags(), refreshAnalysis()]);
       }
       else if (button.id === "library-treatment-edit") {
         const choice = await chooseTreatment(open, open.title);
@@ -482,7 +472,7 @@ export async function showLibrary() {
         const off = button.id === "library-treatment-off";
         detailMessage(off ? "Rifaccio la copia senza trattamento…" : "Rifaccio la copia con il trattamento…");
         open = await prepareItemCopy<Item>(open, open.copy?.crop || undefined, { off });
-        detailMessage(open.treatment && !open.treatment.off ? "Copia trattata." : open.treatment ? "Copia senza trattamento." : "Nessuna REAL misurata nel gruppo: copia senza trattamento.");
+        detailMessage(open.treatment && !open.treatment.off ? "Copia trattata." : open.treatment ? "Copia senza trattamento." : "Misure della REAL di riferimento non disponibili: copia senza trattamento.");
       }
       else if (button.id === "library-crop") {
         const choice = await chooseFrame(open.id, open.width, open.height, open.copy ? { crop: open.copy.crop } : null, open.title);
@@ -640,7 +630,6 @@ export async function showLibrary() {
     }
     else if (target.id === "library-tag") addFilterTag(target);
     else if (target.id === "library-tag-match") { filter.match = target.value; void load(); }
-    else if (target.id === "library-group") { filter.group = target.value; void load(); }
   });
   /** A tag typed in the filter, converted like a tag written by hand; an alias is resolved by the server only when saving, so
    * here the label is used as typed. */
@@ -820,7 +809,7 @@ export async function showLibrary() {
   // The REAL wizard is the section shown first: it is mounted before the others load.
   realWizard = await mountRealWizard($<HTMLElement>("#real-wizard"), async () => { await Promise.all([load(), refreshTags(), refreshAnalysis()]); })
     .catch(error => { $("#real-wizard").textContent = String(error instanceof Error ? error.message : error); return null; });
-  await Promise.all([load(), refreshTags(), refreshAnalysis(), refreshGroups()]).catch(error => message(String(error instanceof Error ? error.message : error)));
+  await Promise.all([load(), refreshTags(), refreshAnalysis()]).catch(error => message(String(error instanceof Error ? error.message : error)));
   await refreshContexts().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   await refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   await call<Numbers>("/settings").then(n => renderNumbers(n)).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));

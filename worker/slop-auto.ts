@@ -92,8 +92,8 @@ async function start(env: Env, data: Record<string, unknown>) {
   if (await openBatch(env)) throw new HttpError(409, "C'è già un batch automatico aperto: nessuna chiamata inviata");
   const items = await inspirationItems(env, selected.sources.map(r => r.id)), stamp = now(), batchId = selected.id;
   try {
-    await env.DB.prepare(`INSERT INTO slop_batches(id,theme,slots,created_at,updated_at,origin,auto_tag,auto_status,auto_size,auto_snapshot)
-      VALUES(?,'[]',?,?,?,'auto',?,'running',?,?)`).bind(batchId, "[]", stamp, stamp, "catalog-balance", items.length, JSON.stringify({size: items.length})).run();
+    await env.DB.prepare(`INSERT INTO slop_batches(id,theme,slots,created_at,updated_at,origin,auto_status,auto_size,auto_snapshot)
+      VALUES(?,'[]',?,?,?,'auto','running',?,?)`).bind(batchId, "[]", stamp, stamp, items.length, JSON.stringify({size: items.length})).run();
   } catch { throw new HttpError(409, "Estrazione già avviata o altro batch aperto: nessuna chiamata inviata"); }
   try { await initializeBatch(env, batchId, items, snapshot, selected.sources.map(r => r.revision)); }
   catch { await env.DB.prepare("DELETE FROM slop_batches WHERE id=?").bind(batchId).run(); throw new HttpError(409, "Una REAL è cambiata o è stata occupata: estrai di nuovo. Nessuna chiamata inviata"); }

@@ -75,7 +75,8 @@ try:
     assert balance['real']['published'] >= 2 and balance['slop']['published'] >= 2 and [l['id'] for l in balance['levels']] == ['facile', 'medio', 'difficile', 'esperto'], balance
     share = balance['real']['published'] / (balance['real']['published'] + balance['slop']['published'])
     assert abs(balance['real_share_published'] - round(share, 3)) < 0.001 and balance['warning'] == (share < 0.4 or share > 0.6), balance
-    assert 'formats' not in balance
+    assert 'formats' not in balance and 'groups' not in balance and 'measures' not in balance
+    assert 'groups' not in call('/slop/state')[1]
     assert call('/stats')[1]['period'] == '30' and call('/stats?period=all')[0] == 200
 finally:
     sql("DELETE FROM game_sessions WHERE id IN ('st-now','st-old','st-done','st-expired'); DELETE FROM images WHERE id LIKE 'st-img-%'")

@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 28.1.2, aggiornata il 2026-11-17T17:58:46Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 29.0.0, aggiornata il 2026-11-17T18:23:22Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,7 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.39.0 (PR #155):** tolti dal Database i tre checkbox di manutenzione e il loro stato/parametri del browser; test delle analisi adattati a origine, ricerca e selezione esplicita. Anteprima gratuita delle REAL estratte prima del batch automatico: miniature, titoli, tag, originale intero e descrizione; riestrazione/annullamento senza chiamate. Avvio vincolato alle stesse REAL con token firmato, revisioni controllate nella transazione e ID batch monouso. Nessuna nuova migrazione. Nessun merge, deploy, migrazione remota o chiamata reale eseguiti per questa versione.
+- **Ramo 1.39.0 (PR #155):** tolti dal Database i tre checkbox di manutenzione e il loro stato/parametri del browser; test delle analisi adattati a origine, ricerca e selezione esplicita. Anteprima gratuita delle REAL estratte prima del batch automatico: miniature, titoli, tag, originale intero e descrizione; riestrazione/annullamento senza chiamate. Avvio vincolato alle stesse REAL con token firmato, revisioni controllate nella transazione e ID batch monouso. Rimossi i gruppi di genere/decennio da Database, statistiche, API e schema: migrazione 0056 con conservazione del contesto storico come tag ordinari. Bilanciamento solo per conteggi e disponibilità madre–figlia. Nessun merge, deploy, migrazione remota o chiamata reale eseguiti per questa versione.
 - **Integrata in main la 1.38.0 (PR #154):** modalità manuale e automatica, registro privato delle REAL occupate (0055), composizioni variate e CI alleggerita. Merge confermato in questa sessione; funzionamento segnalato dall'owner.
 - **Integrata in main la 1.37.0 (PR #152):** dashboard nelle cinque sezioni, ricerca catalogo e conteggi grezzi. Migrazione 0054. Stato del deploy non verificato in questa sessione.
 
@@ -61,14 +61,14 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 4.1.1 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 5.0.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.0.2 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 3.2.1 |
-| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 7.1.0 |
-| Sezione Database | `docs/database-immagini.md` | 3.1.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.1.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 3.3.0 |
+| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 8.0.0 |
+| Sezione Database | `docs/database-immagini.md` | 4.0.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.0.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 3.1.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.0.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -118,13 +118,13 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
   analisi `analysis.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
 - SLOP: studio `slop.ts`, riferimenti editoriali temporanei `slop-references.ts` (disponibilità privata), generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
-  `slop-runner.ts`, batch automatici `slop-auto.ts`, selezioni firmate prima dell’avvio `slop-preview.ts`, gruppi e loro misure per Database e Statistiche `slop-groups.ts`.
+  `slop-runner.ts`, batch automatici `slop-auto.ts`, selezioni firmate prima dell’avvio `slop-preview.ts`.
 - Corpo delle richieste con un'immagine (analisi e valutazione, base64 scritto nei byte) `image-body.ts`.
 - Copie di gioco: controllo e conservazione della copia caricata dal browser in `library.ts` (`POST /:id/copy`).
 - Gioco `game.ts` con `sampling.ts` e `random.ts`, classifica `leaderboard.ts`.
 
 **Codice condiviso** (`shared/`): tag `tags.ts`, tag scritti a mano `tag-input.ts`, categorie `tag-categories.ts`, modelli OpenAI
-`models.ts`, tipi dei batch `slop-proposals.ts`, preferenze di composizione `slop-composition.ts`, gruppi `slop-groups.ts`, formati e ricetta della copia
+`models.ts`, tipi dei batch `slop-proposals.ts`, preferenze di composizione `slop-composition.ts`, formati e ricetta della copia
 `game-copy.ts`, misure e trattamento `copy-treatment.ts`, licenze ND
 `licenses.ts`, pulizia dei metadati `media-clean.ts`, livelli e punteggio `levels.ts`, costanti legali `legal.ts`, controllo delle
 immagini `editorial.ts` (descrizioni, brief e valutazioni), `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
@@ -160,6 +160,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0053 | snapshot editoriali anonimi, rimozione dei legami REAL/SLOP; conservazione di processi, tentativi e chiamate |
 | 0054 | proposte ignorate con fabbisogno assoluto e rimozione delle soglie obsolete; altre impostazioni conservate |
 | 0055 | registro privato REAL/processo/figlia, cancellazione definitiva che libera la madre, eliminazione delle proposte e dell’opzione |
+| 0056 | elimina i gruppi da colonne, impostazioni e snapshot; contesto storico convertito in tag ordinari, immagini/processi/chiamate/legami conservati |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

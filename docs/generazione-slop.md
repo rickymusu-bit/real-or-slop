@@ -1,12 +1,14 @@
-# Generazione SLOP — specifica 7.1.0
+# Generazione SLOP — specifica 8.0.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T17:42:44Z.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:23:22Z.
 
 ## Due modalità e avviso sul dataset
 
 Decisione dell'owner del 2026-11-17: in «Generazione SLOP» ci sono «Generazione manuale» e «Generazione automatica».
 La proposta di generazione, Ignora/Chiudi e l'impostazione per attivarla spariscono. Un avviso mostra soltanto lo sbilanciamento
 tra REAL e SLOP approvate/pubblicate, contando separatamente le SLOP nuove ancora da decidere. Non avvia processi e non impone una quantità.
+Il bilanciamento usa soltanto il numero di foto e la disponibilità delle REAL madri rispetto alle SLOP figlie. Non esistono gruppi
+di genere/decennio, quote per tag o soglie di gruppo. Genere e Tempo restano normali tag descrittivi, senza influenzare il campione.
 
 **Manuale:** l'owner scrive prompt inglese, tag di partenza e brief (ancoraggi obbligatori, preferenze, elementi liberi ed esclusioni).
 Non occorre una REAL. Preparare e modificare il processo prima del primo tentativo è gratuito; nessuna chiamata scrive o riscrive
@@ -28,7 +30,7 @@ quelle REAL, senza un secondo campionamento. Un riferimento cambiato, occupato o
 scadenza richiedono una nuova estrazione prima di qualsiasi chiamata. Il controllo delle revisioni e della disponibilità è ripetuto
 nella transazione che crea processi e prenotazioni. L'ID dell'estrazione diventa l'ID univoco del batch: una selezione già avviata
 non si riusa, anche dopo la chiusura e la cancellazione delle figlie. L'anteprima non è conservata ricaricando la pagina.
-Non occorrono nuove migrazioni.
+L'anteprima non richiede migrazioni aggiuntive.
 
 ## Ispirazione e disponibilità
 
@@ -83,3 +85,6 @@ I batch precedenti restano consultabili senza riprese a pagamento incompatibili.
 ## Rilascio
 
 La 0055 aggiunge il registro privato, elimina le proposte ignorate e la loro opzione. Non esegue chiamate né backfill di identità. Prima del rilascio devono terminare i Workflow precedenti: non registrerebbero il nuovo utilizzo delle REAL. Migrazione e deploy richiedono l'autorizzazione di rilascio dell'owner. Nessuna chiamata né migrazione remota fa parte delle verifiche locali.
+
+La 0056 elimina i campi e le impostazioni dei gruppi dal database. Le informazioni pregresse di genere e decennio negli slot
+restano come normali tag di partenza; prompt, tentativi, chiamate, immagini e registro madre–figlia sono conservati.
