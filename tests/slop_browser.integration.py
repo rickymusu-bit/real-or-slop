@@ -25,6 +25,11 @@ try:
                 expect(card).to_contain_text('il valutatore chiede la tua revisione')
                 card.locator(':scope > summary').click();card.locator('details > summary').first.click()
                 expect(card.locator('img')).to_be_visible();expect(card.locator('p[lang=en]')).to_be_visible()
+                # Refreshing the studio preserves the expanded attempt, including its prompt and evaluation.
+                previous=card.locator('p[lang=en]').element_handle()
+                page.locator('[data-admin-tab=slop]').click()
+                previous.wait_for_element_state('hidden')
+                expect(card.locator('p[lang=en]')).to_be_visible()
                 expect(page.locator('#slop-attention-count')).to_contain_text('da vedere')
                 page.screenshot(path=str(folder/(name+'-attention.png')),full_page=True)
                 card.locator('[data-slop=close-process]').click();expect(card).to_have_count(0)

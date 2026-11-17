@@ -35,7 +35,7 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
   const manual = {prompt: "", tags: "", required: "", preferred: "", flexible: "", exclusions: ""};
   let batchId = sessionStorage.getItem(DRAFT) || "", recent: {id: string; count: number}[] = [];
   const loadBatch = async () => { if (batchId) batch = await call<Batch>("batches/" + batchId); };
-  const evaluation = (a: Attempt, open = false) => `<details${open ? " open" : ""}><summary>Tentativo ${a.number}: ${escape(a.evaluation?.decision || a.status)}</summary>` +
+  const evaluation = (a: Attempt, open = false) => `<details data-evaluation="${escape(a.id)}"${open ? " open" : ""}><summary>Tentativo ${a.number}: ${escape(a.evaluation?.decision || a.status)}</summary>` +
     (a.file ? `<img src="${escape(a.file)}" alt="Candidata intera del tentativo ${a.number}" style="max-width:100%;max-height:360px;object-fit:contain">` : "") +
     `<p lang="en">${escape(a.prompt)}</p>` + (a.evaluation ? `<p>${escape(a.evaluation.action_reason)}</p><p>Difetti critici: ${escape(a.evaluation.critical_findings.join("; ") || "nessuno")}</p><p>Difetti minori: ${escape(a.evaluation.minor_findings.join("; ") || "nessuno")}</p><p>Incertezze: ${escape(a.evaluation.uncertainty_notes.join("; ") || "nessuna")}</p><p>Vincoli editoriali: ${a.evaluation.editorial_constraints_met ? "rispettati" : "non rispettati"}</p>` : "") + "</details>";
   const summary = () => batch?.config ? `<p class="hint">${batch.config.max_generation_attempts} tentativi massimi per SLOP; tolleranza ${["rigorosa","normale","permissiva"][batch.config.editorial_tolerance]}. Massimo ${batch.max_calls} chiamate (${batch.config.mode === "manual" ? "generazioni, valutazioni e tag dopo accettazione" : "brief+prompt, generazioni, valutazioni e tag dopo accettazione, più eventuali riscritture confermate"}). Effettive: ${batch.processes.reduce((n,p) => n+p.calls,0)}. Modelli: ${escape(batch.config.text_model)}, ${escape(batch.config.image_model)}, qualità ${escape(batch.config.quality)}.</p>` : "";
@@ -86,9 +86,13 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
   };
   const render = () => {
     const expanded = [...root.querySelectorAll<HTMLDetailsElement>("details[data-attention][open]")].map(d => d.dataset.attention);
+    const evaluations = new Map([...root.querySelectorAll<HTMLDetailsElement>("details[data-evaluation]")].map(d => [d.dataset.evaluation, d.open]));
     root.innerHTML = `<div class="rw slop">${attentionView()}<ol class="rw-steps">${["Prompt, tag e ancoraggi","Controlla il prompt","Generazione e valutazione","Revisione"].map((l,i) => `<li ${page===i+1?'aria-current="step"':""}>${i+1}. ${l}</li>`).join("")}</ol><p role="status" aria-live="polite">${escape(notice)}</p>` +
       (busy ? `<p role="status">${escape(progress || "Operazione in corso…")}</p>` : "") + [first, second, () => summary() + `<p role="status">${escape(progress)}</p>` + (working() ? '<p class="hint">La generazione continua sul server anche se chiudi questa pagina.</p><button data-slop="stop-run">Interrompi</button>' : ""), fourth][page-1]() + '</div>';
     for (const d of root.querySelectorAll<HTMLDetailsElement>("details[data-attention]")) d.open = expanded.includes(d.dataset.attention);
+    for (const d of root.querySelectorAll<HTMLDetailsElement>("details[data-evaluation]")) {
+      if (evaluations.has(d.dataset.evaluation)) d.open = evaluations.get(d.dataset.evaluation)!;
+    }
     if (busy) root.querySelectorAll<HTMLButtonElement>("button:not([data-slop=stop-run])").forEach(b => b.disabled = true);
   };
   const refresh = async () => {

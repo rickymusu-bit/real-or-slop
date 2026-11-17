@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 30.0.0, aggiornata il 2026-11-17T18:33:16Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 30.0.0, aggiornata il 2026-11-17T18:37:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -64,8 +64,8 @@ nome.
 | Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 6.0.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.1.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 3.3.0 |
-| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 8.0.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 3.3.1 |
+| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 8.0.1 |
 | Sezione Database | `docs/database-immagini.md` | 5.0.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.0.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.0.0 |

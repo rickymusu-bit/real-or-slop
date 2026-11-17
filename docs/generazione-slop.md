@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 8.0.0
+# Generazione SLOP — specifica 8.0.1
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:23:22Z.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:37:00Z.
 
 ## Due modalità e avviso sul dataset
 
@@ -74,6 +74,8 @@ Tentativi massimi 1–5, tolleranza 0–2. A tolleranza zero, difetti minori pro
 Solo una candidata accettata entra nella libreria privata come nuova SLOP. Analisi tag sull'intero originale. Copia 4:5 preparata dopo accettazione nel browser, con identica codifica WebP delle REAL, senza metadati. Il trattamento usa misure numeriche salvate, senza identificativo della REAL e senza rileggerla. I cursori permettono correzioni manuali; una REAL eliminata non impedisce di rifare la copia. Se mancano le misure, la copia è senza trattamento.
 
 Accettazione automatica, approvazione dell'owner e pubblicazione sono distinte. Esauriti, in revisione, falliti e incerti restano in evidenza con tentativi e valutazioni finché l'owner li chiude. Per un processo in revisione si può accettare una candidata valutata senza difetti critici, anche se il modello non conferma un vincolo; la conferma avverte delle incertezze e autorizza una chiamata per i tag. Chiusura esplicita e manutenzione consentono poi la rimozione dei tentativi dopo sette giorni.
+
+Aprire o chiudere il dettaglio di un tentativo conserva la scelta anche quando la sezione viene aggiornata.
 
 ## Batch automatici
 
