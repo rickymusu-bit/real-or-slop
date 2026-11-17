@@ -82,7 +82,7 @@ export async function showLibrary() {
     if (saved && ["added", "views", "accuracy"].includes(saved.by) && ["asc", "desc"].includes(saved.order)) sort = saved; } catch { /* private browsing */ }
   let measuring = false;
   let slopStudio: { refresh: () => Promise<void> } = { refresh: async () => {} };
-  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "", group: "", redo_copy: false, incomplete: false, undescribed: false };
+  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "", group: "" };
   let autoBox: { refresh: () => Promise<void> } = { refresh: async () => {} };
   let models: Models | null = null;
   let statsView: { refresh: () => Promise<void> } = { refresh: async () => {} };
@@ -114,9 +114,6 @@ export async function showLibrary() {
         <select id="library-tag-match" aria-label="Come combinare i tag"><option value="all">con tutti i tag</option><option value="any">con almeno un tag</option></select></div>
         <div class="rw-pills" id="library-tag-pills"></div></div>
       <label>Gruppo<select id="library-group"><option value="">tutti</option></select></label>
-      <label class="library-check-inline"><input type="checkbox" id="library-redo-copy"> Copia da rifare in 4:5</label>
-      <label class="library-check-inline"><input type="checkbox" id="library-undescribed"> REAL senza descrizione</label>
-      <label class="library-check-inline"><input type="checkbox" id="library-incomplete"> Senza Genere, Colore o Supporto</label>
       <label>Ordina per<select id="library-sort"><option value="added">data di aggiunta</option><option value="views">visualizzazioni</option><option value="accuracy">accuratezza</option></select></label>
       <label>Ordine<select id="library-order"><option value="desc">decrescente</option><option value="asc">crescente</option></select></label>
       <datalist id="library-tag-list"></datalist>
@@ -254,7 +251,7 @@ export async function showLibrary() {
   const load = async () => {
     const seq = ++loadSeq;
     const params = new URLSearchParams({ status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q, batch: filter.batch,
-      group: filter.group, redo_copy: filter.redo_copy ? "1" : "", incomplete: filter.incomplete ? "1" : "", undescribed: filter.undescribed ? "1" : "" });
+      group: filter.group });
     $("#library-batch-filter").hidden = !filter.batch;
     const data = await call<{ items: Item[]; counts: { status: string; origin: string; n: number }[] }>("?" + params);
     if (seq !== loadSeq) return;
@@ -644,9 +641,6 @@ export async function showLibrary() {
     else if (target.id === "library-tag") addFilterTag(target);
     else if (target.id === "library-tag-match") { filter.match = target.value; void load(); }
     else if (target.id === "library-group") { filter.group = target.value; void load(); }
-    else if (target.id === "library-redo-copy") { filter.redo_copy = target.checked; void load(); }
-    else if (target.id === "library-undescribed") { filter.undescribed = target.checked; void load(); }
-    else if (target.id === "library-incomplete") { filter.incomplete = target.checked; void load(); }
   });
   /** A tag typed in the filter, converted like a tag written by hand; an alias is resolved by the server only when saving, so
    * here the label is used as typed. */

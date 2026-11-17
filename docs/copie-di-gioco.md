@@ -1,6 +1,6 @@
-# Copie di gioco — specifica 12.0.1
+# Copie di gioco — specifica 12.0.2
 
-Stato: vigente per il ramo 1.36.0. Aggiornata: 2026-11-16T21:28:00Z. La 12.0.0 usa misure anonime senza legami persistenti alla REAL. La 12.0.1 precisa la validazione dei dati del trattamento. La 11.1.0 distingue il seppia dal bianco e nero (richiesta dell'owner del 2026-11-16): tinta sui mezzitoni, misurata su tutti i pixel delle REAL, e tinta seppia di partenza nel riquadro. La 11.0.0 riporta la
+Stato: vigente per il ramo 1.36.0. Aggiornata: 2026-11-17T17:58:46Z. La 12.0.0 usa misure anonime senza legami persistenti alla REAL. La 12.0.1 precisa la validazione dei dati del trattamento. La 11.1.0 distingue il seppia dal bianco e nero (richiesta dell'owner del 2026-11-16): tinta sui mezzitoni, misurata su tutti i pixel delle REAL, e tinta seppia di partenza nel riquadro. La 11.0.0 riporta la
 preparazione delle copie nel browser (decisione dell'owner del 2026-11-16: il Worker gestisce ciò che riguarda OpenAI, il browser
 tutto il resto) e rende il trattamento delle SLOP regolabile con i cursori (sezione 4.4). La 10.0.0 aveva spostato le copie sul Worker
 con il binding Images. La 9.0.0 riporta tutte le copie di gioco al formato verticale 4:5 e prende le misure del trattamento dalla REAL
@@ -183,7 +183,7 @@ Decisione dell'owner del 2026-11-16: il trattamento della copia si modifica come
 
 - Al rilascio le copie esistenti hanno il formato della foto. Una migrazione ritira dal gioco le pubblicate (tornano approvate) e
   nessuna copia non 4:5 si può approvare o pubblicare.
-- Nel Database il filtro «Copia da rifare in 4:5» e l'azione in gruppo «Rifai la copia di gioco» (nella pagina, una foto alla volta,
+- Nel Database l'azione in gruppo «Rifai la copia di gioco» sulle immagini selezionate (nella pagina, una foto alla volta,
   gratis: il ritaglio 4:5 salvato o, per un formato precedente, quello centrato; le pubblicate tornano approvate)
   rifanno le copie; l'owner rivede le inquadrature e ripubblica. Le statistiche delle foto ripartono, perché contano solo i
   round giocati con la copia attuale.

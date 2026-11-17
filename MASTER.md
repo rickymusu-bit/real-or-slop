@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 28.1.1, aggiornata il 2026-11-17T17:48:50Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 28.1.2, aggiornata il 2026-11-17T17:58:46Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,7 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.39.0:** anteprima gratuita delle REAL estratte prima del batch automatico: miniature, titoli, tag, originale intero e descrizione; riestrazione/annullamento senza chiamate. Avvio vincolato alle stesse REAL con token firmato, revisioni controllate nella transazione e ID batch monouso. Nessuna nuova migrazione. Nessun merge, deploy, migrazione remota o chiamata reale eseguiti per questa versione.
+- **Ramo 1.39.0 (PR #155):** tolti dal Database i tre checkbox di manutenzione e il loro stato/parametri del browser; test delle analisi adattati a origine, ricerca e selezione esplicita. Anteprima gratuita delle REAL estratte prima del batch automatico: miniature, titoli, tag, originale intero e descrizione; riestrazione/annullamento senza chiamate. Avvio vincolato alle stesse REAL con token firmato, revisioni controllate nella transazione e ID batch monouso. Nessuna nuova migrazione. Nessun merge, deploy, migrazione remota o chiamata reale eseguiti per questa versione.
 - **Integrata in main la 1.38.0 (PR #154):** modalità manuale e automatica, registro privato delle REAL occupate (0055), composizioni variate e CI alleggerita. Merge confermato in questa sessione; funzionamento segnalato dall'owner.
 - **Integrata in main la 1.37.0 (PR #152):** dashboard nelle cinque sezioni, ricerca catalogo e conteggi grezzi. Migrazione 0054. Stato del deploy non verificato in questa sessione.
 
@@ -61,12 +61,12 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 4.1.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 4.1.1 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.0.1 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 3.2.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.0.2 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 3.2.1 |
 | SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 7.1.0 |
-| Sezione Database | `docs/database-immagini.md` | 3.0.1 |
+| Sezione Database | `docs/database-immagini.md` | 3.1.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.0.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 3.1.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |

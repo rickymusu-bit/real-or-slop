@@ -1,6 +1,6 @@
-# Sezione Database — specifica 3.0.1
+# Sezione Database — specifica 3.1.0
 
-Stato: vigente; la 2.8.0 è in produzione con l'app 1.33.0, la 2.9.0 è per l'app 1.34.0. Aggiornata: 2026-11-16T22:03:33Z. La 2.9.0: copie, misure e
+Stato: vigente; la 2.8.0 è in produzione con l'app 1.33.0, la 2.9.0 è per l'app 1.34.0. Aggiornata: 2026-11-17T17:58:46Z. La 2.9.0: copie, misure e
 «Rifai la copia di gioco» tornano nel browser (decisione dell'owner del 2026-11-16); «Regola il trattamento» per le SLOP. La 2.8.0: copie e misure
 le preparava il Worker; «Rifai la copia di gioco» era un lavoro su Cloudflare. La 2.7.1 include nelle analisi
 in gruppo le immagini con esito incerto o interrotto, nominate nella conferma. La 2.7.0 aggiunge «Seleziona
@@ -32,8 +32,7 @@ Ricerca in titolo, descrizione o prompt, combinata con i filtri di origine, stat
 
 - **Viste:** Tutte, Nuove, Approvate, Pubblicate, Cestino, con i conteggi; «Svuota cestino» nella vista Cestino.
 - **Filtri:** origine (REAL e SLOP, REAL, SLOP) e uno o più tag combinati con «con tutti i tag» o «con almeno un tag»; i tag scritti si
-  convertono come quelli scritti a mano e compaiono come pillole rimovibili; **gruppo** (genere e decennio) e «senza Genere, Colore o
-  Supporto». Il filtro «Batch automatico in corso» arriva dal riquadro dei batch.
+  convertono come quelli scritti a mano e compaiono come pillole rimovibili; **gruppo** (genere e decennio). Il filtro «Batch automatico in corso» arriva dal riquadro dei batch. Decisione dell’owner del 2026-11-17: rimossi dalla dashboard i tre checkbox «Copia da rifare in 4:5», «REAL senza descrizione» e «Senza Genere, Colore o Supporto», insieme al loro stato e ai parametri inviati dal browser.
 - **Ordinamento:** data di aggiunta, visualizzazioni o accuratezza, decrescente o crescente, ricordato nel browser; per l'accuratezza le
   foto mai viste vanno in fondo.
 - **Schede:** miniatura (copia di gioco), origine e stato, casella di selezione. Tocco breve: dettaglio. Pressione prolungata: anteprima
@@ -62,13 +61,13 @@ Ricerca in titolo, descrizione o prompt, combinata con i filtri di origine, stat
   definitivamente (cestino).
 - **Rigenerare una SLOP:** richiede un nuovo processo nello studio con conferma, brief ed esame dell’immagine intera. nessuna sostituzione diretta che scavalchi la valutazione.
 - **Descrizione REAL privata:** elementi visibili, contesto documentato e incertezze, modificabili indipendentemente dai tag, anche per una pubblicata. Per una REAL storica senza descrizione, compilazione manuale o analisi combinata tag+descrizione con conferma separata.
-- **REAL senza descrizione:** filtro «REAL senza descrizione» e azione in gruppo «Analisi combinata tag e descrizione» (decisione
+- **Analisi combinata:** azione in gruppo «Analisi combinata tag e descrizione» (decisione
   dell'owner del 2026-11-15): per le REAL selezionate fuori dal cestino e senza descrizione privata, una chiamata a pagamento per foto
   sull'originale intero, dopo una conferma che dichiara il massimo; sostituisce i tag, non ritira le pubblicate. Le immagini con un'analisi interrotta o con
   esito incerto sono incluse: la conferma dice quante sono e che potrebbero essere già state addebitate. Restano escluse solo quelle
   con un'analisi in corso da meno di dieci minuti. Se nessuna selezionata è senza descrizione privata, il messaggio lo dice (il
   testo di Commons non conta).
-- **Vecchie copie:** filtro «Copia da rifare in 4:5», azione in gruppo «Rifai la copia di gioco» (nella pagina, una foto alla volta,
+- **Vecchie copie:** azione in gruppo «Rifai la copia di gioco» (nella pagina, una foto alla volta,
   gratis, per qualunque selezione: la pagina deve restare aperta), anche per rifare con il browser le copie preparate dal Worker
   con la 1.32–1.33. Le copie senza misure della versione corrente si misurano in background aprendo il Database.
 - **Trattamento di una SLOP:** «Senza/Con trattamento» e «Regola il trattamento», con i cursori e l'anteprima nella pagina

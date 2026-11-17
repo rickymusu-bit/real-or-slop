@@ -54,7 +54,7 @@ with sync_playwright() as p:
         page.get_by_role('button', name='Database immagini').click()
         expect(page.get_by_role('heading', name='Database immagini')).to_be_visible()
         # No upload, copy filter, «Da Commons» or drop zone in the Database section any more.
-        for gone in ('#library-files', '#library-copy-filter', '#library-commons-toggle', '#library-drop'):
+        for gone in ('#library-files', '#library-copy-filter', '#library-commons-toggle', '#library-drop', '#library-redo-copy', '#library-undescribed', '#library-incomplete'):
             expect(page.locator(gone)).to_have_count(0)
         expect(page.locator('#library-search')).to_be_visible()
         page.locator('#library-search').fill('no-such-dashboard-image')

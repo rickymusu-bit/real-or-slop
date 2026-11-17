@@ -111,8 +111,8 @@ with sync_playwright() as p:
         page.locator('[data-filter-remove="dbb-paris"]').click(); page.locator('[data-filter-remove="dbb-beach"]').click()
         tag_input.fill('dbb-riot'); tag_input.press('Enter')
         expect(cards).to_have_count(2)
-        # REAL without the private description: filter, then the combined analysis of the selection, with the exact maximum.
-        page.locator('#library-undescribed').check()
+        # Select REAL through the origin filter, then explicitly analyse the selection with the exact maximum.
+        page.locator('#library-origin').select_option('REAL')
         expect(cards).to_have_count(1)
         # «Seleziona tutte» takes exactly the photos the filters show.
         expect(page.locator('#library-select-all')).to_have_text(re.compile(r'^Seleziona tutte \(\d+\)$'))
@@ -129,13 +129,13 @@ with sync_playwright() as p:
         assert 'al massimo 1 chiamata' in confirms[-1] and "sull'originale intero" in confirms[-1], confirms[-1]
         described = call(f'{API}/{real["id"]}')
         assert described['real_description']['visible'] and described['status'] == 'published', described
-        expect(cards).to_have_count(0)
-        page.locator('#library-undescribed').uncheck()
+        expect(cards).to_have_count(1)
+        page.locator('#library-origin').select_option('all')
         expect(cards).to_have_count(2)
         # An analysis left «running» by a request that died (more than ten minutes ago) is repeated from the card, with the warning.
         stuck = seed(prefix, 'REAL', 'interrotta', 30 + index, ['dbb-riot'], False)
         sql(f"UPDATE images SET analysis_status='running',updated_at='2000-01-01T00:00:00.000Z' WHERE id='{stuck['id']}'")
-        page.locator('#library-undescribed').check()
+        page.locator('#library-search').fill(f'{prefix}-interrotta')
         expect(cards).to_have_count(1)
         page.get_by_role('button', name=f'Apri {prefix}-interrotta').click()
         expect(page.locator('#library-detail [data-analysis-unsure]')).to_contain_text('interrotta')
@@ -150,18 +150,21 @@ with sync_playwright() as p:
         fresh = seed(prefix, 'REAL', 'in-corso', 50 + index, ['dbb-riot'], False)
         sql(f"UPDATE images SET analysis_status='running',updated_at='2000-01-01T00:00:00.000Z' WHERE id='{again['id']}'")
         sql(f"UPDATE images SET analysis_status='running',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id='{fresh['id']}'")
-        page.locator('#library-undescribed').uncheck(); page.locator('#library-undescribed').check()
-        expect(cards).to_have_count(2)
-        page.locator('#library-select-all').click()
+        page.locator('#library-search').fill('')
+        expect(cards).to_have_count(5)
+        page.get_by_role('checkbox', name=f'Seleziona {prefix}-interrotta-gruppo',exact=True).check()
+        page.get_by_role('checkbox', name=f'Seleziona {prefix}-in-corso',exact=True).check()
         openai([{'tags': ['dbb-riot']}])
-        page.locator('[data-bulk=describe]').click()
-        expect(cards).to_have_count(1, timeout=30000)  # the described one leaves the filter; the running one stays
+        with page.expect_response(f'{API}/{again["id"]}/analyze') as analysis:
+            page.locator('[data-bulk=describe]').click()
+        assert analysis.value.ok
+        expect(cards).to_have_count(5, timeout=30000)  # analysis no longer hides images from the catalogue
         expect(page.locator('#library-message')).to_contain_text('1 di 1 analizzate')
         assert "un'analisi precedente interrotta o con esito incerto" in confirms[-1] and 'al massimo 1 chiamata' in confirms[-1], confirms[-1]
         assert call(f'{API}/{again["id"]}')['real_description']['visible'] and call(f'{API}/{fresh["id"]}')['real_description'] is None
         ids = [stuck['id'], again['id'], fresh['id']]
         call(f'{API}/bulk', {'action': 'trash', 'ids': ids}); call(f'{API}/bulk', {'action': 'delete', 'ids': ids})
-        page.locator('#library-undescribed').uncheck()
+        page.locator('[data-view=library]').click()
         expect(cards).to_have_count(2)
 
         # Edit a published SLOP: confirmation, out of publication, approved; then the prompt and a regeneration.
