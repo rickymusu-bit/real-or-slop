@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 3.0.1
+# Dashboard e wizard REAL — specifica 3.1.0
 
-Stato: vigente (con decisioni future indicate a parte). Aggiornata: 2026-11-17T05:35:07Z. La 2.7.0: la copia di gioco torna a prepararla il browser (decisione dell'owner del 2026-11-16). La 2.6.0: la preparava il Worker. La 2.5.0 fa analizzare la REAL intera invece della copia 4:5. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
+Stato: vigente (con decisioni future indicate a parte). Aggiornata: 2026-11-17T10:19:38Z. La 2.7.0: la copia di gioco torna a prepararla il browser (decisione dell'owner del 2026-11-16). La 2.6.0: la preparava il Worker. La 2.5.0 fa analizzare la REAL intera invece della copia 4:5. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
 senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wizard di `didascalie-wizard.v1.0.0` e
 `anteprima-descrizione.v1.2.0`, che restano nella cronologia git.
 
@@ -21,7 +21,7 @@ senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wiza
 
 ## 2. Dashboard `/admin`
 
-Riprogettazione 1.37.0: navigazione laterale desktop con descrizione delle cinque attività; su mobile barra orizzontale scorrevole. La barra laterale e i suoi pulsanti restano nella propria colonna, senza coprire i pannelli; le descrizioni dei pulsanti sono sotto il titolo. Su mobile la barra scorre mantenendo le voci compatte. Ultima sezione ricordata nella sessione. Testata compatta, pannelli coerenti, comandi tattili e focus visibile. I quattro passi REAL restano espliciti con schede e azioni raggruppate. Le eccezioni SLOP sono espandibili singolarmente; massimo dieci ispirazioni selezionabili, con titolo visibile sotto la miniatura.
+Riprogettazione 1.37.0: navigazione laterale desktop con descrizione delle cinque attività; su mobile barra orizzontale scorrevole. La barra laterale e i suoi pulsanti restano nella propria colonna, senza coprire i pannelli; le descrizioni dei pulsanti sono sotto il titolo. Su mobile la barra scorre mantenendo le voci compatte. Ultima sezione ricordata nella sessione. Testata compatta, pannelli coerenti, comandi tattili e focus visibile. I quattro passi REAL restano espliciti con schede e azioni raggruppate. Le eccezioni SLOP sono espandibili singolarmente; modalità manuale con prompt, tag e ancoraggi, modalità automatica con quantità scelta (1–10, entro le REAL libere).
 
 Database con ricerca testuale, filtri e ordinamento richiudibili, griglia 4:5 e barra di selezione durante lo scorrimento. Statistiche con viste Panoramica, Adesso, Gioco, Chiamate IA e Catalogo. Impostazioni con indice per Modelli, Generazione, Istruzioni IA, Tag, Partite e Classifica; ogni gruppo mantiene il proprio salvataggio.
 
@@ -31,8 +31,7 @@ Database con ricerca testuale, filtri e ordinamento richiudibili, griglia 4:5 e 
   (specifica `database-immagini`), Statistiche e Impostazioni (specifica `statistiche-impostazioni`).
 - **Caricamento:** accanto al titolo «Caricamento della dashboard…» con un indicatore che gira (fermo con «riduci movimento») finché
   tutte le sezioni non sono pronte; ogni sezione ha il suo segnaposto. Il wizard REAL si monta per primo.
-- **Riquadro dei batch automatici** in cima a ogni sezione, con il numero delle proposte sul pulsante «Generazione SLOP»
-  (specifica `generazione-slop`, sezione 8).
+- **Avviso sullo sbilanciamento** in cima alla dashboard, senza proposta né comandi di avvio. I controlli dei batch e il numero di SLOP stanno nella modalità automatica di «Generazione SLOP»; la modalità scelta resta nella sessione. I dettagli e la revisione dei processi restano consultabili nello studio.
 - Tornando a «Caricamento REAL», il wizard toglie le foto spostate nel cestino, pubblicate o eliminate altrove, con un avviso.
 
 ## 3. Anteprima a pressione prolungata

@@ -1,7 +1,4 @@
-/** Automatic SLOP batches in the dashboard (spec `generazione-slop`, section 8): the proposal box (Genera, Ignora, Chiudi), the
- * progress of the batch that runs on Cloudflare (worker/slop-runner.ts: briefs, attempts, tags), «Riprendi sul server» when its
- * runner died, «Interrompi», «Rivedi nel Database»; game copies of accepted images are made here. The proposal is read again after
- * every change to the library made from the dashboard. */
+/** Automatic generation controls, server progress and a separate catalogue balance notification. */
 import "./slop-auto.css";
 import { prepareItemCopy, type TreatableItem } from "./game-copy";
 import { escape } from "../shared/html";
@@ -15,8 +12,8 @@ interface AutoBatch {
   id: string; size: number; status: "running" | "review"; prompts_status: string; prompts_error: string; slots: number;
   attempted: number[]; snapshot: Proposal | null; images: AutoImage[]; undecided: number; updated_at: string;
 }
-export interface AutoState { config: Config; enabled: boolean; max_batch: number; paid_calls: boolean; batch: AutoBatch | null; proposal: Proposal | null; reason: string | null }
-interface Hooks { loop: (batchId:string) => void | Promise<void>; review: (batchId: string) => void | Promise<void>; changed: () => Promise<void>; indicator: (proposals: number) => void }
+export interface AutoState { config: Config; max_batch: number; available: number; paid_calls: boolean; batch: AutoBatch | null; balance: {real:number; slop:number; pending:number; missing:number} }
+interface Hooks { loop: (batchId:string) => void | Promise<void>; review: (batchId: string) => void | Promise<void>; changed: () => Promise<void>; indicator: (imbalances: number) => void }
 
 const LIBRARY = "/api/admin/library", SLOP = LIBRARY + "/slop/";
 const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -45,12 +42,14 @@ function observeLibrary(changed: () => void) {
   };
 }
 
-export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () => Promise<void> } {
-  let state: AutoState | null = null, running = false, dismissed = "", progress = "", notice = "", timer = 0;
+export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: Hooks): { refresh: () => Promise<void> } {
+  let state: AutoState | null = null, running = false, quantity = 1, progress = "", notice = "", timer = 0;
 
   const render = () => {
-    const batch = state?.batch, next = state?.proposal;
-    hooks.indicator(next && !batch ? 1 : 0);
+    const batch = state?.batch, balance = state?.balance;
+    hooks.indicator(balance?.missing ? 1 : 0);
+    root.innerHTML = balance && balance.real !== balance.slop ? `<p role="status"><strong>Dataset sbilanciato</strong>: ${balance.real} REAL e ${balance.slop} SLOP approvate o pubblicate; ${balance.pending} SLOP nuove da decidere.${balance.missing ? ` Mancano ${balance.missing} SLOP al pareggio, contando le nuove.` : ""}</p>` : "";
+    root.hidden = !root.innerHTML;
     let html = "";
     if (batch && batch.pipeline_version !== 2) {
       html = '<p>Batch precedente in pausa: sola revisione. Nessuna chiamata verrà ripetuta.</p><button data-auto="stop">Chiudi generazione precedente</button><button data-auto="review">Rivedi nel Database</button>';
@@ -61,26 +60,27 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
         <div class="slop-auto-actions">${batch.runner?.alive ? "" : '<button type="button" class="primary" data-auto="resume">Riprendi sul server</button>'}<button type="button" data-auto="stop">Interrompi</button></div>`;
     } else if (batch) {
       html = `<p><strong>Batch automatico</strong> di SLOP: ${batch.undecided} di ${batch.images.length} ${batch.images.length === 1 ? "immagine" : "immagini"} da decidere.
-        Nessuna nuova proposta finché non sono tutte approvate, pubblicate o nel cestino. Esaurite: ${batch.processes.filter(p=>p.state==="exhausted").length}; sospese: ${batch.processes.filter(p=>["review_needed","uncertain","failed"].includes(p.state)).length}.</p>
+        Decidi le immagini nuove prima di avviare un altro batch. Esaurite: ${batch.processes.filter(p=>p.state==="exhausted").length}; sospese: ${batch.processes.filter(p=>["review_needed","uncertain","failed"].includes(p.state)).length}.</p>
         ${(() => { const left = batch.processes.filter(p => ["draft", "ready", "retry"].includes(p.state)).length;
           return left ? `<p class="hint">${left} SLOP ancora da generare dalle REAL di riferimento del batch: il batch si è interrotto prima.</p>` : ""; })()}
         <div class="slop-auto-actions">${batch.processes.some(p => ["draft", "ready", "retry"].includes(p.state)) && !batch.runner?.alive ? '<button type="button" class="primary" data-auto="resume">Riprendi sul server</button>' : ""}<button type="button" data-auto="review">Rivedi nel Database</button><button type="button" data-auto="loop">Dettagli dei tentativi</button>${batch.undecided ? "" : '<button type="button" data-auto="close">Chiudi revisione</button>'}</div>`;
-    } else if (next && dismissed !== "catalog:" + next.size) {
-      html = `<p><strong>Proposta di generazione</strong>: ${next.n_real} REAL, ${next.n_slop} SLOP approvate o pubblicate,
-        ${next.n_new} SLOP nuove da decidere; ${next.missing} SLOP mancanti.
-        Generare un batch di <strong>${next.size} SLOP</strong>? Per ogni REAL: brief e prompt testuali, fino a ${state!.config.max_generation_attempts} generazioni e valutazioni, poi copia 4:5 e tag solo dopo accettazione. Massimo ${next.size*(2+2*state!.config.max_generation_attempts)} chiamate.</p>
-        ${state!.paid_calls ? "" : '<p class="hint">Chiamate a pagamento spente: manca la chiave OpenAI.</p>'}
-        <div class="slop-auto-actions"><button type="button" class="primary" data-auto="start" ${state!.paid_calls ? "" : "disabled"}>Genera ${next.size} SLOP</button>
-        <button type="button" data-auto="ignore">Ignora</button><button type="button" data-auto="dismiss" aria-label="Chiudi la proposta">Chiudi</button></div>`;
+    } else if (state) {
+      const max = state.max_batch;
+      quantity = Math.min(Math.max(1, quantity), Math.max(1, max));
+      html = `<h3>Generazione automatica</h3><p>REAL disponibili: ${state.available}. Ogni REAL scelta a caso ispira una SLOP. Una madre resta esclusa finché la figlia esiste, anche nel cestino.</p>
+        <label>Numero di SLOP<input id="slop-auto-size" type="number" required min="1" max="${max}" value="${quantity}" ${max ? "" : "disabled"}></label>
+        <p class="hint">Per ogni SLOP: brief e prompt, fino a ${state.config.max_generation_attempts} generazioni con valutazione, poi analisi dei tag. Massimo <span id="slop-auto-max-calls">${quantity*(2+2*state.config.max_generation_attempts)}</span> chiamate.</p>
+        ${max ? "" : '<p role="status">Nessuna REAL libera con descrizione editoriale. Aggiungi REAL o elimina definitivamente una SLOP per liberarne la madre.</p>'}
+        ${state.paid_calls ? "" : '<p class="hint">Manca la chiave OpenAI.</p>'}
+        <button type="button" class="primary" data-auto="start" ${max && state.paid_calls ? "" : "disabled"}>Genera SLOP</button>`;
     }
     if (notice) html += `<p class="slop-auto-notice" role="status">${escape(notice)}</p>`;
-    root.innerHTML = html;
-    root.hidden = !html;
+    controls.innerHTML = html;
   };
 
   const load = async () => {
     try { state = await call<AutoState>(SLOP + "auto"); }
-    catch (error) { notice = "Proposte di generazione: " + errorText(error); }
+    catch (error) { notice = "Generazione automatica: " + errorText(error); }
     render();
   };
   const refresh = async () => {
@@ -124,13 +124,19 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
     await load(); await hooks.changed();
   };
 
-  root.addEventListener("click", async event => {
+  controls.addEventListener("input", event => {
+    const input = event.target as HTMLInputElement;
+    if (input.id !== "slop-auto-size") return;
+    quantity = Number(input.value);
+    const calls = controls.querySelector("#slop-auto-max-calls");
+    if (calls && state) calls.textContent = String(quantity*(2+2*state.config.max_generation_attempts));
+  });
+  controls.addEventListener("click", async event => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-auto]");
     if (!button || !state) return;
-    const action = button.dataset.auto!, next = state.proposal;
+    const action = button.dataset.auto!;
     notice = "";
     try {
-      if (action === "dismiss" && next) { dismissed = "catalog:" + next.size; render(); return; }
       if (action === "loop" && state.batch) { await hooks.loop(state.batch.id); return; }
       if (action === "close") { state = await call<AutoState>(SLOP + "auto/close", {}); render(); return; }
       if (action === "review" && state.batch) { await hooks.review(state.batch.id); return; }
@@ -139,12 +145,14 @@ export function mountSlopAuto(root: HTMLElement, hooks: Hooks): { refresh: () =>
         if (!window.confirm("Riprendere il batch sul server? Continua da dove si è interrotto, entro il massimo di chiamate confermato all'avvio; le chiamate già inviate o con esito incerto non si ripetono.")) return;
         button.disabled = true; state = await call<AutoState>(SLOP + "auto/resume", { confirm: true }); render(); void follow(); return;
       }
-      if (action === "ignore" && next) { state = await call<AutoState>(SLOP + "auto/ignore", {}); render(); return; }
-      if (action === "start" && next) {
+      if (action === "start") {
+        const input = controls.querySelector<HTMLInputElement>("#slop-auto-size")!;
+        if (!input.reportValidity()) return;
+        const size = Number(input.value);
         const c = state.config;
-        if (!window.confirm(`Generare ${next.size} SLOP con ${c.image_model}, qualità ${c.quality}, valutatore e tag ${c.text_model}? Massimo ${next.size*(2+2*c.max_generation_attempts)} chiamate: ${next.size} brief+prompt, fino a ${next.size*c.max_generation_attempts} immagini e altrettante valutazioni, ${next.size} analisi tag solo dopo accettazione. Tolleranza ${c.editorial_tolerance}. Stop anticipato alla prima candidata idonea.`)) return;
+        if (!window.confirm(`Generare ${size} SLOP con ${c.image_model}, qualità ${c.quality}, valutatore e tag ${c.text_model}? Massimo ${size*(2+2*c.max_generation_attempts)} chiamate: ${size} brief+prompt, fino a ${size*c.max_generation_attempts} immagini e altrettante valutazioni, ${size} analisi tag solo dopo accettazione. Tolleranza ${c.editorial_tolerance}. Stop anticipato alla prima candidata idonea.`)) return;
         button.disabled = true;
-        state = await call<AutoState>(SLOP + "auto/start", { size: next.size, confirm: true, config: c });
+        state = await call<AutoState>(SLOP + "auto/start", { size: size, confirm: true, config: c });
         render();
         void follow();
       }

@@ -1,8 +1,8 @@
 """Local-only API helpers for editorial-loop integration and browser tests."""
+from local_db import sql
 import io
 import json
 import os
-import subprocess
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -30,10 +30,6 @@ def control(queue=None):
     req = urllib.request.Request(FAKE+'/control', data=json.dumps({'queue':queue}).encode() if queue is not None else None,
                                  headers={'Content-Type':'application/json'})
     with urllib.request.urlopen(req) as r: return json.loads(r.read()).get('log')
-
-def sql(command):
-    out = subprocess.run(['npx','wrangler','d1','execute','DB','--local','--env','local','--persist-to',os.environ['ROS_TEST_STATE'],'--command',command,'--json'], capture_output=True,text=True,check=True)
-    return json.loads(out.stdout)[-1]['results']
 
 counter = 100
 DESCRIPTION = {'visible':'A group of people on a street, in flat daylight.', 'documented_context':'Paris in the 1960s, according to Commons.', 'uncertainties':'The individual people cannot be identified.'}

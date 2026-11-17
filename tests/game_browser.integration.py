@@ -1,9 +1,9 @@
 """Level game in the browser, desktop and mobile: level picker, whole explorable photo, buttons and keys, covered photo,
 results, final list with descriptions, leaderboard, «Come funziona» and «Fonti e crediti». Publishes 10 REAL and 10 SLOP locally."""
+from local_db import sql
 import os
 import re
 import shutil
-import subprocess
 from pathlib import Path
 from playwright.sync_api import expect, sync_playwright
 from catalog import publish, remove
@@ -12,10 +12,6 @@ base, state = os.environ['ROS_TEST_BASE'], os.environ['ROS_TEST_STATE']
 token = Path('.dev.vars').read_text().strip().split('=', 1)[1]
 API = base + '/api/admin/library'
 folder = Path('artifacts/game-browser'); folder.mkdir(parents=True, exist_ok=True)
-def sql(command):
-    subprocess.run(['npx', 'wrangler', 'd1', 'execute', 'DB', '--local', '--env', 'local', '--persist-to', state, '--command', command],
-                   capture_output=True, text=True, check=True)
-
 # Two fingers apart on the frame: a pinch that zooms in, then a one-finger drag.
 PINCH = """() => { const f = document.querySelector('.card-media'); const r = f.getBoundingClientRect();
   const x = r.left + r.width / 2, y = r.top + r.height / 2, t = (id, cx, cy, type) => f.dispatchEvent(new PointerEvent(type,

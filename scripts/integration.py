@@ -2,6 +2,7 @@
 checks and, with ROS_TEST_BROWSER=1, the browser checks, then stops both. Never touches remote resources and never calls OpenAI.
 The automatic SLOP batches run last, because they move every earlier image to the trash."""
 import os
+import json
 import secrets
 import shutil
 import subprocess
@@ -38,11 +39,26 @@ try:
             if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.integration.py', 'tests/real_wizard.integration.py', 'tests/slop_browser.integration.py', 'tests/database_browser.integration.py', 'tests/game_browser.integration.py'])
             scripts.append('tests/slop_auto.integration.py')
             if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.append('tests/slop_auto_browser.integration.py')
+            if os.environ.get('ROS_TEST_SUITES'):
+                selected = set(os.environ['ROS_TEST_SUITES'].split(','))
+                known = {Path(script).name.removesuffix('.integration.py') for script in scripts}
+                if selected - known: raise RuntimeError('Unknown or disabled integration suite: ' + ','.join(sorted(selected - known)))
+                scripts = [script for script in scripts if Path(script).name.removesuffix('.integration.py') in selected]
             if os.environ.get('ROS_TEST_MATCH'):
                 patterns = os.environ['ROS_TEST_MATCH'].split(',')
                 scripts = [script for script in scripts if any(pattern in script for pattern in patterns)]
                 if not scripts: raise RuntimeError('ROS_TEST_MATCH did not select any integration tests')
-            for script in scripts: subprocess.run(['python3', script], env=env, check=True)
+            timings = []
+            try:
+                for script in scripts:
+                    started = time.monotonic()
+                    result = subprocess.run(['python3', script], env=env)
+                    elapsed = round(time.monotonic() - started, 2)
+                    timings.append({'suite': script, 'seconds': elapsed, 'exit_code': result.returncode})
+                    print(f'{script}: {elapsed}s', flush=True)
+                    result.check_returncode()
+            finally:
+                Path('artifacts/integration-timings.json').write_text(json.dumps(timings, indent=2))
         finally:
             os.killpg(proc.pid, 15)
             proc.wait(timeout=20)

@@ -1,11 +1,11 @@
 """Database section in the browser, desktop and mobile: filters, cards, press-and-hold preview, detail with tags and
 statistics, edit of a published photo, crop, regeneration of a SLOP, trash, «Distribuzione» tab. Seeds rows in the local D1."""
+from local_db import sql
 import io
 import json
 import re
 import os
 import shutil
-import subprocess
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -24,9 +24,6 @@ def call(url, data=None, method=None, raw=None, mime='application/json'):
     req = urllib.request.Request(url, data=body, method=method or ('POST' if body is not None else 'GET'),
                                  headers={'Content-Type': mime, 'Authorization': 'Bearer ' + token})
     with urllib.request.urlopen(req) as r: return json.loads(r.read())
-def sql(command):
-    subprocess.run(['npx', 'wrangler', 'd1', 'execute', 'DB', '--local', '--env', 'local', '--persist-to', state, '--command', command],
-                   capture_output=True, text=True, check=True)
 def openai(queue):
     req = urllib.request.Request(os.environ['ROS_TEST_FAKE_OPENAI'] + '/control', data=json.dumps({'queue': queue}).encode(), headers={'Content-Type': 'application/json'})
     urllib.request.urlopen(req).read()

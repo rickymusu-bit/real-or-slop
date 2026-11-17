@@ -248,10 +248,16 @@ with sync_playwright() as p:
                     return nav.right < panel.left && [...document.querySelectorAll('[data-admin-tab]')].every(button =>
                         button.getBoundingClientRect().right <= nav.right + 1);
                 }'''), 'navigation overlaps ' + section
-            assert page.locator('.slop-waiting label span').evaluate_all('''labels => labels.every(label => {
-                const text = label.getBoundingClientRect(), card = label.closest('label').getBoundingClientRect();
-                return text.right <= card.right + 1;
-            })'''), 'inspiration title overflows its card'
+            if section == 'slop':
+                page.locator('[data-generation-mode=manual]').click()
+                expect(page.locator('[data-manual=prompt]')).to_be_visible()
+                expect(page.locator('[data-manual=tags]')).to_be_visible()
+                page.locator('[data-generation-mode=automatic]').click()
+                expect(page.locator('#slop-auto-controls')).to_be_visible()
+                expect(page.locator('#slop-manual')).to_be_hidden()
+                expect(page.locator('#slop-auto [data-auto=start]')).to_have_count(0)
+                assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
+                page.locator('[data-generation-mode=manual]').click()
             page.evaluate('window.scrollTo(0, 0)')
             page.screenshot(path=str(folder / f'{name}-workspace-{section}.png'), full_page=True)
         page.locator('[data-admin-tab=stats]').click()

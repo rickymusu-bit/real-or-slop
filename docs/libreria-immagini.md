@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 4.0.0
+# Libreria delle immagini, tag e analisi — specifica 4.1.0
 
-Stato: vigente; la 3.8.1 è in produzione con l'app 1.30.1, la 3.9.0 è per l'app 1.30.2. Aggiornata: 2026-11-15T21:07:23Z. La 3.9.0 ammette nelle azioni
+Stato: vigente; la 3.8.1 è in produzione con l'app 1.30.1, la 3.9.0 è per l'app 1.30.2. Aggiornata: 2026-11-17T10:22:45Z. La 3.9.0 ammette nelle azioni
 in gruppo la ripetizione confermata degli esiti incerti o interrotti (decisione dell'owner del 2026-11-15). La 3.8.1 corregge la
 memoria usata per inviare l'originale e la ripetizione di un'analisi interrotta dalla dashboard.
 La 3.8.0 fa analizzare REAL e SLOP intere (l'originale, non la copia 4:5: decisioni dell'owner del 2026-11-15) e aggiunge
@@ -199,11 +199,11 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
 ## 8. Dati
 
 - D1: `images`, `tags`, `image_tags`, `tag_aliases`, `paid_calls`, `model_contexts`, `app_settings`, `slop_batches`,
-  `slop_proposal_ignored`, `retired_copies`, tabelle del gioco (`game_sessions`, `game_rounds`, `answers`, `media_events`,
+  `slop_reference_uses`, `slop_processes`, `slop_attempts`, `retired_copies`, tabelle del gioco (`game_sessions`, `game_rounds`, `answers`, `media_events`,
   `leaderboard`, `rate_limits`). Elenco delle migrazioni in `MASTER.md`.
 - Migrazione 0048 (`images`): `categories_completed_at` (completamento delle tre categorie), `copy_metrics` (misure della copia di
   gioco) e `copy_treatment` (trattamento di una SLOP), specifica `copie-di-gioco`, sezione 4; `generation_group`, oggi inutilizzata.
-- Migrazione 0053: rimuove `generation_source` e `source_id`, anonimizza slot e trattamento e preserva tentativi e chiamate. La migrazione storica 0049 aveva introdotto il legame, ora eliminato.
+- Migrazione 0053: rimuove `generation_source` e `source_id`, anonimizza slot e trattamento e preserva tentativi e chiamate. La migrazione storica 0049 aveva introdotto il legame, poi eliminato. La 0055 introduce il solo registro privato di disponibilità `slop_reference_uses` per le nuove generazioni: madre occupata finché la figlia esiste in qualsiasi stato; eliminare definitivamente la figlia libera la madre. Nessun legame viene inferito per le generazioni pregresse. La disponibilità non interviene nel campionamento del gioco.
 - Colonne inutilizzate, lasciate per non ricostruire le tabelle: `caption`, `generated_caption` (`images`), `caption` e `copy_view`
   (`game_rounds`), `copy_view` (`images`).
 - R2: quarantena privata (`library/<id>/`: originale e copia) e bucket del gioco (copie pubblicate).

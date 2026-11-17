@@ -1,7 +1,7 @@
 /** Editorial SLOP pipeline: one textual brief per REAL, bounded full-image evaluation loop, private attempts.
  * All paid steps are claimed before sending. Interrupted/uncertain steps are never automatically repeated. */
 import { HttpError, id, type Env } from "./core";
-import { create, viewOf, find } from "./library";
+import { create, viewOf, find, labels, categorize } from "./library";
 import { chosenModel, chosenQuality } from "./models";
 import { currentContext, PIPELINE } from "./model-context";
 import type { Metrics } from "../shared/copy-treatment";
@@ -9,6 +9,7 @@ import { numberSettings } from "./app-settings";
 import { generationSize, nearestFormat, type Format } from "../shared/game-copy";
 import { MAX_BATCH, type InspirationItem } from "../shared/slop-proposals";
 import { briefSchema, realDescription, validBrief, validEvaluation, DECISIONS, type Brief, type Evaluation, type RealDescription } from "../shared/editorial";
+import { compositionAt } from "../shared/slop-composition";
 import { byCategory, inspirationItems } from "./slop-references";
 import { paid, PaidError, responseJson } from "./paid";
 import { IMAGE_MARK, jsonWithImage } from "./image-body";
@@ -19,8 +20,8 @@ import { analyze } from "./analysis";
 
 const now = () => new Date().toISOString();
 const parse = <T>(s: string | null, fallback: T): T => { try { return s ? JSON.parse(s) as T : fallback; } catch { return fallback; } };
-interface Snapshot { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string; source_description?: RealDescription; source_tags?: ReturnType<typeof byCategory>; width?: number; height?: number; target_metrics?: Metrics | null }
-interface Batch { id: string; slots: string; prompts: string; prompts_status: string; prompts_error: string; pipeline_version: number; loop_settings: string; created_at: string; updated_at: string; runner: string | null; runner_status: string | null; runner_updated: string | null }
+interface Snapshot { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string; source_description?: RealDescription; source_tags?: ReturnType<typeof byCategory>; width?: number; height?: number; target_metrics?: Metrics | null; mode?: "manual" | "automatic"; composition?: string }
+interface Batch { origin: string; id: string; slots: string; prompts: string; prompts_status: string; prompts_error: string; pipeline_version: number; loop_settings: string; created_at: string; updated_at: string; runner: string | null; runner_status: string | null; runner_updated: string | null }
 interface Process { id: string; batch_id: string; slot: number; image_id: string | null; state: string; brief: string | null; brief_hash: string | null; prompt: string; snapshot: string; attempts: number; error: string; updated_at: string }
 interface Attempt { id: string; process_id: string; number: number; prompt: string; status: string; candidate_key: string | null; evaluation: string | null }
 export interface PromptEntry { prompt: string; used: string[]; brief?: Brief; format?: Format }
@@ -76,29 +77,55 @@ async function show(env: Env, batchId: string) {
   const ids = (await env.DB.prepare("SELECT id FROM images WHERE generation_batch=? ORDER BY created_at,rowid").bind(batchId).all<{id: string}>()).results;
   const prompts: PromptEntry[] = row.pipeline_version === 2 ? processes.filter(p => p.prompt && p.brief).map(p => ({prompt: p.prompt, used: [], brief: p.brief!})) : parse(row.prompts, []);
   const config = parse<Snapshot | null>(row.loop_settings, null);
-  return { id: row.id, items: itemsOf(row), prompts, processes, config, pipeline_version: row.pipeline_version,
+  return { origin: row.origin, id: row.id, items: itemsOf(row), prompts, processes, config, pipeline_version: row.pipeline_version,
     // Planned: one brief call, N generations, N evaluations and the tags after acceptance per REAL. Every confirmed rewrite of a
     // brief adds its call to the maximum, so the figure shown never falls below what was spent.
-    max_calls: config ? processes.reduce((n, p) => n + Math.max(1, p.prompt_calls) + 1 + 2 * config.max_generation_attempts, 0) : null,
+    max_calls: config ? processes.reduce((n, p) => n + (p.snapshot?.mode === "manual" ? p.prompt_calls : Math.max(1, p.prompt_calls)) + 1 + 2 * config.max_generation_attempts, 0) : null,
     prompts_status: row.prompts_status, prompts_error: row.prompts_error, created_at: row.created_at, updated_at: row.updated_at, runner: runnerView(row),
     images: await Promise.all(ids.map(i => viewOf(env, i.id))) };
 }
 export async function initializeBatch(env: Env, batchId: string, items: InspirationItem[], snapshot: Snapshot) {
   const stamp = now();
-  const configs = await Promise.all(items.map(async item => {
+  const sequence = await env.DB.prepare("SELECT count(*) AS n FROM slop_processes").first<{n: number}>();
+  const configs = await Promise.all(items.map(async (item, slot) => {
     const source = await find(env, item.source!);
     const description = realDescription(parse(source.real_description, null));
     if (!description || !["approved", "published"].includes(source.status)) throw new HttpError(409, "REAL non disponibile o descrizione mancante");
-    return {...snapshot, source_description: description, source_tags: byCategory(item.tags), width: source.width, height: source.height,
+    return {...snapshot, mode: "automatic" as const, composition: compositionAt((sequence?.n || 0) + slot), source_description: description, source_tags: byCategory(item.tags), width: source.width, height: source.height,
       target_metrics: parse<Metrics | null>(source.copy_metrics, null)};
   }));
-  const anonymous = items.map((item, slot) => ({title: `Proposta ${slot + 1}`, tags: item.tags}));
+  const anonymous = items.map((item, slot) => ({title: `SLOP ${slot + 1}`, tags: item.tags}));
   await env.DB.batch([env.DB.prepare("UPDATE slop_batches SET slots=?,pipeline_version=2,loop_settings=? WHERE id=?")
     .bind(JSON.stringify(anonymous), JSON.stringify(snapshot), batchId),
-    ...items.map((_, slot) => env.DB.prepare(`INSERT INTO slop_processes(id,batch_id,slot,snapshot,created_at,updated_at) VALUES(?,?,?,?,?,?)`)
-      .bind(id(), batchId, slot, JSON.stringify(configs[slot]), stamp, stamp))]);
+    ...items.flatMap((item, slot) => {
+      const processId = id();
+      return [env.DB.prepare(`INSERT INTO slop_processes(id,batch_id,slot,snapshot,created_at,updated_at) VALUES(?,?,?,?,?,?)`)
+        .bind(processId, batchId, slot, JSON.stringify(configs[slot]), stamp, stamp),
+      env.DB.prepare("INSERT INTO slop_reference_uses(source_id,process_id,created_at) VALUES(?,?,?)").bind(item.source!, processId, stamp)];
+    })]);
+}
+/** A manual draft is free: the owner supplies the whole prompt, target tags and immutable anchors. */
+async function createManualBatch(env: Env, data: Record<string, unknown>) {
+  if (Object.keys(data).some(k => !["mode", "prompt", "tags", "brief"].includes(k))) throw new HttpError(400, "Campi non previsti");
+  const brief = validBrief(data.brief);
+  if (!brief || typeof data.prompt !== "string" || !data.prompt.trim() || data.prompt.length > 4000)
+    throw new HttpError(400, "Inserisci un prompt e almeno un ancoraggio obbligatorio");
+  const tags = labels(data.tags);
+  if (!tags.length) throw new HttpError(400, "Inserisci almeno un tag");
+  const categories = await categorize(env, tags);
+  const item = {title: "SLOP manuale", tags: tags.map(label => ({label, category: categories.get(label)!}))};
+  const snapshot = {...await loopSnapshot(env), mode: "manual" as const, source_tags: byCategory(item.tags)};
+  const batchId = id(), stamp = now();
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO slop_batches(id,theme,slots,pipeline_version,loop_settings,prompts_status,created_at,updated_at)
+      VALUES(?,'[]',?,2,?,'done',?,?)`).bind(batchId, JSON.stringify([item]), JSON.stringify(snapshot), stamp, stamp),
+    env.DB.prepare(`INSERT INTO slop_processes(id,batch_id,slot,state,brief,prompt,snapshot,created_at,updated_at)
+      VALUES(?,?,0,'ready',?,?,?,?,?)`).bind(id(), batchId, JSON.stringify(brief), data.prompt.trim(), JSON.stringify(snapshot), stamp, stamp),
+  ]);
+  return show(env, batchId);
 }
 async function createBatch(env: Env, data: Record<string, unknown>) {
+  if (data.mode === "manual") return createManualBatch(env, data);
   if (Object.keys(data).some(k => k !== "sources")) throw new HttpError(400, "Campi non previsti");
   const sources = Array.isArray(data.sources) ? [...new Set(data.sources)] : [];
   if (!sources.length || sources.length > MAX_BATCH || sources.some(s => typeof s !== "string" || !/^[\w-]{1,64}$/.test(s))) throw new HttpError(400, `Scegli da 1 a ${MAX_BATCH} REAL`);
@@ -107,7 +134,8 @@ async function createBatch(env: Env, data: Record<string, unknown>) {
     throw new HttpError(409, `«${item.title}»: aggiungi la descrizione editoriale manualmente o autorizza un'analisi combinata nel Database`);
   const batchId = id(), stamp = now(), snapshot = await loopSnapshot(env);
   await env.DB.prepare("INSERT INTO slop_batches(id,theme,slots,created_at,updated_at) VALUES(?,'[]',?,?,?)").bind(batchId, "[]", stamp, stamp).run();
-  await initializeBatch(env, batchId, items, snapshot);
+  try { await initializeBatch(env, batchId, items, snapshot); }
+  catch { await env.DB.prepare("DELETE FROM slop_batches WHERE id=?").bind(batchId).run(); throw new HttpError(409, "REAL già occupata o non più disponibile: nessuna chiamata inviata"); }
   return show(env, batchId);
 }
 async function editBatch(env: Env, batchId: string, data: Record<string, unknown>) {
@@ -132,7 +160,7 @@ async function editBatch(env: Env, batchId: string, data: Record<string, unknown
 const PROMPT_RULE = `Write a new plausible photograph in English (600–1000 characters). Return a minimal editorial brief and prompt together.
 Use ONLY the supplied saved description and tags as editorial context, not as a scene to imitate. No required visual resemblance or single changed element.
 Separate required anchors, preferred, flexible and exclusions. Credibility takes priority over literal prompt details. Real buildings and places: decide case by case whether to name a real place or invent one of the same kind, style, period and region, but never require or ask for a faithful reproduction of a specific real building, its exact architecture or its inscriptions; a required anchor may name a place, never the fidelity of its appearance. Invent all people; never name or describe living people or people dead less than 50 years. Never attribute crimes to historical figures, celebrate regimes, or depict nudity outside artworks.
-Concrete natural photographic technique and light, no cinematic clichés. Never compose for a later game crop. Do not choose a format.`;
+Concrete natural photographic technique and light, no cinematic clichés. Never compose for a later game crop. Do not choose a format. Treat reference placement and gaze as incidental, not as required anchors. Follow the supplied composition preference when natural, without forcing every photograph into the same arrangement.`;
 export async function writePrompts(env: Env, batchId: string, data: Record<string, unknown>) {
   confirmOnly(data, ["index"]);
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
@@ -141,11 +169,12 @@ export async function writePrompts(env: Env, batchId: string, data: Record<strin
   if (index !== undefined && (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= items.length)) throw new HttpError(400, "Immagine inesistente");
   const wanted = (await env.DB.prepare("SELECT * FROM slop_processes WHERE batch_id=? ORDER BY slot").bind(batchId).all<Process>()).results.filter(p => index === undefined ? !p.prompt : p.slot === index);
   if (!wanted.length) throw new HttpError(409, "Brief e prompt già salvati");
+  if (wanted.some(p => parse<Snapshot>(p.snapshot, {} as Snapshot).mode === "manual")) throw new HttpError(409, "Modalità manuale: prompt e ancoraggi li scrive l’owner");
   if (wanted.some(p => p.attempts || !["draft", "ready", "failed"].includes(p.state))) throw new HttpError(409, "Processo bloccato: nessuna chiamata ripetuta");
   const inputs = wanted.map(p => {
     const snapshot = parse<Snapshot>(p.snapshot, {} as Snapshot), description = realDescription(snapshot.source_description);
     if (!description) throw new HttpError(409, "Descrizione del processo mancante: crea un nuovo batch");
-    return {description, tags: snapshot.source_tags || {}};
+    return {description, tags: snapshot.source_tags || {}, composition: snapshot.composition || ""};
   });
   // Read before the claim: a refusal here costs nothing. A text written for the twin prompts would contradict the brief.
   const base = await currentContext(env, "base"), context = await currentContext(env, "slop_prompt");
@@ -190,7 +219,7 @@ const evaluationSchema = { type: "object", additionalProperties: false,
   properties: {attempt_id: {type: "string"}, decision: {type: "string", enum: [...DECISIONS]}, critical_findings: strings, minor_findings: strings,
     editorial_constraints_met: {type: "boolean"}, uncertainty_notes: strings, action_reason: {type: "string"}, revised_prompt: {type: "string"}, preserved_required: strings, preserved_exclusions: strings} };
 /** The part of the evaluator's instructions that the code enforces, after the editable context «slop_evaluation». */
-const EVALUATE_RULE = `Evaluate the ENTIRE unprocessed generated photograph. Choose accept, retry_same_prompt, revise_prompt, replan_scene or review_needed; choose review_needed only for a concrete doubt about something visible in the image that you cannot settle (for example a landmark or a sign that may contradict the place); facts that pixels alone can never verify (exact place, date, identity, whether the people are invented) are not a reason for review_needed: write them in uncertainty_notes and decide on the visible evidence. Never judge, and never ask in a revised prompt for, fidelity to the real appearance of a named building or place: a plausible building of that kind, style, period and region meets the anchor; a difference from the real one is neither a defect nor a reason for review_needed, nor makes editorial_constraints_met false. Critical defects are never accepted at any tolerance. Tolerance 0 accepts no minor defects: with only minor defects choose retry_same_prompt or revise_prompt, never review_needed; 1 accepts subtle photographically plausible imperfections; 2 tolerates minor defects only while credibility holds. If revising or replanning, give the revised prompt in this same response and copy every required anchor and exclusion of the brief verbatim into preserved_required and preserved_exclusions. Never compose for a later crop.`;
+const EVALUATE_RULE = `Evaluate the ENTIRE unprocessed generated photograph. Choose accept, retry_same_prompt, revise_prompt, replan_scene or review_needed; choose review_needed only for a concrete doubt about something visible in the image that you cannot settle (for example a landmark or a sign that may contradict the place); facts that pixels alone can never verify (exact place, date, identity, whether the people are invented) are not a reason for review_needed: write them in uncertainty_notes and decide on the visible evidence. Never judge, and never ask in a revised prompt for, fidelity to the real appearance of a named building or place: a plausible building of that kind, style, period and region meets the anchor; a difference from the real one is neither a defect nor a reason for review_needed, nor makes editorial_constraints_met false. Critical defects are never accepted at any tolerance. Tolerance 0 accepts no minor defects: with only minor defects choose retry_same_prompt or revise_prompt, never review_needed; 1 accepts subtle photographically plausible imperfections; 2 tolerates minor defects only while credibility holds. If revising or replanning, give the revised prompt in this same response and copy every required anchor and exclusion of the brief verbatim into preserved_required and preserved_exclusions. Composition preferences are optional: never reject or request another attempt solely for placement or gaze; when revising retain the preference only if natural. Never compose for a later crop.`;
 async function hash(brief: Brief) { return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(brief))))].map(b => b.toString(16).padStart(2, "0")).join(""); }
 async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array, evaluation: Evaluation) {
   // Reuse a saved accepted result if the Worker was interrupted after inserting the library row.
@@ -200,6 +229,7 @@ async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array
     bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, prompt: p.prompt, model: config.image_model,
     generation: {batch: batch.id, quality: config.quality,
       slot: {index: p.slot, target_metrics: config.target_metrics || null, tags: item.tags, process: p.id, brief: parse(p.brief, null), brief_hash: p.brief_hash, evaluation, attempts: p.attempts}} });
+  await env.DB.prepare("UPDATE slop_reference_uses SET image_id=? WHERE process_id=?").bind(image.id, p.id).run();
   await env.DB.prepare("UPDATE slop_processes SET image_id=?,state='accepted',updated_at=? WHERE id=?").bind(image.id, now(), p.id).run();
   return {...image, process: {id: p.id, state: "accepted", attempts: p.attempts}};
 }
@@ -230,7 +260,9 @@ export async function generateImage(env: Env, batchId: string, data: Record<stri
   await env.DB.prepare("INSERT INTO slop_attempts(id,process_id,number,prompt,created_at,updated_at) VALUES(?,?,?,?,?,?)").bind(attemptId, p.id, p.attempts, p.prompt, stamp, stamp).run();
   try {
     const size = generationSize(config.image_model, nearestFormat(config.width || 1024, config.height || 1024));
-    const payload = await paid(env, "images", config.image_model, {model: config.image_model, prompt: p.prompt, n: 1, size, quality: config.quality}, {process: p.id, attempt: attemptId});
+    const sentPrompt = config.mode === "manual" ? p.prompt + "\n\nEditorial context (do not render labels): " +
+      JSON.stringify({tags: config.source_tags, brief}) : config.composition ? p.prompt + "\n\n" + config.composition : p.prompt;
+    const payload = await paid(env, "images", config.image_model, {model: config.image_model, prompt: sentPrompt, n: 1, size, quality: config.quality}, {process: p.id, attempt: attemptId});
     const encoded = (payload.data as {b64_json?: string}[] | undefined)?.[0]?.b64_json;
     if (!encoded) throw new HttpError(502, "Risposta del generatore non leggibile");
     const bytes = Uint8Array.from(atob(encoded), c => c.charCodeAt(0)), mime = imageMime(bytes);
@@ -247,7 +279,7 @@ export async function generateImage(env: Env, batchId: string, data: Record<stri
     const evaluationPayload = await paid(env, "evaluation", config.text_model, jsonWithImage({model: config.text_model,
       instructions: base.body + "\n\n" + context.body + "\n\n" + EVALUATE_RULE, max_output_tokens: 8000,
       text: {format: {type: "json_schema", name: "slop_evaluation", strict: true, schema: evaluationSchema}},
-      input: [{role: "user", content: [{type: "input_text", text: JSON.stringify({attempt_id: attemptId, brief, prompt: p.prompt, tolerance: config.editorial_tolerance})},
+      input: [{role: "user", content: [{type: "input_text", text: JSON.stringify({attempt_id: attemptId, brief, prompt: p.prompt, composition_preference: config.composition || null, tolerance: config.editorial_tolerance})},
         {type: "input_image", image_url: IMAGE_MARK}]}]}, bytes, mime), {process: p.id, attempt: attemptId});
     let evaluation = validEvaluation(responseJson(evaluationPayload), attemptId, brief);
     if (!evaluation) throw new HttpError(502, "Valutazione non valida: processo sospeso");

@@ -6,7 +6,6 @@ from playwright.sync_api import sync_playwright,expect
 from editorial_helpers import *
 folder=Path('artifacts/slop-browser');folder.mkdir(parents=True,exist_ok=True)
 old=call('/settings',library=True)[1]['values']
-call('/settings',{'slop_auto_enabled':0},method='PUT',library=True)
 try:
     with sync_playwright() as p:
         browser=p.chromium.launch(executable_path=os.environ.get('ROS_CHROMIUM_PATH') or shutil.which('chromium'),args=['--no-sandbox'])
@@ -42,10 +41,13 @@ try:
                 expect(studio.get_by_role('status').first).to_contain_text('SLOP accettata')
                 reviewed=sql("SELECT state,image_id FROM slop_processes WHERE id='"+review['processes'][0]['id']+"'")[0]
                 assert reviewed['state']=='accepted' and reviewed['image_id'];generated.append(reviewed['image_id'])
-                studio.locator('[data-slop-pick="'+source['id']+'"]').check()
-                control([]);studio.locator('[data-slop=prompts]').click()
-                expect(studio.locator('[data-prompt="0"]')).not_to_have_value('', timeout=20000)  # written: one request per REAL
-                assert len(control())==1 and 'Massimo 1' in confirmations[-1]
+                studio.locator('[data-manual=prompt]').fill('A credible street photograph in ordinary daylight.')
+                studio.locator('[data-manual=tags]').fill('street-scene, 1960s')
+                studio.locator('[data-manual=required]').fill('street-scene')
+                control([]);studio.locator('[data-slop=manual-draft]').click()
+                expect(studio.locator('[data-prompt="0"]')).not_to_have_value('', timeout=20000)
+                assert control()==[]  # manual draft has no prompt call and no REAL
+                expect(studio.locator('[data-slop=rewrite]')).to_have_count(0)
                 studio.locator('[data-brief="0"][data-key=required]').fill('street-scene')
                 studio.locator('[data-prompt="0"]').fill('A credible street photograph in ordinary daylight.')
                 studio.locator('[data-slop=save]').click();expect(studio.get_by_role('status').first).to_contain_text('salvati')

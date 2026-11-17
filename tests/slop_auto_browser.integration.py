@@ -7,12 +7,12 @@ from playwright.sync_api import sync_playwright,expect
 from editorial_helpers import *
 folder=Path('artifacts/slop-auto-browser');folder.mkdir(parents=True,exist_ok=True)
 old=call('/settings',library=True)[1]['values']
-call('/settings',{'slop_auto_enabled':1,'max_generation_attempts':2},method='PUT',library=True)
+call('/settings',{'max_generation_attempts':2},method='PUT',library=True)
 try:
     with sync_playwright() as p:
         browser=p.chromium.launch(executable_path=os.environ.get('ROS_CHROMIUM_PATH') or shutil.which('chromium'),args=['--no-sandbox'])
         for name,options in [('desktop',{'viewport':{'width':1280,'height':900}}),('mobile',p.devices['Pixel 7'])]:
-            sql("UPDATE slop_batches SET auto_status='closed' WHERE origin='auto'; DELETE FROM slop_proposal_ignored; UPDATE images SET trashed_from='approved',status='trash' WHERE status<>'trash'")
+            sql("UPDATE slop_batches SET auto_status='closed' WHERE origin='auto'; UPDATE images SET trashed_from='approved',status='trash' WHERE status<>'trash'")
             source=real('auto-browser-'+name);generated=[]
             context=browser.new_context(**options,http_credentials={'username':'owner','password':TOKEN})
             page=context.new_page();errors=[];confirmations=[]
@@ -20,6 +20,11 @@ try:
             page.on('dialog',lambda d:(confirmations.append(d.message),d.accept()))
             try:
                 control([None, {'delay':1.5}] if name=='desktop' else []);page.goto(BASE+'/admin')
+                page.locator('[data-admin-tab=slop]').click()
+                page.locator('[data-generation-mode=automatic]').click()
+                expect(page.get_by_text('Proposta di generazione',exact=False)).to_have_count(0)
+                page.locator('#slop-auto-size').fill('1')
+                page.screenshot(path=str(folder/(name+'-setup.png')),full_page=True)
                 page.locator('[data-auto=start]').click()
                 if name=='desktop':
                     for _ in range(60):

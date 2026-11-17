@@ -1,7 +1,14 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-17T05:46:28Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-17T10:35:22Z Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.38.0 — 2026-11-17T10:19:38Z
+
+- Generazione manuale con prompt, tag e ancoraggi dell'owner, senza REAL né chiamata per scrivere il prompt; automatica con quantità scelta. La proposta diventa una notifica di sbilanciamento, senza pulsanti di generazione globali.
+- Registro privato delle REAL occupate: nessun riuso finché la figlia esiste, anche nuova o nel cestino; liberazione con eliminazione definitiva. Prenotazioni atomiche contro processi concorrenti. Migrazione 0055; nessuna attribuzione inventata per i legami pregressi rimossi.
+- Composizione automatica variata con preferenze di posizione e sguardo, senza imporre pose o causare tentativi extra.
+- CI: suite per area con fallback completo, cache dipendenze e Chromium, rimossa la terza build; fixture SQL nel solo D1 isolato senza avviare ogni volta Wrangler, tempi per suite negli artefatti. Suite completa disponibile manualmente.
 
 ## 1.37.0 — 2026-11-16T22:03:33Z
 

@@ -1,6 +1,6 @@
-"""Automatic batches: proposal, configuration, consent, persistent retries, old-batch guard and manual publication."""
+"""Automatic batches: owner quantity, unused references, consent, persistent retries and legacy guards."""
 from editorial_helpers import *
-sql("UPDATE images SET trashed_from=CASE status WHEN 'new' THEN 'new' ELSE 'approved' END,status='trash' WHERE status<>'trash'; DELETE FROM slop_batches; DELETE FROM slop_proposal_ignored")
+sql("UPDATE images SET trashed_from=CASE status WHEN 'new' THEN 'new' ELSE 'approved' END,status='trash' WHERE status<>'trash'; DELETE FROM slop_batches")
 code,settings=call('/settings',library=True);assert code==200
 call('/settings',{'max_generation_attempts':2},method='PUT',library=True)
 ids=[];generated=[]
@@ -12,18 +12,18 @@ def wait_auto(seconds=90):
     raise AssertionError('the automatic batch is still running on the server')
 try:
     ids=[real('auto-loop')['id'] for _ in range(3)]
-    code,auto=call('auto');assert code==200 and auto['proposal']['size']==3,auto
+    code,auto=call('auto');assert code==200 and auto['available']==3 and auto['balance']['missing']==3 and 'proposal' not in auto,auto
     assert auto['config']['max_generation_attempts']==2
     # The whole loop runs on Cloudflare (Workflow): briefs, attempts, tags. First photo exhausts, second is suspended, third accepted.
     control([None]*3+[None,{'evaluation':'retry_same_prompt'},None,{'evaluation':'retry_same_prompt'},None,{'evaluation':'review_needed'},None,{'evaluation':'accept'}])
     assert call('auto/start',{'size':3})[0]==400
-    assert call('auto/start',{'size':2,'confirm':True})[0]==409
+    assert call('auto/start',{'size':4,'confirm':True})[0]==409
     code,auto=call('auto/start',{'size':3,'confirm':True});assert code==200,auto
     b=auto['batch'];bid=b['id'];assert b['pipeline_version']==2 and b['config']['max_generation_attempts']==2 and b['runner']['status'] in ('running','done'),b
     assert call('auto/start',{'size':3,'confirm':True})[0]==409
     assert call('auto/resume',{'confirm':True})[0]==409  # alive or finished: never a second runner
     assert call('batches/'+bid,{'prompts':['x']*3},method='PUT')[0]==409
-    assert call('batches/'+bid+'/run',{'confirm':True,'phase':'images'})[0]==409  # automatic batches run from their proposal
+    assert call('batches/'+bid+'/run',{'confirm':True,'phase':'images'})[0]==409  # automatic mode owns the runner
     auto=wait_auto()
     assert auto['batch']['status']=='review',auto
     b=call('batches/'+bid)[1]
@@ -50,6 +50,21 @@ try:
     control([]);remove(generated);generated=[]
     assert call('auto')[1]['batch']['status']=='review'  # suspended cases require acknowledgement
     assert call('auto/close',{})[1]['batch'] is None
+    # Quantity is an owner choice, independent of the imbalance; used/reserved mothers are excluded.
+    auto=call('auto')[1]
+    assert auto['available']==2 and auto['balance']['missing']==3,auto
+    control([])
+    for size in (0,1.5,11):assert call('auto/start',{'size':size,'confirm':True})[0]==400
+    assert control()==[] and call('auto/ignore',{})[0]==404
+    code,auto=call('auto/start',{'size':1,'confirm':True});assert code==200,auto
+    assert auto['batch']['size']==1
+    auto=wait_auto();assert auto['batch']['status']=='review',auto
+    assert len(auto['batch']['images'])==1 and auto['available']==1,auto
+    chosen_child=auto['batch']['images'][0]['id'];generated.append(chosen_child)
+    assert len(control())==4
+    remove([chosen_child]);generated=[]
+    assert call('auto')[1]['batch'] is None and call('auto')[1]['available']==2
+    control([])
     # Legacy paused batch is inspectable; no speculative paid resume.
     sql("INSERT INTO slop_batches(id,theme,slots,origin,auto_status,auto_size,prompts_status,created_at,updated_at) VALUES('old-paused-loop','[]','[]','auto','running',1,'done','x','x')")
     assert call('auto')[1]['batch']['pipeline_version']==1
@@ -58,4 +73,4 @@ try:
     call('auto/stop',{})
 finally:
     remove(generated+ids);call('/settings',settings['values'],method='PUT',library=True)
-print('Automatic editorial loops: consent, proposals, bounded per-photo outcomes, resume guard, legacy protection and manual publication passed.')
+print('Automatic editorial loops: consent, chosen quantity, unused references, bounded per-photo outcomes, resume guard, legacy protection and manual publication passed.')
