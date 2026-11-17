@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 28.1.0, aggiornata il 2026-11-17T17:42:44Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 28.1.1, aggiornata il 2026-11-17T17:48:50Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -182,6 +182,8 @@ R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (
 `npm run lint`, `npm test`, `npm run build`, `npm run dry-run`, `npm run test:integration` (Worker locale con D1 e R2 locali e il modello
 finto `tests/fake_openai.py`) e `ROS_TEST_BROWSER=1 npm run test:integration` per la dashboard, desktop e mobile. L'elenco dei
 test d'integrazione eseguiti è in `scripts/integration.py`.
+
+**Verifica locale della 1.39.0:** lint, 106 test unitari, build e dry-run passati; tutte le 13 suite di integrazione, comprese le sei suite browser desktop/mobile, passate. Controllati estrazione gratuita, immagini intere, riestrazione/annullamento, avvio sulle stesse REAL, riferimenti modificati/occupati, firma/scadenza e riutilizzo della selezione. PR #155, CI da verificare. Solo modelli finti e risorse locali.
 
 **Verifica locale della 1.38.0:** lint, unitari (26 file), build, dry-run e tutte le 13 suite di integrazione, comprese le sei suite browser su desktop/mobile, passati. Confronto nello stesso ambiente: 501,18 s su main contro 206,77 s sul ramo (−58,7%); misura della sola integrazione con browser, non dei minuti fatturati. Nessun modello reale o risorsa remota.
 

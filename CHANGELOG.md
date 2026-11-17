@@ -1,6 +1,6 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-17T17:43:47Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-17T17:48:50Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
 ## 1.39.0 — 2026-11-17T17:43:47Z
