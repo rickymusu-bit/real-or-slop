@@ -1,7 +1,15 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-16T21:28:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-17T05:46:28Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.37.0 — 2026-11-16T22:03:33Z
+
+- Dashboard riprogettata in tutte le sezioni: ricerca catalogo, navigazione persistente, impostazioni raggruppate, revisioni progressive. Proposte automatiche dal fabbisogno globale, con campione casuale di REAL e nessuna soglia di spread o gruppo. Migrazione 0054.
+- Allineamento a main dopo la #151, conservando i controlli del trattamento anonimo; verifica browser aggiornata alla nuova presentazione dei conteggi.
+- Ricerca del catalogo effettiva anche su descrizione e prompt, combinata con gli altri filtri; test della migrazione 0054 e rifiuto delle impostazioni obsolete.
+
+- Corretta la sovrapposizione della navigazione laterale ai pannelli desktop, ripristinati testata e spaziature della dashboard e resi visibili i titoli delle ispirazioni SLOP. Controlli browser sulla geometria oltre ai controlli funzionali; preparazione della pressione prolungata stabile anche quando il catalogo ricrea le schede in background.
 
 ## 1.36.0 — 2026-11-16T21:28:00Z
 

@@ -1,0 +1,79 @@
+/* Shared task-oriented dashboard layout. */
+.library.page { max-width:1536px; padding:32px 36px 64px; }
+.library .library-head { padding:4px 0 26px; border-bottom:1px solid var(--hairline); margin-bottom:24px; justify-content:space-between; }
+.admin-eyebrow { color:var(--real); text-transform:uppercase; letter-spacing:.14em; font-size:11px; font-weight:600; margin:0 0 8px; }
+.library .library-head h1 { font-size:clamp(26px,3vw,38px); letter-spacing:-.04em; line-height:1.2; }
+.admin-intro,.section-intro { color:var(--muted); margin:10px 0 22px; max-width:70ch; }
+.admin-workspace { display:grid; grid-template-columns:224px minmax(0,1fr); gap:32px; align-items:start; }
+.admin-workspace-body { min-width:0; }
+.library .admin-tabs { position:sticky; top:20px; display:grid; gap:8px; padding:0; margin:0; border:0; min-width:0; }
+.library .admin-tabs button { display:block; min-width:0; width:100%; text-align:left; padding:14px 16px; border-radius:12px; color:var(--text); font-weight:600; background:var(--surface); border:1px solid transparent; }
+.library .admin-tabs small { display:block; color:var(--muted); font-size:11px; font-weight:400; margin-top:5px; line-height:1.45; }
+.library .admin-tabs button[aria-pressed=true] { color:var(--real); background:color-mix(in srgb,var(--real) 9%,var(--bg)); border-color:color-mix(in srgb,var(--real) 40%,var(--hairline)); }
+.library .admin-panel > h2,.library .rw > h2 { font-size:26px; margin:0 0 8px; letter-spacing:-.025em; }
+.library :is(input:not([type=checkbox]):not([type=range]),select,textarea) { border-radius:8px; max-width:100%; }
+.library button { border-radius:8px; min-height:42px; }
+.library summary { cursor:pointer; padding:14px 0; font-weight:600; }
+.library details { scroll-margin-top:24px; }
+.db-search-row label { display:grid; gap:6px; color:var(--muted); font-size:13px; margin-top:18px; }
+.db-search-row input { width:100%; }
+.db-filter-panel { border-bottom:1px solid var(--hairline); margin-bottom:18px; }
+.library .library-toolbar { background:var(--surface); border-radius:12px; padding:16px; gap:16px; }
+.library .library-views { flex-basis:100%; gap:6px; }
+.library .library-views button { font-size:12px; min-height:34px; }
+.library .library-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:16px; }
+.library .library-card { border-radius:12px; overflow:hidden; }
+.library .library-open img { aspect-ratio:4/5; }
+.library .library-selection { border:1px solid var(--real); border-radius:12px; box-shadow:0 6px 24px #0004; }
+.library .rw-steps { position:sticky; top:0; z-index:2; background:var(--bg); padding:12px 0; border-bottom:1px solid var(--hairline); gap:8px; }
+.library .rw-steps li { font-size:12px; padding:10px 12px; border-radius:8px; }
+.library :is(.rw-card,.rw-final,.slop-prompts > li,.stats-block,.library-vocabulary) { background:color-mix(in srgb,var(--surface) 65%,var(--bg)); border:1px solid var(--hairline); border-radius:14px; padding:20px; margin-bottom:18px; }
+.library .rw-actions { gap:10px; padding:16px 0 6px; flex-wrap:wrap; }
+.library .slop-waiting { grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+.library .slop-waiting li { border:1px solid var(--hairline); border-radius:12px; overflow:hidden; }
+.library .slop-waiting li:has(input:checked) { border-color:var(--real); background:color-mix(in srgb,var(--real) 8%,var(--surface)); }
+.library .slop-waiting img { aspect-ratio:4/3; object-fit:cover; width:100%; height:auto; }
+.library .rw .slop-waiting label { display:grid; grid-template-columns:20px minmax(0,1fr); gap:8px; padding:10px; }
+.library .slop-waiting label span { grid-column:1/-1; overflow-wrap:anywhere; }
+.studio-intro { padding:18px 20px; background:var(--surface); border-radius:12px; }
+.studio-intro h3 { margin:0 0 6px; }
+.studio-intro p { margin:0; color:var(--muted); }
+.library .slop-attention { border-left:3px solid #e4b36c; padding:0 0 0 16px; margin:20px 0; }
+.library .slop-attention > h3 { font-size:17px; }
+.library .slop-closed { border:1px solid var(--hairline); border-radius:10px; padding:0 14px 12px; margin:10px 0; }
+.library .slop-closed:not([open]) { padding-bottom:0; }
+.settings-index,.stats-views { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+.settings-index button,.stats-views button { background:transparent; border:1px solid var(--hairline); font-size:12px; }
+.stats-views button[aria-pressed=true] { color:var(--real); border-color:var(--real); }
+.library .library-vocabulary { margin:12px 0; padding:2px 20px 16px; }
+.library .library-vocabulary:not([open]) { padding-bottom:2px; }
+.library .library-inline { gap:16px; }
+.library .library-inline label { min-width:min(200px,100%); flex:1; }
+.library .stat-tile { border-radius:10px; background:var(--surface); }
+.library .stat-tile strong { font-variant-numeric:tabular-nums; }
+.library .stats-table-wrap { border-radius:8px; overflow-x:auto; }
+.library .stats-table th { font-size:12px; color:var(--muted); }
+.library .stats-table td { font-variant-numeric:tabular-nums; }
+.library .slop-auto { border-radius:12px; margin-bottom:24px; padding:18px 22px; }
+.library :is(.library-detail,.treatment-dialog) { border-radius:16px; }
+@media(max-width:1000px) {
+  .library.page { padding:24px 20px 48px; }
+  .admin-workspace { grid-template-columns:180px minmax(0,1fr); gap:20px; }
+  .library .admin-tabs button { padding:12px; font-size:12px; }
+}
+@media(max-width:720px) {
+  .library.page { padding:18px 12px 40px; }
+  .library .library-head { padding-bottom:14px; margin-bottom:16px; }
+  .admin-intro { font-size:13px; margin-bottom:0; }
+  .admin-workspace { display:block; }
+  .library .admin-tabs { position:static; display:flex; overflow-x:auto; flex-wrap:nowrap; padding-bottom:12px; margin-bottom:16px; }
+  .library .admin-tabs button { flex:0 0 auto; width:auto; white-space:nowrap; padding:10px 13px; }
+  .library .admin-tabs small { display:none; }
+  .library .rw-steps { position:static; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .library .library-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .library .library-toolbar > label,.library .db-tag-filter { flex:1 1 100%; min-width:0; }
+  .library .library-toolbar select { width:100%; }
+  .library :is(.rw-card,.rw-final,.slop-prompts > li,.stats-block,.library-vocabulary) { padding:14px; }
+  .library .slop-auto { padding:14px; }
+  .library .library-selection { max-height:40svh; overflow-y:auto; }
+}

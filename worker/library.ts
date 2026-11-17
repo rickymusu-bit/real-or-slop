@@ -387,7 +387,7 @@ async function destroy(env: Env, ids: readonly string[]): Promise<{ deleted: num
   return { deleted: rows.length, postponed };
 }
 
-/** The list: status, origin, title and one or more tags, all of them («all», default) or at least one («any»). */
+/** The list: status, origin, text in title/description/prompt and one or more tags («all» or «any»). */
 async function list(env: Env, url: URL) {
   const status = url.searchParams.get("status") || "library", originFilter = url.searchParams.get("origin") || "all";
   const q = (url.searchParams.get("q") || "").trim().slice(0, 100), match = url.searchParams.get("match") || "all";
@@ -400,7 +400,7 @@ async function list(env: Env, url: URL) {
   const where = [status === "library" ? "status<>'trash'" : "status=?1", "(?2='all' OR origin=?2)",
     `(?3='[]' OR id IN (SELECT it.image_id FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE t.label IN (SELECT value FROM json_each(?3))
       GROUP BY it.image_id HAVING count(DISTINCT t.label)>=CASE ?5 WHEN 'any' THEN 1 ELSE json_array_length(?3) END))`,
-    "(?4='' OR title LIKE '%'||?4||'%' COLLATE NOCASE)", "(?6='' OR generation_batch=?6)",
+    "(?4='' OR title LIKE '%'||?4||'%' COLLATE NOCASE OR description LIKE '%'||?4||'%' COLLATE NOCASE OR prompt LIKE '%'||?4||'%' COLLATE NOCASE)", "(?6='' OR generation_batch=?6)",
     `(?7='' OR (EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id AND t.category='genre' AND t.label=?7)
       AND EXISTS(SELECT 1 FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id AND t.category='time' AND t.label=?8)))`,
     `(?9=0 OR (SELECT count(DISTINCT t.category) FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id

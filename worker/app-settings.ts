@@ -1,15 +1,12 @@
-/** Numeric settings of the dashboard (spec `statistiche-impostazioni`, section 2): thresholds of the SLOP studio and of
- * the automatic proposals, hours of an open game. A missing row is the default of the code. */
+/** Numeric settings of the dashboard: SLOP proposals, attempt limits, tolerance and hours of an open game.
+ * A missing row is the default of the code (spec `statistiche-impostazioni`, section 2). */
 import { HttpError, type Env } from "./core";
-import { AUTO_DEFAULT_THRESHOLD, SECTION_MIN_REAL } from "../shared/slop-proposals";
 
 export const LIMITS = {
   max_generation_attempts: { min: 1, max: 5, default: 3 },
   editorial_tolerance: { min: 0, max: 2, default: 1 },
-  slop_section_min_real: { min: 1, max: 1000, default: SECTION_MIN_REAL },
   open_game_hours: { min: 1, max: 168, default: 24 },
   slop_auto_enabled: { min: 0, max: 1, default: 1 },
-  slop_auto_threshold_percent: { min: 1, max: 100, default: AUTO_DEFAULT_THRESHOLD },
 } as const;
 export type NumberSetting = keyof typeof LIMITS;
 const KEYS = Object.keys(LIMITS) as NumberSetting[];
@@ -26,7 +23,7 @@ export async function numberSettings(env: Env): Promise<Record<NumberSetting, nu
 }
 export async function numberSetting(env: Env, key: NumberSetting) { return (await numberSettings(env))[key]; }
 
-/** GET /settings; PUT /settings {slop_section_min_real?, open_game_hours?, slop_auto_enabled?, slop_auto_threshold_percent?}. */
+/** GET /settings; PUT /settings accepts only keys in LIMITS. */
 export async function settingsRoute(env: Env, method: string, data: Record<string, unknown>) {
   const view = async () => ({ values: await numberSettings(env), limits: LIMITS });
   if (method === "GET") return view();

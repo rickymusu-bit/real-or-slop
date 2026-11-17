@@ -6,7 +6,7 @@ from playwright.sync_api import sync_playwright,expect
 from editorial_helpers import *
 folder=Path('artifacts/slop-browser');folder.mkdir(parents=True,exist_ok=True)
 old=call('/settings',library=True)[1]['values']
-call('/settings',{'slop_section_min_real':1,'slop_auto_enabled':0},method='PUT',library=True)
+call('/settings',{'slop_auto_enabled':0},method='PUT',library=True)
 try:
     with sync_playwright() as p:
         browser=p.chromium.launch(executable_path=os.environ.get('ROS_CHROMIUM_PATH') or shutil.which('chromium'),args=['--no-sandbox'])
@@ -24,6 +24,7 @@ try:
                 studio=page.locator('#slop-studio')
                 card=studio.locator('[data-attention="'+stuck['processes'][0]['id']+'"]')
                 expect(card).to_contain_text('il valutatore chiede la tua revisione')
+                card.locator(':scope > summary').click();card.locator('details > summary').first.click()
                 expect(card.locator('img')).to_be_visible();expect(card.locator('p[lang=en]')).to_be_visible()
                 expect(page.locator('#slop-attention-count')).to_contain_text('da vedere')
                 page.screenshot(path=str(folder/(name+'-attention.png')),full_page=True)
@@ -35,6 +36,7 @@ try:
                 control([None,{'evaluation':'review_needed','constraints':False}]);assert generate(review)[1]['process']['state']=='review_needed'
                 page.reload();page.locator('[data-admin-tab=slop]').click()
                 card=studio.locator('[data-attention="'+review['processes'][0]['id']+'"]')
+                card.locator(':scope > summary').click()
                 control([]);card.locator('[data-slop=accept-process]').click();expect(card).to_have_count(0,timeout=20000)
                 assert 'Accettare questa candidata' in confirmations[-1] and 'non ha potuto confermare' in confirmations[-1] and len(control())==1
                 expect(studio.get_by_role('status').first).to_contain_text('SLOP accettata')

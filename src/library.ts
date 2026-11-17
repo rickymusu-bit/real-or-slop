@@ -3,6 +3,7 @@
  * preview, selection, detail with editing, crop, analysis, regeneration, starting tags of a generated SLOP, distribution) and Settings
  * (spec `statistiche-impostazioni`: models, model context, vocabulary, leaderboard, thresholds, open games). */
 import "./library.css";
+import { mountAdminWorkspace } from "./admin-workspace";
 import { descriptionFields, readDescription } from "./editorial-ui";
 import type { RealDescription } from "../shared/editorial";
 import "./admin-navigation.css";
@@ -89,7 +90,7 @@ export async function showLibrary() {
   let distribution: { refresh: () => Promise<void> } = { refresh: async () => {} };
   let analysis: Analysis | null = null;
   content().innerHTML = `<section class="library page" aria-labelledby="library-title">
-    <div class="library-head"><h1 id="library-title">Dashboard admin</h1><span id="dashboard-loading">${loading("Caricamento della dashboard…")}</span></div>
+    <div class="library-head"><div><p class="admin-eyebrow">REAL or SLOP / Studio</p><h1 id="library-title">Il tuo archivio, in ordine.</h1><p class="admin-intro">Scegli le fotografie, crea le SLOP e prepara il prossimo gioco.</p></div><span id="dashboard-loading">${loading("Caricamento della dashboard…")}</span></div>
     <div id="slop-auto" class="slop-auto" role="region" aria-label="Generazione automatica delle SLOP" hidden></div>
     <nav class="admin-tabs" aria-label="Sezioni amministrazione">
       <button type="button" data-admin-tab="real" aria-pressed="true">Caricamento REAL</button>
@@ -105,7 +106,7 @@ export async function showLibrary() {
     <section id="db-distribution" hidden></section>
     <div id="db-images">
     <p id="library-counts" aria-live="polite"></p><p id="library-analysis" class="hint"></p>
-    <div class="library-toolbar">
+    <div class="db-search-row"><label>Cerca nel catalogo<input id="library-search" type="search" placeholder="Titolo, descrizione o prompt"></label></div><details class="db-filter-panel" open><summary>Filtri e ordinamento</summary><div class="library-toolbar">
       <nav class="library-views" aria-label="Viste">${Object.entries(STATUS_LABEL).map(([key, label]) =>
         `<button type="button" data-view="${key}" aria-pressed="${key === "library"}">${label}</button>`).join("")}</nav>
       <label>Origine<select id="library-origin"><option value="all">REAL e SLOP</option><option value="REAL">REAL</option><option value="SLOP">SLOP</option></select></label>
@@ -119,7 +120,7 @@ export async function showLibrary() {
       <label>Ordina per<select id="library-sort"><option value="added">data di aggiunta</option><option value="views">visualizzazioni</option><option value="accuracy">accuratezza</option></select></label>
       <label>Ordine<select id="library-order"><option value="desc">decrescente</option><option value="asc">crescente</option></select></label>
       <datalist id="library-tag-list"></datalist>
-    </div>
+    </div></details>
     <div class="library-add"><button type="button" id="library-select-all" hidden>Seleziona tutte</button><button type="button" id="library-empty-trash" hidden>Svuota cestino</button><span id="library-progress" role="status" aria-live="polite"></span></div>
     <p id="library-batch-filter" class="library-batch-filter" hidden><span>Batch automatico in corso: solo le sue immagini.</span><button type="button" data-batch-clear>Mostra tutte</button></p>
     <div id="library-selection" class="library-selection" hidden></div>
@@ -148,12 +149,11 @@ export async function showLibrary() {
       <p id="library-models-note" class="hint"></p>
       <p class="hint">La qualità vale per lo studio SLOP e per la rigenerazione nella sezione Database.</p></details>
     <details id="library-thresholds" class="library-vocabulary"><summary>Studio SLOP</summary>
-      <form id="library-thresholds-form" class="library-inline"><label>REAL approvate o pubblicate per aprire lo studio<input type="number" name="slop_section_min_real" required></label>
+      <form id="library-thresholds-form" class="library-inline">
         <label>Proposte automatiche<select name="slop_auto_enabled"><option value="1">attive</option><option value="0">spente</option></select></label>
         <label>Tentativi massimi per SLOP<input type="number" name="max_generation_attempts" required></label><label>Tolleranza (0 rigorosa, 1 normale, 2 permissiva)<input type="number" name="editorial_tolerance" required></label>
-        <label>Soglia di proposta (% di spread)<input type="number" name="slop_auto_threshold_percent" required></label><button>Salva</button></form>
-      <p class="hint">Stime da verificare sui primi temi reali. Una proposta di generazione compare quando
-        100 × (REAL − SLOP approvate o pubblicate) / REAL raggiunge la soglia (33%: 1,5 REAL per ogni SLOP); spegnere le proposte non ferma un batch già avviato.</p></details>
+        <button>Salva</button></form>
+      <p class="hint">Le proposte colmano la differenza tra REAL e SLOP del catalogo, contando anche le SLOP nuove da decidere. Fino a 10 immagini per batch, ispirate a REAL scelte a caso. Spegnere le proposte non ferma un batch già avviato.</p></details>
     <details id="library-games" class="library-vocabulary"><summary>Partite</summary>
       <form id="library-games-form" class="library-inline"><label>Durata massima di una partita aperta (ore)<input type="number" name="open_game_hours" required></label><button>Salva</button></form>
       <p class="hint">Oltre questo tempo una partita non conclusa non trattiene più le copie delle foto ritirate o modificate, e la sua foto può non essere più disponibile. I livelli del gioco sono fissi nel codice.</p></details></section>
@@ -161,11 +161,17 @@ export async function showLibrary() {
     <dialog id="library-detail" class="library-detail" aria-labelledby="library-detail-title"></dialog>
   </section>`;
   const page = content().querySelector<HTMLElement>(".library")!;
+  mountAdminWorkspace(page);
   const $ = <T extends HTMLElement>(selector: string) => page.querySelector<T>(selector)!;
   const message = (text: string) => { $("#library-message").textContent = text; };
   const settingsMessage = (text: string) => { $("#library-settings-message").textContent = text; };
   const progress = (text: string) => { $("#library-progress").textContent = text; };
 
+  let searchTimer = 0;
+  $("#library-search").addEventListener("input", event => {
+    filter.q = (event.target as HTMLInputElement).value.trim();
+    window.clearTimeout(searchTimer); searchTimer = window.setTimeout(() => { void load().catch(error => message(String(error))); }, 250);
+  });
   let tagCategories = new Map<string, Category>();
   const refreshTags = async () => {
     const { tags } = await call<{ tags: Tag[] }>("/tags");
@@ -175,9 +181,9 @@ export async function showLibrary() {
     // Grouped by category; the category of a tag changes for every image that uses it.
     $("#library-vocabulary-list").innerHTML = CATEGORIES.map(c => [c, tags.filter(t => t.category === c)] as const).filter(([, list]) => list.length)
       .map(([c, list]) => `<li class="tag-category-group">${escape(CATEGORY_LABELS[c])} (${list.length})</li>` + list.map(t =>
-        `<li class="tag-cat tag-cat-${t.category}"><strong>${escape(t.label)}</strong> · ${t.images} ${t.images === 1 ? "immagine" : "immagini"} ` +
+        `<li class="tag-cat tag-cat-${t.category}"><strong>${escape(t.label)}</strong> / ${t.images} ${t.images === 1 ? "immagine" : "immagini"} ` +
         categorySelect(`data-tag-category="${escape(t.label)}" data-images="${t.images}"`, t.category) + (t.aliases.length
-        ? " · alias: " + t.aliases.map(a => `${escape(a)} <button type="button" data-alias-remove="${escape(a)}" aria-label="Togli l'alias ${escape(a)}">×</button>`).join(" ") : "") + "</li>").join("")).join("")
+        ? " / alias: " + t.aliases.map(a => `${escape(a)} <button type="button" data-alias-remove="${escape(a)}" aria-label="Togli l'alias ${escape(a)}">×</button>`).join(" ") : "") + "</li>").join("")).join("")
       || "<li>Nessun tag.</li>";
   };
   const refreshAnalysis = async () => {
@@ -200,7 +206,7 @@ export async function showLibrary() {
     }
     await Promise.all([load(), refreshTags(), refreshAnalysis(), refreshGroups()]);
     progress("");
-    message(`${done} di ${ids.length} completate.` + conflictText(conflicts) + (errors.length ? " " + [...new Set(errors)].join(" · ") : ""));
+    message(`${done} di ${ids.length} completate.` + conflictText(conflicts) + (errors.length ? " " + [...new Set(errors)].join(" / ") : ""));
   };
   const refreshGroups = async () => {
     try {
@@ -230,7 +236,7 @@ export async function showLibrary() {
     // The list is reloaded first: the message says the work is over only when the cards show the new tags.
     await Promise.all([load(), refreshTags(), refreshAnalysis()]);
     progress("");
-    message(`${done} di ${ids.length} analizzate.` + conflictText(conflicts) + (errors.length ? " " + [...new Set(errors)].join(" · ") : ""));
+    message(`${done} di ${ids.length} analizzate.` + conflictText(conflicts) + (errors.length ? " " + [...new Set(errors)].join(" / ") : ""));
   };
   // The list of the last request wins: a slower, older answer never overwrites a newer one.
   let loadSeq = 0;
@@ -244,7 +250,7 @@ export async function showLibrary() {
     items = data.items;
     selected = new Set([...selected].filter(id => items.some(item => item.id === id)));
     const count = (status: string) => data.counts.filter(c => c.status === status).reduce((n, c) => n + c.n, 0);
-    $("#library-counts").textContent = `${count("new")} nuove · ${count("approved")} approvate · ${count("published")} pubblicate · ${count("trash")} nel cestino`;
+    $("#library-counts").textContent = `${count("new")} nuove / ${count("approved")} approvate / ${count("published")} pubblicate / ${count("trash")} nel cestino`;
     $("#library-empty-trash").hidden = filter.status !== "trash" || !count("trash");
     render();
     // Copies without measures of the current version are measured in this page, in the background, one at a time (free).
@@ -254,7 +260,7 @@ export async function showLibrary() {
     }
   };
   const rate = (item: Item) => item.stats.views ? ` (${Math.round(item.stats.correct / item.stats.views * 100)}%)` : "";
-  const statsLine = (item: Item) => `<span class="db-stats" data-stats>Vista <strong>${item.stats.views}</strong> ${item.stats.views === 1 ? "volta" : "volte"} · classificata correttamente <strong>${item.stats.correct}</strong>${rate(item)}</span>`;
+  const statsLine = (item: Item) => `<span class="db-stats" data-stats>Vista <strong>${item.stats.views}</strong> ${item.stats.views === 1 ? "volta" : "volte"} / classificata correttamente <strong>${item.stats.correct}</strong>${rate(item)}</span>`;
   const tagPills = () => {
     $("#library-tag-pills").innerHTML = filter.tags.map(t => pill(t, tagCategories.get(t) || "other", "rw-pill",
       `<button type="button" data-filter-remove="${escape(t)}" aria-label="Togli ${escape(t)} dal filtro">×</button>`)).join("") ||
@@ -332,7 +338,7 @@ export async function showLibrary() {
   const analysisLine = (item: Item) => interrupted(item) ? "Analisi interrotta: esito incerto, forse già addebitata." : ({ none: "Non ancora analizzata.", running: "Analisi in corso…",
     done: "Analizzata: tag generati una volta sola, da rivedere prima di approvare.",
     uncertain: "Esito incerto: " + item.analysis.error, failed: "Analisi non riuscita: " + item.analysis.error })[item.analysis.status];
-  const metricText = (m: Metrics) => `lato ${m.long} px · rumore ${m.noise.toFixed(1)} · nitidezza ${m.sharpness.toFixed(1)} · contrasto ${m.contrast} · saturazione ${m.saturation.toFixed(2)}`;
+  const metricText = (m: Metrics) => `lato ${m.long} px / rumore ${m.noise.toFixed(1)} / nitidezza ${m.sharpness.toFixed(1)} / contrasto ${m.contrast} / saturazione ${m.saturation.toFixed(2)}`;
   /** Group, missing categories and the paid completion. */
   const groupBlock = (item: Item) => {
     const missing = item.missing_categories.map(c => CATEGORY_LABELS[c as Category] || c);
@@ -358,7 +364,7 @@ export async function showLibrary() {
     const fields = FIELDS.filter(([key]) => item.origin === "SLOP" || (key !== "prompt" && key !== "model"));
     detail.innerHTML = `<form method="dialog" class="library-detail-close"><button aria-label="Chiudi">×</button></form>
       <h2 id="library-detail-title">${escape(item.title)}</h2>
-      <p class="hint">${item.origin} · ${STATE_LABEL[item.status]} · originale ${item.width}×${item.height}${item.copy ? ` · copia di gioco WebP ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}: è ciò che vedranno i giocatori` : " · copia di gioco non pronta"}</p>
+      <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / originale ${item.width}×${item.height}${item.copy ? ` / copia di gioco WebP ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}: è ciò che vedranno i giocatori` : " / copia di gioco non pronta"}</p>
       <div class="library-detail-body"><div class="game-media-surface library-preview"><img data-game-media draggable="false" src="${escape(item.file)}" alt="${escape(item.title)}"></div>
       <div class="library-fields"><p>${statsLine(item)}</p>
       ${item.in_play ? `<p class="hint">In ${item.in_play} ${item.in_play === 1 ? "partita" : "partite"} in corso: continuano con la versione con cui sono iniziate; le modifiche valgono dalle partite nuove.</p>` : ""}
@@ -516,6 +522,7 @@ export async function showLibrary() {
     if (target.closest("dialog") || target.closest("#real-wizard") || target.closest("#slop-auto")) return;
     if (button?.dataset.adminTab) {
       const tab = button.dataset.adminTab;
+      try { sessionStorage.setItem("ros-admin-section", tab); } catch { /* storage unavailable */ }
       for (const panel of ["real", "slop", "database", "stats", "settings"])
         $<HTMLElement>("#admin-" + panel).hidden = panel !== tab;
       page.querySelectorAll<HTMLButtonElement>("[data-admin-tab]").forEach(b => b.setAttribute("aria-pressed", String(b === button)));
@@ -567,7 +574,7 @@ export async function showLibrary() {
           if (pending.some(i=>i.status === "published") && !window.confirm("Le foto pubblicate verranno ritirate e resteranno approvate con la nuova copia. Continuare?")) return;
           const result = await remakeCopies(pending, progress);
           progress(""); await load();
-          message(`${result.done} di ${pending.length} copie rifatte. Controlla l’inquadratura prima di pubblicare.` + (result.failed.length ? " Non riuscite: " + result.failed.map(f => f.error).join(" · ") : "")); return;
+          message(`${result.done} di ${pending.length} copie rifatte. Controlla l’inquadratura prima di pubblicare.` + (result.failed.length ? " Non riuscite: " + result.failed.map(f => f.error).join(" / ") : "")); return;
         }
         if (action === "complete") {
           const ids = items.filter(i => selected.has(i.id) && i.completable).map(i => i.id);
@@ -707,7 +714,7 @@ export async function showLibrary() {
         ${p.proposed ? `<p class="hint" data-context-proposal>È disponibile un testo proposto con l'aggiornamento dell'app. <button type="button" data-context-load="${escape(p.part)}">Carica nel campo</button> (diventa una versione solo se lo salvi).</p>` : ""}
         <div class="library-inline"><button type="button" data-context-save="${escape(p.part)}">Salva nuova versione</button></div>
         <details class="library-context-history"><summary>Versioni (${p.history.length})</summary><ol>${p.history.map((v, index) =>
-          `<li><span>${escape(when(v.created_at))}</span> · ${v.body.length} caratteri${p.part === "base" || p.part === "analysis" ? ` · usata da ${v.used} ${v.used === 1 ? "immagine" : "immagini"}` : ""}${p.part === "slop_prompt" && v.pipeline < 2 ? " · SLOP gemelle" : ""}${index === 0 ? " · <strong>attuale</strong>" : ` <button type="button" data-context-restore="${escape(v.id)}">Ripristina</button>`}
+          `<li><span>${escape(when(v.created_at))}</span> / ${v.body.length} caratteri${p.part === "base" || p.part === "analysis" ? ` / usata da ${v.used} ${v.used === 1 ? "immagine" : "immagini"}` : ""}${p.part === "slop_prompt" && v.pipeline < 2 ? " / SLOP gemelle" : ""}${index === 0 ? " / <strong>attuale</strong>" : ` <button type="button" data-context-restore="${escape(v.id)}">Ripristina</button>`}
           <details><summary>Testo</summary><pre>${escape(v.body)}</pre></details></li>`).join("")}</ol></details></section>`;
     }).join("");
   };
@@ -759,12 +766,12 @@ export async function showLibrary() {
       settingsMessage(done); await slopStudio.refresh(); await autoBox.refresh();
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
-  numbersForm("#library-thresholds-form", ["slop_section_min_real", "slop_auto_enabled", "slop_auto_threshold_percent", "max_generation_attempts", "editorial_tolerance"], "Soglie dello studio SLOP salvate.");
+  numbersForm("#library-thresholds-form", ["slop_auto_enabled", "max_generation_attempts", "editorial_tolerance"], "Soglie dello studio SLOP salvate.");
   numbersForm("#library-games-form", ["open_game_hours"], "Durata massima di una partita aperta salvata.");
   statsView = mountStats($<HTMLElement>("#stats-body"), period => call<Stats>("/stats?" + new URLSearchParams({ period })));
   // Leaderboard: check a code, hide or show an entry.
   interface Entry { id: string; nickname: string; level_label: string; score: number; photos: number; balanced_accuracy: number; hidden: boolean; created_at: string }
-  const entryLine = (e: Entry) => `${escape(e.nickname)} · ${escape(e.level_label)} · ${e.score.toLocaleString("it-IT", { minimumFractionDigits: 1 })} punti · ${Math.round(e.balanced_accuracy * 100)}% · ${escape(when(e.created_at))}${e.hidden ? " · <strong>nascosta</strong>" : ""}`;
+  const entryLine = (e: Entry) => `${escape(e.nickname)} / ${escape(e.level_label)} / ${e.score.toLocaleString("it-IT", { minimumFractionDigits: 1 })} punti / ${Math.round(e.balanced_accuracy * 100)}% / ${escape(when(e.created_at))}${e.hidden ? " / <strong>nascosta</strong>" : ""}`;
   const leaderboardCall = async <T>(path: string, init: RequestInit = {}) => {
     const response = await fetch("/api/admin/leaderboard" + path, { credentials: "same-origin", ...init, headers: { "Content-Type": "application/json" } });
     const data = await response.json().catch(() => ({})) as T & { error?: string };
@@ -813,7 +820,7 @@ export async function showLibrary() {
   await refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   await call<Numbers>("/settings").then(n => renderNumbers(n)).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   tagPills();
-  slopStudio = await mountSlopStudio($<HTMLElement>("#slop-studio"), n => { $("#slop-attention-count").textContent = n ? ` · ${n} da vedere` : ""; });
+  slopStudio = await mountSlopStudio($<HTMLElement>("#slop-studio"), n => { $("#slop-attention-count").textContent = n ? ` / ${n} da vedere` : ""; });
   // Automatic SLOP batches: proposal, progress and review (spec `generazione-slop`).
   autoBox = mountSlopAuto($<HTMLElement>("#slop-auto"), {
     loop: async batchId => {
@@ -831,5 +838,6 @@ export async function showLibrary() {
   });
   await autoBox.refresh();
   $("#dashboard-loading").remove();
+  try { const saved = sessionStorage.getItem("ros-admin-section"); if (saved && ["real","slop","database","stats","settings"].includes(saved)) page.querySelector<HTMLButtonElement>(`[data-admin-tab="${saved}"]`)?.click(); } catch { /* storage unavailable */ }
 }
 

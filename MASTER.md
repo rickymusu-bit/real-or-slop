@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 27.0.1, aggiornata il 2026-11-16T21:28:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 27.1.3, aggiornata il 2026-11-17T05:46:28Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,9 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.36.0 (PR #151):** SLOP indipendenti, migrazione 0053, proposte sullo spread del catalogo; revisione tecnica in `docs/revisione-codice.md`. Validazione del trattamento anonimo anche per campioni malformati, con test di regressione in `tests/copy-treatment.test.ts`. Nessun rilascio eseguito.
+- **Ramo 1.37.0:** dashboard riprogettata nelle cinque sezioni e proposte dai conteggi grezzi, con campione casuale senza soglie. `src/admin-workspace.ts` e `src/admin-workspace.css`: struttura e stile. Migrazione 0054: conteggi delle proposte ignorate e rimozione delle impostazioni obsolete. Ricerca estesa a descrizione e prompt in `worker/library.ts`; test di upgrade 0054 in `tests/slop-proposals.test.ts`. Verifiche geometriche su barra laterale e titoli delle ispirazioni in `tests/library_browser.integration.py`; correzione della cascata CSS della testata e della navigazione. `tests/long_press.py` prepara il gesto con un’azione che ritrova le schede sostituite dal caricamento in background. Allineata a main dopo il merge della #151; nessun rilascio della 1.37.0 eseguito.
+
+- **Integrata in main la 1.36.0 (PR #151):** SLOP indipendenti e migrazione 0053, inclusa la validazione del trattamento anonimo per campioni malformati. Revisione tecnica in `docs/revisione-codice.md`. Stato del deploy non verificato in questa sessione.
 
 - **In produzione:** app 1.35.0 (PR rickymusu-bit/real-or-slop#149; migrazioni fino alla 0052), Workers Paid dal 2026-11-16,
   Workers Logs attivi. 20 REAL approvate con tag e descrizione; copie fatte nel browser (con la 1.34.0 restano valide). Nessuna immagine pubblicata. Il primo batch automatico, ripreso sul server il 2026-11-16 alle 08:24 UTC, è finito alle
@@ -60,11 +62,11 @@ nome.
 | Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 4.0.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.0.1 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 2.7.0 |
-| SLOP indipendenti, studio e batch automatici | `docs/generazione-slop.md` | 6.0.0 |
-| Sezione Database | `docs/database-immagini.md` | 2.9.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 3.0.1 |
+| SLOP indipendenti, studio e batch automatici | `docs/generazione-slop.md` | 6.1.0 |
+| Sezione Database | `docs/database-immagini.md` | 3.0.1 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.0.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 2.8.1 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 3.0.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -152,8 +154,9 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0049 | REAL di origine di una SLOP gemella |
 | 0050 | descrizione editoriale REAL e provenienza, contesto Commons separato, processi/tentativi privati, chiamate evaluation e collegamenti, snapshot e impostazioni del loop; batch legacy invariati |
 | 0051 | contesto «Valutazione delle SLOP» e pipeline di ogni versione del contesto (testi delle gemelle = 1) |
-| 0053 | snapshot editoriali anonimi, rimozione dei legami REAL/SLOP; conservazione di processi, tentativi e chiamate |
 | 0052 | runner del ciclo SLOP su Cloudflare per batch: istanza, stato, ultimo passo |
+| 0053 | snapshot editoriali anonimi, rimozione dei legami REAL/SLOP; conservazione di processi, tentativi e chiamate |
+| 0054 | proposte ignorate con fabbisogno assoluto e rimozione delle soglie obsolete; altre impostazioni conservate |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

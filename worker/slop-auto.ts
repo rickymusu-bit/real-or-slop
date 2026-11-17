@@ -2,7 +2,7 @@
  * Legacy batches remain inspectable; no incompatible paid resume. */
 import { HttpError, type Env } from "./core";
 import { numberSettings } from "./app-settings";
-import { IGNORE_KEY, MAX_BATCH, proposal, spreadPercent, type Proposal } from "../shared/slop-proposals";
+import { IGNORE_KEY, MAX_BATCH, proposal, type Proposal } from "../shared/slop-proposals";
 import { initializeBatch, loopSnapshot, processViews, itemsOf } from "./slop-generation";
 import { realRows, catalogCounts, inspirationItems } from "./slop-references";
 import { runnerView, startRun } from "./slop-runner";
@@ -46,15 +46,15 @@ async function batchView(env: Env, row: AutoRow) {
 
 async function current(env: Env) {
   const [v, open, counts] = [await numberSettings(env), await openBatch(env), await catalogCounts(env)];
-  const ignored = await env.DB.prepare("SELECT spread_percent FROM slop_proposal_ignored WHERE tag=?").bind(IGNORE_KEY).first<{ spread_percent: number }>();
-  const result = proposal({ ...counts, sectionMin: v.slop_section_min_real, thresholdPercent: v.slop_auto_threshold_percent,
-    enabled: v.slop_auto_enabled === 1, openBatch: !!open, ignoredAt: ignored?.spread_percent ?? null });
+  const ignored = await env.DB.prepare("SELECT missing_count FROM slop_proposal_ignored WHERE tag=?").bind(IGNORE_KEY).first<{ missing_count: number }>();
+  const result = proposal({ ...counts,
+    enabled: v.slop_auto_enabled === 1, openBatch: !!open, ignoredMissing: ignored?.missing_count ?? null });
   return { v, open, counts, ...result };
 }
 
 export async function autoState(env: Env) {
   const { v, open, proposal: next, reason } = await current(env);
-  return { enabled: v.slop_auto_enabled === 1, threshold_percent: v.slop_auto_threshold_percent, max_batch: MAX_BATCH, paid_calls: !!env.OPENAI_API_KEY,
+  return { enabled: v.slop_auto_enabled === 1, max_batch: MAX_BATCH, paid_calls: !!env.OPENAI_API_KEY,
     config: await loopSnapshot(env), batch: open ? await batchView(env, open) : null, proposal: next, reason };
 }
 
@@ -105,10 +105,10 @@ async function resume(env: Env, data: Record<string, unknown>) {
 
 async function ignore(env: Env, data: Record<string, unknown>) {
   if (Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
-  const counts = await catalogCounts(env), percent = spreadPercent(counts.real, counts.slop);
-  if (percent === null) throw new HttpError(404, "Nessuna REAL approvata o pubblicata");
-  await env.DB.prepare(`INSERT INTO slop_proposal_ignored(tag,spread_percent,created_at) VALUES(?,?,?)
-    ON CONFLICT(tag) DO UPDATE SET spread_percent=excluded.spread_percent,created_at=excluded.created_at`).bind(IGNORE_KEY, percent, now()).run();
+  const counts = await catalogCounts(env), missing = Math.max(0, counts.real - counts.slop - counts.pending);
+  if (!missing) throw new HttpError(404, "Nessuna REAL approvata o pubblicata");
+  await env.DB.prepare(`INSERT INTO slop_proposal_ignored(tag,missing_count,created_at) VALUES(?,?,?)
+    ON CONFLICT(tag) DO UPDATE SET missing_count=excluded.missing_count,created_at=excluded.created_at`).bind(IGNORE_KEY, missing, now()).run();
   return autoState(env);
 }
 

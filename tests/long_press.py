@@ -2,7 +2,9 @@
 button elsewhere; the press lasts 800 ms (the dashboard opens the preview after 500 ms)."""
 
 def long_press(page, locator, hold_ms=800):
-    locator.scroll_into_view_if_needed()
+    # Unlike scrolling an element handle, this locator action reacquires a card
+    # replaced by the catalogue's background measurement before the gesture starts.
+    locator.hover()
     box = locator.bounding_box()
     x, y = box['x'] + box['width'] / 2, box['y'] + box['height'] / 2
     if page.evaluate("matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0"):

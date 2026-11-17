@@ -7,7 +7,7 @@ from playwright.sync_api import sync_playwright,expect
 from editorial_helpers import *
 folder=Path('artifacts/slop-auto-browser');folder.mkdir(parents=True,exist_ok=True)
 old=call('/settings',library=True)[1]['values']
-call('/settings',{'slop_section_min_real':1,'slop_auto_enabled':1,'max_generation_attempts':2},method='PUT',library=True)
+call('/settings',{'slop_auto_enabled':1,'max_generation_attempts':2},method='PUT',library=True)
 try:
     with sync_playwright() as p:
         browser=p.chromium.launch(executable_path=os.environ.get('ROS_CHROMIUM_PATH') or shutil.which('chromium'),args=['--no-sandbox'])
