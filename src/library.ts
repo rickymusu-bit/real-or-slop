@@ -91,7 +91,7 @@ export async function showLibrary() {
   let analysis: Analysis | null = null;
   content().innerHTML = `<section class="library page" aria-labelledby="library-title">
     <div class="library-head"><div><p class="admin-eyebrow">REAL or SLOP / Studio</p><h1 id="library-title">Il tuo archivio, in ordine.</h1><p class="admin-intro">Scegli le fotografie, crea le SLOP e prepara il prossimo gioco.</p></div><span id="dashboard-loading">${loading("Caricamento della dashboard…")}</span></div>
-    <div id="slop-auto" class="slop-auto" role="region" aria-label="Generazione automatica delle SLOP" hidden></div>
+    <div id="slop-auto" class="slop-auto" role="region" aria-label="Equilibrio del dataset" hidden></div>
     <nav class="admin-tabs" aria-label="Sezioni amministrazione">
       <button type="button" data-admin-tab="real" aria-pressed="true">Caricamento REAL</button>
       <button type="button" data-admin-tab="slop" aria-pressed="false">Generazione SLOP<span id="slop-auto-count"></span><span id="slop-attention-count"></span></button>
@@ -150,14 +150,16 @@ export async function showLibrary() {
       <p class="hint">La qualità vale per lo studio SLOP e per la rigenerazione nella sezione Database.</p></details>
     <details id="library-thresholds" class="library-vocabulary"><summary>Studio SLOP</summary>
       <form id="library-thresholds-form" class="library-inline">
-        <label>Proposte automatiche<select name="slop_auto_enabled"><option value="1">attive</option><option value="0">spente</option></select></label>
         <label>Tentativi massimi per SLOP<input type="number" name="max_generation_attempts" required></label><label>Tolleranza (0 rigorosa, 1 normale, 2 permissiva)<input type="number" name="editorial_tolerance" required></label>
         <button>Salva</button></form>
-      <p class="hint">Le proposte colmano la differenza tra REAL e SLOP del catalogo, contando anche le SLOP nuove da decidere. Fino a 10 immagini per batch, ispirate a REAL scelte a caso. Spegnere le proposte non ferma un batch già avviato.</p></details>
+      <p class="hint">In Generazione SLOP scegli la modalità manuale oppure automatica e la quantità. Lo sbilanciamento del catalogo è solo una notifica. Una REAL resta occupata finché la sua SLOP esiste, anche nel cestino.</p></details>
     <details id="library-games" class="library-vocabulary"><summary>Partite</summary>
       <form id="library-games-form" class="library-inline"><label>Durata massima di una partita aperta (ore)<input type="number" name="open_game_hours" required></label><button>Salva</button></form>
       <p class="hint">Oltre questo tempo una partita non conclusa non trattiene più le copie delle foto ritirate o modificate, e la sua foto può non essere più disponibile. I livelli del gioco sono fissi nel codice.</p></details></section>
-    <section id="admin-slop" class="admin-panel" hidden><div id="slop-studio">${loading("Caricamento dello studio SLOP…")}</div></section>
+    <section id="admin-slop" class="admin-panel" hidden><h2>Generazione SLOP</h2>
+      <nav class="db-tabs" aria-label="Modalità di generazione"><button type="button" data-generation-mode="manual" aria-pressed="true">Generazione manuale</button><button type="button" data-generation-mode="automatic" aria-pressed="false">Generazione automatica</button></nav>
+      <section id="slop-manual"><div id="slop-studio">${loading("Caricamento dello studio SLOP…")}</div></section>
+      <section id="slop-automatic" hidden><div id="slop-auto-controls">${loading()}</div></section></section>
     <dialog id="library-detail" class="library-detail" aria-labelledby="library-detail-title"></dialog>
   </section>`;
   const page = content().querySelector<HTMLElement>(".library")!;
@@ -166,6 +168,15 @@ export async function showLibrary() {
   const message = (text: string) => { $("#library-message").textContent = text; };
   const settingsMessage = (text: string) => { $("#library-settings-message").textContent = text; };
   const progress = (text: string) => { $("#library-progress").textContent = text; };
+
+  const setGenerationMode = (mode: string) => {
+    $("#slop-manual").hidden = mode !== "manual";
+    $("#slop-automatic").hidden = mode !== "automatic";
+    page.querySelectorAll<HTMLButtonElement>("[data-generation-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.generationMode === mode)));
+    sessionStorage.setItem("ros-generation-mode", mode);
+  };
+  page.querySelectorAll<HTMLButtonElement>("[data-generation-mode]").forEach(b => b.addEventListener("click", () => setGenerationMode(b.dataset.generationMode!)));
+  setGenerationMode(sessionStorage.getItem("ros-generation-mode") === "automatic" ? "automatic" : "manual");
 
   let searchTimer = 0;
   $("#library-search").addEventListener("input", event => {
@@ -766,7 +777,7 @@ export async function showLibrary() {
       settingsMessage(done); await slopStudio.refresh(); await autoBox.refresh();
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
-  numbersForm("#library-thresholds-form", ["slop_auto_enabled", "max_generation_attempts", "editorial_tolerance"], "Soglie dello studio SLOP salvate.");
+  numbersForm("#library-thresholds-form", ["max_generation_attempts", "editorial_tolerance"], "Soglie dello studio SLOP salvate.");
   numbersForm("#library-games-form", ["open_game_hours"], "Durata massima di una partita aperta salvata.");
   statsView = mountStats($<HTMLElement>("#stats-body"), period => call<Stats>("/stats?" + new URLSearchParams({ period })));
   // Leaderboard: check a code, hide or show an entry.
@@ -821,11 +832,12 @@ export async function showLibrary() {
   await call<Numbers>("/settings").then(n => renderNumbers(n)).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   tagPills();
   slopStudio = await mountSlopStudio($<HTMLElement>("#slop-studio"), n => { $("#slop-attention-count").textContent = n ? ` / ${n} da vedere` : ""; });
-  // Automatic SLOP batches: proposal, progress and review (spec `generazione-slop`).
-  autoBox = mountSlopAuto($<HTMLElement>("#slop-auto"), {
+  // Automatic generation controls, balance notification, progress and review (spec `generazione-slop`).
+  autoBox = mountSlopAuto($<HTMLElement>("#slop-auto"), $<HTMLElement>("#slop-auto-controls"), {
     loop: async batchId => {
       sessionStorage.setItem("ros-editorial-studio-v1",batchId);
       page.querySelector<HTMLButtonElement>('[data-admin-tab="slop"]')!.click();
+      page.querySelector<HTMLButtonElement>('[data-generation-mode="manual"]')!.click();
       await slopStudio.refresh();
     },
     review: async batchId => {

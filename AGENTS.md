@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 25.0.0, aggiornata il 2026-11-16T19:41:37Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 26.0.0, aggiornata il 2026-11-17T10:19:38Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -23,14 +23,14 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   e il contesto Commons, ma **non conosce l'esistenza delle SLOP**.
   Il modello successivo che produce **brief e prompt SLOP** riceve solo tag e descrizione salvata, **non l'immagine**;
   conosce invece lo scopo sintetico della generazione. Tenere separati i contesti di istruzione.
-- **Ogni SLOP nasce da una REAL di riferimento** (decisione del 2026-11-15, specifica `generazione-slop` 5.2.0): il riferimento
-  assicura ancoraggi editoriali tematici e fotografici, **non** somiglianza visiva né il cambiamento di un solo elemento.
-  Il wizard salva **tag e descrizione della REAL nella medesima chiamata di analisi**; successivamente **una sola chiamata
-  testuale** trasforma tag e descrizione in brief e prompt iniziale. La descrizione separa osservazioni visive, contesto
-  documentato da Commons e incertezze, senza inventare fatti né sovrascrivere il testo originale di Commons.
-  Il brief editoriale del processo resta immutabile; il prompt e la scena possono cambiare.
-  Le persone sono inventate.
-  La REAL è solo ispirazione: nessun legame identificativo viene conservato nei processi o nelle SLOP. Possono comparire nella stessa partita.
+- **Generazione SLOP manuale o automatica** (decisione dell'owner del 2026-11-17, specifica `generazione-slop` 7.0.0).
+  Manuale: prompt, tag di partenza e ancoraggi scritti dall'owner, senza una REAL né una chiamata per scrivere il prompt.
+  Automatica: descrizione e tag di una REAL libera diventano brief e prompt con una sola chiamata testuale, senza immagine.
+  La madre resta occupata finché la figlia esiste nel dataset: nuova, approvata, pubblicata o cestinata. Solo l'eliminazione
+  definitiva libera la REAL. Prenotazioni private impediscono due processi concorrenti dalla stessa REAL e si liberano
+  chiudendo esplicitamente un processo senza figlia. Il riferimento non vincola il gioco: madre e figlia possono apparire insieme.
+  Le descrizioni restano osservazioni, contesto Commons documentato e incertezze; non sovrascrivono il contesto Commons.
+  I legami cancellati dalla migrazione 0053 non vanno inventati. Le persone sono inventate.
 - **Credibilità prima dell'aderenza letterale al prompt.** Il valutatore esamina **l'immagine generata intera**, senza crop
   né trattamento 4:5; decide accettazione, nuovo tentativo, revisione del prompt o revisione umana. Il ritaglio 4:5 è preparato
   **soltanto dopo l'accettazione** e non dà feedback al generatore. I difetti critici non sono compensabili con altri punti forti; tentativi

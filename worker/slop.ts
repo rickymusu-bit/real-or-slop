@@ -12,7 +12,7 @@ async function state(env: Env) {
   const slop = await env.DB.prepare("SELECT count(*) AS n FROM images WHERE origin='SLOP' AND status IN ('approved','published')").first<{ n: number }>();
   return { thresholds: { section: 1, max_batch: MAX_BATCH },
     real_total: counts.real, slop_total: slop?.n || 0,
-    waiting: all.map(r => ({ id: r.id, title: r.title, tags: r.tags, measured: r.measured, described: r.described, file: `/api/admin/library/${r.id}/file` })),
+    waiting: all.filter(r => r.available).map(r => ({ id: r.id, title: r.title, tags: r.tags, measured: r.measured, described: r.described, file: `/api/admin/library/${r.id}/file` })),
     groups: (await groups(env)).map(g => ({ ...g, spread: g.real - g.slop })), attention: await attention(env) };
 }
 

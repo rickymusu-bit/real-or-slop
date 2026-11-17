@@ -1,5 +1,6 @@
 """Database section through the API: tag and origin filters, statistics on the current copy, edit of a published photo
 during a game (the game keeps its copy), regeneration of a SLOP (confirmed, statistics reset, new analysis), distribution."""
+from local_db import sql
 import http.cookiejar
 import io
 import json
@@ -29,10 +30,6 @@ def call(url, data=None, method=None, raw=None, mime='application/json', auth=Tr
             return r.status, (json.loads(payload) if r.headers.get('Content-Type', '').startswith('application/json') else payload)
     except urllib.error.HTTPError as e:
         return e.code, json.loads(e.read() or b'{}')
-def sql(command):
-    out = subprocess.run(['npx', 'wrangler', 'd1', 'execute', 'DB', '--local', '--env', 'local', '--persist-to', state, '--command', command, '--json'],
-                         capture_output=True, text=True, check=True)
-    return json.loads(out.stdout)[0]['results']
 def stored(key):
     with tempfile.TemporaryDirectory() as folder:
         target = Path(folder) / 'f'

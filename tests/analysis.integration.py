@@ -1,10 +1,10 @@
 """Paid analysis against a local Worker and the fake OpenAI (never the real one): confirmation of each call, register of
 calls, model selectors, uncertain outcomes not resent, OpenAI limits, ASCII tags, aliases, tags replaced once and restorable, model
 context with versions, tag categories and conflicts, merge, tags removed with their last image, no captions."""
+from local_db import sql
 import io
 import json
 import os
-import subprocess
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -24,10 +24,6 @@ def call(url, data=None, method=None, raw=None, mime='application/json'):
     try:
         with urllib.request.urlopen(req) as r: return r.status, json.loads(r.read())
     except urllib.error.HTTPError as e: return e.code, json.loads(e.read() or b'{}')
-def sql(command):
-    out = subprocess.run(['npx', 'wrangler', 'd1', 'execute', 'DB', '--local', '--env', 'local', '--persist-to', state, '--command', command, '--json'],
-                         capture_output=True, text=True, check=True)
-    return json.loads(out.stdout)[0]['results']
 def openai(queue=None):
     """Sets the fake model's next answers (and clears its log), or returns the requests it received."""
     if queue is not None:

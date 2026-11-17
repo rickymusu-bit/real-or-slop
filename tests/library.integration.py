@@ -1,5 +1,6 @@
 """Library through the API on a local Worker with real D1 and R2: add, game copy and crop, ND licences refused, edit,
 tags, approve, publish, play, withdraw, trash (also of a published photo), delete for good with every row and file, bulk actions."""
+from local_db import sql
 import http.cookiejar
 import time
 import hashlib
@@ -31,10 +32,6 @@ def call(url, data=None, method=None, raw=None, mime='application/json', auth=Tr
             return r.status, (json.loads(payload) if r.headers.get('Content-Type', '').startswith('application/json') else payload), r.headers
     except urllib.error.HTTPError as e:
         return e.code, json.loads(e.read() or b'{}'), e.headers
-def sql(command):
-    out = subprocess.run(['npx', 'wrangler', 'd1', 'execute', 'DB', '--local', '--env', 'local', '--persist-to', state, '--command', command, '--json'],
-                         capture_output=True, text=True, check=True)
-    return json.loads(out.stdout)[0]['results']
 def stored(bucket, key):
     with tempfile.TemporaryDirectory() as folder:
         target = Path(folder) / 'f'

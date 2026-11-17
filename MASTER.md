@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 27.1.3, aggiornata il 2026-11-17T05:46:28Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 28.0.0, aggiornata il 2026-11-17T10:35:22Z Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,8 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.37.0:** dashboard riprogettata nelle cinque sezioni e proposte dai conteggi grezzi, con campione casuale senza soglie. `src/admin-workspace.ts` e `src/admin-workspace.css`: struttura e stile. Migrazione 0054: conteggi delle proposte ignorate e rimozione delle impostazioni obsolete. Ricerca estesa a descrizione e prompt in `worker/library.ts`; test di upgrade 0054 in `tests/slop-proposals.test.ts`. Verifiche geometriche su barra laterale e titoli delle ispirazioni in `tests/library_browser.integration.py`; correzione della cascata CSS della testata e della navigazione. `tests/long_press.py` prepara il gesto con un’azione che ritrova le schede sostituite dal caricamento in background. Allineata a main dopo il merge della #151; nessun rilascio della 1.37.0 eseguito.
+- **Ramo 1.38.0:** generazione SLOP manuale senza REAL o chiamata brief, automatica con quantità scelta, avviso di sbilanciamento senza proposte. Migrazione 0055: registro privato delle madri occupate, con liberazione solo dopo cancellazione definitiva della figlia; prenotazioni contro la concorrenza. Preferenze di composizione variate. CI con selezione conservativa delle suite, cache pip/Chromium, una build duplicata rimossa, misure per suite e fixture SQL locali senza riavviare Wrangler per ogni asserzione. Nessun merge, deploy, migrazione remota o chiamata reale eseguiti.
+- **Integrata in main la 1.37.0 (PR #152):** dashboard nelle cinque sezioni, ricerca catalogo e conteggi grezzi. Migrazione 0054. Stato del deploy non verificato in questa sessione.
 
 - **Integrata in main la 1.36.0 (PR #151):** SLOP indipendenti e migrazione 0053, inclusa la validazione del trattamento anonimo per campioni malformati. Revisione tecnica in `docs/revisione-codice.md`. Stato del deploy non verificato in questa sessione.
 
@@ -59,14 +60,14 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 4.0.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 4.1.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.2.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.0.1 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 3.0.1 |
-| SLOP indipendenti, studio e batch automatici | `docs/generazione-slop.md` | 6.1.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 3.1.0 |
+| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 7.0.0 |
 | Sezione Database | `docs/database-immagini.md` | 3.0.1 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.0.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 3.0.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 3.1.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -115,20 +116,20 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - Libreria `library.ts` (stati, vocabolario, alias, categorie, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   analisi `analysis.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
-- SLOP: studio `slop.ts`, riferimenti editoriali temporanei `slop-references.ts`, generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
+- SLOP: studio `slop.ts`, riferimenti editoriali temporanei `slop-references.ts` (disponibilità privata), generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
   `slop-runner.ts`, batch automatici `slop-auto.ts`, gruppi e loro misure per Database e Statistiche `slop-groups.ts`.
 - Corpo delle richieste con un'immagine (analisi e valutazione, base64 scritto nei byte) `image-body.ts`.
 - Copie di gioco: controllo e conservazione della copia caricata dal browser in `library.ts` (`POST /:id/copy`).
 - Gioco `game.ts` con `sampling.ts` e `random.ts`, classifica `leaderboard.ts`.
 
 **Codice condiviso** (`shared/`): tag `tags.ts`, tag scritti a mano `tag-input.ts`, categorie `tag-categories.ts`, modelli OpenAI
-`models.ts`, proposta dei batch `slop-proposals.ts`, gruppi `slop-groups.ts`, formati e ricetta della copia
+`models.ts`, tipi dei batch `slop-proposals.ts`, preferenze di composizione `slop-composition.ts`, gruppi `slop-groups.ts`, formati e ricetta della copia
 `game-copy.ts`, misure e trattamento `copy-treatment.ts`, licenze ND
 `licenses.ts`, pulizia dei metadati `media-clean.ts`, livelli e punteggio `levels.ts`, costanti legali `legal.ts`, controllo delle
 immagini `editorial.ts` (descrizioni, brief e valutazioni), `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
 
 **Test** (`tests/`): unitari `*.test.ts` (`npm test`); d'integrazione `*.integration.py`, eseguiti da `scripts/integration.py` con il
-modello finto `fake_openai.py` e gli aiuti `catalog.py`, `game_copy.py`, `long_press.py`; `cloudflare-workers.mjs` sostituisce in Node
+modello finto `fake_openai.py` e gli aiuti `catalog.py`, `game_copy.py`, `long_press.py`, `local_db.py` (sole fixture nello SQLite di D1 isolato); `cloudflare-workers.mjs` sostituisce in Node
 il modulo `cloudflare:workers` per i test unitari.
 
 **Dati.** D1 con le migrazioni in `migrations/`:
@@ -157,6 +158,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0052 | runner del ciclo SLOP su Cloudflare per batch: istanza, stato, ultimo passo |
 | 0053 | snapshot editoriali anonimi, rimozione dei legami REAL/SLOP; conservazione di processi, tentativi e chiamate |
 | 0054 | proposte ignorate con fabbisogno assoluto e rimozione delle soglie obsolete; altre impostazioni conservate |
+| 0055 | registro privato REAL/processo/figlia, cancellazione definitiva che libera la madre, eliminazione delle proposte e dell’opzione |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 
@@ -166,7 +168,7 @@ R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (
   risorse di produzione (D1 `real-or-slop-local`, R2 `real-or-slop-quarantine` e `real-or-slop-approved`).
 - Anteprime delle PR: migrazioni con `--env preview`, poi `npm run preview` (controllo `scripts/check-preview.mjs`) su D1
   `real-or-slop-preview` e R2 `real-or-slop-preview-quarantine` e `real-or-slop-preview-approved`, inizialmente vuoti.
-- CI (`.github/workflows/checks.yml`): lint, test, build e controlli di Wrangler; non parte per le PR che toccano solo documenti.
+- CI (`.github/workflows/checks.yml`): lint, unitari, build e dry-run sempre; `scripts/select-integration.mjs` seleziona le suite per le aree modificate. File sconosciuti, dipendenze condivise e infrastruttura eseguono tutto. `workflow_dispatch` esegue tutto. Desktop e mobile per ogni suite browser selezionata; cache pip e Chromium. Non parte per le PR solo documentali. Tempi per suite in `artifacts/integration-timings.json`.
 - Tag: al merge su `main` il workflow `release-tag` (`.github/workflows/release-tag.yml`) crea `vX.Y.Z` con la versione di
   `package.json`, se non esiste già.
 - Manutenzione giornaliera: Cron Trigger alle 03:17 UTC.
@@ -180,8 +182,12 @@ R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (
 finto `tests/fake_openai.py`) e `ROS_TEST_BROWSER=1 npm run test:integration` per la dashboard, desktop e mobile. L'elenco dei
 test d'integrazione eseguiti è in `scripts/integration.py`.
 
+**Verifica locale della 1.38.0:** lint, unitari (26 file), build, dry-run e tutte le 13 suite di integrazione, comprese le sei suite browser su desktop/mobile, passati. Confronto nello stesso ambiente: 501,18 s su main contro 206,77 s sul ramo (−58,7%); misura della sola integrazione con browser, non dei minuti fatturati. Nessun modello reale o risorsa remota.
+
 **Verifica locale della 1.29.0:** esiti nella PR. Solo API fittizia, D1 e R2 locali. Per la suite con browser in un container senza
 il modulo Python `playwright`: `pip install playwright` e `ROS_CHROMIUM_PATH` sul Chromium installato.
 
 **Consegna del lavoro:** pubblicare sempre il ramo e aprire o aggiornare una PR per avviare i controlli CI (`AGENTS.md` 22.3.0). Commit e patch locali non completano la consegna.
 
+
+**Selezione locale:** `ROS_TEST_SUITES=slop,slop_auto ROS_TEST_BROWSER=1 npm run test:integration` seleziona nomi esatti e rifiuta nomi sconosciuti. Senza selezione resta la suite completa; `ROS_TEST_MATCH` resta disponibile per filtri locali. Le fixture `tests/local_db.py` accettano solo `.wrangler/integration`, non un database remoto o un altro stato locale.

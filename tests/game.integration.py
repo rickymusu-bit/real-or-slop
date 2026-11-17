@@ -1,11 +1,11 @@
 """Level game through the API: levels, one photo at a time, countdown from the photo shown, verdicts, timeouts, score,
 credits (description and changes of a REAL, prompt of a SLOP), leaderboard with age declaration and game codes, deletion,
 12-month maintenance."""
+from local_db import sql
 import http.cookiejar
 import json
 import os
 import re
-import subprocess
 import time
 import urllib.error
 import urllib.parse
@@ -27,10 +27,6 @@ def call(url, data=None, method=None, opener=None, admin=False):
             payload = r.read()
             return r.status, json.loads(payload) if r.headers.get('Content-Type', '').startswith('application/json') else payload
     except urllib.error.HTTPError as e: return e.code, json.loads(e.read() or b'{}')
-def sql(command):
-    out = subprocess.run(['npx', 'wrangler', 'd1', 'execute', 'DB', '--local', '--env', 'local', '--persist-to', state, '--command', command, '--json'],
-                         capture_output=True, text=True, check=True)
-    return json.loads(out.stdout)[0]['results']
 def player(): return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 def origin_of(round_id): return sql(f"SELECT i.origin FROM game_rounds r JOIN images i ON i.id=r.image_id WHERE r.id='{round_id}'")[0]['origin']
 def expected(outcomes):

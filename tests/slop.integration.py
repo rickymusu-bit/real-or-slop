@@ -12,6 +12,20 @@ code,settings=call('/settings',library=True);assert code==200
 assert 'slop_section_min_real' not in settings['values']
 sources=[];images=[]
 try:
+    # Manual generation requires no REAL and never pays for writing a prompt.
+    manual_input={'mode':'manual','prompt':'An ordinary street photograph.','tags':['street-scene','1960s'],'brief':BRIEF}
+    control([])
+    assert call('batches',{**manual_input,'tags':[]})[0]==400
+    assert call('batches',{**manual_input,'brief':{**BRIEF,'required':[]}})[0]==400
+    code,manual=call('batches',manual_input);assert code==200,manual
+    assert manual['max_calls']==7 and manual['processes'][0]['snapshot']['mode']=='manual'
+    assert call('batches/'+manual['id']+'/prompts',{'confirm':True,'index':0})[0]==409
+    assert control()==[]
+    assert sql("SELECT count(*) AS n FROM slop_reference_uses WHERE process_id='"+manual['processes'][0]['id']+"'")[0]['n']==0
+    code,manual_image=generate(manual);assert code==200,manual_image
+    images.append(manual_image['id'])
+    assert len(control())==2 and 'Editorial context' in control()[0]['body']['prompt']
+    assert manual_image['generation']['slot']['tags']==manual['items'][0]['tags']
     historical=real(described=False);sources.append(historical['id']);control([])
     assert call('batches',{'sources':[historical['id']]})[0]==409
     assert control()==[]
@@ -36,7 +50,7 @@ try:
         if expected!='accepted':
             assert load(b)['images']==[]
             assert call('batches/'+b['id'],{'briefs':[BRIEF]},method='PUT')[0]==409
-    images.append(result['id']);assert result['status']=='new' and result['copy'] is None
+    historical_child=result['id'];images.append(historical_child);assert result['status']=='new' and result['copy'] is None
     b=load(b);assert b['processes'][0]['brief']==original_brief and len(b['processes'][0]['attempts'])==3
     assert b['processes'][0]['calls']==7 and len(b['images'])==1
     logs=control();assert len(logs)==6
@@ -191,14 +205,22 @@ try:
     assert call('/'+source['id'],method='DELETE',library=True)[1]['deleted']==1
     assert load(pending)['processes'][0]['id']==pid
 
-    # Independent generations from the same inspiration coexist, including restored images.
-    predecessor=images[0];call('/'+predecessor+'/trash',{},library=True)
-    replacement=batch(historical);pid=replacement['processes'][0]['id']
-    sql(f"UPDATE slop_processes SET state='running' WHERE id='{pid}'")
+    # A mother is occupied while its accepted child exists, including trash and restoration.
+    predecessor=historical_child
+    assert call('batches',{'sources':[historical['id']]})[0]==409
+    call('/'+predecessor+'/trash',{},library=True)
+    assert call('batches',{'sources':[historical['id']]})[0]==409
     assert call('/'+predecessor+'/restore',{},library=True)[0]==200
-    sql(f"UPDATE slop_processes SET state='ready' WHERE id='{pid}'")
+    remove([predecessor]);images.remove(predecessor)
+    replacement=batch(historical)
     code,replaced=generate(replacement);assert code==200,replaced;images.append(replaced['id'])
-    assert call('/'+predecessor+'/restore',{},library=True)[0]==200
+    # Two simultaneous drafts may reserve a REAL only once; the losing transaction creates no orphan process.
+    source=real();sources.append(source['id']);control([])
+    with concurrent.futures.ThreadPoolExecutor(2) as pool:
+        drafts=list(pool.map(lambda _:call('batches',{'sources':[source['id']]}),range(2)))
+    assert sorted(code for code,_ in drafts)==[200,409],drafts
+    assert sql("SELECT count(*) AS n FROM slop_reference_uses WHERE source_id='"+source['id']+"'")[0]['n']==1
+    assert control()==[]
     # A Worker that died after recording a claim is suspended, including its paid ledger, after ten minutes.
     source=real();sources.append(source['id']);stale=batch(source);pid=stale['processes'][0]['id']
     sql(f"UPDATE slop_processes SET state='running',updated_at='2000-01-01' WHERE id='{pid}'; INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,process_id) VALUES('editorial-stale-call','images','fake','pending','2000-01-01','2000-01-01','{pid}')")
