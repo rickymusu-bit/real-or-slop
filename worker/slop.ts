@@ -4,7 +4,6 @@ import { acceptProcess, attention, batchRoute, closeProcess } from "./slop-gener
 import { autoRoute, guardBatch } from "./slop-auto";
 import { MAX_BATCH } from "../shared/slop-proposals";
 import { realRows, catalogCounts } from "./slop-references";
-import { groups } from "./slop-groups";
 
 /** Independent SLOP catalogue and anonymous editorial inputs. */
 async function state(env: Env) {
@@ -13,7 +12,7 @@ async function state(env: Env) {
   return { thresholds: { section: 1, max_batch: MAX_BATCH },
     real_total: counts.real, slop_total: slop?.n || 0,
     waiting: all.filter(r => r.available).map(r => ({ id: r.id, title: r.title, tags: r.tags, measured: r.measured, described: r.described, file: `/api/admin/library/${r.id}/file` })),
-    groups: (await groups(env)).map(g => ({ ...g, spread: g.real - g.slop })), attention: await attention(env) };
+    attention: await attention(env) };
 }
 
 export async function slopRoute(env: Env, method: string, path: string, data: Record<string, unknown>) {

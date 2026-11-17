@@ -1,19 +1,6 @@
-# Sezione Database — specifica 3.0.1
+# Sezione Database — specifica 6.0.0
 
-Stato: vigente; la 2.8.0 è in produzione con l'app 1.33.0, la 2.9.0 è per l'app 1.34.0. Aggiornata: 2026-11-16T22:03:33Z. La 2.9.0: copie, misure e
-«Rifai la copia di gioco» tornano nel browser (decisione dell'owner del 2026-11-16); «Regola il trattamento» per le SLOP. La 2.8.0: copie e misure
-le preparava il Worker; «Rifai la copia di gioco» era un lavoro su Cloudflare. La 2.7.1 include nelle analisi
-in gruppo le immagini con esito incerto o interrotto, nominate nella conferma. La 2.7.0 aggiunge «Seleziona
-tutte». La 2.6.0 aggiunge il filtro
-«REAL senza descrizione» e l'azione in gruppo «Analisi combinata tag e descrizione». La 2.3.0: i tag di partenza di una SLOP
-sono quelli della REAL di cui è la gemella, senza un collegamento alla REAL; il filtro per categoria della Distribuzione torna a
-comprendere Tempo e Genere, persi con la 1.25.0. La 2.2.0 mostra i conflitti di categoria dopo analisi e completamento (app 1.25.1). La 2.1.1 chiama «REAL di riferimento» la foto delle misure del trattamento. La 2.1.0 aggiunge il filtro
-per gruppo, il completamento di Genere, Colore e Supporto, le misure della copia e i comandi del trattamento delle SLOP (specifiche
-`libreria-immagini` 3.0.0, `copie-di-gioco` 7.0.0, `generazione-slop` 2.0.0). La 2.0.0 era la versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
-senza strati `database-immagini.v1.0.1` e le modifiche delle app 1.17–1.24 (cestino, schede, ordinamento, anteprima, tag di partenza),
-che restano nella cronologia git. Stati e regole della libreria: specifica `libreria-immagini`.
-
-**Stato del ramo 1.27.0:** implementata la pipeline della specifica `generazione-slop` 5.3.0; produzione ancora 1.26.0 fino al rilascio autorizzato.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T19:34:55Z.
 
 ## 1. Decisioni dell'owner
 
@@ -27,13 +14,12 @@ che restano nella cronologia git. Stati e regole della libreria: specifica `libr
 
 ## 2. Scheda «Immagini»
 
-Ricerca in titolo, descrizione o prompt, combinata con i filtri di origine, stato e tag; filtri e ordinamento richiudibili. Griglia 4:5 a due colonne su mobile; barra delle azioni massive durante lo scorrimento.
+Ricerca in ID, titolo REAL, descrizione o prompt, combinata con i filtri di origine, stato e tag; filtri e ordinamento richiudibili. Griglia 4:5 a due colonne su mobile; barra delle azioni massive durante lo scorrimento.
 
 
 - **Viste:** Tutte, Nuove, Approvate, Pubblicate, Cestino, con i conteggi; «Svuota cestino» nella vista Cestino.
 - **Filtri:** origine (REAL e SLOP, REAL, SLOP) e uno o più tag combinati con «con tutti i tag» o «con almeno un tag»; i tag scritti si
-  convertono come quelli scritti a mano e compaiono come pillole rimovibili; **gruppo** (genere e decennio) e «senza Genere, Colore o
-  Supporto». Il filtro «Batch automatico in corso» arriva dal riquadro dei batch.
+  convertono come quelli scritti a mano e compaiono come pillole rimovibili. Non esiste un filtro per gruppo (decisione del 2026-11-17); il parametro API `group` è rifiutato. Il filtro «Batch automatico in corso» arriva dal riquadro dei batch. Decisione dell’owner del 2026-11-17: rimossi dalla dashboard i tre checkbox «Copia da rifare in 4:5», «REAL senza descrizione» e «Senza Genere, Colore o Supporto», insieme al loro stato e ai parametri inviati dal browser.
 - **Ordinamento:** data di aggiunta, visualizzazioni o accuratezza, decrescente o crescente, ricordato nel browser; per l'accuratezza le
   foto mai viste vanno in fondo.
 - **Schede:** miniatura (copia di gioco), origine e stato, casella di selezione. Tocco breve: dettaglio. Pressione prolungata: anteprima
@@ -52,23 +38,22 @@ Ricerca in titolo, descrizione o prompt, combinata con i filtri di origine, stat
 ## 3. Dettaglio
 
 - Origine, stato, dimensioni dell'originale, copia di gioco con formato e peso; visualizzazioni e classificazioni corrette con la
-  percentuale; partite in corso che la includono; avvisi (licenza ND, copia mancante con «Prepara la copia di gioco», immagine fuori
-  dai gruppi); gruppo; misure della copia e, per una SLOP trattata, REAL di riferimento e scarto dall'obiettivo.
-- **Campi:** titolo, descrizione, spiegazione, fonte, autore, licenza e, per le SLOP, prompt e modello; tag per categoria con aggiunta e
-  rimozione; «Tag di partenza» per le SLOP generate (i tag della REAL di origine, senza un collegamento alla REAL); avviso se una REAL non ha il tag di Tempo. Ogni modifica si salva subito.
+  percentuale; partite in corso che la includono; avvisi (licenza ND, copia mancante con «Prepara la copia di gioco», categorie mancanti); misure della copia e, per una SLOP trattata, misure anonime di riferimento e scarto dall'obiettivo.
+- **Campi:** descrizione per entrambe le origini; titolo solo per le REAL; fonte, autore e licenza solo per le REAL; prompt e modello solo per le SLOP; tag per categoria con aggiunta e
+  rimozione; nessun riquadro «Tag di partenza» sulle SLOP, identificate dall’ID abbreviato e con i soli tag effettivi dell’immagine; avviso se una REAL non ha il tag di Tempo. Ogni modifica si salva subito. La migrazione 0058 rimuove i titoli SLOP e la copia dei tag di partenza dai metadati delle figlie, conservando i titoli REAL e i parametri tecnici del trattamento. Rimossa «Spiegazione dopo la risposta», inutilizzata dal gioco; l’API rifiuta il campo e i metadati dell’origine sbagliata. La migrazione 0057 elimina anche le colonne obsolete di didascalie e vista iniziale.
 - **Azioni:** Inquadratura (nuove e approvate), comandi del trattamento per le SLOP (specifica `copie-di-gioco`, sezione 4.3),
   Completa Genere, Colore e Supporto, Analizza con IA (nuove con copia, mai analizzate o non riuscite), Ripristina i tag
   generati, Approva, Pubblica nel gioco, Modifica e Ritira dal gioco (pubblicate), Elimina (nel cestino), Ripristina ed Elimina
   definitivamente (cestino).
 - **Rigenerare una SLOP:** richiede un nuovo processo nello studio con conferma, brief ed esame dell’immagine intera. nessuna sostituzione diretta che scavalchi la valutazione.
 - **Descrizione REAL privata:** elementi visibili, contesto documentato e incertezze, modificabili indipendentemente dai tag, anche per una pubblicata. Per una REAL storica senza descrizione, compilazione manuale o analisi combinata tag+descrizione con conferma separata.
-- **REAL senza descrizione:** filtro «REAL senza descrizione» e azione in gruppo «Analisi combinata tag e descrizione» (decisione
+- **Analisi combinata:** azione in gruppo «Analisi combinata tag e descrizione» (decisione
   dell'owner del 2026-11-15): per le REAL selezionate fuori dal cestino e senza descrizione privata, una chiamata a pagamento per foto
   sull'originale intero, dopo una conferma che dichiara il massimo; sostituisce i tag, non ritira le pubblicate. Le immagini con un'analisi interrotta o con
   esito incerto sono incluse: la conferma dice quante sono e che potrebbero essere già state addebitate. Restano escluse solo quelle
   con un'analisi in corso da meno di dieci minuti. Se nessuna selezionata è senza descrizione privata, il messaggio lo dice (il
   testo di Commons non conta).
-- **Vecchie copie:** filtro «Copia da rifare in 4:5», azione in gruppo «Rifai la copia di gioco» (nella pagina, una foto alla volta,
+- **Vecchie copie:** azione in gruppo «Rifai la copia di gioco» (nella pagina, una foto alla volta,
   gratis, per qualunque selezione: la pagina deve restare aperta), anche per rifare con il browser le copie preparate dal Worker
   con la 1.32–1.33. Le copie senza misure della versione corrente si misurano in background aprendo il Database.
 - **Trattamento di una SLOP:** «Senza/Con trattamento» e «Regola il trattamento», con i cursori e l'anteprima nella pagina

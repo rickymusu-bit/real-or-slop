@@ -229,7 +229,7 @@ status, result = call(f'{API}/tags/merge', {'from': 'retro', 'into': '1960s'}); 
 assert call(f'{API}/tags/merge', {'from': 'sepia', 'into': 'black-and-white'})[0] == 200
 status, y = call(f'{API}/{y["id"]}'); assert y['categories'].get('black-and-white') == 'color' and 'sepia' not in y['tags'], y
 # Completion of Genre, Color and Medium for an image analysed before they existed: one paid call, once; only those three change.
-assert x['completable'] is False and x['group']['key'] == 'press-photo/1960s' and x['missing_categories'] == ['medium'], x  # analysed after 0048: no completion
+assert x['completable'] is False and 'group' not in x and x['missing_categories'] == ['medium'], x  # analysed after 0048: no completion
 sql(f"UPDATE images SET categories_completed_at=NULL WHERE id='{y['id']}'")
 code, result = call(f'{API}/{y["id"]}/categories', {'confirm': True}); assert code == 409 and 'analisi' in result['error'], result  # never analysed
 sql(f"UPDATE images SET analysis_status='done' WHERE id='{y['id']}'")
@@ -244,7 +244,7 @@ openai([{'json': {'tags': {'genre': ['Studio Portrait'], 'color': ['color'], 'me
 code, y = call(f'{API}/{y["id"]}/categories', {'confirm': True}); assert code == 200, y
 # The three categories are replaced (black-and-white becomes color), the others stay.
 assert y['categories'] == {'1970s': 'time', 'retro': 'other', 'studio-portrait': 'genre', 'color': 'color', 'photo-print': 'medium'}, y['categories']
-assert y['group'] == {'key': 'studio-portrait/1970s', 'genre': 'studio-portrait', 'time': '1970s'} and not y['completable'], y
+assert 'group' not in y and not y['completable'], y
 [sent] = openai(); assert sent['body']['text']['format']['schema']['properties']['tags']['required'] == ['genre', 'color', 'medium'], sent['body']['text']
 assert 'mai dal titolo' in sent['body']['instructions'] and len(spend()) == before + 1 and spend()[-1]['kind'] == 'analysis'
 openai([])

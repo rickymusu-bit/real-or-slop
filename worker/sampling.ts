@@ -14,8 +14,6 @@ export interface SamplingImage {
   perceptual_hash?: string | null;
   r2_key?: string;
   categories?: string[];
-  scene_group?: string | null;
-  scene_preferred?: boolean;
   perceptual_distinct?: string[];
   curation?: Tags | null;
 }
@@ -85,7 +83,6 @@ function unique<T extends SamplingImage>(input: readonly T[]) {
   const hashes = new Map<number, bigint>();
   rows.forEach((row, i) => {
     const keys = ["id:" + row.id];
-    if (row.scene_group) keys.push("scene:" + row.type + ":" + row.scene_group);
     if (row.r2_key) keys.push("storage:" + row.r2_key);
     if (row.sha256 && row.sha256 !== "pending") keys.push("sha:" + row.sha256.toLowerCase());
     for (const key of keys) {
@@ -118,7 +115,7 @@ function unique<T extends SamplingImage>(input: readonly T[]) {
   const eligible = [...groups.values()]
     .filter((group) => group.every((row) => row.type === group[0].type))
     .map((group) => group.reduce((first, row) =>
-      row.scene_preferred && !first.scene_preferred ? row : first.scene_preferred && !row.scene_preferred ? first : row.id < first.id ? row : first));
+      row.id < first.id ? row : first));
   return { eligible, removed: rows.length - eligible.length };
 }
 

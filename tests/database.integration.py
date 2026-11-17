@@ -30,6 +30,9 @@ def call(url, data=None, method=None, raw=None, mime='application/json', auth=Tr
             return r.status, (json.loads(payload) if r.headers.get('Content-Type', '').startswith('application/json') else payload)
     except urllib.error.HTTPError as e:
         return e.code, json.loads(e.read() or b'{}')
+# The removed catalogue grouping cannot narrow a request silently.
+assert call(API + '?group=press-photo%2F1960s')[0] == 400
+
 def stored(key):
     with tempfile.TemporaryDirectory() as folder:
         target = Path(folder) / 'f'
@@ -75,6 +78,7 @@ assert set(listing(q='crowded beach', tags='db-beach')) == {beach['id']}
 assert not listing(q='crowded beach', origin='REAL')
 assert not listing(q='crowded beach', status='published')
 assert not listing(q='no-such-catalogue-text')
+assert set(listing(q=slop['id'][:12])) == {slop['id']}
 # Filters: one tag, all of several tags, any of several tags, origin.
 assert set(listing(tags='db-riot')) == {real['id'], slop['id']}
 assert set(listing(tags='db-riot,db-paris')) == {real['id']}
@@ -95,20 +99,20 @@ assert dist['totals']['REAL']['published'] >= 1 and dist['totals']['SLOP']['appr
 assert [t['spread'] for t in dist['tags']] == sorted((t['spread'] for t in dist['tags']), reverse=True)
 
 # A game in progress with these two photos, seeded in the local D1: the REAL is classified right, then, while the SLOP is on screen,
-# the owner starts editing it; the game keeps caption and copy; the SLOP is classified wrong.
+# the owner starts editing it; the game keeps its copy; the SLOP is classified wrong.
 import hashlib, secrets, time
 cookie = secrets.token_hex(16); sid = 'db-game-' + secrets.token_hex(4)
 player = urllib.request.build_opener(); player.addheaders = [('Cookie', 'ros_owner=' + cookie)]
 sql(f"INSERT INTO game_sessions(id,mode,level,created_at,owner_hash,phase,timing_mode,round_seconds) VALUES('{sid}','levels','facile',"
     f"{int(time.time() * 1000)},'{hashlib.sha256(cookie.encode()).hexdigest()}','active','per-image',20); "
-    f"INSERT INTO game_rounds(id,session_id,image_id,position,caption,copy_key) SELECT '{sid}-0','{sid}',id,0,caption,copy_key FROM images WHERE id='{real['id']}'; "
-    f"INSERT INTO game_rounds(id,session_id,image_id,position,caption,copy_key) SELECT '{sid}-1','{sid}',id,1,caption,copy_key FROM images WHERE id='{slop['id']}'")
+    f"INSERT INTO game_rounds(id,session_id,image_id,position,copy_key) SELECT '{sid}-0','{sid}',id,0,copy_key FROM images WHERE id='{real['id']}'; "
+    f"INSERT INTO game_rounds(id,session_id,image_id,position,copy_key) SELECT '{sid}-1','{sid}',id,1,copy_key FROM images WHERE id='{slop['id']}'")
 for position, image_id in enumerate((real['id'], slop['id'])):
     status, view = call(f'{base}/api/sessions/{sid}', auth=False, opener=player)
     question = view['question']; assert question['id'] == f'{sid}-{position}', view
     assert call(f'{base}/api/sessions/{sid}/ready', {'roundId': question['id']}, auth=False, opener=player)[0] == 200
     if image_id == slop['id']:
-        # Edit during the game: the photo leaves publication at once; the game keeps caption and copy.
+        # Edit during the game: the photo leaves publication at once; the game keeps its copy.
         status, edited = call(f'{API}/{slop["id"]}/withdraw', {}); assert edited['status'] == 'approved' and edited['in_play'] == 1, edited
         held = sql(f"SELECT copy_key FROM images WHERE id='{slop['id']}'")[0]['copy_key']
         assert stored(held) and sql(f"SELECT count(*) AS n FROM retired_copies WHERE copy_key='{held}'")[0]['n'] == 1

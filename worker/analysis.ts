@@ -88,7 +88,7 @@ async function vocabularyText(env: Env, categories: readonly Category[]) {
   return categories.map(c => [c, used.filter(t => t.category === c).map(t => t.label)] as const).filter(([, list]) => list.length)
     .map(([c, list]) => c + ": " + list.join(", ")).join("\n");
 }
-const contextOf = (row: Row) => [row.title && "Title: " + row.title, row.description && "Description: " + row.description,
+const contextOf = (row: Row) => [row.origin === "REAL" && row.title && "Title: " + row.title, row.description && "Description: " + row.description,
   row.commons_description && "Original Commons context: " + row.commons_description, row.prompt && "Description: " + row.prompt].filter(Boolean).join("\n");
 
 /** One call to the text model with the image to analyse. Never throws for the call itself: the outcome says what happened. */

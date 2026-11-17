@@ -13,6 +13,8 @@ const JPEG_QUALITY = 0.85;
 /** Version of the measures: 2 leaves burnt-out areas out of the noise; 3 adds the tint of a monochrome image. Copies measured
  * before are measured again. */
 export const METRICS_VERSION = 3;
+/** Technical colour and medium of the treatment reference, without inherited catalogue tags. */
+export interface CopyStyle { color: string; medium: string }
 export interface Metrics {
   /** Long side in pixels. */ long: number;
   /** Standard deviation of the noise of the luminance in uniform areas (0–255 scale). */ noise: number;

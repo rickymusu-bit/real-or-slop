@@ -1,9 +1,10 @@
 /** Game copies made in the owner's browser (spec `copie-di-gioco`; owner decision of 2026-11-16: the Worker handles what concerns
  * OpenAI, the browser everything else): 4:5 crop of the oriented original, size of the recipe, light treatment of a SLOP from its
  * source REAL (proposed or set with the sliders), WebP, measures; the Worker checks and stores the upload. */
+import type { OwnerAcceptance } from "../shared/editorial";
 import { centredCrop, copyDimensions, cropQuery, GAME_COPY, type Crop } from "../shared/game-copy";
 import {
-  gap, measure, METRICS_VERSION, settingsOf, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Settings, type Treatment,
+  gap, measure, METRICS_VERSION, settingsOf, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Settings, type Treatment, type CopyStyle,
 } from "../shared/copy-treatment";
 
 const API = "/api/admin/library/";
@@ -108,17 +109,11 @@ export async function originalOf(imageId: string): Promise<Blob> {
 /** Items of the library a treatment plan is built from. */
 export interface TreatableItem {
   id: string; origin: string;
-  generation?: { slot?: { tags?: { label: string; category: string }[] | Record<string, string>; target_metrics?: Metrics | null } | null } | null;
+  generation?: { slot?: { copy_style?: CopyStyle; target_metrics?: Metrics | null; acceptance?: OwnerAcceptance } | null } | null;
   treatment?: Treatment | null;
   copy?: { crop: Crop | null } | null;
 }
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0] & 0x7fffffff;
-/** Colour and medium a SLOP was asked for, from the tags of its source REAL kept in its slot. */
-function lookOf(slot: NonNullable<TreatableItem["generation"]>["slot"]) {
-  const tags = slot?.tags, of = (category: string) => (Array.isArray(tags) ? tags.find(t => t.category === category)?.label
-    : tags && typeof tags === "object" ? (tags as Record<string, string>)[category] : "") || "";
-  return { color: of("color"), medium: of("medium") };
-}
 /** The plan of a SLOP: its source REAL's measures; the stored seed, on/off and the owner's settings are kept unless asked otherwise
  * (`settings` null goes back to the proposal). Null for a REAL, or for a SLOP whose source REAL has no measures (untreated copy). */
 export async function treatmentPlan(listed: TreatableItem, asked: { off?: boolean; settings?: Settings | null } = {}): Promise<TreatmentPlan | null> {
@@ -133,7 +128,8 @@ export async function treatmentPlan(listed: TreatableItem, asked: { off?: boolea
   if (!metrics) return null;
   const settings = asked.settings !== undefined ? asked.settings : stored && stored.version >= 4 ? stored.settings || null : null;
   return { off: asked.off ?? (asked.settings ? false : stored?.off || false), seed: stored?.seed ?? randomSeed(),
-    ...lookOf(item.generation?.slot), sample: {metrics}, settings };
+    color: item.generation?.slot?.copy_style?.color || stored?.color || "",
+    medium: item.generation?.slot?.copy_style?.medium || stored?.medium || "", sample: {metrics}, settings };
 }
 /** The settings a plan gives on these pixels: the owner's, or the proposal (what the sliders start from). */
 export function proposalOf(base: ImageData, plan: TreatmentPlan, long: number): Settings {

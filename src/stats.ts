@@ -16,30 +16,11 @@ interface Stats {
   calls: { totals: { kind: string; status: string; n: number; input_tokens: number; output_tokens: number }[];
     recent: { kind: string; model: string; status: string; input_tokens: number | null; output_tokens: number | null; created_at: string }[] };
   balance: { real: { approved: number; published: number }; slop: { approved: number; published: number }; real_share_published: number | null; warning: boolean; formats?: { format: string; real: number; slop: number }[];
-    groups?: { group: string; real: number; slop: number; fresh: number; spread: number }[];
     balance?: { real: number; slop: number; pending: number; available: number };
-    measures?: { group: string; real_count: number; slop_count: number; real: Record<string, number | null>; slop: Record<string, number | null>; diverging: string[] }[];
     levels: { id: Level; label: string; photos: number; available: boolean }[] };
 }
 const pct = (a: number, b: number) => b ? Math.round(a / b * 100) + "%" : "—";
 const num = (n: number) => n.toLocaleString("it-IT");
-/** Formats of the published copies: count and share within each origin, so that a divergence between REAL and SLOP shows. */
-const MEASURE_LABELS: Record<string, string> = { long: "lato lungo", noise: "rumore", sharpness: "nitidezza", contrast: "contrasto", saturation: "saturazione" };
-function groupTable(rows: NonNullable<Stats["balance"]["groups"]>) {
-  return `<h4>Gruppi (genere e decennio)</h4><div class="stats-table-wrap"><table class="stats-table stats-groups"><thead><tr><th scope="col">Gruppo</th>
-    <th scope="col">REAL</th><th scope="col">SLOP</th><th scope="col">Nuove</th><th scope="col">Spread</th></tr></thead><tbody>
-    ${rows.map(r => `<tr><th scope="row">${escape(r.group)}</th><td>${r.real}</td><td>${r.slop}</td><td>${r.fresh}</td><td>${r.spread}</td></tr>`).join("")}
-    </tbody></table></div><p class="hint">I gruppi servono a confrontare REAL e SLOP dello stesso genere e decennio.</p>`;
-}
-function measureTable(rows: NonNullable<Stats["balance"]["measures"]>) {
-  const keys = Object.keys(MEASURE_LABELS), value = (n: number | null | undefined) => n === null || n === undefined ? "—" : String(n);
-  return `<h4>Misure delle copie pubblicate</h4><div class="stats-table-wrap"><table class="stats-table stats-measures"><thead><tr><th scope="col">Gruppo</th>
-    ${keys.map(k => `<th scope="col">${MEASURE_LABELS[k]} REAL / SLOP</th>`).join("")}</tr></thead><tbody>
-    ${rows.map(r => `<tr><th scope="row">${escape(r.group)} <small>(${r.real_count} REAL, ${r.slop_count} SLOP)</small></th>${keys.map(k =>
-      `<td class="${r.diverging.includes(k) ? "is-uncertain" : ""}">${value(r.real[k])} / ${value(r.slop[k])}</td>`).join("")}</tr>`).join("")}
-    </tbody></table></div>${rows.some(r => r.diverging.length) ? '<p class="stats-warning" role="status">⚠ Alcune misure delle SLOP si scostano di oltre il 25% da quelle delle REAL del gruppo: il trattamento crea un indizio. Avviso non bloccante.</p>' : ""}`;
-}
-
 const tile = (value: string, label: string, note = "") => `<div class="stat-tile"><strong>${value}</strong><span>${label}</span>${note ? `<small>${note}</small>` : ""}</div>`;
 
 export function mountStats(root: HTMLElement, load: (period: string) => Promise<Stats>) {
@@ -90,9 +71,7 @@ export function mountStats(root: HTMLElement, load: (period: string) => Promise<
         <p class="share-legend"><span><i class="share-key share-real"></i>REAL</span><span><i class="share-key share-slop"></i>SLOP</span><span><i class="share-key share-band-key"></i>fascia 40–60%</span></p>`}
       ${b.warning ? '<p class="stats-warning" role="status">⚠ Le pubblicate escono dal rapporto 40–60% tra REAL e SLOP: avviso non bloccante.</p>' : ""}
       ${d.processes?.length ? `<p>Processi SLOP: ${d.processes.map(p => `${escape(p.state)} ${p.n} (${p.attempts} tentativi)`).join(" / ")}</p>` : ""}
-      ${b.balance ? `<p class="stats-twins">Catalogo: <strong>${b.balance.real}</strong> REAL e <strong>${b.balance.slop}</strong> SLOP approvate o pubblicate; ${b.balance.pending} SLOP da decidere.</p>` : ""}
-      ${b.groups?.length ? groupTable(b.groups) : ""}
-      ${b.measures?.length ? measureTable(b.measures) : ""}
+      ${b.balance ? `<p class="stats-twins">Catalogo: <strong>${b.balance.real}</strong> REAL e <strong>${b.balance.slop}</strong> SLOP approvate o pubblicate; ${b.balance.pending} SLOP da decidere; ${b.balance.available} REAL madri disponibili.</p>` : ""}
       <ul class="stats-levels">${b.levels.map(l => `<li>${l.available ? "✓" : "✗"} ${escape(l.label)}: ${l.available ? "giocabile" : `servono almeno ${l.photos} REAL e ${l.photos} SLOP pubblicate`}</li>`).join("")}</ul></section>`;
     applyView();
   };

@@ -12,9 +12,14 @@ try:
         for name,options in [('desktop',{'viewport':{'width':1280,'height':900}}),('mobile',p.devices['Pixel 7'])]:
             source=real('browser-'+name);generated=[]
             context=browser.new_context(**options,http_credentials={'username':'owner','password':TOKEN})
-            page=context.new_page();errors=[];confirmations=[]
+            page=context.new_page();errors=[];confirmations=[];dismiss_next=[False]
             page.on('pageerror',lambda e:errors.append(str(e)))
-            page.on('dialog',lambda d:(confirmations.append(d.message),d.accept()))
+            def confirm(dialog):
+                confirmations.append(dialog.message)
+                if dismiss_next[0]:
+                    dismiss_next[0]=False;dialog.dismiss()
+                else:dialog.accept()
+            page.on('dialog',confirm)
             try:
                 # A process that ended without a SLOP is shown on top, with its attempts, until the owner closes it.
                 stuck_source=real('browser-stuck-'+name);generated.append(stuck_source['id']);stuck=batch(stuck_source)
@@ -25,22 +30,49 @@ try:
                 expect(card).to_contain_text('il valutatore chiede la tua revisione')
                 card.locator(':scope > summary').click();card.locator('details > summary').first.click()
                 expect(card.locator('img')).to_be_visible();expect(card.locator('p[lang=en]')).to_be_visible()
+                # Refreshing the studio preserves the expanded attempt, including its prompt and evaluation.
+                previous=card.locator('p[lang=en]').element_handle()
+                page.locator('[data-admin-tab=slop]').click()
+                previous.wait_for_element_state('hidden')
+                expect(card.locator('p[lang=en]')).to_be_visible()
                 expect(page.locator('#slop-attention-count')).to_contain_text('da vedere')
                 page.screenshot(path=str(folder/(name+'-attention.png')),full_page=True)
                 card.locator('[data-slop=close-process]').click();expect(card).to_have_count(0)
                 assert 'Chiudere questo processo' in confirmations[-1]
                 assert sql("SELECT state FROM slop_processes WHERE id='"+stuck['processes'][0]['id']+"'")[0]['state']=='closed'
-                # The owner accepts a candidate the evaluator sent to review: one paid call, for its tags.
+                # The owner can accept critical/minor findings and uncertainty, after a cancellable confirmation.
                 review_source=real('browser-review-'+name);generated.append(review_source['id']);review=batch(review_source)
-                control([None,{'evaluation':'review_needed','constraints':False}]);assert generate(review)[1]['process']['state']=='review_needed'
+                control([None,{'evaluation':'review_needed','critical':['A hand has six fingers'],'minor':['Soft focus on the edge'],'uncertainty':['Place cannot be confirmed'],'constraints':False}]);assert generate(review)[1]['process']['state']=='review_needed'
                 page.reload();page.locator('[data-admin-tab=slop]').click()
                 card=studio.locator('[data-attention="'+review['processes'][0]['id']+'"]')
                 card.locator(':scope > summary').click()
-                control([]);card.locator('[data-slop=accept-process]').click();expect(card).to_have_count(0,timeout=20000)
+                control([]);dismiss_next[0]=True;card.locator('[data-slop=accept-process]').click()
+                expect(card).to_be_visible();assert control()==[]
+                assert all(note in confirmations[-1] for note in ['A hand has six fingers','Soft focus on the edge','Place cannot be confirmed','Massimo 1'])
+                card.locator('[data-slop=accept-process]').click();expect(card).to_have_count(0,timeout=20000)
                 assert 'Accettare questa candidata' in confirmations[-1] and 'non ha potuto confermare' in confirmations[-1] and len(control())==1
                 expect(studio.get_by_role('status').first).to_contain_text('SLOP accettata')
                 reviewed=sql("SELECT state,image_id FROM slop_processes WHERE id='"+review['processes'][0]['id']+"'")[0]
                 assert reviewed['state']=='accepted' and reviewed['image_id'];generated.append(reviewed['image_id'])
+                studio.locator('[data-recent]').select_option(review['id'])
+                expect(studio.locator('[data-owner-accepted]')).to_be_visible()
+                expect(studio.locator('[data-slop=approve]')).to_be_disabled()
+                studio.locator('[data-slop=frame]').click();editor=page.locator('.crop-dialog')
+                editor.locator('[data-crop=ok]').click();expect(editor).to_have_count(0)
+                studio.locator('[data-slop=approve]').click();expect(studio.locator('[data-slop=publish]')).to_be_visible()
+                studio.locator('[data-slop=publish]').click();expect(studio.get_by_role('heading',name='SLOP published')).to_be_visible()
+                # Exhausted attempts with minor defects have the same explicit override.
+                call('/settings',{'max_generation_attempts':1},method='PUT',library=True)
+                minor_source=real('browser-minor-'+name);generated.append(minor_source['id']);minor=batch(minor_source)
+                call('/settings',{'max_generation_attempts':old['max_generation_attempts']},method='PUT',library=True)
+                control([None,{'evaluation':'retry_same_prompt','minor':['Visible banding']}]);assert generate(minor)[1]['process']['state']=='exhausted'
+                page.reload();page.locator('[data-admin-tab=slop]').click()
+                minor_proc=load(minor)['processes'][0]
+                card=studio.locator('[data-attention="'+minor_proc['id']+'"]');card.locator(':scope > summary').click()
+                control([]);card.locator('[data-slop=accept-process]').click();expect(card).to_have_count(0,timeout=20000)
+                assert 'Visible banding' in confirmations[-1] and len(control())==1
+                generated.append(load(minor)['images'][0]['id'])
+                studio.locator('[data-slop=new-batch]').click()
                 studio.locator('[data-manual=prompt]').fill('A credible street photograph in ordinary daylight.')
                 studio.locator('[data-manual=tags]').fill('street-scene, 1960s')
                 studio.locator('[data-manual=required]').fill('street-scene')

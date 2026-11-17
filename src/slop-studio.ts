@@ -35,7 +35,7 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
   const manual = {prompt: "", tags: "", required: "", preferred: "", flexible: "", exclusions: ""};
   let batchId = sessionStorage.getItem(DRAFT) || "", recent: {id: string; count: number}[] = [];
   const loadBatch = async () => { if (batchId) batch = await call<Batch>("batches/" + batchId); };
-  const evaluation = (a: Attempt, open = false) => `<details${open ? " open" : ""}><summary>Tentativo ${a.number}: ${escape(a.evaluation?.decision || a.status)}</summary>` +
+  const evaluation = (a: Attempt, open = false) => `<details data-evaluation="${escape(a.id)}"${open ? " open" : ""}><summary>Tentativo ${a.number}: ${escape(a.evaluation?.decision || a.status)}</summary>` +
     (a.file ? `<img src="${escape(a.file)}" alt="Candidata intera del tentativo ${a.number}" style="max-width:100%;max-height:360px;object-fit:contain">` : "") +
     `<p lang="en">${escape(a.prompt)}</p>` + (a.evaluation ? `<p>${escape(a.evaluation.action_reason)}</p><p>Difetti critici: ${escape(a.evaluation.critical_findings.join("; ") || "nessuno")}</p><p>Difetti minori: ${escape(a.evaluation.minor_findings.join("; ") || "nessuno")}</p><p>Incertezze: ${escape(a.evaluation.uncertainty_notes.join("; ") || "nessuna")}</p><p>Vincoli editoriali: ${a.evaluation.editorial_constraints_met ? "rispettati" : "non rispettati"}</p>` : "") + "</details>";
   const summary = () => batch?.config ? `<p class="hint">${batch.config.max_generation_attempts} tentativi massimi per SLOP; tolleranza ${["rigorosa","normale","permissiva"][batch.config.editorial_tolerance]}. Massimo ${batch.max_calls} chiamate (${batch.config.mode === "manual" ? "generazioni, valutazioni e tag dopo accettazione" : "brief+prompt, generazioni, valutazioni e tag dopo accettazione, più eventuali riscritture confermate"}). Effettive: ${batch.processes.reduce((n,p) => n+p.calls,0)}. Modelli: ${escape(batch.config.text_model)}, ${escape(batch.config.image_model)}, qualità ${escape(batch.config.quality)}.</p>` : "";
@@ -61,17 +61,15 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
     return missing.length ? `<p class="slop-closed">Ancoraggi non rilevati nei tag: ${escape(missing.join(", "))}. Verifica la divergenza; i tag descrivono ciò che si vede.</p>` : "";
   };
   const fourth = () => summary() + '<p>Accettazione del modello e approvazione dell’owner sono separate. Controlla l’originale intero e la copia 4:5; pubblica solo dopo revisione.</p>' +
-    (batch?.images || []).map(image => `<article class="rw-final slop-review" data-image="${image.id}"><h3>SLOP ${escape(image.status)}</h3><div class="rw-preview-grid"><figure><img data-slop-original="${image.id}" data-long-press src="${escape(image.original)}" alt="Originale SLOP intero" style="max-width:100%;max-height:420px;object-fit:contain"><figcaption>Originale intero valutato</figcaption></figure><figure><img data-slop-copy="${image.id}" data-long-press src="${escape(image.file)}" alt="Copia di gioco 4:5" style="max-width:100%;max-height:420px;object-fit:contain"><figcaption>Copia 4:5${image.copy ? "" : " da preparare"}</figcaption></figure></div><p>Tag effettivi: ${escape(image.tags.join(", "))}</p>${divergence(image)}<p class="hint">Confronta i tag rilevati con gli ancoraggi del brief qui sotto: eventuali divergenze restano visibili e non modificano i tag.</p><p lang="en">${escape(image.prompt)}</p>` +
+    (batch?.images || []).map(image => `<article class="rw-final slop-review" data-image="${image.id}"><h3>SLOP ${escape(image.status)}</h3>${image.generation?.slot?.acceptance?.by === "owner" ? '<p class="hint" data-owner-accepted>Accettata manualmente dall’owner. Le segnalazioni del valutatore restano nella valutazione originale.</p>' : ""}<div class="rw-preview-grid"><figure><img data-slop-original="${image.id}" data-long-press src="${escape(image.original)}" alt="Originale SLOP intero" style="max-width:100%;max-height:420px;object-fit:contain"><figcaption>Originale intero valutato</figcaption></figure><figure><img data-slop-copy="${image.id}" data-long-press src="${escape(image.file)}" alt="Copia di gioco 4:5" style="max-width:100%;max-height:420px;object-fit:contain"><figcaption>Copia 4:5${image.copy ? "" : " da preparare"}</figcaption></figure></div><p>Tag effettivi: ${escape(image.tags.join(", "))}</p>${divergence(image)}<p class="hint">Confronta i tag rilevati con gli ancoraggi del brief qui sotto: eventuali divergenze restano visibili e non modificano i tag.</p><p lang="en">${escape(image.prompt)}</p>` +
       `<div class="rw-actions">${image.status === "new" || image.status === "approved" ? `<button data-slop="frame" data-id="${image.id}">Inquadratura</button><button data-slop="${image.treatment?.off ? "treatment-on" : "treatment-off"}" data-id="${image.id}">${image.treatment?.off ? "Con trattamento" : "Senza trattamento"}</button>${image.treatment ? `<button data-slop="treatment-edit" data-id="${image.id}">Regola il trattamento</button>` : ""}` : ""}` +
       (image.status === "new" ? `${image.analysis.status === "none" || image.analysis.status === "failed" ? `<button data-slop="analyze" data-id="${image.id}">Analizza</button>` : ""}<button data-slop="approve" data-id="${image.id}" ${image.copy && image.tags.length ? "" : "disabled"}>Approva</button>` : "") +
       (image.status === "approved" ? `<button data-slop="publish" data-id="${image.id}">Pubblica</button>` : "") +
       (image.status !== "published" && image.status !== "trash" ? `<button data-slop="trash" data-id="${image.id}">Cestino</button>` : "") + '</div></article>').join("") +
     (batch?.processes || []).map(p => `<section><h3>${escape(batch!.items[p.slot]?.title || "SLOP")}: ${escape(p.state)}</h3>${p.error ? `<p role="status">${escape(p.error)}</p>` : ""}${p.brief ? `<p>Ancoraggi obbligatori: ${escape(p.brief.required.join("; "))}. Esclusioni: ${escape(p.brief.exclusions.join("; "))}</p>` : ""}${p.attempts.map(a => evaluation(a)).join("")}</section>`).join("") +
     '<div class="rw-actions"><button data-slop="to-prompts">Brief e prompt / ripresa</button><button data-slop="new-batch">Nuovo batch</button></div>';
-  /** A candidate the owner may accept after a review: evaluated, saved whole, with no critical defect. Constraints the evaluator
-   * could not confirm, without a critical defect, are a doubt for the owner to settle, not a defect. */
-  const acceptable = (a: Attempt) => a.status === "completed" && !!a.file && !!a.evaluation && !a.evaluation.critical_findings.length;
-  // Processes that ended without a SLOP are exceptional: they stay on top, with every attempt, until the owner closes them.
+  /** A saved and evaluated candidate can be accepted manually regardless of its findings. */
+  const acceptable = (a: Attempt) => a.status === "completed" && !!a.file && !!a.evaluation;
   const attentionView = () => {
     const list = state?.attention || [];
     onAttention(list.length);
@@ -81,14 +79,18 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
         `<p>${p.attempts.length} ${p.attempts.length === 1 ? "tentativo" : "tentativi"}, ${p.calls} chiamate registrate.${p.error ? " " + escape(p.error) : ""}</p>` +
         (p.brief ? `<p>Ancoraggi obbligatori: ${escape(p.brief.required.join("; "))}. Esclusioni: ${escape(p.brief.exclusions.join("; ") || "nessuna")}</p>` : "") +
         p.attempts.map(a => evaluation(a, false)).join("") +
-        `<div class="rw-actions">${p.state === "review_needed" ? p.attempts.filter(acceptable).map(a => `<button data-slop="accept-process" data-process="${escape(p.id)}" data-attempt="${escape(a.id)}">Accetta il tentativo ${a.number}</button>`).join("") : ""}` +
+        `<div class="rw-actions">${p.attempts.filter(acceptable).map(a => `<button data-slop="accept-process" data-process="${escape(p.id)}" data-attempt="${escape(a.id)}">Accetta comunque il tentativo ${a.number}</button>`).join("")}` +
         `<button data-slop="close-process" data-process="${escape(p.id)}">Chiudi: ho visto</button></div></details>`).join("") + "</section>";
   };
   const render = () => {
     const expanded = [...root.querySelectorAll<HTMLDetailsElement>("details[data-attention][open]")].map(d => d.dataset.attention);
+    const evaluations = new Map([...root.querySelectorAll<HTMLDetailsElement>("details[data-evaluation]")].map(d => [d.dataset.evaluation, d.open]));
     root.innerHTML = `<div class="rw slop">${attentionView()}<ol class="rw-steps">${["Prompt, tag e ancoraggi","Controlla il prompt","Generazione e valutazione","Revisione"].map((l,i) => `<li ${page===i+1?'aria-current="step"':""}>${i+1}. ${l}</li>`).join("")}</ol><p role="status" aria-live="polite">${escape(notice)}</p>` +
       (busy ? `<p role="status">${escape(progress || "Operazione in corso…")}</p>` : "") + [first, second, () => summary() + `<p role="status">${escape(progress)}</p>` + (working() ? '<p class="hint">La generazione continua sul server anche se chiudi questa pagina.</p><button data-slop="stop-run">Interrompi</button>' : ""), fourth][page-1]() + '</div>';
     for (const d of root.querySelectorAll<HTMLDetailsElement>("details[data-attention]")) d.open = expanded.includes(d.dataset.attention);
+    for (const d of root.querySelectorAll<HTMLDetailsElement>("details[data-evaluation]")) {
+      if (evaluations.has(d.dataset.evaluation)) d.open = evaluations.get(d.dataset.evaluation)!;
+    }
     if (busy) root.querySelectorAll<HTMLButtonElement>("button:not([data-slop=stop-run])").forEach(b => b.disabled = true);
   };
   const refresh = async () => {
@@ -159,8 +161,14 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
     if(busy)return;
     const action=button.dataset.slop!, slot=Number(button.dataset.slot), image=batch?.images.find(i=>i.id===button.dataset.id);
     if(action==="accept-process"){
-      const doubt=state?.attention.find(p=>p.id===button.dataset.process)?.attempts.find(a=>a.id===button.dataset.attempt)?.evaluation?.editorial_constraints_met===false;
-      if(!window.confirm((doubt?"Il valutatore non ha potuto confermare i vincoli editoriali: rileggi le sue incertezze. ":"")+"Accettare questa candidata? Entra nella libreria come SLOP nuova, da approvare dopo la copia 4:5; poi una chiamata a pagamento per i tag."))return;
+      const attempt=state?.attention.find(p=>p.id===button.dataset.process)?.attempts.find(a=>a.id===button.dataset.attempt);
+      if(!attempt || !acceptable(attempt))return;
+      const e=attempt.evaluation!;
+      const findings=[`Difetti critici: ${e.critical_findings.join("; ") || "nessuno"}`,
+        `Difetti minori: ${e.minor_findings.join("; ") || "nessuno"}`,
+        `Incertezze: ${e.uncertainty_notes.join("; ") || "nessuna"}`,
+        ...(e.editorial_constraints_met ? [] : ["Il valutatore non ha potuto confermare i vincoli editoriali."])].join("\n");
+      if(!window.confirm(`Accettare questa candidata (tentativo ${attempt.number}) nonostante la valutazione?\n\n${findings}\n\n${e.action_reason}\n\nLa tua decisione sarà registrata senza modificare la valutazione. Entra nella libreria come SLOP nuova, da approvare dopo la copia 4:5. Massimo 1 chiamata a pagamento per i tag.`))return;
       busy=true;notice="Accettazione e analisi dei tag…";render();
       try{const done=await call<{attention: Attention[]; tags_error: string}>("processes/"+button.dataset.process+"/accept",{confirm:true,attempt:button.dataset.attempt});
         state={...state!,attention:done.attention};notice=done.tags_error?`SLOP accettata; analisi dei tag non riuscita: ${done.tags_error}. Si ripete dal Database.`:"SLOP accettata: la trovi nella revisione del suo batch.";}

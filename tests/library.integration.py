@@ -74,7 +74,7 @@ for wrong in ('?crop=1,0,40,60,2:3', '?crop=0,5,40,60,2:3', '?crop=0,0,20,30,2:3
 status, real, _ = copy(real['id'], game_copy(real_source))
 assert status == 201 and (real['copy']['width'], real['copy']['height']) == (40, 50) and real['copy']['crop'] == centred_crop(40, 64), real
 assert real['copy']['crop']['format'] == '4:5' and 'view' not in real['copy'] and 'redo' not in real['copy'], real
-assert sql(f"SELECT copy_view FROM images WHERE id='{real['id']}'")[0]['copy_view'] is None
+assert not {"caption", "generated_caption", "copy_view", "explanation"} & {r["name"] for r in sql("PRAGMA table_info(images)")}
 assert copy(real['id'], game_copy(real_source))[1]['already_prepared'] is True
 # Another crop remakes the copy: new file, the previous one leaves the quarantine.
 first_copy = sql(f"SELECT copy_key FROM images WHERE id='{real['id']}'")[0]['copy_key']
@@ -88,7 +88,7 @@ status, real, _ = copy(real['id'], game_copy(real_source, frame), query=crop_que
 assert call(f'{API}/{real["id"]}/view', {'revision': real['revision'], 'view': {'x': 0, 'y': 10, 'height': 50}})[0] == 404
 status, served, headers = call(base + real['file'])
 assert status == 200 and served[:4] == b'RIFF' and b'Canon' not in served
-# Edit in place: fields, caption length, ASCII tags, optimistic revision.
+# Edit in place: removed fields refused, ASCII tags, optimistic revision.
 status, result, _ = patch(real, {'caption': 'Parigi, 1968.'}); assert status == 400 and 'Campi non previsti' in result['error'], result
 status, result, _ = patch(real, {'tags': ['São Paulo']}); assert status == 400 and 'sao-paulo' in result['error'], result
 status, real, _ = patch(real, {'title': 'Barricate in rue de Rivoli',
@@ -107,13 +107,19 @@ status, real, _ = call(f'{API}/{real["id"]}')
 # Approve: a REAL needs the rights confirmation; a later edit keeps it approved (owner decision of 2026-11-11).
 status, result, _ = call(f'{API}/{real["id"]}/approve', {}); assert status == 409 and 'diritti' in result['error'], result
 status, real, _ = call(f'{API}/{real["id"]}/approve', {'rights_confirmed': True}); assert real['status'] == 'approved', real
-status, real, _ = patch(real, {'explanation': 'Fotografia scattata durante il maggio francese.'}); assert real['status'] == 'approved', real
+status, real, _ = patch(real, {'description': 'Fotografia scattata durante il maggio francese.'}); assert real['status'] == 'approved', real
 status, result, _ = patch(real, {'tags': []}); assert status == 409 and 'almeno un tag' in result['error'], result
 # A SLOP image: no rights checkbox, but copy and tags are required.
 slop_source = photo((0, 0, 200), (48, 48), exif=False, fmt='PNG')
-status, slop, _ = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': 'SLOP', 'title': 'Generated street scene', 'prompt': 'A street in 1968'}),
+status, slop, _ = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': 'SLOP', 'prompt': 'A street in 1968'}),
                        raw=slop_source, mime='image/png')
 assert status == 201 and slop['prompt'] == 'A street in 1968', slop
+assert sql("SELECT title FROM images WHERE id='"+slop['id']+"'")[0]['title'] is None
+assert not {'title', 'source_url', 'author', 'license_name', 'license_url', 'commons_description', 'explanation'} & slop.keys(), slop
+assert not {'prompt', 'model', 'explanation'} & real.keys(), real
+for item, change in [(real, {'explanation': 'Unused'}), (real, {'prompt': 'Not a REAL field'}), (slop, {'author': 'Not a SLOP field'}), (slop, {'title': 'Not a SLOP field'})]:
+    status, result, _ = patch(item, change)
+    assert status == 400 and 'Campi non previsti' in result['error'], result
 assert call(f'{API}/{slop["id"]}/approve', {})[0] == 409  # no copy
 status, slop, _ = copy(slop['id'], game_copy(slop_source)); assert status == 201
 assert call(f'{API}/{slop["id"]}/approve', {})[0] == 409  # no tag
@@ -125,13 +131,13 @@ for item in (real, slop):
 real_keys = sql(f"SELECT original_key,copy_key FROM images WHERE id='{real['id']}'")[0]
 assert stored(IMAGES, real_keys['copy_key']) and stored(QUARANTINE, real_keys['original_key'])
 assert call(f'{API}/{real["id"]}', {'revision': 99, 'title': 'x'}, method='PATCH')[0] == 409
-# Play: a game in progress with these two photos, seeded in the local D1; the round shows photo and caption, never the origin; the file
+# Play: a game in progress with these two photos, seeded in the local D1; the round shows only the photo, never the origin; the file
 # has no metadata.
 cookie = secrets.token_hex(16); sid = 'lib-game-' + secrets.token_hex(4)
 sql(f"INSERT INTO game_sessions(id,mode,level,created_at,owner_hash,phase,timing_mode,round_seconds) VALUES('{sid}','levels','facile',"
     f"{int(time.time() * 1000)},'{hashlib.sha256(cookie.encode()).hexdigest()}','active','per-image',20); "
-    f"INSERT INTO game_rounds(id,session_id,image_id,position,caption,copy_key) SELECT '{sid}-0','{sid}',id,0,caption,copy_key FROM images WHERE id='{real['id']}'; "
-    f"INSERT INTO game_rounds(id,session_id,image_id,position,caption,copy_key) SELECT '{sid}-1','{sid}',id,1,caption,copy_key FROM images WHERE id='{slop['id']}'")
+    f"INSERT INTO game_rounds(id,session_id,image_id,position,copy_key) SELECT '{sid}-0','{sid}',id,0,copy_key FROM images WHERE id='{real['id']}'; "
+    f"INSERT INTO game_rounds(id,session_id,image_id,position,copy_key) SELECT '{sid}-1','{sid}',id,1,copy_key FROM images WHERE id='{slop['id']}'")
 player = urllib.request.build_opener(); player.addheaders = [('Cookie', 'ros_owner=' + cookie)]
 session = {'id': sid}
 status, view, _ = call(base + '/api/sessions/' + sid, auth=False, opener=player)
@@ -150,7 +156,7 @@ status, slop, _ = call(f'{API}/{slop["id"]}/trash', {})
 assert status == 200 and slop['status'] == 'trash' and slop['trashed_from'] == 'approved' and slop['published_at'] is None, slop
 assert stored(IMAGES, slop_copy)  # still needed by the game in progress
 status, slop, _ = call(f'{API}/{slop["id"]}/restore', {}); assert slop['status'] == 'approved', slop
-# Withdraw while the game is in progress: the copy stays in the game bucket, the game keeps its caption.
+# Withdraw while the game is in progress: the copy stays in the game bucket, the game keeps its copy.
 status, real, _ = call(f'{API}/{real["id"]}/withdraw', {}); assert real['status'] == 'approved'
 in_game = sql(f"SELECT count(*) AS n FROM game_rounds r JOIN game_sessions s ON s.id=r.session_id WHERE s.id='{session['id']}' AND r.image_id='{real['id']}' AND s.phase='active'")[0]['n']
 assert stored(IMAGES, real_keys['copy_key']) == bool(in_game)
@@ -186,4 +192,4 @@ status, result, _ = call(f'{API}/trash/empty', {}); assert result['deleted'] == 
 status, tags, _ = call(f'{API}/tags')
 assert {t['label']: t['images'] for t in tags['tags']}.get('riot') == 1, tags  # the SLOP keeps its tags
 assert call(f'{API}/commons', {'url': 'https://example.com/not-commons.jpg'})[0] in (400, 404)
-print('Library integration 1.9.0 passed: no captions; no initial view; trash withdraws a published photo; level game seeded; copies in the nearest format with crop and view, ND refused; add, copy, edit kept approved, publish, play with caption, withdraw with the game in progress, trash, delete with every row and file, upload again, bulk.')
+print('Library integration 1.9.0 passed: no captions; no initial view; trash withdraws a published photo; level game seeded; copies with 4:5 crop, ND refused; add, copy, edit kept approved, publish, play without captions, withdraw with the game in progress, trash, delete with every row and file, upload again, bulk.')

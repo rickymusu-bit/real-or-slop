@@ -1,15 +1,6 @@
-# Statistiche e Impostazioni — specifica 3.1.0
+# Statistiche e Impostazioni — specifica 4.0.0
 
-Stato: vigente; la 2.8.0 è in produzione con l'app 1.30.1, la 2.8.1 è per l'app 1.30.2. Aggiornata: 2026-11-17T10:19:38Z. La 2.8.1: salvare un modulo
-numerico aggiorna solo i propri campi. La 2.8.0 porta a quattro i
-testi del contesto dei modelli e segnala il testo dei prompt scritto per le gemelle. La 2.2.0 toglie la soglia del gruppo
-(le SLOP sono gemelle di una REAL, specifica `generazione-slop` 3.0.0) e aggiunge il conteggio delle gemelle. La 2.1.0 sostituisce la soglia
-del tema con quella del gruppo e aggiunge i gruppi all'equilibrio del catalogo (specifica `generazione-slop`). La 2.0.0 era la
-versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
-senza strati `statistiche-impostazioni.v1.0.1` e le aggiunte successive (soglie dei batch automatici, formati, cancellazione delle voci
-di classifica), che restano nella cronologia git.
-
-**Stato del ramo 1.27.0:** implementata la pipeline della specifica `generazione-slop` 5.3.0; produzione ancora 1.26.0 fino al rilascio autorizzato.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:23:22Z.
 
 ## 1. Decisioni dell'owner (2026-11-12)
 
@@ -31,7 +22,7 @@ si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ri
 - **Vocabolario dei tag:** elenco per categoria con il numero di immagini, cambio di categoria con conferma, alias, «Unisci».
 - **Classifica:** verifica di un codice partita (soprannome, livello, punteggio, data), Nascondi, Mostra, Cancella (per sempre, per le
   richieste di cancellazione).
-- **Studio SLOP:** tentativi massimi (1–5, default 3), tolleranza (0–2, default 1). Quantità e modalità si scelgono in Generazione SLOP. Nessuna proposta da attivare o spegnere; lo sbilanciamento è solo una notifica. La 0055 rimuove `slop_auto_enabled`, rifiutato dall’API; le altre impostazioni restano.
+- **Studio SLOP:** tentativi massimi (1–5, default 3), tolleranza (0–2, default 1). Quantità e modalità si scelgono in Generazione SLOP. Nessuna proposta da attivare o spegnere; lo sbilanciamento è solo una notifica. La 0055 rimuove `slop_auto_enabled`, rifiutato dall’API. La 0056 elimina anche i vincoli e le chiavi legacy dei gruppi, conservando le impostazioni attive.
 - **Partite:** durata massima di una partita aperta in ore (24, da 1 a 168): oltre, una partita non conclusa non trattiene più le copie
   ritirate e non conta tra le aperte.
 - Dati in `app_settings`; una riga mancante vale il predefinito del codice.
@@ -49,10 +40,9 @@ Periodo: ultimi 7 giorni, ultimi 30 (predefinito) o da sempre; «Aggiorna». API
   le ultime 200 chiamate del periodo con filtri per tipo ed esito. Nessun importo.
 - **Equilibrio del catalogo:** REAL e SLOP pubblicate e approvate, quota di REAL tra le pubblicate con la fascia 40–60% e un avviso non
   bloccante fuori fascia, livelli giocabili e foto mancanti agli altri. Le copie nuove sono tutte 4:5.
-- **Equilibrio:** conteggi indipendenti di REAL e SLOP approvate/pubblicate e SLOP nuove da decidere.
-- **Gruppi** (genere e decennio): REAL, SLOP, nuove, spread; per i gruppi con SLOP pubblicate, le medie
-  delle misure delle copie (lato lungo, rumore, nitidezza, contrasto, saturazione) di REAL e SLOP affiancate, con un avviso non
-  bloccante quando divergono di oltre il 25%.
+- **Equilibrio:** conteggi indipendenti di REAL e SLOP approvate/pubblicate, SLOP nuove da decidere e REAL madri disponibili.
+  Il campionamento automatico usa solo REAL libere; una madre occupata resta esclusa finché la figlia esiste nel dataset, anche nel cestino.
+  Nessuna statistica o misura aggregata per gruppi di genere/decennio, nessuna soglia di gruppo (decisione del 2026-11-17).
 
 ## 4. Limiti
 

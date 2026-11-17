@@ -2,10 +2,18 @@
 import "./slop-auto.css";
 import { prepareItemCopy, type TreatableItem } from "./game-copy";
 import { escape } from "../shared/html";
+import { onLongPress, openPreview } from "./image-preview";
+import { startPills } from "./tag-ui";
+import type { Tag } from "../shared/slop-proposals";
+import type { RealDescription } from "../shared/editorial";
 
 interface Proposal { n_real: number; n_slop: number; n_new: number; spread: number; spread_percent: number; missing: number; size: number }
 interface AutoImage { id: string; status: string; index: number | null; copy: boolean; analysis: string }
 interface Config { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string }
+interface AutoPreview {
+  token: string; expires: number; config: Config;
+  references: {id: string; title: string; tags: Tag[]; description: RealDescription; file: string; original: string}[];
+}
 interface AutoBatch {
   pipeline_version: number; config: Config; processes: {slot: number; state: string; updated_at: string; attempts: unknown[]}[];
   runner: { id: string; status: string | null; updated_at: string | null; alive: boolean } | null;
@@ -43,10 +51,12 @@ function observeLibrary(changed: () => void) {
 }
 
 export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: Hooks): { refresh: () => Promise<void> } {
+  let preview: AutoPreview | null = null, extraction = 0;
   let state: AutoState | null = null, running = false, quantity = 1, progress = "", notice = "", timer = 0;
 
   const render = () => {
     const batch = state?.batch, balance = state?.balance;
+    if (batch) { preview = null; extraction++; }
     hooks.indicator(balance?.missing ? 1 : 0);
     root.innerHTML = balance && balance.real !== balance.slop ? `<p role="status"><strong>Dataset sbilanciato</strong>: ${balance.real} REAL e ${balance.slop} SLOP approvate o pubblicate; ${balance.pending} SLOP nuove da decidere.${balance.missing ? ` Mancano ${balance.missing} SLOP al pareggio, contando le nuove.` : ""}</p>` : "";
     root.hidden = !root.innerHTML;
@@ -65,14 +75,22 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
           return left ? `<p class="hint">${left} SLOP ancora da generare dalle REAL di riferimento del batch: il batch si è interrotto prima.</p>` : ""; })()}
         <div class="slop-auto-actions">${batch.processes.some(p => ["draft", "ready", "retry"].includes(p.state)) && !batch.runner?.alive ? '<button type="button" class="primary" data-auto="resume">Riprendi sul server</button>' : ""}<button type="button" data-auto="review">Rivedi nel Database</button><button type="button" data-auto="loop">Dettagli dei tentativi</button>${batch.undecided ? "" : '<button type="button" data-auto="close">Chiudi revisione</button>'}</div>`;
     } else if (state) {
-      const max = state.max_batch;
-      quantity = Math.min(Math.max(1, quantity), Math.max(1, max));
+      const max = state.max_batch, c = preview?.config || state.config;
+      if (!preview) quantity = Math.min(Math.max(1, quantity), Math.max(1, max));
       html = `<h3>Generazione automatica</h3><p>REAL disponibili: ${state.available}. Ogni REAL scelta a caso ispira una SLOP. Una madre resta esclusa finché la figlia esiste, anche nel cestino.</p>
         <label>Numero di SLOP<input id="slop-auto-size" type="number" required min="1" max="${max}" value="${quantity}" ${max ? "" : "disabled"}></label>
-        <p class="hint">Per ogni SLOP: brief e prompt, fino a ${state.config.max_generation_attempts} generazioni con valutazione, poi analisi dei tag. Massimo <span id="slop-auto-max-calls">${quantity*(2+2*state.config.max_generation_attempts)}</span> chiamate.</p>
+        <p class="hint">Per ogni SLOP: brief e prompt, fino a ${c.max_generation_attempts} generazioni con valutazione, poi analisi dei tag. Massimo <span id="slop-auto-max-calls">${quantity*(2+2*c.max_generation_attempts)}</span> chiamate.</p>
         ${max ? "" : '<p role="status">Nessuna REAL libera con descrizione editoriale. Aggiungi REAL o elimina definitivamente una SLOP per liberarne la madre.</p>'}
         ${state.paid_calls ? "" : '<p class="hint">Manca la chiave OpenAI.</p>'}
-        <button type="button" class="primary" data-auto="start" ${max && state.paid_calls ? "" : "disabled"}>Genera SLOP</button>`;
+        <button type="button" data-auto="preview" ${max ? "" : "disabled"}>${preview ? "Estrai di nuovo le REAL" : "Estrai le REAL"}</button>
+        <p class="hint">L'estrazione è gratuita. La generazione parte solo dopo aver controllato le REAL e confermato l'avvio.</p>`;
+      if (preview) html += `<section data-auto-preview aria-labelledby="slop-preview-title"><h4 id="slop-preview-title">REAL estratte: ${preview.references.length}</h4>
+        <p>Tocca una foto o tieni premuto per vedere l'originale intero e la descrizione editoriale.</p>
+        <ul class="slop-auto-references">${preview.references.map(r=>`<li data-reference="${escape(r.id)}">
+          <button type="button" class="slop-auto-photo" data-auto-reference="${escape(r.id)}" aria-label="Ingrandisci ${escape(r.title)}" data-long-press><img src="${escape(r.file)}" alt="" draggable="false"></button>
+          <strong>${escape(r.title)}</strong><div class="rw-pills">${startPills(r)}</div></li>`).join("")}</ul>
+        <p class="hint">Le REAL saranno prenotate all'avvio. L'estrazione vale 15 minuti; se una foto cambia o viene occupata, occorre estrarre di nuovo.</p>
+        <div class="slop-auto-actions"><button type="button" class="primary" data-auto="start" ${state.paid_calls ? "" : "disabled"}>Conferma e avvia ${preview.references.length} SLOP</button><button type="button" data-auto="discard">Annulla estrazione</button></div></section>`;
     }
     if (notice) html += `<p class="slop-auto-notice" role="status">${escape(notice)}</p>`;
     controls.innerHTML = html;
@@ -128,15 +146,41 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
     const input = event.target as HTMLInputElement;
     if (input.id !== "slop-auto-size") return;
     quantity = Number(input.value);
+    preview = null; extraction++;
+    controls.querySelector("[data-auto-preview]")?.remove();
+    const draw = controls.querySelector<HTMLButtonElement>('[data-auto="preview"]');
+    if (draw) draw.disabled = !state?.max_batch;
     const calls = controls.querySelector("#slop-auto-max-calls");
     if (calls && state) calls.textContent = String(quantity*(2+2*state.config.max_generation_attempts));
   });
+  const showReference = (element: HTMLElement) => {
+    const ref = preview?.references.find(r=>r.id===element.dataset.autoReference);
+    if (!ref) return;
+    openPreview({src: ref.original, alt: "Originale REAL intero", title: ref.title,
+      description: ref.description.visible, extra: `<div class="rw-pills">${startPills(ref)}</div><p>Contesto documentato: ${escape(ref.description.documented_context)}</p><p>Incertezze: ${escape(ref.description.uncertainties)}</p>`});
+  };
+  onLongPress(controls, "[data-auto-reference]", showReference);
   controls.addEventListener("click", async event => {
+    const reference = (event.target as HTMLElement).closest<HTMLElement>("[data-auto-reference]");
+    if (reference) { showReference(reference); return; }
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-auto]");
     if (!button || !state) return;
     const action = button.dataset.auto!;
     notice = "";
     try {
+      if (action === "discard") { preview = null; render(); return; }
+      if (action === "preview") {
+        const input = controls.querySelector<HTMLInputElement>("#slop-auto-size")!;
+        if (!input.reportValidity()) return;
+        const request = ++extraction;
+        preview = null; controls.querySelector("[data-auto-preview]")?.remove(); button.disabled = true;
+        try {
+          const selected = await call<AutoPreview>(SLOP + "auto/preview", {size: Number(input.value)});
+          if (request !== extraction || state.batch) return;
+          preview = selected; render();
+        } catch (error) { if (request === extraction) throw error; }
+        return;
+      }
       if (action === "loop" && state.batch) { await hooks.loop(state.batch.id); return; }
       if (action === "close") { state = await call<AutoState>(SLOP + "auto/close", {}); render(); return; }
       if (action === "review" && state.batch) { await hooks.review(state.batch.id); return; }
@@ -148,15 +192,15 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
       if (action === "start") {
         const input = controls.querySelector<HTMLInputElement>("#slop-auto-size")!;
         if (!input.reportValidity()) return;
-        const size = Number(input.value);
-        const c = state.config;
+        if (!preview) return;
+        const selected = preview, size = selected.references.length, c = selected.config;
         if (!window.confirm(`Generare ${size} SLOP con ${c.image_model}, qualità ${c.quality}, valutatore e tag ${c.text_model}? Massimo ${size*(2+2*c.max_generation_attempts)} chiamate: ${size} brief+prompt, fino a ${size*c.max_generation_attempts} immagini e altrettante valutazioni, ${size} analisi tag solo dopo accettazione. Tolleranza ${c.editorial_tolerance}. Stop anticipato alla prima candidata idonea.`)) return;
         button.disabled = true;
-        state = await call<AutoState>(SLOP + "auto/start", { size: size, confirm: true, config: c });
+        state = await call<AutoState>(SLOP + "auto/start", { preview: selected.token, confirm: true });
         render();
         void follow();
       }
-    } catch (error) { notice = errorText(error); await load(); }
+    } catch (error) { if (action === "start" || action === "preview") preview = null; notice = errorText(error); await load(); }
   });
 
   observeLibrary(() => { window.clearTimeout(timer); timer = window.setTimeout(() => { if (!running) void load(); }, 400); });

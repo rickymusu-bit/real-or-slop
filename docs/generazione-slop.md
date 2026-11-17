@@ -1,21 +1,36 @@
-# Generazione SLOP — specifica 7.0.0
+# Generazione SLOP — specifica 8.2.0
 
-Stato: implementata nel ramo 1.38.0, da rilasciare. Aggiornata: 2026-11-17T10:19:38Z.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T19:34:55Z.
 
 ## Due modalità e avviso sul dataset
 
 Decisione dell'owner del 2026-11-17: in «Generazione SLOP» ci sono «Generazione manuale» e «Generazione automatica».
 La proposta di generazione, Ignora/Chiudi e l'impostazione per attivarla spariscono. Un avviso mostra soltanto lo sbilanciamento
 tra REAL e SLOP approvate/pubblicate, contando separatamente le SLOP nuove ancora da decidere. Non avvia processi e non impone una quantità.
+Il bilanciamento usa soltanto il numero di foto e la disponibilità delle REAL madri rispetto alle SLOP figlie. Non esistono gruppi
+di genere/decennio, quote per tag o soglie di gruppo. Genere e Tempo restano normali tag descrittivi, senza influenzare il campione.
 
 **Manuale:** l'owner scrive prompt inglese, tag di partenza e brief (ancoraggi obbligatori, preferenze, elementi liberi ed esclusioni).
 Non occorre una REAL. Preparare e modificare il processo prima del primo tentativo è gratuito; nessuna chiamata scrive o riscrive
 il prompt manuale. Poi partono lo stesso ciclo di generazione e valutazione, la revisione e la copia 4:5. I tag di partenza restano
-nello snapshot; i tag finali descrivono l'originale prodotto, con la normale analisi dopo accettazione. Nessun trattamento da una REAL mancante.
+nello snapshot privato del processo, senza essere copiati nei metadati della figlia; i tag finali descrivono l'originale prodotto, con la normale analisi dopo accettazione. Nessun trattamento da una REAL mancante.
 
 **Automatica:** l'owner sceglie da una a dieci SLOP, entro il numero di REAL libere con descrizione. La quantità può essere diversa
 dallo sbilanciamento, anche quando il catalogo è in pareggio. Campione casuale uniforme, senza ripetizioni. Una chiamata testuale
-per REAL scrive brief e prompt dai tag e dalla descrizione salvati. La conferma mostra il massimo di chiamate del numero scelto.
+per REAL scrive brief e prompt dai tag e dalla descrizione salvati.
+
+Prima di avviare, «Estrai le REAL» mostra miniature, titoli e tag delle fotografie selezionate. Un tocco o una pressione prolungata
+apre l'originale intero con descrizione editoriale, contesto documentato e incertezze. Si può riestrarre o annullare, gratuitamente.
+Solo «Conferma e avvia N SLOP», seguito dalla conferma esplicita del massimo di chiamate, avvia il processo. Cambiare la quantità
+invalida l'anteprima corrente; la risposta di un'estrazione precedente non sostituisce una selezione più recente.
+
+`POST auto/preview {size}` non crea batch, non prenota REAL e non invia chiamate al modello. Restituisce un token firmato con ID,
+revisioni, ordine delle REAL e configurazione mostrata, valido quindici minuti. `POST auto/start {preview,confirm:true}` usa esattamente
+quelle REAL, senza un secondo campionamento. Un riferimento cambiato, occupato o eliminato, un cambio della configurazione o una
+scadenza richiedono una nuova estrazione prima di qualsiasi chiamata. Il controllo delle revisioni e della disponibilità è ripetuto
+nella transazione che crea processi e prenotazioni. L'ID dell'estrazione diventa l'ID univoco del batch: una selezione già avviata
+non si riusa, anche dopo la chiusura e la cancellazione delle figlie. L'anteprima non è conservata ricaricando la pagina.
+L'anteprima non richiede migrazioni aggiuntive.
 
 ## Ispirazione e disponibilità
 
@@ -50,15 +65,42 @@ Prima del primo tentativo è possibile salvare o riscrivere brief e prompt. Ogni
 
 Workflow Cloudflare: brief, generazione, valutazione e analisi dei tag dopo accettazione. Continua anche chiudendo la dashboard. Ogni chiamata è acquisita nel database prima dell'invio; gli esiti incerti non si ripetono automaticamente. La ripresa esegue solo passi ancora disponibili. Lo stop termina prima della successiva chiamata; quella già inviata può concludersi.
 
-Il valutatore vede la SLOP intera, non ritagliata né trattata. Restituisce accetta, riprova, riscrivi prompt, riprogetta scena o revisione umana, con difetti critici/minori, vincoli, incertezze e motivazione. Credibilità prima dell'aderenza letterale; difetti critici mai compensabili. Luogo, data e identità non verificabili dai pixel sono annotazioni, non ragioni automatiche di rifiuto. La revisione del prompt conserva gli ancoraggi e le esclusioni del brief. Il controllo testuale non dimostra che il modello li abbia realmente rispettati: resta necessario il controllo umano.
+A ogni iterazione il valutatore riceve una nuova richiesta Responses API, senza conversazione o `previous_response_id`:
+- l’immagine generata corrente intera, prima di crop e trattamento, come data URL;
+- un testo JSON con esattamente `attempt_id`, `brief` (required, preferred, flexible, exclusions), `prompt` corrente,
+  `composition_preference` e `tolerance` congelata nel processo;
+- istruzioni composte da contesto Base e contesto Valutazione attivi al momento della richiesta, seguiti dalle regole fisse del codice;
+- schema JSON obbligatorio della risposta e limite di 8000 token in uscita.
+
+Non riceve l’immagine REAL, titolo o tag della madre, né immagini o valutazioni precedenti. Il brief può contenere ancoraggi ricavati
+dai tag della REAL; non è la lista dei tag. Nei tentativi successivi il prompt può essere quello rivisto, mentre gli ancoraggi restano
+immutabili. Il modello è quello di testo registrato nello snapshot all’avvio. Il valutatore vede la SLOP intera, non ritagliata né trattata. Restituisce accetta, riprova, riscrivi prompt, riprogetta scena o revisione umana, con difetti critici/minori, vincoli, incertezze e motivazione. Credibilità prima dell'aderenza letterale; nell’accettazione automatica i difetti critici non sono mai compensabili. Luogo, data e identità non verificabili dai pixel sono annotazioni, non ragioni automatiche di rifiuto. La revisione del prompt conserva gli ancoraggi e le esclusioni del brief. Il controllo testuale non dimostra che il modello li abbia realmente rispettati: resta necessario il controllo umano.
 
 Tentativi massimi 1–5, tolleranza 0–2. A tolleranza zero, difetti minori provocano un nuovo tentativo entro il limite. Snapshot dei modelli, qualità e limiti all'avvio. Massimo iniziale per SLOP automatica: una chiamata brief, due per tentativo (immagine e valutazione), una analisi tag dopo accettazione. In manuale manca la chiamata brief: 1 + 2N invece di 2 + 2N. Nei test solo API fittizie. Nessun punteggio di difficoltà deriva dal numero di tentativi.
+
+## Identità e tag della foto SLOP
+
+Decisione del 2026-11-17: nessun titolo delle SLOP. La foto usa il proprio ID; la dashboard mostra un’etichetta con ID abbreviato,
+mai salvata come titolo né inviata ai modelli. Il titolo rimane obbligatorio solo per le REAL.
+
+Il riquadro «Tag di partenza» scompare dal dettaglio e dall’anteprima della figlia; i tag copiati sono rimossi dallo slot della foto.
+Restano i tag osservati dall’analisi della SLOP intera e le modifiche dell’owner. L’analisi riceve prompt e descrizione aggiuntiva se presente,
+non il titolo della SLOP o i tag di partenza; conserva il vocabolario generale per mantenere coerenti i nomi. Genere, Colore e Supporto
+si deducono solo dall’immagine. I tag della REAL restano input privati del processo per scrivere o riscrivere il brief; i tag inseriti
+dall’owner restano disponibili nella generazione manuale. Colore e supporto necessari alla copia sono parametri tecnici `copy_style`,
+separati dal catalogo dei tag e dalle misure numeriche. Non si cancella il legame madre–figlia.
 
 ## Revisione e copie
 
 Solo una candidata accettata entra nella libreria privata come nuova SLOP. Analisi tag sull'intero originale. Copia 4:5 preparata dopo accettazione nel browser, con identica codifica WebP delle REAL, senza metadati. Il trattamento usa misure numeriche salvate, senza identificativo della REAL e senza rileggerla. I cursori permettono correzioni manuali; una REAL eliminata non impedisce di rifare la copia. Se mancano le misure, la copia è senza trattamento.
 
-Accettazione automatica, approvazione dell'owner e pubblicazione sono distinte. Esauriti, in revisione, falliti e incerti restano in evidenza con tentativi e valutazioni finché l'owner li chiude. Per un processo in revisione si può accettare una candidata valutata senza difetti critici, anche se il modello non conferma un vincolo; la conferma avverte delle incertezze e autorizza una chiamata per i tag. Chiusura esplicita e manutenzione consentono poi la rimozione dei tentativi dopo sette giorni.
+Accettazione automatica, approvazione dell'owner e pubblicazione sono distinte. Esauriti, in revisione, falliti e incerti restano in evidenza con tentativi e valutazioni finché l'owner li chiude. Decisione dell’owner del 2026-11-17: in un processo esaurito, in revisione, fallito o incerto si può scegliere «Accetta comunque il tentativo N» per qualsiasi candidata intera salvata e con valutazione valida, anche con difetti critici, minori, incertezze o vincoli non confermati. Si può scegliere anche un tentativo precedente a quello finale. La conferma elenca le segnalazioni e dichiara il massimo di una chiamata a pagamento, per i tag; annullare non invia chiamate.
+
+L’accettazione manuale non cambia la valutazione originale: nello slot privato della foto viene registrata separatamente `acceptance:{by:"owner",attempt,at}`. La revisione mostra che la foto è stata accettata manualmente. Entra come SLOP nuova senza copia, mai approvata o pubblicata automaticamente. Per copie, approvazione e pubblicazione valgono i passaggi consueti. L’accettazione occupa la madre come qualunque altra figlia.
+
+Processi in corso, già accettati o chiusi, tentativi non valutati o senza candidata non sono accettabili. Una sola richiesta acquisisce atomicamente il processo: un doppio clic non duplica immagini o chiamate. Se il file è mancante lo stato precedente viene ripristinato senza chiamate; se fallisce l’analisi dei tag la foto resta accettata e segnala l’errore, senza ripetizione automatica. I limiti del ciclo automatico restano gli stessi. Chiusura esplicita e manutenzione consentono poi la rimozione dei tentativi dopo sette giorni.
+
+Aprire o chiudere il dettaglio di un tentativo conserva la scelta anche quando la sezione viene aggiornata.
 
 ## Batch automatici
 
@@ -70,3 +112,10 @@ I batch precedenti restano consultabili senza riprese a pagamento incompatibili.
 ## Rilascio
 
 La 0055 aggiunge il registro privato, elimina le proposte ignorate e la loro opzione. Non esegue chiamate né backfill di identità. Prima del rilascio devono terminare i Workflow precedenti: non registrerebbero il nuovo utilizzo delle REAL. Migrazione e deploy richiedono l'autorizzazione di rilascio dell'owner. Nessuna chiamata né migrazione remota fa parte delle verifiche locali.
+
+La 0056 elimina i campi e le impostazioni dei gruppi dal database. Le informazioni pregresse di genere e decennio negli slot
+restano come normali tag di partenza; prompt, tentativi, chiamate, immagini e registro madre–figlia sono conservati.
+
+L’accettazione manuale estesa non richiede nuove migrazioni: decisione e data sono nei metadati privati della foto, la valutazione originale resta nel tentativo.
+
+La 0058 elimina i titoli SLOP e i tag di partenza copiati sulla foto. Conserva titoli REAL, tag osservati, dati dei processi, relazioni e impostazioni delle copie; non genera nuove analisi.

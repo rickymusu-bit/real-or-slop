@@ -1,10 +1,6 @@
-# Dashboard e wizard REAL — specifica 3.1.0
+# Dashboard e wizard REAL — specifica 3.5.0
 
-Stato: vigente (con decisioni future indicate a parte). Aggiornata: 2026-11-17T10:19:38Z. La 2.7.0: la copia di gioco torna a prepararla il browser (decisione dell'owner del 2026-11-16). La 2.6.0: la preparava il Worker. La 2.5.0 fa analizzare la REAL intera invece della copia 4:5. Versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riunisce
-senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wizard di `didascalie-wizard.v1.0.0` e
-`anteprima-descrizione.v1.2.0`, che restano nella cronologia git.
-
-**Stato del ramo 1.27.0:** implementata la pipeline della specifica `generazione-slop` 5.3.0; produzione ancora 1.26.0 fino al rilascio autorizzato.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T19:34:55Z.
 
 ## 1. Decisioni dell'owner
 
@@ -21,9 +17,9 @@ senza strati `dashboard-admin-wizard-real.v1.3.0` e le parti su dashboard e wiza
 
 ## 2. Dashboard `/admin`
 
-Riprogettazione 1.37.0: navigazione laterale desktop con descrizione delle cinque attività; su mobile barra orizzontale scorrevole. La barra laterale e i suoi pulsanti restano nella propria colonna, senza coprire i pannelli; le descrizioni dei pulsanti sono sotto il titolo. Su mobile la barra scorre mantenendo le voci compatte. Ultima sezione ricordata nella sessione. Testata compatta, pannelli coerenti, comandi tattili e focus visibile. I quattro passi REAL restano espliciti con schede e azioni raggruppate. Le eccezioni SLOP sono espandibili singolarmente; modalità manuale con prompt, tag e ancoraggi, modalità automatica con quantità scelta (1–10, entro le REAL libere).
+Riprogettazione 1.37.0: navigazione laterale desktop con descrizione delle cinque attività; su mobile barra orizzontale scorrevole. La barra laterale e i suoi pulsanti restano nella propria colonna, senza coprire i pannelli; le descrizioni dei pulsanti sono sotto il titolo. Su mobile la barra scorre mantenendo le voci compatte. Ultima sezione ricordata nella sessione. Testata compatta, pannelli coerenti, comandi tattili e focus visibile. I quattro passi REAL restano espliciti con schede e azioni raggruppate. Le eccezioni SLOP e i loro tentativi sono espandibili singolarmente; un aggiornamento della sezione conserva anche i tentativi aperti o chiusi; modalità manuale con prompt, tag e ancoraggi, modalità automatica con quantità scelta (1–10, entro le REAL libere), estrazione gratuita delle REAL e loro anteprima prima di confermare e avviare. Miniature con titolo e tag; tocco o pressione prolungata per originale intero e descrizione editoriale. Riestrazione e annullamento gratuiti; nessuna chiamata a pagamento fino alla conferma finale.
 
-Database con ricerca testuale, filtri e ordinamento richiudibili, griglia 4:5 e barra di selezione durante lo scorrimento. Statistiche con viste Panoramica, Adesso, Gioco, Chiamate IA e Catalogo. Impostazioni con indice per Modelli, Generazione, Istruzioni IA, Tag, Partite e Classifica; ogni gruppo mantiene il proprio salvataggio.
+Database con ricerca per ID e testo; le SLOP usano un’etichetta con ID abbreviato senza campo titolo né riquadro «Tag di partenza». Restano i tag osservati e modificabili, con filtri di origine e tag (nessun gruppo di genere/decennio) e ordinamento richiudibili, griglia 4:5 e barra di selezione durante lo scorrimento. Rimossi i tre checkbox di manutenzione: copia da rifare in 4:5, REAL senza descrizione, categorie visive mancanti (decisione dell’owner del 2026-11-17). Statistiche con viste Panoramica, Adesso, Gioco, Chiamate IA e Catalogo. Impostazioni con indice per Modelli, Generazione, Istruzioni IA, Tag, Partite e Classifica; ogni gruppo mantiene il proprio salvataggio.
 
 
 - Accesso con le credenziali dell'owner (`ADMIN_TOKEN`).
@@ -33,6 +29,8 @@ Database con ricerca testuale, filtri e ordinamento richiudibili, griglia 4:5 e 
   tutte le sezioni non sono pronte; ogni sezione ha il suo segnaposto. Il wizard REAL si monta per primo.
 - **Avviso sullo sbilanciamento** in cima alla dashboard, senza proposta né comandi di avvio. I controlli dei batch e il numero di SLOP stanno nella modalità automatica di «Generazione SLOP»; la modalità scelta resta nella sessione. I dettagli e la revisione dei processi restano consultabili nello studio.
 - Tornando a «Caricamento REAL», il wizard toglie le foto spostate nel cestino, pubblicate o eliminate altrove, con un avviso.
+
+Nelle eccezioni SLOP, «Accetta comunque il tentativo N» è disponibile per ogni candidata salvata e valutata, anche con difetti critici, minori o incertezze. La conferma elenca le segnalazioni e il massimo di una chiamata per i tag; annullare è gratuito. La scelta manuale è visibile nella revisione, separata dalla valutazione originale. Il processo deve essere concluso o sospeso; foto nuova, copia, approvazione e pubblicazione restano passaggi separati (decisione del 2026-11-17).
 
 ## 3. Anteprima a pressione prolungata
 

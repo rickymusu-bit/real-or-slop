@@ -52,7 +52,7 @@ with sync_playwright() as p:
         # Statistics: three rounds of the REAL (two right), one of the SLOP (wrong), played on the current copies.
         session = f'{prefix}-session'
         sql(f"INSERT INTO game_sessions(id,mode,created_at,owner_hash,phase,completed) VALUES('{session}','training',0,'x','completed',1); " +
-            "; ".join(f"INSERT INTO game_rounds(id,session_id,image_id,position,presented_at,caption,copy_key) SELECT '{prefix}-r{i}','{session}',id,{i},1,caption,copy_key FROM images WHERE id='{image}'"
+            "; ".join(f"INSERT INTO game_rounds(id,session_id,image_id,position,presented_at,copy_key) SELECT '{prefix}-r{i}','{session}',id,{i},1,copy_key FROM images WHERE id='{image}'"
                       for i, image in enumerate((real['id'], slop['id']))) + "; " +
             f"INSERT INTO answers(round_id,choice,correct,answered_at,elapsed_ms) VALUES('{prefix}-r0','REAL',1,1,10),('{prefix}-r1','REAL',0,1,10)")
         context = browser.new_context(**options, http_credentials={'username': 'owner', 'password': token})
@@ -67,7 +67,7 @@ with sync_playwright() as p:
         tag_input = page.locator('#library-tag')
         tag_input.fill('dbb-riot'); tag_input.press('Enter')
         expect(page.locator('#library-tag-pills .rw-pill')).to_have_count(1)
-        cards = page.locator(f'.library-card:has([aria-label^="Apri {prefix}"])')
+        cards = page.locator(f'.library-card:has([aria-label^="Apri {prefix}"]),.library-card[data-id="{slop["id"]}"],.library-card[data-id="{beach["id"]}"]')
         expect(cards).to_have_count(2)
         tag_input.fill('DBB Paris'); tag_input.press('Enter')  # converted like a typed tag
         expect(page.locator('#library-tag-pills .rw-pill', has_text='dbb-paris')).to_have_count(1)
@@ -102,7 +102,7 @@ with sync_playwright() as p:
         expect(cards).to_have_count(2)
         page.locator('#library-origin').select_option('SLOP')
         expect(cards).to_have_count(1)
-        expect(cards.locator('.library-open')).to_have_attribute('aria-label', f'Apri {prefix}-spiaggia')
+        expect(cards.locator('.library-open')).to_have_attribute('aria-label', 'Apri SLOP '+beach['id'][:8])
         long_press(page, cards.locator('.library-open'))
         expect(page.locator('dialog.image-preview')).to_contain_text('A beach, 1960s')
         page.locator('dialog.image-preview').get_by_role('button', name="Chiudi l'anteprima").click()
@@ -111,8 +111,8 @@ with sync_playwright() as p:
         page.locator('[data-filter-remove="dbb-paris"]').click(); page.locator('[data-filter-remove="dbb-beach"]').click()
         tag_input.fill('dbb-riot'); tag_input.press('Enter')
         expect(cards).to_have_count(2)
-        # REAL without the private description: filter, then the combined analysis of the selection, with the exact maximum.
-        page.locator('#library-undescribed').check()
+        # Select REAL through the origin filter, then explicitly analyse the selection with the exact maximum.
+        page.locator('#library-origin').select_option('REAL')
         expect(cards).to_have_count(1)
         # «Seleziona tutte» takes exactly the photos the filters show.
         expect(page.locator('#library-select-all')).to_have_text(re.compile(r'^Seleziona tutte \(\d+\)$'))
@@ -129,13 +129,13 @@ with sync_playwright() as p:
         assert 'al massimo 1 chiamata' in confirms[-1] and "sull'originale intero" in confirms[-1], confirms[-1]
         described = call(f'{API}/{real["id"]}')
         assert described['real_description']['visible'] and described['status'] == 'published', described
-        expect(cards).to_have_count(0)
-        page.locator('#library-undescribed').uncheck()
+        expect(cards).to_have_count(1)
+        page.locator('#library-origin').select_option('all')
         expect(cards).to_have_count(2)
         # An analysis left «running» by a request that died (more than ten minutes ago) is repeated from the card, with the warning.
         stuck = seed(prefix, 'REAL', 'interrotta', 30 + index, ['dbb-riot'], False)
         sql(f"UPDATE images SET analysis_status='running',updated_at='2000-01-01T00:00:00.000Z' WHERE id='{stuck['id']}'")
-        page.locator('#library-undescribed').check()
+        page.locator('#library-search').fill(f'{prefix}-interrotta')
         expect(cards).to_have_count(1)
         page.get_by_role('button', name=f'Apri {prefix}-interrotta').click()
         expect(page.locator('#library-detail [data-analysis-unsure]')).to_contain_text('interrotta')
@@ -150,22 +150,25 @@ with sync_playwright() as p:
         fresh = seed(prefix, 'REAL', 'in-corso', 50 + index, ['dbb-riot'], False)
         sql(f"UPDATE images SET analysis_status='running',updated_at='2000-01-01T00:00:00.000Z' WHERE id='{again['id']}'")
         sql(f"UPDATE images SET analysis_status='running',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id='{fresh['id']}'")
-        page.locator('#library-undescribed').uncheck(); page.locator('#library-undescribed').check()
-        expect(cards).to_have_count(2)
-        page.locator('#library-select-all').click()
+        page.locator('#library-search').fill('')
+        expect(cards).to_have_count(5)
+        page.get_by_role('checkbox', name=f'Seleziona {prefix}-interrotta-gruppo',exact=True).check()
+        page.get_by_role('checkbox', name=f'Seleziona {prefix}-in-corso',exact=True).check()
         openai([{'tags': ['dbb-riot']}])
-        page.locator('[data-bulk=describe]').click()
-        expect(cards).to_have_count(1, timeout=30000)  # the described one leaves the filter; the running one stays
+        with page.expect_response(f'{API}/{again["id"]}/analyze') as analysis:
+            page.locator('[data-bulk=describe]').click()
+        assert analysis.value.ok
+        expect(cards).to_have_count(5, timeout=30000)  # analysis no longer hides images from the catalogue
         expect(page.locator('#library-message')).to_contain_text('1 di 1 analizzate')
         assert "un'analisi precedente interrotta o con esito incerto" in confirms[-1] and 'al massimo 1 chiamata' in confirms[-1], confirms[-1]
         assert call(f'{API}/{again["id"]}')['real_description']['visible'] and call(f'{API}/{fresh["id"]}')['real_description'] is None
         ids = [stuck['id'], again['id'], fresh['id']]
         call(f'{API}/bulk', {'action': 'trash', 'ids': ids}); call(f'{API}/bulk', {'action': 'delete', 'ids': ids})
-        page.locator('#library-undescribed').uncheck()
+        page.locator('[data-view=library]').click()
         expect(cards).to_have_count(2)
 
         # Edit a published SLOP: confirmation, out of publication, approved; then the prompt and a regeneration.
-        page.get_by_role('button', name=f'Apri {prefix}-scontri').click()
+        page.locator(f'.library-card[data-id="{slop["id"]}"] .library-open').click()
         dialog = page.locator('#library-detail')
         expect(dialog.locator('.db-edit-note')).to_be_visible()
         expect(dialog.locator('[data-field=caption]')).to_have_count(0)
@@ -197,7 +200,7 @@ with sync_playwright() as p:
         # Crop: the 60×40 SLOP is 3:2, whole; as 1:1 the crop is 40×40 centred, three steps left. One frame only, no view.
         page.locator('#library-tag-match').select_option('any')
         tag_input.fill('dbb-beach'); tag_input.press('Enter')
-        page.get_by_role('button', name=f'Apri {prefix}-spiaggia').click()
+        page.locator(f'.library-card[data-id="{beach["id"]}"] .library-open').click()
         expect(dialog).to_contain_text('copia di gioco WebP 32×40, 4:5 verticale')
         dialog.locator('#library-crop').click()
         editor = page.locator('dialog.crop-dialog')
@@ -228,7 +231,7 @@ with sync_playwright() as p:
         # redraws the preview in the page, saving makes the copy here with the owner's settings and uploads it.
         metrics = json.dumps({'long': 40, 'noise': 3.0, 'sharpness': 6.0, 'contrast': 120, 'saturation': 0.2, 'cast': [2, 0, -2], 'tint': [0, 0, 0], 'v': 3})
         sql(f"UPDATE images SET generation_batch='test-treatment',generation_slot=json_object('target_metrics',json('{metrics}')) WHERE id='{beach['id']}'")
-        page.get_by_role('button', name=f'Apri {prefix}-spiaggia').click()
+        page.locator(f'.library-card[data-id="{beach["id"]}"] .library-open').click()
         dialog.locator('#library-treatment-on').click()
         expect(dialog.locator('#library-detail-message')).to_have_text('Copia trattata.')
         dialog.locator('#library-treatment-edit').click()

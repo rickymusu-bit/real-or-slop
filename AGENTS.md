@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 26.0.0, aggiornata il 2026-11-17T10:19:38Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 28.1.0, aggiornata il 2026-11-17T19:34:55Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -23,21 +23,26 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   e il contesto Commons, ma **non conosce l'esistenza delle SLOP**.
   Il modello successivo che produce **brief e prompt SLOP** riceve solo tag e descrizione salvata, **non l'immagine**;
   conosce invece lo scopo sintetico della generazione. Tenere separati i contesti di istruzione.
-- **Generazione SLOP manuale o automatica** (decisione dell'owner del 2026-11-17, specifica `generazione-slop` 7.0.0).
+- **Generazione SLOP manuale o automatica** (decisione dell'owner del 2026-11-17, specifica `generazione-slop` 8.2.0).
   Manuale: prompt, tag di partenza e ancoraggi scritti dall'owner, senza una REAL né una chiamata per scrivere il prompt.
-  Automatica: descrizione e tag di una REAL libera diventano brief e prompt con una sola chiamata testuale, senza immagine.
+  Automatica: prima estrazione gratuita e anteprima delle REAL, poi conferma del massimo e avvio sulle stesse REAL mostrate.
+  Descrizione e tag di una REAL libera diventano brief e prompt con una sola chiamata testuale, senza immagine.
   La madre resta occupata finché la figlia esiste nel dataset: nuova, approvata, pubblicata o cestinata. Solo l'eliminazione
   definitiva libera la REAL. Prenotazioni private impediscono due processi concorrenti dalla stessa REAL e si liberano
   chiudendo esplicitamente un processo senza figlia. Il riferimento non vincola il gioco: madre e figlia possono apparire insieme.
   Le descrizioni restano osservazioni, contesto Commons documentato e incertezze; non sovrascrivono il contesto Commons.
   I legami cancellati dalla migrazione 0053 non vanno inventati. Le persone sono inventate.
+- **Bilanciamento del dataset solo per numero di foto e disponibilità madre–figlia** (decisione del 2026-11-17).
+  Nessun gruppo di genere/decennio, quota per tag o soglia di gruppo nel codice e nel database; Genere e Tempo restano tag descrittivi.
 - **Credibilità prima dell'aderenza letterale al prompt.** Il valutatore esamina **l'immagine generata intera**, senza crop
   né trattamento 4:5; decide accettazione, nuovo tentativo, revisione del prompt o revisione umana. Il ritaglio 4:5 è preparato
-  **soltanto dopo l'accettazione** e non dà feedback al generatore. I difetti critici non sono compensabili con altri punti forti; tentativi
+  **soltanto dopo l'accettazione** e non dà feedback al generatore. Nell’accettazione automatica i difetti critici non sono compensabili con altri punti forti; tentativi
   e tolleranza sono configurabili. Nessuna candidata rifiutata entra nella libreria giocabile o viene pubblicata automaticamente.
   Un processo che finisce senza SLOP (tentativi esauriti, revisione chiesta, errore, esito incerto) è un'eccezione che richiede
   l'attenzione dell'owner (decisione del 2026-11-15): resta in evidenza con immagini, prompt e valutazioni di ogni tentativo
-  finché l'owner non lo chiude.
+  finché l'owner non lo chiude. L’owner può accettare esplicitamente qualsiasi candidata salvata e valutata di un processo
+  concluso o sospeso, anche con difetti critici, minori o incertezze (decisione del 2026-11-17). La conferma elenca le segnalazioni;
+  valutazione originale e decisione dell’owner restano distinte. La foto entra come nuova, poi richiede copia, approvazione e pubblicazione.
 - **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP. Tag e descrizione della REAL, e i tag della
   SLOP, descrivono l'immagine intera (l'originale); il ritaglio non deve eliminare elementi **fondamentali** per il significato della fotografia; in caso contrario
   l'owner corregge l'inquadratura. Le SLOP si valutano **intere** prima di creare la copia 4:5.
@@ -53,6 +58,9 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   file dell'immagine.
 - **Contenuti delle SLOP:** regole nella specifica `contenuti-e-trasparenza` (persone vive o morte da meno di 50 anni mai nominate né
   descritte, personaggi storici senza crimini attribuiti, regimi documentati ma mai celebrati, niente nudità fuori dalle opere d'arte).
+- **SLOP senza titolo né tag di partenza copiati sulla foto** (decisione del 2026-11-17). Identità tramite ID;
+  sulla figlia solo tag effettivi e modifiche dell’owner. I tag della REAL restano input del brief, quelli manuali input dell’owner.
+  Per rifare le copie si conservano misure anonime e soli parametri tecnici di colore/supporto, non la lista dei tag della madre.
 - **Niente didascalie**, né nel gioco né nella dashboard (decisione del 2026-11-13).
 - **Privacy:** solo il cookie tecnico, partite cancellate dopo 12 mesi, testi legali verificati da un legale: ogni modifica a Privacy o
   Termini va fatta verificare di nuovo (specifica `privacy-note-legali`).

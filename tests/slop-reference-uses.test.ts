@@ -12,7 +12,7 @@ test('reference remains occupied in every child state and across process deletio
     const image = db.prepare(`INSERT INTO images(id,origin,title,original_key,original_sha256,original_mime,width,height,created_at,updated_at)
       VALUES(?,?,?,lower(hex(randomblob(16))),?,'image/png',100,100,'now','now')`);
     image.run('mother','REAL','mother','a'.repeat(64));
-    image.run('child','SLOP','child','b'.repeat(64));
+    image.run('child','SLOP',null,'b'.repeat(64));
     db.prepare("UPDATE images SET copy_key='child-copy',copy_sha256=?,trashed_from='new' WHERE id='child'").run('c'.repeat(64));
     db.exec(`INSERT INTO slop_batches(id,theme,slots,created_at,updated_at) VALUES('batch','[]','[]','now','now');
       INSERT INTO slop_processes(id,batch_id,slot,snapshot,created_at,updated_at) VALUES('process','batch',0,'{}','now','now');

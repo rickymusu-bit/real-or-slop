@@ -1,6 +1,6 @@
 /** Admin dashboard (spec `dashboard-admin-wizard-real`, section 2): the five sections, the loading notice, the box of
  * the automatic SLOP batches; the Database section (spec `database-immagini`: views, filters, sorting, cards with press-and-hold
- * preview, selection, detail with editing, crop, analysis, regeneration, starting tags of a generated SLOP, distribution) and Settings
+ * preview, selection, detail with editing, crop, analysis, regeneration, observed tags of a generated SLOP, distribution) and Settings
  * (spec `statistiche-impostazioni`: models, model context, vocabulary, leaderboard, thresholds, open games). */
 import "./library.css";
 import { mountAdminWorkspace } from "./admin-workspace";
@@ -16,11 +16,12 @@ import { mountStats, type Stats } from "./stats";
 import { mountDistribution, type Distribution } from "./database-chart";
 import "./database.css";
 import { CATEGORIES, CATEGORY_LABELS, isCategory, type Category } from "../shared/tag-categories";
-import { categoryOf, categorySelect, legend, pill, sortByCategory, startPills, suggestedCategory, type StartSlot } from "./tag-ui";
+import { imageLabel } from "../shared/image-label";
+import { categoryOf, categorySelect, legend, pill, sortByCategory, suggestedCategory } from "./tag-ui";
 import { mountRealWizard, type RealWizard } from "./real-wizard";
 import { onLongPress, openPreview } from "./image-preview";
 import { content, escape } from "./main";
-import { measureMissing, prepareItemCopy, remakeCopies, saveFrame } from "./game-copy";
+import { type TreatableItem, measureMissing, prepareItemCopy, remakeCopies, saveFrame } from "./game-copy";
 import { chooseTreatment } from "./treatment-editor";
 import { METRICS_VERSION, type Metrics, type Treatment } from "../shared/copy-treatment";
 import { chooseFrame } from "./crop-editor";
@@ -29,18 +30,16 @@ import { markGameMedia } from "./media-mark";
 import { tagFromInput } from "../shared/tag-input";
 
 type Status = "new" | "approved" | "published" | "trash";
-interface Item {
-  id: string; origin: "REAL" | "SLOP"; status: Status; trashed_from: Status | null; title: string; description: string;
-  commons_description: string | null; real_description: RealDescription | null; explanation: string; source_url: string; author: string; license_name: string; license_url: string;
+interface Item extends TreatableItem {
+  id: string; origin: "REAL" | "SLOP"; status: Status; trashed_from: Status | null; title?: string; description: string;
+  commons_description: string | null; real_description: RealDescription | null; source_url: string; author: string; license_name: string; license_url: string;
   prompt: string; model: string; width: number; height: number; copy: { width: number; height: number; bytes: number; crop: Crop | null; sha256: string | null } | null;
   rights_confirmed: boolean; revision: number; tags: string[]; file: string; updated_at: string; created_at: string;
   analysis: { status: "none" | "running" | "done" | "uncertain" | "failed"; error: string; at: string | null };
   generated: { tags: string[] } | null;
   categories: Record<string, string>;
   stats: { views: number; correct: number }; in_play: number; no_derivatives: boolean;
-  /** A generated SLOP: its batch, the REAL it is the twin of and what its prompt was written from. */
-  generation?: { batch: string; slot: StartSlot | null; quality: string | null } | null;
-  group: { key: string; genre: string; time: string } | null; missing_categories: string[]; completable: boolean;
+  missing_categories: string[]; completable: boolean;
   metrics: Metrics | null; treatment: Treatment | null; copy_sha?: string;
 }
 interface Analysis { enabled: boolean; reason: string; model: string; calls_30_days: { total: number; uncertain: number; input_tokens: number; output_tokens: number }; note: string }
@@ -55,7 +54,7 @@ const STATE_LABEL: Record<Status, string> = { new: "nuova", approved: "approvata
 /** A section still loading: a short line with a spinner (src/admin-loading.css). */
 const loading = (text = "Caricamento…") => `<p class="admin-loading" role="status">${text}</p>`;
 const FIELDS: [keyof Item, string, number, boolean][] = [
-  ["title", "Titolo", 200, false], ["description", "Descrizione", 1000, true], ["explanation", "Spiegazione (dopo la risposta)", 2000, true], ["source_url", "Pagina della fonte", 1000, false],
+  ["title", "Titolo", 200, false], ["description", "Descrizione", 1000, true], ["source_url", "Pagina della fonte", 1000, false],
   ["author", "Autore", 300, false], ["license_name", "Licenza", 200, false], ["license_url", "Indirizzo della licenza", 1000, false],
   ["prompt", "Prompt (SLOP)", 4000, true], ["model", "Modello (SLOP)", 100, false],
 ];
@@ -82,7 +81,7 @@ export async function showLibrary() {
     if (saved && ["added", "views", "accuracy"].includes(saved.by) && ["asc", "desc"].includes(saved.order)) sort = saved; } catch { /* private browsing */ }
   let measuring = false;
   let slopStudio: { refresh: () => Promise<void> } = { refresh: async () => {} };
-  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "", group: "", redo_copy: false, incomplete: false, undescribed: false };
+  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "" };
   let autoBox: { refresh: () => Promise<void> } = { refresh: async () => {} };
   let models: Models | null = null;
   let statsView: { refresh: () => Promise<void> } = { refresh: async () => {} };
@@ -106,17 +105,13 @@ export async function showLibrary() {
     <section id="db-distribution" hidden></section>
     <div id="db-images">
     <p id="library-counts" aria-live="polite"></p><p id="library-analysis" class="hint"></p>
-    <div class="db-search-row"><label>Cerca nel catalogo<input id="library-search" type="search" placeholder="Titolo, descrizione o prompt"></label></div><details class="db-filter-panel" open><summary>Filtri e ordinamento</summary><div class="library-toolbar">
+    <div class="db-search-row"><label>Cerca nel catalogo<input id="library-search" type="search" placeholder="ID, titolo REAL, descrizione o prompt"></label></div><details class="db-filter-panel" open><summary>Filtri e ordinamento</summary><div class="library-toolbar">
       <nav class="library-views" aria-label="Viste">${Object.entries(STATUS_LABEL).map(([key, label]) =>
         `<button type="button" data-view="${key}" aria-pressed="${key === "library"}">${label}</button>`).join("")}</nav>
       <label>Origine<select id="library-origin"><option value="all">REAL e SLOP</option><option value="REAL">REAL</option><option value="SLOP">SLOP</option></select></label>
       <div class="db-tag-filter"><span>Tag</span><div class="db-tag-entry"><input id="library-tag" list="library-tag-list" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="es. riot, Invio" aria-label="Aggiungi un tag al filtro">
         <select id="library-tag-match" aria-label="Come combinare i tag"><option value="all">con tutti i tag</option><option value="any">con almeno un tag</option></select></div>
         <div class="rw-pills" id="library-tag-pills"></div></div>
-      <label>Gruppo<select id="library-group"><option value="">tutti</option></select></label>
-      <label class="library-check-inline"><input type="checkbox" id="library-redo-copy"> Copia da rifare in 4:5</label>
-      <label class="library-check-inline"><input type="checkbox" id="library-undescribed"> REAL senza descrizione</label>
-      <label class="library-check-inline"><input type="checkbox" id="library-incomplete"> Senza Genere, Colore o Supporto</label>
       <label>Ordina per<select id="library-sort"><option value="added">data di aggiunta</option><option value="views">visualizzazioni</option><option value="accuracy">accuratezza</option></select></label>
       <label>Ordine<select id="library-order"><option value="desc">decrescente</option><option value="asc">crescente</option></select></label>
       <datalist id="library-tag-list"></datalist>
@@ -215,16 +210,9 @@ export async function showLibrary() {
       }
       catch (error) { errors.push(error instanceof Error ? error.message : String(error)); if (/OpenAI:/.test(String(error))) break; }
     }
-    await Promise.all([load(), refreshTags(), refreshAnalysis(), refreshGroups()]);
+    await Promise.all([load(), refreshTags(), refreshAnalysis()]);
     progress("");
     message(`${done} di ${ids.length} completate.` + conflictText(conflicts) + (errors.length ? " " + [...new Set(errors)].join(" / ") : ""));
-  };
-  const refreshGroups = async () => {
-    try {
-      const { groups } = await call<{ groups: { key: string; real: number; slop: number }[] }>("/slop/state");
-      const select = $<HTMLSelectElement>("#library-group");
-      select.innerHTML = '<option value="">tutti</option>' + groups.map(g => `<option value="${escape(g.key)}"${g.key === filter.group ? " selected" : ""}>${escape(g.key)} (${g.real} REAL, ${g.slop} SLOP)</option>`).join("");
-    } catch { /* the filter stays as it is */ }
   };
   /** Analyses images one by one after an explicit confirmation of the total estimate. */
   const analyzeMany = async (ids: string[], describe = false) => {
@@ -253,8 +241,7 @@ export async function showLibrary() {
   let loadSeq = 0;
   const load = async () => {
     const seq = ++loadSeq;
-    const params = new URLSearchParams({ status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q, batch: filter.batch,
-      group: filter.group, redo_copy: filter.redo_copy ? "1" : "", incomplete: filter.incomplete ? "1" : "", undescribed: filter.undescribed ? "1" : "" });
+    const params = new URLSearchParams({ status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q, batch: filter.batch });
     $("#library-batch-filter").hidden = !filter.batch;
     const data = await call<{ items: Item[]; counts: { status: string; origin: string; n: number }[] }>("?" + params);
     if (seq !== loadSeq) return;
@@ -277,22 +264,14 @@ export async function showLibrary() {
       `<button type="button" data-filter-remove="${escape(t)}" aria-label="Togli ${escape(t)} dal filtro">×</button>`)).join("") ||
       "<small>Nessun tag: tutte le immagini</small>";
   };
-  /** Starting tags of a generated SLOP: the tags of the REAL it is the twin of. Empty for a REAL or an uploaded SLOP. */
-  const startTags = (item: Item) => {
-    const pills = item.origin === "SLOP" ? startPills(item.generation?.slot) : "";
-    if (!pills) return "";
-    return `<div class="library-start-tags" data-start-tags><span class="image-preview-label">Tag di partenza</span>
-      <p class="hint">Tag da cui è stato scritto il prompt; i tag dell'immagine sono quelli dell'analisi.</p>
-      <div class="image-preview-tags">${pills}</div></div>`;
-  };
   const preview = (item: Item) => openPreview(item.origin === "REAL"
-    ? { src: item.file, alt: item.title, title: item.title, description: item.description,
+    ? { src: item.file, alt: imageLabel(item), title: imageLabel(item), description: item.description,
       link: item.source_url ? { href: item.source_url, label: "Apri la pagina su Commons" } : undefined }
-    : { src: item.file, alt: item.title, title: item.title,
-      extra: (item.prompt ? `<p><span class="image-preview-label">Prompt</span><br><q lang="en">${escape(item.prompt)}</q></p>` : "") + startTags(item) });
+    : { src: item.file, alt: imageLabel(item), title: imageLabel(item),
+      extra: (item.prompt ? `<p><span class="image-preview-label">Prompt</span><br><q lang="en">${escape(item.prompt)}</q></p>` : "") });
   const card = (item: Item) => `<li class="library-card${selected.has(item.id) ? " is-selected" : ""}" data-id="${escape(item.id)}">
-    <label class="library-check"><input type="checkbox" data-select="${escape(item.id)}" ${selected.has(item.id) ? "checked" : ""} aria-label="Seleziona ${escape(item.title)}"></label>
-    <button type="button" class="library-open" data-open="${escape(item.id)}" data-long-press aria-label="Apri ${escape(item.title)}">
+    <label class="library-check"><input type="checkbox" data-select="${escape(item.id)}" ${selected.has(item.id) ? "checked" : ""} aria-label="Seleziona ${escape(imageLabel(item))}"></label>
+    <button type="button" class="library-open" data-open="${escape(item.id)}" data-long-press aria-label="Apri ${escape(imageLabel(item))}">
       <img src="${escape(item.file)}" alt="" loading="lazy" draggable="false"><span class="library-badges"><span class="badge badge-${item.origin.toLowerCase()}">${item.origin}</span>
       <span class="badge badge-status">${STATE_LABEL[item.status]}</span></span>
     </button></li>`;
@@ -350,11 +329,10 @@ export async function showLibrary() {
     done: "Analizzata: tag generati una volta sola, da rivedere prima di approvare.",
     uncertain: "Esito incerto: " + item.analysis.error, failed: "Analisi non riuscita: " + item.analysis.error })[item.analysis.status];
   const metricText = (m: Metrics) => `lato ${m.long} px / rumore ${m.noise.toFixed(1)} / nitidezza ${m.sharpness.toFixed(1)} / contrasto ${m.contrast} / saturazione ${m.saturation.toFixed(2)}`;
-  /** Group, missing categories and the paid completion. */
-  const groupBlock = (item: Item) => {
+  /** Missing categories and the paid completion. */
+  const categoriesBlock = (item: Item) => {
     const missing = item.missing_categories.map(c => CATEGORY_LABELS[c as Category] || c);
-    return `<p class="hint" data-group>${item.group ? `Gruppo: <strong>${escape(item.group.genre)}</strong>, <strong>${escape(item.group.time)}</strong>.` : "Fuori dai gruppi del bilanciamento (servono Genere e Tempo)."}` +
-      (missing.length ? ` Mancano: ${escape(missing.join(", "))}.` : "") + "</p>" +
+    return (missing.length ? `<p class="hint" data-missing-categories>Mancano: ${escape(missing.join(", "))}.</p>` : "") +
       (item.completable && analysis?.enabled ? '<p><button type="button" id="library-complete">Completa Genere, Colore e Supporto (a pagamento)</button></p>' : "");
   };
   /** Measures of the copy and, for a SLOP, its treatment with the commands (free; they make the copy again). */
@@ -372,11 +350,11 @@ export async function showLibrary() {
   const showDetail = (item: Item) => {
     open = item;
     const editable = item.status === "new" || item.status === "approved";
-    const fields = FIELDS.filter(([key]) => item.origin === "SLOP" || (key !== "prompt" && key !== "model"));
+    const fields = FIELDS.filter(([key]) => item.origin === "REAL" ? key !== "prompt" && key !== "model" : !["title", "source_url", "author", "license_name", "license_url"].includes(key));
     detail.innerHTML = `<form method="dialog" class="library-detail-close"><button aria-label="Chiudi">×</button></form>
-      <h2 id="library-detail-title">${escape(item.title)}</h2>
+      <h2 id="library-detail-title">${escape(imageLabel(item))}</h2>
       <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / originale ${item.width}×${item.height}${item.copy ? ` / copia di gioco WebP ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}: è ciò che vedranno i giocatori` : " / copia di gioco non pronta"}</p>
-      <div class="library-detail-body"><div class="game-media-surface library-preview"><img data-game-media draggable="false" src="${escape(item.file)}" alt="${escape(item.title)}"></div>
+      <div class="library-detail-body"><div class="game-media-surface library-preview"><img data-game-media draggable="false" src="${escape(item.file)}" alt="${escape(imageLabel(item))}"></div>
       <div class="library-fields"><p>${statsLine(item)}</p>
       ${item.in_play ? `<p class="hint">In ${item.in_play} ${item.in_play === 1 ? "partita" : "partite"} in corso: continuano con la versione con cui sono iniziate; le modifiche valgono dalle partite nuove.</p>` : ""}
       ${item.status === "published" ? '<p class="db-edit-note">Pubblicata: per modificarla avvia la modifica. La foto esce subito dalla pubblicazione, quindi non entra in nuove partite; quelle in corso finiscono con la versione attuale. Finita la modifica resta approvata: la ripubblichi quando vuoi.</p>' : ""}
@@ -384,7 +362,7 @@ export async function showLibrary() {
       ${item.no_derivatives ? '<p class="db-edit-note">Licenza senza opere derivate (ND): la foto è esclusa dal gioco, perché la copia di gioco la ritaglia.</p>' : ""}
       ${!item.copy && item.status === "new" ? '<p><button type="button" id="library-copy">Prepara la copia di gioco</button></p>' : ""}
       ${editable ? '<p><button type="button" id="library-crop">Inquadratura</button></p>' : ""}
-      ${groupBlock(item)}
+      ${categoriesBlock(item)}
       ${measuresBlock(item, editable)}
       ${fields.map(([key, label, max, area]) => `<label>${label}${area
         ? `<textarea data-field="${key}" maxlength="${max}" rows="3" ${editable ? "" : "readonly"}>${escape(item[key])}</textarea>`
@@ -393,7 +371,6 @@ export async function showLibrary() {
       ${item.origin === "REAL" && !item.real_description && item.copy && item.status !== "trash" ? (unsure(item) ? `<p class="hint" data-analysis-unsure>${escape(analysisLine(item))}</p>` : "") + '<button type="button" id="library-description-analysis">Analisi combinata tag e descrizione (a pagamento)</button>' : ""}
       <div class="library-tags"><span>Tag</span>${legend()}<ul>${sortByCategory(item.tags, item.categories).map(t => `<li class="tag-cat tag-cat-${categoryOf(item.categories, t)}" title="${escape(CATEGORY_LABELS[categoryOf(item.categories, t)])}">${escape(t)}${editable ? ` <button type="button" data-tag-remove="${escape(t)}" aria-label="Togli ${escape(t)}">×</button>` : ""}</li>`).join("") || "<li>nessuno</li>"}</ul>
         ${item.origin === "REAL" && !item.tags.some(t => categoryOf(item.categories, t) === "time") ? '<p class="hint" data-no-time>Nessun tag di Tempo: aggiungi il decennio se è noto.</p>' : ""}
-        ${startTags(item)}
         ${editable ? '<div class="library-tag-entry library-inline"><input id="library-tag-input" list="library-tag-list" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="nuovo tag, Invio">' + categorySelect('id="library-tag-category"') + '</div><p id="library-tag-hint" class="hint">Scegli la categoria per un tag nuovo. Maiuscole, accenti e spazi vengono convertiti (São Paulo → sao-paulo); inglese per i nomi comuni.</p>' : ""}</div>
       ${item.status === "new" && item.copy ? `<p class="library-analysis">${analysisLine(item)} ${analysis?.enabled && (item.analysis.status !== "running" || interrupted(item)) && item.analysis.status !== "done"
         ? `<button type="button" id="library-analyze">${item.analysis.status === "none" ? "Analizza con IA" : "Riprova l'analisi"} (a pagamento)</button>` : ""}</p>` : ""}
@@ -462,20 +439,20 @@ export async function showLibrary() {
     try {
       if (button.id === "library-description-analysis") {
         const repeat = unsure(open);
-        if (!window.confirm(`Analizzare nuovamente tag e descrizione di «${open.title}»? Una chiamata a pagamento con ${analysis?.model}. I tag saranno sostituiti.${repeat ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : ""}`)) return;
+        if (!window.confirm(`Analizzare nuovamente tag e descrizione di «${imageLabel(open)}»? Una chiamata a pagamento con ${analysis?.model}. I tag saranno sostituiti.${repeat ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : ""}`)) return;
         open = await call<Item>(`/${open.id}/analyze`, {method:"POST",body:JSON.stringify(repeat ? {confirm:true,refresh_description:true,repeat_uncertain:true} : {confirm:true,refresh_description:true})});
       }
       else if (button.dataset.tagRemove) open = await save(open, { tags: open.tags.filter(t => t !== button.dataset.tagRemove) });
       else if (button.id === "library-copy") { detailMessage("Preparo la copia di gioco…"); open = await prepareItemCopy<Item>(open); }
       else if (button.id === "library-complete" && analysis) {
-        if (!window.confirm(`Completare Genere, Colore e Supporto di «${open.title}» con ${analysis.model}? È una chiamata a pagamento, una sola volta per l'immagine; gli altri tag restano.`)) return;
+        if (!window.confirm(`Completare Genere, Colore e Supporto di «${imageLabel(open)}» con ${analysis.model}? È una chiamata a pagamento, una sola volta per l'immagine; gli altri tag restano.`)) return;
         detailMessage("Completamento in corso…");
         const completed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(open.id)}/categories`, { method: "POST", body: JSON.stringify({ confirm: true }) });
         open = completed; detailMessage("Completamento fatto." + conflictText(completed.tag_conflicts));
-        void Promise.all([refreshTags(), refreshAnalysis(), refreshGroups()]);
+        void Promise.all([refreshTags(), refreshAnalysis()]);
       }
       else if (button.id === "library-treatment-edit") {
-        const choice = await chooseTreatment(open, open.title);
+        const choice = await chooseTreatment(open, imageLabel(open));
         if (!choice) return;
         detailMessage("Rifaccio la copia con il trattamento scelto…");
         open = await prepareItemCopy<Item>(open, open.copy?.crop || undefined, choice);
@@ -485,10 +462,10 @@ export async function showLibrary() {
         const off = button.id === "library-treatment-off";
         detailMessage(off ? "Rifaccio la copia senza trattamento…" : "Rifaccio la copia con il trattamento…");
         open = await prepareItemCopy<Item>(open, open.copy?.crop || undefined, { off });
-        detailMessage(open.treatment && !open.treatment.off ? "Copia trattata." : open.treatment ? "Copia senza trattamento." : "Nessuna REAL misurata nel gruppo: copia senza trattamento.");
+        detailMessage(open.treatment && !open.treatment.off ? "Copia trattata." : open.treatment ? "Copia senza trattamento." : "Misure della REAL di riferimento non disponibili: copia senza trattamento.");
       }
       else if (button.id === "library-crop") {
-        const choice = await chooseFrame(open.id, open.width, open.height, open.copy ? { crop: open.copy.crop } : null, open.title);
+        const choice = await chooseFrame(open.id, open.width, open.height, open.copy ? { crop: open.copy.crop } : null, imageLabel(open));
         if (!choice) return;
         detailMessage("Rifaccio la copia con la nuova inquadratura…");
         open = await saveFrame<Item>(open, choice);
@@ -496,7 +473,7 @@ export async function showLibrary() {
       }
       else if (button.id === "library-analyze" && analysis) {
         const repeat = unsure(open) ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
-        if (!window.confirm(`Analizzare «${open.title}» con ${analysis.model}? È una chiamata a pagamento. I tag attuali saranno sostituiti.${repeat}`)) return;
+        if (!window.confirm(`Analizzare «${imageLabel(open)}» con ${analysis.model}? È una chiamata a pagamento. I tag attuali saranno sostituiti.${repeat}`)) return;
         detailMessage("Analisi in corso…");
         const analysed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(open.id)}/analyze`, { method: "POST",
           body: JSON.stringify(repeat ? { confirm: true, repeat_uncertain: true } : { confirm: true }) });
@@ -509,12 +486,12 @@ export async function showLibrary() {
       else if (button.dataset.action === "delete") { await call("/" + encodeURIComponent(open.id), { method: "DELETE" }); detail.close(); open = null; }
       else if (button.dataset.action === "edit") {
         // Owner decision of 2026-11-11: the photo leaves publication as soon as the edit starts.
-        if (!window.confirm(`Modificare «${open.title}»? Esce subito dalla pubblicazione e non entra in nuove partite; le partite in corso finiscono con la versione attuale. Finita la modifica resta approvata.`)) return;
+        if (!window.confirm(`Modificare «${imageLabel(open)}»? Esce subito dalla pubblicazione e non entra in nuove partite; le partite in corso finiscono con la versione attuale. Finita la modifica resta approvata.`)) return;
         open = await call<Item>(`/${encodeURIComponent(open.id)}/withdraw`, { method: "POST", body: "{}" });
         detailMessage("Modifica avviata: la foto non è più pubblicata.");
       }
       else if (button.dataset.action === "remove") {
-        if (!window.confirm(`Eliminare «${open.title}»? Esce dalla pubblicazione e va nel cestino; le partite in corso finiscono con la versione attuale.`)) return;
+        if (!window.confirm(`Eliminare «${imageLabel(open)}»? Esce dalla pubblicazione e va nel cestino; le partite in corso finiscono con la versione attuale.`)) return;
         open = await call<Item>(`/${encodeURIComponent(open.id)}/trash`, { method: "POST", body: "{}" });
       }
 
@@ -643,10 +620,6 @@ export async function showLibrary() {
     }
     else if (target.id === "library-tag") addFilterTag(target);
     else if (target.id === "library-tag-match") { filter.match = target.value; void load(); }
-    else if (target.id === "library-group") { filter.group = target.value; void load(); }
-    else if (target.id === "library-redo-copy") { filter.redo_copy = target.checked; void load(); }
-    else if (target.id === "library-undescribed") { filter.undescribed = target.checked; void load(); }
-    else if (target.id === "library-incomplete") { filter.incomplete = target.checked; void load(); }
   });
   /** A tag typed in the filter, converted like a tag written by hand; an alias is resolved by the server only when saving, so
    * here the label is used as typed. */
@@ -826,7 +799,7 @@ export async function showLibrary() {
   // The REAL wizard is the section shown first: it is mounted before the others load.
   realWizard = await mountRealWizard($<HTMLElement>("#real-wizard"), async () => { await Promise.all([load(), refreshTags(), refreshAnalysis()]); })
     .catch(error => { $("#real-wizard").textContent = String(error instanceof Error ? error.message : error); return null; });
-  await Promise.all([load(), refreshTags(), refreshAnalysis(), refreshGroups()]).catch(error => message(String(error instanceof Error ? error.message : error)));
+  await Promise.all([load(), refreshTags(), refreshAnalysis()]).catch(error => message(String(error instanceof Error ? error.message : error)));
   await refreshContexts().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   await refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   await call<Numbers>("/settings").then(n => renderNumbers(n)).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));

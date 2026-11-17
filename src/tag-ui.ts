@@ -27,18 +27,17 @@ export const legend = () => '<p class="tag-legend">' + CATEGORIES.map(c => pill(
 
 /** Independent SLOP catalogue and anonymous editorial inputs. */
 export interface StartSlot {
-  index?: number; group?: string | null; theme?: string[];
+  index?: number; theme?: string[];
   tags?: { label: string; category: string }[] | Record<string, string>;
 }
-/** The starting tags of a slot with their category and, for the old slots, a note («gruppo», «tema»). */
+/** The starting tags of a slot with their category and, for the old slots, the old theme note. */
 export function startTagList(slot: StartSlot | null | undefined): { label: string; category: Category; note: string }[] {
   if (!slot) return [];
   if (Array.isArray(slot.tags)) return sortByCategory(slot.tags.map(t => t.label), Object.fromEntries(slot.tags.map(t => [t.label, t.category])))
     .map(label => ({ label, category: categoryOf(Object.fromEntries((slot.tags as { label: string; category: string }[]).map(t => [t.label, t.category])), label), note: "" }));
-  const [genre, time] = (slot.group || "").split("/"), theme = Array.isArray(slot.theme) ? slot.theme.filter(t => typeof t === "string") : [];
+  const theme = Array.isArray(slot.theme) ? slot.theme.filter(t => typeof t === "string") : [];
   const old = slot.tags && typeof slot.tags === "object" ? slot.tags as Record<string, string> : {};
-  return [...(genre && time ? [{ label: genre, category: "genre" as Category, note: "gruppo" }, { label: time, category: "time" as Category, note: "gruppo" }] : []),
-    ...theme.map(label => ({ label, category: "other" as Category, note: "tema" })),
+  return [...theme.map(label => ({ label, category: "other" as Category, note: "tema" })),
     ...Object.entries(old).filter(([c, label]) => isCategory(c) && typeof label === "string" && !theme.includes(label)).map(([c, label]) => ({ label, category: c as Category, note: "" }))];
 }
 export const startPills = (slot: StartSlot | null | undefined) =>
