@@ -67,7 +67,7 @@ with sync_playwright() as p:
         tag_input = page.locator('#library-tag')
         tag_input.fill('dbb-riot'); tag_input.press('Enter')
         expect(page.locator('#library-tag-pills .rw-pill')).to_have_count(1)
-        cards = page.locator(','.join(f'.library-card[data-id="{photo["id"]}"]' for photo in (real,slop,beach)))
+        cards = page.locator(f'.library-card:has([aria-label^="Apri {prefix}"]),.library-card[data-id="{slop["id"]}"],.library-card[data-id="{beach["id"]}"]')
         expect(cards).to_have_count(2)
         tag_input.fill('DBB Paris'); tag_input.press('Enter')  # converted like a typed tag
         expect(page.locator('#library-tag-pills .rw-pill', has_text='dbb-paris')).to_have_count(1)
