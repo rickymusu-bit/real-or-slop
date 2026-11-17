@@ -67,7 +67,7 @@ with sync_playwright() as p:
         tag_input = page.locator('#library-tag')
         tag_input.fill('dbb-riot'); tag_input.press('Enter')
         expect(page.locator('#library-tag-pills .rw-pill')).to_have_count(1)
-        cards = page.locator(f'.library-card:has([aria-label^="Apri {prefix}"])')
+        cards = page.locator(','.join(f'.library-card[data-id="{photo["id"]}"]' for photo in (real,slop,beach)))
         expect(cards).to_have_count(2)
         tag_input.fill('DBB Paris'); tag_input.press('Enter')  # converted like a typed tag
         expect(page.locator('#library-tag-pills .rw-pill', has_text='dbb-paris')).to_have_count(1)
@@ -102,7 +102,7 @@ with sync_playwright() as p:
         expect(cards).to_have_count(2)
         page.locator('#library-origin').select_option('SLOP')
         expect(cards).to_have_count(1)
-        expect(cards.locator('.library-open')).to_have_attribute('aria-label', f'Apri {prefix}-spiaggia')
+        expect(cards.locator('.library-open')).to_have_attribute('aria-label', 'Apri SLOP '+beach['id'][:8])
         long_press(page, cards.locator('.library-open'))
         expect(page.locator('dialog.image-preview')).to_contain_text('A beach, 1960s')
         page.locator('dialog.image-preview').get_by_role('button', name="Chiudi l'anteprima").click()
@@ -168,7 +168,7 @@ with sync_playwright() as p:
         expect(cards).to_have_count(2)
 
         # Edit a published SLOP: confirmation, out of publication, approved; then the prompt and a regeneration.
-        page.get_by_role('button', name=f'Apri {prefix}-scontri').click()
+        page.locator(f'.library-card[data-id="{slop["id"]}"] .library-open').click()
         dialog = page.locator('#library-detail')
         expect(dialog.locator('.db-edit-note')).to_be_visible()
         expect(dialog.locator('[data-field=caption]')).to_have_count(0)
@@ -200,7 +200,7 @@ with sync_playwright() as p:
         # Crop: the 60×40 SLOP is 3:2, whole; as 1:1 the crop is 40×40 centred, three steps left. One frame only, no view.
         page.locator('#library-tag-match').select_option('any')
         tag_input.fill('dbb-beach'); tag_input.press('Enter')
-        page.get_by_role('button', name=f'Apri {prefix}-spiaggia').click()
+        page.locator(f'.library-card[data-id="{beach["id"]}"] .library-open').click()
         expect(dialog).to_contain_text('copia di gioco WebP 32×40, 4:5 verticale')
         dialog.locator('#library-crop').click()
         editor = page.locator('dialog.crop-dialog')
@@ -231,7 +231,7 @@ with sync_playwright() as p:
         # redraws the preview in the page, saving makes the copy here with the owner's settings and uploads it.
         metrics = json.dumps({'long': 40, 'noise': 3.0, 'sharpness': 6.0, 'contrast': 120, 'saturation': 0.2, 'cast': [2, 0, -2], 'tint': [0, 0, 0], 'v': 3})
         sql(f"UPDATE images SET generation_batch='test-treatment',generation_slot=json_object('target_metrics',json('{metrics}')) WHERE id='{beach['id']}'")
-        page.get_by_role('button', name=f'Apri {prefix}-spiaggia').click()
+        page.locator(f'.library-card[data-id="{beach["id"]}"] .library-open').click()
         dialog.locator('#library-treatment-on').click()
         expect(dialog.locator('#library-detail-message')).to_have_text('Copia trattata.')
         dialog.locator('#library-treatment-edit').click()

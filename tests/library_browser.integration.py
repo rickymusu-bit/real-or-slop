@@ -80,17 +80,18 @@ with sync_playwright() as p:
         expect(detail.locator('.library-tags li.tag-cat')).to_have_count(2)
         expect(detail.locator('[data-stats]')).to_have_text('Vista 0 volte / classificata correttamente 0')
         detail.locator('.library-detail-close button').click()
-        add(page, picture(f'{name}-street.jpg', (40, 40, 190), (300, 300)), 'SLOP')
+        slop=add(page, picture(f'{name}-street.jpg', (40, 40, 190), (300, 300)), 'SLOP')
+        slop_label='SLOP '+slop['id'][:8]
         page.locator('[data-view=library]').click()  # reload the list
-        expect(page.locator(f'.library-open[aria-label^="Apri {name}-"]')).to_have_count(3)
+        expect(page.locator(f'.library-open[aria-label^="Apri {name}-"], .library-open[data-open="{slop["id"]}"]')).to_have_count(3)
         # Sorting: date added, newest first by default; ascending puts the oldest first; views all 0 keep the newest first.
-        titles = lambda: [l[5:] for l in page.locator('.library-open').evaluate_all("bs => bs.map(b => b.getAttribute('aria-label'))") if l.startswith(f'Apri {name}-')]
+        titles = lambda: [l[5:] for l in page.locator('.library-open').evaluate_all("bs => bs.map(b => b.getAttribute('aria-label'))") if l.startswith(f'Apri {name}-') or l==f'Apri {slop_label}']
         expect(page.locator('#library-sort')).to_have_value('added'); expect(page.locator('#library-order')).to_have_value('desc')
-        assert titles()[:3] == [f'{name}-street', f'{name}-spare', f'{name}-rivoli'], titles()
+        assert titles()[:3] == [slop_label, f'{name}-spare', f'{name}-rivoli'], titles()
         page.locator('#library-order').select_option('asc')
-        mine = titles(); assert mine.index(f'{name}-rivoli') < mine.index(f'{name}-spare') < mine.index(f'{name}-street'), mine
+        mine = titles(); assert mine.index(f'{name}-rivoli') < mine.index(f'{name}-spare') < mine.index(slop_label), mine
         page.locator('#library-sort').select_option('views')
-        mine = titles(); assert mine.index(f'{name}-street') < mine.index(f'{name}-spare') < mine.index(f'{name}-rivoli'), mine  # ties: newest first
+        mine = titles(); assert mine.index(slop_label) < mine.index(f'{name}-spare') < mine.index(f'{name}-rivoli'), mine  # ties: newest first
         page.reload(); page.get_by_role('button', name='Database immagini').click()
         expect(page.locator('#library-sort')).to_have_value('views'); expect(page.locator('#library-order')).to_have_value('asc')  # remembered
         page.locator('#library-sort').select_option('added'); page.locator('#library-order').select_option('desc')
@@ -178,6 +179,8 @@ with sync_playwright() as p:
             expect(dialog.locator('[data-field=caption], [data-field=explanation]')).to_have_count(0)
             for key in ('source_url', 'author', 'license_name', 'license_url'):
                 expect(dialog.locator(f'[data-field={key}]')).to_have_count(1 if real else 0)
+            expect(dialog.locator('[data-field=title]')).to_have_count(1 if real else 0)
+            expect(dialog.locator('[data-start-tags]')).to_have_count(0)
             for key in ('prompt', 'model'):
                 expect(dialog.locator(f'[data-field={key}]')).to_have_count(0 if real else 1)
             field = dialog.locator('[data-field=description]')
@@ -211,18 +214,18 @@ with sync_playwright() as p:
             expect(dialog.locator('[data-action=withdraw]')).to_be_visible()
             dialog.locator('.library-detail-close button').click()
         edit_and_publish(f'{name}-rivoli', 'Parigi, maggio 1968. Barricate in rue de Rivoli.', ['riot', 'paris'], True)
-        edit_and_publish(f'{name}-street', 'Parigi, 1968. Una strada bloccata.', ['riot', 'street'], False)
+        edit_and_publish(slop_label, 'Parigi, 1968. Una strada bloccata.', ['riot', 'street'], False)
         # Multi-selection: the spare photo and a published one go to the trash together (the published one leaves the game at once,
         # after a confirmation), then the spare is deleted for good and the published one comes back approved.
         page.get_by_role('checkbox', name=f'Seleziona {name}-spare').check()
-        page.get_by_role('checkbox', name=f'Seleziona {name}-street').check()
+        page.get_by_role('checkbox', name=f'Seleziona {slop_label}').check()
         confirms.clear()
         page.locator('[data-bulk=trash]').click()
         expect(page.locator('#library-message')).to_contain_text('2 aggiornate')
         assert any('pubblicata' in c for c in confirms), confirms
         page.locator('[data-view=trash]').click()
         expect(page.locator('.library-card')).to_have_count(2)
-        page.get_by_role('checkbox', name=f'Seleziona {name}-street').check()
+        page.get_by_role('checkbox', name=f'Seleziona {slop_label}').check()
         page.locator('[data-bulk=restore]').click()
         expect(page.locator('#library-message')).to_contain_text('1 aggiornate')
         page.get_by_role('checkbox', name=f'Seleziona {name}-spare').check()
@@ -230,13 +233,13 @@ with sync_playwright() as p:
         expect(page.locator('#library-message')).to_contain_text('1 eliminate definitivamente')
         expect(page.locator('.library-empty')).to_contain_text('cestino è vuoto')
         page.locator('[data-view=approved]').click()
-        expect(page.locator(f'.library-card:has([aria-label="Apri {name}-street"])')).to_have_count(1)
-        page.get_by_role('checkbox', name=f'Seleziona {name}-street').check()
+        expect(page.locator(f'.library-card:has([aria-label="Apri {slop_label}"])')).to_have_count(1)
+        page.get_by_role('checkbox', name=f'Seleziona {slop_label}').check()
         page.locator('[data-bulk=publish]').click()
         expect(page.locator('#library-message')).to_contain_text('1 aggiornate')
         # Withdraw both, so that the next viewport works with its own images.
         page.locator('[data-view=published]').click()
-        for title in (f'{name}-rivoli', f'{name}-street'): page.get_by_role('checkbox', name=f'Seleziona {title}').check()
+        for title in (f'{name}-rivoli', slop_label): page.get_by_role('checkbox', name=f'Seleziona {title}').check()
         page.locator('[data-bulk=withdraw]').click()
         expect(page.locator('#library-message')).to_contain_text('2 aggiornate')
         expect(page.locator(f'.library-card:has([aria-label="Apri {name}-rivoli"])')).to_have_count(0)

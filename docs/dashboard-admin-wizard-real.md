@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 3.4.0
+# Dashboard e wizard REAL — specifica 3.5.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:49:04Z.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T19:34:55Z.
 
 ## 1. Decisioni dell'owner
 
@@ -19,7 +19,7 @@ Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:49
 
 Riprogettazione 1.37.0: navigazione laterale desktop con descrizione delle cinque attività; su mobile barra orizzontale scorrevole. La barra laterale e i suoi pulsanti restano nella propria colonna, senza coprire i pannelli; le descrizioni dei pulsanti sono sotto il titolo. Su mobile la barra scorre mantenendo le voci compatte. Ultima sezione ricordata nella sessione. Testata compatta, pannelli coerenti, comandi tattili e focus visibile. I quattro passi REAL restano espliciti con schede e azioni raggruppate. Le eccezioni SLOP e i loro tentativi sono espandibili singolarmente; un aggiornamento della sezione conserva anche i tentativi aperti o chiusi; modalità manuale con prompt, tag e ancoraggi, modalità automatica con quantità scelta (1–10, entro le REAL libere), estrazione gratuita delle REAL e loro anteprima prima di confermare e avviare. Miniature con titolo e tag; tocco o pressione prolungata per originale intero e descrizione editoriale. Riestrazione e annullamento gratuiti; nessuna chiamata a pagamento fino alla conferma finale.
 
-Database con ricerca testuale, filtri di origine e tag (nessun gruppo di genere/decennio) e ordinamento richiudibili, griglia 4:5 e barra di selezione durante lo scorrimento. Rimossi i tre checkbox di manutenzione: copia da rifare in 4:5, REAL senza descrizione, categorie visive mancanti (decisione dell’owner del 2026-11-17). Statistiche con viste Panoramica, Adesso, Gioco, Chiamate IA e Catalogo. Impostazioni con indice per Modelli, Generazione, Istruzioni IA, Tag, Partite e Classifica; ogni gruppo mantiene il proprio salvataggio.
+Database con ricerca per ID e testo; le SLOP usano un’etichetta con ID abbreviato senza campo titolo né riquadro «Tag di partenza». Restano i tag osservati e modificabili, con filtri di origine e tag (nessun gruppo di genere/decennio) e ordinamento richiudibili, griglia 4:5 e barra di selezione durante lo scorrimento. Rimossi i tre checkbox di manutenzione: copia da rifare in 4:5, REAL senza descrizione, categorie visive mancanti (decisione dell’owner del 2026-11-17). Statistiche con viste Panoramica, Adesso, Gioco, Chiamate IA e Catalogo. Impostazioni con indice per Modelli, Generazione, Istruzioni IA, Tag, Partite e Classifica; ogni gruppo mantiene il proprio salvataggio.
 
 
 - Accesso con le credenziali dell'owner (`ADMIN_TOKEN`).

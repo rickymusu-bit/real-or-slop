@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 28.0.0, aggiornata il 2026-11-17T18:49:04Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 28.1.0, aggiornata il 2026-11-17T19:34:55Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -23,7 +23,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   e il contesto Commons, ma **non conosce l'esistenza delle SLOP**.
   Il modello successivo che produce **brief e prompt SLOP** riceve solo tag e descrizione salvata, **non l'immagine**;
   conosce invece lo scopo sintetico della generazione. Tenere separati i contesti di istruzione.
-- **Generazione SLOP manuale o automatica** (decisione dell'owner del 2026-11-17, specifica `generazione-slop` 8.1.0).
+- **Generazione SLOP manuale o automatica** (decisione dell'owner del 2026-11-17, specifica `generazione-slop` 8.2.0).
   Manuale: prompt, tag di partenza e ancoraggi scritti dall'owner, senza una REAL né una chiamata per scrivere il prompt.
   Automatica: prima estrazione gratuita e anteprima delle REAL, poi conferma del massimo e avvio sulle stesse REAL mostrate.
   Descrizione e tag di una REAL libera diventano brief e prompt con una sola chiamata testuale, senza immagine.
@@ -58,6 +58,9 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   file dell'immagine.
 - **Contenuti delle SLOP:** regole nella specifica `contenuti-e-trasparenza` (persone vive o morte da meno di 50 anni mai nominate né
   descritte, personaggi storici senza crimini attribuiti, regimi documentati ma mai celebrati, niente nudità fuori dalle opere d'arte).
+- **SLOP senza titolo né tag di partenza copiati sulla foto** (decisione del 2026-11-17). Identità tramite ID;
+  sulla figlia solo tag effettivi e modifiche dell’owner. I tag della REAL restano input del brief, quelli manuali input dell’owner.
+  Per rifare le copie si conservano misure anonime e soli parametri tecnici di colore/supporto, non la lista dei tag della madre.
 - **Niente didascalie**, né nel gioco né nella dashboard (decisione del 2026-11-13).
 - **Privacy:** solo il cookie tecnico, partite cancellate dopo 12 mesi, testi legali verificati da un legale: ogni modifica a Privacy o
   Termini va fatta verificare di nuovo (specifica `privacy-note-legali`).

@@ -230,11 +230,11 @@ async function hash(brief: Brief) { return [...new Uint8Array(await crypto.subtl
 async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array, evaluation: Evaluation, acceptance?: OwnerAcceptance) {
   // Reuse a saved accepted result if the Worker was interrupted after inserting the library row.
   const existing = await env.DB.prepare("SELECT id FROM images WHERE generation_batch=? AND json_extract(generation_slot,'$.process')=?").bind(batch.id, p.id).first<{id: string}>();
-  const config = parse<Snapshot>(p.snapshot, {} as Snapshot), item = itemsOf(batch)[p.slot];
-  const image = existing ? await viewOf(env, existing.id) : await create(env, { origin: "SLOP", title: "SLOP " + (p.slot + 1),
+  const config = parse<Snapshot>(p.snapshot, {} as Snapshot);
+  const image = existing ? await viewOf(env, existing.id) : await create(env, { origin: "SLOP",
     bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, prompt: p.prompt, model: config.image_model,
     generation: {batch: batch.id, quality: config.quality,
-      slot: {index: p.slot, target_metrics: config.target_metrics || null, tags: item.tags, process: p.id, brief: parse(p.brief, null), brief_hash: p.brief_hash, evaluation, ...(acceptance ? {acceptance} : {}), attempts: p.attempts}} });
+      slot: {index: p.slot, target_metrics: config.target_metrics || null, copy_style: {color: config.source_tags?.color?.[0] || "", medium: config.source_tags?.medium?.[0] || ""}, process: p.id, brief: parse(p.brief, null), brief_hash: p.brief_hash, evaluation, ...(acceptance ? {acceptance} : {}), attempts: p.attempts}} });
   await env.DB.prepare("UPDATE slop_reference_uses SET image_id=? WHERE process_id=?").bind(image.id, p.id).run();
   await env.DB.prepare("UPDATE slop_processes SET image_id=?,state='accepted',updated_at=? WHERE id=?").bind(image.id, now(), p.id).run();
   return {...image, process: {id: p.id, state: "accepted", attempts: p.attempts}};

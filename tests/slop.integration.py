@@ -25,7 +25,7 @@ try:
     code,manual_image=generate(manual);assert code==200,manual_image
     images.append(manual_image['id'])
     assert len(control())==2 and 'Editorial context' in control()[0]['body']['prompt']
-    assert manual_image['generation']['slot']['tags']==manual['items'][0]['tags']
+    assert 'tags' not in manual_image['generation']['slot'] and 'title' not in manual_image
     historical=real(described=False);sources.append(historical['id']);control([])
     assert call('batches',{'sources':[historical['id']]})[0]==409
     assert control()==[]
@@ -57,6 +57,16 @@ try:
     sent=logs[1]['body']['input'][0]['content'][1]['image_url']
     im=Image.open(io.BytesIO(base64.b64decode(sent.split(',')[1])));assert im.size==(96,64),im.size  # whole 3:2, no 4:5 crop
     assert logs[2]['body']['prompt'].startswith('A revised')
+    # Every evaluation is a fresh request for this whole candidate, with exactly these editorial inputs.
+    for n,log in enumerate(logs[1::2]):
+        request=log['body'];assert len(request['input'])==1 and len(request['input'][0]['content'])==2
+        given=json.loads(request['input'][0]['content'][0]['text'])
+        assert set(given)=={'attempt_id','brief','prompt','composition_preference','tolerance'},given
+        assert given['attempt_id']==b['processes'][0]['attempts'][n]['id']
+        assert given['brief']==original_brief and given['prompt']==b['processes'][0]['attempts'][n]['prompt']
+        assert 'previous_response_id' not in request and 'conversation' not in request
+    assert 'title' not in result and 'tags' not in result['generation']['slot']
+
     # The evaluator gets the base, its editable context and the rules fixed in the code; the attempt records the versions.
     instructions=logs[1]['body']['instructions']
     assert instructions.startswith('Lavori per un archivio') and 'credibilità fotografica' in instructions and 'ENTIRE unprocessed' in instructions,instructions[:300]

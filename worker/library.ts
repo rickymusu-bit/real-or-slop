@@ -1,6 +1,7 @@
 /** Image library of the dashboard (spec `libreria-immagini`, `database-immagini`): states and transitions, edits with
  * optimistic revision, tags with categories and aliases, vocabulary, game copies with their crop, trash and deletion of every row
  * and file, bulk actions, statistics per image, distribution, Commons acquisition, regeneration of a SLOP, settings and contexts. */
+import { imageLabel } from "../shared/image-label";
 import { body, HttpError, id, json, type Env } from "./core";
 import { browseCommonsCategory, browseCommonsSearch, commonsFile, MAX_IMAGE_BYTES } from "./commons-editorial";
 import { imageMime } from "../shared/image-format";
@@ -27,7 +28,7 @@ const MAX_PIXELS = 32_000_000;
 type Origin = "REAL" | "SLOP";
 type Status = "new" | "approved" | "published" | "trash";
 export interface Row {
-  id: string; origin: Origin; status: Status; trashed_from: Status | null; title: string; description: string;
+  id: string; origin: Origin; status: Status; trashed_from: Status | null; title: string | null; description: string;
   source_url: string; author: string; license_name: string; license_url: string; prompt: string; model: string;
   original_key: string; original_sha256: string; original_mime: string; width: number; height: number;
   copy_key: string | null; copy_sha256: string | null; copy_width: number | null; copy_height: number | null; copy_bytes: number | null;
@@ -128,10 +129,10 @@ function view(row: Row, rows: TagRow[], extra: Extra = {}) {
   const tags = rows.map(r => r.label);
   const v = row.copy_sha256 ? row.copy_sha256.slice(0, 12) : row.original_sha256.slice(0, 12);
   return {
-    id: row.id, origin: row.origin, status: row.status, trashed_from: row.trashed_from, title: row.title,
+    id: row.id, origin: row.origin, status: row.status, trashed_from: row.trashed_from,
     real_description: parseJson(row.real_description), real_description_provenance: parseJson(row.real_description_provenance),
     description: row.description,
-    ...(row.origin === "REAL" ? { commons_description: row.commons_description, source_url: row.source_url,
+    ...(row.origin === "REAL" ? { title: row.title, commons_description: row.commons_description, source_url: row.source_url,
       author: row.author, license_name: row.license_name, license_url: row.license_url }
       : { prompt: row.prompt, model: row.model }),
     width: row.width, height: row.height, original_mime: row.original_mime, original_sha256: row.original_sha256,
@@ -192,7 +193,7 @@ export function tagStatements(env: Env, imageIdValue: string, wanted: string[], 
 }
 
 /** Adds a new image to the library. The original goes to quarantine; the browser then uploads its game copy. */
-export async function create(env: Env, input: { origin: Origin; title: string; description?: string; bytes: ArrayBuffer;
+export async function create(env: Env, input: { origin: Origin; title?: string; description?: string; bytes: ArrayBuffer;
   source_url?: string; author?: string; license_name?: string; license_url?: string; prompt?: string; model?: string;
   generation?: { batch: string; slot: unknown; quality: string } }) {
   if (!env.QUARANTINE) throw new HttpError(503, "Quarantena privata non configurata");
@@ -205,15 +206,15 @@ export async function create(env: Env, input: { origin: Origin; title: string; d
   const width = geometry.width ?? geometry.encoded_width, height = geometry.height ?? geometry.encoded_height;
   if (width * height > MAX_PIXELS) throw new HttpError(413, "Immagine oltre 32 megapixel");
   const hash = await sha256(bytes);
-  const twin = await env.DB.prepare("SELECT id,status,title FROM images WHERE original_sha256=?").bind(hash).first<{ id: string; status: string; title: string }>();
-  if (twin) throw new HttpError(409, twin.status === "trash" ? `È già nel cestino come «${twin.title}»: ripristinala` : `È già nella libreria come «${twin.title}»`);
+  const twin = await env.DB.prepare("SELECT id,origin,status,title FROM images WHERE original_sha256=?").bind(hash).first<{ id: string; origin: Origin; status: string; title: string | null }>();
+  if (twin) throw new HttpError(409, twin.status === "trash" ? `È già nel cestino come «${imageLabel(twin)}»: ripristinala` : `È già nella libreria come «${imageLabel(twin)}»`);
   const imageIdValue = id(), key = `library/${imageIdValue}/original`, stamp = now();
   await env.QUARANTINE.put(key, bytes, { httpMetadata: { contentType: mime }, customMetadata: { sha256: hash } });
   try {
     await env.DB.prepare(`INSERT INTO images(id,origin,title,description,source_url,author,license_name,license_url,prompt,model,
       original_key,original_sha256,original_mime,width,height,created_at,updated_at,generation_batch,generation_slot,generation_quality,commons_description)
       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(imageIdValue, input.origin, text(input.title, "title", true), text(input.description, "description"),
+      .bind(imageIdValue, input.origin, input.origin === "REAL" ? text(input.title, "title", true) : null, text(input.description, "description"),
         text(input.source_url, "source_url"), text(input.author, "author"), text(input.license_name, "license_name"),
         text(input.license_url, "license_url"), text(input.prompt, "prompt"), text(input.model, "model"),
         key, hash, mime, width, height, stamp, stamp, input.generation?.batch ?? null,
@@ -289,7 +290,7 @@ async function storeCopy(request: Request, env: Env, row: Row) {
 
 async function edit(env: Env, row: Row, data: Record<string, unknown>) {
   const applicable = Object.keys(TEXT_FIELDS).filter(key => row.origin === "REAL"
-    ? !["prompt", "model"].includes(key) : !["source_url", "author", "license_name", "license_url"].includes(key));
+    ? !["prompt", "model"].includes(key) : !["title", "source_url", "author", "license_name", "license_url"].includes(key));
   const allowed = ["revision", "tags", "tag_categories", ...(row.origin === "REAL" ? ["real_description"] : []), ...applicable];
   if (Object.keys(data).some(key => !allowed.includes(key))) throw new HttpError(400, "Campi non previsti");
   if (data.revision !== row.revision) throw new HttpError(409, "Immagine modificata altrove: ricaricare");
@@ -402,7 +403,7 @@ async function list(env: Env, url: URL) {
   const where = [status === "library" ? "status<>'trash'" : "status=?1", "(?2='all' OR origin=?2)",
     `(?3='[]' OR id IN (SELECT it.image_id FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE t.label IN (SELECT value FROM json_each(?3))
       GROUP BY it.image_id HAVING count(DISTINCT t.label)>=CASE ?5 WHEN 'any' THEN 1 ELSE json_array_length(?3) END))`,
-    "(?4='' OR title LIKE '%'||?4||'%' COLLATE NOCASE OR description LIKE '%'||?4||'%' COLLATE NOCASE OR prompt LIKE '%'||?4||'%' COLLATE NOCASE)", "(?6='' OR generation_batch=?6)",
+    "(?4='' OR id LIKE '%'||?4||'%' COLLATE NOCASE OR title LIKE '%'||?4||'%' COLLATE NOCASE OR description LIKE '%'||?4||'%' COLLATE NOCASE OR prompt LIKE '%'||?4||'%' COLLATE NOCASE)", "(?6='' OR generation_batch=?6)",
     `(?7=0 OR (SELECT count(DISTINCT t.category) FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id
       AND t.category IN ('genre','color','medium'))<3)`, `(?8=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, "(?9=0 OR (origin='REAL' AND real_description IS NULL))"].join(" AND ");
   await sweepRetired(env);

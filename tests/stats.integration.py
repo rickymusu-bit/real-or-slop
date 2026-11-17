@@ -43,7 +43,7 @@ call('/settings', {'max_generation_attempts': 3}, method='PUT')
 # Statistics: a game being played now, an open game left yesterday, a concluded game, a game whose preparation expired.
 now = int(time.time() * 1000)
 statements = ["INSERT INTO images(id,origin,status,title,original_key,original_sha256,original_mime,width,height,copy_key,copy_sha256,copy_crop,created_at,updated_at) VALUES "
-              + ",".join(f"('st-img-{i}','{o}','published','s{i}','st/{i}','{format(900 + i, '064x')}','image/png',40,50,'st/c{i}','{format(900 + i, '064x')}','{'{"format":"3:2"}' if i == 0 else '{}'}','x','x')"
+              + ",".join(f"('st-img-{i}','{o}','published',CASE '{o}' WHEN 'REAL' THEN 's{i}' ELSE NULL END,'st/{i}','{format(900 + i, '064x')}','image/png',40,50,'st/c{i}','{format(900 + i, '064x')}','{'{"format":"3:2"}' if i == 0 else '{}'}','x','x')"
                          for i, o in enumerate(['REAL', 'REAL', 'SLOP', 'SLOP']))]
 def game(sid, level, phase, created, rounds):
     statements.append(f"INSERT INTO game_sessions(id,mode,level,created_at,owner_hash,phase,timing_mode,round_seconds) VALUES('{sid}','levels','{level}',{created},'x','{phase}','per-image',20)")

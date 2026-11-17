@@ -78,6 +78,7 @@ assert set(listing(q='crowded beach', tags='db-beach')) == {beach['id']}
 assert not listing(q='crowded beach', origin='REAL')
 assert not listing(q='crowded beach', status='published')
 assert not listing(q='no-such-catalogue-text')
+assert set(listing(q=slop['id'][:12])) == {slop['id']}
 # Filters: one tag, all of several tags, any of several tags, origin.
 assert set(listing(tags='db-riot')) == {real['id'], slop['id']}
 assert set(listing(tags='db-riot,db-paris')) == {real['id']}

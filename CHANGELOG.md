@@ -1,9 +1,9 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-17T18:49:04Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-17T19:34:55Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.39.0 — 2026-11-17T18:49:04Z
+## 1.39.0 — 2026-11-17T19:34:55Z
 
 - Database: rimossi i checkbox «Copia da rifare in 4:5», «REAL senza descrizione» e «Senza Genere, Colore o Supporto», con lo stato e i parametri obsoleti inviati dal browser. Le analisi in gruppo si eseguono sulla selezione esplicita.
 - Generazione automatica in due passaggi: estrazione gratuita delle REAL, con miniature, titoli, tag e anteprima dell'originale intero con descrizione; poi conferma del massimo e avvio. Riestrazione e annullamento senza chiamate.
@@ -16,6 +16,8 @@ I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella c
 - Un aggiornamento dello studio conserva anche l’apertura dei singoli tentativi nelle eccezioni SLOP, evitando che prompt e valutazione si richiudano durante la lettura.
 
 - «Accetta comunque il tentativo N» anche con difetti critici/minori, incertezze o vincoli non confermati, nei processi conclusi/sospesi. Conferma con le segnalazioni e massimo una chiamata per i tag; scelta registrata separatamente dalla valutazione originale. Foto nuova, senza approvazione o pubblicazione automatiche; gestione dei doppi clic e dello stato in caso di file mancante. Nessuna nuova migrazione.
+
+- SLOP senza titolo né riquadro «Tag di partenza»: ID abbreviato nella dashboard, ricerca per ID, titolo escluso dall’analisi. Migrazione 0058 elimina titoli SLOP e tag ereditati dai metadati della figlia; conserva titoli REAL, tag osservati, processi, legami e parametri tecnici della copia. Input esatto del valutatore documentato e verificato per ciascuna iterazione, senza cronologia implicita.
 
 ## 1.38.0 — 2026-11-17T10:19:38Z
 

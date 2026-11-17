@@ -1,6 +1,6 @@
-# Copie di gioco — specifica 12.1.0
+# Copie di gioco — specifica 12.2.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:23:22Z.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T19:34:55Z.
 
 ## 1. Decisioni dell'owner
 
@@ -153,6 +153,8 @@ Decisione dell'owner del 2026-11-16: il trattamento della copia si modifica come
   proposti torna al trattamento proposto. Le impostazioni restano quando la copia si rifà («Rifai la copia di gioco», nuova
   inquadratura, «Senza/Con trattamento»), finché la REAL di riferimento è la stessa.
 - Tutto è gratuito: nessun modello è chiamato.
+
+Colore e supporto del riferimento sono salvati come parametri tecnici `copy_style`, insieme alle misure anonime: non occorre conservare la lista dei tag della REAL sulla figlia. La 0058 converte i dati pregressi e conserva trattamento già salvato e regolazioni dell’owner. I «Tag di partenza» non compaiono nel dettaglio della SLOP.
 
 ## 5. Nella partita
 

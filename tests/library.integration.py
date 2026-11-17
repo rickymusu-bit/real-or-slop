@@ -111,12 +111,13 @@ status, real, _ = patch(real, {'description': 'Fotografia scattata durante il ma
 status, result, _ = patch(real, {'tags': []}); assert status == 409 and 'almeno un tag' in result['error'], result
 # A SLOP image: no rights checkbox, but copy and tags are required.
 slop_source = photo((0, 0, 200), (48, 48), exif=False, fmt='PNG')
-status, slop, _ = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': 'SLOP', 'title': 'Generated street scene', 'prompt': 'A street in 1968'}),
+status, slop, _ = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': 'SLOP', 'prompt': 'A street in 1968'}),
                        raw=slop_source, mime='image/png')
 assert status == 201 and slop['prompt'] == 'A street in 1968', slop
-assert not {'source_url', 'author', 'license_name', 'license_url', 'commons_description', 'explanation'} & slop.keys(), slop
+assert sql("SELECT title FROM images WHERE id='"+slop['id']+"'")[0]['title'] is None
+assert not {'title', 'source_url', 'author', 'license_name', 'license_url', 'commons_description', 'explanation'} & slop.keys(), slop
 assert not {'prompt', 'model', 'explanation'} & real.keys(), real
-for item, change in [(real, {'explanation': 'Unused'}), (real, {'prompt': 'Not a REAL field'}), (slop, {'author': 'Not a SLOP field'})]:
+for item, change in [(real, {'explanation': 'Unused'}), (real, {'prompt': 'Not a REAL field'}), (slop, {'author': 'Not a SLOP field'}), (slop, {'title': 'Not a SLOP field'})]:
     status, result, _ = patch(item, change)
     assert status == 400 and 'Campi non previsti' in result['error'], result
 assert call(f'{API}/{slop["id"]}/approve', {})[0] == 409  # no copy

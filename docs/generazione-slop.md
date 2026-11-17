@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 8.1.0
+# Generazione SLOP — specifica 8.2.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:49:04Z.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T19:34:55Z.
 
 ## Due modalità e avviso sul dataset
 
@@ -13,7 +13,7 @@ di genere/decennio, quote per tag o soglie di gruppo. Genere e Tempo restano nor
 **Manuale:** l'owner scrive prompt inglese, tag di partenza e brief (ancoraggi obbligatori, preferenze, elementi liberi ed esclusioni).
 Non occorre una REAL. Preparare e modificare il processo prima del primo tentativo è gratuito; nessuna chiamata scrive o riscrive
 il prompt manuale. Poi partono lo stesso ciclo di generazione e valutazione, la revisione e la copia 4:5. I tag di partenza restano
-nello snapshot; i tag finali descrivono l'originale prodotto, con la normale analisi dopo accettazione. Nessun trattamento da una REAL mancante.
+nello snapshot privato del processo, senza essere copiati nei metadati della figlia; i tag finali descrivono l'originale prodotto, con la normale analisi dopo accettazione. Nessun trattamento da una REAL mancante.
 
 **Automatica:** l'owner sceglie da una a dieci SLOP, entro il numero di REAL libere con descrizione. La quantità può essere diversa
 dallo sbilanciamento, anche quando il catalogo è in pareggio. Campione casuale uniforme, senza ripetizioni. Una chiamata testuale
@@ -65,9 +65,30 @@ Prima del primo tentativo è possibile salvare o riscrivere brief e prompt. Ogni
 
 Workflow Cloudflare: brief, generazione, valutazione e analisi dei tag dopo accettazione. Continua anche chiudendo la dashboard. Ogni chiamata è acquisita nel database prima dell'invio; gli esiti incerti non si ripetono automaticamente. La ripresa esegue solo passi ancora disponibili. Lo stop termina prima della successiva chiamata; quella già inviata può concludersi.
 
-Il valutatore vede la SLOP intera, non ritagliata né trattata. Restituisce accetta, riprova, riscrivi prompt, riprogetta scena o revisione umana, con difetti critici/minori, vincoli, incertezze e motivazione. Credibilità prima dell'aderenza letterale; nell’accettazione automatica i difetti critici non sono mai compensabili. Luogo, data e identità non verificabili dai pixel sono annotazioni, non ragioni automatiche di rifiuto. La revisione del prompt conserva gli ancoraggi e le esclusioni del brief. Il controllo testuale non dimostra che il modello li abbia realmente rispettati: resta necessario il controllo umano.
+A ogni iterazione il valutatore riceve una nuova richiesta Responses API, senza conversazione o `previous_response_id`:
+- l’immagine generata corrente intera, prima di crop e trattamento, come data URL;
+- un testo JSON con esattamente `attempt_id`, `brief` (required, preferred, flexible, exclusions), `prompt` corrente,
+  `composition_preference` e `tolerance` congelata nel processo;
+- istruzioni composte da contesto Base e contesto Valutazione attivi al momento della richiesta, seguiti dalle regole fisse del codice;
+- schema JSON obbligatorio della risposta e limite di 8000 token in uscita.
+
+Non riceve l’immagine REAL, titolo o tag della madre, né immagini o valutazioni precedenti. Il brief può contenere ancoraggi ricavati
+dai tag della REAL; non è la lista dei tag. Nei tentativi successivi il prompt può essere quello rivisto, mentre gli ancoraggi restano
+immutabili. Il modello è quello di testo registrato nello snapshot all’avvio. Il valutatore vede la SLOP intera, non ritagliata né trattata. Restituisce accetta, riprova, riscrivi prompt, riprogetta scena o revisione umana, con difetti critici/minori, vincoli, incertezze e motivazione. Credibilità prima dell'aderenza letterale; nell’accettazione automatica i difetti critici non sono mai compensabili. Luogo, data e identità non verificabili dai pixel sono annotazioni, non ragioni automatiche di rifiuto. La revisione del prompt conserva gli ancoraggi e le esclusioni del brief. Il controllo testuale non dimostra che il modello li abbia realmente rispettati: resta necessario il controllo umano.
 
 Tentativi massimi 1–5, tolleranza 0–2. A tolleranza zero, difetti minori provocano un nuovo tentativo entro il limite. Snapshot dei modelli, qualità e limiti all'avvio. Massimo iniziale per SLOP automatica: una chiamata brief, due per tentativo (immagine e valutazione), una analisi tag dopo accettazione. In manuale manca la chiamata brief: 1 + 2N invece di 2 + 2N. Nei test solo API fittizie. Nessun punteggio di difficoltà deriva dal numero di tentativi.
+
+## Identità e tag della foto SLOP
+
+Decisione del 2026-11-17: nessun titolo delle SLOP. La foto usa il proprio ID; la dashboard mostra un’etichetta con ID abbreviato,
+mai salvata come titolo né inviata ai modelli. Il titolo rimane obbligatorio solo per le REAL.
+
+Il riquadro «Tag di partenza» scompare dal dettaglio e dall’anteprima della figlia; i tag copiati sono rimossi dallo slot della foto.
+Restano i tag osservati dall’analisi della SLOP intera e le modifiche dell’owner. L’analisi riceve prompt e descrizione aggiuntiva se presente,
+non il titolo della SLOP o i tag di partenza; conserva il vocabolario generale per mantenere coerenti i nomi. Genere, Colore e Supporto
+si deducono solo dall’immagine. I tag della REAL restano input privati del processo per scrivere o riscrivere il brief; i tag inseriti
+dall’owner restano disponibili nella generazione manuale. Colore e supporto necessari alla copia sono parametri tecnici `copy_style`,
+separati dal catalogo dei tag e dalle misure numeriche. Non si cancella il legame madre–figlia.
 
 ## Revisione e copie
 
@@ -96,3 +117,5 @@ La 0056 elimina i campi e le impostazioni dei gruppi dal database. Le informazio
 restano come normali tag di partenza; prompt, tentativi, chiamate, immagini e registro madre–figlia sono conservati.
 
 L’accettazione manuale estesa non richiede nuove migrazioni: decisione e data sono nei metadati privati della foto, la valutazione originale resta nel tentativo.
+
+La 0058 elimina i titoli SLOP e i tag di partenza copiati sulla foto. Conserva titoli REAL, tag osservati, dati dei processi, relazioni e impostazioni delle copie; non genera nuove analisi.
