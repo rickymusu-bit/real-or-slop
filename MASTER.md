@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 27.1.2, aggiornata il 2026-11-17T05:35:07Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 27.1.3, aggiornata il 2026-11-17T05:46:28Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,7 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.37.0:** dashboard riprogettata nelle cinque sezioni e proposte dai conteggi grezzi, con campione casuale senza soglie. `src/admin-workspace.ts` e `src/admin-workspace.css`: struttura e stile. Migrazione 0054: conteggi delle proposte ignorate e rimozione delle impostazioni obsolete. Ricerca estesa a descrizione e prompt in `worker/library.ts`; test di upgrade 0054 in `tests/slop-proposals.test.ts`. Verifiche geometriche su barra laterale e titoli delle ispirazioni in `tests/library_browser.integration.py`; correzione della cascata CSS della testata e della navigazione. Allineata a main dopo il merge della #151; nessun rilascio della 1.37.0 eseguito.
+- **Ramo 1.37.0:** dashboard riprogettata nelle cinque sezioni e proposte dai conteggi grezzi, con campione casuale senza soglie. `src/admin-workspace.ts` e `src/admin-workspace.css`: struttura e stile. Migrazione 0054: conteggi delle proposte ignorate e rimozione delle impostazioni obsolete. Ricerca estesa a descrizione e prompt in `worker/library.ts`; test di upgrade 0054 in `tests/slop-proposals.test.ts`. Verifiche geometriche su barra laterale e titoli delle ispirazioni in `tests/library_browser.integration.py`; correzione della cascata CSS della testata e della navigazione. `tests/long_press.py` prepara il gesto con un’azione che ritrova le schede sostituite dal caricamento in background. Allineata a main dopo il merge della #151; nessun rilascio della 1.37.0 eseguito.
 
 - **Integrata in main la 1.36.0 (PR #151):** SLOP indipendenti e migrazione 0053, inclusa la validazione del trattamento anonimo per campioni malformati. Revisione tecnica in `docs/revisione-codice.md`. Stato del deploy non verificato in questa sessione.
 
