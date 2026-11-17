@@ -56,7 +56,7 @@ class Handler(BaseHTTPRequestHandler):
         if schema_name == 'slop_evaluation' and (behaviour is None or behaviour.get('evaluation')):
             decision = (behaviour or {}).get('evaluation', 'accept')
             behaviour = {'json': {'attempt_id': request['attempt_id'], 'decision': decision, 'critical_findings': (behaviour or {}).get('critical', []), 'minor_findings': (behaviour or {}).get('minor', []),
-                                  'editorial_constraints_met': (behaviour or {}).get('constraints', True), 'uncertainty_notes': [], 'action_reason': 'Visible photographic texture and plausible geometry throughout the frame.',
+                                  'editorial_constraints_met': (behaviour or {}).get('constraints', True), 'uncertainty_notes': (behaviour or {}).get('uncertainty', []), 'action_reason': 'Visible photographic texture and plausible geometry throughout the frame.',
                                   'revised_prompt': 'A revised documentary scene with a different viewpoint.' if decision in ('revise_prompt', 'replan_scene') else '',
                                   'preserved_required': request['brief']['required'], 'preserved_exclusions': request['brief']['exclusions']}}
         if schema_name == 'image_analysis' and (behaviour is None or 'tags' in behaviour):

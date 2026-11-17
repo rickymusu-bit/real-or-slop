@@ -129,7 +129,7 @@ try:
     source=real();sources.append(source['id']);b=batch(source);control([None,{'evaluation':'review_needed'}])
     assert generate(b)[1]['process']['state']=='review_needed';assert generate(b)[0]==409 and len(control())==2
     # The owner accepts the candidate after the review (owner decision of 2026-11-16): it enters the library as new, then one
-    # paid call analyses its tags; never twice, never without confirmation, never a candidate with critical defects.
+    # paid call analyses its tags; never twice or without confirmation; every finding can be overridden explicitly.
     proc=load(b)['processes'][0];att=proc['attempts'][0]
     assert call('processes/'+proc['id']+'/accept',{'attempt':att['id']})[0]==400
     assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':'another'})[0]==409
@@ -145,10 +145,41 @@ try:
     assert generate(b)[1]['process']['state']=='review_needed';proc=load(b)['processes'][0];control([])
     code,doubted=call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':proc['attempts'][0]['id']});assert code==200,doubted
     images.append(doubted['image']['id']);assert load(b)['processes'][0]['state']=='accepted' and len(control())==1
-    source=real();sources.append(source['id']);b=batch(source);control([None,{'evaluation':'review_needed','critical':['Centre: a hand with six fingers']}])
-    assert generate(b)[1]['process']['state']=='review_needed';proc=load(b)['processes'][0]
-    assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':proc['attempts'][0]['id']})[0]==409 and len(control())==2
-    assert load(b)['processes'][0]['state']=='review_needed' and load(b)['images']==[]
+    # Critical/minor findings, uncertainty and unmet anchors stay intact after explicit manual acceptance.
+    source=real();sources.append(source['id']);b=batch(source)
+    control([None,{'evaluation':'review_needed','critical':['Centre: a hand with six fingers'],
+        'minor':['Soft focus at the edge'],'uncertainty':['The sign may name another town'],'constraints':False}])
+    assert generate(b)[1]['process']['state']=='review_needed';proc=load(b)['processes'][0];att=proc['attempts'][0]
+    control([{'delay':0.2}])
+    with concurrent.futures.ThreadPoolExecutor(2) as pool:
+        results=list(pool.map(lambda _:call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']}),range(2)))
+    assert sorted(r[0] for r in results)==[200,409],results
+    assert len(control())==1  # one tag analysis, no new image or evaluation
+    saved=load(b)['images'][0];images.append(saved['id'])
+    assert saved['status']=='new' and saved['copy'] is None
+    assert saved['generation']['slot']['evaluation']==att['evaluation']
+    assert saved['generation']['slot']['acceptance']['by']=='owner'
+    assert saved['generation']['slot']['acceptance']['attempt']==att['id'] and saved['generation']['slot']['acceptance']['at']
+    assert load(b)['processes'][0]['attempts'][0]['evaluation']==att['evaluation']
+    assert sql("SELECT image_id FROM slop_reference_uses WHERE source_id='"+source['id']+"'")[0]['image_id']==saved['id']
+    # A failed or uncertain later attempt does not prevent choosing an earlier completed candidate.
+    for failure,state in [(400,'failed'),(503,'uncertain')]:
+        source=real();sources.append(source['id']);b=batch(source)
+        control([None,{'evaluation':'retry_same_prompt','minor':['Visible banding']},{'status':failure}])
+        assert generate(b)[1]['process']['state']=='retry';proc=load(b)['processes'][0];att=proc['attempts'][0]
+        assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']})[0]==409  # loop still resumable
+        assert generate(b)[0]==502;proc=load(b)['processes'][0];assert proc['state']==state,proc
+        control([])
+        assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':proc['attempts'][1]['id']})[0]==409
+        # A missing private file restores the original process state and makes no paid call.
+        key=sql("SELECT candidate_key FROM slop_attempts WHERE id='"+att['id']+"'")[0]['candidate_key']
+        sql("UPDATE slop_attempts SET candidate_key='missing' WHERE id='"+att['id']+"'")
+        assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']})[0]==404
+        assert load(b)['processes'][0]['state']==state and control()==[]
+        sql("UPDATE slop_attempts SET candidate_key='"+key+"' WHERE id='"+att['id']+"'")
+        code,done=call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']});assert code==200,done
+        images.append(done['image']['id']);assert len(control())==1
+        assert load(b)['images'][0]['generation']['slot']['evaluation']==att['evaluation']
     # Network uncertainty in evaluation preserves the private image and never resends.
     source=real();sources.append(source['id']);b=batch(source);control([None,{'status':503}])
     assert generate(b)[0]==502 and load(b)['processes'][0]['state']=='uncertain'
@@ -189,6 +220,12 @@ try:
     code,first=generate(strict);assert code==200 and first['process']['state']=='retry' and first['process']['evaluation']['decision']=='retry_same_prompt',first
     code,second=generate(strict);assert code==200 and second['process']['state']=='exhausted',second
     assert load(strict)['images']==[] and len(control())==4
+    proc=load(strict)['processes'][0];att=proc['attempts'][0];control([])
+    code,done=call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']});assert code==200,done
+    images.append(done['image']['id']);assert len(control())==1
+    chosen=load(strict)['images'][0]
+    assert chosen['prompt']==att['prompt'] and chosen['generation']['slot']['evaluation']==att['evaluation']
+    assert chosen['generation']['slot']['acceptance']['attempt']==att['id']
     # Deleting the reference later cannot break the accepted SLOP's analysis or leave stale paid-call foreign keys.
     source=real();sources.append(source['id']);fresh=batch(source);control([])
     code,accepted=generate(fresh);assert code==200,accepted;images.append(accepted['id'])

@@ -1,6 +1,7 @@
 /** Game copies made in the owner's browser (spec `copie-di-gioco`; owner decision of 2026-11-16: the Worker handles what concerns
  * OpenAI, the browser everything else): 4:5 crop of the oriented original, size of the recipe, light treatment of a SLOP from its
  * source REAL (proposed or set with the sliders), WebP, measures; the Worker checks and stores the upload. */
+import type { OwnerAcceptance } from "../shared/editorial";
 import { centredCrop, copyDimensions, cropQuery, GAME_COPY, type Crop } from "../shared/game-copy";
 import {
   gap, measure, METRICS_VERSION, settingsOf, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Settings, type Treatment,
@@ -108,7 +109,7 @@ export async function originalOf(imageId: string): Promise<Blob> {
 /** Items of the library a treatment plan is built from. */
 export interface TreatableItem {
   id: string; origin: string;
-  generation?: { slot?: { tags?: { label: string; category: string }[] | Record<string, string>; target_metrics?: Metrics | null } | null } | null;
+  generation?: { slot?: { tags?: { label: string; category: string }[] | Record<string, string>; target_metrics?: Metrics | null; acceptance?: OwnerAcceptance } | null } | null;
   treatment?: Treatment | null;
   copy?: { crop: Crop | null } | null;
 }

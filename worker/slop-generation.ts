@@ -8,7 +8,7 @@ import type { Metrics } from "../shared/copy-treatment";
 import { numberSettings } from "./app-settings";
 import { generationSize, nearestFormat, type Format } from "../shared/game-copy";
 import { MAX_BATCH, type InspirationItem } from "../shared/slop-proposals";
-import { briefSchema, realDescription, validBrief, validEvaluation, DECISIONS, type Brief, type Evaluation, type RealDescription } from "../shared/editorial";
+import { briefSchema, realDescription, validBrief, validEvaluation, DECISIONS, type Brief, type Evaluation, type RealDescription, type OwnerAcceptance } from "../shared/editorial";
 import { compositionAt } from "../shared/slop-composition";
 import { byCategory, inspirationItems } from "./slop-references";
 import { paid, PaidError, responseJson } from "./paid";
@@ -227,14 +227,14 @@ const evaluationSchema = { type: "object", additionalProperties: false,
 /** The part of the evaluator's instructions that the code enforces, after the editable context «slop_evaluation». */
 const EVALUATE_RULE = `Evaluate the ENTIRE unprocessed generated photograph. Choose accept, retry_same_prompt, revise_prompt, replan_scene or review_needed; choose review_needed only for a concrete doubt about something visible in the image that you cannot settle (for example a landmark or a sign that may contradict the place); facts that pixels alone can never verify (exact place, date, identity, whether the people are invented) are not a reason for review_needed: write them in uncertainty_notes and decide on the visible evidence. Never judge, and never ask in a revised prompt for, fidelity to the real appearance of a named building or place: a plausible building of that kind, style, period and region meets the anchor; a difference from the real one is neither a defect nor a reason for review_needed, nor makes editorial_constraints_met false. Critical defects are never accepted at any tolerance. Tolerance 0 accepts no minor defects: with only minor defects choose retry_same_prompt or revise_prompt, never review_needed; 1 accepts subtle photographically plausible imperfections; 2 tolerates minor defects only while credibility holds. If revising or replanning, give the revised prompt in this same response and copy every required anchor and exclusion of the brief verbatim into preserved_required and preserved_exclusions. Composition preferences are optional: never reject or request another attempt solely for placement or gaze; when revising retain the preference only if natural. Never compose for a later crop.`;
 async function hash(brief: Brief) { return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(brief))))].map(b => b.toString(16).padStart(2, "0")).join(""); }
-async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array, evaluation: Evaluation) {
+async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array, evaluation: Evaluation, acceptance?: OwnerAcceptance) {
   // Reuse a saved accepted result if the Worker was interrupted after inserting the library row.
   const existing = await env.DB.prepare("SELECT id FROM images WHERE generation_batch=? AND json_extract(generation_slot,'$.process')=?").bind(batch.id, p.id).first<{id: string}>();
   const config = parse<Snapshot>(p.snapshot, {} as Snapshot), item = itemsOf(batch)[p.slot];
   const image = existing ? await viewOf(env, existing.id) : await create(env, { origin: "SLOP", title: "SLOP " + (p.slot + 1),
     bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, prompt: p.prompt, model: config.image_model,
     generation: {batch: batch.id, quality: config.quality,
-      slot: {index: p.slot, target_metrics: config.target_metrics || null, tags: item.tags, process: p.id, brief: parse(p.brief, null), brief_hash: p.brief_hash, evaluation, attempts: p.attempts}} });
+      slot: {index: p.slot, target_metrics: config.target_metrics || null, tags: item.tags, process: p.id, brief: parse(p.brief, null), brief_hash: p.brief_hash, evaluation, ...(acceptance ? {acceptance} : {}), attempts: p.attempts}} });
   await env.DB.prepare("UPDATE slop_reference_uses SET image_id=? WHERE process_id=?").bind(image.id, p.id).run();
   await env.DB.prepare("UPDATE slop_processes SET image_id=?,state='accepted',updated_at=? WHERE id=?").bind(image.id, now(), p.id).run();
   return {...image, process: {id: p.id, state: "accepted", attempts: p.attempts}};
@@ -330,32 +330,29 @@ export async function closeProcess(env: Env, processId: string, data: Record<str
   if (!closed.meta.changes) throw new HttpError(409, "Processo inesistente o non da rivedere");
   return {attention: await attention(env)};
 }
-/** POST processes/:id/accept {confirm, attempt}: the owner accepts the candidate of a process whose evaluator asked for review.
- * Only a completed attempt with its whole candidate saved and no critical defect (critical defects are never compensable). The candidate enters the library as new, like an automatic acceptance; then one paid call analyses its tags. */
+/** The owner may accept a completed, evaluated candidate of a stopped process despite any findings.
+ * Original evaluation and owner acceptance stay separate; only the later tag analysis is paid. */
 export async function acceptProcess(env: Env, processId: string, data: Record<string, unknown>) {
   confirmOnly(data, ["attempt"]);
   if (!env.QUARANTINE) throw new HttpError(503, "Quarantena mancante");
   const p = await env.DB.prepare("SELECT * FROM slop_processes WHERE id=?").bind(processId).first<Process>();
-  if (!p || p.state !== "review_needed") throw new HttpError(409, "Processo inesistente o non in attesa della tua revisione");
+  if (!p || !(ATTENTION as readonly string[]).includes(p.state) || p.image_id) throw new HttpError(409, "Processo inesistente, già deciso o ancora in corso");
   const a = await env.DB.prepare("SELECT * FROM slop_attempts WHERE id=? AND process_id=?").bind(typeof data.attempt === "string" ? data.attempt : "", p.id).first<Attempt>();
+  const brief = validBrief(parse(p.brief, null));
   const evaluation = parse<Evaluation | null>(a?.evaluation ?? null, null);
-  if (!a || a.status !== "completed" || !a.candidate_key || !evaluation) throw new HttpError(409, "Tentativo senza candidata valutata");
-  // A missing anchor is a critical defect and is listed as one; «constraints not met» with no critical defect is the evaluator's
-  // doubt, which the owner settles (owner decision of 2026-11-16).
-  if (evaluation.critical_findings.length) throw new HttpError(409, "Difetti critici: la candidata non si può accettare");
+  if (!a || a.status !== "completed" || !a.candidate_key || !brief || !evaluation || !validEvaluation(evaluation, a.id, brief)) throw new HttpError(409, "Tentativo senza candidata valutata");
   const batch = await load(env, p.batch_id);
-  const claimed = await env.DB.prepare("UPDATE slop_processes SET state='running',updated_at=? WHERE id=? AND state='review_needed'")
-    .bind(now(), p.id).run().catch(() => ({meta: {changes: 0}}));
+  const claimed = await env.DB.prepare("UPDATE slop_processes SET state='running',updated_at=? WHERE id=? AND state=? AND image_id IS NULL")
+    .bind(now(), p.id, p.state).run().catch(() => ({meta: {changes: 0}}));
   if (!claimed.meta.changes) throw new HttpError(409, "Il processo è già stato deciso");
   let image;
   try {
     const file = await env.QUARANTINE.get(a.candidate_key);
     if (!file) throw new HttpError(404, "Candidata non più disponibile");
     const bytes = new Uint8Array(await file.arrayBuffer());
-    image = await materialize(env, {...p, prompt: a.prompt}, batch, bytes, {...evaluation, decision: "accept",
-      action_reason: (evaluation.action_reason + " Accettata dall'owner dopo la revisione.").slice(0, 3000)});
+    image = await materialize(env, {...p, prompt: a.prompt}, batch, bytes, evaluation, {by: "owner", attempt: a.id, at: now()});
   } catch (e) {
-    await env.DB.prepare("UPDATE slop_processes SET state='review_needed',updated_at=? WHERE id=? AND state='running' AND image_id IS NULL").bind(now(), p.id).run();
+    await env.DB.prepare("UPDATE slop_processes SET state=?,updated_at=? WHERE id=? AND state='running' AND image_id IS NULL").bind(p.state, now(), p.id).run();
     throw e;
   }
   // The SLOP is accepted whatever happens to its tags: a failed or uncertain analysis shows on its card, as for the runner.

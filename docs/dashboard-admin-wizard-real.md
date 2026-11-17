@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 3.3.1
+# Dashboard e wizard REAL — specifica 3.4.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:37:00Z.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:49:04Z.
 
 ## 1. Decisioni dell'owner
 
@@ -29,6 +29,8 @@ Database con ricerca testuale, filtri di origine e tag (nessun gruppo di genere/
   tutte le sezioni non sono pronte; ogni sezione ha il suo segnaposto. Il wizard REAL si monta per primo.
 - **Avviso sullo sbilanciamento** in cima alla dashboard, senza proposta né comandi di avvio. I controlli dei batch e il numero di SLOP stanno nella modalità automatica di «Generazione SLOP»; la modalità scelta resta nella sessione. I dettagli e la revisione dei processi restano consultabili nello studio.
 - Tornando a «Caricamento REAL», il wizard toglie le foto spostate nel cestino, pubblicate o eliminate altrove, con un avviso.
+
+Nelle eccezioni SLOP, «Accetta comunque il tentativo N» è disponibile per ogni candidata salvata e valutata, anche con difetti critici, minori o incertezze. La conferma elenca le segnalazioni e il massimo di una chiamata per i tag; annullare è gratuito. La scelta manuale è visibile nella revisione, separata dalla valutazione originale. Il processo deve essere concluso o sospeso; foto nuova, copia, approvazione e pubblicazione restano passaggi separati (decisione del 2026-11-17).
 
 ## 3. Anteprima a pressione prolungata
 

@@ -22,6 +22,8 @@ export function validBrief(value: unknown): Brief | null {
   return Object.fromEntries(BRIEF_KEYS.map(k => [k, (v[k] as string[]).map(s => s.trim())])) as unknown as Brief;
 }
 export const DECISIONS = ["accept", "retry_same_prompt", "revise_prompt", "replan_scene", "review_needed"] as const;
+/** Explicit owner decision, kept separately from the evaluator’s findings. */
+export interface OwnerAcceptance { by: "owner"; attempt: string; at: string }
 export interface Evaluation {
   attempt_id: string; decision: typeof DECISIONS[number]; critical_findings: string[]; minor_findings: string[];
   editorial_constraints_met: boolean; uncertainty_notes: string[]; action_reason: string; revised_prompt: string;

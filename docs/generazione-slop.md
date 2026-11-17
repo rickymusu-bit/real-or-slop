@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 8.0.1
+# Generazione SLOP — specifica 8.1.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:37:00Z.
+Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T18:49:04Z.
 
 ## Due modalità e avviso sul dataset
 
@@ -65,7 +65,7 @@ Prima del primo tentativo è possibile salvare o riscrivere brief e prompt. Ogni
 
 Workflow Cloudflare: brief, generazione, valutazione e analisi dei tag dopo accettazione. Continua anche chiudendo la dashboard. Ogni chiamata è acquisita nel database prima dell'invio; gli esiti incerti non si ripetono automaticamente. La ripresa esegue solo passi ancora disponibili. Lo stop termina prima della successiva chiamata; quella già inviata può concludersi.
 
-Il valutatore vede la SLOP intera, non ritagliata né trattata. Restituisce accetta, riprova, riscrivi prompt, riprogetta scena o revisione umana, con difetti critici/minori, vincoli, incertezze e motivazione. Credibilità prima dell'aderenza letterale; difetti critici mai compensabili. Luogo, data e identità non verificabili dai pixel sono annotazioni, non ragioni automatiche di rifiuto. La revisione del prompt conserva gli ancoraggi e le esclusioni del brief. Il controllo testuale non dimostra che il modello li abbia realmente rispettati: resta necessario il controllo umano.
+Il valutatore vede la SLOP intera, non ritagliata né trattata. Restituisce accetta, riprova, riscrivi prompt, riprogetta scena o revisione umana, con difetti critici/minori, vincoli, incertezze e motivazione. Credibilità prima dell'aderenza letterale; nell’accettazione automatica i difetti critici non sono mai compensabili. Luogo, data e identità non verificabili dai pixel sono annotazioni, non ragioni automatiche di rifiuto. La revisione del prompt conserva gli ancoraggi e le esclusioni del brief. Il controllo testuale non dimostra che il modello li abbia realmente rispettati: resta necessario il controllo umano.
 
 Tentativi massimi 1–5, tolleranza 0–2. A tolleranza zero, difetti minori provocano un nuovo tentativo entro il limite. Snapshot dei modelli, qualità e limiti all'avvio. Massimo iniziale per SLOP automatica: una chiamata brief, due per tentativo (immagine e valutazione), una analisi tag dopo accettazione. In manuale manca la chiamata brief: 1 + 2N invece di 2 + 2N. Nei test solo API fittizie. Nessun punteggio di difficoltà deriva dal numero di tentativi.
 
@@ -73,7 +73,11 @@ Tentativi massimi 1–5, tolleranza 0–2. A tolleranza zero, difetti minori pro
 
 Solo una candidata accettata entra nella libreria privata come nuova SLOP. Analisi tag sull'intero originale. Copia 4:5 preparata dopo accettazione nel browser, con identica codifica WebP delle REAL, senza metadati. Il trattamento usa misure numeriche salvate, senza identificativo della REAL e senza rileggerla. I cursori permettono correzioni manuali; una REAL eliminata non impedisce di rifare la copia. Se mancano le misure, la copia è senza trattamento.
 
-Accettazione automatica, approvazione dell'owner e pubblicazione sono distinte. Esauriti, in revisione, falliti e incerti restano in evidenza con tentativi e valutazioni finché l'owner li chiude. Per un processo in revisione si può accettare una candidata valutata senza difetti critici, anche se il modello non conferma un vincolo; la conferma avverte delle incertezze e autorizza una chiamata per i tag. Chiusura esplicita e manutenzione consentono poi la rimozione dei tentativi dopo sette giorni.
+Accettazione automatica, approvazione dell'owner e pubblicazione sono distinte. Esauriti, in revisione, falliti e incerti restano in evidenza con tentativi e valutazioni finché l'owner li chiude. Decisione dell’owner del 2026-11-17: in un processo esaurito, in revisione, fallito o incerto si può scegliere «Accetta comunque il tentativo N» per qualsiasi candidata intera salvata e con valutazione valida, anche con difetti critici, minori, incertezze o vincoli non confermati. Si può scegliere anche un tentativo precedente a quello finale. La conferma elenca le segnalazioni e dichiara il massimo di una chiamata a pagamento, per i tag; annullare non invia chiamate.
+
+L’accettazione manuale non cambia la valutazione originale: nello slot privato della foto viene registrata separatamente `acceptance:{by:"owner",attempt,at}`. La revisione mostra che la foto è stata accettata manualmente. Entra come SLOP nuova senza copia, mai approvata o pubblicata automaticamente. Per copie, approvazione e pubblicazione valgono i passaggi consueti. L’accettazione occupa la madre come qualunque altra figlia.
+
+Processi in corso, già accettati o chiusi, tentativi non valutati o senza candidata non sono accettabili. Una sola richiesta acquisisce atomicamente il processo: un doppio clic non duplica immagini o chiamate. Se il file è mancante lo stato precedente viene ripristinato senza chiamate; se fallisce l’analisi dei tag la foto resta accettata e segnala l’errore, senza ripetizione automatica. I limiti del ciclo automatico restano gli stessi. Chiusura esplicita e manutenzione consentono poi la rimozione dei tentativi dopo sette giorni.
 
 Aprire o chiudere il dettaglio di un tentativo conserva la scelta anche quando la sezione viene aggiornata.
 
@@ -90,3 +94,5 @@ La 0055 aggiunge il registro privato, elimina le proposte ignorate e la loro opz
 
 La 0056 elimina i campi e le impostazioni dei gruppi dal database. Le informazioni pregresse di genere e decennio negli slot
 restano come normali tag di partenza; prompt, tentativi, chiamate, immagini e registro madre–figlia sono conservati.
+
+L’accettazione manuale estesa non richiede nuove migrazioni: decisione e data sono nei metadati privati della foto, la valutazione originale resta nel tentativo.
