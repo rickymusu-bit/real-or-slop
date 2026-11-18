@@ -1,4 +1,4 @@
-"""PR 139: textual briefs, full-image evaluation, bounded attempts, uncertainty, concurrency and private candidates."""
+"""Manual generation in a gallery, full-image evaluation and bounded, idempotent attempts."""
 import base64
 import concurrent.futures
 import io
@@ -10,38 +10,24 @@ import urllib.request
 
 code,settings=call('/settings',library=True);assert code==200
 assert 'slop_section_min_real' not in settings['values']
-sources=[];images=[]
+gallery=make_gallery("Galleria manuale")['id'];images=[]
 try:
     # Manual generation requires no REAL and never pays for writing a prompt.
-    manual_input={'mode':'manual','prompt':'An ordinary street photograph.','tags':['street-scene','1960s'],'brief':BRIEF}
+    manual_input={'mode':'manual','gallery_id':gallery,'prompt':'An ordinary street photograph.','tags':['street-scene','1960s'],'brief':BRIEF}
     control([])
+    assert call('batches',{**manual_input,'gallery_id':None})[0]==400
     assert call('batches',{**manual_input,'tags':[]})[0]==400
     assert call('batches',{**manual_input,'brief':{**BRIEF,'required':[]}})[0]==400
     code,manual=call('batches',manual_input);assert code==200,manual
     assert manual['max_calls']==7 and manual['processes'][0]['snapshot']['mode']=='manual'
-    assert call('batches/'+manual['id']+'/prompts',{'confirm':True,'index':0})[0]==409
-    assert control()==[]
-    assert sql("SELECT count(*) AS n FROM slop_reference_uses WHERE process_id='"+manual['processes'][0]['id']+"'")[0]['n']==0
+    assert control()==[] and manual['gallery_id']==gallery
     code,manual_image=generate(manual);assert code==200,manual_image
     images.append(manual_image['id'])
     assert len(control())==2 and 'Editorial context' in control()[0]['body']['prompt']
     assert 'tags' not in manual_image['generation']['slot'] and 'title' not in manual_image
-    historical=real(described=False);sources.append(historical['id']);control([])
-    assert call('batches',{'sources':[historical['id']]})[0]==409
-    assert control()==[]
-    # A private manual description does not alter Commons or tags.
-    code,changed=call('/'+historical['id'],{'revision':historical['revision'],'real_description':DESCRIPTION},method='PATCH',library=True)
-    assert code==200 and changed['tags']==historical['tags'] and changed['description']=='Original Commons text',changed
-    b=batch(changed);[prompt]=control()
-    assert prompt['path']=='/v1/responses' and prompt['body']['text']['format']['name']=='slop_brief'
-    # Real buildings: named or invented, never reproduced faithfully (owner decision of 2026-11-16).
-    assert 'never require or ask for a faithful reproduction of a specific real building' in prompt['body']['instructions']
-    assert 'A frontal viewpoint, eye contact, a natural posed portrait, centred or symmetrical framing' in prompt['body']['instructions']
-    assert 'Add people, props and background detail only when the scene calls for them' in prompt['body']['instructions']
-    assert not any(c['type']=='input_image' for c in prompt['body']['input'][0]['content'])
-    inp=__import__('json').loads(prompt['body']['input'][0]['content'][0]['text'])
-    assert inp['description']==DESCRIPTION and inp['tags']['genre']==['street-scene']
-    assert b['max_calls']==8 and b['config']['max_generation_attempts']==3 and b['processes'][0]['state']=='ready'
+    assert manual_image['gallery_id']==gallery
+    assert call('batches',{'sources':['real']})[0]==409
+    b=batch(gallery)
     # Free edits before the first generation, immutable after the loop starts.
     code,b=call('batches/'+b['id'],{'briefs':[BRIEF],'prompts':['An ordinary documentary street photograph.']},method='PUT');assert code==200,b
     original_brief=b['processes'][0]['brief']
@@ -54,11 +40,10 @@ try:
             assert call('batches/'+b['id'],{'briefs':[BRIEF]},method='PUT')[0]==409
     historical_child=result['id'];images.append(historical_child);assert result['status']=='new' and result['copy'] is None
     b=load(b);assert b['processes'][0]['brief']==original_brief and len(b['processes'][0]['attempts'])==3
-    assert b['processes'][0]['calls']==7 and len(b['images'])==1
+    assert b['processes'][0]['calls']==6 and len(b['images'])==1
     logs=control();assert len(logs)==6
-    assert all(inp['composition'] in log['body']['prompt'] for log in logs[::2])
     sent=logs[1]['body']['input'][0]['content'][1]['image_url']
-    im=Image.open(io.BytesIO(base64.b64decode(sent.split(',')[1])));assert im.size==(96,64),im.size  # whole 3:2, no 4:5 crop
+    im=Image.open(io.BytesIO(base64.b64decode(sent.split(',')[1])));assert im.size==(96,96),im.size  # whole square, no 4:5 crop
     assert logs[2]['body']['prompt'].startswith('A revised')
     # Every evaluation is a fresh request for this whole candidate, with exactly these editorial inputs.
     for n,log in enumerate(logs[1::2]):
@@ -105,12 +90,12 @@ try:
     code,manual=upload(record);assert code==201 and manual['treatment']['settings']==chosen,manual
     assert upload(record)[1]['already_prepared'] is True
     assert call('/'+result['id']+'/analyze',{'confirm':True},library=True)[0]==200
-    assert load(b)['processes'][0]['calls']==8  # 2+2N, including the final tags
+    assert load(b)['processes'][0]['calls']==7  # 1+2N, including the final tags
     analysed=control()[-1];assert analysed['body']['text']['format']['schema']['required']==['tags']
     seen=analysed['body']['input'][0]['content'][1]['image_url'];assert seen.startswith('data:image/png;base64,'),seen[:40]
-    assert Image.open(io.BytesIO(base64.b64decode(seen.split(',')[1]))).size==(96,64)  # the whole SLOP, not its 4:5 copy
+    assert Image.open(io.BytesIO(base64.b64decode(seen.split(',')[1]))).size==(96,96)  # the whole SLOP, not its 4:5 copy
     # Exhaustion never creates a library image, and cannot consume another attempt after refresh.
-    source=real();sources.append(source['id']);b=batch(source)
+    b=batch(gallery)
     control([None,{'evaluation':'retry_same_prompt'}]*3)
     for n in range(3):code,result=generate(b);assert code==200,result
     assert result['process']['state']=='exhausted' and load(b)['images']==[] and len(control())==6
@@ -139,7 +124,7 @@ try:
     assert sql(f"SELECT count(*) AS n FROM slop_processes WHERE id='{exhausted['id']}'")[0]['n']==0
     assert call(seen['attempts'][0]['file'].split('/slop/')[1])[0]==404
     # review_needed stops early, even with attempts available.
-    source=real();sources.append(source['id']);b=batch(source);control([None,{'evaluation':'review_needed'}])
+    b=batch(gallery);control([None,{'evaluation':'review_needed'}])
     assert generate(b)[1]['process']['state']=='review_needed';assert generate(b)[0]==409 and len(control())==2
     # The owner accepts the candidate after the review (owner decision of 2026-11-16): it enters the library as new, then one
     # paid call analyses its tags; never twice or without confirmation; every finding can be overridden explicitly.
@@ -154,12 +139,12 @@ try:
     images.append(reviewed['images'][0]['id']);assert reviewed['images'][0]['status']=='new'
     assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']})[0]==409 and len(control())==1
     # Constraints the evaluator could not confirm, with no critical defect, are a doubt the owner settles (2026-11-16).
-    source=real();sources.append(source['id']);b=batch(source);control([None,{'evaluation':'review_needed','constraints':False}])
+    b=batch(gallery);control([None,{'evaluation':'review_needed','constraints':False}])
     assert generate(b)[1]['process']['state']=='review_needed';proc=load(b)['processes'][0];control([])
     code,doubted=call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':proc['attempts'][0]['id']});assert code==200,doubted
     images.append(doubted['image']['id']);assert load(b)['processes'][0]['state']=='accepted' and len(control())==1
     # Critical/minor findings, uncertainty and unmet anchors stay intact after explicit manual acceptance.
-    source=real();sources.append(source['id']);b=batch(source)
+    b=batch(gallery)
     control([None,{'evaluation':'review_needed','critical':['Centre: a hand with six fingers'],
         'minor':['Soft focus at the edge'],'uncertainty':['The sign may name another town'],'constraints':False}])
     assert generate(b)[1]['process']['state']=='review_needed';proc=load(b)['processes'][0];att=proc['attempts'][0]
@@ -174,10 +159,9 @@ try:
     assert saved['generation']['slot']['acceptance']['by']=='owner'
     assert saved['generation']['slot']['acceptance']['attempt']==att['id'] and saved['generation']['slot']['acceptance']['at']
     assert load(b)['processes'][0]['attempts'][0]['evaluation']==att['evaluation']
-    assert sql("SELECT image_id FROM slop_reference_uses WHERE source_id='"+source['id']+"'")[0]['image_id']==saved['id']
     # A failed or uncertain later attempt does not prevent choosing an earlier completed candidate.
     for failure,state in [(400,'failed'),(503,'uncertain')]:
-        source=real();sources.append(source['id']);b=batch(source)
+        b=batch(gallery)
         control([None,{'evaluation':'retry_same_prompt','minor':['Visible banding']},{'status':failure}])
         assert generate(b)[1]['process']['state']=='retry';proc=load(b)['processes'][0];att=proc['attempts'][0]
         assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']})[0]==409  # loop still resumable
@@ -194,41 +178,23 @@ try:
         images.append(done['image']['id']);assert len(control())==1
         assert load(b)['images'][0]['generation']['slot']['evaluation']==att['evaluation']
     # Network uncertainty in evaluation preserves the private image and never resends.
-    source=real();sources.append(source['id']);b=batch(source);control([None,{'status':503}])
+    b=batch(gallery);control([None,{'status':503}])
     assert generate(b)[0]==502 and load(b)['processes'][0]['state']=='uncertain'
     assert generate(b)[0]==409 and len(control())==2 and load(b)['images']==[]
     # Double click / two tabs: only one generation and evaluation, no duplicate library image.
-    source=real();sources.append(source['id']);b=batch(source);control([])
+    b=batch(gallery);control([])
     with concurrent.futures.ThreadPoolExecutor(2) as pool:results=list(pool.map(lambda _:generate(b),range(2)))
     assert all(code in (200,409) for code,_ in results),results
     b=load(b);assert len(b['images'])==1 and len(control())==2;images.append(b['images'][0]['id'])
-    # A confirmed rewrite of brief and prompt raises the maximum of the batch by its call.
-    source=real();sources.append(source['id']);rewritten=batch(source);control([])
-    code,rewritten=call('batches/'+rewritten['id']+'/prompts',{'confirm':True,'index':0});assert code==200,rewritten
-    assert len(control())==1 and rewritten['max_calls']==9 and rewritten['processes'][0]['calls']==2,rewritten
-    # A «slop_prompt» written for the twin prompts (pipeline 1) sends no brief call until the owner saves a new version.
-    sql("INSERT INTO model_contexts(id,part,body,created_at,pipeline) VALUES('editorial-twin','slop_prompt','Twin prompt text',strftime('%Y-%m-%dT%H:%M:%fZ','now'),1)")
-    code,state=call('/contexts',library=True);prompt_part=next(p for p in state['parts'] if p['part']=='slop_prompt')
-    assert prompt_part['outdated'] and prompt_part['proposed'],prompt_part
-    source=real();sources.append(source['id']);control([])
-    code,blocked=call('batches',{'sources':[source['id']]});assert code==200,blocked
-    code,result=call('batches/'+blocked['id']+'/prompts',{'confirm':True});assert code==409 and 'gemelle' in result['error'],result
-    assert control()==[] and sql("SELECT count(*) AS n FROM paid_calls WHERE process_id IN (SELECT id FROM slop_processes WHERE batch_id='"+blocked['id']+"')")[0]['n']==0
-    # Restoring keeps the old pipeline; saving the proposal unblocks.
-    code,state=call('/contexts/restore',{'id':'editorial-twin'},library=True);assert code==200
-    code,state=call('/contexts',{'part':'slop_prompt','body':prompt_part['proposed']},library=True);assert code==200
-    assert not next(p for p in state['parts'] if p['part']=='slop_prompt')['outdated']
-    code,unblocked=call('batches/'+blocked['id']+'/prompts',{'confirm':True});assert code==200 and len(control())==1,unblocked
-    sql("DELETE FROM model_contexts WHERE id='editorial-twin'")
     # Snapshot unchanged when settings change; 1–5 validation.
     assert call('/settings',{'max_generation_attempts':0},method='PUT',library=True)[0]==400
     assert call('/settings',{'max_generation_attempts':6},method='PUT',library=True)[0]==400
-    source=real();sources.append(source['id']);b=batch(source)
+    b=batch(gallery)
     assert call('/settings',{'max_generation_attempts':1,'editorial_tolerance':0},method='PUT',library=True)[0]==200
     assert load(b)['config']['max_generation_attempts']==3
     # Tolerance 0: a candidate with minor defects is never accepted and never stops the loop; it consumes another attempt.
     assert call('/settings',{'max_generation_attempts':2},method='PUT',library=True)[0]==200
-    source=real();sources.append(source['id']);strict=batch(source)
+    strict=batch(gallery)
     control([None,{'evaluation':'accept','minor':['slightly soft focus on the left edge']},None,{'evaluation':'accept','minor':['faint banding in the sky']}])
     code,first=generate(strict);assert code==200 and first['process']['state']=='retry' and first['process']['evaluation']['decision']=='retry_same_prompt',first
     code,second=generate(strict);assert code==200 and second['process']['state']=='exhausted',second
@@ -239,93 +205,22 @@ try:
     chosen=load(strict)['images'][0]
     assert chosen['prompt']==att['prompt'] and chosen['generation']['slot']['evaluation']==att['evaluation']
     assert chosen['generation']['slot']['acceptance']['attempt']==att['id']
-    # Approval, rather than generation or publication of the SLOP, unlocks permanent deletion of the source.
-    source=real();source_id=source['id'];sources.append(source_id)
-    assert call('/'+source_id+'/publish',{},library=True)[0]==200
-    fresh=batch(source);control([])
-    assert call('/'+source_id,library=True)[1]['status']=='published'
-    code,accepted=generate(fresh);assert code==200,accepted;images.append(accepted['id'])
-    code,withdrawn=call('/'+source_id,library=True)
-    assert code==200 and withdrawn['status']=='approved' and withdrawn['reference_state']=='unapproved',withdrawn
-    assert call('/'+source_id+'/publish',{},library=True)[0]==409
-    code,trashed=call('/'+source_id+'/trash',{},library=True);assert code==200 and trashed['status']=='trash',trashed
-    code,blocked=call('/'+source_id,method='DELETE',library=True);assert code==409 and 'Approva la SLOP' in blocked['error'],blocked
-    assert call('/bulk',{'action':'delete','ids':[source_id]},library=True)[1]=={'deleted':0,'postponed':1,'awaiting_slop':1}
-    assert call('/'+source_id+'/original',library=True)[0]==200
-    req=urllib.request.Request(LIBRARY+'/'+accepted['id']+'/original',headers={'Authorization':'Bearer '+TOKEN})
-    with urllib.request.urlopen(req) as r:original=r.read()
-    req=urllib.request.Request(LIBRARY+'/'+accepted['id']+'/copy',data=game_copy(original),method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'image/webp'})
-    with urllib.request.urlopen(req) as r:
-        assert r.status==201
-        copied=json.loads(r.read())
-    code,tagged=call('/'+accepted['id'],{'revision':copied['revision'],'tags':['street-scene']},method='PATCH',library=True)
-    assert code==200,tagged
-    assert call('/'+accepted['id']+'/approve',{},library=True)[0]==200
-    assert call('/'+accepted['id']+'/trash',{},library=True)[0]==200
-    assert call('/'+source_id,method='DELETE',library=True)[1]=={'deleted':1,'postponed':0}
-    assert call('/'+source_id,library=True)[0]==404
-    assert call('/'+accepted['id']+'/restore',{},library=True)[0]==200
-    assert call('/'+accepted['id']+'/publish',{},library=True)[1]['status']=='published'
-    assert call('/'+accepted['id']+'/original',library=True)[1]==original
-    # Closing a generation without a SLOP releases its source.
-    source=real();sources.append(source['id']);pending=batch(source);pid=pending['processes'][0]['id']
-    sql(f"UPDATE slop_processes SET state='review_needed' WHERE id='{pid}'")
-    call('/'+source['id']+'/trash',{},library=True)
-    assert call('/'+source['id'],method='DELETE',library=True)[0]==409
-    assert call('processes/'+pid+'/close',{})[0]==200
-    assert call('/'+source['id'],method='DELETE',library=True)[1]['deleted']==1
-    assert load(pending)['processes'][0]['id']==pid
-
-    # A mother is occupied while its accepted child exists, including trash and restoration.
-    predecessor=historical_child
-    assert call('batches',{'sources':[historical['id']]})[0]==409
-    call('/'+predecessor+'/trash',{},library=True)
-    assert call('batches',{'sources':[historical['id']]})[0]==409
-    assert call('/'+historical['id']+'/publish',{},library=True)[0]==409
-    assert call('/'+predecessor+'/restore',{},library=True)[0]==200
-    remove([predecessor]);images.remove(predecessor)
-    assert call('/'+historical['id']+'/publish',{},library=True)[0]==200
-    replacement=batch(historical)
-    code,replaced=generate(replacement);assert code==200,replaced;images.append(replaced['id'])
-    # Two simultaneous drafts may reserve a REAL only once; the losing transaction creates no orphan process.
-    source=real();sources.append(source['id']);control([])
-    with concurrent.futures.ThreadPoolExecutor(2) as pool:
-        drafts=list(pool.map(lambda _:call('batches',{'sources':[source['id']]}),range(2)))
-    assert sorted(code for code,_ in drafts)==[200,409],drafts
-    assert sql("SELECT count(*) AS n FROM slop_reference_uses WHERE source_id='"+source['id']+"'")[0]['n']==1
-    assert control()==[]
     # A Worker that died after recording a claim is suspended, including its paid ledger, after ten minutes.
-    source=real();sources.append(source['id']);stale=batch(source);pid=stale['processes'][0]['id']
+    stale=batch(gallery);pid=stale['processes'][0]['id']
     sql(f"UPDATE slop_processes SET state='running',updated_at='2000-01-01' WHERE id='{pid}'; INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,process_id) VALUES('editorial-stale-call','images','fake','pending','2000-01-01','2000-01-01','{pid}')")
     control([]);assert load(stale)['processes'][0]['state']=='uncertain'
     assert generate(stale)[0]==409 and control()==[]
     assert sql("SELECT status FROM paid_calls WHERE id='editorial-stale-call'")[0]['status']=='uncertain'
-    # A brief request that died with the browser connection: after ten minutes the batch follows its processes again.
-    three=[real()['id'] for _ in range(3)];sources.extend(three)
-    code,cut=call('batches',{'sources':three});assert code==200,cut
-    control([]);assert call('batches/'+cut['id']+'/prompts',{'confirm':True,'index':0})[0]==200
-    second=cut['processes'][1]['id']
-    sql(f"UPDATE slop_batches SET prompts_status='running',updated_at='2000-01-01' WHERE id='{cut['id']}'; UPDATE slop_processes SET state='prompting',updated_at='2000-01-01' WHERE id='{second}'; INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,process_id) VALUES('editorial-cut-call','prompts','fake','pending','2000-01-01','2000-01-01','{second}')")
-    cut=load(cut);assert [p['state'] for p in cut['processes']]==['ready','uncertain','draft'] and cut['prompts_status']=='none',cut
-    assert sql("SELECT status FROM paid_calls WHERE id='editorial-cut-call'")[0]['status']=='uncertain'
-    assert call('batches/'+cut['id']+'/prompts',{'confirm':True,'index':1})[0]==409  # never resent
-    code,cut=call('batches/'+cut['id']+'/prompts',{'confirm':True,'index':2});assert code==200 and cut['prompts_status']=='done',cut
-    assert len(control())==2 and any(p['id']==second for p in call('attention')[1]['attention'])
-    # The loop on Cloudflare (Workflow) from the studio: briefs first, then attempts and tags; the page only follows it.
+    # The manual loop runs on the Worker and keeps its consent and attempt bounds.
     def wait_run(b, seconds=90):
         for _ in range(seconds*4):
             b=load(b)
             if not (b['runner'] or {}).get('alive'):return b
             __import__('time').sleep(.25)
         raise AssertionError('the batch is still running on the server')
-    source=real();sources.append(source['id'])
-    code,run=call('batches',{'sources':[source['id']]});assert code==200,run
-    control([])
-    assert call('batches/'+run['id']+'/run',{'confirm':True,'phase':'images'})[0]==409  # briefs first
-    assert call('batches/'+run['id']+'/run',{'phase':'briefs'})[0]==400  # the owner's confirmation
-    code,run=call('batches/'+run['id']+'/run',{'confirm':True,'phase':'briefs'});assert code==200 and run['runner']['status'] in ('running','done'),run
-    run=wait_run(run);assert run['processes'][0]['state']=='ready' and run['prompts_status']=='done' and run['runner']['status']=='done',run
-    assert len(control())==1
+    run=batch(gallery)
+    assert call('batches/'+run['id']+'/run',{'phase':'images'})[0]==400
+    assert call('batches/'+run['id']+'/run',{'confirm':True,'phase':'briefs'})[0]==400
     control([{'delay':1.5},{'evaluation':'retry_same_prompt'},None,{'evaluation':'accept'}])
     code,run=call('batches/'+run['id']+'/run',{'confirm':True,'phase':'images'});assert code==200,run
     assert call('batches/'+run['id']+'/run',{'confirm':True,'phase':'images'})[0]==409  # one runner per batch
@@ -334,9 +229,7 @@ try:
     images.append(run['images'][0]['id']);assert run['images'][0]['analysis']['status']=='done'
     assert [r['path'] for r in control()]==['/v1/images/generations','/v1/responses']*2+['/v1/responses']  # 2 attempts, then the tags
     # «Interrompi»: the step in progress ends, no further paid step starts.
-    source=real();sources.append(source['id'])
-    code,halt=call('batches',{'sources':[source['id']]});control([])
-    call('batches/'+halt['id']+'/run',{'confirm':True,'phase':'briefs'});halt=wait_run(halt)
+    halt=batch(gallery)
     control([{'delay':2},{'evaluation':'retry_same_prompt'}]+[None,{'evaluation':'retry_same_prompt'}]*4)
     code,halt=call('batches/'+halt['id']+'/run',{'confirm':True,'phase':'images'});assert code==200,halt
     for _ in range(200):
@@ -352,16 +245,8 @@ try:
     code,halt=call('batches/'+halt['id']+'/run',{'confirm':True,'phase':'images'});assert code==200,halt
     halt=wait_run(halt);assert halt['processes'][0]['state']=='accepted' and len(halt['processes'][0]['attempts'])==2,halt
     images.append(halt['images'][0]['id'])
-    # Legacy batches are readable; no automatic conversion or paid resume.
-    legacy='editorial-legacy'
-    sql("INSERT INTO slop_batches(id,theme,slots,prompts,prompts_status,created_at,updated_at) VALUES('editorial-legacy','[]','[]','[]','done','x','x')")
-    control([]);assert call('batches/'+legacy)[0]==200
-    assert call('batches/'+legacy+'/images',{'confirm':True,'index':0,'quality':'high'})[0]==409 and control()==[]
 finally:
-    remove(images+sources)
-    # Release drafts/reviews opened by this suite so their source fixtures can be cleaned up.
-    sql("DELETE FROM slop_reference_uses WHERE image_id IS NULL AND source_id IN ("+','.join(repr(source) for source in sources)+")")
-    remove(sources)
+    remove(images)
     call('/settings',settings['values'],method='PUT',library=True)
-print('Editorial loop: combined contracts, text-only brief, all evaluator decisions, attempts/call cap, full image, private candidates, idempotency and legacy guards passed.')
+print('Manual gallery generation: full images, evaluator decisions, bounded attempts, private review and idempotency passed.')
 

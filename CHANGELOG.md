@@ -1,7 +1,13 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-18T05:56:24Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-18T19:45:07Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.42.0 — 2026-11-18T19:45:07Z
+
+- Gallerie obbligatorie per REAL e SLOP, con titolo, descrizione e Indicazioni SLOP. Assegnazione nel caricamento e nel Database.
+- Estrazione casuale gratuita dalla galleria e due conferme per proposte e immagini. Premessa e prompt dall’originale intero, valutazione con la premessa approvata. Le REAL restano utilizzabili nel gioco.
+- Migrazioni 0060 e 0061. Su decisione dell’owner, azzeramento del D1 corrente al rilascio, compresi catalogo, batch, partite, classifica, chiamate registrate e impostazioni. Rimozione del registro madre–figlia. Le immagini nuove richiedono una galleria anche nella generazione manuale.
 
 ## 1.41.0 — 2026-11-18T05:56:24Z
 

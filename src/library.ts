@@ -1,3 +1,4 @@
+import { galleryOptions, mountGalleries, type Gallery, type GalleryList } from "./galleries";
 /** Admin dashboard (spec `dashboard-admin-wizard-real`, section 2): the five sections, the loading notice, the box of
  * the automatic SLOP batches; the Database section (spec `database-immagini`: views, filters, sorting, cards with press-and-hold
  * preview, selection, detail with editing, crop, analysis, regeneration, observed tags of a generated SLOP, distribution) and Settings
@@ -31,7 +32,7 @@ import { tagFromInput } from "../shared/tag-input";
 
 type Status = "new" | "approved" | "published" | "trash";
 interface Item extends TreatableItem {
-  id: string; origin: "REAL" | "SLOP"; status: Status; trashed_from: Status | null; title?: string; description: string;
+  id: string; gallery_id: string; origin: "REAL" | "SLOP"; status: Status; trashed_from: Status | null; title?: string; description: string;
   commons_description: string | null; real_description: RealDescription | null; source_url: string; author: string; license_name: string; license_url: string;
   prompt: string; model: string; width: number; height: number; copy: { width: number; height: number; bytes: number; crop: Crop | null; sha256: string | null } | null;
   rights_confirmed: boolean; revision: number; tags: string[]; file: string; updated_at: string; created_at: string;
@@ -39,7 +40,6 @@ interface Item extends TreatableItem {
   generated: { tags: string[] } | null;
   categories: Record<string, string>;
   stats: { views: number; correct: number }; in_play: number; no_derivatives: boolean;
-  reference_state?: "pending" | "unapproved" | "approved" | null;
   missing_categories: string[]; completable: boolean;
   metrics: Metrics | null; treatment: Treatment | null; copy_sha?: string;
 }
@@ -47,7 +47,7 @@ interface Analysis { enabled: boolean; reason: string; model: string; calls_30_d
 interface ModelOption { id: string; available: boolean | null; qualities?: string[]; shutdown?: string | null }
 interface Models { text_model: string; image_model: string; image_quality: string; text_models: ModelOption[]; image_models: ModelOption[]; note: string }
 interface ContextVersion { id: string; body: string; created_at: string; pipeline: number; used: number }
-interface ContextState { max: number; parts: { part: string; current: { id: string; body: string }; history: ContextVersion[]; outdated?: boolean; proposed?: string | null }[] }
+interface ContextState { max: number; parts: { part: string; current: { id: string; body: string }; history: ContextVersion[]; proposed?: string | null }[] }
 interface Tag { label: string; category: Category; images: number; aliases: string[] }
 const API = "/api/admin/library";
 const STATUS_LABEL: Record<string, string> = { library: "Tutte", new: "Nuove", approved: "Approvate", published: "Pubblicate", trash: "Cestino" };
@@ -74,14 +74,8 @@ const conflictText = (list: Conflict[] = []) => list.length ? " Categorie in con
   `«${c.label}» proposto come ${CATEGORY_LABELS[c.proposed as Category] || c.proposed}, nel vocabolario è ${CATEGORY_LABELS[c.existing as Category] || c.existing}`).join("; ") + "." : "";
 const kb = (bytes: number) => bytes < 1024 ? bytes + " byte" : Math.round(bytes / 1024) + " kB";
 
-interface Deletion { deleted: number; postponed: number; awaiting_slop?: number }
-const deletionText = ({ deleted, postponed, awaiting_slop = 0 }: Deletion) =>
-  (deleted === 1 ? "1 immagine eliminata definitivamente." : `${deleted} immagini eliminate definitivamente.`) +
-  (postponed === 1 ? " 1 immagine resta nel cestino." : postponed ? ` ${postponed} immagini restano nel cestino.` : "") +
-  (awaiting_slop ? ` ${awaiting_slop} REAL ${awaiting_slop === 1 ? "attende" : "attendono"} l’approvazione della SLOP o la chiusura del processo senza SLOP.` : "") +
-  (postponed > awaiting_slop ? " Le immagini ancora in gioco potranno essere eliminate al termine delle partite in corso." : "");
-
 export async function showLibrary() {
+  let galleries: Gallery[] = [];
   let items: Item[] = [], selected = new Set<string>(), open: Item | null = null, busy = false;
   const SORT_KEY = "ros-library-sort";
   let sort = { by: "added", order: "desc" };
@@ -89,7 +83,7 @@ export async function showLibrary() {
     if (saved && ["added", "views", "accuracy"].includes(saved.by) && ["asc", "desc"].includes(saved.order)) sort = saved; } catch { /* private browsing */ }
   let measuring = false;
   let slopStudio: { refresh: () => Promise<void> } = { refresh: async () => {} };
-  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "" };
+  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "", gallery: "" };
   let autoBox: { refresh: () => Promise<void> } = { refresh: async () => {} };
   let models: Models | null = null;
   let statsView: { refresh: () => Promise<void> } = { refresh: async () => {} };
@@ -109,7 +103,8 @@ export async function showLibrary() {
     <section id="admin-real" class="admin-panel"><div id="real-wizard">${loading("Caricamento del wizard…")}</div></section>
     <section id="admin-database" class="admin-panel" hidden>
     <h2>Database immagini</h2>
-    <nav class="db-tabs" aria-label="Schede del database"><button type="button" data-db-tab="images" aria-pressed="true">Immagini</button><button type="button" data-db-tab="distribution" aria-pressed="false">Distribuzione</button></nav>
+    <nav class="db-tabs" aria-label="Schede del database"><button type="button" data-db-tab="images" aria-pressed="true">Immagini</button><button type="button" data-db-tab="galleries" aria-pressed="false">Gallerie</button><button type="button" data-db-tab="distribution" aria-pressed="false">Distribuzione</button></nav>
+    <section id="db-galleries" hidden></section>
     <section id="db-distribution" hidden></section>
     <div id="db-images">
     <p id="library-counts" aria-live="polite"></p><p id="library-analysis" class="hint"></p>
@@ -117,6 +112,7 @@ export async function showLibrary() {
       <nav class="library-views" aria-label="Viste">${Object.entries(STATUS_LABEL).map(([key, label]) =>
         `<button type="button" data-view="${key}" aria-pressed="${key === "library"}">${label}</button>`).join("")}</nav>
       <label>Origine<select id="library-origin"><option value="all">REAL e SLOP</option><option value="REAL">REAL</option><option value="SLOP">SLOP</option></select></label>
+      <label>Galleria<select id="library-gallery"><option value="">Tutte le gallerie</option></select></label>
       <div class="db-tag-filter"><span>Tag</span><div class="db-tag-entry"><input id="library-tag" list="library-tag-list" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="es. riot, Invio" aria-label="Aggiungi un tag al filtro">
         <select id="library-tag-match" aria-label="Come combinare i tag"><option value="all">con tutti i tag</option><option value="any">con almeno un tag</option></select></div>
         <div class="rw-pills" id="library-tag-pills"></div></div>
@@ -172,6 +168,16 @@ export async function showLibrary() {
   const settingsMessage = (text: string) => { $("#library-settings-message").textContent = text; };
   const progress = (text: string) => { $("#library-progress").textContent = text; };
 
+  const galleriesPanel = mountGalleries($("#db-galleries"), call, async () => {
+    await refreshGalleries();
+    await autoBox?.refresh();
+  });
+  const refreshGalleries = async () => {
+    const list = await call<GalleryList>("/galleries");
+    galleries = list.galleries;
+    galleriesPanel.show(list);
+    $<HTMLSelectElement>("#library-gallery").innerHTML = `<option value="">Tutte le gallerie</option>${galleryOptions(galleries, filter.gallery)}`;
+  };
   const setGenerationMode = (mode: string) => {
     $("#slop-manual").hidden = mode !== "manual";
     $("#slop-automatic").hidden = mode !== "automatic";
@@ -249,7 +255,7 @@ export async function showLibrary() {
   let loadSeq = 0;
   const load = async () => {
     const seq = ++loadSeq;
-    const params = new URLSearchParams({ status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q, batch: filter.batch });
+    const params = new URLSearchParams({ status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q, batch: filter.batch, gallery: filter.gallery });
     $("#library-batch-filter").hidden = !filter.batch;
     const data = await call<{ items: Item[]; counts: { status: string; origin: string; n: number }[] }>("?" + params);
     if (seq !== loadSeq) return;
@@ -292,6 +298,7 @@ export async function showLibrary() {
       ? '<button data-bulk="restore">Ripristina</button><button data-bulk="delete" class="danger">Elimina definitivamente</button>'
       : '<button data-bulk="trash">Sposta nel cestino</button><label><input type="checkbox" id="library-bulk-rights"> Diritti delle REAL verificati</label><button data-bulk="copy-portrait">Rifai la copia di gioco</button><button data-bulk="analyze">Analizza con IA</button><button data-bulk="describe">Analisi combinata tag e descrizione</button><button data-bulk="complete">Completa Genere, Colore e Supporto</button><button data-bulk="approve">Approva</button><button data-bulk="publish">Pubblica</button><button data-bulk="withdraw">Ritira dal gioco</button>' +
         '<label>Tag<input id="library-bulk-tag" autocomplete="off" autocapitalize="none" spellcheck="false"></label>' + categorySelect('id="library-bulk-category"') + '<button data-bulk="tag-add">Aggiungi tag</button><button data-bulk="tag-remove">Togli tag</button>') +
+      (items.some(item => selected.has(item.id) && item.origin === "REAL") ? `<label>Galleria delle REAL<select id="library-bulk-gallery"><option value="">Scegli una galleria</option>${galleryOptions(galleries, "")}</select></label><button type="button" data-bulk="gallery">Assegna galleria</button>` : "") +
       '<button data-bulk="none">Deseleziona</button>';
   };
   /** Order of the grid: date added, views or accuracy (correct over views), descending or ascending. For accuracy, photos never
@@ -358,21 +365,17 @@ export async function showLibrary() {
   const showDetail = (item: Item) => {
     open = item;
     const editable = item.status === "new" || item.status === "approved";
-    const sourceExcluded = item.reference_state === "unapproved" || item.reference_state === "approved";
-    const sourceProtected = item.reference_state === "pending" || item.reference_state === "unapproved";
     const fields = FIELDS.filter(([key]) => item.origin === "REAL" ? key !== "prompt" && key !== "model" : !["title", "source_url", "author", "license_name", "license_url"].includes(key));
     detail.innerHTML = `<form method="dialog" class="library-detail-close"><button aria-label="Chiudi">×</button></form>
       <h2 id="library-detail-title">${escape(imageLabel(item))}</h2>
-      <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / originale ${item.width}×${item.height}${item.copy ? ` / copia di gioco WebP ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}${sourceExcluded ? "" : ": è ciò che vedranno i giocatori"}` : " / copia di gioco non pronta"}</p>
+      <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / originale ${item.width}×${item.height}${item.copy ? ` / copia di gioco WebP ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}: è ciò che vedranno i giocatori` : " / copia di gioco non pronta"}</p>
       <div class="library-detail-body"><div class="game-media-surface library-preview"><img data-game-media draggable="false" src="${escape(item.file)}" alt="${escape(imageLabel(item))}"></div>
       <div class="library-fields"><p>${statsLine(item)}</p>
+      ${item.origin === "REAL" ? `<label>Galleria<select id="library-detail-gallery">${galleryOptions(galleries, item.gallery_id)}</select></label>`
+        : item.gallery_id ? `<p>Galleria · ${escape(galleries.find(g => g.id === item.gallery_id)?.title || "")}</p>` : ""}
       ${item.in_play ? `<p class="hint">In ${item.in_play} ${item.in_play === 1 ? "partita" : "partite"} in corso: continuano con la versione con cui sono iniziate; le modifiche valgono dalle partite nuove.</p>` : ""}
       ${item.status === "published" ? '<p class="db-edit-note">Pubblicata: per modificarla avvia la modifica. La foto esce subito dalla pubblicazione, quindi non entra in nuove partite; quelle in corso finiscono con la versione attuale. Finita la modifica resta approvata: la ripubblichi quando vuoi.</p>' : ""}
-      ${item.status === "approved" && !sourceExcluded ? '<p class="hint">Le modifiche si salvano subito e la foto resta approvata. Pubblicala quando hai finito.</p>' : ""}
-      ${sourceExcluded ? '<p class="db-edit-note">Questa REAL ha generato una SLOP ed è esclusa dalle nuove partite.</p>' : ""}
-      ${sourceProtected ? `<p class="hint">${item.reference_state === "pending"
-        ? "Questa REAL è riservata a una generazione. Per eliminarla definitivamente, chiudi il processo senza una SLOP oppure approva la SLOP che ne deriva."
-        : "Puoi eliminarla definitivamente dopo aver approvato la SLOP derivata."}</p>` : ""}
+      ${item.status === "approved" ? '<p class="hint">Le modifiche si salvano subito e la foto resta approvata. Pubblicala quando hai finito.</p>' : ""}
       ${item.no_derivatives ? '<p class="db-edit-note">Licenza senza opere derivate (ND): la foto è esclusa dal gioco, perché la copia di gioco la ritaglia.</p>' : ""}
       ${!item.copy && item.status === "new" ? '<p><button type="button" id="library-copy">Prepara la copia di gioco</button></p>' : ""}
       ${editable ? '<p><button type="button" id="library-crop">Inquadratura</button></p>' : ""}
@@ -391,9 +394,9 @@ export async function showLibrary() {
       ${editable && item.generated ? '<p><button type="button" id="library-restore">Ripristina i tag generati</button></p>' : ""}
       ${editable && item.origin === "SLOP" ? '<p class="hint">Per rigenerare: cestina questa SLOP e avvia un nuovo processo nello studio, con conferma e valutazione.</p>' : ""}
       <div class="library-actions">${item.status === "new" ? `${item.origin === "REAL" ? `<label><input type="checkbox" id="library-rights" ${item.rights_confirmed ? "checked" : ""}> Ho verificato diritti e licenza</label>` : ""}<button type="button" data-action="approve" class="primary">Approva</button>` : ""}
-        ${item.status === "approved" && !sourceExcluded ? '<button type="button" data-action="publish" class="primary">Pubblica nel gioco</button>' : ""}
+        ${item.status === "approved" ? '<button type="button" data-action="publish" class="primary">Pubblica nel gioco</button>' : ""}
         ${item.status === "published" ? '<button type="button" data-action="edit" class="primary">Modifica</button><button type="button" data-action="withdraw">Ritira dal gioco</button><button type="button" data-action="remove">Elimina (nel cestino)</button>' : ""}
-        ${item.status === "trash" ? `<button type="button" data-action="restore">Ripristina</button>${sourceProtected ? "" : '<button type="button" data-action="delete" class="danger">Elimina definitivamente</button>'}`
+        ${item.status === "trash" ? '<button type="button" data-action="restore">Ripristina</button><button type="button" data-action="delete" class="danger">Elimina definitivamente</button>'
           : item.status !== "published" ? '<button type="button" data-action="trash">Elimina (nel cestino)</button>' : ""}</div>
       <p id="library-detail-message" role="status" aria-live="polite"></p></div></div>`;
     if (!detail.open) detail.showModal();
@@ -402,6 +405,18 @@ export async function showLibrary() {
   detail.addEventListener("close", () => { open = null; });
   const detailMessage = (text: string) => { const el = detail.querySelector("#library-detail-message"); if (el) el.textContent = text; };
   detail.addEventListener("change", async event => {
+    const gallery = (event.target as HTMLElement).closest<HTMLSelectElement>("#library-detail-gallery");
+    if (gallery && open) {
+      const item = open;
+      try {
+        const updated = await save(item, {gallery_id: gallery.value});
+        if (open?.id === updated.id) { showDetail(updated); detailMessage("Galleria aggiornata."); }
+        await load();
+      } catch (error) {
+        if (open?.id === item.id) { showDetail(open); detailMessage(String(error)); }
+      }
+      return;
+    }
     const editorial = (event.target as HTMLElement).closest<HTMLTextAreaElement>("[data-editorial]");
     if (editorial && open && !editorial.disabled) {
       try { open = await save(open, {real_description: readDescription(detail, open.id)}); detailMessage("Descrizione privata salvata; tag invariati."); }
@@ -528,17 +543,24 @@ export async function showLibrary() {
       for (const panel of ["real", "slop", "database", "stats", "settings"])
         $<HTMLElement>("#admin-" + panel).hidden = panel !== tab;
       page.querySelectorAll<HTMLButtonElement>("[data-admin-tab]").forEach(b => b.setAttribute("aria-pressed", String(b === button)));
-      if (tab === "database") { await load(); if (!$("#db-distribution").hidden) await distribution.refresh(); }
+      if (tab === "database") {
+        await refreshGalleries().catch(error => message(String(error)));
+        await load();
+        if (!$("#db-distribution").hidden) await distribution.refresh();
+      }
       if (tab === "slop") await slopStudio.refresh();
       if (tab === "real") await realWizard?.sync();
       if (tab === "stats") await statsView.refresh();
       return;
     }
     if (button?.dataset.dbTab) {
-      const images = button.dataset.dbTab === "images";
-      $("#db-images").hidden = !images; $("#db-distribution").hidden = images;
+      const tab = button.dataset.dbTab;
+      $("#db-images").hidden = tab !== "images";
+      $("#db-distribution").hidden = tab !== "distribution";
+      $("#db-galleries").hidden = tab !== "galleries";
       page.querySelectorAll<HTMLButtonElement>("[data-db-tab]").forEach(b => b.setAttribute("aria-pressed", String(b === button)));
-      if (images) await load(); else await distribution.refresh();
+      if (tab === "images") await load();
+      else if (tab === "distribution") await distribution.refresh();
       return;
     }
     if (button?.hasAttribute("data-batch-clear")) { filter.batch = ""; await load(); return; }
@@ -559,9 +581,9 @@ export async function showLibrary() {
     busy = true;
     try {
       if (button.id === "library-empty-trash") {
-        const result = await call<Deletion>("/trash/empty", { method: "POST", body: "{}" });
+        const result = await call<{ deleted: number; postponed: number }>("/trash/empty", { method: "POST", body: "{}" });
         await Promise.all([load(), refreshTags()]);
-        message(deletionText(result));
+        message(`${result.deleted} immagini eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} restano nel cestino finché le partite o le generazioni in corso non finiscono.` : ""));
       } else if (button.dataset.bulk) {
         const action = button.dataset.bulk;
         if (action === "none") { selected.clear(); render(); return; }
@@ -598,6 +620,16 @@ export async function showLibrary() {
           if (!ids.length) { message("Nessuna immagine nuova, con copia di gioco e non ancora analizzata tra le selezionate."); return; }
           await analyzeMany(ids); return;
         }
+        if (action === "gallery") {
+          const ids = items.filter(i => selected.has(i.id) && i.origin === "REAL").map(i => i.id);
+          const gallery_id = $<HTMLSelectElement>("#library-bulk-gallery").value;
+          if (!gallery_id) { message("Scegli una galleria."); return; }
+          const result = await call<{done: number; failed: {error: string}[]}>("/bulk", {method: "POST", body: JSON.stringify({action, ids, gallery_id})});
+          selected.clear();
+          await load();
+          message(`${result.done} REAL aggiornate.` + (result.failed.length ? " " + result.failed.map(f => f.error).join(" / ") : ""));
+          return;
+        }
         let tag = $<HTMLInputElement>("#library-bulk-tag")?.value.trim();
         let bulkCategory = "";
         if ((action === "tag-add" || action === "tag-remove")) {
@@ -611,9 +643,9 @@ export async function showLibrary() {
           }
           bulkCategory = isCategory(chosen) ? chosen : "";
         }
-        const result = await call<Deletion | { done: number; failed?: { error: string }[] }>("/bulk", { method: "POST",
+        const result = await call<{ done?: number; deleted?: number; postponed?: number; failed?: { error: string }[] }>("/bulk", { method: "POST",
           body: JSON.stringify({ action, ids: [...selected], tags: tag ? [tag] : [], ...(bulkCategory ? { category: bulkCategory } : {}), rights_confirmed: action === "approve" && Boolean($<HTMLInputElement>("#library-bulk-rights")?.checked) }) });
-        const completedMessage = "deleted" in result ? deletionText(result) :
+        const completedMessage = result.deleted !== undefined ? `${result.deleted} eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} in partite in corso: restano nel cestino per ora.` : "") :
           `${result.done} aggiornate.` + (result.failed?.length ? ` ${result.failed.length} non aggiornate: ${[...new Set(result.failed.map(f => f.error))].join("; ")}.` : "");
         if (action !== "tag-add" && action !== "tag-remove") selected.clear();
         await Promise.all([load(), refreshTags()]);
@@ -626,6 +658,7 @@ export async function showLibrary() {
     const target = event.target as HTMLInputElement;
     if (target.closest("dialog")) return;
     if (target.dataset.select) { if (target.checked) selected.add(target.dataset.select); else selected.delete(target.dataset.select); render(); }
+    else if (target.id === "library-gallery") { filter.gallery = target.value; void load(); }
     else if (target.id === "library-origin") { filter.origin = target.value; void load(); }
     else if (target.id === "library-sort" || target.id === "library-order") {
       sort = { by: $<HTMLSelectElement>("#library-sort").value, order: $<HTMLSelectElement>("#library-order").value };
@@ -696,7 +729,7 @@ export async function showLibrary() {
   const CONTEXT_LABELS: Record<string, [string, string]> = {
     base: ["Base comune", "Inviata in ogni chiamata. Non deve parlare di immagini generate: il modello che scrive i tag non deve sapere che esistono."],
     analysis: ["Tag", "Inviato insieme alla base a ogni analisi: tag e, per le REAL, descrizione privata."],
-    slop_prompt: ["Brief e prompt per le SLOP", "Inviato insieme alla base alla chiamata che scrive brief e prompt di una SLOP dalla descrizione e dai tag della REAL."],
+    slop_gallery_prompt: ["Premessa e prompt di galleria", "Inviato insieme alla base, all’originale intero e alle indicazioni della galleria."],
     slop_evaluation: ["Valutazione delle SLOP", "Inviato insieme alla base a ogni valutazione di una candidata intera. Decisioni, tolleranza e formato della risposta restano fissati nel codice."],
   };
   const when = (iso: string) => new Date(iso).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" });
@@ -708,11 +741,10 @@ export async function showLibrary() {
       return `<section class="library-context" data-context-part="${escape(p.part)}"><h3>${escape(label)}</h3><p class="hint">${escape(hint)}</p>
         <textarea data-context="${escape(p.part)}" rows="10" maxlength="${state.max}" spellcheck="true" aria-label="${escape(label)}">${escape(p.current.body)}</textarea>
         <small class="caption-count" data-context-count>${p.current.body.length}/${state.max}</small>
-        ${p.outdated ? `<p class="hint" role="status" data-context-outdated><strong>Il testo in vigore è stato scritto per le SLOP gemelle e contraddice il brief editoriale: finché non salvi una nuova versione (il testo proposto o uno tuo) lo studio non scrive brief e prompt.</strong></p>` : ""}
         ${p.proposed ? `<p class="hint" data-context-proposal>È disponibile un testo proposto con l'aggiornamento dell'app. <button type="button" data-context-load="${escape(p.part)}">Carica nel campo</button> (diventa una versione solo se lo salvi).</p>` : ""}
         <div class="library-inline"><button type="button" data-context-save="${escape(p.part)}">Salva nuova versione</button></div>
         <details class="library-context-history"><summary>Versioni (${p.history.length})</summary><ol>${p.history.map((v, index) =>
-          `<li><span>${escape(when(v.created_at))}</span> / ${v.body.length} caratteri${p.part === "base" || p.part === "analysis" ? ` / usata da ${v.used} ${v.used === 1 ? "immagine" : "immagini"}` : ""}${p.part === "slop_prompt" && v.pipeline < 2 ? " / SLOP gemelle" : ""}${index === 0 ? " / <strong>attuale</strong>" : ` <button type="button" data-context-restore="${escape(v.id)}">Ripristina</button>`}
+          `<li><span>${escape(when(v.created_at))}</span> / ${v.body.length} caratteri${p.part === "base" || p.part === "analysis" ? ` / usata da ${v.used} ${v.used === 1 ? "immagine" : "immagini"}` : ""}${index === 0 ? " / <strong>attuale</strong>" : ` <button type="button" data-context-restore="${escape(v.id)}">Ripristina</button>`}
           <details><summary>Testo</summary><pre>${escape(v.body)}</pre></details></li>`).join("")}</ol></details></section>`;
     }).join("");
   };
@@ -811,24 +843,26 @@ export async function showLibrary() {
   distribution = mountDistribution($<HTMLElement>("#db-distribution"), () => call<Distribution>("/distribution"));
   // Bind every command before startup requests: visible forms must never submit natively while data loads.
   // The REAL wizard is the section shown first: it is mounted before the others load.
-  realWizard = await mountRealWizard($<HTMLElement>("#real-wizard"), async () => { await Promise.all([load(), refreshTags(), refreshAnalysis()]); })
+  await refreshGalleries().catch(error => { $("#db-galleries").textContent = String(error); });
+  realWizard = await mountRealWizard($<HTMLElement>("#real-wizard"), async () => { await Promise.all([load(), refreshTags(), refreshAnalysis()]); }, () => galleries)
     .catch(error => { $("#real-wizard").textContent = String(error instanceof Error ? error.message : error); return null; });
   await Promise.all([load(), refreshTags(), refreshAnalysis()]).catch(error => message(String(error instanceof Error ? error.message : error)));
   await refreshContexts().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   await refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   await call<Numbers>("/settings").then(n => renderNumbers(n)).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
   tagPills();
-  slopStudio = await mountSlopStudio($<HTMLElement>("#slop-studio"), n => { $("#slop-attention-count").textContent = n ? ` / ${n} da vedere` : ""; });
+  slopStudio = await mountSlopStudio($<HTMLElement>("#slop-studio"), n => { $("#slop-attention-count").textContent = n ? ` / ${n} da vedere` : ""; }, () => galleries);
   // Automatic generation controls, balance notification, progress and review (spec `generazione-slop`).
   autoBox = mountSlopAuto($<HTMLElement>("#slop-auto"), $<HTMLElement>("#slop-auto-controls"), {
     loop: async batchId => {
-      sessionStorage.setItem("ros-editorial-studio-v1",batchId);
+      sessionStorage.setItem("ros-editorial-studio-v2",batchId);
       page.querySelector<HTMLButtonElement>('[data-admin-tab="slop"]')!.click();
       page.querySelector<HTMLButtonElement>('[data-generation-mode="manual"]')!.click();
       await slopStudio.refresh();
     },
     review: async batchId => {
-      filter.batch = batchId; filter.status = "library"; selected.clear();
+      filter.batch = batchId; filter.status = "library"; filter.gallery = ""; selected.clear();
+      page.querySelector<HTMLButtonElement>('[data-db-tab="images"]')!.click();
       page.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === "library")));
       page.querySelector<HTMLButtonElement>('[data-admin-tab="database"]')!.click();
     },

@@ -1,3 +1,4 @@
+import { galleryOptions, type Gallery } from "./galleries";
 /** Editorial studio: textual briefs, bounded full-image evaluation, accepted copies and manual review. */
 import "./slop-studio.css";
 import { prepareItemCopy, saveFrame, type TreatableItem } from "./game-copy";
@@ -9,42 +10,38 @@ import type { InspirationItem } from "../shared/slop-proposals";
 import { tagFromInput } from "../shared/tag-input";
 import { onLongPress, openPreview } from "./image-preview";
 import { startPills } from "./tag-ui";
-interface Config { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string; mode?: "manual" | "automatic" }
+interface Config { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string; mode?: "manual" | "gallery" }
 interface Image extends TreatableItem { id: string; status: string; revision: number; tags: string[]; categories: Record<string,string>; file: string; original: string;
   width: number; height: number; copy: Parameters<typeof chooseFrame>[3]; prompt: string; analysis: { status: string; error: string } }
 interface Attempt {id: string; number: number; prompt: string; status: string; evaluation: Evaluation | null; file: string | null}
-interface Process {id: string; slot: number; state: string; prompt: string; snapshot?: {mode?: string}; brief: Brief | null; attempts: Attempt[]; error: string; calls: number; image_id: string | null}
-interface Batch {origin: string; id: string; items: InspirationItem[]; prompts: {prompt: string; brief?: Brief}[]; processes: Process[]; config: Config | null; max_calls: number;
+interface Process {id: string; slot: number; state: string; prompt: string; snapshot?: {mode?: string}; brief: Brief | null; premise?: string | null; attempts: Attempt[]; error: string; calls: number; image_id: string | null}
+interface Batch {origin: string; id: string; items: InspirationItem[]; gallery_id: string; processes: Process[]; config: Config | null; max_calls: number;
   runner: {id: string; status: string | null; updated_at: string | null; alive: boolean} | null;
-  pipeline_version: number; prompts_status: string; prompts_error: string; images: Image[]}
-interface Waiting {id: string; title: string; file: string; described: boolean; tags: InspirationItem["tags"]}
+  prompts_status: string; prompts_error: string; images: Image[]}
 interface Attention extends Process {title: string; batch_id: string; updated_at: string}
-interface State {thresholds: {section: number; max_batch: number}; real_total: number; waiting: Waiting[]; attention: Attention[]}
+interface State {attention: Attention[]}
 const STATE_LABELS: Record<string, string> = {exhausted: "tentativi esauriti senza SLOP", review_needed: "il valutatore chiede la tua revisione",
   failed: "non riuscito", uncertain: "esito incerto, nessuna chiamata ripetuta"};
 const BRIEF_LABELS = {required:"Ancoraggi obbligatori",preferred:"Preferenze",flexible:"Elementi liberi",exclusions:"Esclusioni"};
-const API = "/api/admin/library/slop/", LIBRARY = "/api/admin/library", DRAFT = "ros-editorial-studio-v1";
+const API = "/api/admin/library/slop/", LIBRARY = "/api/admin/library", DRAFT = "ros-editorial-studio-v2";
 async function call<T>(path: string, body?: unknown, method?: string, base = API): Promise<T> {
   const response = await fetch(base + path, {credentials: "same-origin", method: method || (body === undefined ? "GET" : "POST"),
     headers: {"Content-Type":"application/json"}, body: body === undefined ? undefined : JSON.stringify(body)});
   const data = await response.json() as T & {error?: string};
   if (!response.ok) throw Error(data.error || "Richiesta non riuscita"); return data;
 }
-export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number) => void = () => {}): Promise<{refresh: () => Promise<void>}> {
+export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number) => void, galleries: () => Gallery[]): Promise<{refresh: () => Promise<void>}> {
   let state: State | null = null, batch: Batch | null = null, config: Config | null = null, page = 1, busy = false, notice = "", progress = "";
-  const manual = {prompt: "", tags: "", required: "", preferred: "", flexible: "", exclusions: ""};
+  const manual = {gallery_id: "", prompt: "", tags: "", required: "", preferred: "", flexible: "", exclusions: ""};
   let batchId = sessionStorage.getItem(DRAFT) || "", recent: {id: string; count: number}[] = [];
-  const loadBatch = async () => {
-    const requested = batchId;
-    if (!requested) return;
-    const loaded = await call<Batch>("batches/" + requested);
-    if (batchId === requested) batch = loaded;
-  };
+  const loadBatch = async () => { if (batchId) batch = await call<Batch>("batches/" + batchId); };
   const evaluation = (a: Attempt, open = false) => `<details data-evaluation="${escape(a.id)}"${open ? " open" : ""}><summary>Tentativo ${a.number}: ${escape(a.evaluation?.decision || a.status)}</summary>` +
     (a.file ? `<img src="${escape(a.file)}" alt="Candidata intera del tentativo ${a.number}" style="max-width:100%;max-height:360px;object-fit:contain">` : "") +
     `<p lang="en">${escape(a.prompt)}</p>` + (a.evaluation ? `<p>${escape(a.evaluation.action_reason)}</p><p>Difetti critici: ${escape(a.evaluation.critical_findings.join("; ") || "nessuno")}</p><p>Difetti minori: ${escape(a.evaluation.minor_findings.join("; ") || "nessuno")}</p><p>Incertezze: ${escape(a.evaluation.uncertainty_notes.join("; ") || "nessuna")}</p><p>Vincoli editoriali: ${a.evaluation.editorial_constraints_met ? "rispettati" : "non rispettati"}</p>` : "") + "</details>";
-  const summary = () => batch?.config ? `<p class="hint">${batch.config.max_generation_attempts} tentativi massimi per SLOP; tolleranza ${["rigorosa","normale","permissiva"][batch.config.editorial_tolerance]}. Massimo ${batch.max_calls} chiamate (${batch.config.mode === "manual" ? "generazioni, valutazioni e tag dopo accettazione" : "brief+prompt, generazioni, valutazioni e tag dopo accettazione, più eventuali riscritture confermate"}). Effettive: ${batch.processes.reduce((n,p) => n+p.calls,0)}. Modelli: ${escape(batch.config.text_model)}, ${escape(batch.config.image_model)}, qualità ${escape(batch.config.quality)}.</p>` : "";
-  const first = () => `<div class="studio-intro"><h3>Generazione manuale</h3><p>Scrivi prompt, tag di partenza e ancoraggi. Non viene scelta una REAL e non viene chiesto al modello di scrivere il prompt.</p></div>
+  const summary = () => batch?.config ? `<p class="hint">${batch.config.max_generation_attempts} tentativi massimi per SLOP; tolleranza ${["rigorosa","normale","permissiva"][batch.config.editorial_tolerance]}. Massimo ${batch.max_calls} chiamate (${batch.origin === "auto" ? "proposte, generazioni, valutazioni e tag dopo accettazione" : "generazioni, valutazioni e tag dopo accettazione"}). Effettive: ${batch.processes.reduce((n,p) => n+p.calls,0)}. Modelli: ${escape(batch.config.text_model)}, ${escape(batch.config.image_model)}, qualità ${escape(batch.config.quality)}.</p>` : "";
+  const first = () => `<div class="studio-intro"><h3>Generazione manuale</h3><p>Scegli la galleria e scrivi prompt, tag di partenza e ancoraggi.</p></div>
+    <label>Galleria<select data-manual="gallery_id" required><option value="">Scegli una galleria</option>${galleryOptions(galleries(), manual.gallery_id)}</select></label>
+    ${galleries().length ? "" : '<p class="hint">Crea una galleria in Database immagini → Gallerie.</p>'}
     <label>Prompt in inglese<textarea data-manual="prompt" rows="6" maxlength="4000" required>${escape(manual.prompt)}</textarea></label>
     <label>Tag di partenza (separati da virgole)<textarea data-manual="tags" rows="2" required>${escape(manual.tags)}</textarea></label>
     <p class="hint">I tag finali descriveranno l'immagine effettivamente generata: quelli di partenza restano disponibili per il confronto.</p>` +
@@ -52,26 +49,26 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
     (config ? `<p>Fino a ${config.max_generation_attempts} tentativi con valutazione e analisi finale dei tag: massimo ${1+2*config.max_generation_attempts} chiamate. La preparazione è gratuita.</p>` : "") +
     '<button type="button" data-slop="manual-draft" class="primary">Prepara generazione</button>' +
     (recent.length ? `<label>Riprendi una generazione<select data-recent><option value="">Scegli…</option>${recent.map(b => `<option value="${b.id}">${escape(b.id.slice(0,8))} / ${b.count} SLOP</option>`).join("")}</select></label>` : "");
-  const second = () => summary() + (batch?.pipeline_version !== 2 ? '<p>Batch precedente: sola revisione. Avvia un nuovo batch per la nuova pipeline.</p>' :
+  const second = () => summary() + (batch?.origin === "auto" ? '<p>Il batch di galleria si gestisce dalla generazione automatica.</p>' :
     '<p>Brief e prompt sono revisionabili prima del primo tentativo. Il brief resta poi congelato.</p><ol class="slop-prompts">' + (batch?.processes || []).map(p => {
-      const locked = batch?.origin === "auto" || p.attempts.length > 0 || !["draft","ready","failed"].includes(p.state);
+      const locked = p.attempts.length > 0 || !["ready","failed"].includes(p.state);
       return `<li><h3>${escape(batch!.items[p.slot]?.title || "SLOP")}</h3><div class="rw-pills">${startPills(batch!.items[p.slot])}</div>` +
         BRIEF_KEYS.map(k => `<label>${BRIEF_LABELS[k]} (una voce per riga)<textarea data-brief="${p.slot}" data-key="${k}" rows="2" ${locked ? "disabled" : ""}>${escape(p.brief?.[k].join("\n") || "")}</textarea></label>`).join("") +
         `<label>Prompt in inglese<textarea data-prompt="${p.slot}" rows="6" maxlength="4000" ${locked ? "disabled" : ""}>${escape(p.prompt)}</textarea></label><p>${escape(p.state)} ${escape(p.error)}</p>` +
-        (!locked && p.snapshot?.mode !== "manual" ? `<button data-slop="rewrite" data-slot="${p.slot}">Riscrivi brief e prompt</button>` : "") + '</li>';
-    }).join("") + '</ol>' + (batch?.origin === "auto" ? '<p>Il batch si gestisce dalla modalità automatica.</p>' : '<div class="rw-actions"><button data-slop="save">Salva brief e prompt</button><button data-slop="images" class="primary">Genera e valuta</button></div>')) + '<button data-slop="to-review">Vai alla revisione</button><button data-slop="new-batch">Nuovo batch</button>';
+        '</li>';
+    }).join("") + '</ol>' + ('<div class="rw-actions"><button data-slop="save">Salva brief e prompt</button><button data-slop="images" class="primary">Genera e valuta</button></div>')) + '<button data-slop="to-review">Vai alla revisione</button><button data-slop="new-batch">Nuovo batch</button>';
   const divergence = (image: Image) => {
     const anchors = batch?.processes.find(p=>p.image_id===image.id)?.brief?.required || [];
     const missing = anchors.filter(a=>/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(a) && !image.tags.includes(a));
     return missing.length ? `<p class="slop-closed">Ancoraggi non rilevati nei tag: ${escape(missing.join(", "))}. Verifica la divergenza; i tag descrivono ciò che si vede.</p>` : "";
   };
   const fourth = () => summary() + '<p>Accettazione del modello e approvazione dell’owner sono separate. Controlla l’originale intero e la copia 4:5; pubblica solo dopo revisione.</p>' +
-    (batch?.images || []).map(image => `<article class="rw-final slop-review" data-image="${image.id}"><h3>SLOP ${escape(image.status)}</h3>${image.generation?.slot?.acceptance?.by === "owner" ? '<p class="hint" data-owner-accepted>Accettata manualmente dall’owner. Le segnalazioni del valutatore restano nella valutazione originale.</p>' : ""}<div class="rw-preview-grid"><figure><img data-slop-original="${image.id}" data-long-press src="${escape(image.original)}" alt="Originale SLOP intero" style="max-width:100%;max-height:420px;object-fit:contain"><figcaption>Originale intero valutato</figcaption></figure><figure><img data-slop-copy="${image.id}" data-long-press src="${escape(image.file)}" alt="Copia di gioco 4:5" style="max-width:100%;max-height:420px;object-fit:contain"><figcaption>Copia 4:5${image.copy ? "" : " da preparare"}</figcaption></figure></div><p>Tag effettivi: ${escape(image.tags.join(", "))}</p>${divergence(image)}<p class="hint">Confronta i tag rilevati con gli ancoraggi del brief qui sotto: eventuali divergenze restano visibili e non modificano i tag.</p><p lang="en">${escape(image.prompt)}</p>` +
+    (batch?.images || []).map(image => `<article class="rw-final slop-review" data-image="${image.id}"><h3>SLOP ${escape(image.status)}</h3>${image.generation?.slot?.acceptance?.by === "owner" ? '<p class="hint" data-owner-accepted>Accettata manualmente dall’owner. Le segnalazioni del valutatore restano nella valutazione originale.</p>' : ""}<div class="rw-preview-grid"><figure><img data-slop-original="${image.id}" data-long-press src="${escape(image.original)}" alt="Originale SLOP intero" style="max-width:100%;max-height:420px;object-fit:contain"><figcaption>Originale intero valutato</figcaption></figure><figure><img data-slop-copy="${image.id}" data-long-press src="${escape(image.file)}" alt="Copia di gioco 4:5" style="max-width:100%;max-height:420px;object-fit:contain"><figcaption>Copia 4:5${image.copy ? "" : " da preparare"}</figcaption></figure></div><p>Tag effettivi: ${escape(image.tags.join(", "))}</p>${divergence(image)}${batch?.origin === "auto" ? "" : '<p class="hint">Confronta i tag rilevati con gli ancoraggi del brief qui sotto: eventuali divergenze restano visibili e non modificano i tag.</p>'}<p lang="en">${escape(image.prompt)}</p>` +
       `<div class="rw-actions">${image.status === "new" || image.status === "approved" ? `<button data-slop="frame" data-id="${image.id}">Inquadratura</button><button data-slop="${image.treatment?.off ? "treatment-on" : "treatment-off"}" data-id="${image.id}">${image.treatment?.off ? "Con trattamento" : "Senza trattamento"}</button>${image.treatment ? `<button data-slop="treatment-edit" data-id="${image.id}">Regola il trattamento</button>` : ""}` : ""}` +
       (image.status === "new" ? `${image.analysis.status === "none" || image.analysis.status === "failed" ? `<button data-slop="analyze" data-id="${image.id}">Analizza</button>` : ""}<button data-slop="approve" data-id="${image.id}" ${image.copy && image.tags.length ? "" : "disabled"}>Approva</button>` : "") +
       (image.status === "approved" ? `<button data-slop="publish" data-id="${image.id}">Pubblica</button>` : "") +
       (image.status !== "published" && image.status !== "trash" ? `<button data-slop="trash" data-id="${image.id}">Cestino</button>` : "") + '</div></article>').join("") +
-    (batch?.processes || []).map(p => `<section><h3>${escape(batch!.items[p.slot]?.title || "SLOP")}: ${escape(p.state)}</h3>${p.error ? `<p role="status">${escape(p.error)}</p>` : ""}${p.brief ? `<p>Ancoraggi obbligatori: ${escape(p.brief.required.join("; "))}. Esclusioni: ${escape(p.brief.exclusions.join("; "))}</p>` : ""}${p.attempts.map(a => evaluation(a)).join("")}</section>`).join("") +
+    (batch?.processes || []).map(p => `<section><h3>${escape(batch!.items[p.slot]?.title || "SLOP")}: ${escape(p.state)}</h3>${p.error ? `<p role="status">${escape(p.error)}</p>` : ""}${p.premise ? `<p>Premessa approvata · ${escape(p.premise)}</p>` : p.brief ? `<p>Ancoraggi obbligatori: ${escape(p.brief.required.join("; "))}. Esclusioni: ${escape(p.brief.exclusions.join("; "))}</p>` : ""}${p.attempts.map(a => evaluation(a)).join("")}</section>`).join("") +
     '<div class="rw-actions"><button data-slop="to-prompts">Brief e prompt / ripresa</button><button data-slop="new-batch">Nuovo batch</button></div>';
   /** A saved and evaluated candidate can be accepted manually regardless of its findings. */
   const acceptable = (a: Attempt) => a.status === "completed" && !!a.file && !!a.evaluation;
@@ -82,7 +79,7 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
     return `<section class="slop-attention" aria-labelledby="slop-attention-title"><h3 id="slop-attention-title">Da vedere: ${list.length} ${list.length === 1 ? "processo senza SLOP" : "processi senza SLOP"}</h3>` +
       list.map(p => `<details class="slop-closed" data-attention="${escape(p.id)}"><summary>${escape(p.title)}: ${escape(STATE_LABELS[p.state] || p.state)}</summary>` +
         `<p>${p.attempts.length} ${p.attempts.length === 1 ? "tentativo" : "tentativi"}, ${p.calls} chiamate registrate.${p.error ? " " + escape(p.error) : ""}</p>` +
-        (p.brief ? `<p>Ancoraggi obbligatori: ${escape(p.brief.required.join("; "))}. Esclusioni: ${escape(p.brief.exclusions.join("; ") || "nessuna")}</p>` : "") +
+        (p.premise ? `<p>Premessa approvata · ${escape(p.premise)}</p>` : p.brief ? `<p>Ancoraggi obbligatori: ${escape(p.brief.required.join("; "))}. Esclusioni: ${escape(p.brief.exclusions.join("; ") || "nessuna")}</p>` : "") +
         p.attempts.map(a => evaluation(a, false)).join("") +
         `<div class="rw-actions">${p.attempts.filter(acceptable).map(a => `<button data-slop="accept-process" data-process="${escape(p.id)}" data-attempt="${escape(a.id)}">Accetta comunque il tentativo ${a.number}</button>`).join("")}` +
         `<button data-slop="close-process" data-process="${escape(p.id)}">Chiudi: ho visto</button></div></details>`).join("") + "</section>";
@@ -101,16 +98,12 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
   const refresh = async () => {
     try {
       batchId = sessionStorage.getItem(DRAFT) || batchId;
-      const requested = batchId;
       state = await call<State>("state");
       const values = await call<{values: {max_generation_attempts: number; editorial_tolerance: number}}>("/settings", undefined, "GET", LIBRARY);
       const models = await call<{text_model: string; image_model: string; image_quality: string}>("/models", undefined, "GET", LIBRARY);
       config = {...values.values, ...models, quality: models.image_quality};
       recent = (await call<{batches: typeof recent}>("batches")).batches;
-      if (requested && batchId === requested) {
-        await loadBatch();
-        if (batchId === requested && batch) page = working() ? 3 : 4;
-      }
+      await loadBatch(); if (batch) page = working() ? 3 : 4;
     } catch (e) { notice = String(e); } render();
     // Following an existing server job must not hold the dashboard's initial loading promise.
     // busy also prevents a second polling loop when the owner reopens this section.
@@ -149,7 +142,6 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
     for (const image of batch?.images || []) if (image.status === "new" && !image.copy) await finish(image).catch(e => { notice += " " + String(e); });
     await loadBatch();
   };
-  onLongPress(root, "[data-slop-waiting]", element => {const w = state?.waiting.find(w => w.id === element.dataset.slopWaiting); if(w) openPreview({src:w.file,title:w.title,alt:w.title});});
   onLongPress(root, "[data-slop-original], [data-slop-copy]", element => {
     const image = batch?.images.find(i=>i.id===(element.dataset.slopOriginal || element.dataset.slopCopy));
     if(image) openPreview({src:element.dataset.slopOriginal ? image.original : image.file, title:"SLOP / "+image.status,
@@ -168,7 +160,7 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
     const button=(event.target as HTMLElement).closest<HTMLButtonElement>("[data-slop]");if(!button)return;
     if(button.dataset.slop==="stop-run"){button.disabled=true;try{batch=await call<Batch>("batches/"+batchId+"/stop",{});notice="Il server si ferma prima della prossima chiamata.";}catch(e){notice=String(e);}render();return;}
     if(busy)return;
-    const action=button.dataset.slop!, slot=Number(button.dataset.slot), image=batch?.images.find(i=>i.id===button.dataset.id);
+    const action=button.dataset.slop!, image=batch?.images.find(i=>i.id===button.dataset.id);
     if(action==="accept-process"){
       const attempt=state?.attention.find(p=>p.id===button.dataset.process)?.attempts.find(a=>a.id===button.dataset.attempt);
       if(!attempt || !acceptable(attempt))return;
@@ -190,24 +182,22 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
     if(action==="to-prompts"||action==="to-review"){page=action==="to-prompts"?2:4;render();return;}
     try {
       if(action==="manual-draft") {
-        for (const input of root.querySelectorAll<HTMLTextAreaElement>("[data-manual]")) if (!input.reportValidity()) return;
+        for (const input of root.querySelectorAll<HTMLTextAreaElement | HTMLSelectElement>("[data-manual]")) if (!input.reportValidity()) return;
         const tags = manual.tags.split(",").map(t=>tagFromInput(t));
         if (tags.some(t=>!t.ok)) throw Error(tags.find(t=>!t.ok)!.reason);
         const brief = Object.fromEntries(BRIEF_KEYS.map(k=>[k, manual[k].split("\n").map(t=>t.trim()).filter(Boolean)]));
         busy=true;render();
-        batch=await call<Batch>("batches",{mode:"manual",prompt:manual.prompt,tags:tags.filter(t=>t.ok).map(t=>t.tag),brief});
+        batch=await call<Batch>("batches",{mode:"manual",gallery_id:manual.gallery_id,prompt:manual.prompt,tags:tags.filter(t=>t.ok).map(t=>t.tag),brief});
         batchId=batch.id;sessionStorage.setItem(DRAFT,batchId);page=2;notice="Pronta: controlla e avvia quando vuoi.";
         return;
       }
       if(action==="images"||action==="save") await save();
       const messages:Record<string,string>={
-        rewrite:`Riscrivere brief e prompt della REAL ${slot+1}? Una chiamata a pagamento con ${batch?.config?.text_model}, in più rispetto al massimo del batch, che sale a ${(batch?.max_calls || 0)+1}.`,
         images:`Avviare/riprendere il loop? Massimo ${batch?.config ? batch.items.length*(1+2*batch.config.max_generation_attempts) : 0} chiamate ulteriori: generazioni e valutazioni più tag solo dopo accettazione. ${batch?.config?.image_model}, qualità ${batch?.config?.quality}; valutatore e tag ${batch?.config?.text_model}. Stop alla prima accettazione.`,
         analyze:"Analizzare questa SLOP? Una chiamata a pagamento."};
       if(messages[action]&&!window.confirm(messages[action]))return;
       busy=true;notice="";render();
-      if(action==="rewrite"){batch=await call<Batch>("batches/"+batchId+"/prompts",{confirm:true,index:slot});}
-      else if(action==="images"){page=3;batch=await call<Batch>("batches/"+batchId+"/run",{confirm:true,phase:"images"});await follow();page=4;state=await call<State>("state");}
+      if(action==="images"){page=3;batch=await call<Batch>("batches/"+batchId+"/run",{confirm:true,phase:"images"});await follow();page=4;state=await call<State>("state");}
       else if(action==="save")notice="Brief e prompt salvati.";
       else if(image){
         if(action==="frame"){const choice=await chooseFrame(image.id,image.width,image.height,image.copy);if(choice)await saveFrame(image,choice);}

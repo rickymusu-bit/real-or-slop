@@ -1,0 +1,15 @@
+.gallery-form {
+  display: grid;
+  gap: 0.9rem;
+  max-inline-size: 46rem;
+}
+.gallery-form label, #db-galleries > label {
+  display: grid;
+  gap: 0.35rem;
+}
+.gallery-form input, .gallery-form textarea, #gallery-editor-select {
+  inline-size: 100%;
+  min-inline-size: 0;
+  box-sizing: border-box;
+}
+#db-galleries > label { max-inline-size: 30rem; }

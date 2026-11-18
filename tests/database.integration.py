@@ -12,11 +12,13 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from PIL import Image
+from catalog import make_gallery
 from game_copy import game_copy
 
 base = os.environ['ROS_TEST_BASE']; assert base.startswith('http://127.0.0.1:')
 state, fake = os.environ['ROS_TEST_STATE'], os.environ['ROS_TEST_FAKE_OPENAI']
 token = Path('.dev.vars').read_text().strip().split('=', 1)[1]
+gallery_id = make_gallery(base + '/api/admin/library', token, 'Test database')
 API = base + '/api/admin/library'
 IMAGES = 'real-or-slop-approved-local'
 
@@ -49,7 +51,7 @@ def picture(seed, size=(48, 32)):
 def webp(source): return game_copy(source)
 def add(origin, title, seed, tags, prompt=''):
     source = picture(seed)
-    status, item = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': origin, 'title': title, 'prompt': prompt}), raw=source, mime='image/png')
+    status, item = call(f'{API}/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': origin, 'title': title, 'prompt': prompt}), raw=source, mime='image/png')
     assert status == 201, item
     status, item = call(f'{API}/{item["id"]}/copy', raw=webp(source), mime='image/webp'); assert status == 201, item
     status, item = call(f'{API}/{item["id"]}', {'revision': item['revision'], 'tags': tags,

@@ -10,7 +10,7 @@ export interface Env {
   OPENAI_BASE_URL?: string;
   ANALYSIS_MODEL?: string;
   /** The SLOP loop on Cloudflare (worker/slop-runner.ts, wrangler.jsonc «workflows»). */
-  SLOP_RUNNER?: Workflow<{ batchId: string; phase: "briefs" | "images" | "all" }>;
+  SLOP_RUNNER?: Workflow<{ batchId: string; phase: "images" | "proposals" }>;
 }
 export class HttpError extends Error {
   constructor(

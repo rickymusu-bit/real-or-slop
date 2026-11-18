@@ -1,15 +1,12 @@
-/** The SLOP loop on Cloudflare (spec `generazione-slop`, section 6): a Workflow writes the briefs and runs the attempts (generation
- * and evaluation) one REAL at a time, then analyses the tags of an accepted SLOP. The browser only starts it, after the owner's
- * confirmation of the maximum, and follows it: closing the dashboard or a phone that changes app no longer stops anything.
- * Every paid step keeps its own claim (writePrompts, generateImage, analyze): a step that Cloudflare runs again after an
- * interruption finds the claim and sends nothing, so no paid call is ever repeated; such a step ends uncertain, as before. */
+/** Workflow for editorial proposals and the generation, evaluation and tag analysis of SLOP. */
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 import { HttpError, type Env } from "./core";
-import { generateImage, writePrompts } from "./slop-generation";
+import { generateImage } from "./slop-generation";
+import { writeGalleryProposal } from "./slop-gallery";
 import { analyze } from "./analysis";
 import { find } from "./library";
 
-export type Phase = "briefs" | "images" | "all";
+export type Phase = "images" | "proposals";
 export interface RunParams { batchId: string; phase: Phase }
 /** A runner silent for longer than this is considered dead: the batch can be resumed (one step lasts at most a few minutes). */
 export const RUNNER_STALE_MS = 15 * 60_000;
@@ -28,7 +25,9 @@ export async function startRun(env: Env, batchId: string, phase: Phase) {
   if (!env.SLOP_RUNNER) throw new HttpError(503, "Esecuzione sul server non configurata");
   const runner = `${batchId}-${phase}-${Date.now()}`, stamp = now(), stale = new Date(Date.now() - RUNNER_STALE_MS).toISOString();
   const claim = await env.DB.prepare(`UPDATE slop_batches SET runner=?,runner_status='running',runner_updated=? WHERE id=?
-    AND (runner_status IS NULL OR runner_status NOT IN ('running','stopping') OR runner_updated<?)`).bind(runner, stamp, batchId, stale).run();
+    AND ((origin='studio' AND ?='images') OR
+      (gallery_review='pending' AND ?='proposals' AND gallery_expires>?) OR (gallery_review='confirmed' AND ?='images' AND auto_status='running'))
+    AND (runner_status IS NULL OR runner_status NOT IN ('running','stopping') OR runner_updated<?)`).bind(runner, stamp, batchId, phase, phase, Date.now(), phase, stale).run();
   if (!claim.meta.changes) throw new HttpError(409, "La generazione di questo batch è già in corso sul server");
   try { await env.SLOP_RUNNER.create({ id: runner, params: { batchId, phase } }); }
   catch (error) {
@@ -50,9 +49,12 @@ export class SlopBatchWorkflow extends WorkflowEntrypoint<Env, RunParams> {
     const env = this.env, { batchId, phase } = event.payload, runner = event.instanceId;
     /** Before every paid step: still this batch's runner, still wanted (an automatic batch stopped by the owner ends here). */
     const live = (name: string) => step.do(name, async () => {
-      const row = await env.DB.prepare("SELECT runner,runner_status,origin,auto_status FROM slop_batches WHERE id=?").bind(batchId)
-        .first<{ runner: string; runner_status: string; origin: string; auto_status: string }>();
+      const row = await env.DB.prepare("SELECT runner,runner_status,origin,auto_status,gallery_review,gallery_expires FROM slop_batches WHERE id=?").bind(batchId)
+        .first<{ runner: string; runner_status: string; origin: string; auto_status: string; gallery_review: string | null; gallery_expires: number | null }>();
       if (!row || row.runner !== runner || row.runner_status !== "running" || (row.origin === "auto" && row.auto_status !== "running")) return false;
+      if (row.gallery_review && (phase === "proposals"
+        ? row.gallery_review !== "pending" || (row.gallery_expires || 0) <= Date.now()
+        : phase !== "images" || row.gallery_review !== "confirmed")) return false;
       await env.DB.prepare("UPDATE slop_batches SET runner_updated=? WHERE id=? AND runner=?").bind(now(), batchId, runner).run();
       return true;
     });
@@ -64,16 +66,19 @@ export class SlopBatchWorkflow extends WorkflowEntrypoint<Env, RunParams> {
     };
     let outcome = "done", reason = "";
     try {
-      if (phase !== "images") {
+      if (phase === "proposals") {
         const drafts = await step.do("drafts", async () => (await env.DB.prepare("SELECT slot FROM slop_processes WHERE batch_id=? AND state='draft' ORDER BY slot")
           .bind(batchId).all<{ slot: number }>()).results.map(r => r.slot));
         for (const slot of drafts) {
-          if (!await live(`live-brief-${slot}`)) { outcome = "stopped"; return; }
-          const result = await safely(`brief-${slot}`, () => attempt(async () => { await writePrompts(env, batchId, { confirm: true, index: slot }); return {}; }));
+          if (!await live(`live-proposal-${slot}`)) { outcome = "stopped"; return; }
+          const result = await safely(`proposal-${slot}`, () => attempt(async () => {
+            await writeGalleryProposal(env, batchId, slot, runner);
+            return {};
+          }));
           if (result.account) { outcome = "failed"; reason = result.error || ""; return; }
         }
+        return;
       }
-      if (phase === "briefs") return;
       const work = await step.do("work", async () => {
         const batch = await env.DB.prepare("SELECT loop_settings FROM slop_batches WHERE id=?").bind(batchId).first<{ loop_settings: string | null }>();
         const config = JSON.parse(batch?.loop_settings || "{}") as { quality?: string; max_generation_attempts?: number };
@@ -85,13 +90,14 @@ export class SlopBatchWorkflow extends WorkflowEntrypoint<Env, RunParams> {
         for (let n = 0; n < work.max; n++) {
           if (!await live(`live-${slot}-${n}`)) { outcome = "stopped"; return; }
           const result = await safely(`attempt-${slot}-${n}`, () => attempt(async () => {
-            const done = await generateImage(env, batchId, { confirm: true, index: slot, quality: work.quality }) as { id?: string; process?: { state: string } };
+            const done = await generateImage(env, batchId, { confirm: true, index: slot, quality: work.quality }, runner) as { id?: string; process?: { state: string } };
             return { id: done.id ?? null, state: done.process?.state };
           }));
           if (result.account) { outcome = "failed"; reason = result.error || ""; return; }
           if (result.id) {
             // Tags of the accepted SLOP, from its whole original: one paid call, claimed like any analysis. Its game copy is made
             // in the owner's browser at the review (owner decision of 2026-11-16).
+            if (!await live(`live-tags-${slot}`)) { outcome = "stopped"; return; }
             await safely(`tags-${slot}`, () => attempt(async () => { await analyze(env, await find(env, result.id!), { confirm: true }); return {}; }));
             break;
           }
@@ -105,8 +111,9 @@ export class SlopBatchWorkflow extends WorkflowEntrypoint<Env, RunParams> {
         await env.DB.prepare("UPDATE slop_batches SET runner_status=?,runner_updated=?,prompts_error=CASE WHEN ?<>'' THEN ? ELSE prompts_error END WHERE id=? AND runner=?")
           .bind(outcome, now(), reason, reason.slice(0, 500), batchId, runner).run();
         // An automatic batch that ran to the end (or met an account problem) waits for the owner's decisions.
-        if (phase === "all" && outcome !== "stopped")
-          await env.DB.prepare("UPDATE slop_batches SET auto_status='review',updated_at=? WHERE id=? AND origin='auto' AND auto_status='running'").bind(now(), batchId).run();
+        if (phase === "images" && outcome !== "stopped")
+          await env.DB.prepare(`UPDATE slop_batches SET auto_status='review',updated_at=? WHERE id=? AND runner=? AND origin='auto' AND auto_status='running'
+            AND gallery_review='confirmed'`).bind(now(), batchId, runner).run();
         return outcome;
       });
     }

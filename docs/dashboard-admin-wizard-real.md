@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 3.6.0
+# Dashboard e wizard REAL — specifica 3.7.0
 
-Stato: implementata nel ramo 1.41.0, da rilasciare. Aggiornata: 2026-11-18T05:56:24Z.
+Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
 
 ## 1. Decisioni dell'owner
 
@@ -17,9 +17,9 @@ Stato: implementata nel ramo 1.41.0, da rilasciare. Aggiornata: 2026-11-18T05:56
 
 ## 2. Dashboard `/admin`
 
-Riprogettazione 1.37.0: navigazione laterale desktop con descrizione delle cinque attività; su mobile barra orizzontale scorrevole. La barra laterale e i suoi pulsanti restano nella propria colonna, senza coprire i pannelli; le descrizioni dei pulsanti sono sotto il titolo. Su mobile la barra scorre mantenendo le voci compatte. Ultima sezione ricordata nella sessione. Testata compatta, pannelli coerenti, comandi tattili e focus visibile. I quattro passi REAL restano espliciti con schede e azioni raggruppate. Le eccezioni SLOP e i loro tentativi sono espandibili singolarmente; un aggiornamento della sezione conserva anche i tentativi aperti o chiusi; modalità manuale con prompt, tag e ancoraggi, modalità automatica con scelta dei riferimenti dal Database, importazione da Commons o estrazione casuale. Prima dell’avvio si rivedono miniature, tag, originale e descrizione editoriale.
+Riprogettazione 1.37.0: navigazione laterale desktop con descrizione delle cinque attività; su mobile barra orizzontale scorrevole. La barra laterale e i suoi pulsanti restano nella propria colonna, senza coprire i pannelli; le descrizioni dei pulsanti sono sotto il titolo. Su mobile la barra scorre mantenendo le voci compatte. Ultima sezione ricordata nella sessione. Testata compatta, pannelli coerenti, comandi tattili e focus visibile. I quattro passi REAL restano espliciti con schede e azioni raggruppate. Le eccezioni SLOP e i loro tentativi sono espandibili singolarmente; un aggiornamento della sezione conserva anche i tentativi aperti o chiusi; modalità manuale con galleria, prompt, tag e ancoraggi, modalità automatica con galleria e quantità (1–10). L’estrazione gratuita mostra miniature, titoli e tag. Tocco o pressione prolungata apre l’originale intero e la descrizione editoriale. Dopo l’estrazione si conferma prima il massimo di chiamate per scrivere premesse e prompt, poi il massimo per generare e valutare gli esiti validi (specifica `generazione-slop`).
 
-Database con ricerca per ID e testo; le SLOP usano un’etichetta con ID abbreviato senza campo titolo né riquadro «Tag di partenza». Restano i tag osservati e modificabili, con filtri di origine e tag (nessun gruppo di genere/decennio) e ordinamento richiudibili, griglia 4:5 e barra di selezione durante lo scorrimento. Rimossi i tre checkbox di manutenzione: copia da rifare in 4:5, REAL senza descrizione, categorie visive mancanti (decisione dell’owner del 2026-11-17). Statistiche con viste Panoramica, Adesso, Gioco, Chiamate IA e Catalogo. Impostazioni con indice per Modelli, Generazione, Istruzioni IA, Tag, Partite e Classifica; ogni gruppo mantiene il proprio salvataggio.
+Database con ricerca per ID e testo; le SLOP usano un’etichetta con ID abbreviato senza campo titolo né riquadro «Tag di partenza». Restano i tag osservati e modificabili, con filtri di origine, galleria e tag (nessun gruppo di genere/decennio) e ordinamento richiudibili, griglia 4:5 e barra di selezione durante lo scorrimento. Rimossi i tre checkbox di manutenzione: copia da rifare in 4:5, REAL senza descrizione, categorie visive mancanti (decisione dell’owner del 2026-11-17). Statistiche con viste Panoramica, Adesso, Gioco, Chiamate IA e Catalogo. Impostazioni con indice per Modelli, Generazione, Istruzioni IA, Tag, Partite e Classifica; ogni gruppo mantiene il proprio salvataggio.
 
 
 - Accesso con le credenziali dell'owner (`ADMIN_TOKEN`).
@@ -59,6 +59,7 @@ acquisite sono comunque nella libreria privata.
   caricamento». Al massimo 100 immagini.
 - Le selezionate sono miniature senza titolo che aprono la loro pagina di Commons in una nuova scheda.
 - «Aggiungi link di Wikimedia Commons», chiuso all'inizio: più link incollati, uno per riga.
+- Prima di acquisire le foto scegli una galleria. Si può usare una galleria con indicazioni SLOP ancora vuote. Nel passo Tag si può cambiare la galleria di una singola REAL.
 - «Avanti: tag» acquisisce ogni immagine nella quarantena privata; il browser ne prepara subito la copia di gioco (specifica
   `copie-di-gioco`, sezione 3). Duplicati, link non validi
   e licenze ND vengono rifiutati con il motivo; una copia fallita si ripete dal passo 3.
@@ -92,13 +93,6 @@ ritaglio (specifica `copie-di-gioco`, sezione 3); «Prepara la copia di gioco» 
 **4. Riepilogo e pubblicazione.** Ogni foto con la copia servita dal gioco e il marchio «RS» sovrapposto, la descrizione e i tag.
 L'owner dichiara di aver verificato autenticità, provenienza e condizioni della licenza; poi le immagini si approvano e si pubblicano una
 alla volta. Dopo un errore quelle già pubblicate non si ripetono; gli errori restano indicati.
-
-### REAL di riferimento da Wikimedia Commons
-
-Il pannello «Generazione automatica» riusa la ricerca e l'importazione del wizard. I suoi due passi sono «Seleziona su Commons»
-e «Tag e descrizione». Le REAL restano nuove nella libreria privata. Dopo la catalogazione manuale o l'analisi combinata
-con conferma separata, «Aggiungi alla selezione SLOP» le aggiunge all'elenco dei riferimenti del batch. Il caricamento
-per la generazione ha una propria bozza di sessione.
 
 ## 5. Limiti
 

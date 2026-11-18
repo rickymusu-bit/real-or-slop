@@ -6,6 +6,7 @@ import os
 import urllib.error
 import urllib.parse
 import urllib.request
+from uuid import uuid4
 from pathlib import Path
 from PIL import Image
 from game_copy import game_copy
@@ -32,15 +33,19 @@ def control(queue=None):
     with urllib.request.urlopen(req) as r: return json.loads(r.read()).get('log')
 
 counter = 100
+fixture_gallery = None
 DESCRIPTION = {'visible':'A group of people on a street, in flat daylight.', 'documented_context':'Paris in the 1960s, according to Commons.', 'uncertainties':'The individual people cannot be identified.'}
 BRIEF = {'required':['street-scene'], 'preferred':['daylight'], 'flexible':['people and viewpoint'], 'exclusions':['identifiable real people']}
 
-def real(prefix='editorial', described=True):
-    global counter
+def real(prefix='editorial', described=True, gallery=None):
+    global counter, fixture_gallery
+    if not gallery:
+        fixture_gallery = fixture_gallery or make_gallery('Galleria dei test editoriali')['id']
+        gallery=fixture_gallery
     counter += 1
     img=Image.new('RGB',(180,120),(counter%256,80,110));img.putpixel((0,0),(counter%256,20,210))
     out=io.BytesIO();img.save(out,'PNG')
-    code,item=call('/upload?'+urllib.parse.urlencode({'origin':'REAL','title':f'{prefix}-{counter}','description':'Original Commons text'}), raw=out.getvalue(),library=True); assert code==201,item
+    code,item=call('/upload?'+urllib.parse.urlencode({'origin':'REAL','title':f'{prefix}-{counter}','description':'Original Commons text', 'gallery_id':gallery}), raw=out.getvalue(),library=True); assert code==201,item
     # Match the production browser's WebP upload.
     req=urllib.request.Request(LIBRARY+'/'+item['id']+'/copy',data=game_copy(out.getvalue()),method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'image/webp'})
     with urllib.request.urlopen(req) as r:item=json.loads(r.read())
@@ -50,9 +55,20 @@ def real(prefix='editorial', described=True):
     code,item=call('/'+item['id']+'/approve',{'rights_confirmed':True},library=True);assert code==200,item
     return item
 
-def batch(source):
-    code,b=call('batches',{'sources':[source['id']]});assert code==200,b
-    code,b=call('batches/'+b['id']+'/prompts',{'confirm':True});assert code==200,b
+def make_gallery(title, instructions='', description='Fotografie documentarie della piazza.'):
+    code,result=call('/galleries',{'title':title,'description':description,'slop_instructions':instructions},library=True)
+    assert code==200,result
+    return result
+
+def assign_gallery(image, gallery):
+    code,result=call('/'+image['id'],{'revision':image['revision'],'gallery_id':gallery},method='PATCH',library=True)
+    assert code==200,result
+    return result
+
+def batch(gallery_id, **fields):
+    data={'mode':'manual','gallery_id':gallery_id,'prompt':'An ordinary documentary street photograph.',
+          'tags':['street-scene','1960s'],'brief':BRIEF,**fields}
+    code,b=call('batches',data);assert code==200,b
     return b
 
 def generate(b):return call('batches/'+b['id']+'/images',{'confirm':True,'index':0,'quality':b['config']['quality']})

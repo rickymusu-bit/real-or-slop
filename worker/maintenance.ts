@@ -2,9 +2,11 @@
  * with their rounds, answers and events, expired rate limits and withdrawn copies no game uses any more. */
 import { type Env } from "./core";
 import { GAME_RETENTION_MS } from "../shared/legal";
+import { expireGalleryBatches } from "./slop-gallery";
 import { sweepRetired } from "./in-play";
 
 export async function maintenance(env: Env, now = Date.now()) {
+  await expireGalleryBatches(env, now);
   const games = await env.DB.prepare("DELETE FROM game_sessions WHERE created_at<?").bind(now - GAME_RETENTION_MS).run();
   await env.DB.prepare("DELETE FROM rate_limits WHERE resets_at<?").bind(now).run();
   const copies = await sweepRetired(env);

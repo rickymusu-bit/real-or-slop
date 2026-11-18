@@ -10,11 +10,13 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from PIL import Image
+from catalog import make_gallery
 from game_copy import game_copy
 
 base = os.environ['ROS_TEST_BASE']; assert base.startswith('http://127.0.0.1:')
 state, fake = os.environ['ROS_TEST_STATE'], os.environ['ROS_TEST_FAKE_OPENAI']; assert fake.startswith('http://127.0.0.1:')
 token = Path('.dev.vars').read_text().strip().split('=', 1)[1]
+gallery_id = make_gallery(base + '/api/admin/library', token, 'Test analysis')
 API = base + '/api/admin/library'
 
 def call(url, data=None, method=None, raw=None, mime='application/json'):
@@ -36,7 +38,7 @@ def openai(queue=None):
 def image(color, title, description=''):
     picture = Image.new('RGB', (48, 32)); picture.putdata([(color, (x * 7) % 256, (y * 11) % 256) for y in range(32) for x in range(48)])
     source = io.BytesIO(); picture.save(source, 'JPEG', quality=95)
-    status, item = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': 'REAL', 'title': title, 'description': description}),
+    status, item = call(f'{API}/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': 'REAL', 'title': title, 'description': description}),
                         raw=source.getvalue(), mime='image/jpeg'); assert status == 201, item
     return item, game_copy(source.getvalue())
 def analyze(item, confirm=True, repeat=False):
@@ -169,9 +171,8 @@ assert labels()['riot']['aliases'] == []
 # Model context: four parts with the approved first versions; each save is a version; restore; used by each call.
 status, contexts = call(f'{API}/contexts'); assert status == 200 and contexts['max'] == 4000, contexts
 parts = {p['part']: p for p in contexts['parts']}
-assert set(parts) == {'base', 'analysis', 'slop_prompt', 'slop_evaluation'} and all(len(p['history']) == 1 for p in parts.values()), contexts
-assert 'brief editoriale' in parts['slop_prompt']['current']['body'] and 'nessuna somiglianza obbligatoria' in parts['slop_prompt']['current']['body']
-assert 'credibilità fotografica' in parts['slop_evaluation']['current']['body'] and not any(p['outdated'] for p in parts.values()), parts
+assert set(parts) == {'base', 'analysis', 'slop_gallery_prompt', 'slop_evaluation'} and all(len(p['history']) == 1 for p in parts.values()), contexts
+assert 'credibilità fotografica' in parts['slop_evaluation']['current']['body'], parts
 first_analysis = parts['analysis']['current']
 for wrong in ({'part': 'other', 'body': 'x'}, {'part': 'base', 'body': '   '}, {'part': 'base', 'body': 'x' * 4001}, {'part': 'base'}, {'part': 'base', 'body': 'x', 'extra': 1}):
     assert call(f'{API}/contexts', wrong)[0] == 400, wrong

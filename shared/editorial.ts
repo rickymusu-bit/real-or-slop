@@ -29,7 +29,7 @@ export interface Evaluation {
   editorial_constraints_met: boolean; uncertainty_notes: string[]; action_reason: string; revised_prompt: string;
   preserved_required: string[]; preserved_exclusions: string[];
 }
-export function validEvaluation(value: unknown, attemptId: string, brief: Brief): Evaluation | null {
+export function validEvaluation(value: unknown, attemptId: string, constraints: Pick<Brief, "required" | "exclusions">): Evaluation | null {
   if (!value || typeof value !== "object") return null;
   const v = value as Evaluation;
   if (v.attempt_id !== attemptId || !DECISIONS.includes(v.decision) || typeof v.editorial_constraints_met !== "boolean" ||
@@ -40,7 +40,7 @@ export function validEvaluation(value: unknown, attemptId: string, brief: Brief)
   if (v.decision === "accept" && (v.critical_findings.length || !v.editorial_constraints_met))
     return { ...v, decision: "review_needed" };
   if (["revise_prompt", "replan_scene"].includes(v.decision) && (!v.revised_prompt.trim() ||
-    JSON.stringify(v.preserved_required) !== JSON.stringify(brief.required) || JSON.stringify(v.preserved_exclusions) !== JSON.stringify(brief.exclusions)))
+    JSON.stringify(v.preserved_required) !== JSON.stringify(constraints.required) || JSON.stringify(v.preserved_exclusions) !== JSON.stringify(constraints.exclusions)))
     return { ...v, decision: "review_needed" };
   return v;
 }

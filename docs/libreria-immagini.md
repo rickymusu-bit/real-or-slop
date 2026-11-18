@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 7.1.0
+# Libreria delle immagini, tag e analisi — specifica 8.0.0
 
-Stato: implementata nel ramo 1.40.0, da rilasciare. Aggiornata: 2026-11-18T05:29:01Z.
+Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
 
 ## 1. Decisioni dell'owner
 
@@ -55,7 +55,8 @@ Una sola raccolta di immagini REAL e SLOP.
 | Tag correnti e generati, contesti/esito dell'analisi | sì | sì | Ricerca, controllo dell'analisi e ripristino gratuito dei tag |
 | Originale/copia, hash, dimensioni, MIME, crop e misure | sì | sì | Archivio, verifica file, copie identiche nel gioco e rifacimento nel browser |
 | Batch, slot, qualità e trattamento | no | sì | Revisione, idempotenza e rifacimento delle copie SLOP |
-| Stato, date, revisione e disponibilità madre–figlia | sì | sì | Transizioni, concorrenza e campionamento delle REAL libere |
+| Stato, date e revisione | sì | sì | Transizioni e concorrenza |
+| Galleria editoriale | sì | sì | Obbligatoria. Organizzazione delle REAL e appartenenza ereditata dalle SLOP dal batch |
 
 Il dettaglio e l’API non espongono titolo/fonte/autore/licenza sulle SLOP né prompt/modello sulle REAL. Le SLOP hanno `title=NULL` nella tabella condivisa e un’etichetta visiva basata sull’ID; ricerca anche per ID. Le modifiche di quei campi
 sull'origine sbagliata sono rifiutate. Le colonne restano nella tabella condivisa perché servono all'altra origine; non si cancella
@@ -71,18 +72,15 @@ alla copia per estrarre le foto; i crediti REAL e il prompt SLOP vengono letti n
 
 - **Approvare** (solo una nuova): copia di gioco in 4:5, almeno un tag e, per una REAL, la conferma di aver verificato
   diritti e licenza. Una REAL con licenza senza opere derivate (ND) è esclusa: il server rifiuta approvazione e pubblicazione.
-- **Pubblicare** (solo un'approvata): la copia passa nel bucket del gioco ed entra nelle partite nuove. Dalla registrazione della
-  SLOP derivata, la REAL di origine è esclusa e viene ritirata se era pubblicata (2026-11-18).
+- **Pubblicare** (solo un'approvata): la copia passa nel bucket del gioco ed entra nelle partite nuove.
 - **Modificare.** Nuove e approvate si modificano direttamente, con salvataggio immediato; un'approvata resta approvata e deve
   conservare almeno un tag. Una pubblicata si modifica solo dopo «Modifica», che la ritira subito dal gioco (torna approvata); va poi
   ripubblicata. Le partite in corso continuano con la copia con cui sono iniziate.
 - **Ritirare** una pubblicata: torna approvata. La copia lascia il bucket del gioco subito, oppure quando finisce l'ultima partita in
   corso che la usa (`retired_copies`).
 - **Cestino.** Spostare nel cestino, da sola o in gruppo, non chiede conferma, tranne per le pubblicate, che escono subito dal gioco. Ripristinare riporta allo
-  stato di provenienza; una pubblicata torna approvata. «Svuota cestino» ed «Elimina definitivamente» cancellano ogni riga
-  dell'immagine (tag, round, risposte) e ogni suo file. Un'immagine ancora usata da una partita in corso si elimina quando la partita
-  finisce. Una REAL riservata a un processo resta protetta fino alla chiusura senza figlia o all'approvazione della SLOP derivata
-  (2026-11-18). L'approvazione resta valida per l'eliminazione anche se la SLOP viene spostata nel cestino.
+  stato di provenienza; una SLOP non si ripristina se la REAL ha già una SLOP attiva o un processo in corso; una pubblicata torna approvata. «Svuota cestino» ed «Elimina definitivamente» cancellano ogni riga dell'immagine
+  (tag, round, risposte) e ogni suo file; un'immagine ancora usata da una partita in corso si elimina quando la partita finisce.
 - **Partita in corso:** in preparazione o attiva e iniziata da meno della durata massima delle Impostazioni (24 ore predefinite).
 - Azioni in gruppo: fino a 500 immagini per volta.
 
@@ -173,27 +171,21 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
 
 ## 6. Chiamate a pagamento e modelli
 
-- Quattro tipi: analisi, brief+prompt SLOP, immagini SLOP, valutazione SLOP intera. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
+- Quattro tipi: analisi, proposte editoriali e prompt SLOP, immagini SLOP, valutazione SLOP intera. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
 - **Esiti:** risposta valida → `completed`; errore 4xx → `failed`, senza addebito; errore 5xx, timeout o rete → `uncertain`, mai
   ripetuta in automatico. Chiave rifiutata, limite di spesa o credito OpenAI esaurito fermano le serie con un messaggio che rimanda a
   platform.openai.com.
 - **Registro** `paid_calls`: tipo, modello, esito, token, date; nessun importo e collegamenti a immagine, processo e tentativo, azzerati alla cancellazione; nessun archivio delle immagini eliminate.
-- **Modelli:** modello di testo (analisi, brief+prompt e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
+- **Modelli:** modello di testo (analisi, proposte editoriali e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
   elencati nel codice e presenti nel progetto OpenAI (`GET /v1/models`, in cache per un'ora; se l'elenco non si legge si offrono tutti).
   Ogni chiamata registra il modello usato.
 - Senza il segreto `OPENAI_API_KEY` le chiamate a pagamento sono spente. Nei test solo il modello finto `tests/fake_openai.py`.
 
 ## 7. Contesto dei modelli
 
-- Quattro testi modificabili dalle Impostazioni, fino a 4000 caratteri ciascuno: **base comune** (ogni chiamata: lingua, fatti, regole
-  dei tag; non parla mai di immagini generate), **Tag** (con la base a ogni analisi), **Brief e prompt per le SLOP** (con la base alla
-  chiamata che scrive brief e prompt, con le regole della specifica `contenuti-e-trasparenza`), **Valutazione delle SLOP** (con la base
-  a ogni valutazione di una candidata intera; dall'app 1.28.0, prima era fisso nel codice).
-- **Pipeline di un testo** (migrazione 0051): ogni versione registra la pipeline SLOP per cui è stata salvata. Le versioni salvate
-  prima del rilascio della 1.27.0 (2026-11-15T15:10:12Z) valgono 1: il «Prompt per le SLOP» di allora descrive le gemelle e
-  contraddice il brief editoriale. Finché il testo in vigore di «Brief e prompt per le SLOP» è di pipeline 1, il server non invia la
-  chiamata di brief e prompt e le Impostazioni lo segnalano; salvare una versione (la proposta o un testo dell'owner) la sblocca.
-  Ripristinare una versione ne conserva la pipeline.
+- Quattro testi modificabili dalle Impostazioni, fino a 4000 caratteri: **Base comune** (ogni chiamata, con istruzioni neutre),
+  **Tag** (analisi), **Premessa e prompt di galleria** (proposte da originale e contesto) e **Valutazione delle SLOP** (candidata
+  intera). La fase di catalogazione REAL ha istruzioni distinte.
 - Ogni salvataggio di un testo diverso crea una versione datata; ripristinarne una vecchia crea una nuova versione con lo stesso testo.
   Ogni analisi registra le versioni usate.
 - Il codice propone un testo (`DEFAULTS` del modulo del contesto) che le Impostazioni mostrano accanto a quello in vigore finché è
@@ -213,12 +205,13 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
   `leaderboard`, `rate_limits`). Elenco delle migrazioni in `MASTER.md`.
 - Migrazione 0048 (`images`): `categories_completed_at` (completamento delle tre categorie), `copy_metrics` (misure della copia di
   gioco) e `copy_treatment` (trattamento di una SLOP), specifica `copie-di-gioco`, sezione 4.
-- Migrazione 0053: rimuove `generation_source` e `source_id`, anonimizza slot e trattamento e preserva tentativi e chiamate. La migrazione storica 0049 aveva introdotto il legame, poi eliminato. La 0055 introduce il solo registro privato di disponibilità `slop_reference_uses` per le nuove generazioni: madre occupata finché la figlia esiste in qualsiasi stato; eliminare definitivamente la figlia libera la madre. Nessun legame viene inferito per le generazioni pregresse.
+- Migrazione 0053: rimuove `generation_source` e `source_id`, anonimizza slot e trattamento e preserva tentativi e chiamate. La migrazione storica 0049 aveva introdotto il legame, poi eliminato. La 0055 introduce il solo registro privato di disponibilità `slop_reference_uses` per i batch di pipeline 2: madre occupata finché la figlia esiste in qualsiasi stato; eliminare definitivamente la figlia libera la madre. Nessun legame viene inferito per le generazioni pregresse. La disponibilità non interviene nel campionamento del gioco.
 - Migrazione 0056: elimina `images.generation_group`, `slop_batches.group_key`, `slop_batches.auto_tag` e le impostazioni obsolete dei gruppi. Ripulisce gli snapshot e converte il contesto storico di genere/decennio in tag di partenza ordinari, conservando immagini, tag, copie, processi, tentativi, chiamate e registro madre–figlia. Nessuna chiamata a pagamento.
+- Migrazioni 0060 e 0061: introducono le gallerie e azzerano il D1 esistente su decisione dell’owner del 2026-11-18. Ogni
+  immagine appartiene a una galleria. Le REAL si possono spostare conservandone lo stato. I riferimenti dei batch sono temporanei.
 - Migrazione 0058: titolo obbligatorio per le REAL e nullo per le SLOP (vincoli tramite trigger, senza ricostruire la tabella madre). I tag di partenza vengono rimossi dagli slot delle SLOP dopo aver conservato solo colore/supporto nei parametri tecnici della copia. Nessuna modifica a tag osservati, processi, copie o legami.
 - Le accettazioni manuali delle SLOP conservano nello slot `acceptance` (owner, ID tentativo e data) separata dalla valutazione originale, anche con difetti critici/minori o incertezze. Nessuna migrazione aggiuntiva; nuova foto senza approvazione/pubblicazione automatica.
 - Migrazione 0057: elimina `caption`, `generated_caption`, `copy_view` ed `explanation` da `images`; `caption` e `copy_view` da `game_rounds`. Ogni altra colonna e ogni collegamento sono conservati. Le vecchie spiegazioni, mai lette dal gioco, vengono eliminate; descrizioni, tag e contesto editoriale restano.
-- Migrazione 0059: ritira dal gioco le REAL con una SLOP già registrata e conserva le copie per le partite in corso. La vista privata registra se la REAL è riservata, ha una SLOP da approvare o ha una SLOP già approvata.
 - R2: quarantena privata (`library/<id>/`: originale e copia) e bucket del gioco (copie pubblicate).
 - Le statistiche di un'immagine (visualizzazioni e classificazioni corrette) contano solo i round giocati con la copia attuale.
 

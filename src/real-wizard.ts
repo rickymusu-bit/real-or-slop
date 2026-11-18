@@ -1,3 +1,4 @@
+import { galleryOptions, type Gallery } from "./galleries";
 /** REAL wizard (spec `dashboard-admin-wizard-real`, section 4), four steps: select on Commons (search, pages, columns,
  * a tap ticks and adds at once, press and hold for the preview, pasted links), tags (editable description, tags with categories,
  * paid generation once per image, restore, «Togli dal caricamento»), crop, summary and publication. The draft lives in the
@@ -14,11 +15,10 @@ import { prepareLibraryCopy, saveFrame } from "./game-copy";
 import { chooseFrame } from "./crop-editor";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
-import { MAX_BATCH } from "../shared/slop-proposals";
 
 type Stage = 1 | 2 | 3 | 4;
 interface Image {
-  id: string; origin: "REAL" | "SLOP"; status: "new" | "approved" | "published" | "trash";
+  id: string; gallery_id: string; origin: "REAL" | "SLOP"; status: "new" | "approved" | "published" | "trash";
   commons_description: string | null; real_description: RealDescription | null; revision: number; title: string; description: string; tags: string[];
   source_url: string; author: string; license_name: string; license_url: string;
   width: number; height: number; file: string;
@@ -30,7 +30,7 @@ interface Image {
 interface Hit { title: string; page_url: string; thumb_url: string; preview_url?: string; width: number; height: number; date?: string; description?: string }
 interface Browse { files: Hit[]; next: string | null }
 interface Analysis { enabled: boolean; reason: string; model: string }
-const BASE = "/api/admin/library", DRAFT_KEY = "ros-real-wizard-v1.0.0";
+const BASE = "/api/admin/library", DRAFT_KEY = "ros-real-wizard-v2";
 
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(BASE + path, { credentials: "same-origin", ...options, headers: { "Content-Type": "application/json", ...options.headers } });
@@ -46,20 +46,18 @@ function commonsLink(value: string): string | null {
     return url.href;
   } catch { return null; }
 }
+/** Paid generation runs once, only on new images with a game copy and no analysis in progress. */
+const generable = (i: Image) => i.status === "new" && !!i.copy && i.analysis.status !== "running" && i.analysis.status !== "done";
+/** Preselected: never generated, or refused without charge. «uncertain» may already have been paid. */
+const freshForGeneration = (i: Image) => generable(i) && (i.analysis.status === "none" || i.analysis.status === "failed");
+const generationNote = (i: Image) => i.status !== "new" ? "approvata" : !i.copy ? "WebP non pronto"
+  : ({ running: "in corso", done: "già generata", uncertain: "esito incerto, forse già addebitata", failed: "non riuscita" } as Record<string, string>)[i.analysis.status] || "";
 const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
 const short = (value: string, count = 90) => value.length > count ? value.slice(0, count - 1) + "…" : value;
 
 export interface RealWizard { sync(): Promise<void> }
-export async function mountRealWizard(root: HTMLElement, onPublished: () => Promise<void>,
-  onReferences?: (ids: string[]) => Promise<void>): Promise<RealWizard> {
-  const draftKey = onReferences ? DRAFT_KEY + "-slop-references" : DRAFT_KEY;
-  const fieldId = (name: string) => (onReferences ? "slop-" : "") + "rw-" + name;
-  const field = <T extends HTMLElement>(name: string) => root.querySelector<T>("#" + fieldId(name));
-  const limit = onReferences ? MAX_BATCH : 100;
-  const generable = (i: Image) => i.status === "new" && (!!onReferences || !!i.copy) && !["running", "done"].includes(i.analysis.status);
-  const freshForGeneration = (i: Image) => generable(i) && ["none", "failed"].includes(i.analysis.status);
-  const generationNote = (i: Image) => i.status !== "new" ? "approvata" : !onReferences && !i.copy ? "WebP non pronto"
-    : ({ running: "in corso", done: "già generata", uncertain: "esito incerto, forse già addebitata", failed: "non riuscita" } as Record<string, string>)[i.analysis.status] || "";
+export async function mountRealWizard(root: HTMLElement, onPublished: () => Promise<void>, galleries: () => Gallery[]): Promise<RealWizard> {
+  let importGallery = "";
   let stage: Stage = 1, images: Image[] = [], notice = "", busy = false, query = "", sort = "relevance";
   /** Pages of Commons results already loaded: files and the offset of the following page. */
   /** Columns of the Commons results: 0 = automatic, otherwise 1 to 6; kept in this browser. */
@@ -75,9 +73,8 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   let analysis: Analysis | null = null;
   const pending = new Map<string, Hit | null>();
   const staged = () => images.filter(i => i.origin === "REAL" && (i.status === "new" || i.status === "approved"));
-  const pendingLimit = () => onReferences ? limit - staged().length : limit;
   const persist = () => {
-    try { sessionStorage.setItem(draftKey, JSON.stringify({ ids: staged().map(i => i.id), stage })); } catch { /* private browsing */ }
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ids: staged().map(i => i.id), stage })); } catch { /* private browsing */ }
   };
   let saving: Promise<unknown> = Promise.resolve();
   const replace = (updated: Image) => { images = images.map(i => i.id === updated.id ? updated : i); persist(); };
@@ -125,7 +122,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     analysis = status;
   };
   const progress = () => '<ol class="rw-steps" aria-label="Fasi del caricamento">' +
-    (onReferences ? ["Seleziona su Commons", "Tag e descrizione"] : ["Seleziona le immagini", "Tag", "Inquadratura", "Riepilogo e pubblicazione"]).map((label, index) =>
+    ["Seleziona le immagini", "Tag", "Inquadratura", "Riepilogo e pubblicazione"].map((label, index) =>
       '<li ' + (stage === index + 1 ? 'aria-current="step"' : "") + '><span>' + (index + 1) + "</span>" + label + "</li>").join("") + "</ol>";
   /** A chosen photo: its thumbnail, which opens the Commons page in a new tab, and × to remove it. Pasted links have no thumbnail. */
   const cardSelected = () => [...pending.entries()].map(([url, hit]) => { const name = (hit?.title || url).replace(/^File:/, "");
@@ -136,9 +133,10 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   const selectedSection = () => '<h3>Immagini selezionate (' + pending.size + ')</h3>' +
     (pending.size ? '<ul class="rw-picks">' + cardSelected() + "</ul>" : '<p>Tocca le fotografie nei risultati oppure incolla i link.</p>') +
     (images.length ? '<p class="hint">Già acquisite in questa sessione: ' + staged().length + ' immagini in revisione.</p>' : "");
-  const importButton = () => '<button type="button" class="primary" data-rw="import" ' + (!pending.size && !staged().length ? "disabled" : "") + '>' + (onReferences ? "Importa e prepara i riferimenti" : "Avanti: tag") + '</button>';
+  const importDisabled = () => pending.size ? !importGallery : !staged().length;
+  const importButton = () => '<button type="button" class="primary" data-rw="import" ' + (importDisabled() ? "disabled" : "") + '>Avanti: tag</button>';
   const first = () => '<div class="rw-stack">' +
-    '<section class="rw-panel"><h3>Cerca su Commons</h3><form id="' + fieldId("search") + '" class="rw-search">' +
+    '<section class="rw-panel"><h3>Cerca su Commons</h3><form id="rw-search" class="rw-search">' +
     '<label>Termini di ricerca<span class="rw-search-field"><input name="q" type="search" minlength="2" maxlength="200" required value="' + escape(query) +
       '" placeholder="Soggetto, luogo, evento"><button type="button" class="rw-search-clear" data-rw-clear-search aria-label="Cancella la ricerca"' +
       (query ? "" : " disabled") + '>×</button></span></label>' +
@@ -147,7 +145,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     '<button type="submit">Cerca</button></form>' +
     (searchCategories.length ? '<details class="rw-categories"><summary>Categorie correlate (' + searchCategories.length + ')</summary><ul>' +
       searchCategories.map(c => "<li>" + escape(c.replace(/^Category:/, "")) + "</li>").join("") + "</ul></details>" : "") +
-    (current().length ? '<label class="rw-columns-pick">Colonne<select id="' + fieldId("columns") + '">' +
+    (current().length ? '<label class="rw-columns-pick">Colonne<select id="rw-columns">' +
       [0, 1, 2, 3, 4, 5, 6].map(n => '<option value="' + n + '" ' + (columns === n ? "selected" : "") + ">" + (n || "Automatiche") + "</option>").join("") +
       "</select></label>" : "") +
     '<div class="rw-results" aria-live="polite"' + (columns ? ' style="grid-template-columns:repeat(' + columns + ',minmax(0,1fr))"' : "") + ">" + (searched && !current().length ? "<p>Nessun risultato.</p>" : "") +
@@ -160,12 +158,13 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       '<span aria-current="page">Pagina ' + (page + 1) + '</span>' +
       '<button type="button" data-rw="next-results" aria-label="Pagina successiva" ' + (searchPages[page]?.next ? "" : "disabled") + '>→</button></nav>' : "") +
     "</section>" +
-    '<details class="rw-panel rw-links" id="' + fieldId("links-section") + '" ' + (linksOpen ? "open" : "") + '><summary><h3>Aggiungi link di Wikimedia Commons</h3></summary>' +
-    '<p class="hint">Incolla più collegamenti, uno per riga.' +
-    (onReferences ? ' Le foto vengono salvate nella libreria privata.' : ' Non vengono pubblicati finché non confermi il riepilogo.') + '</p>' +
-    '<label for="' + fieldId("links") + '">Link delle immagini</label><textarea id="' + fieldId("links") + '" rows="5" placeholder="https://commons.wikimedia.org/wiki/File:..."></textarea>' +
+    '<details class="rw-panel rw-links" id="rw-links-section" ' + (linksOpen ? "open" : "") + '><summary><h3>Aggiungi link di Wikimedia Commons</h3></summary>' +
+    '<p class="hint">Incolla più collegamenti, uno per riga. Non vengono pubblicati finché non confermi il riepilogo.</p>' +
+    '<label for="rw-links">Link delle immagini</label><textarea id="rw-links" rows="5" placeholder="https://commons.wikimedia.org/wiki/File:..."></textarea>' +
     '<button type="button" data-rw="add-links">Aggiungi alla selezione</button></details></div>' +
-    '<div class="rw-selected">' + selectedSection() + '</div><div class="rw-actions rw-bottom">' + importButton() + '</div>';
+    '<div class="rw-selected">' + selectedSection() + '</div><div class="rw-actions rw-bottom">' +
+    (galleries().length ? `<label>Galleria del caricamento<select id="rw-import-gallery" required><option value="">Scegli una galleria</option>${galleryOptions(galleries(), importGallery)}</select></label>` : '<p class="hint">Crea una galleria in Database immagini → Gallerie prima di acquisire le foto.</p>') +
+    importButton() + '</div>';
   const metadata = (item: Image) => '<details class="rw-metadata"><summary>Titolo e metadati</summary><dl>' +
     [["Titolo Commons", item.title], ["Autore", item.author],
       ["Licenza", item.license_name], ["Dimensioni originali", item.width + " × " + item.height],
@@ -180,12 +179,13 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     (analysis?.enabled ? 'Modello: ' + escape(analysis.model) + '. Una chiamata a pagamento per immagine, con conferma.' :
       'Generazione non disponibile: ' + escape(analysis?.reason || "configurazione mancante")) + "</span>" +
     (staged().some(i => i.generated) ? '<button type="button" data-rw="choose-reset">Ripristina i tag generati</button>' : "") + "</div>" +
-    '<datalist id="' + fieldId("existing-tags") + '">' + vocabulary.map(t => '<option value="' + escape(t) + '"></option>').join("") + '</datalist>' +
+    '<datalist id="rw-existing-tags">' + vocabulary.map(t => '<option value="' + escape(t) + '"></option>').join("") + '</datalist>' +
     legend() + '<div class="rw-editor-grid">' + staged().map(item => '<article class="rw-editor" data-rw-image="' + escape(item.id) + '">' +
       '<div class="rw-image"><img src="' + escape(item.file) + '" alt="' + escape(item.title) + '" loading="lazy"></div>' +
       '<div class="rw-editor-fields"><h3>' + escape(short(item.title, 90)) + '</h3>' +
-      (onReferences ? "" : '<label class="rw-description">Descrizione <small>(la leggono i giocatori alla fine della partita)</small><textarea data-rw-description="' +
-        escape(item.id) + '" maxlength="1000" rows="3" placeholder="Che cosa mostra la foto, dove e quando">' + escape(item.description) + '</textarea></label>') +
+      (galleries().length ? `<label>Galleria<select data-rw-gallery="${escape(item.id)}">${galleryOptions(galleries(), item.gallery_id)}</select></label>` : "") +
+      '<label class="rw-description">Descrizione <small>(la leggono i giocatori alla fine della partita)</small><textarea data-rw-description="' +
+        escape(item.id) + '" maxlength="1000" rows="3" placeholder="Che cosa mostra la foto, dove e quando">' + escape(item.description) + '</textarea></label>' +
       descriptionFields(item.id, item.real_description, false, item.commons_description || "") +
       '<label>Tag</label><div class="rw-tagbox"><div class="rw-pills">' +
         (item.tags.length ? sortByCategory(item.tags, item.categories).map(t => pill(t, categoryOf(item.categories, t), "rw-pill",
@@ -194,7 +194,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         '</div>' + (item.origin === "REAL" && !item.tags.some(t => categoryOf(item.categories, t) === "time")
           ? '<small class="rw-no-time" data-rw-no-time>Nessun tag di Tempo: aggiungi il decennio se è noto.</small>' : "") +
         '<div class="rw-tag-entry"><input data-rw-new-tag="' + escape(item.id) +
-          '" list="' + fieldId("existing-tags") + '" autocomplete="off" spellcheck="false" autocapitalize="none" placeholder="Nuovo tag">' +
+          '" list="rw-existing-tags" autocomplete="off" spellcheck="false" autocapitalize="none" placeholder="Nuovo tag">' +
           categorySelect('data-rw-tag-category="' + escape(item.id) + '"') +
           '<button type="button" data-rw="add-tag" data-id="' + escape(item.id) + '">Aggiungi</button></div></div>' +
       '<div class="rw-actions">' +
@@ -203,19 +203,18 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       '<button type="button" data-rw="discard" data-id="' + escape(item.id) + '">Togli dal caricamento</button>' +
       '</div>' + metadata(item) + '</div></article>').join("") + '</div>' +
     '<div class="rw-actions rw-bottom"><button type="button" data-rw="back">Indietro</button>' +
-    (onReferences ? '<button type="button" data-rw="use-references" class="primary">Aggiungi alla selezione SLOP</button>'
-      : '<button type="button" data-rw="to-crop" class="primary">Avanti: inquadratura</button>') + '</div>' +
-    '<dialog id="' + fieldId("generation-dialog") + '" class="rw-dialog"><h3>Seleziona le immagini</h3><p>Seleziona le immagini per generare i tag. ' +
+    '<button type="button" data-rw="to-crop" class="primary">Avanti: inquadratura</button></div>' +
+    '<dialog id="rw-generation-dialog" class="rw-dialog"><h3>Seleziona le immagini</h3><p>Seleziona le immagini per generare i tag. ' +
     'I tag attuali delle immagini scelte saranno sostituiti; le altre non cambiano. Ogni immagine si genera una sola volta.</p>' +
-    '<label><input type="checkbox" id="' + fieldId("generation-all") + '"> Seleziona tutte</label>' +
+    '<label><input type="checkbox" id="rw-generation-all"> Seleziona tutte</label>' +
     '<div class="rw-gen-list">' + staged().map(i => '<label><input type="checkbox" data-rw-gen="' +
       escape(i.id) + '" ' + (!generable(i) ? "disabled" : freshForGeneration(i) ? "checked" : "") + '> ' + escape(short(i.title)) +
       (generationNote(i) ? ' <small>(' + escape(generationNote(i)) + ')</small>' : "") +
       '</label>').join("") + '</div><div class="rw-actions"><button type="button" data-rw="close-gen">Annulla</button>' +
       '<button type="button" class="primary" data-rw="run-gen">Genera</button></div></dialog>' +
-    '<dialog id="' + fieldId("reset-dialog") + '" class="rw-dialog"><h3>Ripristina i tag generati</h3><p>Le immagini scelte tornano ai tag ' +
+    '<dialog id="rw-reset-dialog" class="rw-dialog"><h3>Ripristina i tag generati</h3><p>Le immagini scelte tornano ai tag ' +
     'generati, senza costi; le tue modifiche su quelle immagini vanno perse. Le altre non cambiano.</p>' +
-    '<label><input type="checkbox" id="' + fieldId("reset-all") + '"> Seleziona tutte</label>' +
+    '<label><input type="checkbox" id="rw-reset-all"> Seleziona tutte</label>' +
     '<div class="rw-gen-list">' + staged().filter(i => i.generated).map(i => '<label><input type="checkbox" data-rw-restore="' +
       escape(i.id) + '"> ' + escape(short(i.title)) + '</label>').join("") + '</div><div class="rw-actions">' +
     '<button type="button" data-rw="close-reset">Annulla</button><button type="button" class="primary" data-rw="run-reset">Ripristina</button></div></dialog>';
@@ -261,7 +260,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     const focused = focusKey();
     // A description being typed (not yet saved) survives a redraw.
     const drafts = [...root.querySelectorAll<HTMLTextAreaElement>("[data-rw-description]")].map(t => [t.dataset.rwDescription!, t.value] as const);
-    root.innerHTML = '<div class="rw">' + (onReferences ? "" : "<h2>Caricamento REAL</h2>") + progress() +
+    root.innerHTML = '<div class="rw"><h2>Caricamento REAL</h2>' + progress() +
       '<p class="rw-message" role="status" aria-live="polite" tabindex="-1">' + escape(notice) + '</p>' +
       (busy ? '<p class="rw-busy" role="status">Operazione in corso…</p>' : "") +
       (stage === 1 ? first() : stage === 2 ? second() : stage === 3 ? third() : fourth()) +
@@ -281,10 +280,10 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   };
   /** Redraws only the chosen photos and the button under them, so that the results keep their scroll. */
   const renderSelected = () => {
-    const section = root.querySelector<HTMLElement>(".rw-selected"), bottom = root.querySelector<HTMLElement>(".rw-bottom");
-    if (!section || !bottom || stage !== 1) { render(); return; }
+    const section = root.querySelector<HTMLElement>(".rw-selected"), next = root.querySelector<HTMLButtonElement>('[data-rw="import"]');
+    if (!section || !next || stage !== 1) { render(); return; }
     section.innerHTML = selectedSection();
-    bottom.innerHTML = importButton();
+    next.disabled = importDisabled();
     const message = root.querySelector<HTMLElement>(".rw-message");
     if (message) message.textContent = notice;
   };
@@ -292,10 +291,10 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     const invalid: string[] = [];
     for (const source of links) {
       const url = commonsLink(source);
-      if (url && (pending.has(url) || pending.size < pendingLimit())) pending.set(url, hits.get(source) || null);
+      if (url && pending.size < 100) pending.set(url, hits.get(source) || null);
       else invalid.push(source);
     }
-    notice = invalid.length ? "Link non validi oppure limite di " + limit + " superato: " + invalid.map(s => short(s, 80)).join("; ") :
+    notice = invalid.length ? "Link non validi oppure limite di 100 superato: " + invalid.map(s => short(s, 80)).join("; ") :
       pending.size + (pending.size === 1 ? " immagine" : " immagini") + " nella selezione.";
     render();
   };
@@ -319,24 +318,19 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     if (!pending.size && staged().length) { stage = 2; persist(); render(); return; }
     const failures: string[] = [];
     let done = 0;
-    const pendingCount = pending.size;
     for (const [url] of [...pending]) {
       try {
-        notice = "Acquisizione privata " + (done + failures.length + 1) + " di " + pendingCount + "…";
+        notice = "Acquisizione privata " + (done + failures.length + 1) + " di " + pending.size + "…";
         render();
-        const item = await api<Image>("/commons", { method: "POST", body: JSON.stringify({ url }) });
+        const item = await api<Image>("/commons", { method: "POST", body: JSON.stringify({ url, gallery_id: importGallery }) });
         images.push(item); pending.delete(url); persist(); done++;
         // The game copy (4:5, centred) is made here, in the browser, from the stored original.
-        if (!onReferences) {
-          try { replace(await prepareLibraryCopy<Image>(item.id)); }
-          catch (copyError) { failures.push(short(item.title, 40) + ": copia di gioco non pronta (" + errorText(copyError) + ")"); }
-        }
+        try { replace(await prepareLibraryCopy<Image>(item.id)); }
+        catch (copyError) { failures.push(short(item.title, 40) + ": copia di gioco non pronta (" + errorText(copyError) + ")"); }
       } catch (error) { failures.push(short(url, 40) + ": " + errorText(error)); }
     }
     stage = staged().length ? 2 : 1;
-    notice = (onReferences ? (done === 1 ? "1 immagine importata." : done + " immagini importate.")
-      : done + (done === 1 ? " immagine acquisita e preparata" : " immagini acquisite e preparate") + " in WebP.") +
-      (failures.length ? " Errori: " + failures.join(" | ") : "");
+    notice = done + (done === 1 ? " immagine acquisita e preparata" : " immagini acquisite e preparate") + " in WebP." + (failures.length ? " Errori: " + failures.join(" | ") : "");
     persist(); render();
   };
   let conflictNotes: string[] = [];
@@ -424,7 +418,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       const picker = root.querySelector<HTMLSelectElement>('[data-rw-tag-category="' + target.dataset.rwNewTag + '"]');
       if (picker && suggested) picker.value = suggested;
     }
-    if (target.matches('#' + fieldId("search") + ' [name="q"]')) {
+    if (target.matches('#rw-search [name="q"]')) {
       const clear = root.querySelector<HTMLButtonElement>("[data-rw-clear-search]");
       if (clear) clear.disabled = !target.value;
     }
@@ -432,11 +426,19 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   // «toggle» does not bubble: listen in the capture phase to keep the links section open across re-renders.
   root.addEventListener("toggle", event => {
     const section = event.target as HTMLDetailsElement;
-    if (section.id === fieldId("links-section")) linksOpen = section.open;
+    if (section.id === "rw-links-section") linksOpen = section.open;
   }, true);
   root.addEventListener("change", event => {
     const target = event.target as HTMLInputElement;
-    if (target.id === fieldId("columns")) {
+    if (target.id === "rw-import-gallery") { importGallery = target.value; renderSelected(); return; }
+    if (target.dataset.rwGallery) {
+      const item = images.find(i => i.id === target.dataset.rwGallery);
+      if (!item) return;
+      if (busy) { target.value = item.gallery_id; return; }
+      void update(item, {gallery_id: target.value}).catch(error => { notice = errorText(error); render(); });
+      return;
+    }
+    if (target.id === "rw-columns") {
       const n = Number(target.value);
       columns = Number.isInteger(n) && n >= 1 && n <= 6 ? n : 0;
       try { if (columns) localStorage.setItem(COLUMNS_KEY, String(columns)); else localStorage.removeItem(COLUMNS_KEY); } catch { /* private browsing */ }
@@ -448,7 +450,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       // A tap ticks the photo and puts it among the chosen ones at once; unticking takes it out.
       const url = target.dataset.rwHit!;
       if (!target.checked) { pending.delete(url); notice = ""; }
-      else if (pending.size >= pendingLimit()) { target.checked = false; notice = "Limite di " + limit + " immagini per caricamento raggiunto."; }
+      else if (pending.size >= 100) { target.checked = false; notice = "Limite di 100 immagini per caricamento raggiunto."; }
       else { pending.set(url, knownHits.get(url) || null); notice = ""; }
       renderSelected();
       return;
@@ -472,10 +474,10 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         .finally(() => { const message = root.querySelector<HTMLElement>(".rw-message"); if (message) message.textContent = notice; });
       return;
     }
-    if (target.id === fieldId("reset-all")) {
+    if (target.id === "rw-reset-all") {
       root.querySelectorAll<HTMLInputElement>("[data-rw-restore]").forEach(c => { c.checked = target.checked; });
     }
-    if (target.id === fieldId("generation-all")) {
+    if (target.id === "rw-generation-all") {
       root.querySelectorAll<HTMLInputElement>("[data-rw-gen]:not(:disabled)").forEach(c => { c.checked = target.checked; });
     }
   });
@@ -486,7 +488,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       description: hit.description || "", link: { href: hit.page_url, label: "Apri la pagina su Commons" } });
   });
   root.addEventListener("submit", event => {
-    if ((event.target as HTMLElement).id !== fieldId("search")) return;
+    if ((event.target as HTMLElement).id !== "rw-search") return;
     event.preventDefault();
     if (busy) return;
     const data = new FormData(event.target as HTMLFormElement);
@@ -503,7 +505,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     // The button at the end of the Commons search field empties it; results and selection stay.
     const clear = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-rw-clear-search]");
     if (clear) {
-      const input = field<HTMLFormElement>("search")?.querySelector<HTMLInputElement>('[name="q"]');
+      const input = root.querySelector<HTMLInputElement>('#rw-search [name="q"]');
       if (input) { input.value = ""; input.focus(); }
       query = ""; clear.disabled = true;
       return;
@@ -511,16 +513,16 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-rw]");
     if (!button || busy) return;
     const action = button.dataset.rw!, id = button.dataset.id || "";
-    if (action === "close-reset") { field<HTMLDialogElement>("reset-dialog")?.close(); return; }
-    if (action === "choose-reset") { field<HTMLDialogElement>("reset-dialog")!.showModal(); return; }
-    if (action === "close-gen") { field<HTMLDialogElement>("generation-dialog")?.close(); return; }
+    if (action === "close-reset") { root.querySelector<HTMLDialogElement>("#rw-reset-dialog")?.close(); return; }
+    if (action === "choose-reset") { root.querySelector<HTMLDialogElement>("#rw-reset-dialog")!.showModal(); return; }
+    if (action === "close-gen") { root.querySelector<HTMLDialogElement>("#rw-generation-dialog")?.close(); return; }
     if (action === "choose-generation") {
-      field<HTMLDialogElement>("generation-dialog")!.showModal();
+      root.querySelector<HTMLDialogElement>("#rw-generation-dialog")!.showModal();
       return;
     }
     if (action === "run-gen") {
       const ids = [...root.querySelectorAll<HTMLInputElement>("[data-rw-gen]:checked")].map(x => x.dataset.rwGen!);
-      field<HTMLDialogElement>("generation-dialog")?.close();
+      root.querySelector<HTMLDialogElement>("#rw-generation-dialog")?.close();
       busy = true;
       try { await generate(ids); } catch (error) { notice = errorText(error); render(); }
       finally { busy = false; render(); }
@@ -529,7 +531,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     busy = true;
     try {
       if (action === "add-links") {
-        const input = field<HTMLTextAreaElement>("links")!;
+        const input = root.querySelector<HTMLTextAreaElement>("#rw-links")!;
         addLinks(input.value.split(/\s+/).filter(Boolean));
       } else if (action === "remove-pending") {
         const url = button.dataset.url!;
@@ -541,18 +543,6 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       else if (action === "prev-results" && page > 0) { page--; notice = ""; render(); }
       else if (action === "import") await acquire();
       else if (action === "back") { stage = stage > 1 ? (stage - 1) as Stage : 1; notice = ""; persist(); render(); }
-      else if (action === "use-references" && onReferences) {
-        const dropped = await syncStaged();
-        const chosen = staged();
-        if (dropped) notice = goneNotice(dropped);
-        else if (chosen.some(item => !item.tags.length || !item.real_description))
-          notice = "Completa tag e descrizione editoriale per tutte le REAL di riferimento.";
-        else if (chosen.length) {
-          await onReferences(chosen.map(item => item.id));
-          images = []; stage = 1; notice = "";
-          persist();
-        }
-      }
       else if (action === "to-crop") {
         const dropped = await syncStaged();
         if (dropped && !staged().length) { notice = goneNotice(dropped); render(); return; }
@@ -604,7 +594,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       } else if (action === "run-reset" || action === "reset") {
         const ids = action === "reset" ? [id]
           : [...root.querySelectorAll<HTMLInputElement>("[data-rw-restore]:checked")].map(x => x.dataset.rwRestore!);
-        field<HTMLDialogElement>("reset-dialog")?.close();
+        root.querySelector<HTMLDialogElement>("#rw-reset-dialog")?.close();
         await restore(ids);
       } else if (action === "copy") {
         notice = "Preparo la copia di gioco…"; render();
@@ -617,6 +607,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       } else if (action === "discard") {
         const item = images.find(i => i.id === id)!;
         if (!window.confirm("Togliere «" + short(item.title, 60) + "» dal caricamento? La foto va nel cestino e si può ripristinare dalla sezione Database.")) return;
+        await saving.catch(() => {});
         await api("/" + encodeURIComponent(id) + "/trash", { method: "POST", body: "{}" });
         images = images.filter(i => i.id !== id);
         if (!staged().length) stage = 1;
@@ -636,17 +627,17 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     finally { busy = false; render(); }
   });
   try {
-    const raw = sessionStorage.getItem(draftKey);
+    const raw = sessionStorage.getItem(DRAFT_KEY);
     if (raw) {
       const draft = JSON.parse(raw) as { ids?: string[]; stage?: Stage };
-      const ids = Array.isArray(draft.ids) ? draft.ids.filter(x => typeof x === "string").slice(0, limit) : [];
+      const ids = Array.isArray(draft.ids) ? draft.ids.filter(x => typeof x === "string").slice(0, 100) : [];
       for (const id of ids) {
         try {
           const item = await api<Image>("/" + encodeURIComponent(id));
           if (item.origin === "REAL" && (item.status === "new" || item.status === "approved")) images.push(item);
         } catch { /* inaccessible draft */ }
       }
-      stage = images.length && (draft.stage === 2 || (!onReferences && (draft.stage === 3 || draft.stage === 4))) ? draft.stage : 1;
+      stage = images.length && (draft.stage === 2 || draft.stage === 3 || draft.stage === 4) ? draft.stage : 1;
     }
     await refreshMeta();
   } catch (error) { notice = errorText(error); }

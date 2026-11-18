@@ -31,6 +31,11 @@ export async function retireCopy(env: Env, copyKey: string, imageId: string) {
   return true;
 }
 
+/** A copy published again is live: it no longer waits for deletion. */
+export async function reviveCopy(env: Env, copyKey: string) {
+  await env.DB.prepare("DELETE FROM retired_copies WHERE copy_key=?").bind(copyKey).run();
+}
+
 /** Deletes the retired copies that no game in progress and no published image uses any more. */
 export async function sweepRetired(env: Env): Promise<number> {
   const free = (await env.DB.prepare(`SELECT copy_key FROM retired_copies WHERE copy_key NOT IN (SELECT copy_key FROM (${IN_PLAY}))

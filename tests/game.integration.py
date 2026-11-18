@@ -45,28 +45,6 @@ status, refused = call(base + '/api/sessions', {'level': 'facile'}, opener=playe
 catalogue = publish(API, token, 'gm', real=10, slop=10)
 try:
     assert [l['available'] for l in call(base + '/api/levels')[1]['levels']] == [True, False, False, False]
-    # A newly linked source leaves both the pool and the level counts but remains available to existing rounds.
-    earlier = player()
-    code, prepared = call(base + '/api/sessions', {'level': 'facile'}, opener=earlier)
-    assert code == 201, prepared
-    prepared_id = prepared['id']
-    first = call(f'{base}/api/sessions/{prepared_id}/manifest', opener=earlier)[1]['images'][0]
-    current = sql(f"SELECT i.id,i.origin FROM images i JOIN game_rounds r ON i.id=r.image_id WHERE r.id='{first['id']}'")[0]
-    source = current['id'] if current['origin'] == 'REAL' else sql(f"""SELECT id FROM images WHERE origin='REAL' AND status='published'
-        AND id NOT IN (SELECT image_id FROM game_rounds WHERE session_id='{prepared_id}') LIMIT 1""")[0]['id']
-    child = catalogue['SLOP'][0]
-    try:
-        sql(f"""UPDATE game_rounds SET image_id='{source}', copy_key=(SELECT copy_key FROM images WHERE id='{source}') WHERE id='{first['id']}';
-            INSERT INTO slop_reference_uses(source_id,created_at) VALUES('{source}','now');
-            UPDATE slop_reference_uses SET image_id='{child}' WHERE source_id='{source}';""")
-        assert not call(base + '/api/levels')[1]['levels'][0]['available']
-        assert call(base + '/api/sessions', {'level': 'facile'}, opener=player())[0] == 409
-        call(API, admin=True)  # Sweeping retired copies must keep the copy assigned to the open game.
-        status, image = call(base + first['image'], opener=earlier)
-        assert status == 200 and image[:4] == b'RIFF'
-    finally:
-        sql(f"DELETE FROM game_sessions WHERE id='{prepared_id}'; DELETE FROM slop_reference_uses WHERE source_id='{source}';")
-        assert call(f'{API}/{source}/publish', {}, admin=True)[0] == 200
     for wrong in ({'level': 'impossibile'}, {}, {'level': 'facile', 'count': 3}, {'mode': 'training'}):
         assert call(base + '/api/sessions', wrong, opener=player())[0] == 400, wrong
 

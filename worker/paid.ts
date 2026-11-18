@@ -4,11 +4,12 @@ export class PaidError extends HttpError {
   constructor(message: string, public outcome: "failed" | "uncertain") { super(502, message); }
 }
 export async function paid(env: Env, kind: "prompts" | "images" | "evaluation", model: string, body: unknown,
-  links: { process?: string; attempt?: string; image?: string } = {}): Promise<Record<string, unknown>> {
+  links: { process?: string; attempt?: string; image?: string; request?: string } = {}): Promise<Record<string, unknown>> {
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
-  const callId = id(), stamp = new Date().toISOString();
-  await env.DB.prepare(`INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,process_id,attempt_id,image_id)
-    VALUES(?,?,?,'pending',?,?,?,?,?)`).bind(callId, kind, model, stamp, stamp, links.process ?? null, links.attempt ?? null, links.image ?? null).run();
+  const callId = links.request ?? id(), stamp = new Date().toISOString();
+  const claim = await env.DB.prepare(`INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,process_id,attempt_id,image_id)
+    VALUES(?,?,?,'pending',?,?,?,?,?) ON CONFLICT(id) DO NOTHING`).bind(callId, kind, model, stamp, stamp, links.process ?? null, links.attempt ?? null, links.image ?? null).run();
+  if (!claim.meta.changes) throw new HttpError(409, "Richiesta già registrata: nessuna chiamata ripetuta");
   const settle = (status: string, usage: { input_tokens?: number; output_tokens?: number } = {}) =>
     env.DB.prepare("UPDATE paid_calls SET status=?,input_tokens=?,output_tokens=?,updated_at=? WHERE id=?")
       .bind(status, usage.input_tokens ?? null, usage.output_tokens ?? null, new Date().toISOString(), callId).run();

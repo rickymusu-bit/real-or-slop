@@ -18,17 +18,14 @@ interface Session {
   invalid_reason: string | null; round_seconds: number | null;
 }
 
-const PLAYABLE = `images.status='published' AND images.copy_key IS NOT NULL AND json_extract(images.copy_crop,'$.format')='4:5'
-  AND NOT EXISTS(SELECT 1 FROM slop_reference_uses WHERE source_id=images.id AND image_id IS NOT NULL)`;
-
 /** Published images available to the game, by origin. */
 async function catalog(env: Env) {
-  return (await env.DB.prepare(GAME_IMAGE + ` WHERE ${PLAYABLE}`).all<ImageRow>()).results
+  return (await env.DB.prepare(GAME_IMAGE + " WHERE status='published' AND copy_key IS NOT NULL AND json_extract(copy_crop,'$.format')='4:5'").all<ImageRow>()).results
     .map(row => ({ ...row, status: "approved" }));
 }
 /** A level is playable when every position can be either origin: at least as many REAL and as many SLOP as its photos. */
 export async function levels(env: Env) {
-  const rows = (await env.DB.prepare(`SELECT origin,count(*) AS n FROM images WHERE ${PLAYABLE} GROUP BY origin`)
+  const rows = (await env.DB.prepare("SELECT origin,count(*) AS n FROM images WHERE status='published' AND copy_key IS NOT NULL AND json_extract(copy_crop,'$.format')='4:5' GROUP BY origin")
     .all<{ origin: string; n: number }>()).results;
   const real = rows.find(r => r.origin === "REAL")?.n || 0, slop = rows.find(r => r.origin === "SLOP")?.n || 0;
   return { levels: LEVEL_IDS.map(level => ({ id: level, ...LEVELS[level], available: real >= LEVELS[level].photos && slop >= LEVELS[level].photos })) };
@@ -123,23 +120,18 @@ export async function game(request: Request, env: Env, path: string) {
     const real = rows.filter(r => r.type === "REAL").length, slop = rows.filter(r => r.type === "AI").length;
     if (real < level.photos || slop < level.photos)
       throw new HttpError(409, `Il catalogo non ha ancora abbastanza foto per il livello ${level.label}: ne servono almeno ${level.photos} REAL e ${level.photos} SLOP`);
-    const sample = curatedSample(rows, level.photos);
-    if (sample.images.length !== level.photos) throw new HttpError(409, "Catalogo insufficiente per questo livello");
+    const drawn = curatedSample(rows, level.photos);
+    if (drawn.images.length !== level.photos) throw new HttpError(409, "Catalogo insufficiente per questo livello");
+    const sample = drawn;
     const token = cookie(request) || id() + id(), key = await hash(token), now = Date.now(), sid = id();
-    const rounds = JSON.stringify(sample.images.map((image, position) => ({ id: id(), imageId: image.id, position, copyKey: image.r2_key })));
-    // Recheck the sample in the same transaction that registers the rounds.
-    const [created] = await env.DB.batch([
+    await env.DB.batch([
       env.DB.prepare(`INSERT INTO game_sessions(id,mode,level,created_at,owner_hash,protocol_version,phase,preparation_expires_at,timing_mode,round_seconds)
-        SELECT ?,'levels',?,?,?,2,'preparing',?,'per-image',? WHERE NOT EXISTS(
-          SELECT 1 FROM json_each(?) picked LEFT JOIN images ON images.id=json_extract(picked.value,'$.imageId')
-            AND images.copy_key=json_extract(picked.value,'$.copyKey') AND ${PLAYABLE}
-          WHERE images.id IS NULL)`).bind(sid, data.level, now, key, now + preparationTtlMs, level.seconds, rounds),
+        VALUES(?,'levels',?,?,?,2,'preparing',?,'per-image',?)`).bind(sid, data.level, now, key, now + preparationTtlMs, level.seconds),
       // Each round keeps the copy it serves: later edits to the image never reach a game already started.
-      env.DB.prepare(`INSERT INTO game_rounds(id,session_id,image_id,position,copy_key) SELECT json_extract(value,'$.id'),?1,json_extract(value,'$.imageId'),
-        json_extract(value,'$.position'),json_extract(value,'$.copyKey') FROM json_each(?2) WHERE EXISTS(SELECT 1 FROM game_sessions WHERE id=?1)`)
-        .bind(sid, rounds),
+      env.DB.prepare(`INSERT INTO game_rounds(id,session_id,image_id,position,copy_key) SELECT json_extract(value,'$.id'),?,json_extract(value,'$.imageId'),
+        json_extract(value,'$.position'),json_extract(value,'$.copyKey') FROM json_each(?)`)
+        .bind(sid, JSON.stringify(sample.images.map((image, position) => ({ id: id(), imageId: image.id, position, copyKey: image.r2_key })))),
     ]);
-    if (!created.meta.changes) throw new HttpError(409, "Il catalogo è cambiato. Riprova a iniziare la partita");
     const response = json({ id: sid }, 201);
     response.headers.set("Set-Cookie", `ros_owner=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${new URL(request.url).protocol === "https:" ? "; Secure" : ""}`);
     return response;
