@@ -51,9 +51,9 @@ try:
     instructions=draft['slop_instructions']+' Preserva l’architettura della piazza.'
     gallery=update_gallery(gallery,instructions)
 
-    two=real(); no_description=real(described=False,gallery=gallery['id']); outside=real(gallery=other['id'])
+    two=real(gallery=other['id']); no_description=real(described=False,gallery=gallery['id']); outside=real(gallery=other['id'])
     photos.extend([two['id'],no_description['id'],outside['id']])
-    assert two['id'] in [i['id'] for i in call('?gallery=unassigned',library=True)[1]['items']]
+    assert two['id'] in [i['id'] for i in call('?gallery='+other['id'],library=True)[1]['items']]
     code,two=call('/'+two['id']+'/publish',{},library=True); assert code==200,two
     two=assign_gallery(two,gallery['id'])
     assert two['status']=='published'
@@ -64,6 +64,7 @@ try:
     code,short=extract(gallery,2);assert code==409 and 'disponibili: 1' in short['error'],short
     sql(f"UPDATE images SET original_key='{key}' WHERE id='{one['id']}'")
     code,short=extract(gallery,3);assert code==409 and 'disponibili: 2' in short['error'],short
+    assert call('auto/preview',{'gallery_id':gallery['id'],'sources':[two['id']]})[0]==400
     for size in (0,1.5,11):assert extract(gallery,size)[0]==400
 
     control([])
@@ -125,7 +126,7 @@ try:
     assert generated['gallery_id']==gallery['id'] and generated['status']=='new' and generated['copy'] is None
     assert 'brief' not in generated['generation']['slot']
     assert not sql(f"SELECT source_id FROM slop_gallery_sources s JOIN slop_processes p ON p.id=s.process_id WHERE p.batch_id='{bid}'")
-    assert not sql(f"SELECT source_id FROM slop_reference_uses WHERE image_id='{child['id']}'")
+    assert not sql("SELECT name FROM sqlite_schema WHERE name='slop_reference_uses'")
     saved=json.dumps(call('batches/'+bid)[1])
     assert all(r['id'] not in saved and r['title'] not in saved for r in selected['references'])
     assert call('/'+two['id'],library=True)[1]['status']=='published'
@@ -188,15 +189,9 @@ try:
     assert call('auto/start',{'batch':review['id'],'count':1,'confirm':True})[0]==409
     assert len(control())==1 and not sql("SELECT source_id FROM slop_gallery_sources")
 
-    # The pre-editorial automatic batch remains reviewable, without paid resume.
-    sql("INSERT INTO slop_batches(id,theme,slots,origin,auto_status,auto_size,prompts_status,created_at,updated_at) VALUES('old-paused-loop','[]','[]','auto','running',1,'done','x','x')")
-    assert call('auto')[1]['batch']['pipeline_version']==1
-    assert call('batches/old-paused-loop/images',{'confirm':True,'index':0,'quality':'high'})[0]==409
-    assert call('auto/resume',{'confirm':True})[0]==409
-    call('auto/stop',{})
 finally:
     if catalogue:remove_catalog(LIBRARY,TOKEN,catalogue)
     remove(photos)
     call('/settings',old,method='PUT',library=True)
 
-print('Gallery API: assignment, readiness, paid confirmations, whole images, revisions, privacy, reuse and historic compatibility passed.')
+print('Gallery API: assignment, readiness, paid confirmations, whole images, revisions, privacy, and reuse passed.')

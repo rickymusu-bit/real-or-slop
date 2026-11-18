@@ -1,6 +1,6 @@
-# Sezione Database — specifica 6.1.0
+# Sezione Database — specifica 7.0.0
 
-Stato: implementata nel ramo 1.40.0, da rilasciare. Aggiornata: 2026-11-18T18:13:41Z.
+Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
 
 ## 1. Decisioni dell'owner
 
@@ -39,8 +39,8 @@ Ricerca in ID, titolo REAL, descrizione o prompt, combinata con i filtri di orig
 
 La scheda «Gallerie» consente di creare e modificare titolo, descrizione e Indicazioni SLOP. L’owner può chiedere una proposta al
 modello dopo aver confermato una chiamata, rivederla nel campo e salvarla quando è pronta. Il modulo indica quando la galleria ha
-indicazioni operative. La vista Immagini può filtrare per galleria o mostrare le foto senza galleria. Dal dettaglio e dalla
-selezione multipla si assegnano le REAL, incluse quelle pubblicate o nel cestino, conservandone lo stato. Il dettaglio delle SLOP
+indicazioni operative. La vista Immagini può filtrare per galleria. Dal dettaglio e dalla selezione multipla si possono spostare le REAL in
+un’altra galleria, anche quando sono pubblicate o nel cestino. Le immagini conservano il proprio stato. Il dettaglio delle SLOP
 mostra la galleria ereditata dal batch.
 
 ## 3. Dettaglio

@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 3.6.0
+# Dashboard e wizard REAL — specifica 3.7.0
 
-Stato: implementata nel ramo 1.40.0, da rilasciare. Aggiornata: 2026-11-18T18:13:41Z.
+Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
 
 ## 1. Decisioni dell'owner
 
@@ -17,7 +17,7 @@ Stato: implementata nel ramo 1.40.0, da rilasciare. Aggiornata: 2026-11-18T18:13
 
 ## 2. Dashboard `/admin`
 
-Riprogettazione 1.37.0: navigazione laterale desktop con descrizione delle cinque attività; su mobile barra orizzontale scorrevole. La barra laterale e i suoi pulsanti restano nella propria colonna, senza coprire i pannelli; le descrizioni dei pulsanti sono sotto il titolo. Su mobile la barra scorre mantenendo le voci compatte. Ultima sezione ricordata nella sessione. Testata compatta, pannelli coerenti, comandi tattili e focus visibile. I quattro passi REAL restano espliciti con schede e azioni raggruppate. Le eccezioni SLOP e i loro tentativi sono espandibili singolarmente; un aggiornamento della sezione conserva anche i tentativi aperti o chiusi; modalità manuale con prompt, tag e ancoraggi, modalità automatica con galleria e quantità (1–10). L’estrazione gratuita mostra miniature, titoli e tag. Tocco o pressione prolungata apre l’originale intero e la descrizione editoriale. Dopo l’estrazione si conferma prima il massimo di chiamate per scrivere premesse e prompt, poi il massimo per generare e valutare gli esiti validi (specifica `generazione-slop`).
+Riprogettazione 1.37.0: navigazione laterale desktop con descrizione delle cinque attività; su mobile barra orizzontale scorrevole. La barra laterale e i suoi pulsanti restano nella propria colonna, senza coprire i pannelli; le descrizioni dei pulsanti sono sotto il titolo. Su mobile la barra scorre mantenendo le voci compatte. Ultima sezione ricordata nella sessione. Testata compatta, pannelli coerenti, comandi tattili e focus visibile. I quattro passi REAL restano espliciti con schede e azioni raggruppate. Le eccezioni SLOP e i loro tentativi sono espandibili singolarmente; un aggiornamento della sezione conserva anche i tentativi aperti o chiusi; modalità manuale con galleria, prompt, tag e ancoraggi, modalità automatica con galleria e quantità (1–10). L’estrazione gratuita mostra miniature, titoli e tag. Tocco o pressione prolungata apre l’originale intero e la descrizione editoriale. Dopo l’estrazione si conferma prima il massimo di chiamate per scrivere premesse e prompt, poi il massimo per generare e valutare gli esiti validi (specifica `generazione-slop`).
 
 Database con ricerca per ID e testo; le SLOP usano un’etichetta con ID abbreviato senza campo titolo né riquadro «Tag di partenza». Restano i tag osservati e modificabili, con filtri di origine, galleria e tag (nessun gruppo di genere/decennio) e ordinamento richiudibili, griglia 4:5 e barra di selezione durante lo scorrimento. Rimossi i tre checkbox di manutenzione: copia da rifare in 4:5, REAL senza descrizione, categorie visive mancanti (decisione dell’owner del 2026-11-17). Statistiche con viste Panoramica, Adesso, Gioco, Chiamate IA e Catalogo. Impostazioni con indice per Modelli, Generazione, Istruzioni IA, Tag, Partite e Classifica; ogni gruppo mantiene il proprio salvataggio.
 
@@ -59,7 +59,7 @@ acquisite sono comunque nella libreria privata.
   caricamento». Al massimo 100 immagini.
 - Le selezionate sono miniature senza titolo che aprono la loro pagina di Commons in una nuova scheda.
 - «Aggiungi link di Wikimedia Commons», chiuso all'inizio: più link incollati, uno per riga.
-- Si può scegliere la galleria del caricamento, anche prima di scrivere le indicazioni SLOP. Nel passo Tag si può cambiare la galleria di una singola REAL.
+- Prima di acquisire le foto scegli una galleria. Si può usare una galleria con indicazioni SLOP ancora vuote. Nel passo Tag si può cambiare la galleria di una singola REAL.
 - «Avanti: tag» acquisisce ogni immagine nella quarantena privata; il browser ne prepara subito la copia di gioco (specifica
   `copie-di-gioco`, sezione 3). Duplicati, link non validi
   e licenze ND vengono rifiutati con il motivo; una copia fallita si ripete dal passo 3.

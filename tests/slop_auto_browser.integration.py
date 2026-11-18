@@ -13,7 +13,8 @@ try:
     with sync_playwright() as p:
         browser=p.chromium.launch(executable_path=os.environ.get('ROS_CHROMIUM_PATH') or shutil.which('chromium'),args=['--no-sandbox'])
         for name,options in [('desktop',{'viewport':{'width':1280,'height':900}}),('mobile',p.devices['Pixel 7'])]:
-            source=real('auto-browser-'+name);generated=[]
+            old_gallery=make_gallery('Galleria di partenza '+name)
+            source=real('auto-browser-'+name,gallery=old_gallery['id']);generated=[]
             context=browser.new_context(**options,http_credentials={'username':'owner','password':TOKEN})
             page=context.new_page();errors=[];confirmations=[]
             page.on('pageerror',lambda e:errors.append(str(e)))
@@ -31,7 +32,7 @@ try:
                 gallery_id=page.locator('#gallery-editor-select').input_value()
                 expect(page.locator('#gallery-readiness')).to_contain_text('Salva le Indicazioni SLOP')
                 page.locator('[data-db-tab=images]').click()
-                page.locator('#library-gallery').select_option('unassigned')
+                page.locator('#library-gallery').select_option(old_gallery['id'])
                 page.locator('[data-open="'+source['id']+'"]').click()
                 page.locator('#library-detail-gallery').select_option(gallery_id)
                 expect(page.locator('#library-detail-message')).to_have_text('Galleria aggiornata.')

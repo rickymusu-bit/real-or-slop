@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 32.0.0, aggiornata il 2026-11-18T18:13:41Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 33.0.0, aggiornata il 2026-11-18T19:45:07Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,17 +9,18 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.40.0 (#157):** gallerie tematiche con indicazioni editoriali, assegnazione nel caricamento REAL e nel Database,
-  estrazione gratuita seguita da due conferme per proposte e immagini. Premessa e prompt da originale intero. Migrazione 0060
-  per appartenenza, riferimenti temporanei e contesto delle proposte. Contratti e dati storici conservati.
-
+- **Ramo 1.42.0 (PR #158, issue #157):** gallerie obbligatorie, estrazione casuale per galleria e conferme separate per
+  proposte e immagini. Migrazioni 0060 e 0061. La 0061 azzera il D1 attuale al rilascio su decisione dell’owner e rimuove
+  la genealogia tra REAL e SLOP. Il browser usa nuove chiavi per le bozze del wizard e dello studio.
+- **In produzione la 1.41.0 (PR #156):** scelta esplicita dal Database o da Commons, estrazione casuale disponibile, ritiro
+  della REAL legata alla SLOP. Build Cloudflare del 2026-11-18 alle 19:18 UTC. La 1.42.0 sostituisce queste regole.
 - **Integrata in main la 1.39.0 (PR #155):** tolti dal Database i tre checkbox di manutenzione e il loro stato/parametri del browser; test delle analisi adattati a origine, ricerca e selezione esplicita. Anteprima gratuita delle REAL estratte prima del batch automatico: miniature, titoli, tag, originale intero e descrizione; riestrazione/annullamento senza chiamate. Avvio vincolato alle stesse REAL con token firmato, revisioni controllate nella transazione e ID batch monouso. Rimossi i gruppi di genere/decennio da Database, statistiche, API e schema: migrazione 0056 con conservazione del contesto storico come tag ordinari. Bilanciamento solo per conteggi e disponibilità madre–figlia. Migrazione 0057: via didascalie, vista iniziale e spiegazione inutilizzata; dettaglio/API con metadati distinti per REAL e SLOP, query del gioco limitata ai dati necessari. Accettazione manuale estesa a candidate valutate con difetti critici/minori, incertezze o vincoli non confermati nei processi conclusi/sospesi; decisione registrata separatamente, conferma con le segnalazioni e massimo una chiamata per i tag. Migrazione 0058: titoli solo REAL, SLOP identificate tramite ID; rimossi riquadro e tag di partenza dalla figlia, conservando parametri tecnici della copia. Contratto esatto degli ingressi del valutatore documentato e verificato. Nessun merge, deploy, migrazione remota o chiamata reale eseguiti per questa versione.
 - **Integrata in main la 1.38.0 (PR #154):** modalità manuale e automatica, registro privato delle REAL occupate (0055), composizioni variate e CI alleggerita. Merge confermato in questa sessione; funzionamento segnalato dall'owner.
 - **Integrata in main la 1.37.0 (PR #152):** dashboard nelle cinque sezioni, ricerca catalogo e conteggi grezzi. Migrazione 0054. Stato del deploy non verificato in questa sessione.
 
 - **Integrata in main la 1.36.0 (PR #151):** SLOP indipendenti e migrazione 0053, inclusa la validazione del trattamento anonimo per campioni malformati. Revisione tecnica in `docs/revisione-codice.md`. Stato del deploy non verificato in questa sessione.
 
-- **In produzione:** app 1.35.0 (PR rickymusu-bit/real-or-slop#149; migrazioni fino alla 0052), Workers Paid dal 2026-11-16,
+- **Resoconto del rilascio:** app 1.35.0 (PR rickymusu-bit/real-or-slop#149; migrazioni fino alla 0052), Workers Paid dal 2026-11-16,
   Workers Logs attivi. 20 REAL approvate con tag e descrizione; copie fatte nel browser (con la 1.34.0 restano valide). Nessuna immagine pubblicata. Il primo batch automatico, ripreso sul server il 2026-11-16 alle 08:24 UTC, è finito alle
   08:32: 4 SLOP accettate (3 con copia; quella in bianco e nero accettata alle 05:38 senza copia, vedi 1.33.1), 4 revisioni chieste,
   2 incerti. Su indicazione dell'owner, il 2026-11-15 sono stati salvati direttamente nel D1 il contesto «Brief e prompt per le SLOP»
@@ -53,7 +54,6 @@ in `CHANGELOG.md`.
   evidenza nello studio, con immagini, prompt e valutazioni di ogni tentativo, conservati fino alla chiusura dell'owner; con
   tolleranza 0 i difetti minori fanno rigenerare invece di fermare il ciclo; nel Database filtro «REAL senza descrizione» e analisi
   combinata in gruppo; ripetizione confermata degli esiti incerti anche dal wizard. Nessuna migrazione.
-- **Da fare:** l'owner lancia dal Database l'analisi combinata delle 20 REAL (20 chiamate a pagamento).
 - **Selezione REAL:** otto principi qualitativi nella issue #138; nessun filtro o scoring automatico.
 - **Da decidere con l'owner:** se e come comunicare al giocatore il processo di generazione dopo la risposta.
 - **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
@@ -65,14 +65,14 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 7.1.0 |
-| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.3.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 8.0.0 |
+| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.3.1 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.2.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 3.6.0 |
-| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 9.0.0 |
-| Sezione Database | `docs/database-immagini.md` | 6.1.0 |
-| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.0.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.1.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 3.7.0 |
+| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 10.0.0 |
+| Sezione Database | `docs/database-immagini.md` | 7.0.0 |
+| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.1.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.2.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -121,7 +121,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - Libreria `library.ts` (stati, vocabolario, alias, categorie, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   analisi `analysis.ts`, gallerie `galleries.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
-- SLOP: studio `slop.ts`, riferimenti editoriali temporanei `slop-references.ts` (disponibilità privata), generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
+- SLOP: studio `slop.ts`, conteggi e categorie `slop-references.ts`, generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
   `slop-runner.ts`, batch automatici `slop-auto.ts`, preparazione e conferma delle proposte `slop-gallery.ts`, selezioni firmate `slop-preview.ts`.
 - Corpo delle richieste con un'immagine (analisi e valutazione, base64 scritto nei byte) `image-body.ts`.
 - Copie di gioco: controllo e conservazione della copia caricata dal browser in `library.ts` (`POST /:id/copy`).
@@ -167,7 +167,9 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0056 | elimina i gruppi da colonne, impostazioni e snapshot; contesto storico convertito in tag ordinari, immagini/processi/chiamate/legami conservati |
 | 0057 | elimina le sei colonne obsolete di didascalie, vista iniziale e spiegazione; ogni altro dato e collegamento conservati |
 | 0058 | titoli solo REAL, nessun tag ereditato sulla figlia; parametri tecnici della copia e relazioni preservati senza ricostruire images |
-| 0060 | gallerie, appartenenza facoltativa, premesse, riferimenti temporanei e contesto delle proposte; dati storici conservati |
+| 0059 | ritira dal gioco le REAL legate a SLOP e conserva le copie delle partite in corso, regola sostituita dalla 0061 |
+| 0060 | gallerie, premesse, riferimenti temporanei e contesto delle proposte |
+| 0061 | azzera i dati applicativi del D1, elimina il registro madre–figlia e rende obbligatoria la galleria |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

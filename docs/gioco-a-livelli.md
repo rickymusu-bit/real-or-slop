@@ -1,6 +1,6 @@
-# Partita a livelli e classifica — specifica 3.0.0
+# Partita a livelli e classifica — specifica 3.1.0
 
-Stato: vigente per il ramo 1.36.0. Aggiornata: 2026-11-16T20:00:00Z.
+Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
 
 **Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
 descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
@@ -8,6 +8,9 @@ descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le
 - **Foto:** tutte le copie di gioco sono 4:5 verticali, mostrate intere (specifica `copie-di-gioco` 9.0.0).
 - **Lista di fine partita:** per le SLOP, accanto al prompt, l'elemento inventato («luogo: da Parigi a Marsiglia»). Proposta ancora
   da confermare dall'owner: non si implementa senza la sua conferma.
+
+La migrazione 0061 azzera partite e classifica al rilascio delle gallerie. Le nuove partite possono usare tutte le REAL pubblicate,
+comprese quelle estratte come riferimenti temporanei per un batch SLOP.
 
 ## 1. Decisioni dell'owner
 

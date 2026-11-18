@@ -48,16 +48,12 @@ class Handler(BaseHTTPRequestHandler):
             if behaviour and behaviour.get('garbage'): return self.reply(200, {'data': []})
             return self.reply(200, {'data': [{'b64_json': picture(data.get('size', '1024x1024'))}], 'usage': {'input_tokens': 50, 'output_tokens': 1056}})
         schema_name = data.get('text', {}).get('format', {}).get('name')
-        request = json.loads(data['input'][0]['content'][0]['text']) if schema_name in ('slop_brief', 'slop_evaluation', 'slop_gallery_proposal') else None
+        request = json.loads(data['input'][0]['content'][0]['text']) if schema_name in ('slop_evaluation', 'slop_gallery_proposal') else None
         if schema_name == 'gallery_instructions' and (behaviour is None or 'delay' in behaviour):
             behaviour = {'json': {'instructions': 'Inventa un fatto visibile e conserva la piazza riconoscibile.'}}
         if schema_name == 'slop_gallery_proposal' and (behaviour is None or 'delay' in behaviour):
             behaviour = {'json': {'premise': 'Un bus d’epoca inventato attraversa la piazza riconoscibile.',
                                   'prompt': 'A plausible invented vintage bus crossing a recognizable square in natural light.', 'reason': ''}}
-        if behaviour is None and schema_name == 'slop_brief':
-            labels = [l for values in request['tags'].values() for l in values]
-            behaviour = {'json': {'brief': {'required': labels[:2] or ['documentary photograph'], 'preferred': [], 'flexible': ['scene and viewpoint'], 'exclusions': ['identifiable real people']},
-                                  'prompt': 'A documentary photograph: ' + ', '.join(labels)}}
         if schema_name == 'slop_evaluation' and (behaviour is None or behaviour.get('evaluation') or behaviour.get('delay')):
             decision = (behaviour or {}).get('evaluation', 'accept')
             anchors = request.get('brief') or {'required': [request.get('premise')], 'exclusions': []}

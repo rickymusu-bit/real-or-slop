@@ -17,7 +17,7 @@ export async function findGallery(env: Env, value: unknown): Promise<Gallery> {
   return gallery;
 }
 export async function galleryId(env: Env, value: unknown) {
-  return value === null || value === undefined ? null : (await findGallery(env, value)).id;
+  return (await findGallery(env, value)).id;
 }
 export async function galleries(env: Env) {
   const rows = (await env.DB.prepare(`SELECT g.*, (SELECT count(*) FROM images WHERE gallery_id=g.id AND ${GALLERY_SOURCE}) AS available

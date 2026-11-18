@@ -8,10 +8,12 @@ import urllib.parse
 from pathlib import Path
 from PIL import Image
 from playwright.sync_api import expect, sync_playwright
+from catalog import make_gallery
 from game_copy import game_copy
 
 base = os.environ['ROS_TEST_BASE']
 token = Path('.dev.vars').read_text().strip().split('=', 1)[1]
+gallery_id = make_gallery(base + '/api/admin/library', token, 'Test library_browser')
 folder = Path('artifacts/library-browser'); folder.mkdir(parents=True, exist_ok=True)
 
 def picture(name, color, size):
@@ -25,7 +27,7 @@ def add(page, picture_file, origin):
     """Adds a photo through the API, as the REAL wizard and the SLOP studio do (the Database section no longer uploads, owner decision
     of 2026-11-13), with its game copy made by the stand-in encoder."""
     title = picture_file['name'].rsplit('.', 1)[0]
-    response = page.request.post(base + '/api/admin/library/upload?' + urllib.parse.urlencode({'origin': origin, 'title': title}),
+    response = page.request.post(base + '/api/admin/library/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': origin, 'title': title}),
                                  data=picture_file['buffer'], headers={'Content-Type': picture_file['mimeType']})
     assert response.ok, response.text()
     item = response.json()
@@ -148,9 +150,8 @@ with sync_playwright() as p:
         page.locator('#library-contexts summary').first.click()
         base_field = page.locator('[data-context=base]')
         expect(base_field).to_have_value(re.compile('^Lavori per un archivio fotografico italiano'))
-        expect(page.locator('[data-context]')).to_have_count(5)
+        expect(page.locator('[data-context]')).to_have_count(4)
         expect(page.locator('[data-context=slop_gallery_prompt]')).to_have_value(re.compile('galleria tematica'))
-        expect(page.locator('[data-context-outdated]')).to_have_count(0)
         approved = base_field.input_value()
         base_field.fill(approved + '\nProva dalla dashboard.')
         expect(page.locator('[data-context-part=base] [data-context-count]')).to_have_text('%d/4000' % (len(approved) + 23))

@@ -45,6 +45,9 @@ with sync_playwright() as p:
         created_gallery = page.request.post(base + '/api/admin/library/galleries', data={'title':'Ponti '+name})
         assert created_gallery.ok, created_gallery.text()
         gallery_id = created_gallery.json()['id']
+        alternate = page.request.post(base + '/api/admin/library/galleries', data={'title':'Altri ponti '+name})
+        assert alternate.ok,alternate.text()
+        alternate_id=alternate.json()['id']
         page.goto(base + '/admin')
         expect(page.get_by_role('heading', name='Caricamento REAL')).to_be_visible()
         expect(page.get_by_role('button', name='Generazione SLOP')).to_be_visible()
@@ -166,7 +169,7 @@ with sync_playwright() as p:
         title = 'wizard-' + name
         seed = 18 if name == 'desktop' else 28
         for f in (image_file(title + '-a', seed), image_file(title + '-b', seed + 40), image_file(title + '-c', seed + 80), image_file(title + '-d', seed + 120)):
-            r = page.request.post(base + '/api/admin/library/upload?' + urllib.parse.urlencode({'origin': 'REAL', 'title': f['name'].rsplit('.', 1)[0]}),
+            r = page.request.post(base + '/api/admin/library/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': 'REAL', 'title': f['name'].rsplit('.', 1)[0]}),
                                   data=f['buffer'], headers={'Content-Type': f['mimeType']}); assert r.ok, r.text()
             r = page.request.post(base + f"/api/admin/library/{r.json()['id']}/copy", data=game_copy(f['buffer']), headers={'Content-Type': 'image/webp'}); assert r.ok, r.text()
         response = page.request.get(base + '/api/admin/library?status=new&origin=REAL&q=' + title)
@@ -174,7 +177,7 @@ with sync_playwright() as p:
         found = {i['title']: i for i in response.json()['items']}
         first, second, third, fourth = (found[title + suffix] for suffix in ('-a', '-b', '-c', '-d'))
         assert first['copy'] and second['copy'] and first['analysis']['status'] == 'none', first
-        page.evaluate("""ids => sessionStorage.setItem('ros-real-wizard-v1.0.0',
+        page.evaluate("""ids => sessionStorage.setItem('ros-real-wizard-v2',
             JSON.stringify({ids, stage:2}))""", [first['id'], second['id'], third['id'], fourth['id']])
         page.reload()
         expect(page.locator('.rw-editor')).to_have_count(4)
@@ -323,8 +326,8 @@ with sync_playwright() as p:
         expect(page.locator('[data-rw-gallery]')).to_have_value(gallery_id)
         stored=page.request.get(base+'/api/admin/library/'+acquired[0]).json()
         assert stored['gallery_id']==gallery_id and stored['status']=='new' and stored['copy']
-        page.locator('[data-rw-gallery]').select_option('')
-        expect(page.locator('[data-rw-gallery]')).to_have_value('')
+        page.locator('[data-rw-gallery]').select_option(alternate_id)
+        expect(page.locator('[data-rw-gallery]')).to_have_value(alternate_id)
         page.locator('[data-rw-gallery]').select_option(gallery_id)
         page.locator('[data-rw=discard]').click()
         expect(page.locator('.rw-message')).to_contain_text('Foto tolta dal caricamento')

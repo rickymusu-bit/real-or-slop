@@ -1,14 +1,14 @@
-/** Editorial SLOP pipeline: one textual brief per REAL, bounded full-image evaluation loop, private attempts.
+/** Bounded full-image generation and evaluation with private attempts.
  * All paid steps are claimed before sending. Interrupted/uncertain steps are never automatically repeated. */
 import { HttpError, id, type Env } from "./core";
 import { create, viewOf, find, labels, categorize } from "./library";
 import { chosenModel, chosenQuality } from "./models";
-import { currentContext, PIPELINE } from "./model-context";
+import { currentContext } from "./model-context";
 import type { Metrics } from "../shared/copy-treatment";
 import { numberSettings } from "./app-settings";
-import { generationSize, nearestFormat, type Format } from "../shared/game-copy";
+import { generationSize, nearestFormat } from "../shared/game-copy";
 import type { InspirationItem } from "../shared/slop-proposals";
-import { briefSchema, realDescription, validBrief, validEvaluation, DECISIONS, type Brief, type Evaluation, type RealDescription, type OwnerAcceptance } from "../shared/editorial";
+import { validBrief, validEvaluation, DECISIONS, type Brief, type Evaluation, type OwnerAcceptance } from "../shared/editorial";
 import { byCategory } from "./slop-references";
 import { paid, PaidError, responseJson } from "./paid";
 import { IMAGE_MARK, jsonWithImage } from "./image-body";
@@ -16,15 +16,15 @@ import { imageMime } from "../shared/image-format";
 import { imageGeometry } from "../shared/image-geometry";
 import { runnerView, startRun } from "./slop-runner";
 import { analyze } from "./analysis";
+import { galleryId } from "./galleries";
 import { GALLERY_PIPELINE, type GalleryBatch, type GallerySnapshot } from "./slop-gallery";
 
 const now = () => new Date().toISOString();
 const parse = <T>(s: string | null, fallback: T): T => { try { return s ? JSON.parse(s) as T : fallback; } catch { return fallback; } };
-interface Snapshot { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string; source_description?: RealDescription; source_tags?: ReturnType<typeof byCategory>; width?: number; height?: number; target_metrics?: Metrics | null; copy_style?: {color?: string; medium?: string}; mode?: "manual" | "automatic" | "gallery"; composition?: string }
-interface Batch extends GalleryBatch { origin: string; slots: string; prompts: string; prompts_status: string; prompts_error: string; pipeline_version: number; loop_settings: string; created_at: string; updated_at: string; runner: string | null; runner_status: string | null; runner_updated: string | null }
+interface Snapshot { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string; source_tags?: ReturnType<typeof byCategory>; width?: number; height?: number; target_metrics?: Metrics | null; copy_style?: {color?: string; medium?: string}; mode?: "manual" | "gallery" }
+interface Batch extends GalleryBatch { origin: string; slots: string; prompts_status: string; prompts_error: string; pipeline_version: number; loop_settings: string; created_at: string; updated_at: string; runner: string | null; runner_status: string | null; runner_updated: string | null }
 interface Process { id: string; batch_id: string; slot: number; image_id: string | null; state: string; brief: string | null; brief_hash: string | null; premise: string | null; prompt: string; snapshot: string; attempts: number; error: string; updated_at: string }
 interface Attempt { id: string; process_id: string; number: number; prompt: string; status: string; candidate_key: string | null; evaluation: string | null }
-export interface PromptEntry { prompt: string; used: string[]; brief?: Brief; format?: Format }
 export const itemsOf = (row: { slots: string }): InspirationItem[] => parse<unknown[]>(row.slots, []).filter((i): i is InspirationItem =>
   !!i && Array.isArray((i as InspirationItem).tags));
 const confirmOnly = (data: Record<string, unknown>, allowed: string[]) => {
@@ -37,19 +37,13 @@ async function load(env: Env, batchId: string) {
   return row;
 }
 function compatible(row: Batch) {
-  if (row.pipeline_version < 2) throw new HttpError(409, "Batch precedente: sola revisione. Per generare avvia un nuovo processo e conferma le chiamate");
+  if (row.pipeline_version !== GALLERY_PIPELINE) throw new HttpError(409, "Batch non compatibile");
 }
 export async function loopSnapshot(env: Env): Promise<Snapshot> {
   const settings = await numberSettings(env), image_model = await chosenModel(env, "image_model");
   return { max_generation_attempts: settings.max_generation_attempts, editorial_tolerance: settings.editorial_tolerance,
     text_model: await chosenModel(env, "text_model"), image_model, quality: await chosenQuality(env) };
 }
-/** The brief status of a batch follows its processes: some still to write → none; at least one usable → done; else failed.
- * A brief that ended uncertain or failed never blocks the others (each REAL is written by its own request). */
-const settleBatch = (env: Env, batchId: string, error: string) => env.DB.prepare(`UPDATE slop_batches SET prompts_status=CASE
-    WHEN EXISTS(SELECT 1 FROM slop_processes WHERE batch_id=?1 AND state IN ('draft','prompting')) THEN 'none'
-    WHEN EXISTS(SELECT 1 FROM slop_processes WHERE batch_id=?1 AND state NOT IN ('failed','uncertain','closed')) THEN 'done'
-    ELSE 'failed' END, prompts_error=?2, updated_at=?3 WHERE id=?1`).bind(batchId, error.slice(0, 500), now());
 export async function processViews(env: Env, batchId: string) {
   // The request may have outlived its browser. A stale claim is uncertain, never permission to resend it.
   const stale = new Date(Date.now()-10*60_000).toISOString();
@@ -58,10 +52,6 @@ export async function processViews(env: Env, batchId: string) {
     env.DB.prepare("UPDATE paid_calls SET status='uncertain' WHERE status='pending' AND updated_at<? AND process_id IN (SELECT id FROM slop_processes WHERE batch_id=? AND state='uncertain')").bind(stale,batchId),
     env.DB.prepare("UPDATE slop_attempts SET status='uncertain' WHERE status IN ('pending','generated') AND updated_at<? AND process_id IN (SELECT id FROM slop_processes WHERE batch_id=? AND state='uncertain')").bind(stale,batchId),
   ]);
-  // A brief request that died (the browser closed the connection, 2026-11-15) left the batch «running»: after ten minutes the
-  // batch follows its processes again, and the remaining REAL can be written; the interrupted one stays uncertain.
-  const stuck = await env.DB.prepare("SELECT 1 FROM slop_batches WHERE id=? AND prompts_status='running' AND updated_at<?").bind(batchId, stale).first();
-  if (stuck) await settleBatch(env, batchId, "Scrittura di brief e prompt interrotta: nessuna chiamata ripetuta").run();
   const rows = (await env.DB.prepare("SELECT * FROM slop_processes WHERE batch_id=? ORDER BY slot").bind(batchId).all<Process>()).results;
   return Promise.all(rows.map(async p => {
     const attempts = (await env.DB.prepare("SELECT * FROM slop_attempts WHERE process_id=? ORDER BY number").bind(p.id).all<Attempt>()).results;
@@ -75,25 +65,22 @@ export async function processViews(env: Env, batchId: string) {
   }));
 }
 async function show(env: Env, batchId: string) {
-  // Processes first: reading them may settle a stuck batch, and the batch row must reflect it.
   const processes = await processViews(env, batchId), row = await load(env, batchId);
   const ids = (await env.DB.prepare("SELECT id FROM images WHERE generation_batch=? ORDER BY created_at,rowid").bind(batchId).all<{id: string}>()).results;
-  const prompts: PromptEntry[] = row.pipeline_version === 2 ? processes.filter(p => p.prompt && p.brief).map(p => ({prompt: p.prompt, used: [], brief: p.brief!})) : parse(row.prompts, []);
   const config = parse<Snapshot | null>(row.loop_settings, null);
   const maxCalls = config && processes.reduce((total, p) => {
-    const mode = p.snapshot?.mode;
-    const prompts = mode === "manual" || mode === "gallery" ? p.prompt_calls : Math.max(1, p.prompt_calls);
-    const rendering = mode === "gallery" && !p.premise ? 0 : 1 + 2 * config.max_generation_attempts;
-    return total + prompts + rendering;
+    const rendering = row.origin === "auto" && !p.premise ? 0 : 1 + 2 * config.max_generation_attempts;
+    return total + p.prompt_calls + rendering;
   }, 0);
-  return { origin: row.origin, id: row.id, items: itemsOf(row), prompts, processes, config, pipeline_version: row.pipeline_version,
+  return { origin: row.origin, id: row.id, items: itemsOf(row), gallery_id: row.gallery_id, processes, config,
     max_calls: maxCalls,
     prompts_status: row.prompts_status, prompts_error: row.prompts_error, created_at: row.created_at, updated_at: row.updated_at, runner: runnerView(row),
     images: await Promise.all(ids.map(i => viewOf(env, i.id))) };
 }
 /** A manual draft is free: the owner supplies the whole prompt, target tags and immutable anchors. */
 async function createManualBatch(env: Env, data: Record<string, unknown>) {
-  if (Object.keys(data).some(k => !["mode", "prompt", "tags", "brief"].includes(k))) throw new HttpError(400, "Campi non previsti");
+  if (Object.keys(data).some(k => !["mode", "prompt", "tags", "brief", "gallery_id"].includes(k))) throw new HttpError(400, "Campi non previsti");
+  const gallery = await galleryId(env, data.gallery_id);
   const brief = validBrief(data.brief);
   if (!brief || typeof data.prompt !== "string" || !data.prompt.trim() || data.prompt.length > 4000)
     throw new HttpError(400, "Inserisci un prompt e almeno un ancoraggio obbligatorio");
@@ -104,8 +91,8 @@ async function createManualBatch(env: Env, data: Record<string, unknown>) {
   const snapshot = {...await loopSnapshot(env), mode: "manual" as const, source_tags: byCategory(item.tags)};
   const batchId = id(), stamp = now();
   await env.DB.batch([
-    env.DB.prepare(`INSERT INTO slop_batches(id,theme,slots,pipeline_version,loop_settings,prompts_status,created_at,updated_at)
-      VALUES(?,'[]',?,2,?,'done',?,?)`).bind(batchId, JSON.stringify([item]), JSON.stringify(snapshot), stamp, stamp),
+    env.DB.prepare(`INSERT INTO slop_batches(id,theme,slots,pipeline_version,loop_settings,prompts_status,created_at,updated_at,gallery_id)
+      VALUES(?,'[]',?,?,?,'done',?,?,?)`).bind(batchId, JSON.stringify([item]), GALLERY_PIPELINE, JSON.stringify(snapshot), stamp, stamp, gallery),
     env.DB.prepare(`INSERT INTO slop_processes(id,batch_id,slot,state,brief,prompt,snapshot,created_at,updated_at)
       VALUES(?,?,0,'ready',?,?,?,?,?)`).bind(id(), batchId, JSON.stringify(brief), data.prompt.trim(), JSON.stringify(snapshot), stamp, stamp),
   ]);
@@ -118,76 +105,20 @@ async function createBatch(env: Env, data: Record<string, unknown>) {
 async function editBatch(env: Env, batchId: string, data: Record<string, unknown>) {
   const batch = await load(env, batchId); compatible(batch);
   if (!Object.keys(data).length || Object.keys(data).some(k => !["prompts", "briefs"].includes(k))) throw new HttpError(400, "Campi non previsti");
-  const processes = (await env.DB.prepare("SELECT * FROM slop_processes WHERE batch_id=? ORDER BY slot").bind(batchId).all<Process>()).results;
-  if (processes.some(p => !["draft", "ready", "failed"].includes(p.state) || p.attempts)) throw new HttpError(409, "Brief congelato: avvia un nuovo processo per modificarlo");
-  const prompts = data.prompts ?? processes.map(p => p.prompt), briefs = data.briefs ?? processes.map(p => parse(p.brief, null));
-  if (!Array.isArray(prompts) || prompts.length !== processes.length || prompts.some(p => typeof p !== "string" || !p.trim() || p.length > 4000) ||
-    !Array.isArray(briefs) || briefs.length !== processes.length || briefs.some(b => !validBrief(b))) throw new HttpError(400, "Un brief valido e un prompt per REAL");
-  // Single batch claim prevents concurrent edits, prompt calls and loop starts.
-  const claim = await env.DB.prepare("UPDATE slop_batches SET prompts_status='running' WHERE id=? AND prompts_status<>'running'").bind(batchId).run();
-  if (!claim.meta.changes) throw new HttpError(409, "Batch occupato");
-  try {
-    const locked = await env.DB.prepare("SELECT count(*) AS n FROM slop_processes WHERE batch_id=? AND (attempts>0 OR state NOT IN ('draft','ready','failed'))").bind(batchId).first<{n: number}>();
-    if (locked?.n) throw new HttpError(409, "Brief congelato: nuovo processo richiesto");
-    await env.DB.batch(processes.map((p, i) => env.DB.prepare("UPDATE slop_processes SET prompt=?,brief=?,state='ready',updated_at=? WHERE id=? AND attempts=0")
-      .bind(prompts[i].trim(), JSON.stringify(validBrief(briefs[i])), now(), p.id)));
-  } finally { await env.DB.prepare("UPDATE slop_batches SET prompts_status='done',updated_at=? WHERE id=?").bind(now(), batchId).run(); }
-  return show(env, batchId);
-}
-const PROMPT_RULE = `Write a new plausible photograph in English (600–1000 characters). Return a minimal editorial brief and prompt together.
-Use ONLY the supplied saved description and tags as editorial context, not as a scene to imitate. No required visual resemblance or single changed element.
-Separate required anchors, preferred, flexible and exclusions. Credibility takes priority over literal prompt details. Real buildings and places: decide case by case whether to name a real place or invent one of the same kind, style, period and region, but never require or ask for a faithful reproduction of a specific real building, its exact architecture or its inscriptions; a required anchor may name a place, never the fidelity of its appearance. Invent all people; never name or describe living people or people dead less than 50 years. Never attribute crimes to historical figures, celebrate regimes, or depict nudity outside artworks.
-Concrete natural photographic technique and light, no cinematic clichés. Never compose for a later game crop. Do not choose a format. Treat reference placement and gaze as incidental, not as required anchors. Follow the supplied composition preference when natural, without forcing every photograph into the same arrangement.`;
-export async function writePrompts(env: Env, batchId: string, data: Record<string, unknown>) {
-  confirmOnly(data, ["index"]);
-  if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
-  const batch = await load(env, batchId); compatible(batch);
-  const items = itemsOf(batch), index = data.index;
-  if (index !== undefined && (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= items.length)) throw new HttpError(400, "Immagine inesistente");
-  const wanted = (await env.DB.prepare("SELECT * FROM slop_processes WHERE batch_id=? ORDER BY slot").bind(batchId).all<Process>()).results.filter(p => index === undefined ? !p.prompt : p.slot === index);
-  if (!wanted.length) throw new HttpError(409, "Brief e prompt già salvati");
-  if (wanted.some(p => parse<Snapshot>(p.snapshot, {} as Snapshot).mode === "manual")) throw new HttpError(409, "Modalità manuale: prompt e ancoraggi li scrive l’owner");
-  if (wanted.some(p => p.attempts || !["draft", "ready", "failed"].includes(p.state))) throw new HttpError(409, "Processo bloccato: nessuna chiamata ripetuta");
-  const inputs = wanted.map(p => {
-    const snapshot = parse<Snapshot>(p.snapshot, {} as Snapshot), description = realDescription(snapshot.source_description);
-    if (!description) throw new HttpError(409, "Descrizione del processo mancante: crea un nuovo batch");
-    return {description, tags: snapshot.source_tags || {}, composition: snapshot.composition || ""};
-  });
-  // Read before the claim: a refusal here costs nothing. A text written for the twin prompts would contradict the brief.
-  const base = await currentContext(env, "base"), context = await currentContext(env, "slop_prompt");
-  if (context.pipeline < PIPELINE) throw new HttpError(409, "Il contesto «Brief e prompt per le SLOP» in vigore è stato scritto per le SLOP gemelle: " +
-    "salva nelle Impostazioni il testo proposto o uno tuo prima di scrivere brief e prompt. Nessuna chiamata inviata");
-  const claim = await env.DB.prepare("UPDATE slop_batches SET prompts_status='running',prompts_error='',updated_at=? WHERE id=? AND prompts_status NOT IN ('running','editing','uncertain')").bind(now(), batchId).run();
-  if (!claim.meta.changes) throw new HttpError(409, "Prompt già in scrittura o incerti: nessuna chiamata inviata");
-  try {
-    const failures: string[] = [];
-    for (const [i, p] of wanted.entries()) {
-      const marked = await env.DB.prepare("UPDATE slop_processes SET state='prompting',updated_at=? WHERE id=? AND attempts=0 AND state IN ('draft','ready','failed')").bind(now(), p.id).run();
-      if (!marked.meta.changes) throw new HttpError(409, "Processo occupato");
-      try {
-        const config = parse<Snapshot>(p.snapshot, {} as Snapshot);
-        await env.DB.prepare("UPDATE slop_processes SET snapshot=? WHERE id=? AND state='prompting'")
-          .bind(JSON.stringify({...config, source_description: inputs[i].description, source_tags: inputs[i].tags,
-            base_context: base.id, prompt_context: context.id}), p.id).run();
-        const payload = await paid(env, "prompts", config.text_model, { model: config.text_model,
-          instructions: base.body + "\n\n" + context.body + "\n\n" + PROMPT_RULE, max_output_tokens: 16000,
-          text: { format: { type: "json_schema", name: "slop_brief", strict: true, schema: { type: "object", additionalProperties: false,
-            required: ["brief", "prompt"], properties: { brief: briefSchema, prompt: {type: "string", maxLength: 4000} } } } },
-          input: [{role: "user", content: [{type: "input_text", text: JSON.stringify(inputs[i])}]}] }, {process: p.id});
-        const result = responseJson(payload) as { brief?: unknown; prompt?: unknown }, brief = validBrief(result.brief);
-        if (!brief || typeof result.prompt !== "string" || !result.prompt.trim() || result.prompt.length > 4000) throw new HttpError(502, "Brief o prompt non validi");
-        await env.DB.prepare("UPDATE slop_processes SET state='ready',brief=?,prompt=?,error='',updated_at=? WHERE id=?")
-          .bind(JSON.stringify(brief), result.prompt.trim(), now(), p.id).run();
-      } catch (e) {
-        await env.DB.prepare("UPDATE slop_processes SET state=?,error=?,updated_at=? WHERE id=?").bind(e instanceof PaidError && e.outcome === "uncertain" ? "uncertain" : "failed", String(e).slice(0, 500), now(), p.id).run();
-        if (index !== undefined || /OpenAI:/.test(String(e))) throw e;
-        failures.push(String(e));
-      }
-    }
-    await settleBatch(env, batchId, failures.join("; ")).run();
-  } catch (e) {
-    await settleBatch(env, batchId, String(e)).run(); throw e;
-  }
+  const process = await env.DB.prepare("SELECT * FROM slop_processes WHERE batch_id=? AND slot=0")
+    .bind(batchId).first<Process>();
+  if (!process || process.attempts || !["ready","failed"].includes(process.state))
+    throw new HttpError(409, "Prompt e brief si modificano prima del primo tentativo");
+  const prompts = data.prompts ?? [process.prompt], briefs = data.briefs ?? [parse(process.brief, null)];
+  if (!Array.isArray(prompts) || prompts.length !== 1 || typeof prompts[0] !== "string" || !prompts[0].trim() || prompts[0].length > 4000 ||
+    !Array.isArray(briefs) || briefs.length !== 1) throw new HttpError(400, "Inserisci un prompt e un brief validi");
+  const brief = validBrief(briefs[0]);
+  if (!brief) throw new HttpError(400, "Inserisci almeno un ancoraggio obbligatorio");
+  const edit = await env.DB.prepare(`UPDATE slop_processes SET prompt=?,brief=?,state='ready',error='',updated_at=?
+    WHERE id=? AND attempts=0 AND state IN ('ready','failed')
+      AND EXISTS(SELECT 1 FROM slop_batches WHERE id=? AND (runner_status IS NULL OR runner_status NOT IN ('running','stopping')))`)
+    .bind(prompts[0].trim(), JSON.stringify(brief), now(), process.id, batchId).run();
+  if (!edit.meta.changes) throw new HttpError(409, "Batch occupato o tentativo già avviato");
   return show(env, batchId);
 }
 const strings = {type: "array", maxItems: 30, items: {type: "string", maxLength: 3000}};
@@ -210,7 +141,6 @@ async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array
     generation: {batch: batch.id, quality: config.quality,
       slot: {index: p.slot, target_metrics: config.target_metrics || null, copy_style: {color: config.copy_style?.color || config.source_tags?.color?.[0] || "", medium: config.copy_style?.medium || config.source_tags?.medium?.[0] || ""},
         process: p.id, ...(p.premise ? {} : {brief: parse(p.brief, null), brief_hash: p.brief_hash}), evaluation, ...(acceptance ? {acceptance} : {}), attempts: p.attempts}} });
-  if (!batch.gallery_id) await env.DB.prepare("UPDATE slop_reference_uses SET image_id=? WHERE process_id=?").bind(image.id, p.id).run();
   await env.DB.prepare("UPDATE slop_processes SET image_id=?,state='accepted',updated_at=? WHERE id=?").bind(image.id, now(), p.id).run();
   return {...image, process: {id: p.id, state: "accepted", attempts: p.attempts}};
 }
@@ -219,7 +149,7 @@ export async function generateImage(env: Env, batchId: string, data: Record<stri
   confirmOnly(data, ["index", "quality"]);
   if (!env.OPENAI_API_KEY || !env.QUARANTINE) throw new HttpError(503, "Chiave OpenAI o quarantena mancante");
   const batch = await load(env, batchId); compatible(batch);
-  const gallery = batch.pipeline_version === GALLERY_PIPELINE ? JSON.parse(batch.auto_snapshot) as GallerySnapshot : null;
+  const gallery = batch.origin === "auto" ? JSON.parse(batch.auto_snapshot) as GallerySnapshot : null;
   if (gallery && (batch.gallery_review !== "confirmed" || !runner || batch.runner !== runner)) throw new HttpError(409, "Prima conferma le proposte della galleria");
   if (batch.prompts_status !== "done") throw new HttpError(409, "Prima completa la preparazione del batch");
   const p = await env.DB.prepare("SELECT * FROM slop_processes WHERE batch_id=? AND slot=?").bind(batchId, typeof data.index === "number" ? data.index : -1).first<Process>();
@@ -239,9 +169,9 @@ export async function generateImage(env: Env, batchId: string, data: Record<stri
   const [base, context] = gallery ? [gallery.base, gallery.evaluation] : await Promise.all([currentContext(env, "base"), currentContext(env, "slop_evaluation")]);
   let marked;
   try { marked = await env.DB.prepare(`UPDATE slop_processes SET state='running',brief_hash=?,attempts=attempts+1,updated_at=?
-    WHERE id=? AND state=? AND attempts=? AND EXISTS(SELECT 1 FROM slop_batches WHERE id=? AND prompts_status='done'
+    WHERE id=? AND state=? AND attempts=? AND prompt=? AND brief IS ? AND EXISTS(SELECT 1 FROM slop_batches WHERE id=? AND prompts_status='done'
       AND (gallery_review IS NULL OR (gallery_review='confirmed' AND auto_status='running' AND runner=? AND runner_status='running')))`)
-    .bind(briefHash, now(), p.id, p.state, p.attempts, batchId, runner ?? null).run(); }
+    .bind(briefHash, now(), p.id, p.state, p.attempts, p.prompt, p.brief, batchId, runner ?? null).run(); }
   catch { throw new HttpError(409, "Impossibile acquisire il processo"); }
   if (!marked.meta.changes) throw new HttpError(409, "Tentativo già inviato: nessuna chiamata ripetuta");
   p.attempts++; p.brief_hash = briefHash;
@@ -250,7 +180,7 @@ export async function generateImage(env: Env, batchId: string, data: Record<stri
   try {
     const size = generationSize(config.image_model, nearestFormat(config.width || 1024, config.height || 1024));
     const sentPrompt = config.mode === "manual" ? p.prompt + "\n\nEditorial context (do not render labels): " +
-      JSON.stringify({tags: config.source_tags, brief: constraints}) : config.composition ? p.prompt + "\n\n" + config.composition : p.prompt;
+      JSON.stringify({tags: config.source_tags, brief: constraints}) : p.prompt;
     const payload = await paid(env, "images", config.image_model, {model: config.image_model, prompt: sentPrompt, n: 1, size, quality: config.quality}, {process: p.id, attempt: attemptId});
     const encoded = (payload.data as {b64_json?: string}[] | undefined)?.[0]?.b64_json;
     if (!encoded) throw new HttpError(502, "Risposta del generatore non leggibile");
@@ -268,7 +198,7 @@ export async function generateImage(env: Env, batchId: string, data: Record<stri
     const inputs = gallery ? {attempt_id: attemptId, premise: p.premise, approved_prompt: approvedPrompt, prompt: p.prompt,
       gallery: {title: gallery.gallery.title, description: gallery.gallery.description, slop_instructions: gallery.gallery.slop_instructions},
       tolerance: config.editorial_tolerance}
-      : {attempt_id: attemptId, brief: constraints, prompt: p.prompt, composition_preference: config.composition || null, tolerance: config.editorial_tolerance};
+      : {attempt_id: attemptId, brief: constraints, prompt: p.prompt, composition_preference: null, tolerance: config.editorial_tolerance};
     const revisedPrompt = (correction: string) => gallery ? approvedPrompt + "\n\n" + correction : correction;
     const evaluationPayload = await paid(env, "evaluation", config.text_model, jsonWithImage({model: config.text_model,
       instructions: base.body + "\n\n" + context.body + "\n\n" + (gallery ? GALLERY_EVALUATE_RULE : EVALUATE_RULE), max_output_tokens: 8000,
@@ -333,7 +263,7 @@ export async function acceptProcess(env: Env, processId: string, data: Record<st
   const evaluation = parse<Evaluation | null>(a?.evaluation ?? null, null);
   if (!a || a.status !== "completed" || !a.candidate_key || !constraints || !evaluation || !validEvaluation(evaluation, a.id, constraints)) throw new HttpError(409, "Tentativo senza candidata valutata");
   const batch = await load(env, p.batch_id);
-  if (batch.gallery_id && batch.gallery_review !== "confirmed") throw new HttpError(409, "Proposte non confermate");
+  if (batch.origin === "auto" && batch.gallery_review !== "confirmed") throw new HttpError(409, "Proposte non confermate");
   const claimed = await env.DB.prepare("UPDATE slop_processes SET state='running',updated_at=? WHERE id=? AND state=? AND image_id IS NULL")
     .bind(now(), p.id, p.state).run().catch(() => ({meta: {changes: 0}}));
   if (!claimed.meta.changes) throw new HttpError(409, "Il processo è già stato deciso");
@@ -365,23 +295,17 @@ export async function candidateFile(env: Env, batchId: string, attemptId: string
   if (!file) throw new HttpError(404, "Candidata non disponibile");
   return new Response(file.body, {headers: {"Content-Type": file.httpMetadata?.contentType || "image/png", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"}});
 }
-/** POST :id/run {confirm, phase}: the owner confirmed the maximum; the loop runs on Cloudflare (slop-runner.ts). «briefs» writes the
- * briefs still to write; «images» runs the attempts of the REAL with a brief, then the tags of an accepted SLOP. */
+/** Start or resume the owner's manual generation within its confirmed call limit. */
 async function runBatch(env: Env, batchId: string, data: Record<string, unknown>) {
   confirmOnly(data, ["phase"]);
-  if (data.phase !== "briefs" && data.phase !== "images") throw new HttpError(400, "Fase sconosciuta");
+  if (data.phase !== "images") throw new HttpError(400, "Fase sconosciuta");
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
   const batch = await load(env, batchId); compatible(batch);
-  if (data.phase === "briefs") {
-    // Same refusals as writePrompts, before anything starts: a refused run costs nothing.
-    const context = await currentContext(env, "slop_prompt");
-    if (context.pipeline < PIPELINE) throw new HttpError(409, "Il contesto «Brief e prompt per le SLOP» in vigore è stato scritto per le SLOP gemelle: " +
-      "salva nelle Impostazioni il testo proposto o uno tuo prima di scrivere brief e prompt. Nessuna chiamata inviata");
-  } else if (batch.prompts_status !== "done") throw new HttpError(409, "Prima completa brief e prompt del batch");
-  await startRun(env, batchId, data.phase);
+  const ready = await env.DB.prepare("SELECT 1 FROM slop_processes WHERE batch_id=? AND state IN ('ready','retry')").bind(batchId).first();
+  if (!ready) throw new HttpError(409, "Nessun tentativo da avviare o riprendere");
+  await startRun(env, batchId, "images");
   return show(env, batchId);
 }
-/** POST :id/stop {}: the runner ends before its next paid step; the step in progress finishes, then it records «stopped». */
 async function stopBatch(env: Env, batchId: string, data: Record<string, unknown>) {
   if (Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
   await env.DB.prepare("UPDATE slop_batches SET runner_status='stopping' WHERE id=? AND runner_status='running'").bind(batchId).run();
@@ -390,12 +314,11 @@ async function stopBatch(env: Env, batchId: string, data: Record<string, unknown
 export async function batchRoute(env: Env, method: string, rest: string, data: Record<string, unknown>) {
   if (!rest && method === "GET") return recent(env);
   if (!rest && method === "POST") return createBatch(env, data);
-  const match = /^([\w-]{1,64})(?:\/(prompts|images|run|stop))?$/.exec(rest);
+  const match = /^([\w-]{1,64})(?:\/(images|run|stop))?$/.exec(rest);
   if (!match) throw new HttpError(404, "Batch inesistente");
   const [,batchId,action] = match;
   if (!action && method === "GET") return show(env, batchId);
   if (!action && method === "PUT") return editBatch(env, batchId, data);
-  if (action === "prompts" && method === "POST") return writePrompts(env, batchId, data);
   if (action === "images" && method === "POST") return generateImage(env, batchId, data);
   if (action === "run" && method === "POST") return runBatch(env, batchId, data);
   if (action === "stop" && method === "POST") return stopBatch(env, batchId, data);

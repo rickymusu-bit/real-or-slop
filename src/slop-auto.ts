@@ -16,7 +16,7 @@ interface AutoPreview {
   references: Reference[];
 }
 interface AutoBatch {
-  pipeline_version: number; config: Config; processes: {slot: number; state: string; updated_at: string; attempts: unknown[]; premise: string | null; prompt: string; error: string}[];
+  config: Config; processes: {slot: number; state: string; updated_at: string; attempts: unknown[]; premise: string | null; prompt: string; error: string}[];
   runner: { id: string; status: string | null; updated_at: string | null; alive: boolean } | null;
   id: string; size: number; status: "running" | "review"; prompts_status: string; prompts_error: string; slots: number;
   attempted: number[];
@@ -92,8 +92,7 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
         <div class="slop-auto-actions">${valid && !review.invalid && !live && !prompting ? `<button type="button" class="primary" data-auto="start" ${state?.paid_calls ? "" : "disabled"}>Conferma e genera ${valid} SLOP</button>` : ""}
         ${!live && !review.invalid && batch.processes.some(p => p.state === "draft") ? '<button type="button" data-auto="resume">Riprendi le proposte</button>' : ""}
         <button type="button" data-auto="cancel">Annulla proposte</button></div></section>`;
-    } else if (batch && batch.pipeline_version < 2) {
-      html = '<p>Batch precedente in pausa: sola revisione. Nessuna chiamata verrà ripetuta.</p><button data-auto="stop">Chiudi generazione precedente</button><button data-auto="review">Rivedi nel Database</button>';
+
     } else if (batch && batch.status === "running") {
       const ready = batch.images.filter(i => i.analysis === "done").length;
       html = `<p><strong>Batch automatico</strong> di SLOP: ${batch.attempted.length} di ${batch.slots} immagini inviate al generatore, ${ready} pronte.</p>
@@ -103,7 +102,7 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
       html = `<p><strong>Batch automatico</strong> di SLOP: ${batch.undecided} di ${batch.images.length} ${batch.images.length === 1 ? "immagine" : "immagini"} da decidere.
         Decidi le immagini nuove prima di avviare un altro batch. Esaurite: ${batch.processes.filter(p=>p.state==="exhausted").length}; sospese: ${batch.processes.filter(p=>["review_needed","uncertain","failed"].includes(p.state)).length}.</p>
         ${(() => { const left = batch.processes.filter(p => ["draft", "ready", "retry"].includes(p.state)).length;
-          return left ? `<p class="hint">${left} SLOP ancora da generare dalle REAL di riferimento del batch: il batch si è interrotto prima.</p>` : ""; })()}
+          return left ? `<p class="hint">${left} SLOP ancora da generare dalle proposte approvate.</p>` : ""; })()}
         <div class="slop-auto-actions">${batch.processes.some(p => ["draft", "ready", "retry"].includes(p.state)) && !batch.runner?.alive ? '<button type="button" class="primary" data-auto="resume">Riprendi sul server</button>' : ""}<button type="button" data-auto="review">Rivedi nel Database</button><button type="button" data-auto="loop">Dettagli dei tentativi</button>${batch.undecided ? "" : '<button type="button" data-auto="close">Chiudi revisione</button>'}</div>`;
     } else if (state) {
       const selected = gallery(), max = state.max_batch, c = preview?.config || state.config;
@@ -143,24 +142,19 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
   };
   const refresh = async () => {
     await load();
-    if ((state?.batch?.pipeline_version || 0) >= 2 && state?.batch?.status === "running" && state.batch.runner?.alive) void follow();
+    if (state?.batch?.status === "running" && state.batch.runner?.alive) void follow();
     else if (state?.batch?.status === "review") void pickup().then(load);
   };
 
-  /** Copy (when missing), then the analysis (only if never asked: uncertain or failed outcomes are not resent). */
-  const finish = async (image: { id: string; copy: boolean; analysis: string }, historical: boolean) => {
-    if (!image.copy) await prepareItemCopy(await call<TreatableItem>(LIBRARY + "/" + encodeURIComponent(image.id)));
-    if (historical && image.analysis === "none") await call(LIBRARY + "/" + encodeURIComponent(image.id) + "/analyze", { confirm: true });
-  };
-
-  /** Copies of the images the server accepted (made in the browser, free), and the tags only if never asked. */
+  /** Prepare the game copies in the browser after acceptance. */
   const pickup = async () => {
     const batch = state?.batch;
-    if (!batch || batch.pipeline_version < 2 || running) return;
+    if (!batch || running) return;
     for (const image of batch.images) {
-      if (image.status !== "new" || (image.copy && image.analysis !== "none")) continue;
+      if (image.status !== "new" || image.copy) continue;
       progress = "Copia di gioco di un'immagine del batch…"; render();
-      try { await finish(image, !batch.gallery_review); } catch (error) { notice = errorText(error); break; }
+      try { await prepareItemCopy(await call<TreatableItem>(LIBRARY + "/" + encodeURIComponent(image.id))); }
+      catch (error) { notice = errorText(error); break; }
     }
     progress = "";
   };
@@ -170,9 +164,9 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
     running = true;
     try {
       while (state?.batch?.status === "running" && state.batch.runner?.alive) {
-        const b = state.batch, briefs = b.processes.filter(p => p.state !== "draft" && p.state !== "prompting").length;
+        const b = state.batch;
         const attempts = b.processes.reduce((n, p) => n + p.attempts.length, 0), accepted = b.processes.filter(p => p.state === "accepted").length;
-        progress = !b.gallery_review && briefs < b.slots ? `Sul server: brief e prompt ${briefs} di ${b.slots}…` : `Sul server: ${attempts} ${attempts === 1 ? "tentativo" : "tentativi"}, ${accepted} ${accepted === 1 ? "SLOP accettata" : "SLOP accettate"} su ${b.slots}…`;
+        progress = `Sul server: ${attempts} ${attempts === 1 ? "tentativo" : "tentativi"}, ${accepted} ${accepted === 1 ? "SLOP accettata" : "SLOP accettate"} su ${b.slots}…`;
         render();
         await new Promise(resolve => window.setTimeout(resolve, 3000));
         await load();

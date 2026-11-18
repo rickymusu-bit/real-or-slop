@@ -10,12 +10,14 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from PIL import Image
+from catalog import make_gallery
 from game_copy import game_copy
 from playwright.sync_api import expect, sync_playwright
 from long_press import long_press
 
 base, state = os.environ['ROS_TEST_BASE'], os.environ['ROS_TEST_STATE']
 token = Path('.dev.vars').read_text().strip().split('=', 1)[1]
+gallery_id = make_gallery(base + '/api/admin/library', token, 'Test database_browser')
 API = base + '/api/admin/library'
 folder = Path('artifacts/database-browser'); folder.mkdir(parents=True, exist_ok=True)
 
@@ -34,7 +36,7 @@ def webp(source): return game_copy(source)
 CATEGORIES = {'dbb-riot': 'event', 'dbb-paris': 'place', 'dbb-beach': 'setting', '1960s': 'time'}
 def seed(prefix, origin, title, number, tags, publish, prompt='', description=''):
     source = png(number, (60, 40))
-    item = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': origin, 'title': f'{prefix}-{title}', 'prompt': prompt, 'description': description}), raw=source, mime='image/png')
+    item = call(f'{API}/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': origin, 'title': f'{prefix}-{title}', 'prompt': prompt, 'description': description}), raw=source, mime='image/png')
     item = call(f'{API}/{item["id"]}/copy', raw=webp(source), mime='image/webp')
     item = call(f'{API}/{item["id"]}', {'revision': item['revision'], 'tags': tags,
                                         'tag_categories': {t: CATEGORIES[t] for t in tags}}, method='PATCH')

@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 29.0.0, aggiornata il 2026-11-18T18:13:41Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 30.0.0, aggiornata il 2026-11-18T19:45:07Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -24,12 +24,13 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   Il modello successivo prepara premessa e prompt SLOP dalla REAL intera, dal profilo editoriale e dal contesto documentato, e
   riceve le indicazioni della galleria. I contesti restano distinti.
 - **Generazione SLOP manuale o automatica** (decisione del 2026-11-18, #157, specifica `generazione-slop` 9.0.0).
-  Manuale: prompt, tag di partenza e ancoraggi scritti dall’owner. Automatica: galleria con indicazioni salvate, estrazione gratuita
+  Manuale: galleria, prompt, tag di partenza e ancoraggi scritti dall’owner. Automatica: galleria con indicazioni salvate, estrazione casuale gratuita
   e anteprima delle REAL idonee. Prima conferma per preparare premessa e prompt, seconda per generare dai prompt presentati. Le
   proposte cambiate, annullate o scadute non autorizzano chiamate immagine. Le SLOP ereditano la galleria e le REAL restano
   utilizzabili nel gioco e nelle estrazioni. Conservare i riferimenti soltanto fino alla conferma, all’annullamento o alla scadenza.
-  I processi storici mantengono le prenotazioni e le regole madre–figlia del proprio contratto. Non ricostruire i legami rimossi
-  dalla migrazione 0053. Le persone sono inventate.
+  Ogni foto appartiene a una galleria. La decisione di ripartire da zero azzera D1 con la migrazione 0061 e rimuove il registro
+  dei legami. L’azzeramento riguarda il database, con impostazioni e dati di gioco. La migrazione agisce esclusivamente sul D1.
+  Le persone raffigurate nelle generazioni sono inventate.
 - **Bilanciamento del dataset per numero di foto** (decisioni del 2026-11-17 e 2026-11-18). I tag, compresi Genere e Tempo,
   sono descrittivi e servono al Database. L’estrazione automatica usa l’appartenenza alla galleria.
 - **Credibilità prima dell'aderenza letterale al prompt.** Il valutatore esamina **l'immagine generata intera**, senza crop
@@ -57,7 +58,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 - **Contenuti delle SLOP:** regole nella specifica `contenuti-e-trasparenza` (persone vive o morte da meno di 50 anni mai nominate né
   descritte, personaggi storici senza crimini attribuiti, regimi documentati ma mai celebrati, niente nudità fuori dalle opere d'arte).
 - **SLOP senza titolo né tag di partenza copiati sulla foto** (decisione del 2026-11-17). Identità tramite ID;
-  sulla figlia solo tag effettivi e modifiche dell’owner. I tag manuali sono forniti dall’owner. I batch storici usano i tag della REAL nel brief.
+  sulla figlia solo tag effettivi e modifiche dell’owner. I tag manuali sono forniti dall’owner.
   Per rifare le copie si conservano misure anonime e soli parametri tecnici di colore/supporto, non la lista dei tag della madre.
 - **Niente didascalie**, né nel gioco né nella dashboard (decisione del 2026-11-13).
 - **Privacy:** solo il cookie tecnico, partite cancellate dopo 12 mesi, testi legali verificati da un legale: ogni modifica a Privacy o

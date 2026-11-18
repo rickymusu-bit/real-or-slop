@@ -1,13 +1,26 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-18T18:13:41Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-18T19:45:07Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.40.0 — 2026-11-18T18:13:41Z
+## 1.42.0 — 2026-11-18T19:45:07Z
 
-- Gallerie tematiche con titolo, descrizione e Indicazioni SLOP. Assegnazione delle REAL nel caricamento e nel Database senza variazioni di stato. Le SLOP ereditano la galleria del batch.
-- Estrazione gratuita per galleria. Due conferme separate per preparare le premesse dall’originale intero e per generare dai prompt approvati. Il valutatore usa la premessa e le indicazioni.
-- Migrazione 0060. I nuovi batch eliminano i riferimenti temporanei alla conferma, all’annullamento o alla scadenza. La REAL resta giocabile e riutilizzabile. I batch storici conservano il loro contratto.
+- Gallerie obbligatorie per REAL e SLOP, con titolo, descrizione e Indicazioni SLOP. Assegnazione nel caricamento e nel Database.
+- Estrazione casuale gratuita dalla galleria e due conferme per proposte e immagini. Premessa e prompt dall’originale intero, valutazione con la premessa approvata. Le REAL restano utilizzabili nel gioco.
+- Migrazioni 0060 e 0061. Su decisione dell’owner, azzeramento del D1 corrente al rilascio, compresi catalogo, batch, partite, classifica, chiamate registrate e impostazioni. Rimozione del registro madre–figlia. Le immagini nuove richiedono una galleria anche nella generazione manuale.
+
+## 1.41.0 — 2026-11-18T05:56:24Z
+
+- La generazione automatica permette di scegliere REAL pronte dal Database o di cercarne e importarne di nuove da Wikimedia Commons, anche combinando le due provenienze.
+- Il wizard Commons prepara tag e descrizione editoriale con inserimento manuale o analisi combinata confermata. La foto privata è utilizzabile come riferimento da nuova.
+- L’anteprima gratuita mostra esattamente le REAL scelte e conserva l’ordine del batch. L’estrazione casuale resta disponibile come opzione.
+- Lo studio ignora le risposte tardive di un batch precedente quando si apre una nuova bozza.
+
+## 1.40.0 — 2026-11-18T05:29:01Z
+
+- Una REAL con SLOP derivata esce dalle nuove partite quando la figlia entra in libreria. La migrazione 0059 ritira le REAL già collegate, preservando le copie delle partite in corso.
+- Dal Database l’eliminazione definitiva della madre è disponibile dopo l’approvazione della figlia. Una generazione chiusa senza SLOP libera la prenotazione.
+- Il brief e il prompt automatici ammettono vista frontale, posa naturale, simmetria, soggetto singolo e sfondo semplice. La rotazione le include e il valutatore le giudica nel contesto della scena.
 
 ## 1.39.0 — 2026-11-17T19:34:55Z
 

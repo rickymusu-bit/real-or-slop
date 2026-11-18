@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 7.1.0
+# Libreria delle immagini, tag e analisi — specifica 8.0.0
 
-Stato: implementata nel ramo 1.40.0, da rilasciare. Aggiornata: 2026-11-18T18:13:41Z.
+Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
 
 ## 1. Decisioni dell'owner
 
@@ -56,7 +56,7 @@ Una sola raccolta di immagini REAL e SLOP.
 | Originale/copia, hash, dimensioni, MIME, crop e misure | sì | sì | Archivio, verifica file, copie identiche nel gioco e rifacimento nel browser |
 | Batch, slot, qualità e trattamento | no | sì | Revisione, idempotenza e rifacimento delle copie SLOP |
 | Stato, date e revisione | sì | sì | Transizioni e concorrenza |
-| Galleria editoriale | sì | sì | Facoltativa. Organizzazione delle REAL e appartenenza ereditata dalle SLOP dei nuovi batch |
+| Galleria editoriale | sì | sì | Obbligatoria. Organizzazione delle REAL e appartenenza ereditata dalle SLOP dal batch |
 
 Il dettaglio e l’API non espongono titolo/fonte/autore/licenza sulle SLOP né prompt/modello sulle REAL. Le SLOP hanno `title=NULL` nella tabella condivisa e un’etichetta visiva basata sull’ID; ricerca anche per ID. Le modifiche di quei campi
 sull'origine sbagliata sono rifiutate. Le colonne restano nella tabella condivisa perché servono all'altra origine; non si cancella
@@ -183,14 +183,9 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
 
 ## 7. Contesto dei modelli
 
-- Cinque testi modificabili dalle Impostazioni, fino a 4000 caratteri: **Base comune** (ogni chiamata, con istruzioni neutre),
-  **Tag** (analisi), **Premessa e prompt di galleria** (nuove proposte da originale e contesto), **Valutazione delle SLOP** (candidata
-  intera) e **Brief e prompt dei batch storici** (processi di pipeline 2). La fase di catalogazione REAL ha istruzioni distinte.
-- **Pipeline di un testo** (migrazione 0051): ogni versione registra la pipeline SLOP per cui è stata salvata. Le versioni salvate
-  prima del rilascio della 1.27.0 (2026-11-15T15:10:12Z) valgono 1: il «Prompt per le SLOP» di allora descrive le gemelle e
-  contraddice il brief editoriale. Finché il testo in vigore di «Brief e prompt per le SLOP» è di pipeline 1, il server non invia la
-  chiamata di brief e prompt e le Impostazioni lo segnalano; salvare una versione (la proposta o un testo dell'owner) la sblocca.
-  Ripristinare una versione ne conserva la pipeline.
+- Quattro testi modificabili dalle Impostazioni, fino a 4000 caratteri: **Base comune** (ogni chiamata, con istruzioni neutre),
+  **Tag** (analisi), **Premessa e prompt di galleria** (proposte da originale e contesto) e **Valutazione delle SLOP** (candidata
+  intera). La fase di catalogazione REAL ha istruzioni distinte.
 - Ogni salvataggio di un testo diverso crea una versione datata; ripristinarne una vecchia crea una nuova versione con lo stesso testo.
   Ogni analisi registra le versioni usate.
 - Il codice propone un testo (`DEFAULTS` del modulo del contesto) che le Impostazioni mostrano accanto a quello in vigore finché è
@@ -212,7 +207,8 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
   gioco) e `copy_treatment` (trattamento di una SLOP), specifica `copie-di-gioco`, sezione 4.
 - Migrazione 0053: rimuove `generation_source` e `source_id`, anonimizza slot e trattamento e preserva tentativi e chiamate. La migrazione storica 0049 aveva introdotto il legame, poi eliminato. La 0055 introduce il solo registro privato di disponibilità `slop_reference_uses` per i batch di pipeline 2: madre occupata finché la figlia esiste in qualsiasi stato; eliminare definitivamente la figlia libera la madre. Nessun legame viene inferito per le generazioni pregresse. La disponibilità non interviene nel campionamento del gioco.
 - Migrazione 0056: elimina `images.generation_group`, `slop_batches.group_key`, `slop_batches.auto_tag` e le impostazioni obsolete dei gruppi. Ripulisce gli snapshot e converte il contesto storico di genere/decennio in tag di partenza ordinari, conservando immagini, tag, copie, processi, tentativi, chiamate e registro madre–figlia. Nessuna chiamata a pagamento.
-- Migrazione 0060: aggiunge gallerie, appartenenza facoltativa, premesse, riferimenti temporanei per la fase di proposta e il contesto delle proposte. I dati precedenti restano disponibili.
+- Migrazioni 0060 e 0061: introducono le gallerie e azzerano il D1 esistente su decisione dell’owner del 2026-11-18. Ogni
+  immagine appartiene a una galleria. Le REAL si possono spostare conservandone lo stato. I riferimenti dei batch sono temporanei.
 - Migrazione 0058: titolo obbligatorio per le REAL e nullo per le SLOP (vincoli tramite trigger, senza ricostruire la tabella madre). I tag di partenza vengono rimossi dagli slot delle SLOP dopo aver conservato solo colore/supporto nei parametri tecnici della copia. Nessuna modifica a tag osservati, processi, copie o legami.
 - Le accettazioni manuali delle SLOP conservano nello slot `acceptance` (owner, ID tentativo e data) separata dalla valutazione originale, anche con difetti critici/minori o incertezze. Nessuna migrazione aggiuntiva; nuova foto senza approvazione/pubblicazione automatica.
 - Migrazione 0057: elimina `caption`, `generated_caption`, `copy_view` ed `explanation` da `images`; `caption` e `copy_view` da `game_rounds`. Ogni altra colonna e ogni collegamento sono conservati. Le vecchie spiegazioni, mai lette dal gioco, vengono eliminate; descrizioni, tag e contesto editoriale restano.

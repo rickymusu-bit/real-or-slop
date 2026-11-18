@@ -1,19 +1,19 @@
-# Generazione SLOP — specifica 9.0.0
+# Generazione SLOP — specifica 10.0.0
 
-Stato: implementata nel ramo 1.40.0, da rilasciare. Aggiornata: 2026-11-18T18:13:41Z.
+Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
 
 ## 1. Modalità e bilanciamento
 
 L’avviso in dashboard confronta i conteggi di REAL e SLOP approvate o pubblicate e mostra a parte le SLOP nuove. L’owner decide la
 quantità da generare, da 1 a 10 per batch automatico. I tag descrivono le immagini e si usano come filtri del Database.
 
-**Manuale.** L’owner scrive prompt inglese, tag di partenza e brief con ancoraggi, preferenze, elementi liberi ed esclusioni. Preparare
+**Manuale.** L’owner sceglie una galleria e scrive prompt inglese, tag di partenza e brief con ancoraggi, preferenze, elementi liberi ed esclusioni. Preparare
 o modificare il processo prima del primo tentativo è gratuito. Il processo non richiede una REAL né una chiamata che scriva o
 riscriva il prompt. I tag di partenza restano nello snapshot privato. Dopo l’accettazione, i tag finali descrivono l’originale prodotto.
 
 **Automatica.** Dalla decisione dell’owner del 2026-11-18 (#157), le gallerie definiscono quali falsi hanno senso, quali elementi reali
 rendono credibile la scena e che cosa deve essere visibile. Si creano e modificano in «Database immagini → Gallerie». Hanno titolo,
-descrizione e **Indicazioni SLOP** in testo libero. Si possono assegnare REAL anche con indicazioni vuote. L’owner può chiedere una
+descrizione e **Indicazioni SLOP** in testo libero. Ogni REAL appartiene a una galleria, anche con indicazioni vuote. L’owner può chiedere una
 proposta di indicazioni al modello dopo aver confermato una chiamata. Il testo entra nel modulo, dove si può modificare, e diventa
 operativo con il salvataggio. Indicazioni vuote o composte di soli spazi bloccano la preparazione automatica in dashboard e API.
 
@@ -79,25 +79,19 @@ acquisisce la decisione e la conferma comprende al massimo una chiamata per i ta
 La scelta dell’owner si registra separatamente dalla valutazione. Chiusura e manutenzione permettono poi di eliminare le candidate
 temporanee dopo sette giorni. Copia, approvazione e pubblicazione restano passaggi distinti.
 
-## 4. Compatibilità e dati
+## 4. Rilascio e dati
 
-La migrazione 0060 aggiunge gallerie, appartenenza facoltativa, premesse e riferimenti temporanei. Le immagini pregresse sono
-consultabili e assegnabili dal Database. Nei nuovi batch (pipeline 3) i riferimenti sono eliminati anche quando una proposta scade
-senza intervento, tramite manutenzione. Sulle SLOP e nel registro storico di disponibilità non vengono scritti ID delle REAL sorgenti.
-Restano galleria, processo, tentativi, metadati della SLOP e registro tecnico delle chiamate.
+La migrazione 0060 aggiunge gallerie, premesse, riferimenti temporanei e contesto per la proposta. Su decisione dell’owner
+del 2026-11-18, la migrazione 0061 azzera il D1 attuale al rilascio. Vengono rimossi catalogo, gallerie, tag, batch, tentativi,
+partite, classifica, chiamate registrate, impostazioni e loro contesti. La migrazione elimina il registro madre–figlia e richiede
+una galleria per ogni immagine e batch. Agisce esclusivamente sul D1.
 
-I processi storici mantengono il contratto precedente. I batch automatici di pipeline 2 riprendono i passi compatibili con descrizione
-e tag salvati, una chiamata testuale per brief e prompt e le prenotazioni di `slop_reference_uses`. Le prenotazioni storiche durano
-finché esiste la figlia, anche nel cestino. La chiusura di un processo senza figlia libera la prenotazione. Le occupazioni del registro
-storico non limitano le nuove estrazioni di galleria né le partite. I batch storici di pipeline 1 restano consultabili in revisione.
+Il **flusso manuale** genera nella galleria scelta e conserva il proprio brief. La valutazione riceve l’intera candidata, l’ID
+del tentativo, il brief, il prompt corrente e la tolleranza, con Base e Valutazione attive. Il massimo è `1 + 2N` chiamate
+per N tentativi, inclusa l’analisi dei tag dopo l’accettazione. Le REAL si aggiungono attraverso il Caricamento REAL e si
+estraggono solo in modo casuale dalla galleria selezionata.
 
-La valutazione di pipeline 2, manuale o storica, riceve l’intera candidata corrente e un JSON con `attempt_id`, `brief` con i
-quattro gruppi di vincoli, `prompt` corrente, `composition_preference` e `tolerance`. Usa i contesti Base e Valutazione attivi,
-le regole fisse, uno schema JSON e un limite di 8000 token. Ogni richiesta è indipendente. I prompt rivisti conservano ancoraggi
-ed esclusioni del brief. Il massimo nel flusso manuale è `1 + 2N`; quello storico comprende anche la preparazione del brief.
-La migrazione conserva lo storico dei contesti dei modelli, incluso il testo per scrivere i brief storici.
+La SLOP è identificata dal suo ID. L’analisi riceve prompt e descrizione aggiuntiva se presente. Per la copia si conservano
+misure anonime e parametri tecnici, e alla conferma o al termine della proposta si eliminano i riferimenti alle REAL.
 
-La SLOP è identificata dal suo ID. La sua analisi riceve prompt e descrizione aggiuntiva se presente e cataloga i tag osservati
-sull’originale. Per le copie si conservano le misure anonime e i parametri tecnici della ricetta.
-
-Nei test si usano solo il Worker e lo storage locali con OpenAI simulato. Il rilascio segue le regole documentate in `AGENTS.md`.
+Nei test si usano solo il Worker e lo storage locali con OpenAI simulato. Il rilascio segue le regole di `AGENTS.md`.

@@ -29,7 +29,7 @@ const MAX_PIXELS = 32_000_000;
 type Origin = "REAL" | "SLOP";
 type Status = "new" | "approved" | "published" | "trash";
 export interface Row {
-  id: string; gallery_id: string | null; origin: Origin; status: Status; trashed_from: Status | null; title: string | null; description: string;
+  id: string; gallery_id: string; origin: Origin; status: Status; trashed_from: Status | null; title: string | null; description: string;
   source_url: string; author: string; license_name: string; license_url: string; prompt: string; model: string;
   original_key: string; original_sha256: string; original_mime: string; width: number; height: number;
   copy_key: string | null; copy_sha256: string | null; copy_width: number | null; copy_height: number | null; copy_bytes: number | null;
@@ -196,7 +196,7 @@ export function tagStatements(env: Env, imageIdValue: string, wanted: string[], 
 /** Adds a new image to the library. The original goes to quarantine; the browser then uploads its game copy. */
 export async function create(env: Env, input: { origin: Origin; title?: string; description?: string; bytes: ArrayBuffer;
   source_url?: string; author?: string; license_name?: string; license_url?: string; prompt?: string; model?: string;
-  gallery_id?: string | null; generation?: { batch: string; slot: unknown; quality: string } }) {
+  gallery_id: string; generation?: { batch: string; slot: unknown; quality: string } }) {
   if (!env.QUARANTINE) throw new HttpError(503, "Quarantena privata non configurata");
   const bytes = new Uint8Array(input.bytes);
   if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new HttpError(413, "File vuoto o oltre 12 MB");
@@ -219,7 +219,7 @@ export async function create(env: Env, input: { origin: Origin; title?: string; 
         text(input.source_url, "source_url"), text(input.author, "author"), text(input.license_name, "license_name"),
         text(input.license_url, "license_url"), text(input.prompt, "prompt"), text(input.model, "model"),
         key, hash, mime, width, height, stamp, stamp, input.generation?.batch ?? null,
-        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null, input.origin === "REAL" ? input.description || "" : null, input.gallery_id ?? null).run();
+        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null, input.origin === "REAL" ? input.description || "" : null, input.gallery_id).run();
   } catch (error) {
     await env.QUARANTINE.delete(key);
     if (error instanceof HttpError) throw error;
@@ -290,8 +290,9 @@ async function storeCopy(request: Request, env: Env, row: Row) {
 }
 
 /** Gallery membership is editorial metadata and does not withdraw or restore a photo. */
-async function assignGallery(env: Env, row: Row, gallery: string | null, revision = row.revision) {
+async function assignGallery(env: Env, row: Row, gallery: string, revision = row.revision) {
   if (row.origin !== "REAL") throw new HttpError(409, "Le SLOP ereditano la galleria del batch");
+  if (row.gallery_id === gallery) return;
   const result = await env.DB.prepare("UPDATE images SET gallery_id=?,revision=revision+1,updated_at=? WHERE id=? AND revision=?")
     .bind(gallery, now(), row.id, revision).run();
   if (!result.meta.changes) throw new HttpError(409, "Immagine modificata altrove: ricaricare");
@@ -420,7 +421,7 @@ async function list(env: Env, url: URL) {
       GROUP BY it.image_id HAVING count(DISTINCT t.label)>=CASE ?5 WHEN 'any' THEN 1 ELSE json_array_length(?3) END))`,
     "(?4='' OR id LIKE '%'||?4||'%' COLLATE NOCASE OR title LIKE '%'||?4||'%' COLLATE NOCASE OR description LIKE '%'||?4||'%' COLLATE NOCASE OR prompt LIKE '%'||?4||'%' COLLATE NOCASE)", "(?6='' OR generation_batch=?6)",
     `(?7=0 OR (SELECT count(DISTINCT t.category) FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id
-      AND t.category IN ('genre','color','medium'))<3)`, `(?8=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, "(?9=0 OR (origin='REAL' AND real_description IS NULL))", "(?10='' OR (?10='unassigned' AND gallery_id IS NULL) OR gallery_id=?10)"].join(" AND ");
+      AND t.category IN ('genre','color','medium'))<3)`, `(?8=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, "(?9=0 OR (origin='REAL' AND real_description IS NULL))", "(?10='' OR gallery_id=?10)"].join(" AND ");
   await sweepRetired(env);
   const rows = (await env.DB.prepare(`SELECT * FROM images WHERE ${where} ORDER BY updated_at DESC,id LIMIT 500`)
     .bind(status, originFilter, JSON.stringify(wanted), q, match, batch, incomplete, url.searchParams.get("redo_copy") === "1" ? 1 : 0, url.searchParams.get("undescribed") === "1" ? 1 : 0, gallery).all<Row>()).results;
@@ -473,7 +474,6 @@ export async function library(request: Request, env: Env, path: string): Promise
   if (path === base + "/upload" && request.method === "POST") {
     const params = url.searchParams;
     const kind = origin(params.get("origin"));
-    if (kind !== "REAL" && params.has("gallery_id")) throw new HttpError(400, "La galleria di una SLOP proviene dal batch");
     return json(await create(env, { origin: kind, gallery_id: await galleryId(env, params.get("gallery_id")), title: params.get("title") || "", bytes: await request.arrayBuffer(),
       description: params.get("description") || "", prompt: params.get("prompt") || "", model: params.get("model") || "" }), 201);
   }
@@ -503,12 +503,11 @@ export async function library(request: Request, env: Env, path: string): Promise
     const action = String(data.action);
     if (action === "delete") return json(await destroy(env, ids));
     const gallery = action === "gallery" ? await galleryId(env, data.gallery_id) : null;
-    if (action === "gallery" && !("gallery_id" in data)) throw new HttpError(400, "Galleria richiesta");
     const done: string[] = [], failed: { id: string; error: string }[] = [];
     for (const target of ids) {
       try {
         const row = await find(env, target);
-        if (action === "gallery") await assignGallery(env, row, gallery);
+        if (gallery) await assignGallery(env, row, gallery);
         else if (action === "tag-add" || action === "tag-remove") {
           const current = (await tagsOf(env, [row.id])).get(row.id) || [], change = await resolveAliases(env, labels(data.tags));
           const wanted = action === "tag-add" ? [...new Set([...current, ...change])] : current.filter(t => !change.includes(t));

@@ -18,7 +18,7 @@ import { markGameMedia } from "./media-mark";
 
 type Stage = 1 | 2 | 3 | 4;
 interface Image {
-  id: string; gallery_id: string | null; origin: "REAL" | "SLOP"; status: "new" | "approved" | "published" | "trash";
+  id: string; gallery_id: string; origin: "REAL" | "SLOP"; status: "new" | "approved" | "published" | "trash";
   commons_description: string | null; real_description: RealDescription | null; revision: number; title: string; description: string; tags: string[];
   source_url: string; author: string; license_name: string; license_url: string;
   width: number; height: number; file: string;
@@ -30,7 +30,7 @@ interface Image {
 interface Hit { title: string; page_url: string; thumb_url: string; preview_url?: string; width: number; height: number; date?: string; description?: string }
 interface Browse { files: Hit[]; next: string | null }
 interface Analysis { enabled: boolean; reason: string; model: string }
-const BASE = "/api/admin/library", DRAFT_KEY = "ros-real-wizard-v1.0.0";
+const BASE = "/api/admin/library", DRAFT_KEY = "ros-real-wizard-v2";
 
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(BASE + path, { credentials: "same-origin", ...options, headers: { "Content-Type": "application/json", ...options.headers } });
@@ -133,7 +133,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   const selectedSection = () => '<h3>Immagini selezionate (' + pending.size + ')</h3>' +
     (pending.size ? '<ul class="rw-picks">' + cardSelected() + "</ul>" : '<p>Tocca le fotografie nei risultati oppure incolla i link.</p>') +
     (images.length ? '<p class="hint">Già acquisite in questa sessione: ' + staged().length + ' immagini in revisione.</p>' : "");
-  const importDisabled = () => !pending.size && !staged().length;
+  const importDisabled = () => pending.size ? !importGallery : !staged().length;
   const importButton = () => '<button type="button" class="primary" data-rw="import" ' + (importDisabled() ? "disabled" : "") + '>Avanti: tag</button>';
   const first = () => '<div class="rw-stack">' +
     '<section class="rw-panel"><h3>Cerca su Commons</h3><form id="rw-search" class="rw-search">' +
@@ -163,7 +163,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     '<label for="rw-links">Link delle immagini</label><textarea id="rw-links" rows="5" placeholder="https://commons.wikimedia.org/wiki/File:..."></textarea>' +
     '<button type="button" data-rw="add-links">Aggiungi alla selezione</button></details></div>' +
     '<div class="rw-selected">' + selectedSection() + '</div><div class="rw-actions rw-bottom">' +
-    (galleries().length ? `<label>Galleria del caricamento<select id="rw-import-gallery"><option value="">Senza galleria</option>${galleryOptions(galleries(), importGallery)}</select></label>` : "") +
+    (galleries().length ? `<label>Galleria del caricamento<select id="rw-import-gallery" required><option value="">Scegli una galleria</option>${galleryOptions(galleries(), importGallery)}</select></label>` : '<p class="hint">Crea una galleria in Database immagini → Gallerie prima di acquisire le foto.</p>') +
     importButton() + '</div>';
   const metadata = (item: Image) => '<details class="rw-metadata"><summary>Titolo e metadati</summary><dl>' +
     [["Titolo Commons", item.title], ["Autore", item.author],
@@ -183,7 +183,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     legend() + '<div class="rw-editor-grid">' + staged().map(item => '<article class="rw-editor" data-rw-image="' + escape(item.id) + '">' +
       '<div class="rw-image"><img src="' + escape(item.file) + '" alt="' + escape(item.title) + '" loading="lazy"></div>' +
       '<div class="rw-editor-fields"><h3>' + escape(short(item.title, 90)) + '</h3>' +
-      (galleries().length ? `<label>Galleria<select data-rw-gallery="${escape(item.id)}"><option value="">Senza galleria</option>${galleryOptions(galleries(), item.gallery_id || "")}</select></label>` : "") +
+      (galleries().length ? `<label>Galleria<select data-rw-gallery="${escape(item.id)}">${galleryOptions(galleries(), item.gallery_id)}</select></label>` : "") +
       '<label class="rw-description">Descrizione <small>(la leggono i giocatori alla fine della partita)</small><textarea data-rw-description="' +
         escape(item.id) + '" maxlength="1000" rows="3" placeholder="Che cosa mostra la foto, dove e quando">' + escape(item.description) + '</textarea></label>' +
       descriptionFields(item.id, item.real_description, false, item.commons_description || "") +
@@ -322,7 +322,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       try {
         notice = "Acquisizione privata " + (done + failures.length + 1) + " di " + pending.size + "…";
         render();
-        const item = await api<Image>("/commons", { method: "POST", body: JSON.stringify({ url, gallery_id: importGallery || null }) });
+        const item = await api<Image>("/commons", { method: "POST", body: JSON.stringify({ url, gallery_id: importGallery }) });
         images.push(item); pending.delete(url); persist(); done++;
         // The game copy (4:5, centred) is made here, in the browser, from the stored original.
         try { replace(await prepareLibraryCopy<Image>(item.id)); }
@@ -430,10 +430,10 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   }, true);
   root.addEventListener("change", event => {
     const target = event.target as HTMLInputElement;
-    if (target.id === "rw-import-gallery") { importGallery = target.value; return; }
+    if (target.id === "rw-import-gallery") { importGallery = target.value; renderSelected(); return; }
     if (target.dataset.rwGallery) {
       const item = images.find(i => i.id === target.dataset.rwGallery);
-      if (item) void update(item, {gallery_id: target.value || null}).catch(error => { notice = errorText(error); render(); });
+      if (item) void update(item, {gallery_id: target.value}).catch(error => { notice = errorText(error); render(); });
       return;
     }
     if (target.id === "rw-columns") {

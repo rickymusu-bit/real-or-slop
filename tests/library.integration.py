@@ -15,11 +15,13 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from PIL import Image, ImageOps
+from catalog import make_gallery
 from game_copy import centred_crop, crop_query, game_copy
 
 base = os.environ['ROS_TEST_BASE']; assert base.startswith('http://127.0.0.1:')
 state = os.environ['ROS_TEST_STATE']
 token = Path('.dev.vars').read_text().strip().split('=', 1)[1]
+gallery_id = make_gallery(base + '/api/admin/library', token, 'Test library')
 API = base + '/api/admin/library'
 
 def call(url, data=None, method=None, raw=None, mime='application/json', auth=True, opener=None):
@@ -49,7 +51,7 @@ def photo(color, size=(64, 40), exif=True, fmt='JPEG'):
     else: image.save(out, fmt)
     return out.getvalue()
 def upload(source, origin='REAL', title='Fixture photo'):
-    return call(f'{API}/upload?' + urllib.parse.urlencode({'origin': origin, 'title': title}), raw=source, mime='image/jpeg')
+    return call(f'{API}/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': origin, 'title': title}), raw=source, mime='image/jpeg')
 def copy(item_id, data, mime='image/webp', query=''):
     return call(f'{API}/{item_id}/copy' + query, raw=data, mime=mime)
 def patch(item, change):
@@ -111,7 +113,7 @@ status, real, _ = patch(real, {'description': 'Fotografia scattata durante il ma
 status, result, _ = patch(real, {'tags': []}); assert status == 409 and 'almeno un tag' in result['error'], result
 # A SLOP image: no rights checkbox, but copy and tags are required.
 slop_source = photo((0, 0, 200), (48, 48), exif=False, fmt='PNG')
-status, slop, _ = call(f'{API}/upload?' + urllib.parse.urlencode({'origin': 'SLOP', 'prompt': 'A street in 1968'}),
+status, slop, _ = call(f'{API}/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': 'SLOP', 'prompt': 'A street in 1968'}),
                        raw=slop_source, mime='image/png')
 assert status == 201 and slop['prompt'] == 'A street in 1968', slop
 assert sql("SELECT title FROM images WHERE id='"+slop['id']+"'")[0]['title'] is None

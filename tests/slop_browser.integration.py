@@ -22,7 +22,7 @@ try:
             page.on('dialog',confirm)
             try:
                 # A process that ended without a SLOP is shown on top, with its attempts, until the owner closes it.
-                stuck_source=real('browser-stuck-'+name);generated.append(stuck_source['id']);stuck=batch(stuck_source)
+                stuck_source=real('browser-stuck-'+name);generated.append(stuck_source['id']);stuck=batch(stuck_source['gallery_id'])
                 control([None,{'evaluation':'review_needed'}]);assert generate(stuck)[1]['process']['state']=='review_needed'
                 page.goto(BASE+'/admin');page.locator('[data-admin-tab=slop]').click()
                 studio=page.locator('#slop-studio')
@@ -41,7 +41,7 @@ try:
                 assert 'Chiudere questo processo' in confirmations[-1]
                 assert sql("SELECT state FROM slop_processes WHERE id='"+stuck['processes'][0]['id']+"'")[0]['state']=='closed'
                 # The owner can accept critical/minor findings and uncertainty, after a cancellable confirmation.
-                review_source=real('browser-review-'+name);generated.append(review_source['id']);review=batch(review_source)
+                review_source=real('browser-review-'+name);generated.append(review_source['id']);review=batch(review_source['gallery_id'])
                 control([None,{'evaluation':'review_needed','critical':['A hand has six fingers'],'minor':['Soft focus on the edge'],'uncertainty':['Place cannot be confirmed'],'constraints':False}]);assert generate(review)[1]['process']['state']=='review_needed'
                 page.reload();page.locator('[data-admin-tab=slop]').click()
                 card=studio.locator('[data-attention="'+review['processes'][0]['id']+'"]')
@@ -63,7 +63,7 @@ try:
                 studio.locator('[data-slop=publish]').click();expect(studio.get_by_role('heading',name='SLOP published')).to_be_visible()
                 # Exhausted attempts with minor defects have the same explicit override.
                 call('/settings',{'max_generation_attempts':1},method='PUT',library=True)
-                minor_source=real('browser-minor-'+name);generated.append(minor_source['id']);minor=batch(minor_source)
+                minor_source=real('browser-minor-'+name);generated.append(minor_source['id']);minor=batch(minor_source['gallery_id'])
                 call('/settings',{'max_generation_attempts':old['max_generation_attempts']},method='PUT',library=True)
                 control([None,{'evaluation':'retry_same_prompt','minor':['Visible banding']}]);assert generate(minor)[1]['process']['state']=='exhausted'
                 page.reload();page.locator('[data-admin-tab=slop]').click()
@@ -73,6 +73,7 @@ try:
                 assert 'Visible banding' in confirmations[-1] and len(control())==1
                 generated.append(load(minor)['images'][0]['id'])
                 studio.locator('[data-slop=new-batch]').click()
+                studio.locator('[data-manual=gallery_id]').select_option(review_source['gallery_id'])
                 studio.locator('[data-manual=prompt]').fill('A credible street photograph in ordinary daylight.')
                 studio.locator('[data-manual=tags]').fill('street-scene, 1960s')
                 studio.locator('[data-manual=required]').fill('street-scene')

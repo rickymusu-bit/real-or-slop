@@ -1,6 +1,6 @@
-# Contenuti delle SLOP e trasparenza — specifica 1.3.0
+# Contenuti delle SLOP e trasparenza — specifica 1.3.1
 
-Stato: implementata nel ramo 1.40.0, da rilasciare. Aggiornata: 2026-11-18T18:13:41Z.
+Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
 Valgono per ogni modello che produce contenuti del sito e per la revisione dell'owner.
 
 ## 1. Che cosa può comparire in una SLOP

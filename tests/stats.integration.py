@@ -37,13 +37,14 @@ for wrong in ({'slop_section_min_real': 50}, {'slop_auto_threshold_percent': 33}
     assert call('/settings', wrong, method='PUT')[0] == 400, wrong
 status, settings = call('/settings', {'max_generation_attempts': 4}, method='PUT')
 assert settings['values']['max_generation_attempts'] == 4, settings
-status, spread = call('/slop/state'); assert spread['thresholds']['section'] == 1, spread
+status, studio = call('/slop/state'); assert status==200 and isinstance(studio['attention'],list), studio
 call('/settings', {'max_generation_attempts': 3}, method='PUT')
 
 # Statistics: a game being played now, an open game left yesterday, a concluded game, a game whose preparation expired.
 now = int(time.time() * 1000)
-statements = ["INSERT INTO images(id,origin,status,title,original_key,original_sha256,original_mime,width,height,copy_key,copy_sha256,copy_crop,created_at,updated_at) VALUES "
-              + ",".join(f"('st-img-{i}','{o}','published',CASE '{o}' WHEN 'REAL' THEN 's{i}' ELSE NULL END,'st/{i}','{format(900 + i, '064x')}','image/png',40,50,'st/c{i}','{format(900 + i, '064x')}','{'{"format":"3:2"}' if i == 0 else '{}'}','x','x')"
+statements = ["INSERT INTO galleries(id,title) VALUES('st-gallery','Statistics')",
+              "INSERT INTO images(id,origin,status,title,original_key,original_sha256,original_mime,width,height,copy_key,copy_sha256,copy_crop,created_at,updated_at,gallery_id) VALUES "
+              + ",".join(f"('st-img-{i}','{o}','published',CASE '{o}' WHEN 'REAL' THEN 's{i}' ELSE NULL END,'st/{i}','{format(900 + i, '064x')}','image/png',40,50,'st/c{i}','{format(900 + i, '064x')}','{'{"format":"3:2"}' if i == 0 else '{}'}','x','x','st-gallery')"
                          for i, o in enumerate(['REAL', 'REAL', 'SLOP', 'SLOP']))]
 def game(sid, level, phase, created, rounds):
     statements.append(f"INSERT INTO game_sessions(id,mode,level,created_at,owner_hash,phase,timing_mode,round_seconds) VALUES('{sid}','levels','{level}',{created},'x','{phase}','per-image',20)")
