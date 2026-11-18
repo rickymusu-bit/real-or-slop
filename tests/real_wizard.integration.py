@@ -331,6 +331,8 @@ with sync_playwright() as p:
         page.locator('[data-rw-gallery]').select_option(gallery_id)
         page.locator('[data-rw=discard]').click()
         expect(page.locator('.rw-message')).to_contain_text('Foto tolta dal caricamento')
+        discarded=page.request.get(base+'/api/admin/library/'+acquired[0]).json()
+        assert discarded['gallery_id']==gallery_id and discarded['status']=='trash', discarded
         assert not errors, errors
         context.close()
         print('REAL wizard browser E2E 1.15.0 passed (search clear box, tap adds at once, selection kept across searches, press-and-hold preview, description edited and summarised, four steps, crop step, search clear button, no captions, photos trashed elsewhere leave the wizard):', name)

@@ -433,7 +433,9 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     if (target.id === "rw-import-gallery") { importGallery = target.value; renderSelected(); return; }
     if (target.dataset.rwGallery) {
       const item = images.find(i => i.id === target.dataset.rwGallery);
-      if (item) void update(item, {gallery_id: target.value}).catch(error => { notice = errorText(error); render(); });
+      if (!item) return;
+      if (busy) { target.value = item.gallery_id; return; }
+      void update(item, {gallery_id: target.value}).catch(error => { notice = errorText(error); render(); });
       return;
     }
     if (target.id === "rw-columns") {
@@ -605,6 +607,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       } else if (action === "discard") {
         const item = images.find(i => i.id === id)!;
         if (!window.confirm("Togliere «" + short(item.title, 60) + "» dal caricamento? La foto va nel cestino e si può ripristinare dalla sezione Database.")) return;
+        await saving.catch(() => {});
         await api("/" + encodeURIComponent(id) + "/trash", { method: "POST", body: "{}" });
         images = images.filter(i => i.id !== id);
         if (!staged().length) stage = 1;
