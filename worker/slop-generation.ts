@@ -88,12 +88,13 @@ export async function initializeBatch(env: Env, batchId: string, items: Inspirat
   const stamp = now();
   const sequence = await env.DB.prepare("SELECT count(*) AS n FROM slop_processes").first<{n: number}>();
   const revisions: number[] = [];
+  const statuses = reviewedRevisions ? ["new", "approved", "published"] : ["approved", "published"];
   const configs = await Promise.all(items.map(async (item, slot) => {
     const source = await find(env, item.source!);
-    if (reviewedRevisions && source.revision !== reviewedRevisions[slot]) throw new HttpError(409, "REAL modificata dopo l’estrazione");
+    if (reviewedRevisions && source.revision !== reviewedRevisions[slot]) throw new HttpError(409, "REAL modificata dopo l’anteprima");
     revisions[slot] = source.revision;
     const description = realDescription(parse(source.real_description, null));
-    if (!description || !["approved", "published"].includes(source.status)) throw new HttpError(409, "REAL non disponibile o descrizione mancante");
+    if (!description || !statuses.includes(source.status)) throw new HttpError(409, "REAL non disponibile o descrizione mancante");
     return {...snapshot, mode: "automatic" as const, composition: compositionAt((sequence?.n || 0) + slot), source_description: description, source_tags: byCategory(item.tags), width: source.width, height: source.height,
       target_metrics: parse<Metrics | null>(source.copy_metrics, null)};
   }));
@@ -106,8 +107,10 @@ export async function initializeBatch(env: Env, batchId: string, items: Inspirat
         .bind(processId, batchId, slot, JSON.stringify(configs[slot]), stamp, stamp),
       // NOT NULL rejects a changed reference and rolls back every process/reservation in this D1 transaction.
       env.DB.prepare(`INSERT INTO slop_reference_uses(source_id,process_id,created_at) VALUES(?,?,
-        CASE WHEN EXISTS(SELECT 1 FROM images WHERE id=? AND revision=? AND origin='REAL' AND status IN ('approved','published')) THEN ? ELSE NULL END)`)
-        .bind(item.source!, processId, item.source!, revisions[slot], stamp)];
+        CASE WHEN EXISTS(SELECT 1 FROM images WHERE id=? AND revision=? AND origin='REAL'
+          AND (status IN ('approved','published') OR (?=1 AND status='new'))
+          AND real_description IS NOT NULL AND EXISTS(SELECT 1 FROM image_tags WHERE image_id=images.id)) THEN ? ELSE NULL END)`)
+        .bind(item.source!, processId, item.source!, revisions[slot], Number(Boolean(reviewedRevisions)), stamp)];
     })]);
 }
 /** A manual draft is free: the owner supplies the whole prompt, target tags and immutable anchors. */

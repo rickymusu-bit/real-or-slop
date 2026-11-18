@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 28.2.0, aggiornata il 2026-11-18T05:29:01Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 28.3.0, aggiornata il 2026-11-18T05:56:24Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -23,9 +23,11 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   e il contesto Commons, ma **non conosce l'esistenza delle SLOP**.
   Il modello successivo che produce **brief e prompt SLOP** riceve solo tag e descrizione salvata, **non l'immagine**;
   conosce invece lo scopo sintetico della generazione. Tenere separati i contesti di istruzione.
-- **Generazione SLOP manuale o automatica** (decisione dell'owner del 2026-11-17, specifica `generazione-slop` 8.3.0).
+- **Generazione SLOP manuale o automatica** (decisione dell'owner del 2026-11-17, specifica `generazione-slop` 8.4.0).
   Manuale: prompt, tag di partenza e ancoraggi scritti dall'owner, senza una REAL né una chiamata per scrivere il prompt.
-  Automatica: prima estrazione gratuita e anteprima delle REAL, poi conferma del massimo e avvio sulle stesse REAL mostrate.
+  Automatica: scegli REAL libere dal Database, importale da Wikimedia Commons o usa l'estrazione casuale. Le REAL scelte o
+  importate possono essere nuove con tag e descrizione editoriale. Poi anteprima gratuita, conferma del massimo e avvio sulle
+  stesse REAL mostrate. L'analisi facoltativa delle immagini importate ha una sua conferma a pagamento.
   Descrizione e tag di una REAL libera diventano brief e prompt con una sola chiamata testuale, senza immagine.
   La madre resta occupata finché la figlia esiste nel dataset: nuova, approvata, pubblicata o cestinata. Solo l'eliminazione
   definitiva libera la REAL. Prenotazioni private impediscono due processi concorrenti dalla stessa REAL e si liberano

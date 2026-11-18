@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 8.3.0
+# Generazione SLOP — specifica 8.4.0
 
-Stato: implementata nel ramo 1.40.0, da rilasciare. Aggiornata: 2026-11-18T05:29:01Z.
+Stato: implementata nel ramo 1.41.0, da rilasciare. Aggiornata: 2026-11-18T05:56:24Z.
 
 ## Due modalità e avviso sul dataset
 
@@ -15,27 +15,32 @@ Non occorre una REAL. Preparare e modificare il processo prima del primo tentati
 il prompt manuale. Poi partono lo stesso ciclo di generazione e valutazione, la revisione e la copia 4:5. I tag di partenza restano
 nello snapshot privato del processo, senza essere copiati nei metadati della figlia; i tag finali descrivono l'originale prodotto, con la normale analisi dopo accettazione. Nessun trattamento da una REAL mancante.
 
-**Automatica:** l'owner sceglie da una a dieci SLOP, entro il numero di REAL libere con descrizione. La quantità può essere diversa
-dallo sbilanciamento, anche quando il catalogo è in pareggio. Campione casuale uniforme, senza ripetizioni. Una chiamata testuale
-per REAL scrive brief e prompt dai tag e dalla descrizione salvati.
+**Automatica:** l'owner sceglie da una a dieci REAL di riferimento. Il numero di SLOP segue il numero di REAL; può essere diverso
+dallo sbilanciamento, anche quando il catalogo è in pareggio. Una chiamata testuale per REAL scrive brief e prompt dai tag e dalla
+descrizione salvati.
 
-Prima di avviare, «Estrai le REAL» mostra miniature, titoli e tag delle fotografie selezionate. Un tocco o una pressione prolungata
-apre l'originale intero con descrizione editoriale, contesto documentato e incertezze. Si può riestrarre o annullare, gratuitamente.
-Solo «Conferma e avvia N SLOP», seguito dalla conferma esplicita del massimo di chiamate, avvia il processo. Cambiare la quantità
-invalida l'anteprima corrente; la risposta di un'estrazione precedente non sostituisce una selezione più recente.
+1. **Scegli le REAL di riferimento.** «Dal Database» filtra le REAL libere per titolo, descrizione o tag e conserva la selezione
+   durante la ricerca. «Da Wikimedia Commons» riusa ricerca, link, importazione privata, tag e descrizione del wizard REAL.
+   Le REAL possono essere preparate a mano o con l'analisi combinata, che dichiara e conferma separatamente una chiamata per foto.
+   Una REAL importata può entrare nella selezione da nuova, con tag e descrizione editoriale, senza copia di gioco. Si possono
+   combinare REAL di entrambe le provenienze. «Estrazione casuale» resta disponibile per le REAL approvate/pubblicate pronte,
+   con campionamento uniforme senza ripetizioni.
+2. **Rivedi le REAL e avvia.** L'anteprima gratuita mostra miniature, titoli e tag. Un tocco o una pressione prolungata apre
+   l'originale intero con descrizione editoriale, contesto documentato e incertezze. «Conferma e avvia N SLOP» richiede la conferma
+   del massimo di chiamate del batch. Un cambio della selezione o della quantità estratta invalida l'anteprima.
 
-`POST auto/preview {size}` non crea batch, non prenota REAL e non invia chiamate al modello. Restituisce un token firmato con ID,
-revisioni, ordine delle REAL e configurazione mostrata, valido quindici minuti. `POST auto/start {preview,confirm:true}` usa esattamente
-quelle REAL, senza un secondo campionamento. Un riferimento cambiato, occupato o eliminato, un cambio della configurazione o una
-scadenza richiedono una nuova estrazione prima di qualsiasi chiamata. Il controllo delle revisioni e della disponibilità è ripetuto
-nella transazione che crea processi e prenotazioni. L'ID dell'estrazione diventa l'ID univoco del batch: una selezione già avviata
-non si riusa, anche dopo la chiusura e la cancellazione delle figlie. L'anteprima non è conservata ricaricando la pagina.
-L'anteprima non richiede migrazioni aggiuntive.
+`GET auto/references` elenca i riferimenti disponibili nel Database, comprese le REAL nuove con tag e descrizione editoriale.
+`POST auto/preview {sources}` conserva l'ordine degli ID scelti. `{size}` chiede invece l'estrazione casuale. L'anteprima non crea
+batch, non prenota REAL e non invia chiamate al modello. Restituisce un token firmato con ID, revisioni, ordine e configurazione,
+valido quindici minuti. `POST auto/start {preview,confirm:true}` usa esattamente quelle REAL. Un riferimento cambiato, occupato
+o eliminato, un cambio della configurazione o una scadenza richiedono una nuova anteprima. La transazione che crea i processi
+verifica nuovamente revisioni e disponibilità. Ogni token può avviare un solo batch. La selezione del batch non sopravvive al
+ricaricamento. Le REAL già importate restano nella libreria privata. La scelta dei riferimenti non richiede una migrazione.
 
 ## Ispirazione e disponibilità
 
-Una SLOP automatica è ispirata a una REAL, senza obbligo di somiglianza. Sono disponibili le REAL approvate/pubblicate con descrizione
-che non hanno una figlia esistente né una prenotazione aperta. Il registro privato `slop_reference_uses` prenota atomicamente la madre
+Una SLOP automatica è ispirata a una REAL, senza obbligo di somiglianza. Sono disponibili le REAL con tag e descrizione editoriale che non
+hanno una figlia esistente né una prenotazione aperta. Le REAL nuove sono disponibili tramite scelta esplicita. Il registro privato `slop_reference_uses` prenota atomicamente la madre
 alla creazione del processo e registra la figlia accettata. La madre resta esclusa se la figlia è nuova, approvata, pubblicata o nel
 cestino; solo cancellare definitivamente la figlia la libera. Chiudere un processo senza figlia libera la sua prenotazione. Gli esiti
 incerti e in revisione richiedono prima la decisione dell'owner. Eliminare un processo già accettato lascia occupata la madre.

@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 3.5.0
+# Dashboard e wizard REAL — specifica 3.6.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T19:34:55Z.
+Stato: implementata nel ramo 1.41.0, da rilasciare. Aggiornata: 2026-11-18T05:56:24Z.
 
 ## 1. Decisioni dell'owner
 
@@ -17,7 +17,7 @@ Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T19:34
 
 ## 2. Dashboard `/admin`
 
-Riprogettazione 1.37.0: navigazione laterale desktop con descrizione delle cinque attività; su mobile barra orizzontale scorrevole. La barra laterale e i suoi pulsanti restano nella propria colonna, senza coprire i pannelli; le descrizioni dei pulsanti sono sotto il titolo. Su mobile la barra scorre mantenendo le voci compatte. Ultima sezione ricordata nella sessione. Testata compatta, pannelli coerenti, comandi tattili e focus visibile. I quattro passi REAL restano espliciti con schede e azioni raggruppate. Le eccezioni SLOP e i loro tentativi sono espandibili singolarmente; un aggiornamento della sezione conserva anche i tentativi aperti o chiusi; modalità manuale con prompt, tag e ancoraggi, modalità automatica con quantità scelta (1–10, entro le REAL libere), estrazione gratuita delle REAL e loro anteprima prima di confermare e avviare. Miniature con titolo e tag; tocco o pressione prolungata per originale intero e descrizione editoriale. Riestrazione e annullamento gratuiti; nessuna chiamata a pagamento fino alla conferma finale.
+Riprogettazione 1.37.0: navigazione laterale desktop con descrizione delle cinque attività; su mobile barra orizzontale scorrevole. La barra laterale e i suoi pulsanti restano nella propria colonna, senza coprire i pannelli; le descrizioni dei pulsanti sono sotto il titolo. Su mobile la barra scorre mantenendo le voci compatte. Ultima sezione ricordata nella sessione. Testata compatta, pannelli coerenti, comandi tattili e focus visibile. I quattro passi REAL restano espliciti con schede e azioni raggruppate. Le eccezioni SLOP e i loro tentativi sono espandibili singolarmente; un aggiornamento della sezione conserva anche i tentativi aperti o chiusi; modalità manuale con prompt, tag e ancoraggi, modalità automatica con scelta dei riferimenti dal Database, importazione da Commons o estrazione casuale. Prima dell’avvio si rivedono miniature, tag, originale e descrizione editoriale.
 
 Database con ricerca per ID e testo; le SLOP usano un’etichetta con ID abbreviato senza campo titolo né riquadro «Tag di partenza». Restano i tag osservati e modificabili, con filtri di origine e tag (nessun gruppo di genere/decennio) e ordinamento richiudibili, griglia 4:5 e barra di selezione durante lo scorrimento. Rimossi i tre checkbox di manutenzione: copia da rifare in 4:5, REAL senza descrizione, categorie visive mancanti (decisione dell’owner del 2026-11-17). Statistiche con viste Panoramica, Adesso, Gioco, Chiamate IA e Catalogo. Impostazioni con indice per Modelli, Generazione, Istruzioni IA, Tag, Partite e Classifica; ogni gruppo mantiene il proprio salvataggio.
 
@@ -92,6 +92,13 @@ ritaglio (specifica `copie-di-gioco`, sezione 3); «Prepara la copia di gioco» 
 **4. Riepilogo e pubblicazione.** Ogni foto con la copia servita dal gioco e il marchio «RS» sovrapposto, la descrizione e i tag.
 L'owner dichiara di aver verificato autenticità, provenienza e condizioni della licenza; poi le immagini si approvano e si pubblicano una
 alla volta. Dopo un errore quelle già pubblicate non si ripetono; gli errori restano indicati.
+
+### REAL di riferimento da Wikimedia Commons
+
+Il pannello «Generazione automatica» riusa la ricerca e l'importazione del wizard. I suoi due passi sono «Seleziona su Commons»
+e «Tag e descrizione». Le REAL restano nuove nella libreria privata. Dopo la catalogazione manuale o l'analisi combinata
+con conferma separata, «Aggiungi alla selezione SLOP» le aggiunge all'elenco dei riferimenti del batch. Il caricamento
+per la generazione ha una propria bozza di sessione.
 
 ## 5. Limiti
 

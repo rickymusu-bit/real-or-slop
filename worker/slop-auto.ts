@@ -3,7 +3,7 @@
 import { HttpError, type Env } from "./core";
 import { MAX_BATCH, type Proposal } from "../shared/slop-proposals";
 import { initializeBatch, loopSnapshot, processViews, itemsOf } from "./slop-generation";
-import { realRows, catalogCounts, inspirationItems } from "./slop-references";
+import { realRows, catalogCounts, inspirationItems, readyReference } from "./slop-references";
 import { find } from "./library";
 import { realDescription } from "../shared/editorial";
 import { PREVIEW_TTL_MS, readPreview, signPreview } from "./slop-preview";
@@ -59,23 +59,30 @@ function draw<T>(list: T[], count: number): T[] {
   while (out.length < count && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
   return out;
 }
-/** Extract first, without a batch, reservations, Workflow or model calls. */
+/** Preview the exact selection (or an optional random draw) without reservations or model calls. */
 async function preview(env: Env, data: Record<string, unknown>) {
-  if (Object.keys(data).some(key => key !== "size")) throw new HttpError(400, "Campi non previsti");
-  const size = data.size;
-  if (typeof size !== "number" || !Number.isInteger(size) || size < 1 || size > MAX_BATCH)
+  const { size, sources } = data;
+  if (Object.keys(data).some(key => !["size", "sources"].includes(key)) || (size === undefined) === (sources === undefined))
+    throw new HttpError(400, "Scegli le REAL oppure indica la quantità da estrarre");
+  if (sources !== undefined && (!Array.isArray(sources) || !sources.length || sources.length > MAX_BATCH ||
+      sources.some(id => typeof id !== "string" || !/^[\w-]{1,64}$/.test(id)) || new Set(sources).size !== sources.length))
+    throw new HttpError(400, `Scegli da 1 a ${MAX_BATCH} REAL distinte`);
+  if (size !== undefined && (typeof size !== "number" || !Number.isInteger(size) || size < 1 || size > MAX_BATCH))
     throw new HttpError(400, `Scegli da 1 a ${MAX_BATCH} SLOP`);
   if (await openBatch(env)) throw new HttpError(409, "C'è già un batch automatico aperto");
-  const waiting = (await realRows(env)).filter(r => r.described && r.available);
-  if (waiting.length < size) throw new HttpError(409, "REAL libere insufficienti: riduci la quantità o aggiungi REAL con descrizione");
-  const chosen = draw(waiting, size);
-  const rows = await Promise.all(chosen.map(r => find(env, r.id)));
-  const references = rows.map((r, index) => {
+  const waiting = (await realRows(env, Array.isArray(sources))).filter(readyReference);
+  if (typeof size === "number" && waiting.length < size) throw new HttpError(409, "REAL libere insufficienti: riduci la quantità o aggiungi REAL con descrizione");
+  const byId = new Map(waiting.map(row => [row.id, row]));
+  const chosen = Array.isArray(sources) ? sources.map(id => byId.get(id)) : draw(waiting, Number(size));
+  const references = await Promise.all(chosen.map(async (candidate) => {
+    if (!candidate) throw new HttpError(409, "Una REAL scelta è occupata o non ha più tag e descrizione editoriale disponibili");
+    const r = await find(env, candidate.id);
     const description = realDescription(parse(r.real_description, null));
-    if (!description || r.revision !== chosen[index].revision || !["approved", "published"].includes(r.status)) throw new HttpError(409, "Una REAL non è più disponibile: estrai di nuovo");
-    return {id: r.id, revision: r.revision, title: r.title, tags: chosen[index].tags, description,
+    if (!description || r.revision !== candidate.revision || r.reference_state || r.status === "trash")
+      throw new HttpError(409, "Una REAL non è più disponibile: controlla la selezione");
+    return {id: r.id, revision: r.revision, title: r.title, tags: candidate.tags, description,
       file: `/api/admin/library/${r.id}/file`, original: `/api/admin/library/${r.id}/original`};
-  });
+  }));
   const config = await loopSnapshot(env), expires = Date.now() + PREVIEW_TTL_MS;
   const token = await signPreview(env, {version: 1, id: crypto.randomUUID(), expires,
     sources: references.map(r => ({id: r.id, revision: r.revision})), config});
@@ -88,15 +95,15 @@ async function start(env: Env, data: Record<string, unknown>) {
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
   const snapshot = await loopSnapshot(env);
   if (Object.entries(snapshot).some(([key,value]) => (selected.config as unknown as Record<string,unknown>)[key] !== value))
-    throw new HttpError(409, "Configurazione cambiata: estrai di nuovo e conferma il nuovo massimo di chiamate");
+    throw new HttpError(409, "Configurazione cambiata: rivedi le REAL e conferma il nuovo massimo di chiamate");
   if (await openBatch(env)) throw new HttpError(409, "C'è già un batch automatico aperto: nessuna chiamata inviata");
-  const items = await inspirationItems(env, selected.sources.map(r => r.id)), stamp = now(), batchId = selected.id;
+  const items = await inspirationItems(env, selected.sources.map(r => r.id), true), stamp = now(), batchId = selected.id;
   try {
     await env.DB.prepare(`INSERT INTO slop_batches(id,theme,slots,created_at,updated_at,origin,auto_status,auto_size,auto_snapshot)
       VALUES(?,'[]',?,?,?,'auto','running',?,?)`).bind(batchId, "[]", stamp, stamp, items.length, JSON.stringify({size: items.length})).run();
-  } catch { throw new HttpError(409, "Estrazione già avviata o altro batch aperto: nessuna chiamata inviata"); }
+  } catch { throw new HttpError(409, "Selezione già avviata o altro batch aperto: nessuna chiamata inviata"); }
   try { await initializeBatch(env, batchId, items, snapshot, selected.sources.map(r => r.revision)); }
-  catch { await env.DB.prepare("DELETE FROM slop_batches WHERE id=?").bind(batchId).run(); throw new HttpError(409, "Una REAL è cambiata o è stata occupata: estrai di nuovo. Nessuna chiamata inviata"); }
+  catch { await env.DB.prepare("DELETE FROM slop_batches WHERE id=?").bind(batchId).run(); throw new HttpError(409, "Una REAL è cambiata o è stata occupata: rivedi la selezione. Nessuna chiamata inviata"); }
   await startRun(env, batchId, "all");
   return autoState(env);
 }
@@ -126,6 +133,8 @@ async function settle(env: Env) {
 
 export async function autoRoute(env: Env, method: string, rest: string, data: Record<string, unknown>) {
   if (rest === "" && method === "GET") return autoState(env);
+  if (rest === "references" && method === "GET") return { references: (await realRows(env, true)).filter(readyReference)
+    .map(({id, title, description, tags}) => ({id, title, description, tags})) };
   if (method !== "POST") throw new HttpError(405, "Metodo non consentito");
   if (rest === "preview") return preview(env, data);
   if (rest === "start") return start(env, data);
