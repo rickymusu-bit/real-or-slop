@@ -133,7 +133,8 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   const selectedSection = () => '<h3>Immagini selezionate (' + pending.size + ')</h3>' +
     (pending.size ? '<ul class="rw-picks">' + cardSelected() + "</ul>" : '<p>Tocca le fotografie nei risultati oppure incolla i link.</p>') +
     (images.length ? '<p class="hint">Già acquisite in questa sessione: ' + staged().length + ' immagini in revisione.</p>' : "");
-  const importButton = () => '<button type="button" class="primary" data-rw="import" ' + (!pending.size && !staged().length ? "disabled" : "") + '>Avanti: tag</button>';
+  const importDisabled = () => !pending.size && !staged().length;
+  const importButton = () => '<button type="button" class="primary" data-rw="import" ' + (importDisabled() ? "disabled" : "") + '>Avanti: tag</button>';
   const first = () => '<div class="rw-stack">' +
     '<section class="rw-panel"><h3>Cerca su Commons</h3><form id="rw-search" class="rw-search">' +
     '<label>Termini di ricerca<span class="rw-search-field"><input name="q" type="search" minlength="2" maxlength="200" required value="' + escape(query) +
@@ -279,10 +280,10 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   };
   /** Redraws only the chosen photos and the button under them, so that the results keep their scroll. */
   const renderSelected = () => {
-    const section = root.querySelector<HTMLElement>(".rw-selected"), bottom = root.querySelector<HTMLElement>(".rw-bottom");
-    if (!section || !bottom || stage !== 1) { render(); return; }
+    const section = root.querySelector<HTMLElement>(".rw-selected"), next = root.querySelector<HTMLButtonElement>('[data-rw="import"]');
+    if (!section || !next || stage !== 1) { render(); return; }
     section.innerHTML = selectedSection();
-    bottom.innerHTML = importButton();
+    next.disabled = importDisabled();
     const message = root.querySelector<HTMLElement>(".rw-message");
     if (message) message.textContent = notice;
   };
