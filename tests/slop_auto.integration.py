@@ -20,6 +20,11 @@ try:
     assert call('auto/start',{'size':3,'confirm':True})[0]==400  # no start without a reviewed extraction
     assert call('auto/preview',{'size':4})[0]==409
     assert call('auto/preview',{'size':1},auth=False)[0]==401
+    assert call('auto/references',auth=False)[0]==401
+    assert {photo['id'] for photo in call('auto/references')[1]['references']}==set(ids)
+    assert call('auto/preview',{'sources':[ids[0],ids[0]]})[0]==400
+    assert call('auto/preview',{'sources':[ids[0]],'size':1})[0]==400
+    assert call('auto/preview',{'sources':['missing']})[0]==409
     code,selected=call('auto/preview',{'size':3});assert code==200,selected
     assert {r['id'] for r in selected['references']}==set(ids)
     assert all(r['title'] and r['tags'] and r['description']==DESCRIPTION and r['original'].endswith('/original') for r in selected['references'])
@@ -37,11 +42,14 @@ try:
     call('/settings',{'max_generation_attempts':2},method='PUT',library=True)
     # A concurrent reservation invalidates the selection without reserving the other references.
     code,held=call('batches',{'sources':[ids[0]]});assert code==200,held
+    assert {photo['id'] for photo in call('auto/references')[1]['references']}==set(ids[1:])
+    assert call('auto/preview',{'sources':[ids[0]]})[0]==409
     assert call('auto/start',{'preview':selected['token'],'confirm':True})[0]==409
     assert control()==[] and sql("SELECT count(*) AS n FROM slop_reference_uses")[0]['n']==1
     sql("DELETE FROM slop_batches WHERE id='"+held['id']+"'")
-    selected=call('auto/preview',{'size':3})[1]
-    expected_sources=[r['id'] for r in selected['references']]
+    expected_sources=list(reversed(ids))
+    selected=call('auto/preview',{'sources':expected_sources})[1]
+    assert [r['id'] for r in selected['references']]==expected_sources
     assert call('auto/start',{'preview':selected['token']})[0]==400
     code,auto=call('auto/start',{'preview':selected['token'],'confirm':True});assert code==200,auto
     b=auto['batch'];bid=b['id'];assert b['pipeline_version']==2 and b['config']['max_generation_attempts']==2 and b['runner']['status'] in ('running','done'),b
@@ -102,5 +110,8 @@ try:
     assert control()==[]
     call('auto/stop',{})
 finally:
-    remove(generated+ids);call('/settings',settings['values'],method='PUT',library=True)
+    remove(generated)
+    sql("DELETE FROM slop_batches WHERE origin='auto'")
+    remove(ids)
+    call('/settings',settings['values'],method='PUT',library=True)
 print('Automatic editorial loops: consent, chosen quantity, unused references, bounded per-photo outcomes, resume guard, legacy protection and manual publication passed.')

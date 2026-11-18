@@ -1,6 +1,6 @@
-# Sezione Database — specifica 6.0.0
+# Sezione Database — specifica 6.1.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T19:34:55Z.
+Stato: implementata nel ramo 1.40.0, da rilasciare. Aggiornata: 2026-11-18T05:29:01Z.
 
 ## 1. Decisioni dell'owner
 
@@ -45,6 +45,9 @@ Ricerca in ID, titolo REAL, descrizione o prompt, combinata con i filtri di orig
   Completa Genere, Colore e Supporto, Analizza con IA (nuove con copia, mai analizzate o non riuscite), Ripristina i tag
   generati, Approva, Pubblica nel gioco, Modifica e Ritira dal gioco (pubblicate), Elimina (nel cestino), Ripristina ed Elimina
   definitivamente (cestino).
+- **REAL usata per una SLOP** (2026-11-18): la scheda segnala l'esclusione dal gioco e nasconde «Pubblica nel gioco» dopo la
+  registrazione della figlia. Dal cestino si può eliminare definitivamente la REAL dopo l'approvazione della figlia o la chiusura
+  del processo senza figlia. Le azioni in gruppo lasciano nel cestino le immagini che devono attendere e ne indicano il numero.
 - **Rigenerare una SLOP:** richiede un nuovo processo nello studio con conferma, brief ed esame dell’immagine intera. nessuna sostituzione diretta che scavalchi la valutazione.
 - **Descrizione REAL privata:** elementi visibili, contesto documentato e incertezze, modificabili indipendentemente dai tag, anche per una pubblicata. Per una REAL storica senza descrizione, compilazione manuale o analisi combinata tag+descrizione con conferma separata.
 - **Analisi combinata:** azione in gruppo «Analisi combinata tag e descrizione» (decisione
@@ -79,5 +82,5 @@ le statistiche coprono al massimo un anno.
 `GET /api/admin/library?status=&origin=&tags=a,b&match=all|any&batch=` (ogni immagine con `stats`, `in_play`, `generation`),
 `GET /api/admin/library/distribution`, `GET /:id` e `GET /:id/{file,original}`, `PATCH /:id` con `revision`,
 `POST /:id/{approve,publish,withdraw,trash,restore,analyze,regenerate,copy}` («Modifica» usa `withdraw`), `POST /bulk`,
-`POST /trash/empty`, `DELETE /:id`. Le eliminazioni rispondono anche con `postponed`.
+`POST /trash/empty`, `DELETE /:id`. Le eliminazioni in gruppo rispondono anche con `postponed` e, quando presente, con il numero `awaiting_slop`.
 

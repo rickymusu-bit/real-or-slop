@@ -34,7 +34,12 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
   let state: State | null = null, batch: Batch | null = null, config: Config | null = null, page = 1, busy = false, notice = "", progress = "";
   const manual = {prompt: "", tags: "", required: "", preferred: "", flexible: "", exclusions: ""};
   let batchId = sessionStorage.getItem(DRAFT) || "", recent: {id: string; count: number}[] = [];
-  const loadBatch = async () => { if (batchId) batch = await call<Batch>("batches/" + batchId); };
+  const loadBatch = async () => {
+    const requested = batchId;
+    if (!requested) return;
+    const loaded = await call<Batch>("batches/" + requested);
+    if (batchId === requested) batch = loaded;
+  };
   const evaluation = (a: Attempt, open = false) => `<details data-evaluation="${escape(a.id)}"${open ? " open" : ""}><summary>Tentativo ${a.number}: ${escape(a.evaluation?.decision || a.status)}</summary>` +
     (a.file ? `<img src="${escape(a.file)}" alt="Candidata intera del tentativo ${a.number}" style="max-width:100%;max-height:360px;object-fit:contain">` : "") +
     `<p lang="en">${escape(a.prompt)}</p>` + (a.evaluation ? `<p>${escape(a.evaluation.action_reason)}</p><p>Difetti critici: ${escape(a.evaluation.critical_findings.join("; ") || "nessuno")}</p><p>Difetti minori: ${escape(a.evaluation.minor_findings.join("; ") || "nessuno")}</p><p>Incertezze: ${escape(a.evaluation.uncertainty_notes.join("; ") || "nessuna")}</p><p>Vincoli editoriali: ${a.evaluation.editorial_constraints_met ? "rispettati" : "non rispettati"}</p>` : "") + "</details>";
@@ -96,12 +101,16 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
   const refresh = async () => {
     try {
       batchId = sessionStorage.getItem(DRAFT) || batchId;
+      const requested = batchId;
       state = await call<State>("state");
       const values = await call<{values: {max_generation_attempts: number; editorial_tolerance: number}}>("/settings", undefined, "GET", LIBRARY);
       const models = await call<{text_model: string; image_model: string; image_quality: string}>("/models", undefined, "GET", LIBRARY);
       config = {...values.values, ...models, quality: models.image_quality};
       recent = (await call<{batches: typeof recent}>("batches")).batches;
-      await loadBatch(); if (batch) page = working() ? 3 : 4;
+      if (requested && batchId === requested) {
+        await loadBatch();
+        if (batchId === requested && batch) page = working() ? 3 : 4;
+      }
     } catch (e) { notice = String(e); } render();
     // Following an existing server job must not hold the dashboard's initial loading promise.
     // busy also prevents a second polling loop when the owner reopens this section.

@@ -88,12 +88,13 @@ export async function initializeBatch(env: Env, batchId: string, items: Inspirat
   const stamp = now();
   const sequence = await env.DB.prepare("SELECT count(*) AS n FROM slop_processes").first<{n: number}>();
   const revisions: number[] = [];
+  const statuses = reviewedRevisions ? ["new", "approved", "published"] : ["approved", "published"];
   const configs = await Promise.all(items.map(async (item, slot) => {
     const source = await find(env, item.source!);
-    if (reviewedRevisions && source.revision !== reviewedRevisions[slot]) throw new HttpError(409, "REAL modificata dopo l’estrazione");
+    if (reviewedRevisions && source.revision !== reviewedRevisions[slot]) throw new HttpError(409, "REAL modificata dopo l’anteprima");
     revisions[slot] = source.revision;
     const description = realDescription(parse(source.real_description, null));
-    if (!description || !["approved", "published"].includes(source.status)) throw new HttpError(409, "REAL non disponibile o descrizione mancante");
+    if (!description || !statuses.includes(source.status)) throw new HttpError(409, "REAL non disponibile o descrizione mancante");
     return {...snapshot, mode: "automatic" as const, composition: compositionAt((sequence?.n || 0) + slot), source_description: description, source_tags: byCategory(item.tags), width: source.width, height: source.height,
       target_metrics: parse<Metrics | null>(source.copy_metrics, null)};
   }));
@@ -106,8 +107,10 @@ export async function initializeBatch(env: Env, batchId: string, items: Inspirat
         .bind(processId, batchId, slot, JSON.stringify(configs[slot]), stamp, stamp),
       // NOT NULL rejects a changed reference and rolls back every process/reservation in this D1 transaction.
       env.DB.prepare(`INSERT INTO slop_reference_uses(source_id,process_id,created_at) VALUES(?,?,
-        CASE WHEN EXISTS(SELECT 1 FROM images WHERE id=? AND revision=? AND origin='REAL' AND status IN ('approved','published')) THEN ? ELSE NULL END)`)
-        .bind(item.source!, processId, item.source!, revisions[slot], stamp)];
+        CASE WHEN EXISTS(SELECT 1 FROM images WHERE id=? AND revision=? AND origin='REAL'
+          AND (status IN ('approved','published') OR (?=1 AND status='new'))
+          AND real_description IS NOT NULL AND EXISTS(SELECT 1 FROM image_tags WHERE image_id=images.id)) THEN ? ELSE NULL END)`)
+        .bind(item.source!, processId, item.source!, revisions[slot], Number(Boolean(reviewedRevisions)), stamp)];
     })]);
 }
 /** A manual draft is free: the owner supplies the whole prompt, target tags and immutable anchors. */
@@ -166,7 +169,7 @@ async function editBatch(env: Env, batchId: string, data: Record<string, unknown
 const PROMPT_RULE = `Write a new plausible photograph in English (600–1000 characters). Return a minimal editorial brief and prompt together.
 Use ONLY the supplied saved description and tags as editorial context, not as a scene to imitate. No required visual resemblance or single changed element.
 Separate required anchors, preferred, flexible and exclusions. Credibility takes priority over literal prompt details. Real buildings and places: decide case by case whether to name a real place or invent one of the same kind, style, period and region, but never require or ask for a faithful reproduction of a specific real building, its exact architecture or its inscriptions; a required anchor may name a place, never the fidelity of its appearance. Invent all people; never name or describe living people or people dead less than 50 years. Never attribute crimes to historical figures, celebrate regimes, or depict nudity outside artworks.
-Concrete natural photographic technique and light, no cinematic clichés. Never compose for a later game crop. Do not choose a format. Treat reference placement and gaze as incidental, not as required anchors. Follow the supplied composition preference when natural, without forcing every photograph into the same arrangement.`;
+Specify plausible photographic technique and concrete lighting. A frontal viewpoint, eye contact, a natural posed portrait, centred or symmetrical framing, a single subject and a sparse background are all welcome when they fit the kind of photograph. Do not treat candid or documentary style as a requirement for side views, off-centre subjects or busy scenes. Add people, props and background detail only when the scene calls for them. Treat the supplied composition preference and the reference framing as optional. Compose for the whole photograph, without choosing a format or planning a later crop.`;
 export async function writePrompts(env: Env, batchId: string, data: Record<string, unknown>) {
   confirmOnly(data, ["index"]);
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
@@ -225,17 +228,17 @@ const evaluationSchema = { type: "object", additionalProperties: false,
   properties: {attempt_id: {type: "string"}, decision: {type: "string", enum: [...DECISIONS]}, critical_findings: strings, minor_findings: strings,
     editorial_constraints_met: {type: "boolean"}, uncertainty_notes: strings, action_reason: {type: "string"}, revised_prompt: {type: "string"}, preserved_required: strings, preserved_exclusions: strings} };
 /** The part of the evaluator's instructions that the code enforces, after the editable context «slop_evaluation». */
-const EVALUATE_RULE = `Evaluate the ENTIRE unprocessed generated photograph. Choose accept, retry_same_prompt, revise_prompt, replan_scene or review_needed; choose review_needed only for a concrete doubt about something visible in the image that you cannot settle (for example a landmark or a sign that may contradict the place); facts that pixels alone can never verify (exact place, date, identity, whether the people are invented) are not a reason for review_needed: write them in uncertainty_notes and decide on the visible evidence. Never judge, and never ask in a revised prompt for, fidelity to the real appearance of a named building or place: a plausible building of that kind, style, period and region meets the anchor; a difference from the real one is neither a defect nor a reason for review_needed, nor makes editorial_constraints_met false. Critical defects are never accepted at any tolerance. Tolerance 0 accepts no minor defects: with only minor defects choose retry_same_prompt or revise_prompt, never review_needed; 1 accepts subtle photographically plausible imperfections; 2 tolerates minor defects only while credibility holds. If revising or replanning, give the revised prompt in this same response and copy every required anchor and exclusion of the brief verbatim into preserved_required and preserved_exclusions. Composition preferences are optional: never reject or request another attempt solely for placement or gaze; when revising retain the preference only if natural. Never compose for a later crop.`;
+const EVALUATE_RULE = `Evaluate the ENTIRE unprocessed generated photograph. Choose accept, retry_same_prompt, revise_prompt, replan_scene or review_needed; choose review_needed only for a concrete doubt about something visible in the image that you cannot settle (for example a landmark or a sign that may contradict the place); facts that pixels alone can never verify (exact place, date, identity, whether the people are invented) are not a reason for review_needed: write them in uncertainty_notes and decide on the visible evidence. Never judge, and never ask in a revised prompt for, fidelity to the real appearance of a named building or place: a plausible building of that kind, style, period and region meets the anchor; a difference from the real one is neither a defect nor a reason for review_needed, nor makes editorial_constraints_met false. Critical defects are never accepted at any tolerance. Tolerance 0 accepts no minor defects: with only minor defects choose retry_same_prompt or revise_prompt, never review_needed; 1 accepts subtle photographically plausible imperfections; 2 tolerates minor defects only while credibility holds. If revising or replanning, give the revised prompt in this same response and copy every required anchor and exclusion of the brief verbatim into preserved_required and preserved_exclusions. Composition preferences are optional. A frontal view, a posed portrait, symmetry, a single subject or a quiet background can all be credible. Never reject or request another attempt solely for the choice of viewpoint, gaze, framing or number of subjects. When revising, retain the preference only if it suits the scene. Never compose for a later crop.`;
 async function hash(brief: Brief) { return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(brief))))].map(b => b.toString(16).padStart(2, "0")).join(""); }
 async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array, evaluation: Evaluation, acceptance?: OwnerAcceptance) {
   // Reuse a saved accepted result if the Worker was interrupted after inserting the library row.
   const existing = await env.DB.prepare("SELECT id FROM images WHERE generation_batch=? AND json_extract(generation_slot,'$.process')=?").bind(batch.id, p.id).first<{id: string}>();
   const config = parse<Snapshot>(p.snapshot, {} as Snapshot);
+  if (existing) await env.DB.prepare("UPDATE slop_reference_uses SET image_id=? WHERE process_id=? AND image_id IS NULL").bind(existing.id, p.id).run();
   const image = existing ? await viewOf(env, existing.id) : await create(env, { origin: "SLOP",
     bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, prompt: p.prompt, model: config.image_model,
-    generation: {batch: batch.id, quality: config.quality,
+    generation: {batch: batch.id, quality: config.quality, process: p.id,
       slot: {index: p.slot, target_metrics: config.target_metrics || null, copy_style: {color: config.source_tags?.color?.[0] || "", medium: config.source_tags?.medium?.[0] || ""}, process: p.id, brief: parse(p.brief, null), brief_hash: p.brief_hash, evaluation, ...(acceptance ? {acceptance} : {}), attempts: p.attempts}} });
-  await env.DB.prepare("UPDATE slop_reference_uses SET image_id=? WHERE process_id=?").bind(image.id, p.id).run();
   await env.DB.prepare("UPDATE slop_processes SET image_id=?,state='accepted',updated_at=? WHERE id=?").bind(image.id, now(), p.id).run();
   return {...image, process: {id: p.id, state: "accepted", attempts: p.attempts}};
 }

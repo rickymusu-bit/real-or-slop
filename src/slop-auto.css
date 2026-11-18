@@ -6,8 +6,14 @@
 .slop-auto-progress, .slop-auto-notice { color: var(--muted); }
 .library-batch-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
 
-.slop-auto-references { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(170px,100%),1fr)); gap:16px; padding:0; list-style:none; margin:16px 0; }
+.slop-auto-references { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(140px,100%),1fr)); gap:16px; padding:0; list-style:none; margin:16px 0; }
 .slop-auto-references li { min-width:0; padding:12px; border:1px solid var(--control-border); border-radius:12px; }
 .slop-auto-references strong { display:block; overflow-wrap:anywhere; margin:8px 0; }
 .library .slop-auto-photo { display:block; width:100%; padding:0; overflow:hidden; border-radius:8px; }
 .slop-auto-photo img { display:block; width:100%; aspect-ratio:4 / 5; object-fit:contain; }
+.slop-auto-check { display:flex; align-items:baseline; gap:8px; cursor:pointer; }
+.slop-auto-check input { flex:none; }
+.slop-auto-picked { display:flex; flex-wrap:wrap; gap:8px; padding:0; list-style:none; }
+.slop-auto-picked li { display:flex; align-items:center; gap:6px; min-width:0; max-width:100%; padding:2px 4px 2px 10px; border:1px solid var(--control-border); border-radius:8px; }
+.slop-auto-picked span { overflow-wrap:anywhere; }
+[data-auto-commons] { margin-top:16px; }
