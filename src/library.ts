@@ -39,6 +39,7 @@ interface Item extends TreatableItem {
   generated: { tags: string[] } | null;
   categories: Record<string, string>;
   stats: { views: number; correct: number }; in_play: number; no_derivatives: boolean;
+  reference_state?: "pending" | "unapproved" | "approved" | null;
   missing_categories: string[]; completable: boolean;
   metrics: Metrics | null; treatment: Treatment | null; copy_sha?: string;
 }
@@ -72,6 +73,13 @@ interface Conflict { label: string; proposed: string; existing: string }
 const conflictText = (list: Conflict[] = []) => list.length ? " Categorie in conflitto, da sistemare nel vocabolario: " + list.map(c =>
   `«${c.label}» proposto come ${CATEGORY_LABELS[c.proposed as Category] || c.proposed}, nel vocabolario è ${CATEGORY_LABELS[c.existing as Category] || c.existing}`).join("; ") + "." : "";
 const kb = (bytes: number) => bytes < 1024 ? bytes + " byte" : Math.round(bytes / 1024) + " kB";
+
+interface Deletion { deleted: number; postponed: number; awaiting_slop?: number }
+const deletionText = ({ deleted, postponed, awaiting_slop = 0 }: Deletion) =>
+  (deleted === 1 ? "1 immagine eliminata definitivamente." : `${deleted} immagini eliminate definitivamente.`) +
+  (postponed === 1 ? " 1 immagine resta nel cestino." : postponed ? ` ${postponed} immagini restano nel cestino.` : "") +
+  (awaiting_slop ? ` ${awaiting_slop} REAL ${awaiting_slop === 1 ? "attende" : "attendono"} l’approvazione della SLOP o la chiusura del processo senza SLOP.` : "") +
+  (postponed > awaiting_slop ? " Le immagini ancora in gioco potranno essere eliminate al termine delle partite in corso." : "");
 
 export async function showLibrary() {
   let items: Item[] = [], selected = new Set<string>(), open: Item | null = null, busy = false;
@@ -350,15 +358,21 @@ export async function showLibrary() {
   const showDetail = (item: Item) => {
     open = item;
     const editable = item.status === "new" || item.status === "approved";
+    const sourceExcluded = item.reference_state === "unapproved" || item.reference_state === "approved";
+    const sourceProtected = item.reference_state === "pending" || item.reference_state === "unapproved";
     const fields = FIELDS.filter(([key]) => item.origin === "REAL" ? key !== "prompt" && key !== "model" : !["title", "source_url", "author", "license_name", "license_url"].includes(key));
     detail.innerHTML = `<form method="dialog" class="library-detail-close"><button aria-label="Chiudi">×</button></form>
       <h2 id="library-detail-title">${escape(imageLabel(item))}</h2>
-      <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / originale ${item.width}×${item.height}${item.copy ? ` / copia di gioco WebP ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}: è ciò che vedranno i giocatori` : " / copia di gioco non pronta"}</p>
+      <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / originale ${item.width}×${item.height}${item.copy ? ` / copia di gioco WebP ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}${sourceExcluded ? "" : ": è ciò che vedranno i giocatori"}` : " / copia di gioco non pronta"}</p>
       <div class="library-detail-body"><div class="game-media-surface library-preview"><img data-game-media draggable="false" src="${escape(item.file)}" alt="${escape(imageLabel(item))}"></div>
       <div class="library-fields"><p>${statsLine(item)}</p>
       ${item.in_play ? `<p class="hint">In ${item.in_play} ${item.in_play === 1 ? "partita" : "partite"} in corso: continuano con la versione con cui sono iniziate; le modifiche valgono dalle partite nuove.</p>` : ""}
       ${item.status === "published" ? '<p class="db-edit-note">Pubblicata: per modificarla avvia la modifica. La foto esce subito dalla pubblicazione, quindi non entra in nuove partite; quelle in corso finiscono con la versione attuale. Finita la modifica resta approvata: la ripubblichi quando vuoi.</p>' : ""}
-      ${item.status === "approved" ? '<p class="hint">Le modifiche si salvano subito e la foto resta approvata. Pubblicala quando hai finito.</p>' : ""}
+      ${item.status === "approved" && !sourceExcluded ? '<p class="hint">Le modifiche si salvano subito e la foto resta approvata. Pubblicala quando hai finito.</p>' : ""}
+      ${sourceExcluded ? '<p class="db-edit-note">Questa REAL ha generato una SLOP ed è esclusa dalle nuove partite.</p>' : ""}
+      ${sourceProtected ? `<p class="hint">${item.reference_state === "pending"
+        ? "Questa REAL è riservata a una generazione. Per eliminarla definitivamente, chiudi il processo senza una SLOP oppure approva la SLOP che ne deriva."
+        : "Puoi eliminarla definitivamente dopo aver approvato la SLOP derivata."}</p>` : ""}
       ${item.no_derivatives ? '<p class="db-edit-note">Licenza senza opere derivate (ND): la foto è esclusa dal gioco, perché la copia di gioco la ritaglia.</p>' : ""}
       ${!item.copy && item.status === "new" ? '<p><button type="button" id="library-copy">Prepara la copia di gioco</button></p>' : ""}
       ${editable ? '<p><button type="button" id="library-crop">Inquadratura</button></p>' : ""}
@@ -377,9 +391,9 @@ export async function showLibrary() {
       ${editable && item.generated ? '<p><button type="button" id="library-restore">Ripristina i tag generati</button></p>' : ""}
       ${editable && item.origin === "SLOP" ? '<p class="hint">Per rigenerare: cestina questa SLOP e avvia un nuovo processo nello studio, con conferma e valutazione.</p>' : ""}
       <div class="library-actions">${item.status === "new" ? `${item.origin === "REAL" ? `<label><input type="checkbox" id="library-rights" ${item.rights_confirmed ? "checked" : ""}> Ho verificato diritti e licenza</label>` : ""}<button type="button" data-action="approve" class="primary">Approva</button>` : ""}
-        ${item.status === "approved" ? '<button type="button" data-action="publish" class="primary">Pubblica nel gioco</button>' : ""}
+        ${item.status === "approved" && !sourceExcluded ? '<button type="button" data-action="publish" class="primary">Pubblica nel gioco</button>' : ""}
         ${item.status === "published" ? '<button type="button" data-action="edit" class="primary">Modifica</button><button type="button" data-action="withdraw">Ritira dal gioco</button><button type="button" data-action="remove">Elimina (nel cestino)</button>' : ""}
-        ${item.status === "trash" ? '<button type="button" data-action="restore">Ripristina</button><button type="button" data-action="delete" class="danger">Elimina definitivamente</button>'
+        ${item.status === "trash" ? `<button type="button" data-action="restore">Ripristina</button>${sourceProtected ? "" : '<button type="button" data-action="delete" class="danger">Elimina definitivamente</button>'}`
           : item.status !== "published" ? '<button type="button" data-action="trash">Elimina (nel cestino)</button>' : ""}</div>
       <p id="library-detail-message" role="status" aria-live="polite"></p></div></div>`;
     if (!detail.open) detail.showModal();
@@ -545,9 +559,9 @@ export async function showLibrary() {
     busy = true;
     try {
       if (button.id === "library-empty-trash") {
-        const result = await call<{ deleted: number; postponed: number }>("/trash/empty", { method: "POST", body: "{}" });
+        const result = await call<Deletion>("/trash/empty", { method: "POST", body: "{}" });
         await Promise.all([load(), refreshTags()]);
-        message(`${result.deleted} immagini eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} restano nel cestino finché le partite o le generazioni in corso non finiscono.` : ""));
+        message(deletionText(result));
       } else if (button.dataset.bulk) {
         const action = button.dataset.bulk;
         if (action === "none") { selected.clear(); render(); return; }
@@ -597,9 +611,9 @@ export async function showLibrary() {
           }
           bulkCategory = isCategory(chosen) ? chosen : "";
         }
-        const result = await call<{ done?: number; deleted?: number; postponed?: number; failed?: { error: string }[] }>("/bulk", { method: "POST",
+        const result = await call<Deletion | { done: number; failed?: { error: string }[] }>("/bulk", { method: "POST",
           body: JSON.stringify({ action, ids: [...selected], tags: tag ? [tag] : [], ...(bulkCategory ? { category: bulkCategory } : {}), rights_confirmed: action === "approve" && Boolean($<HTMLInputElement>("#library-bulk-rights")?.checked) }) });
-        const completedMessage = result.deleted !== undefined ? `${result.deleted} eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} in partite in corso: restano nel cestino per ora.` : "") :
+        const completedMessage = "deleted" in result ? deletionText(result) :
           `${result.done} aggiornate.` + (result.failed?.length ? ` ${result.failed.length} non aggiornate: ${[...new Set(result.failed.map(f => f.error))].join("; ")}.` : "");
         if (action !== "tag-add" && action !== "tag-remove") selected.clear();
         await Promise.all([load(), refreshTags()]);

@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 7.0.0
+# Libreria delle immagini, tag e analisi — specifica 7.1.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T19:34:55Z.
+Stato: implementata nel ramo 1.40.0, da rilasciare. Aggiornata: 2026-11-18T05:29:01Z.
 
 ## 1. Decisioni dell'owner
 
@@ -71,15 +71,18 @@ alla copia per estrarre le foto; i crediti REAL e il prompt SLOP vengono letti n
 
 - **Approvare** (solo una nuova): copia di gioco in 4:5, almeno un tag e, per una REAL, la conferma di aver verificato
   diritti e licenza. Una REAL con licenza senza opere derivate (ND) è esclusa: il server rifiuta approvazione e pubblicazione.
-- **Pubblicare** (solo un'approvata): la copia passa nel bucket del gioco ed entra nelle partite nuove.
+- **Pubblicare** (solo un'approvata): la copia passa nel bucket del gioco ed entra nelle partite nuove. Dalla registrazione della
+  SLOP derivata, la REAL di origine è esclusa e viene ritirata se era pubblicata (2026-11-18).
 - **Modificare.** Nuove e approvate si modificano direttamente, con salvataggio immediato; un'approvata resta approvata e deve
   conservare almeno un tag. Una pubblicata si modifica solo dopo «Modifica», che la ritira subito dal gioco (torna approvata); va poi
   ripubblicata. Le partite in corso continuano con la copia con cui sono iniziate.
 - **Ritirare** una pubblicata: torna approvata. La copia lascia il bucket del gioco subito, oppure quando finisce l'ultima partita in
   corso che la usa (`retired_copies`).
 - **Cestino.** Spostare nel cestino, da sola o in gruppo, non chiede conferma, tranne per le pubblicate, che escono subito dal gioco. Ripristinare riporta allo
-  stato di provenienza; una SLOP non si ripristina se la REAL ha già una SLOP attiva o un processo in corso; una pubblicata torna approvata. «Svuota cestino» ed «Elimina definitivamente» cancellano ogni riga dell'immagine
-  (tag, round, risposte) e ogni suo file; un'immagine ancora usata da una partita in corso si elimina quando la partita finisce.
+  stato di provenienza; una pubblicata torna approvata. «Svuota cestino» ed «Elimina definitivamente» cancellano ogni riga
+  dell'immagine (tag, round, risposte) e ogni suo file. Un'immagine ancora usata da una partita in corso si elimina quando la partita
+  finisce. Una REAL riservata a un processo resta protetta fino alla chiusura senza figlia o all'approvazione della SLOP derivata
+  (2026-11-18). L'approvazione resta valida per l'eliminazione anche se la SLOP viene spostata nel cestino.
 - **Partita in corso:** in preparazione o attiva e iniziata da meno della durata massima delle Impostazioni (24 ore predefinite).
 - Azioni in gruppo: fino a 500 immagini per volta.
 
@@ -210,11 +213,12 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
   `leaderboard`, `rate_limits`). Elenco delle migrazioni in `MASTER.md`.
 - Migrazione 0048 (`images`): `categories_completed_at` (completamento delle tre categorie), `copy_metrics` (misure della copia di
   gioco) e `copy_treatment` (trattamento di una SLOP), specifica `copie-di-gioco`, sezione 4.
-- Migrazione 0053: rimuove `generation_source` e `source_id`, anonimizza slot e trattamento e preserva tentativi e chiamate. La migrazione storica 0049 aveva introdotto il legame, poi eliminato. La 0055 introduce il solo registro privato di disponibilità `slop_reference_uses` per le nuove generazioni: madre occupata finché la figlia esiste in qualsiasi stato; eliminare definitivamente la figlia libera la madre. Nessun legame viene inferito per le generazioni pregresse. La disponibilità non interviene nel campionamento del gioco.
+- Migrazione 0053: rimuove `generation_source` e `source_id`, anonimizza slot e trattamento e preserva tentativi e chiamate. La migrazione storica 0049 aveva introdotto il legame, poi eliminato. La 0055 introduce il solo registro privato di disponibilità `slop_reference_uses` per le nuove generazioni: madre occupata finché la figlia esiste in qualsiasi stato; eliminare definitivamente la figlia libera la madre. Nessun legame viene inferito per le generazioni pregresse.
 - Migrazione 0056: elimina `images.generation_group`, `slop_batches.group_key`, `slop_batches.auto_tag` e le impostazioni obsolete dei gruppi. Ripulisce gli snapshot e converte il contesto storico di genere/decennio in tag di partenza ordinari, conservando immagini, tag, copie, processi, tentativi, chiamate e registro madre–figlia. Nessuna chiamata a pagamento.
 - Migrazione 0058: titolo obbligatorio per le REAL e nullo per le SLOP (vincoli tramite trigger, senza ricostruire la tabella madre). I tag di partenza vengono rimossi dagli slot delle SLOP dopo aver conservato solo colore/supporto nei parametri tecnici della copia. Nessuna modifica a tag osservati, processi, copie o legami.
 - Le accettazioni manuali delle SLOP conservano nello slot `acceptance` (owner, ID tentativo e data) separata dalla valutazione originale, anche con difetti critici/minori o incertezze. Nessuna migrazione aggiuntiva; nuova foto senza approvazione/pubblicazione automatica.
 - Migrazione 0057: elimina `caption`, `generated_caption`, `copy_view` ed `explanation` da `images`; `caption` e `copy_view` da `game_rounds`. Ogni altra colonna e ogni collegamento sono conservati. Le vecchie spiegazioni, mai lette dal gioco, vengono eliminate; descrizioni, tag e contesto editoriale restano.
+- Migrazione 0059: ritira dal gioco le REAL con una SLOP già registrata e conserva le copie per le partite in corso. La vista privata registra se la REAL è riservata, ha una SLOP da approvare o ha una SLOP già approvata.
 - R2: quarantena privata (`library/<id>/`: originale e copia) e bucket del gioco (copie pubblicate).
 - Le statistiche di un'immagine (visualizzazioni e classificazioni corrette) contano solo i round giocati con la copia attuale.
 

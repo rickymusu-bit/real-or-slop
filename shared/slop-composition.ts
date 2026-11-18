@@ -1,8 +1,14 @@
-/** Automatic composition suggestions rotate independently across horizontal placement and gaze.
- * They are preferences, never a credibility criterion or a reason for another paid attempt. */
+/** Automatic composition suggestions. They are preferences, never an acceptance criterion. */
+const preferences = [
+  "Choose a straight-on view. A single subject against a plain or quiet background is welcome.",
+  "Try a natural angle from the left if it suits the scene, with as few elements as the scene needs.",
+  "A centred, symmetrical framing is welcome. A frontal view or a subject looking towards the camera may suit it.",
+  "Let the photographic genre and scene guide the viewpoint, framing and number of subjects.",
+  "Try a natural angle from the right if it suits the scene. Keep the background simple where appropriate.",
+  "Choose a frontal perspective if it suits the scene. A simple head-on view can work for a person, an object, a building or a landscape.",
+];
+
 export function compositionAt(sequence: number): string {
-  const index = ((sequence % 9) + 9) % 9;
-  const positions = ["near the centre", "towards the right side", "towards the left side"];
-  const directions = ["towards the camera or frontally", "towards the left", "towards the right"];
-  return `Composition preference: distribute the main visual weight ${positions[index % 3]}. If a person or animal naturally has a direction, orient it ${directions[(Math.floor(index / 3) + index % 3) % 3]}. For landscapes, objects or crowds without a meaningful gaze, ignore the gaze preference. Preserve a natural photographic scene; do not invent a person or force a pose to satisfy this suggestion. Do not copy the reference's placement, gaze, viewpoint or arrangement. Never compose for a later crop.`;
+  const index = ((sequence % preferences.length) + preferences.length) % preferences.length;
+  return `Optional composition preference: ${preferences[index]} Use a viewpoint and arrangement that suit the scene. Treat any reference framing as incidental. Do not add extra people, objects or background detail merely for variety. Compose for the whole photograph.`;
 }

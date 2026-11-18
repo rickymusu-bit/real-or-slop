@@ -230,7 +230,7 @@ with sync_playwright() as p:
         expect(page.locator('#library-message')).to_contain_text('1 aggiornate')
         page.get_by_role('checkbox', name=f'Seleziona {name}-spare').check()
         page.locator('[data-bulk=delete]').click()
-        expect(page.locator('#library-message')).to_contain_text('1 eliminate definitivamente')
+        expect(page.locator('#library-message')).to_contain_text('1 immagine eliminata definitivamente')
         expect(page.locator('.library-empty')).to_contain_text('cestino è vuoto')
         page.locator('[data-view=approved]').click()
         expect(page.locator(f'.library-card:has([aria-label="Apri {slop_label}"])')).to_have_count(1)

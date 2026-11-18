@@ -36,6 +36,8 @@ try:
     assert prompt['path']=='/v1/responses' and prompt['body']['text']['format']['name']=='slop_brief'
     # Real buildings: named or invented, never reproduced faithfully (owner decision of 2026-11-16).
     assert 'never require or ask for a faithful reproduction of a specific real building' in prompt['body']['instructions']
+    assert 'A frontal viewpoint, eye contact, a natural posed portrait, centred or symmetrical framing' in prompt['body']['instructions']
+    assert 'Add people, props and background detail only when the scene calls for them' in prompt['body']['instructions']
     assert not any(c['type']=='input_image' for c in prompt['body']['input'][0]['content'])
     inp=__import__('json').loads(prompt['body']['input'][0]['content'][0]['text'])
     assert inp['description']==DESCRIPTION and inp['tags']['genre']==['street-scene']
@@ -54,6 +56,7 @@ try:
     b=load(b);assert b['processes'][0]['brief']==original_brief and len(b['processes'][0]['attempts'])==3
     assert b['processes'][0]['calls']==7 and len(b['images'])==1
     logs=control();assert len(logs)==6
+    assert all(inp['composition'] in log['body']['prompt'] for log in logs[::2])
     sent=logs[1]['body']['input'][0]['content'][1]['image_url']
     im=Image.open(io.BytesIO(base64.b64decode(sent.split(',')[1])));assert im.size==(96,64),im.size  # whole 3:2, no 4:5 crop
     assert logs[2]['body']['prompt'].startswith('A revised')
@@ -236,19 +239,40 @@ try:
     chosen=load(strict)['images'][0]
     assert chosen['prompt']==att['prompt'] and chosen['generation']['slot']['evaluation']==att['evaluation']
     assert chosen['generation']['slot']['acceptance']['attempt']==att['id']
-    # Deleting the reference later cannot break the accepted SLOP's analysis or leave stale paid-call foreign keys.
-    source=real();sources.append(source['id']);fresh=batch(source);control([])
+    # Approval, rather than generation or publication of the SLOP, unlocks permanent deletion of the source.
+    source=real();source_id=source['id'];sources.append(source_id)
+    assert call('/'+source_id+'/publish',{},library=True)[0]==200
+    fresh=batch(source);control([])
+    assert call('/'+source_id,library=True)[1]['status']=='published'
     code,accepted=generate(fresh);assert code==200,accepted;images.append(accepted['id'])
+    code,withdrawn=call('/'+source_id,library=True)
+    assert code==200 and withdrawn['status']=='approved' and withdrawn['reference_state']=='unapproved',withdrawn
+    assert call('/'+source_id+'/publish',{},library=True)[0]==409
+    code,trashed=call('/'+source_id+'/trash',{},library=True);assert code==200 and trashed['status']=='trash',trashed
+    code,blocked=call('/'+source_id,method='DELETE',library=True);assert code==409 and 'Approva la SLOP' in blocked['error'],blocked
+    assert call('/bulk',{'action':'delete','ids':[source_id]},library=True)[1]=={'deleted':0,'postponed':1,'awaiting_slop':1}
+    assert call('/'+source_id+'/original',library=True)[0]==200
     req=urllib.request.Request(LIBRARY+'/'+accepted['id']+'/original',headers={'Authorization':'Bearer '+TOKEN})
     with urllib.request.urlopen(req) as r:original=r.read()
     req=urllib.request.Request(LIBRARY+'/'+accepted['id']+'/copy',data=game_copy(original),method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'image/webp'})
-    with urllib.request.urlopen(req) as r:assert r.status==201
-    remove([source['id']])
-    assert call('/'+accepted['id']+'/analyze',{'confirm':True},library=True)[0]==200
-    # Deleting an inspiration never deletes or blocks its independent process.
+    with urllib.request.urlopen(req) as r:
+        assert r.status==201
+        copied=json.loads(r.read())
+    code,tagged=call('/'+accepted['id'],{'revision':copied['revision'],'tags':['street-scene']},method='PATCH',library=True)
+    assert code==200,tagged
+    assert call('/'+accepted['id']+'/approve',{},library=True)[0]==200
+    assert call('/'+accepted['id']+'/trash',{},library=True)[0]==200
+    assert call('/'+source_id,method='DELETE',library=True)[1]=={'deleted':1,'postponed':0}
+    assert call('/'+source_id,library=True)[0]==404
+    assert call('/'+accepted['id']+'/restore',{},library=True)[0]==200
+    assert call('/'+accepted['id']+'/publish',{},library=True)[1]['status']=='published'
+    assert call('/'+accepted['id']+'/original',library=True)[1]==original
+    # Closing a generation without a SLOP releases its source.
     source=real();sources.append(source['id']);pending=batch(source);pid=pending['processes'][0]['id']
-    sql(f"UPDATE slop_processes SET state='running' WHERE id='{pid}'")
+    sql(f"UPDATE slop_processes SET state='review_needed' WHERE id='{pid}'")
     call('/'+source['id']+'/trash',{},library=True)
+    assert call('/'+source['id'],method='DELETE',library=True)[0]==409
+    assert call('processes/'+pid+'/close',{})[0]==200
     assert call('/'+source['id'],method='DELETE',library=True)[1]['deleted']==1
     assert load(pending)['processes'][0]['id']==pid
 
@@ -257,8 +281,10 @@ try:
     assert call('batches',{'sources':[historical['id']]})[0]==409
     call('/'+predecessor+'/trash',{},library=True)
     assert call('batches',{'sources':[historical['id']]})[0]==409
+    assert call('/'+historical['id']+'/publish',{},library=True)[0]==409
     assert call('/'+predecessor+'/restore',{},library=True)[0]==200
     remove([predecessor]);images.remove(predecessor)
+    assert call('/'+historical['id']+'/publish',{},library=True)[0]==200
     replacement=batch(historical)
     code,replaced=generate(replacement);assert code==200,replaced;images.append(replaced['id'])
     # Two simultaneous drafts may reserve a REAL only once; the losing transaction creates no orphan process.
@@ -333,6 +359,9 @@ try:
     assert call('batches/'+legacy+'/images',{'confirm':True,'index':0,'quality':'high'})[0]==409 and control()==[]
 finally:
     remove(images+sources)
+    # Release drafts/reviews opened by this suite so their source fixtures can be cleaned up.
+    sql("DELETE FROM slop_reference_uses WHERE image_id IS NULL AND source_id IN ("+','.join(repr(source) for source in sources)+")")
+    remove(sources)
     call('/settings',settings['values'],method='PUT',library=True)
 print('Editorial loop: combined contracts, text-only brief, all evaluator decisions, attempts/call cap, full image, private candidates, idempotency and legacy guards passed.')
 

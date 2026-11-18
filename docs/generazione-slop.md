@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 8.2.0
+# Generazione SLOP — specifica 8.3.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T19:34:55Z.
+Stato: implementata nel ramo 1.40.0, da rilasciare. Aggiornata: 2026-11-18T05:29:01Z.
 
 ## Due modalità e avviso sul dataset
 
@@ -38,20 +38,24 @@ Una SLOP automatica è ispirata a una REAL, senza obbligo di somiglianza. Sono d
 che non hanno una figlia esistente né una prenotazione aperta. Il registro privato `slop_reference_uses` prenota atomicamente la madre
 alla creazione del processo e registra la figlia accettata. La madre resta esclusa se la figlia è nuova, approvata, pubblicata o nel
 cestino; solo cancellare definitivamente la figlia la libera. Chiudere un processo senza figlia libera la sua prenotazione. Gli esiti
-incerti e in revisione richiedono prima la decisione dell'owner. Eliminare un processo già accettato non libera una madre con figlia
-ancora presente. Eliminare la madre non elimina la figlia né blocca il processo: descrizione, tag e misure sono nello snapshot.
+incerti e in revisione richiedono prima la decisione dell'owner. Eliminare un processo già accettato lascia occupata la madre.
 
-Nessun riferimento è inviato al giocatore o inserito nei file. Il campionamento del gioco è invariato: madre e figlia possono apparire
-nella stessa partita. La migrazione 0055 non inventa i legami pregressi rimossi dalla 0053: l'esclusione per uso è garantita per le
-nuove generazioni tracciate.
+Dal 2026-11-18, quando la figlia entra in libreria come nuova, la REAL viene esclusa dalle nuove partite. Se era pubblicata torna
+approvata. Una prenotazione senza figlia lascia la REAL giocabile se pubblicata. L'eliminazione definitiva dal cestino è possibile
+dopo l'approvazione della figlia o dopo la chiusura del processo senza figlia. Eliminare la madre dopo l'approvazione
+lascia intatta la SLOP, che usa descrizione, tag e misure già salvati nello snapshot. Eliminare definitivamente la figlia libera
+la REAL superstite, che richiede una nuova pubblicazione per tornare nel gioco.
+
+Il legame resta privato. L'esclusione si applica ai legami già registrati e a quelli futuri. La migrazione 0053 aveva cancellato
+i legami precedenti, che restano sconosciuti.
 
 ## Varietà di composizione
 
-La posizione e lo sguardo presenti nella descrizione REAL sono incidentali, non ancoraggi da copiare. Nei processi automatici una
-rotazione copre nove combinazioni di peso visivo sinistra/centro/destra e sguardo sinistra/frontale/destra. La preferenza è nello
-snapshot e nelle richieste di brief e generazione; resta tra i tentativi. Per scene senza sguardo viene ignorata, senza inventare
-persone né forzare pose. Non è un vincolo di accettazione e non causa tentativi extra: la conformità reale del generatore va osservata
-sulle immagini, non è dimostrabile con le API finte. I prompt manuali restano sotto il controllo dell'owner.
+La posizione e lo sguardo descritti nella REAL sono facoltativi. Dal 2026-11-18 la rotazione dei nuovi processi automatici include
+vista frontale, inquadratura centrata e simmetrica, due prospettive laterali e una scelta aperta dettata dalla scena. Il prompt ammette
+anche sguardo in camera, posa naturale, un solo soggetto e sfondo semplice, e aggiunge comparse, oggetti o dettagli solo quando
+servono alla scena. La preferenza viene salvata nello snapshot e accompagna le richieste di brief e generazione e i tentativi
+successivi. Il valutatore giudica la credibilità fotografica e tratta queste scelte come facoltative. I prompt manuali li scrive l'owner.
 
 ## Analisi REAL e brief
 
@@ -119,3 +123,5 @@ restano come normali tag di partenza; prompt, tentativi, chiamate, immagini e re
 L’accettazione manuale estesa non richiede nuove migrazioni: decisione e data sono nei metadati privati della foto, la valutazione originale resta nel tentativo.
 
 La 0058 elimina i titoli SLOP e i tag di partenza copiati sulla foto. Conserva titoli REAL, tag osservati, dati dei processi, relazioni e impostazioni delle copie; non genera nuove analisi.
+
+La 0059 ritira le REAL pubblicate con una SLOP già registrata e conserva le copie necessarie alle partite in corso.

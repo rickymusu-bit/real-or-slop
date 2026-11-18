@@ -1,7 +1,13 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-17T19:34:55Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-18T05:29:01Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.40.0 — 2026-11-18T05:29:01Z
+
+- Una REAL con SLOP derivata esce dalle nuove partite quando la figlia entra in libreria. La migrazione 0059 ritira le REAL già collegate, preservando le copie delle partite in corso.
+- Dal Database l’eliminazione definitiva della madre è disponibile dopo l’approvazione della figlia. Una generazione chiusa senza SLOP libera la prenotazione.
+- Il brief e il prompt automatici ammettono vista frontale, posa naturale, simmetria, soggetto singolo e sfondo semplice. La rotazione le include e il valutatore le giudica nel contesto della scena.
 
 ## 1.39.0 — 2026-11-17T19:34:55Z
 

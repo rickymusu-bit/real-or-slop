@@ -1,6 +1,6 @@
-# Partita a livelli e classifica — specifica 3.0.0
+# Partita a livelli e classifica — specifica 3.1.0
 
-Stato: vigente per il ramo 1.36.0. Aggiornata: 2026-11-16T20:00:00Z.
+Stato: vigente per il ramo 1.40.0. Aggiornata: 2026-11-18T05:29:01Z.
 
 **Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
 descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
@@ -38,7 +38,8 @@ sono le sue foto, altrimenti resta disattivato con il motivo.
 ## 3. Partita
 
 1. Il giocatore sceglie il livello (`/gioca`); il server estrae il lotto e registra per ogni round la copia di gioco da servire.
-   REAL e SLOP sono indipendenti: nessuna esclusione tra una SLOP e la foto che l’ha ispirata (decisione del 2026-11-16).
+   Dal 2026-11-18, quando una SLOP entra in libreria, la REAL da cui è stata generata esce dal campione e dal conteggio che sblocca
+   i livelli. Le partite già registrate conservano le copie assegnate.
 2. Il browser scarica la prima foto; «Inizia» avvia la partita entro il tempo di preparazione.
 3. Il server consegna **una foto alla volta**, mai una successiva. Il tempo parte quando il browser la mostra e lo segnala.
 4. **Foto:** intera nel suo formato, esplorabile con dita, mouse, rotella o doppio tocco, «Foto intera» per tornare all'inizio
