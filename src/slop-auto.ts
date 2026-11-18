@@ -7,20 +7,23 @@ import { startPills } from "./tag-ui";
 import type { Tag } from "../shared/slop-proposals";
 import type { RealDescription } from "../shared/editorial";
 
-interface Proposal { n_real: number; n_slop: number; n_new: number; spread: number; spread_percent: number; missing: number; size: number }
+import { type Gallery } from "./galleries";
 interface AutoImage { id: string; status: string; index: number | null; copy: boolean; analysis: string }
 interface Config { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string }
+interface Reference {id: string; title: string; tags: Tag[]; description: RealDescription; file: string; original: string}
 interface AutoPreview {
   token: string; expires: number; config: Config;
-  references: {id: string; title: string; tags: Tag[]; description: RealDescription; file: string; original: string}[];
+  references: Reference[];
 }
 interface AutoBatch {
-  pipeline_version: number; config: Config; processes: {slot: number; state: string; updated_at: string; attempts: unknown[]}[];
+  pipeline_version: number; config: Config; processes: {slot: number; state: string; updated_at: string; attempts: unknown[]; premise: string | null; prompt: string; error: string}[];
   runner: { id: string; status: string | null; updated_at: string | null; alive: boolean } | null;
   id: string; size: number; status: "running" | "review"; prompts_status: string; prompts_error: string; slots: number;
-  attempted: number[]; snapshot: Proposal | null; images: AutoImage[]; undecided: number; updated_at: string;
+  attempted: number[];
+  gallery_review: "pending" | "confirmed" | null;
+  proposal_review: {gallery: {id: string; title: string}; expires: number; invalid: boolean; references: {slot: number; real: Reference | null}[]} | null; images: AutoImage[]; undecided: number; updated_at: string;
 }
-export interface AutoState { config: Config; max_batch: number; available: number; paid_calls: boolean; batch: AutoBatch | null; balance: {real:number; slop:number; pending:number; missing:number} }
+export interface AutoState { config: Config; max_batch: number; galleries: Gallery[]; expired: boolean; paid_calls: boolean; batch: AutoBatch | null; balance: {real:number; slop:number; pending:number; missing:number} }
 interface Hooks { loop: (batchId:string) => void | Promise<void>; review: (batchId: string) => void | Promise<void>; changed: () => Promise<void>; indicator: (imbalances: number) => void }
 
 const LIBRARY = "/api/admin/library", SLOP = LIBRARY + "/slop/";
@@ -51,17 +54,45 @@ function observeLibrary(changed: () => void) {
 }
 
 export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: Hooks): { refresh: () => Promise<void> } {
-  let preview: AutoPreview | null = null, extraction = 0;
+  let preview: AutoPreview | null = null, extraction = 0, galleryId = "";
   let state: AutoState | null = null, running = false, quantity = 1, progress = "", notice = "", timer = 0;
 
+  const gallery = () => state?.galleries.find(g => g.id === galleryId);
+  const validProposals = (batch: AutoBatch) => batch.processes.filter(p => p.state === "ready" && p.premise);
+  const settings = (c: Config) => `Immagini: ${c.image_model}, qualità ${c.quality}, pianificazione predefinita dal modello. Valutazione e tag: ${c.text_model}. Tentativi massimi: ${c.max_generation_attempts} per SLOP. Tolleranza: ${c.editorial_tolerance}.`;
+  const imageCalls = (batch: AutoBatch, size: number) => size * (1 + 2 * batch.config.max_generation_attempts);
+  const card = (r: Reference) => `<button type="button" class="slop-auto-photo" data-auto-reference="${escape(r.id)}" aria-label="Ingrandisci ${escape(r.title)}" data-long-press><img src="${escape(r.file)}" alt="" draggable="false"></button>
+    <strong>${escape(r.title)}</strong><div class="rw-pills">${startPills(r)}</div>`;
   const render = () => {
     const batch = state?.batch, balance = state?.balance;
+    window.clearTimeout(check);
     if (batch) { preview = null; extraction++; }
     hooks.indicator(balance?.missing ? 1 : 0);
     root.innerHTML = balance && balance.real !== balance.slop ? `<p role="status"><strong>Dataset sbilanciato</strong>: ${balance.real} REAL e ${balance.slop} SLOP approvate o pubblicate; ${balance.pending} SLOP nuove da decidere.${balance.missing ? ` Mancano ${balance.missing} SLOP al pareggio, contando le nuove.` : ""}</p>` : "";
     root.hidden = !root.innerHTML;
     let html = "";
-    if (batch && batch.pipeline_version !== 2) {
+    if (batch?.proposal_review) {
+      const review = batch.proposal_review, valid = validProposals(batch).length;
+      const live = !!batch.runner?.alive, prompting = batch.processes.some(p => p.state === "prompting");
+      if (!live) nextCheck(prompting ? 10_000 : review.expires - Date.now() + 100);
+      html = `<section data-proposal-review aria-labelledby="proposal-title"><h3 id="proposal-title">Proposte per ${escape(review.gallery.title)}</h3>
+        <p role="status">${review.invalid ? "La galleria o le REAL sono cambiate. Annulla e ripeti l’estrazione."
+          : live || prompting ? "Preparazione delle proposte sul server…" : `${valid} ${valid === 1 ? "proposta valida" : "proposte valide"} su ${batch.slots}.`}</p>
+        ${batch.prompts_error ? `<p class="hint">${escape(batch.prompts_error)}</p>` : ""}
+        <ul class="slop-auto-references slop-auto-proposals">${review.references.map(({slot, real}) => {
+          const p = batch.processes.find(p => p.slot === slot);
+          return `<li data-reference="${escape(real?.id || "")}"><div>${real ? card(real) : "<p>REAL modificata o non disponibile.</p>"}</div>
+            <div>${p?.premise ? `<p data-premise>${escape(p.premise)}</p><details><summary>Prompt inglese</summary><p lang="en">${escape(p.prompt)}</p></details>`
+              : `<p>${escape(p?.error || (p?.state === "draft" && !live ? "Proposta non preparata." : "In attesa della proposta…"))}</p>`}</div></li>`;
+        }).join("")}</ul>
+        <p class="hint">Scadenza ${new Date(review.expires).toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"})}.
+          Massimo ${imageCalls(batch, valid)} chiamate rimanenti.</p>
+        <p class="hint">${escape(settings(batch.config))}</p>
+        ${state?.paid_calls ? "" : '<p class="hint">Manca la chiave OpenAI.</p>'}
+        <div class="slop-auto-actions">${valid && !review.invalid && !live && !prompting ? `<button type="button" class="primary" data-auto="start" ${state?.paid_calls ? "" : "disabled"}>Conferma e genera ${valid} SLOP</button>` : ""}
+        ${!live && !review.invalid && batch.processes.some(p => p.state === "draft") ? '<button type="button" data-auto="resume">Riprendi le proposte</button>' : ""}
+        <button type="button" data-auto="cancel">Annulla proposte</button></div></section>`;
+    } else if (batch && batch.pipeline_version < 2) {
       html = '<p>Batch precedente in pausa: sola revisione. Nessuna chiamata verrà ripetuta.</p><button data-auto="stop">Chiudi generazione precedente</button><button data-auto="review">Rivedi nel Database</button>';
     } else if (batch && batch.status === "running") {
       const ready = batch.images.filter(i => i.analysis === "done").length;
@@ -75,52 +106,61 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
           return left ? `<p class="hint">${left} SLOP ancora da generare dalle REAL di riferimento del batch: il batch si è interrotto prima.</p>` : ""; })()}
         <div class="slop-auto-actions">${batch.processes.some(p => ["draft", "ready", "retry"].includes(p.state)) && !batch.runner?.alive ? '<button type="button" class="primary" data-auto="resume">Riprendi sul server</button>' : ""}<button type="button" data-auto="review">Rivedi nel Database</button><button type="button" data-auto="loop">Dettagli dei tentativi</button>${batch.undecided ? "" : '<button type="button" data-auto="close">Chiudi revisione</button>'}</div>`;
     } else if (state) {
-      const max = state.max_batch, c = preview?.config || state.config;
-      if (!preview) quantity = Math.min(Math.max(1, quantity), Math.max(1, max));
-      html = `<h3>Generazione automatica</h3><p>REAL disponibili: ${state.available}. Ogni REAL scelta a caso ispira una SLOP. Una madre resta esclusa finché la figlia esiste, anche nel cestino.</p>
-        <label>Numero di SLOP<input id="slop-auto-size" type="number" required min="1" max="${max}" value="${quantity}" ${max ? "" : "disabled"}></label>
-        <p class="hint">Per ogni SLOP: brief e prompt, fino a ${c.max_generation_attempts} generazioni con valutazione, poi analisi dei tag. Massimo <span id="slop-auto-max-calls">${quantity*(2+2*c.max_generation_attempts)}</span> chiamate.</p>
-        ${max ? "" : '<p role="status">Nessuna REAL libera con descrizione editoriale. Aggiungi REAL o elimina definitivamente una SLOP per liberarne la madre.</p>'}
+      const selected = gallery(), max = state.max_batch, c = preview?.config || state.config;
+      const options = state.galleries.map(g => `<option value="${escape(g.id)}" ${g.id === galleryId ? "selected" : ""}>${escape(g.title)}${g.ready ? "" : " · Indicazioni mancanti"}</option>`).join("");
+      html = `<h3>Generazione automatica</h3>
+        <label class="slop-auto-gallery">Galleria<select id="slop-auto-gallery"><option value="">Scegli una galleria</option>${options}</select></label>
+        ${!state.galleries.length ? '<p class="hint">Crea una galleria in Database immagini → Gallerie.</p>' : ""}
+        ${selected ? `<p role="status">${selected.ready ? `REAL disponibili: ${selected.available}.` : "Salva le Indicazioni SLOP in Database immagini → Gallerie per abilitare la generazione automatica."}</p>` : ""}
+        <label>Numero di SLOP<input id="slop-auto-size" type="number" required min="1" max="${max}" value="${quantity}" ${selected?.ready ? "" : "disabled"}></label>
         ${state.paid_calls ? "" : '<p class="hint">Manca la chiave OpenAI.</p>'}
-        <button type="button" data-auto="preview" ${max ? "" : "disabled"}>${preview ? "Estrai di nuovo le REAL" : "Estrai le REAL"}</button>
-        <p class="hint">L'estrazione è gratuita. La generazione parte solo dopo aver controllato le REAL e confermato l'avvio.</p>`;
+        <button type="button" data-auto="preview" ${selected?.ready ? "" : "disabled"}>${preview ? "Estrai di nuovo le REAL" : "Estrai le REAL"}</button>
+        <p class="hint">L’estrazione è gratuita. Dopo aver visto le REAL potrai confermare la preparazione delle proposte.</p>`;
       if (preview) html += `<section data-auto-preview aria-labelledby="slop-preview-title"><h4 id="slop-preview-title">REAL estratte: ${preview.references.length}</h4>
-        <p>Tocca una foto o tieni premuto per vedere l'originale intero e la descrizione editoriale.</p>
-        <ul class="slop-auto-references">${preview.references.map(r=>`<li data-reference="${escape(r.id)}">
-          <button type="button" class="slop-auto-photo" data-auto-reference="${escape(r.id)}" aria-label="Ingrandisci ${escape(r.title)}" data-long-press><img src="${escape(r.file)}" alt="" draggable="false"></button>
-          <strong>${escape(r.title)}</strong><div class="rw-pills">${startPills(r)}</div></li>`).join("")}</ul>
-        <p class="hint">Le REAL saranno prenotate all'avvio. L'estrazione vale 15 minuti; se una foto cambia o viene occupata, occorre estrarre di nuovo.</p>
-        <div class="slop-auto-actions"><button type="button" class="primary" data-auto="start" ${state.paid_calls ? "" : "disabled"}>Conferma e avvia ${preview.references.length} SLOP</button><button type="button" data-auto="discard">Annulla estrazione</button></div></section>`;
+        <p>Tocca una foto o tieni premuto per vedere l’originale intero e la descrizione editoriale.</p>
+        <ul class="slop-auto-references">${preview.references.map(r=>`<li data-reference="${escape(r.id)}">${card(r)}</li>`).join("")}</ul>
+        <p class="hint">${escape(settings(c))}</p>
+        <p class="hint">Massimo ${preview.references.length} ${preview.references.length === 1 ? "chiamata" : "chiamate"} con ${escape(c.text_model)} per preparare premessa e prompt. L’estrazione vale 15 minuti.</p>
+        <div class="slop-auto-actions"><button type="button" class="primary" data-auto="prepare" ${state.paid_calls ? "" : "disabled"}>Prepara ${preview.references.length} ${preview.references.length === 1 ? "proposta" : "proposte"}</button><button type="button" data-auto="discard">Annulla estrazione</button></div></section>`;
     }
     if (notice) html += `<p class="slop-auto-notice" role="status">${escape(notice)}</p>`;
     controls.innerHTML = html;
   };
 
   const load = async () => {
-    try { state = await call<AutoState>(SLOP + "auto"); }
+    try {
+      const previous = state?.batch?.proposal_review;
+      state = await call<AutoState>(SLOP + "auto");
+      if (state.expired || (previous && !state.batch && previous.expires <= Date.now())) notice = "Proposte scadute. Estrai di nuovo le REAL.";
+    }
     catch (error) { notice = "Generazione automatica: " + errorText(error); }
     render();
   };
+  let check = 0;
+  const nextCheck = (delay: number) => {
+    window.clearTimeout(check);
+    check = window.setTimeout(() => { void refresh(); }, Math.max(2000, delay));
+  };
   const refresh = async () => {
     await load();
-    if (state?.batch?.pipeline_version === 2 && state.batch.status === "running" && state.batch.runner?.alive) void follow();
+    if ((state?.batch?.pipeline_version || 0) >= 2 && state?.batch?.status === "running" && state.batch.runner?.alive) void follow();
     else if (state?.batch?.status === "review") void pickup().then(load);
   };
 
   /** Copy (when missing), then the analysis (only if never asked: uncertain or failed outcomes are not resent). */
-  const finish = async (image: { id: string; copy: boolean; analysis: string }) => {
+  const finish = async (image: { id: string; copy: boolean; analysis: string }, historical: boolean) => {
     if (!image.copy) await prepareItemCopy(await call<TreatableItem>(LIBRARY + "/" + encodeURIComponent(image.id)));
-    if (image.analysis === "none") await call(LIBRARY + "/" + encodeURIComponent(image.id) + "/analyze", { confirm: true });
+    if (historical && image.analysis === "none") await call(LIBRARY + "/" + encodeURIComponent(image.id) + "/analyze", { confirm: true });
   };
 
   /** Copies of the images the server accepted (made in the browser, free), and the tags only if never asked. */
   const pickup = async () => {
     const batch = state?.batch;
-    if (!batch || batch.pipeline_version !== 2 || running) return;
+    if (!batch || batch.pipeline_version < 2 || running) return;
     for (const image of batch.images) {
       if (image.status !== "new" || (image.copy && image.analysis !== "none")) continue;
       progress = "Copia di gioco di un'immagine del batch…"; render();
-      try { await finish(image); } catch (error) { notice = errorText(error); break; }
+      try { await finish(image, !batch.gallery_review); } catch (error) { notice = errorText(error); break; }
     }
     progress = "";
   };
@@ -132,7 +172,7 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
       while (state?.batch?.status === "running" && state.batch.runner?.alive) {
         const b = state.batch, briefs = b.processes.filter(p => p.state !== "draft" && p.state !== "prompting").length;
         const attempts = b.processes.reduce((n, p) => n + p.attempts.length, 0), accepted = b.processes.filter(p => p.state === "accepted").length;
-        progress = briefs < b.slots ? `Sul server: brief e prompt ${briefs} di ${b.slots}…` : `Sul server: ${attempts} ${attempts === 1 ? "tentativo" : "tentativi"}, ${accepted} ${accepted === 1 ? "SLOP accettata" : "SLOP accettate"} su ${b.slots}…`;
+        progress = !b.gallery_review && briefs < b.slots ? `Sul server: brief e prompt ${briefs} di ${b.slots}…` : `Sul server: ${attempts} ${attempts === 1 ? "tentativo" : "tentativi"}, ${accepted} ${accepted === 1 ? "SLOP accettata" : "SLOP accettate"} su ${b.slots}…`;
         render();
         await new Promise(resolve => window.setTimeout(resolve, 3000));
         await load();
@@ -142,19 +182,26 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
     await load(); await hooks.changed();
   };
 
+  controls.addEventListener("change", event => {
+    const input = event.target as HTMLSelectElement;
+    if (input.id !== "slop-auto-gallery") return;
+    galleryId = input.value;
+    preview = null;
+    extraction++;
+    render();
+  });
   controls.addEventListener("input", event => {
     const input = event.target as HTMLInputElement;
     if (input.id !== "slop-auto-size") return;
     quantity = Number(input.value);
-    preview = null; extraction++;
+    preview = null;
+    extraction++;
     controls.querySelector("[data-auto-preview]")?.remove();
-    const draw = controls.querySelector<HTMLButtonElement>('[data-auto="preview"]');
-    if (draw) draw.disabled = !state?.max_batch;
-    const calls = controls.querySelector("#slop-auto-max-calls");
-    if (calls && state) calls.textContent = String(quantity*(2+2*state.config.max_generation_attempts));
   });
   const showReference = (element: HTMLElement) => {
-    const ref = preview?.references.find(r=>r.id===element.dataset.autoReference);
+    const key = element.dataset.autoReference;
+    const ref = preview?.references.find(r => r.id === key) ||
+      state?.batch?.proposal_review?.references.find(r => r.real?.id === key)?.real;
     if (!ref) return;
     openPreview({src: ref.original, alt: "Originale REAL intero", title: ref.title,
       description: ref.description.visible, extra: `<div class="rw-pills">${startPills(ref)}</div><p>Contesto documentato: ${escape(ref.description.documented_context)}</p><p>Incertezze: ${escape(ref.description.uncertainties)}</p>`});
@@ -168,14 +215,14 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
     const action = button.dataset.auto!;
     notice = "";
     try {
-      if (action === "discard") { preview = null; render(); return; }
+      if (action === "discard") { preview = null; extraction++; render(); return; }
       if (action === "preview") {
         const input = controls.querySelector<HTMLInputElement>("#slop-auto-size")!;
         if (!input.reportValidity()) return;
         const request = ++extraction;
         preview = null; controls.querySelector("[data-auto-preview]")?.remove(); button.disabled = true;
         try {
-          const selected = await call<AutoPreview>(SLOP + "auto/preview", {size: Number(input.value)});
+          const selected = await call<AutoPreview>(SLOP + "auto/preview", {size: Number(input.value), gallery_id: galleryId});
           if (request !== extraction || state.batch) return;
           preview = selected; render();
         } catch (error) { if (request === extraction) throw error; }
@@ -186,21 +233,36 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
       if (action === "review" && state.batch) { await hooks.review(state.batch.id); return; }
       if (action === "stop") { await call(SLOP + "auto/stop", {}); notice = "Batch interrotto: il server si ferma prima della prossima chiamata."; await load(); return; }
       if (action === "resume") {
-        if (!window.confirm("Riprendere il batch sul server? Continua da dove si è interrotto, entro il massimo di chiamate confermato all'avvio; le chiamate già inviate o con esito incerto non si ripetono.")) return;
+        const batch = state.batch;
+        if (!batch) return;
+        const remaining = batch.processes.filter(p => p.state === "draft").length;
+        const question = batch.proposal_review
+          ? `Riprendere le proposte sul server? Massimo ${remaining} ${remaining === 1 ? "chiamata" : "chiamate"} con ${batch.config.text_model} per le proposte ancora da preparare.`
+          : "Riprendere il batch sul server entro il massimo di chiamate confermato all’avvio?";
+        if (!window.confirm(question)) return;
         button.disabled = true; state = await call<AutoState>(SLOP + "auto/resume", { confirm: true }); render(); void follow(); return;
       }
-      if (action === "start") {
-        const input = controls.querySelector<HTMLInputElement>("#slop-auto-size")!;
-        if (!input.reportValidity()) return;
-        if (!preview) return;
-        const selected = preview, size = selected.references.length, c = selected.config;
-        if (!window.confirm(`Generare ${size} SLOP con ${c.image_model}, qualità ${c.quality}, valutatore e tag ${c.text_model}? Massimo ${size*(2+2*c.max_generation_attempts)} chiamate: ${size} brief+prompt, fino a ${size*c.max_generation_attempts} immagini e altrettante valutazioni, ${size} analisi tag solo dopo accettazione. Tolleranza ${c.editorial_tolerance}. Stop anticipato alla prima candidata idonea.`)) return;
+      if (action === "cancel" && state.batch?.proposal_review) {
         button.disabled = true;
-        state = await call<AutoState>(SLOP + "auto/start", { preview: selected.token, confirm: true });
-        render();
-        void follow();
+        state = await call<AutoState>(SLOP + "auto/cancel", {batch: state.batch.id});
+        notice = "Proposte annullate.";
+        render(); return;
       }
-    } catch (error) { if (action === "start" || action === "preview") preview = null; notice = errorText(error); await load(); }
+      if (action === "prepare" && preview) {
+        const selected = preview, count = selected.references.length;
+        if (!window.confirm(`Preparare ${count} proposte con ${selected.config.text_model}? Massimo ${count} ${count === 1 ? "chiamata" : "chiamate"}. Potrai controllare le premesse prima di generare le immagini.`)) return;
+        button.disabled = true;
+        state = await call<AutoState>(SLOP + "auto/prepare", {preview: selected.token, count, confirm: true});
+        render(); void follow(); return;
+      }
+      if (action === "start" && state.batch?.proposal_review) {
+        const batch = state.batch, count = validProposals(batch).length, c = batch.config;
+        if (!window.confirm(`Generare ${count} SLOP sulle ${batch.slots} REAL estratte? Massimo ${imageCalls(batch, count)} chiamate: fino a ${count*c.max_generation_attempts} immagini con ${c.image_model} (${c.quality}), altrettante valutazioni con ${c.text_model}, più ${count} analisi dei tag dopo accettazione. Tolleranza ${c.editorial_tolerance}.`)) return;
+        button.disabled = true;
+        state = await call<AutoState>(SLOP + "auto/start", {batch: batch.id, count, confirm: true});
+        render(); void follow();
+      }
+    } catch (error) { if (action === "prepare" || action === "preview") preview = null; notice = errorText(error); await load(); }
   });
 
   observeLibrary(() => { window.clearTimeout(timer); timer = window.setTimeout(() => { if (!running) void load(); }, 400); });

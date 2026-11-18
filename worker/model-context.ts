@@ -5,8 +5,8 @@
  * it. The JSON format, the decisions of the evaluator and the tag filters stay in the code, whatever these texts say. */
 import { HttpError, id, type Env } from "./core";
 
-export type Part = "base" | "analysis" | "slop_prompt" | "slop_evaluation";
-export const PARTS: Part[] = ["base", "analysis", "slop_prompt", "slop_evaluation"];
+export type Part = "base" | "analysis" | "slop_prompt" | "slop_evaluation" | "slop_gallery_prompt";
+export const PARTS: Part[] = ["base", "analysis", "slop_prompt", "slop_gallery_prompt", "slop_evaluation"];
 export const CONTEXT_MAX = 4000;
 /** SLOP pipeline of the texts saved from now on (migration 0051). A «slop_prompt» of pipeline 1 was written for the twin prompts
  * of app 1.26 and contradicts the editorial brief: no brief call is sent with it. */
@@ -33,6 +33,7 @@ Scegli parole con un solo significato («house-fire» per l'evento, «flames» p
 
 Tag: da 5 a 15, divisi per categoria. Se l'epoca è ricavabile, indica il decennio. Indica sempre genere, colore e supporto, giudicandoli dall'aspetto dell'immagine: retino di stampa, bordi e grana di una pellicola, carta di una stampa, nitidezza di un sensore digitale. Preferisci i tag del vocabolario esistente, che ricevi diviso per categoria, quando sono adatti; creane di nuovi solo se nessuno lo è.`,
   slop_prompt: `Scrivi insieme un brief editoriale minimo e un prompt in inglese per una fotografia sintetica credibile. Ricevi i tag e la descrizione editoriale salvata di una REAL, senza i suoi pixel. La REAL è un riferimento tematico e fotografico: nessuna somiglianza obbligatoria, nessun numero di elementi da cambiare. Distingui ancoraggi obbligatori, preferenze, elementi flessibili ed esclusioni. Il brief resterà immutabile nel ciclo di valutazione, mentre prompt e scena possono cambiare. Credibilità, varietà, luce e tecnica concrete; evita enfasi cinematografica e schemi ripetitivi. Persone inventate: nessun nome o descrizione di persone vive o morte da meno di 50 anni. Nessun crimine attribuito a personaggi storici, regimi mai celebrati, niente nudità fuori dalle opere d'arte. Non scegliere formati né comporre per il ritaglio del gioco.`,
+  slop_gallery_prompt: `Per una galleria tematica proponi un falso fotografico concreto e scrivi il prompt inglese. Usa la foto intera, il profilo editoriale e il contesto documentato per scegliere una possibilità compatibile con le indicazioni della galleria. Rendi specifici l’invenzione e gli elementi reali da conservare, come la geografia, un edificio riconoscibile o gli elementi visibili di una mobilitazione. Varia le premesse quando le foto lo consentono. Privilegia credibilità fotografica, luce e tecnica plausibili.`,
   slop_evaluation: `Valuti una fotografia generata, intera e non trattata, prima che entri nella libreria come candidata. Giudica prima la credibilità fotografica: deve poter essere scambiata per una fotografia autentica della tecnica, dell'epoca e della situazione rappresentata. Poi la plausibilità fisica e contestuale e il rispetto degli ancoraggi obbligatori e delle esclusioni del brief. L'aderenza letterale ai dettagli secondari del prompt non è richiesta.
 
 Difetti critici, che nessun punto forte compensa: anatomia, fisica, geometria, scritte centrali senza senso, resa artificiale, contraddizioni di contesto, violazioni delle regole sui contenuti, ancoraggi obbligatori mancanti. Per ogni difetto indica la zona dell'immagine e la conseguenza. Segnala le incertezze; non dedurre identità, provenienza, licenza o verità storica dai pixel. La valutazione è una stima editoriale, non una certificazione.

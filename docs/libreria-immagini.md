@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 7.0.0
+# Libreria delle immagini, tag e analisi — specifica 7.1.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T19:34:55Z.
+Stato: implementata nel ramo 1.40.0, da rilasciare. Aggiornata: 2026-11-18T18:13:41Z.
 
 ## 1. Decisioni dell'owner
 
@@ -55,7 +55,8 @@ Una sola raccolta di immagini REAL e SLOP.
 | Tag correnti e generati, contesti/esito dell'analisi | sì | sì | Ricerca, controllo dell'analisi e ripristino gratuito dei tag |
 | Originale/copia, hash, dimensioni, MIME, crop e misure | sì | sì | Archivio, verifica file, copie identiche nel gioco e rifacimento nel browser |
 | Batch, slot, qualità e trattamento | no | sì | Revisione, idempotenza e rifacimento delle copie SLOP |
-| Stato, date, revisione e disponibilità madre–figlia | sì | sì | Transizioni, concorrenza e campionamento delle REAL libere |
+| Stato, date e revisione | sì | sì | Transizioni e concorrenza |
+| Galleria editoriale | sì | sì | Facoltativa. Organizzazione delle REAL e appartenenza ereditata dalle SLOP dei nuovi batch |
 
 Il dettaglio e l’API non espongono titolo/fonte/autore/licenza sulle SLOP né prompt/modello sulle REAL. Le SLOP hanno `title=NULL` nella tabella condivisa e un’etichetta visiva basata sull’ID; ricerca anche per ID. Le modifiche di quei campi
 sull'origine sbagliata sono rifiutate. Le colonne restano nella tabella condivisa perché servono all'altra origine; non si cancella
@@ -170,22 +171,21 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
 
 ## 6. Chiamate a pagamento e modelli
 
-- Quattro tipi: analisi, brief+prompt SLOP, immagini SLOP, valutazione SLOP intera. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
+- Quattro tipi: analisi, proposte editoriali e prompt SLOP, immagini SLOP, valutazione SLOP intera. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
 - **Esiti:** risposta valida → `completed`; errore 4xx → `failed`, senza addebito; errore 5xx, timeout o rete → `uncertain`, mai
   ripetuta in automatico. Chiave rifiutata, limite di spesa o credito OpenAI esaurito fermano le serie con un messaggio che rimanda a
   platform.openai.com.
 - **Registro** `paid_calls`: tipo, modello, esito, token, date; nessun importo e collegamenti a immagine, processo e tentativo, azzerati alla cancellazione; nessun archivio delle immagini eliminate.
-- **Modelli:** modello di testo (analisi, brief+prompt e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
+- **Modelli:** modello di testo (analisi, proposte editoriali e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
   elencati nel codice e presenti nel progetto OpenAI (`GET /v1/models`, in cache per un'ora; se l'elenco non si legge si offrono tutti).
   Ogni chiamata registra il modello usato.
 - Senza il segreto `OPENAI_API_KEY` le chiamate a pagamento sono spente. Nei test solo il modello finto `tests/fake_openai.py`.
 
 ## 7. Contesto dei modelli
 
-- Quattro testi modificabili dalle Impostazioni, fino a 4000 caratteri ciascuno: **base comune** (ogni chiamata: lingua, fatti, regole
-  dei tag; non parla mai di immagini generate), **Tag** (con la base a ogni analisi), **Brief e prompt per le SLOP** (con la base alla
-  chiamata che scrive brief e prompt, con le regole della specifica `contenuti-e-trasparenza`), **Valutazione delle SLOP** (con la base
-  a ogni valutazione di una candidata intera; dall'app 1.28.0, prima era fisso nel codice).
+- Cinque testi modificabili dalle Impostazioni, fino a 4000 caratteri: **Base comune** (ogni chiamata, con istruzioni neutre),
+  **Tag** (analisi), **Premessa e prompt di galleria** (nuove proposte da originale e contesto), **Valutazione delle SLOP** (candidata
+  intera) e **Brief e prompt dei batch storici** (processi di pipeline 2). La fase di catalogazione REAL ha istruzioni distinte.
 - **Pipeline di un testo** (migrazione 0051): ogni versione registra la pipeline SLOP per cui è stata salvata. Le versioni salvate
   prima del rilascio della 1.27.0 (2026-11-15T15:10:12Z) valgono 1: il «Prompt per le SLOP» di allora descrive le gemelle e
   contraddice il brief editoriale. Finché il testo in vigore di «Brief e prompt per le SLOP» è di pipeline 1, il server non invia la
@@ -210,8 +210,9 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
   `leaderboard`, `rate_limits`). Elenco delle migrazioni in `MASTER.md`.
 - Migrazione 0048 (`images`): `categories_completed_at` (completamento delle tre categorie), `copy_metrics` (misure della copia di
   gioco) e `copy_treatment` (trattamento di una SLOP), specifica `copie-di-gioco`, sezione 4.
-- Migrazione 0053: rimuove `generation_source` e `source_id`, anonimizza slot e trattamento e preserva tentativi e chiamate. La migrazione storica 0049 aveva introdotto il legame, poi eliminato. La 0055 introduce il solo registro privato di disponibilità `slop_reference_uses` per le nuove generazioni: madre occupata finché la figlia esiste in qualsiasi stato; eliminare definitivamente la figlia libera la madre. Nessun legame viene inferito per le generazioni pregresse. La disponibilità non interviene nel campionamento del gioco.
+- Migrazione 0053: rimuove `generation_source` e `source_id`, anonimizza slot e trattamento e preserva tentativi e chiamate. La migrazione storica 0049 aveva introdotto il legame, poi eliminato. La 0055 introduce il solo registro privato di disponibilità `slop_reference_uses` per i batch di pipeline 2: madre occupata finché la figlia esiste in qualsiasi stato; eliminare definitivamente la figlia libera la madre. Nessun legame viene inferito per le generazioni pregresse. La disponibilità non interviene nel campionamento del gioco.
 - Migrazione 0056: elimina `images.generation_group`, `slop_batches.group_key`, `slop_batches.auto_tag` e le impostazioni obsolete dei gruppi. Ripulisce gli snapshot e converte il contesto storico di genere/decennio in tag di partenza ordinari, conservando immagini, tag, copie, processi, tentativi, chiamate e registro madre–figlia. Nessuna chiamata a pagamento.
+- Migrazione 0060: aggiunge gallerie, appartenenza facoltativa, premesse, riferimenti temporanei per la fase di proposta e il contesto delle proposte. I dati precedenti restano disponibili.
 - Migrazione 0058: titolo obbligatorio per le REAL e nullo per le SLOP (vincoli tramite trigger, senza ricostruire la tabella madre). I tag di partenza vengono rimossi dagli slot delle SLOP dopo aver conservato solo colore/supporto nei parametri tecnici della copia. Nessuna modifica a tag osservati, processi, copie o legami.
 - Le accettazioni manuali delle SLOP conservano nello slot `acceptance` (owner, ID tentativo e data) separata dalla valutazione originale, anche con difetti critici/minori o incertezze. Nessuna migrazione aggiuntiva; nuova foto senza approvazione/pubblicazione automatica.
 - Migrazione 0057: elimina `caption`, `generated_caption`, `copy_view` ed `explanation` da `images`; `caption` e `copy_view` da `game_rounds`. Ogni altra colonna e ogni collegamento sono conservati. Le vecchie spiegazioni, mai lette dal gioco, vengono eliminate; descrizioni, tag e contesto editoriale restano.

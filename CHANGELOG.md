@@ -1,7 +1,13 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-17T19:34:55Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-18T18:13:41Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.40.0 — 2026-11-18T18:13:41Z
+
+- Gallerie tematiche con titolo, descrizione e Indicazioni SLOP. Assegnazione delle REAL nel caricamento e nel Database senza variazioni di stato. Le SLOP ereditano la galleria del batch.
+- Estrazione gratuita per galleria. Due conferme separate per preparare le premesse dall’originale intero e per generare dai prompt approvati. Il valutatore usa la premessa e le indicazioni.
+- Migrazione 0060. I nuovi batch eliminano i riferimenti temporanei alla conferma, all’annullamento o alla scadenza. La REAL resta giocabile e riutilizzabile. I batch storici conservano il loro contratto.
 
 ## 1.39.0 — 2026-11-17T19:34:55Z
 

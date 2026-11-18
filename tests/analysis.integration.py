@@ -169,7 +169,7 @@ assert labels()['riot']['aliases'] == []
 # Model context: four parts with the approved first versions; each save is a version; restore; used by each call.
 status, contexts = call(f'{API}/contexts'); assert status == 200 and contexts['max'] == 4000, contexts
 parts = {p['part']: p for p in contexts['parts']}
-assert set(parts) == {'base', 'analysis', 'slop_prompt', 'slop_evaluation'} and all(len(p['history']) == 1 for p in parts.values()), contexts
+assert set(parts) == {'base', 'analysis', 'slop_prompt', 'slop_gallery_prompt', 'slop_evaluation'} and all(len(p['history']) == 1 for p in parts.values()), contexts
 assert 'brief editoriale' in parts['slop_prompt']['current']['body'] and 'nessuna somiglianza obbligatoria' in parts['slop_prompt']['current']['body']
 assert 'credibilità fotografica' in parts['slop_evaluation']['current']['body'] and not any(p['outdated'] for p in parts.values()), parts
 first_analysis = parts['analysis']['current']

@@ -1,3 +1,4 @@
+import { galleryOptions, type Gallery } from "./galleries";
 /** REAL wizard (spec `dashboard-admin-wizard-real`, section 4), four steps: select on Commons (search, pages, columns,
  * a tap ticks and adds at once, press and hold for the preview, pasted links), tags (editable description, tags with categories,
  * paid generation once per image, restore, «Togli dal caricamento»), crop, summary and publication. The draft lives in the
@@ -17,7 +18,7 @@ import { markGameMedia } from "./media-mark";
 
 type Stage = 1 | 2 | 3 | 4;
 interface Image {
-  id: string; origin: "REAL" | "SLOP"; status: "new" | "approved" | "published" | "trash";
+  id: string; gallery_id: string | null; origin: "REAL" | "SLOP"; status: "new" | "approved" | "published" | "trash";
   commons_description: string | null; real_description: RealDescription | null; revision: number; title: string; description: string; tags: string[];
   source_url: string; author: string; license_name: string; license_url: string;
   width: number; height: number; file: string;
@@ -55,7 +56,8 @@ const errorText = (error: unknown) => error instanceof Error ? error.message : S
 const short = (value: string, count = 90) => value.length > count ? value.slice(0, count - 1) + "…" : value;
 
 export interface RealWizard { sync(): Promise<void> }
-export async function mountRealWizard(root: HTMLElement, onPublished: () => Promise<void>): Promise<RealWizard> {
+export async function mountRealWizard(root: HTMLElement, onPublished: () => Promise<void>, galleries: () => Gallery[]): Promise<RealWizard> {
+  let importGallery = "";
   let stage: Stage = 1, images: Image[] = [], notice = "", busy = false, query = "", sort = "relevance";
   /** Pages of Commons results already loaded: files and the offset of the following page. */
   /** Columns of the Commons results: 0 = automatic, otherwise 1 to 6; kept in this browser. */
@@ -159,7 +161,9 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     '<p class="hint">Incolla più collegamenti, uno per riga. Non vengono pubblicati finché non confermi il riepilogo.</p>' +
     '<label for="rw-links">Link delle immagini</label><textarea id="rw-links" rows="5" placeholder="https://commons.wikimedia.org/wiki/File:..."></textarea>' +
     '<button type="button" data-rw="add-links">Aggiungi alla selezione</button></details></div>' +
-    '<div class="rw-selected">' + selectedSection() + '</div><div class="rw-actions rw-bottom">' + importButton() + '</div>';
+    '<div class="rw-selected">' + selectedSection() + '</div><div class="rw-actions rw-bottom">' +
+    (galleries().length ? `<label>Galleria del caricamento<select id="rw-import-gallery"><option value="">Senza galleria</option>${galleryOptions(galleries(), importGallery)}</select></label>` : "") +
+    importButton() + '</div>';
   const metadata = (item: Image) => '<details class="rw-metadata"><summary>Titolo e metadati</summary><dl>' +
     [["Titolo Commons", item.title], ["Autore", item.author],
       ["Licenza", item.license_name], ["Dimensioni originali", item.width + " × " + item.height],
@@ -178,6 +182,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     legend() + '<div class="rw-editor-grid">' + staged().map(item => '<article class="rw-editor" data-rw-image="' + escape(item.id) + '">' +
       '<div class="rw-image"><img src="' + escape(item.file) + '" alt="' + escape(item.title) + '" loading="lazy"></div>' +
       '<div class="rw-editor-fields"><h3>' + escape(short(item.title, 90)) + '</h3>' +
+      (galleries().length ? `<label>Galleria<select data-rw-gallery="${escape(item.id)}"><option value="">Senza galleria</option>${galleryOptions(galleries(), item.gallery_id || "")}</select></label>` : "") +
       '<label class="rw-description">Descrizione <small>(la leggono i giocatori alla fine della partita)</small><textarea data-rw-description="' +
         escape(item.id) + '" maxlength="1000" rows="3" placeholder="Che cosa mostra la foto, dove e quando">' + escape(item.description) + '</textarea></label>' +
       descriptionFields(item.id, item.real_description, false, item.commons_description || "") +
@@ -316,7 +321,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       try {
         notice = "Acquisizione privata " + (done + failures.length + 1) + " di " + pending.size + "…";
         render();
-        const item = await api<Image>("/commons", { method: "POST", body: JSON.stringify({ url }) });
+        const item = await api<Image>("/commons", { method: "POST", body: JSON.stringify({ url, gallery_id: importGallery || null }) });
         images.push(item); pending.delete(url); persist(); done++;
         // The game copy (4:5, centred) is made here, in the browser, from the stored original.
         try { replace(await prepareLibraryCopy<Image>(item.id)); }
@@ -424,6 +429,12 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   }, true);
   root.addEventListener("change", event => {
     const target = event.target as HTMLInputElement;
+    if (target.id === "rw-import-gallery") { importGallery = target.value; return; }
+    if (target.dataset.rwGallery) {
+      const item = images.find(i => i.id === target.dataset.rwGallery);
+      if (item) void update(item, {gallery_id: target.value || null}).catch(error => { notice = errorText(error); render(); });
+      return;
+    }
     if (target.id === "rw-columns") {
       const n = Number(target.value);
       columns = Number.isInteger(n) && n >= 1 && n <= 6 ? n : 0;

@@ -42,6 +42,9 @@ with sync_playwright() as p:
             else:
                 dialog.accept()
         page.on('dialog', handle)
+        created_gallery = page.request.post(base + '/api/admin/library/galleries', data={'title':'Ponti '+name})
+        assert created_gallery.ok, created_gallery.text()
+        gallery_id = created_gallery.json()['id']
         page.goto(base + '/admin')
         expect(page.get_by_role('heading', name='Caricamento REAL')).to_be_visible()
         expect(page.get_by_role('button', name='Generazione SLOP')).to_be_visible()
@@ -296,6 +299,34 @@ with sync_playwright() as p:
         expect(page.locator('.rw-message')).to_contain_text('2 immagini pubblicate', timeout=30000)
         published = page.request.get(base + '/api/admin/library?status=published&origin=REAL&q=' + title)
         assert published.ok and {first['id'], second['id']} <= {i['id'] for i in published.json()['items']}
+        # Commons is simulated at the browser boundary. The wizard passes the selected gallery,
+        # and the real upload API stores that membership while the instructions are empty.
+        acquired=[]
+        def mock_acquisition(route):
+            data=route.request.post_data_json
+            assert data['gallery_id']==gallery_id and 'File:Bridge1.jpg' in data['url'], data
+            photo=image_file('commons-'+name, seed+60)
+            response=page.request.post(base+'/api/admin/library/upload?'+urllib.parse.urlencode({
+                'origin':'REAL','title':'Commons '+name,'gallery_id':data['gallery_id']}),
+                data=photo['buffer'],headers={'Content-Type':photo['mimeType']})
+            assert response.ok,response.text()
+            acquired.append(response.json()['id'])
+            route.fulfill(status=response.status,content_type='application/json',body=response.text())
+        page.route('**/api/admin/library/commons', mock_acquisition)
+        page.get_by_role('button', name='Inizia un nuovo caricamento').click()
+        page.locator('#rw-search [name=q]').fill('bridge')
+        page.locator('#rw-search').get_by_role('button', name='Cerca', exact=True).click()
+        page.locator('.rw-hit img').click()
+        page.locator('#rw-import-gallery').select_option(gallery_id)
+        page.get_by_role('button', name='Avanti: tag').click()
+        expect(page.locator('[data-rw-gallery]')).to_have_value(gallery_id)
+        stored=page.request.get(base+'/api/admin/library/'+acquired[0]).json()
+        assert stored['gallery_id']==gallery_id and stored['status']=='new' and stored['copy']
+        page.locator('[data-rw-gallery]').select_option('')
+        expect(page.locator('[data-rw-gallery]')).to_have_value('')
+        page.locator('[data-rw-gallery]').select_option(gallery_id)
+        page.locator('[data-rw=discard]').click()
+        expect(page.locator('.rw-message')).to_contain_text('Foto tolta dal caricamento')
         assert not errors, errors
         context.close()
         print('REAL wizard browser E2E 1.15.0 passed (search clear box, tap adds at once, selection kept across searches, press-and-hold preview, description edited and summarised, four steps, crop step, search clear button, no captions, photos trashed elsewhere leave the wizard):', name)

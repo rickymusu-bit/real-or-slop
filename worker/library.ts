@@ -1,3 +1,4 @@
+import { galleryId, galleryRoute } from "./galleries";
 /** Image library of the dashboard (spec `libreria-immagini`, `database-immagini`): states and transitions, edits with
  * optimistic revision, tags with categories and aliases, vocabulary, game copies with their crop, trash and deletion of every row
  * and file, bulk actions, statistics per image, distribution, Commons acquisition, regeneration of a SLOP, settings and contexts. */
@@ -28,7 +29,7 @@ const MAX_PIXELS = 32_000_000;
 type Origin = "REAL" | "SLOP";
 type Status = "new" | "approved" | "published" | "trash";
 export interface Row {
-  id: string; origin: Origin; status: Status; trashed_from: Status | null; title: string | null; description: string;
+  id: string; gallery_id: string | null; origin: Origin; status: Status; trashed_from: Status | null; title: string | null; description: string;
   source_url: string; author: string; license_name: string; license_url: string; prompt: string; model: string;
   original_key: string; original_sha256: string; original_mime: string; width: number; height: number;
   copy_key: string | null; copy_sha256: string | null; copy_width: number | null; copy_height: number | null; copy_bytes: number | null;
@@ -129,7 +130,7 @@ function view(row: Row, rows: TagRow[], extra: Extra = {}) {
   const tags = rows.map(r => r.label);
   const v = row.copy_sha256 ? row.copy_sha256.slice(0, 12) : row.original_sha256.slice(0, 12);
   return {
-    id: row.id, origin: row.origin, status: row.status, trashed_from: row.trashed_from,
+    id: row.id, gallery_id: row.gallery_id, origin: row.origin, status: row.status, trashed_from: row.trashed_from,
     real_description: parseJson(row.real_description), real_description_provenance: parseJson(row.real_description_provenance),
     description: row.description,
     ...(row.origin === "REAL" ? { title: row.title, commons_description: row.commons_description, source_url: row.source_url,
@@ -195,7 +196,7 @@ export function tagStatements(env: Env, imageIdValue: string, wanted: string[], 
 /** Adds a new image to the library. The original goes to quarantine; the browser then uploads its game copy. */
 export async function create(env: Env, input: { origin: Origin; title?: string; description?: string; bytes: ArrayBuffer;
   source_url?: string; author?: string; license_name?: string; license_url?: string; prompt?: string; model?: string;
-  generation?: { batch: string; slot: unknown; quality: string } }) {
+  gallery_id?: string | null; generation?: { batch: string; slot: unknown; quality: string } }) {
   if (!env.QUARANTINE) throw new HttpError(503, "Quarantena privata non configurata");
   const bytes = new Uint8Array(input.bytes);
   if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new HttpError(413, "File vuoto o oltre 12 MB");
@@ -212,13 +213,13 @@ export async function create(env: Env, input: { origin: Origin; title?: string; 
   await env.QUARANTINE.put(key, bytes, { httpMetadata: { contentType: mime }, customMetadata: { sha256: hash } });
   try {
     await env.DB.prepare(`INSERT INTO images(id,origin,title,description,source_url,author,license_name,license_url,prompt,model,
-      original_key,original_sha256,original_mime,width,height,created_at,updated_at,generation_batch,generation_slot,generation_quality,commons_description)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      original_key,original_sha256,original_mime,width,height,created_at,updated_at,generation_batch,generation_slot,generation_quality,commons_description,gallery_id)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(imageIdValue, input.origin, input.origin === "REAL" ? text(input.title, "title", true) : null, text(input.description, "description"),
         text(input.source_url, "source_url"), text(input.author, "author"), text(input.license_name, "license_name"),
         text(input.license_url, "license_url"), text(input.prompt, "prompt"), text(input.model, "model"),
         key, hash, mime, width, height, stamp, stamp, input.generation?.batch ?? null,
-        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null, input.origin === "REAL" ? input.description || "" : null).run();
+        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null, input.origin === "REAL" ? input.description || "" : null, input.gallery_id ?? null).run();
   } catch (error) {
     await env.QUARANTINE.delete(key);
     if (error instanceof HttpError) throw error;
@@ -288,7 +289,20 @@ async function storeCopy(request: Request, env: Env, row: Row) {
   return json({ ...(await viewOf(env, row.id)), already_prepared: false }, 201);
 }
 
+/** Gallery membership is editorial metadata and does not withdraw or restore a photo. */
+async function assignGallery(env: Env, row: Row, gallery: string | null, revision = row.revision) {
+  if (row.origin !== "REAL") throw new HttpError(409, "Le SLOP ereditano la galleria del batch");
+  const result = await env.DB.prepare("UPDATE images SET gallery_id=?,revision=revision+1,updated_at=? WHERE id=? AND revision=?")
+    .bind(gallery, now(), row.id, revision).run();
+  if (!result.meta.changes) throw new HttpError(409, "Immagine modificata altrove: ricaricare");
+}
+
 async function edit(env: Env, row: Row, data: Record<string, unknown>) {
+  if (Object.keys(data).every(key => ["revision", "gallery_id"].includes(key)) && "gallery_id" in data) {
+    if (data.revision !== row.revision) throw new HttpError(409, "Immagine modificata altrove: ricaricare");
+    await assignGallery(env, row, await galleryId(env, data.gallery_id));
+    return viewOf(env, row.id);
+  }
   const applicable = Object.keys(TEXT_FIELDS).filter(key => row.origin === "REAL"
     ? !["prompt", "model"].includes(key) : !["title", "source_url", "author", "license_name", "license_url"].includes(key));
   const allowed = ["revision", "tags", "tag_categories", ...(row.origin === "REAL" ? ["real_description"] : []), ...applicable];
@@ -395,20 +409,21 @@ async function destroy(env: Env, ids: readonly string[]): Promise<{ deleted: num
 async function list(env: Env, url: URL) {
   const status = url.searchParams.get("status") || "library", originFilter = url.searchParams.get("origin") || "all";
   const q = (url.searchParams.get("q") || "").trim().slice(0, 100), match = url.searchParams.get("match") || "all";
+  const gallery = url.searchParams.get("gallery") || "";
   const batch = url.searchParams.get("batch") || "", incomplete = url.searchParams.get("incomplete") === "1" ? 1 : 0;
   if (url.searchParams.has("group")) throw new HttpError(400, "Il filtro per gruppi non è più disponibile");
   const wanted = [...new Set([url.searchParams.get("tag") || "", ...(url.searchParams.get("tags") || "").split(",")].map(t => t.trim()).filter(Boolean))];
   if (!["library", "new", "approved", "published", "trash"].includes(status) || !["all", "REAL", "SLOP"].includes(originFilter)
-    || !["all", "any"].includes(match) || wanted.length > 20 || (batch && !/^[\w-]{1,64}$/.test(batch))) throw new HttpError(400, "Filtro non valido");
+    || !["all", "any"].includes(match) || wanted.length > 20 || (batch && !/^[\w-]{1,64}$/.test(batch)) || (gallery && !/^[\w-]{1,64}$/.test(gallery))) throw new HttpError(400, "Filtro non valido");
   const where = [status === "library" ? "status<>'trash'" : "status=?1", "(?2='all' OR origin=?2)",
     `(?3='[]' OR id IN (SELECT it.image_id FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE t.label IN (SELECT value FROM json_each(?3))
       GROUP BY it.image_id HAVING count(DISTINCT t.label)>=CASE ?5 WHEN 'any' THEN 1 ELSE json_array_length(?3) END))`,
     "(?4='' OR id LIKE '%'||?4||'%' COLLATE NOCASE OR title LIKE '%'||?4||'%' COLLATE NOCASE OR description LIKE '%'||?4||'%' COLLATE NOCASE OR prompt LIKE '%'||?4||'%' COLLATE NOCASE)", "(?6='' OR generation_batch=?6)",
     `(?7=0 OR (SELECT count(DISTINCT t.category) FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id
-      AND t.category IN ('genre','color','medium'))<3)`, `(?8=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, "(?9=0 OR (origin='REAL' AND real_description IS NULL))"].join(" AND ");
+      AND t.category IN ('genre','color','medium'))<3)`, `(?8=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, "(?9=0 OR (origin='REAL' AND real_description IS NULL))", "(?10='' OR (?10='unassigned' AND gallery_id IS NULL) OR gallery_id=?10)"].join(" AND ");
   await sweepRetired(env);
   const rows = (await env.DB.prepare(`SELECT * FROM images WHERE ${where} ORDER BY updated_at DESC,id LIMIT 500`)
-    .bind(status, originFilter, JSON.stringify(wanted), q, match, batch, incomplete, url.searchParams.get("redo_copy") === "1" ? 1 : 0, url.searchParams.get("undescribed") === "1" ? 1 : 0).all<Row>()).results;
+    .bind(status, originFilter, JSON.stringify(wanted), q, match, batch, incomplete, url.searchParams.get("redo_copy") === "1" ? 1 : 0, url.searchParams.get("undescribed") === "1" ? 1 : 0, gallery).all<Row>()).results;
   const ids = rows.map(r => r.id), [tags, more] = await Promise.all([tagRowsOf(env, ids), extras(env, ids)]);
   const counts = (await env.DB.prepare("SELECT status,origin,count(*) AS n FROM images GROUP BY status,origin").all<{ status: string; origin: string; n: number }>()).results;
   return json({ items: rows.map(r => view(r, tags.get(r.id) || [], more.get(r.id))), counts });
@@ -442,6 +457,8 @@ async function regenerate(env: Env, row: Row, data: Record<string, unknown>) {
 export async function library(request: Request, env: Env, path: string): Promise<Response> {
   const url = new URL(request.url);
   if (path === base && request.method === "GET") return list(env, url);
+  if (path === base + "/galleries" || path.startsWith(base + "/galleries/"))
+    return json(await galleryRoute(env, request.method, path.slice((base + "/galleries").length).replace(/^\//, ""), ["POST", "PATCH"].includes(request.method) ? await body(request, 40_000) : {}));
   if (path === base + "/tags" || path.startsWith(base + "/tags/")) return vocabulary(request, env, path);
   const candidate = /^\/api\/admin\/library\/slop\/batches\/([\w-]{1,64})\/candidate\/([\w-]{1,64})$/.exec(path);
   if (candidate && request.method === "GET") return candidateFile(env, candidate[1], candidate[2]);
@@ -455,16 +472,19 @@ export async function library(request: Request, env: Env, path: string): Promise
   if (path.startsWith(base + "/slop/")) return json(await slopRoute(env, request.method, path.slice((base + "/slop/").length), request.method === "POST" || request.method === "PUT" ? await body(request, 320_000) : {}));
   if (path === base + "/upload" && request.method === "POST") {
     const params = url.searchParams;
-    return json(await create(env, { origin: origin(params.get("origin")), title: params.get("title") || "", bytes: await request.arrayBuffer(),
+    const kind = origin(params.get("origin"));
+    if (kind !== "REAL" && params.has("gallery_id")) throw new HttpError(400, "La galleria di una SLOP proviene dal batch");
+    return json(await create(env, { origin: kind, gallery_id: await galleryId(env, params.get("gallery_id")), title: params.get("title") || "", bytes: await request.arrayBuffer(),
       description: params.get("description") || "", prompt: params.get("prompt") || "", model: params.get("model") || "" }), 201);
   }
   if (path === base + "/commons" && request.method === "POST") {
     const data = await body(request, 2000);
-    if (Object.keys(data).some(key => key !== "url") || typeof data.url !== "string") throw new HttpError(400, "Link Commons richiesto");
+    if (Object.keys(data).some(key => !["url", "gallery_id"].includes(key)) || typeof data.url !== "string") throw new HttpError(400, "Link Commons richiesto");
+    const gallery = await galleryId(env, data.gallery_id);
     const file = await commonsFile(data.url);
     if (isNoDerivatives(file.license_name, file.license_url))
       throw new HttpError(409, `Licenza ${file.license_name || "senza opere derivate"}: le foto ND sono escluse dal gioco, perché la copia di gioco le ritaglia`);
-    return json(await create(env, { origin: "REAL", bytes: file.bytes, title: file.title.replace(/^File:/, "").replace(/\.[a-z]+$/i, "").slice(0, 200),
+    return json(await create(env, { origin: "REAL", gallery_id: gallery, bytes: file.bytes, title: file.title.replace(/^File:/, "").replace(/\.[a-z]+$/i, "").slice(0, 200),
       description: file.description.slice(0, 1000), source_url: file.source_url, author: file.author.slice(0, 300),
       license_name: file.license_name, license_url: /^https:\/\//.test(file.license_url) ? file.license_url : "" }), 201);
   }
@@ -482,11 +502,14 @@ export async function library(request: Request, env: Env, path: string): Promise
     if (!ids.length || ids.length > 500) throw new HttpError(400, "Selezione vuota o oltre 500 immagini");
     const action = String(data.action);
     if (action === "delete") return json(await destroy(env, ids));
+    const gallery = action === "gallery" ? await galleryId(env, data.gallery_id) : null;
+    if (action === "gallery" && !("gallery_id" in data)) throw new HttpError(400, "Galleria richiesta");
     const done: string[] = [], failed: { id: string; error: string }[] = [];
     for (const target of ids) {
       try {
         const row = await find(env, target);
-        if (action === "tag-add" || action === "tag-remove") {
+        if (action === "gallery") await assignGallery(env, row, gallery);
+        else if (action === "tag-add" || action === "tag-remove") {
           const current = (await tagsOf(env, [row.id])).get(row.id) || [], change = await resolveAliases(env, labels(data.tags));
           const wanted = action === "tag-add" ? [...new Set([...current, ...change])] : current.filter(t => !change.includes(t));
           await edit(env, row, { revision: row.revision, tags: wanted,

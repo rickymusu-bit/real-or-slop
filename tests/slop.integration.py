@@ -27,11 +27,12 @@ try:
     assert len(control())==2 and 'Editorial context' in control()[0]['body']['prompt']
     assert 'tags' not in manual_image['generation']['slot'] and 'title' not in manual_image
     historical=real(described=False);sources.append(historical['id']);control([])
-    assert call('batches',{'sources':[historical['id']]})[0]==409
+    assert historic_draft([historical['id']])[0]==409
     assert control()==[]
     # A private manual description does not alter Commons or tags.
     code,changed=call('/'+historical['id'],{'revision':historical['revision'],'real_description':DESCRIPTION},method='PATCH',library=True)
     assert code==200 and changed['tags']==historical['tags'] and changed['description']=='Original Commons text',changed
+    assert call('batches',{'sources':[changed['id']]})[0]==409 and control()==[]
     b=batch(changed);[prompt]=control()
     assert prompt['path']=='/v1/responses' and prompt['body']['text']['format']['name']=='slop_brief'
     # Real buildings: named or invented, never reproduced faithfully (owner decision of 2026-11-16).
@@ -208,7 +209,7 @@ try:
     code,state=call('/contexts',library=True);prompt_part=next(p for p in state['parts'] if p['part']=='slop_prompt')
     assert prompt_part['outdated'] and prompt_part['proposed'],prompt_part
     source=real();sources.append(source['id']);control([])
-    code,blocked=call('batches',{'sources':[source['id']]});assert code==200,blocked
+    code,blocked=historic_draft([source['id']]);assert code==200,blocked
     code,result=call('batches/'+blocked['id']+'/prompts',{'confirm':True});assert code==409 and 'gemelle' in result['error'],result
     assert control()==[] and sql("SELECT count(*) AS n FROM paid_calls WHERE process_id IN (SELECT id FROM slop_processes WHERE batch_id='"+blocked['id']+"')")[0]['n']==0
     # Restoring keeps the old pipeline; saving the proposal unblocks.
@@ -254,9 +255,9 @@ try:
 
     # A mother is occupied while its accepted child exists, including trash and restoration.
     predecessor=historical_child
-    assert call('batches',{'sources':[historical['id']]})[0]==409
+    assert historic_draft([historical['id']])[0]==409
     call('/'+predecessor+'/trash',{},library=True)
-    assert call('batches',{'sources':[historical['id']]})[0]==409
+    assert historic_draft([historical['id']])[0]==409
     assert call('/'+predecessor+'/restore',{},library=True)[0]==200
     remove([predecessor]);images.remove(predecessor)
     replacement=batch(historical)
@@ -264,7 +265,7 @@ try:
     # Two simultaneous drafts may reserve a REAL only once; the losing transaction creates no orphan process.
     source=real();sources.append(source['id']);control([])
     with concurrent.futures.ThreadPoolExecutor(2) as pool:
-        drafts=list(pool.map(lambda _:call('batches',{'sources':[source['id']]}),range(2)))
+        drafts=list(pool.map(lambda _:historic_draft([source['id']]),range(2)))
     assert sorted(code for code,_ in drafts)==[200,409],drafts
     assert sql("SELECT count(*) AS n FROM slop_reference_uses WHERE source_id='"+source['id']+"'")[0]['n']==1
     assert control()==[]
@@ -276,7 +277,7 @@ try:
     assert sql("SELECT status FROM paid_calls WHERE id='editorial-stale-call'")[0]['status']=='uncertain'
     # A brief request that died with the browser connection: after ten minutes the batch follows its processes again.
     three=[real()['id'] for _ in range(3)];sources.extend(three)
-    code,cut=call('batches',{'sources':three});assert code==200,cut
+    code,cut=historic_draft(three);assert code==200,cut
     control([]);assert call('batches/'+cut['id']+'/prompts',{'confirm':True,'index':0})[0]==200
     second=cut['processes'][1]['id']
     sql(f"UPDATE slop_batches SET prompts_status='running',updated_at='2000-01-01' WHERE id='{cut['id']}'; UPDATE slop_processes SET state='prompting',updated_at='2000-01-01' WHERE id='{second}'; INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,process_id) VALUES('editorial-cut-call','prompts','fake','pending','2000-01-01','2000-01-01','{second}')")
@@ -293,7 +294,7 @@ try:
             __import__('time').sleep(.25)
         raise AssertionError('the batch is still running on the server')
     source=real();sources.append(source['id'])
-    code,run=call('batches',{'sources':[source['id']]});assert code==200,run
+    code,run=historic_draft([source['id']]);assert code==200,run
     control([])
     assert call('batches/'+run['id']+'/run',{'confirm':True,'phase':'images'})[0]==409  # briefs first
     assert call('batches/'+run['id']+'/run',{'phase':'briefs'})[0]==400  # the owner's confirmation
@@ -309,7 +310,7 @@ try:
     assert [r['path'] for r in control()]==['/v1/images/generations','/v1/responses']*2+['/v1/responses']  # 2 attempts, then the tags
     # «Interrompi»: the step in progress ends, no further paid step starts.
     source=real();sources.append(source['id'])
-    code,halt=call('batches',{'sources':[source['id']]});control([])
+    code,halt=historic_draft([source['id']]);control([])
     call('batches/'+halt['id']+'/run',{'confirm':True,'phase':'briefs'});halt=wait_run(halt)
     control([{'delay':2},{'evaluation':'retry_same_prompt'}]+[None,{'evaluation':'retry_same_prompt'}]*4)
     code,halt=call('batches/'+halt['id']+'/run',{'confirm':True,'phase':'images'});assert code==200,halt

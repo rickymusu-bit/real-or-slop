@@ -1,9 +1,6 @@
-# Contenuti delle SLOP e trasparenza — specifica 1.2.0
+# Contenuti delle SLOP e trasparenza — specifica 1.3.0
 
-Stato: vigente, in produzione con l'app 1.25.0 (2026-11-14). Aggiornata: 2026-11-14T18:00:00Z. La 1.2.0
-dice dove i testi del sito citano il trattamento, compresi i Termini (richiesta dell'owner del 2026-11-14). La 1.1.0 aggiunge i generi
-che implicano un reato e il trattamento delle SLOP nella trasparenza verso i giocatori. La 1.0.0 era la versione consolidata (riordino della documentazione dell'owner del 2026-11-14): riprende
-la sezione 11 di `libreria-immagini.v1.8.0` e la sezione 6 di `anteprima-descrizione.v1.2.0`, che restano nella cronologia git.
+Stato: implementata nel ramo 1.40.0, da rilasciare. Aggiornata: 2026-11-18T18:13:41Z.
 Valgono per ogni modello che produce contenuti del sito e per la revisione dell'owner.
 
 ## 1. Che cosa può comparire in una SLOP
@@ -27,11 +24,12 @@ Valgono per ogni modello che produce contenuti del sito e per la revisione dell'
 
 ## 2. Come si applicano
 
-- Le regole arrivano al **modello di testo** attraverso il contesto «Prompt per le SLOP» (specifica `libreria-immagini`, sezione 7).
+- Le regole arrivano al **modello di testo** attraverso le istruzioni dei prompt e della valutazione (specifica `generazione-slop`).
   Il generatore di immagini riceve solo il testo del prompt e applica anche le proprie regole d'uso, che possono rifiutare richieste
   ammesse qui.
-- Nel batch automatico nessuno rilegge i prompt prima della generazione: il controllo finale è la **revisione dell'owner** di ogni
-  immagine, dove si intercetta anche ciò che il generatore aggiunge di suo (un volto simile a una persona reale, una scritta).
+- Nel batch di galleria l’owner legge le premesse e può aprire i prompt prima di confermare la generazione. Le indicazioni possono
+  richiedere luoghi o edifici riconoscibili e un fatto inventato significativo per un evento, trattato come ipotesi editoriale.
+  L’owner rivede anche le immagini generate, compresi elementi aggiunti dal generatore come volti e scritte.
 - Il modello che scrive i tag non sa che esistono immagini generate: la base comune del contesto non ne parla.
 - Le REAL di Commons possono ritrarre persone vive: sono foto autentiche. Le valuta l'owner al caricamento.
 

@@ -11,3 +11,16 @@
 .slop-auto-references strong { display:block; overflow-wrap:anywhere; margin:8px 0; }
 .library .slop-auto-photo { display:block; width:100%; padding:0; overflow:hidden; border-radius:8px; }
 .slop-auto-photo img { display:block; width:100%; aspect-ratio:4 / 5; object-fit:contain; }
+
+.slop-auto-gallery { display:grid; gap:.35rem; max-inline-size:30rem; }
+.slop-auto-gallery select { min-inline-size:0; }
+.slop-auto-proposals { grid-template-columns:minmax(0,1fr); max-inline-size:48rem; }
+.slop-auto-proposals li {
+  display:grid;
+  grid-template-columns:minmax(5rem, min(24%, 9rem)) minmax(0, 1fr);
+  align-items:start;
+  gap:clamp(.75rem, 2vw, 1.5rem);
+  overflow-wrap:anywhere;
+}
+.slop-auto-proposals .slop-auto-photo img { aspect-ratio:1; object-fit:cover; }
+.slop-auto-proposals [data-premise] { color:var(--text); font-weight:600; }

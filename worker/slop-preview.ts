@@ -6,6 +6,7 @@ import {MAX_BATCH} from "../shared/slop-proposals";
 export const PREVIEW_TTL_MS = 15 * 60_000;
 export interface PreviewSelection {
   version: 1; id: string; expires: number;
+  gallery?: {id: string; revision: number};
   sources: {id: string; revision: number}[];
   config: Awaited<ReturnType<typeof loopSnapshot>>;
 }
@@ -29,6 +30,7 @@ export async function readPreview(env: Env, token: unknown, at = Date.now()): Pr
     if (!await crypto.subtle.verify("HMAC", await key(env), decode(signature), new TextEncoder().encode(payload))) throw Error();
     selection = JSON.parse(new TextDecoder("utf-8", {fatal:true, ignoreBOM:false}).decode(decode(payload))) as PreviewSelection;
     if (selection.version !== 1 || !/^[\w-]{1,64}$/.test(selection.id) || !Number.isInteger(selection.expires) ||
+      (selection.gallery !== undefined && (!selection.gallery || !/^[\w-]{1,64}$/.test(selection.gallery.id) || !Number.isInteger(selection.gallery.revision) || selection.gallery.revision < 0)) ||
       !Array.isArray(selection.sources) || !selection.sources.length || selection.sources.length > MAX_BATCH ||
       selection.sources.some(s => !s || !/^[\w-]{1,64}$/.test(s.id) || !Number.isInteger(s.revision) || s.revision < 0) ||
       new Set(selection.sources.map(s => s.id)).size !== selection.sources.length ||

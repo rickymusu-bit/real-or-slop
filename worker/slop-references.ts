@@ -1,6 +1,6 @@
 /** Private REAL allocation and catalogue counts. Snapshot metrics keep copies independent of the reference. */
-import { HttpError, type Env } from "./core";
-import { type Tag, type InspirationItem } from "../shared/slop-proposals";
+import { type Env } from "./core";
+import { type Tag } from "../shared/slop-proposals";
 import type { Category } from "../shared/tag-categories";
 
 const DONE = "status IN ('approved','published')";
@@ -26,16 +26,6 @@ export async function catalogCounts(env: Env) {
     coalesce(sum(origin='REAL' AND status IN ('approved','published') AND real_description IS NOT NULL AND NOT EXISTS(SELECT 1 FROM slop_reference_uses u WHERE u.source_id=images.id)),0) AS available
     FROM images`).first<{ real: number; slop: number; pending: number; available: number }>();
   return row || { real: 0, slop: 0, pending: 0, available: 0 };
-}
-/** Independent SLOP catalogue and anonymous editorial inputs. */
-export async function inspirationItems(env: Env, ids: readonly string[], random: () => number = Math.random): Promise<InspirationItem[]> {
-  void random;
-  const all = await realRows(env), byId = new Map(all.map(r => [r.id, r]));
-  return ids.map(sourceId => {
-    const source = byId.get(sourceId);
-    if (!source || !source.available) throw new HttpError(409, "Una REAL scelta è già occupata o non è più approvata o pubblicata");
-    return { source: source.id, title: source.title, tags: source.tags };
-  });
 }
 /** Tags by category, as the text model reads them. */
 export const byCategory = (tags: readonly Tag[]) => {
