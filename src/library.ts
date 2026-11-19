@@ -199,12 +199,18 @@ export async function showLibrary() {
   const galleryEditor = mountGalleryEditor(galleryEditorDialog, call, async id => {
     await refreshGalleries();
     savedGallery = id;
+  }, id => {
+    if (galleryList) showGalleries({ ...galleryList, galleries: galleries().filter(g => g.id !== id) });
+    realWizards.delete(id);
+    slopStudios.delete(id);
+    if (galleryDialog.open) galleryDialog.close();
+    $("[data-gallery-create]").focus({ preventScroll: true });
+    void Promise.allSettled([autoBox.refresh(), refreshTags()]);
   });
   galleryEditorDialog.addEventListener("close", () => {
     if (savedGallery) { const id = savedGallery; savedGallery = ""; void openGallery(id).catch(report); }
   });
-  const refreshGalleries = async () => {
-    const list = await call<GalleryList>("/galleries");
+  const showGalleries = (list: GalleryList) => {
     galleryList = list;
     const cards = $("#gallery-cards"), focused = (document.activeElement as HTMLElement | null)?.dataset.galleryOpen;
     cards.innerHTML = galleryCards(list.galleries);
@@ -213,6 +219,7 @@ export async function showLibrary() {
     const current = list.galleries.find(g => g.id === filter.gallery);
     if (current) $("#gallery-title").textContent = current.title;
   };
+  const refreshGalleries = async () => { showGalleries(await call<GalleryList>("/galleries")); };
   const report = (error: unknown) => message(error instanceof Error ? error.message : String(error));
 
   const setGenerationMode = (mode: string) => {

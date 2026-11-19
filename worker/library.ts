@@ -1,4 +1,5 @@
 import { galleryId, galleryRoute } from "./galleries";
+import { removeGallery, sweepGalleryFiles } from "./gallery-removal";
 /** Image library of the dashboard (spec `libreria-immagini`, `database-immagini`): states and transitions, edits with
  * optimistic revision, tags with categories and aliases, vocabulary, game copies with their crop, trash and deletion of every row
  * and file, bulk actions, statistics per image, distribution, Commons acquisition, regeneration of a SLOP, settings and contexts. */
@@ -360,8 +361,13 @@ export async function transition(env: Env, row: Row, action: string, data: Recor
     const file = await env.QUARANTINE.get(row.copy_key);
     if (!file) throw new HttpError(409, "Copia di gioco mancante");
     await env.IMAGES.put(row.copy_key, await file.arrayBuffer(), { httpMetadata: { contentType: GAME_COPY.mime } });
-    await env.DB.prepare("UPDATE images SET status='published',published_at=?,revision=revision+1,updated_at=? WHERE id=? AND status='approved'")
+    const published = await env.DB.prepare("UPDATE images SET status='published',published_at=?,revision=revision+1,updated_at=? WHERE id=? AND status='approved'")
       .bind(stamp, stamp, row.id).run();
+    if (!published.meta.changes && !await env.DB.prepare("SELECT 1 FROM images WHERE id=?").bind(row.id).first()) {
+      await env.DB.prepare("INSERT INTO gallery_files_to_delete(bucket,object_key) VALUES('game',?)").bind(row.copy_key).run();
+      await sweepGalleryFiles(env).catch(error => console.error("gallery file cleanup", error));
+      throw new HttpError(404, "Immagine inesistente");
+    }
     await reviveCopy(env, row.copy_key);
   } else if (action === "withdraw") {
     if (row.status !== "published") throw new HttpError(409, "L'immagine non è pubblicata");
@@ -473,6 +479,8 @@ async function regenerate(env: Env, row: Row, data: Record<string, unknown>) {
 export async function library(request: Request, env: Env, path: string): Promise<Response> {
   const url = new URL(request.url);
   if (path === base && request.method === "GET") return list(env, url);
+  const gallery = /^\/api\/admin\/library\/galleries\/([\w-]{1,64})$/.exec(path);
+  if (gallery && request.method === "DELETE") return json(await removeGallery(env, gallery[1], await body(request, 1000)));
   if (path === base + "/galleries" || path.startsWith(base + "/galleries/"))
     return json(await galleryRoute(env, request.method, path.slice((base + "/galleries").length).replace(/^\//, ""), ["POST", "PATCH"].includes(request.method) ? await body(request, 40_000) : {}));
   if (path === base + "/tags" || path.startsWith(base + "/tags/")) return vocabulary(request, env, path);

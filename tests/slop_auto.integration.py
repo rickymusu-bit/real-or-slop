@@ -174,6 +174,9 @@ try:
     for _ in range(100):
         if control():break
         time.sleep(.05)
+    assert control()
+    status, deletion = call('/galleries/'+gallery['id'],{'confirm':True,'revision':gallery['revision']},method='DELETE',library=True)
+    assert status==409 and 'generazione in corso' in deletion['error'],deletion
     assert control() and call('auto/cancel',{'batch':pending})[0]==200
     time.sleep(1.3)
     assert len(control())==1 and image_count()==0

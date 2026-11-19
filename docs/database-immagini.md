@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 8.0.0
+# Foto e gallerie — specifica 8.1.0
 
-Stato: implementata nel ramo 1.43.0, da rilasciare. Aggiornata: 2026-11-19T15:59:47Z.
+Stato: implementata nel ramo 1.44.0, da rilasciare. Aggiornata: 2026-11-19T17:27:23Z.
 
 ## 1. Decisioni dell'owner
 
@@ -44,6 +44,13 @@ per titolo, descrizione e Indicazioni SLOP. Dalla finestra della galleria, «Mod
 al modello dopo aver confermato una chiamata. L’owner può rivedere e salvare il testo proposto. Dal dettaglio e dalla selezione multipla si possono spostare le REAL in
 un’altra galleria, anche quando sono pubblicate o nel cestino. Le immagini conservano il proprio stato. Il dettaglio delle SLOP
 mostra la galleria ereditata dal batch.
+
+- **Elimina galleria** (decisione dell’owner del 2026-11-19). Il pulsante è nel modulo «Modifica galleria». La conferma nomina
+  la galleria ed elenca foto REAL e SLOP, cestino e generazioni. L’eliminazione definitiva cancella queste righe insieme dal D1.
+  Gli oggetti privati, le copie di gioco e le candidate sono registrati in una coda nella stessa operazione. Il Worker li elimina
+  da R2 e la manutenzione ritenta quelli rimasti. Le altre gallerie restano accessibili.
+- Se una foto appartiene a una partita in corso o la galleria ha una generazione in corso, l’operazione viene respinta e si può
+  riprovare al termine. Il cestino si apre da «Filtri e ordinamento» nella finestra della galleria.
 
 ## 3. Dettaglio
 
@@ -89,6 +96,6 @@ le statistiche coprono al massimo un anno.
 `GET /api/admin/library?status=&origin=&tags=a,b&match=all|any&batch=` (ogni immagine con `stats`, `in_play`, `generation`),
 `GET /api/admin/library/distribution`, `GET /:id` e `GET /:id/{file,original}`, `PATCH /:id` con `revision`,
 `POST /:id/{approve,publish,withdraw,trash,restore,analyze,regenerate,copy}` («Modifica» usa `withdraw`), `POST /bulk`,
-`POST /trash/empty?gallery=<id>`, `DELETE /:id`. Con `gallery`, `offset`, `sort` e `order` la lista restituisce una pagina
+`POST /trash/empty?gallery=<id>`, `DELETE /:id`, `DELETE /galleries/:id` con `confirm: true` e `revision`. Con `gallery`, `offset`, `sort` e `order` la lista restituisce una pagina
 di 72 foto e il prossimo offset (`next`, nullo all’ultima pagina). I conteggi sono per galleria quando richiesta. Le eliminazioni rispondono anche con `postponed`.
 

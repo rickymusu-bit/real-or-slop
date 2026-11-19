@@ -20,7 +20,8 @@ export function galleryCards(galleries: GalleryList["galleries"]) {
     <small>${g.photos} foto</small></span></button></li>`).join("")}</ul>`;
 }
 
-export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path: string, init?: RequestInit) => Promise<T>, changed: (id: string) => Promise<void>) {
+export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path: string, init?: RequestInit) => Promise<T>,
+  changed: (id: string) => Promise<void>, removed: (id: string) => void) {
   const root = dialog.querySelector<HTMLElement>("[data-gallery-form]")!;
   let list: GalleryList | null = null, selected = "", busy = false;
   const render = () => {
@@ -36,6 +37,7 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
         <div class="library-inline"><button class="primary" type="submit">${gallery ? "Salva modifiche" : "Crea galleria"}</button>
         ${gallery && list?.paid_calls ? '<button type="button" data-gallery-suggest>Proponi indicazioni con IA</button>' : ""}</div>
       </form>
+      ${gallery ? '<div class="gallery-remove"><button type="button" class="danger" data-gallery-remove>Elimina galleria</button></div>' : ""}
       <p class="hint" role="status" id="gallery-message"></p>`;
   };
   const message = (text: string) => { root.querySelector("#gallery-message")!.textContent = text; };
@@ -79,10 +81,26 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
     finally { setBusy(false); }
   });
   root.addEventListener("click", async event => {
-    if (!(event.target as HTMLElement).closest("[data-gallery-suggest]") || busy || !list) return;
+    const button = (event.target as HTMLElement).closest("[data-gallery-remove], [data-gallery-suggest]");
+    if (!button || busy || !list) return;
     const gallery = list.galleries.find(g => g.id === selected);
+    if (!gallery) return;
+    if (button.hasAttribute("data-gallery-remove")) {
+      if (!window.confirm(`Eliminare definitivamente «${gallery.title}»? Verranno eliminate tutte le sue foto REAL e SLOP, anche quelle nel cestino, e le sue generazioni.`)) return;
+      setBusy(true);
+      message("Eliminazione in corso…");
+      try {
+        await request(`/galleries/${encodeURIComponent(gallery.id)}`, {
+          method: "DELETE", body: JSON.stringify({confirm: true, revision: gallery.revision}),
+        });
+        dialog.close();
+        removed(gallery.id);
+      } catch (error) { report(error); }
+      finally { setBusy(false); }
+      return;
+    }
     const form = root.querySelector("form")!;
-    if (!gallery || !form.reportValidity()) return;
+    if (!form.reportValidity()) return;
     if (!window.confirm(`Chiedere una proposta a ${list.text_model}? Massimo una chiamata. Potrai rivedere le indicazioni prima di salvarle.`)) return;
     const {title, description} = fields(form);
     setBusy(true);

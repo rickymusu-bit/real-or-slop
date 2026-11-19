@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 34.0.0, aggiornata il 2026-11-19T15:59:47Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 34.1.0, aggiornata il 2026-11-19T17:27:23Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,8 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.43.0:** dashboard aperta su Gallerie con anteprime e creazione. Ogni galleria apre la griglia e i wizard di caricamento
+- **Ramo 1.44.0:** eliminazione definitiva da «Modifica galleria» con conferma, rimozione atomica dal catalogo e coda R2.
+- **Integrata in main la 1.43.0 (PR #159):** dashboard aperta su Gallerie con anteprime e creazione. Ogni galleria apre la griglia e i wizard di caricamento
   REAL da ricerca Commons e di generazione SLOP. Distribuzione in Statistiche.
 - **Integrata in main la 1.42.0 (PR #158, issue #157):** gallerie obbligatorie, estrazione casuale per galleria e conferme separate per
   proposte e immagini. Migrazioni 0060 e 0061. La 0061 azzera il D1 attuale al rilascio su decisione dell’owner e rimuove
@@ -70,9 +71,9 @@ nome.
 | Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 8.1.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.3.1 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.2.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 4.0.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 4.1.0 |
 | SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 10.1.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 8.0.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 8.1.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.1.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.3.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
@@ -121,7 +122,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 **Worker** Cloudflare (`worker/`, ingresso `index.ts`):
 - `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera).
 - Libreria `library.ts` (stati, vocabolario, alias, categorie, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
-  analisi `analysis.ts`, gallerie `galleries.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
+  analisi `analysis.ts`, gallerie `galleries.ts`, cancellazione di gallerie e file `gallery-removal.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
 - SLOP: studio `slop.ts`, conteggi e categorie `slop-references.ts`, generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
   `slop-runner.ts`, batch automatici `slop-auto.ts`, preparazione e conferma delle proposte `slop-gallery.ts`, selezioni firmate `slop-preview.ts`.
@@ -172,6 +173,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0059 | ritira dal gioco le REAL legate a SLOP e conserva le copie delle partite in corso, regola sostituita dalla 0061 |
 | 0060 | gallerie, premesse, riferimenti temporanei e contesto delle proposte |
 | 0061 | azzera i dati applicativi del D1, elimina il registro madre–figlia e rende obbligatoria la galleria |
+| 0062 | rimuove i contenuti insieme alla galleria e registra i file R2 da eliminare |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

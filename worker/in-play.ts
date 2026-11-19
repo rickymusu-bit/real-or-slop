@@ -6,7 +6,7 @@ import { numberSetting } from "./app-settings";
 
 
 /** Copy keys and images used by games in progress. */
-const IN_PLAY = `SELECT r.image_id,r.copy_key,r.session_id AS game FROM game_rounds r JOIN game_sessions s ON s.id=r.session_id
+export const IN_PLAY = `SELECT r.image_id,r.copy_key,r.session_id AS game FROM game_rounds r JOIN game_sessions s ON s.id=r.session_id
   WHERE s.phase IN ('preparing','active') AND s.created_at>?1 AND r.copy_key IS NOT NULL`;
 /** Start of the window of open games: now minus the hours set in Settings. */
 export const since = async (env: Env) => Date.now() - (await numberSetting(env, "open_game_hours")) * 3_600_000;
