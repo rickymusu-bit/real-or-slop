@@ -57,9 +57,11 @@ with sync_playwright() as p:
         expect(page.locator('#gallery-workspace')).to_be_hidden()
         open_gallery(page, gallery_id)
         expect(page.locator('#gallery-title')).to_have_text('Test library_browser')
-        page.get_by_role('button', name='Carica REAL').click()
+        page.get_by_role('link', name='Carica REAL').click()
+        expect(page).to_have_url(f'{base}/admin/gallerie/{gallery_id}/real')
+        expect(page.locator('#gallery-workspace')).to_have_count(0)
         expect(page.locator('#real-wizard .rw-steps li')).to_have_count(4)
-        page.locator('[data-gallery-pane=photos]').click()
+        page.locator('[data-gallery-return]').click()
         page.locator('.db-filter-panel summary').click()
         # No upload, copy filter, «Da Commons» or drop zone in the Database section any more.
         for gone in ('#library-files', '#library-copy-filter', '#library-commons-toggle', '#library-drop', '#library-redo-copy', '#library-undescribed', '#library-incomplete', '#library-group'):
@@ -103,7 +105,7 @@ with sync_playwright() as p:
         expect(page.locator(f'.library-open[aria-label^="Apri {name}-"], .library-open[data-open="{slop["id"]}"]').first).to_have_attribute('aria-label', f'Apri {slop_label}')
         mine = titles(); assert mine.index(slop_label) < mine.index(f'{name}-spare') < mine.index(f'{name}-rivoli'), mine  # ties: newest first
         page.reload()
-        open_gallery(page,gallery_id)
+        expect(page.locator('#gallery-workspace')).to_be_visible()
         page.locator('.db-filter-panel summary').click()
         expect(page.locator('#library-sort')).to_have_value('views'); expect(page.locator('#library-order')).to_have_value('asc')  # remembered
         page.locator('#library-sort').select_option('added'); page.locator('#library-order').select_option('desc')
@@ -259,7 +261,12 @@ with sync_playwright() as p:
         expect(page.locator('#library-message')).to_contain_text('2 aggiornate')
         expect(page.locator(f'.library-card:has([aria-label="Apri {name}-rivoli"])')).to_have_count(0)
         # The gallery window and both wizards fit on desktop and mobile.
-        page.locator('[data-gallery-pane=slop]').click()
+        page.get_by_role('link', name='Genera SLOP').click()
+        expect(page).to_have_url(f'{base}/admin/gallerie/{gallery_id}/slop')
+        expect(page.locator('#gallery-workspace')).to_have_count(0)
+        expect(page.locator('#wizard-gallery-name')).to_have_text('Test library_browser')
+        assert page.evaluate("""() => document.querySelector('#wizard-gallery-name').getBoundingClientRect().bottom
+            < document.querySelector('[aria-label="Modalità di generazione"]').getBoundingClientRect().top""")
         page.locator('[data-generation-mode=manual]').click()
         expect(page.locator('[data-manual=prompt]')).to_be_visible()
         expect(page.locator('[data-manual=tags]')).to_be_visible()
@@ -267,8 +274,11 @@ with sync_playwright() as p:
         expect(page.locator('#slop-auto-controls')).to_be_visible()
         expect(page.locator('#slop-manual')).to_be_hidden()
         expect(page.locator('[data-auto=start]')).to_have_count(0)
-        assert page.evaluate('document.querySelector("#gallery-workspace").getBoundingClientRect().right <= innerWidth + 1')
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
         page.screenshot(path=str(folder / f'{name}-workspace-slop.png'))
+        page.go_back()
+        expect(page).to_have_url(f'{base}/admin?gallery={gallery_id}')
+        expect(page.locator('#gallery-workspace')).to_be_visible()
         page.keyboard.press('Escape')
         expect(page.locator('#gallery-workspace')).to_be_hidden()
         for section in ('galleries', 'stats', 'settings'):

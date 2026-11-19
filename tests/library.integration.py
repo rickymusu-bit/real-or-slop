@@ -59,6 +59,10 @@ def patch(item, change):
 
 # Access
 assert call(API, auth=False)[0] == 401
+for wizard in ('real', 'slop'):
+    assert call(f'{base}/admin/gallerie/{gallery_id}/{wizard}', auth=False)[0] == 401
+assert call(f'{API}/galleries/{gallery_id}', auth=False)[0] == 401
+assert call(f'{API}/galleries/{gallery_id}')[1]['title'] == 'Test library'
 # Add a REAL photo: original kept as it is, game copy still missing.
 real_source = photo((200, 0, 0))
 status, real, _ = upload(real_source, title='Rue de Rivoli, 1968')

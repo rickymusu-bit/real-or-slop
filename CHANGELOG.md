@@ -1,7 +1,12 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-19T17:27:23Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-19T19:19:49Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.45.0 — 2026-11-19T19:19:49Z
+
+- «Carica REAL» e «Genera SLOP» aprono pagine dedicate nella stessa scheda, con spazio per i wizard e ritorno diretto alla galleria.
+- Le selezioni di Commons e le bozze del wizard restano associate alla galleria tra le navigazioni. Il collegamento al batch automatico e quello alla revisione aprono la destinazione corretta.
 
 ## 1.44.0 — 2026-11-19T17:27:23Z
 

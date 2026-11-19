@@ -86,6 +86,6 @@
 @media (max-width: 720px) {
   .gallery-workspace { width: 100%; height: 100dvh; margin: 0; border: 0; border-radius: 0; }
   .gallery-workspace-head, .gallery-workspace-scroll { padding-inline: 0.75rem; }
-  .gallery-actions button { font-size: 0.8rem; }
+  .gallery-actions :is(button, a) { font-size: 0.8rem; }
   .gallery-actions [data-gallery-edit] { margin-left: 0; }
 }

@@ -1,10 +1,11 @@
-# Dashboard e wizard REAL — specifica 4.1.0
+# Dashboard e wizard REAL — specifica 4.2.0
 
-Stato: implementata nel ramo 1.44.0, da rilasciare. Aggiornata: 2026-11-19T17:27:23Z.
+Stato: implementata nel ramo 1.45.0, da rilasciare. Aggiornata: 2026-11-19T19:19:49Z.
 
 ## 1. Decisioni dell'owner
 
 - All’apertura si vedono le Gallerie. La finestra di una galleria contiene le foto e apre i wizard REAL e SLOP (2026-11-19).
+- I wizard REAL e SLOP si aprono su indirizzi dedicati nella stessa scheda (2026-11-19).
 - La dashboard segnala il caricamento invece di restare vuota (2026-11-13).
 - Wizard REAL in quattro passi, con l'inquadratura dopo acquisizione e tag (2026-11-13).
 - Nella ricerca su Commons il tasto che svuota il campo sta in una casella separata alla fine del campo, perché non copra il testo; un
@@ -27,10 +28,14 @@ La finestra si chiude con × o Esc. Da «Modifica galleria» l’owner può camb
 «Elimina galleria». La conferma riguarda la galleria, tutte le sue foto compreso il cestino e le sue generazioni. Dopo l’eliminazione
 si torna all’elenco delle gallerie.
 
-«Carica REAL» apre i quattro passi nella galleria corrente. «Genera SLOP» apre le modalità manuale e automatica. Le bozze dei due wizard
-sono per galleria e «Foto della galleria» torna alla griglia. I batch automatici in corso hanno un collegamento in Gallerie e si gestiscono
-dalla galleria che li ha avviati. Statistiche contiene anche l’avviso sullo sbilanciamento e la distribuzione per tag. I comandi di
-Impostazioni restano nei rispettivi gruppi (specifica `statistiche-impostazioni`).
+«Carica REAL» apre `/admin/gallerie/<id>/real` e «Genera SLOP» apre `/admin/gallerie/<id>/slop` nella stessa scheda del browser.
+La pagina mostra il titolo della galleria e usa lo spazio disponibile per i quattro passi REAL o per le modalità SLOP. Si torna alla griglia
+con «Foto della galleria» o con Indietro del browser. L’indirizzo `/admin?gallery=<id>` riapre la finestra delle foto. Le selezioni
+REAL e le bozze dei due wizard si conservano per galleria nella sessione del browser.
+
+I batch automatici in corso hanno un collegamento alla pagina SLOP della galleria che li ha avviati. La revisione del batch apre la
+finestra delle foto con il filtro del batch già applicato. Statistiche include l’avviso sullo sbilanciamento e la distribuzione per tag.
+I comandi di Impostazioni restano nei rispettivi gruppi (specifica `statistiche-impostazioni`).
 
 Nelle eccezioni SLOP, «Accetta comunque il tentativo N» è disponibile per ogni candidata salvata e valutata, anche con difetti critici, minori o incertezze. La conferma elenca le segnalazioni e il massimo di una chiamata per i tag; annullare è gratuito. La scelta manuale è visibile nella revisione, separata dalla valutazione originale. Il processo deve essere concluso o sospeso; foto nuova, copia, approvazione e pubblicazione restano passaggi separati (decisione del 2026-11-17).
 

@@ -3,6 +3,7 @@
 import { setupGame, stopPlay } from "./play";
 import { privacyPage, termsPage } from "./legal";
 import { showLibrary } from "./library";
+import { showGalleryWizard } from "./gallery-wizard";
 import "./style.css";
 const root = document.querySelector<HTMLDivElement>("#app")!;
 /** The demo catalog is gone with the clean database: every published image is a real library image. */
@@ -49,6 +50,7 @@ function credits() {
 export async function render() {
   stopPlay();
   shell();
+  const wizard = /^\/admin\/gallerie\/([\w-]{1,64})\/(real|slop)$/.exec(location.pathname);
   if (location.pathname === "/") home();
   else if (location.pathname === "/informazioni") info();
   else if (location.pathname === "/crediti") credits();
@@ -57,20 +59,25 @@ export async function render() {
   else if (location.pathname === "/gioca") await setupGame();
   else if (["/allenamento", "/tempo", "/pvp"].includes(location.pathname)) { history.replaceState({}, "", "/gioca"); await setupGame(); }
   else if (location.pathname === "/admin") await showLibrary();
+  else if (wizard) await showGalleryWizard(content(), wizard[1], wizard[2] === "real" ? "real" : "slop");
   else
     content().innerHTML =
       '<section class="page"><h1>Pagina non trovata.</h1><a href="/">Torna all’inizio</a></section>';
 }
+const adminPath = (path: string) => path === "/admin" || path.startsWith("/admin/");
 document.addEventListener("click", (event) => {
   const a = (event.target as HTMLElement).closest<HTMLAnchorElement>(
     'a[href^="/"]',
   );
-  if (a && !a.target && !a.hasAttribute("download") && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+  if (a && !adminPath(a.pathname) && !adminPath(location.pathname)
+    && !a.target && !a.hasAttribute("download") && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
     event.preventDefault();
     history.pushState({}, "", a.href);
     void render().then(() => content().focus({ preventScroll: true }));
     window.scrollTo(0, 0);
   }
 });
-window.addEventListener("popstate", () => void render().then(() => content().focus({ preventScroll: true })));
+window.addEventListener("popstate", () => {
+  if (!adminPath(location.pathname)) void render().then(() => content().focus({ preventScroll: true }));
+});
 void render();

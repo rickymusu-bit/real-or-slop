@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 8.1.0
+# Foto e gallerie — specifica 8.2.0
 
-Stato: implementata nel ramo 1.44.0, da rilasciare. Aggiornata: 2026-11-19T17:27:23Z.
+Stato: implementata nel ramo 1.45.0, da rilasciare. Aggiornata: 2026-11-19T19:19:49Z.
 
 ## 1. Decisioni dell'owner
 
@@ -38,6 +38,8 @@ resta disponibile durante lo scorrimento.
   delle REAL), pubblica, ritira, aggiungi o togli un tag; nel cestino ripristina o elimina definitivamente.
 
 ### Gallerie
+
+Dalla finestra delle foto si aprono le pagine dedicate «Carica REAL» e «Genera SLOP». «Foto della galleria» riapre la finestra.
 
 La sezione «Gallerie» mostra fino a tre foto recenti e il conteggio fuori dal cestino per galleria. «Nuova galleria» apre il modulo
 per titolo, descrizione e Indicazioni SLOP. Dalla finestra della galleria, «Modifica galleria» permette anche di chiedere una proposta
@@ -96,6 +98,6 @@ le statistiche coprono al massimo un anno.
 `GET /api/admin/library?status=&origin=&tags=a,b&match=all|any&batch=` (ogni immagine con `stats`, `in_play`, `generation`),
 `GET /api/admin/library/distribution`, `GET /:id` e `GET /:id/{file,original}`, `PATCH /:id` con `revision`,
 `POST /:id/{approve,publish,withdraw,trash,restore,analyze,regenerate,copy}` («Modifica» usa `withdraw`), `POST /bulk`,
-`POST /trash/empty?gallery=<id>`, `DELETE /:id`, `DELETE /galleries/:id` con `confirm: true` e `revision`. Con `gallery`, `offset`, `sort` e `order` la lista restituisce una pagina
+`GET /galleries/:id`, `POST /trash/empty?gallery=<id>`, `DELETE /:id`, `DELETE /galleries/:id` con `confirm: true` e `revision`. Con `gallery`, `offset`, `sort` e `order` la lista restituisce una pagina
 di 72 foto e il prossimo offset (`next`, nullo all’ultima pagina). I conteggi sono per galleria quando richiesta. Le eliminazioni rispondono anche con `postponed`.
 

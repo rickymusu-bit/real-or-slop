@@ -56,11 +56,12 @@ try:
                 page.locator('[data-gallery-close]').click()
                 open_gallery(page,gallery_id)
                 expect(page.locator('[data-open="'+source['id']+'"]')).to_be_visible()
-                page.get_by_role('button',name='Genera SLOP').click()
+                page.get_by_role('link',name='Genera SLOP').click()
                 page.locator('[data-generation-mode=automatic]').click()
                 expect(page.locator('[data-auto=preview]')).to_be_disabled()
                 expect(page.locator('#slop-auto-controls')).to_contain_text('Salva le Indicazioni SLOP')
 
+                page.locator('[data-gallery-return]').click()
                 page.locator('[data-gallery-edit]').click()
                 form.get_by_role('button',name='Proponi indicazioni con IA').click()
                 expect(form.get_by_label('Indicazioni SLOP')).to_have_value(re.compile('conserva la piazza'))
@@ -71,7 +72,7 @@ try:
                 assert 'Massimo una chiamata' in confirmations[0]
                 control([])
 
-                page.get_by_role('button',name='Genera SLOP').click()
+                page.get_by_role('link',name='Genera SLOP').click()
                 expect(page.locator('[data-auto=preview]')).to_be_enabled()
                 page.locator('#slop-auto-size').fill('2')
                 page.locator('[data-auto=preview]').click()
@@ -98,13 +99,16 @@ try:
                 page.locator('summary').filter(has_text='Prompt inglese').click()
                 expect(page.get_by_text('A plausible invented vintage bus',exact=False)).to_be_visible()
                 page.screenshot(path=str(folder/(name+'-setup.png')),full_page=True)
-                page.reload()  # pending review survives closing the dashboard and is scoped to its gallery
+                page.reload()  # the dedicated URL reopens the pending review
+                expect(page.locator('[data-premise]')).to_contain_text('bus')
+                page.goto(BASE+'/admin')
                 open_gallery(page,old_gallery['id'])
-                page.get_by_role('button',name='Genera SLOP').click()
+                page.get_by_role('link',name='Genera SLOP').click()
                 expect(page.locator('[data-premise]')).to_have_count(0)
                 expect(page.locator('#slop-auto-controls')).to_contain_text(title)
                 page.locator('[data-auto=open-gallery]').click()
-                expect(page.locator('#gallery-title')).to_have_text(title)
+                expect(page).to_have_url(f'{BASE}/admin/gallerie/{gallery_id}/slop?mode=automatic')
+                expect(page.locator('#wizard-gallery-name')).to_have_text(title)
                 expect(page.locator('[data-premise]')).to_contain_text('bus')
                 assert len(control())==1
                 control([{'delay':1.5}] if name=='desktop' else [])
@@ -114,7 +118,7 @@ try:
                         if any(r['path']=='/v1/images/generations' for r in control()):break
                         time.sleep(.05)
                     else:raise AssertionError('generation did not start')
-                    page.reload()
+                    page.goto(BASE+'/admin')
                     page.locator('#gallery-active-batch').click()
                 expect(page.locator('[data-auto=review]')).to_be_visible(timeout=30000)
                 assert len(control())==3,control()
@@ -123,6 +127,7 @@ try:
                 generated=[i['id'] for i in auto['batch']['images']];assert len(generated)==1
                 assert call('/'+generated[0],library=True)[1]['gallery_id']==gallery_id
                 page.locator('[data-auto=review]').click()
+                expect(page).to_have_url(f'{BASE}/admin?gallery={gallery_id}&batch={auto["batch"]["id"]}')
                 expect(page.locator('[data-open="'+generated[0]+'"]')).to_be_visible()
                 assert len(control())==3
                 page.screenshot(path=str(folder/(name+'-review.png')),full_page=True)

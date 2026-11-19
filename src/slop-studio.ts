@@ -33,6 +33,16 @@ export function mountSlopStudio(root: HTMLElement, galleryId: string) {
   let state: State | null = null, batch: Batch | null = null, config: Config | null = null, page = 1, busy = false, notice = "", progress = "";
   const manual = {prompt: "", tags: "", required: "", preferred: "", flexible: "", exclusions: ""};
   const draftKey = DRAFT + ":" + galleryId;
+  const viewKey = draftKey + ":view";
+  type SavedView = {manual?: Partial<typeof manual>; expanded: string[]; evaluations: [string, boolean][]; page: number; batchId: string};
+  let savedView: SavedView | null = null;
+  try {
+    savedView = JSON.parse(sessionStorage.getItem(viewKey) || "null") as SavedView | null;
+    for (const key of Object.keys(manual) as (keyof typeof manual)[]) {
+      const value = savedView?.manual?.[key];
+      if (typeof value === "string") manual[key] = value;
+    }
+  } catch { /* private browsing */ }
   const scope = "?" + new URLSearchParams({gallery: galleryId});
   let batchId = sessionStorage.getItem(draftKey) ?? sessionStorage.getItem(DRAFT) ?? "", recent: {id: string; count: number}[] = [];
   const loadBatch = async () => {
@@ -87,16 +97,27 @@ export function mountSlopStudio(root: HTMLElement, galleryId: string) {
         `<div class="rw-actions">${p.attempts.filter(acceptable).map(a => `<button data-slop="accept-process" data-process="${escape(p.id)}" data-attempt="${escape(a.id)}">Accetta comunque il tentativo ${a.number}</button>`).join("")}` +
         `<button data-slop="close-process" data-process="${escape(p.id)}">Chiudi: ho visto</button></div></details>`).join("") + "</section>";
   };
+  const expandedAttention = () => [...root.querySelectorAll<HTMLDetailsElement>("details[data-attention][open]")].map(d => d.dataset.attention!);
+  const expandedEvaluations = () => [...root.querySelectorAll<HTMLDetailsElement>("details[data-evaluation]")].map(d => [d.dataset.evaluation!, d.open] as [string, boolean]);
+  window.addEventListener("pagehide", () => {
+    try {
+      sessionStorage.setItem(viewKey, JSON.stringify({manual, expanded: expandedAttention(), evaluations: expandedEvaluations(), page, batchId}));
+    } catch { /* private browsing */ }
+  });
+  let renderedPage = 1;
   const render = () => {
-    const expanded = [...root.querySelectorAll<HTMLDetailsElement>("details[data-attention][open]")].map(d => d.dataset.attention);
-    const evaluations = new Map([...root.querySelectorAll<HTMLDetailsElement>("details[data-evaluation]")].map(d => [d.dataset.evaluation, d.open]));
+    const expanded = savedView?.expanded || expandedAttention();
+    const evaluations = new Map(savedView?.evaluations || expandedEvaluations());
+    savedView = null;
     root.innerHTML = `<div class="rw slop">${attentionView()}<ol class="rw-steps">${["Prompt, tag e ancoraggi","Controlla il prompt","Generazione e valutazione","Revisione"].map((l,i) => `<li ${page===i+1?'aria-current="step"':""}>${i+1}. ${l}</li>`).join("")}</ol><p role="status" aria-live="polite">${escape(notice)}</p>` +
       (busy ? `<p role="status">${escape(progress || "Operazione in corso…")}</p>` : "") + [first, second, () => summary() + `<p role="status">${escape(progress)}</p>` + (working() ? '<p class="hint">La generazione continua sul server anche se chiudi questa pagina.</p><button data-slop="stop-run">Interrompi</button>' : ""), fourth][page-1]() + '</div>';
-    for (const d of root.querySelectorAll<HTMLDetailsElement>("details[data-attention]")) d.open = expanded.includes(d.dataset.attention);
+    for (const d of root.querySelectorAll<HTMLDetailsElement>("details[data-attention]")) d.open = expanded.includes(d.dataset.attention!);
     for (const d of root.querySelectorAll<HTMLDetailsElement>("details[data-evaluation]")) {
-      if (evaluations.has(d.dataset.evaluation)) d.open = evaluations.get(d.dataset.evaluation)!;
+      if (evaluations.has(d.dataset.evaluation!)) d.open = evaluations.get(d.dataset.evaluation!)!;
     }
     if (busy) root.querySelectorAll<HTMLButtonElement>("button:not([data-slop=stop-run])").forEach(b => b.disabled = true);
+    if (renderedPage !== page && root.getClientRects().length) root.querySelector(".rw-steps")?.scrollIntoView({block: "start"});
+    renderedPage = page;
   };
   const refresh = async (id?: string) => {
     if (busy) return;
@@ -113,7 +134,7 @@ export function mountSlopStudio(root: HTMLElement, galleryId: string) {
       recent = history.batches;
       const resume = !batch || id;
       await loadBatch();
-      if (batch && resume) page = working() ? 3 : 4;
+      if (batch && resume) page = working() ? 3 : savedView?.batchId === batchId && savedView.page === 2 ? 2 : 4;
     } catch (e) { notice = String(e); } render();
     // Following an existing server job must not hold the dashboard's initial loading promise.
     // busy also prevents a second polling loop when the owner reopens this section.
