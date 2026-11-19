@@ -22,7 +22,7 @@ import { stats } from "./stats";
 import { slopRoute } from "./slop";
 import { candidateFile } from "./slop-generation";
 import { realDescription } from "../shared/editorial";
-import { gamesInPlay, retireCopy, reviveCopy, statsOf, sweepRetired } from "./in-play";
+import { currentCopyCorrect, currentCopyViews, gamesInPlay, retireCopy, reviveCopy, statsOf, sweepRetired } from "./in-play";
 
 const base = "/api/admin/library";
 const MAX_PIXELS = 32_000_000;
@@ -411,23 +411,38 @@ async function list(env: Env, url: URL) {
   const status = url.searchParams.get("status") || "library", originFilter = url.searchParams.get("origin") || "all";
   const q = (url.searchParams.get("q") || "").trim().slice(0, 100), match = url.searchParams.get("match") || "all";
   const gallery = url.searchParams.get("gallery") || "";
+  const paged = url.searchParams.has("offset");
+  const offset = Number(url.searchParams.get("offset"));
+  const sort = url.searchParams.get("sort") || "added", order = url.searchParams.get("order") || "desc";
   const batch = url.searchParams.get("batch") || "", incomplete = url.searchParams.get("incomplete") === "1" ? 1 : 0;
   if (url.searchParams.has("group")) throw new HttpError(400, "Il filtro per gruppi non è più disponibile");
   const wanted = [...new Set([url.searchParams.get("tag") || "", ...(url.searchParams.get("tags") || "").split(",")].map(t => t.trim()).filter(Boolean))];
   if (!["library", "new", "approved", "published", "trash"].includes(status) || !["all", "REAL", "SLOP"].includes(originFilter)
     || !["all", "any"].includes(match) || wanted.length > 20 || (batch && !/^[\w-]{1,64}$/.test(batch)) || (gallery && !/^[\w-]{1,64}$/.test(gallery))) throw new HttpError(400, "Filtro non valido");
+  if (paged && (!gallery || !Number.isSafeInteger(offset) || offset < 0 || !["added", "views", "accuracy"].includes(sort) || !["asc", "desc"].includes(order)))
+    throw new HttpError(400, "Pagina non valida");
   const where = [status === "library" ? "status<>'trash'" : "status=?1", "(?2='all' OR origin=?2)",
     `(?3='[]' OR id IN (SELECT it.image_id FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE t.label IN (SELECT value FROM json_each(?3))
       GROUP BY it.image_id HAVING count(DISTINCT t.label)>=CASE ?5 WHEN 'any' THEN 1 ELSE json_array_length(?3) END))`,
     "(?4='' OR id LIKE '%'||?4||'%' COLLATE NOCASE OR title LIKE '%'||?4||'%' COLLATE NOCASE OR description LIKE '%'||?4||'%' COLLATE NOCASE OR prompt LIKE '%'||?4||'%' COLLATE NOCASE)", "(?6='' OR generation_batch=?6)",
-    `(?7=0 OR (SELECT count(DISTINCT t.category) FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=images.id
-      AND t.category IN ('genre','color','medium'))<3)`, `(?8=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, "(?9=0 OR (origin='REAL' AND real_description IS NULL))", "(?10='' OR gallery_id=?10)"].join(" AND ");
+    `(?7=0 OR (SELECT count(DISTINCT t.category) FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=i.id
+      AND t.category IN ('genre','color','medium'))<3)`, `(?8=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, "(?9=0 OR (origin='REAL' AND real_description IS NULL))",
+    gallery ? "gallery_id=?10" : "?10=''"].join(" AND ");
   await sweepRetired(env);
-  const rows = (await env.DB.prepare(`SELECT * FROM images WHERE ${where} ORDER BY updated_at DESC,id LIMIT 500`)
-    .bind(status, originFilter, JSON.stringify(wanted), q, match, batch, incomplete, url.searchParams.get("redo_copy") === "1" ? 1 : 0, url.searchParams.get("undescribed") === "1" ? 1 : 0, gallery).all<Row>()).results;
+  const limit = 72;
+  const sortKey = sort === "views" ? currentCopyViews : sort === "accuracy" ? `1.0*${currentCopyCorrect}/NULLIF(${currentCopyViews},0)` : "created_at";
+  const ordering = paged ? `${sortKey} ${order === "asc" ? "ASC" : "DESC"} NULLS LAST,created_at DESC,id LIMIT ?11 OFFSET ?12` : "updated_at DESC,id LIMIT 500";
+  const rows = (await env.DB.prepare(`SELECT * FROM images i WHERE ${where} ORDER BY ${ordering}`)
+    .bind(status, originFilter, JSON.stringify(wanted), q, match, batch, incomplete, url.searchParams.get("redo_copy") === "1" ? 1 : 0,
+      url.searchParams.get("undescribed") === "1" ? 1 : 0, gallery, ...(paged ? [limit + 1, offset] : [])).all<Row>()).results;
+  const next = paged && rows.length > limit ? offset + limit : null;
+  if (next !== null) rows.pop();
   const ids = rows.map(r => r.id), [tags, more] = await Promise.all([tagRowsOf(env, ids), extras(env, ids)]);
-  const counts = (await env.DB.prepare("SELECT status,origin,count(*) AS n FROM images GROUP BY status,origin").all<{ status: string; origin: string; n: number }>()).results;
-  return json({ items: rows.map(r => view(r, tags.get(r.id) || [], more.get(r.id))), counts });
+  const countQuery = "SELECT status,origin,count(*) AS n FROM images";
+  const counts = (await (gallery
+    ? env.DB.prepare(countQuery + " WHERE gallery_id=? GROUP BY status,origin").bind(gallery)
+    : env.DB.prepare(countQuery + " GROUP BY status,origin")).all<{ status: string; origin: string; n: number }>()).results;
+  return json({ items: rows.map(r => view(r, tags.get(r.id) || [], more.get(r.id))), counts, ...(paged ? {next} : {}) });
 }
 
 /** Distribution of the approved and published images: REAL and SLOP overall and for each tag, with the spread
@@ -470,7 +485,7 @@ export async function library(request: Request, env: Env, path: string): Promise
   if (path === base + "/models") return json(await modelsRoute(env, request.method, request.method === "PUT" ? await body(request, 500) : {}));
   if (path === base + "/settings") return json(await settingsRoute(env, request.method, request.method === "PUT" ? await body(request, 500) : {}));
   if (path === base + "/stats" && request.method === "GET") return json(await stats(env, url.searchParams.get("period") || "30"));
-  if (path.startsWith(base + "/slop/")) return json(await slopRoute(env, request.method, path.slice((base + "/slop/").length), request.method === "POST" || request.method === "PUT" ? await body(request, 320_000) : {}));
+  if (path.startsWith(base + "/slop/")) return json(await slopRoute(env, request.method, path.slice((base + "/slop/").length), request.method === "POST" || request.method === "PUT" ? await body(request, 320_000) : {}, url.searchParams.get("gallery") || ""));
   if (path === base + "/upload" && request.method === "POST") {
     const params = url.searchParams;
     const kind = origin(params.get("origin"));
@@ -493,7 +508,8 @@ export async function library(request: Request, env: Env, path: string): Promise
   if (path === base + "/commons/category" && request.method === "GET")
     return json(await browseCommonsCategory(url.searchParams.get("name") || "", url.searchParams.get("cont") || ""));
   if (path === base + "/trash/empty" && request.method === "POST") {
-    const ids = (await env.DB.prepare("SELECT id FROM images WHERE status='trash'").all<{ id: string }>()).results.map(r => r.id);
+    const gallery = url.searchParams.has("gallery") ? await galleryId(env, url.searchParams.get("gallery")) : "";
+    const ids = (await env.DB.prepare("SELECT id FROM images WHERE status='trash' AND (?1='' OR gallery_id=?1)").bind(gallery).all<{ id: string }>()).results.map(r => r.id);
     return json(await destroy(env, ids));
   }
   if (path === base + "/bulk" && request.method === "POST") {

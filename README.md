@@ -1,13 +1,13 @@
 # REAL or SLOP
 
-Aggiornato: 2026-11-14T12:00:00Z.
+Aggiornato: 2026-11-19T16:05:46Z.
 
 Un gioco educativo: per ogni foto scegli REAL (una fotografia autentica) o SLOP (un'immagine generata con l'intelligenza artificiale).
 Quattro livelli, da 10 foto con 20 secondi ciascuna a 25 foto con 5 secondi; alla fine le fonti delle REAL e i prompt delle SLOP, e una
 classifica.
 
-La dashboard privata (`/admin`) ha cinque sezioni: Caricamento REAL (da Wikimedia Commons), Generazione SLOP, Database immagini,
-Statistiche e Impostazioni.
+La dashboard privata (`/admin`) si apre su Gallerie, dove l’owner vede le anteprime e può creare una galleria. Ogni galleria
+apre le sue foto e i wizard «Carica REAL» da Wikimedia Commons e «Genera SLOP». La navigazione include Statistiche e Impostazioni.
 
 ## Documentazione
 

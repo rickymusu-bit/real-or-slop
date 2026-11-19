@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
 from editorial_helpers import *
+from catalog import open_gallery
 folder=Path('artifacts/slop-browser');folder.mkdir(parents=True,exist_ok=True)
 old=call('/settings',library=True)[1]['values']
 try:
@@ -24,7 +25,8 @@ try:
                 # A process that ended without a SLOP is shown on top, with its attempts, until the owner closes it.
                 stuck_source=real('browser-stuck-'+name);generated.append(stuck_source['id']);stuck=batch(stuck_source['gallery_id'])
                 control([None,{'evaluation':'review_needed'}]);assert generate(stuck)[1]['process']['state']=='review_needed'
-                page.goto(BASE+'/admin');page.locator('[data-admin-tab=slop]').click()
+                page.goto(BASE+'/admin');open_gallery(page,stuck_source['gallery_id'])
+                page.get_by_role('button',name='Genera SLOP').click()
                 studio=page.locator('#slop-studio')
                 card=studio.locator('[data-attention="'+stuck['processes'][0]['id']+'"]')
                 expect(card).to_contain_text('il valutatore chiede la tua revisione')
@@ -32,10 +34,11 @@ try:
                 expect(card.locator('img')).to_be_visible();expect(card.locator('p[lang=en]')).to_be_visible()
                 # Refreshing the studio preserves the expanded attempt, including its prompt and evaluation.
                 previous=card.locator('p[lang=en]').element_handle()
-                page.locator('[data-admin-tab=slop]').click()
+                page.locator('[data-gallery-pane=photos]').click()
+                page.get_by_role('button',name='Genera SLOP').click()
                 previous.wait_for_element_state('hidden')
                 expect(card.locator('p[lang=en]')).to_be_visible()
-                expect(page.locator('#slop-attention-count')).to_contain_text('da vedere')
+                expect(studio.locator('.slop-attention h3')).to_contain_text('Da vedere')
                 page.screenshot(path=str(folder/(name+'-attention.png')),full_page=True)
                 card.locator('[data-slop=close-process]').click();expect(card).to_have_count(0)
                 assert 'Chiudere questo processo' in confirmations[-1]
@@ -43,7 +46,8 @@ try:
                 # The owner can accept critical/minor findings and uncertainty, after a cancellable confirmation.
                 review_source=real('browser-review-'+name);generated.append(review_source['id']);review=batch(review_source['gallery_id'])
                 control([None,{'evaluation':'review_needed','critical':['A hand has six fingers'],'minor':['Soft focus on the edge'],'uncertainty':['Place cannot be confirmed'],'constraints':False}]);assert generate(review)[1]['process']['state']=='review_needed'
-                page.reload();page.locator('[data-admin-tab=slop]').click()
+                page.reload();open_gallery(page,review_source['gallery_id'])
+                page.get_by_role('button',name='Genera SLOP').click()
                 card=studio.locator('[data-attention="'+review['processes'][0]['id']+'"]')
                 card.locator(':scope > summary').click()
                 control([]);dismiss_next[0]=True;card.locator('[data-slop=accept-process]').click()
@@ -63,17 +67,18 @@ try:
                 studio.locator('[data-slop=publish]').click();expect(studio.get_by_role('heading',name='SLOP published')).to_be_visible()
                 # Exhausted attempts with minor defects have the same explicit override.
                 call('/settings',{'max_generation_attempts':1},method='PUT',library=True)
-                minor_source=real('browser-minor-'+name);generated.append(minor_source['id']);minor=batch(minor_source['gallery_id'])
+                minor_gallery=make_gallery('Revisione difetti minori '+name)
+                minor_source=real('browser-minor-'+name,gallery=minor_gallery['id']);generated.append(minor_source['id']);minor=batch(minor_source['gallery_id'])
                 call('/settings',{'max_generation_attempts':old['max_generation_attempts']},method='PUT',library=True)
                 control([None,{'evaluation':'retry_same_prompt','minor':['Visible banding']}]);assert generate(minor)[1]['process']['state']=='exhausted'
-                page.reload();page.locator('[data-admin-tab=slop]').click()
+                page.reload();open_gallery(page,minor_source['gallery_id'])
+                page.get_by_role('button',name='Genera SLOP').click()
                 minor_proc=load(minor)['processes'][0]
                 card=studio.locator('[data-attention="'+minor_proc['id']+'"]');card.locator(':scope > summary').click()
                 control([]);card.locator('[data-slop=accept-process]').click();expect(card).to_have_count(0,timeout=20000)
                 assert 'Visible banding' in confirmations[-1] and len(control())==1
                 generated.append(load(minor)['images'][0]['id'])
-                studio.locator('[data-slop=new-batch]').click()
-                studio.locator('[data-manual=gallery_id]').select_option(review_source['gallery_id'])
+                assert studio.locator(f'[data-recent] option[value="{review["id"]}"]').count() == 0
                 studio.locator('[data-manual=prompt]').fill('A credible street photograph in ordinary daylight.')
                 studio.locator('[data-manual=tags]').fill('street-scene, 1960s')
                 studio.locator('[data-manual=required]').fill('street-scene')
@@ -89,7 +94,8 @@ try:
                 expect(studio.locator('[data-slop=approve]')).to_be_visible(timeout=30000)
                 assert len(control())==5  # two images, two evaluations, final tags
                 image_id=studio.locator('[data-image]').get_attribute('data-image');generated.append(image_id)
-                assert call('/'+image_id,library=True)[1]['status']=='new'
+                saved=call('/'+image_id,library=True)[1]
+                assert saved['status']=='new' and saved['gallery_id']==minor_source['gallery_id']
                 expect(studio.get_by_alt_text('Originale SLOP intero')).to_be_visible()
                 expect(studio.get_by_alt_text('Copia di gioco 4:5')).to_be_visible()
                 expect(studio.locator('details summary',has_text='Tentativo 2: accept')).to_be_visible()

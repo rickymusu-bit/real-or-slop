@@ -1,18 +1,21 @@
-# Generazione SLOP — specifica 10.0.0
+# Generazione SLOP — specifica 10.1.0
 
-Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
+Stato: implementata nel ramo 1.43.0, da rilasciare. Aggiornata: 2026-11-19T15:59:47Z.
 
 ## 1. Modalità e bilanciamento
 
-L’avviso in dashboard confronta i conteggi di REAL e SLOP approvate o pubblicate e mostra a parte le SLOP nuove. L’owner decide la
-quantità da generare, da 1 a 10 per batch automatico. I tag descrivono le immagini e si usano come filtri del Database.
+L’avviso in Statistiche confronta i conteggi di REAL e SLOP approvate o pubblicate e mostra a parte le SLOP nuove. L’owner decide la
+quantità da generare, da 1 a 10 per batch automatico. I tag descrivono le immagini e si usano come filtri nella galleria.
 
-**Manuale.** L’owner sceglie una galleria e scrive prompt inglese, tag di partenza e brief con ancoraggi, preferenze, elementi liberi ed esclusioni. Preparare
+«Genera SLOP» usa la galleria aperta per entrambe le modalità. Le generazioni recenti e le eccezioni mostrate nello studio sono della
+galleria. Se esiste già un batch automatico, Gallerie e la modalità automatica delle altre gallerie offrono un accesso al batch aperto.
+
+**Manuale.** L’owner scrive prompt inglese, tag di partenza e brief con ancoraggi, preferenze, elementi liberi ed esclusioni. Preparare
 o modificare il processo prima del primo tentativo è gratuito. Il processo non richiede una REAL né una chiamata che scriva o
 riscriva il prompt. I tag di partenza restano nello snapshot privato. Dopo l’accettazione, i tag finali descrivono l’originale prodotto.
 
 **Automatica.** Dalla decisione dell’owner del 2026-11-18 (#157), le gallerie definiscono quali falsi hanno senso, quali elementi reali
-rendono credibile la scena e che cosa deve essere visibile. Si creano e modificano in «Database immagini → Gallerie». Hanno titolo,
+rendono credibile la scena e che cosa deve essere visibile. Si creano da «Nuova galleria» e si aggiornano con «Modifica galleria». Hanno titolo,
 descrizione e **Indicazioni SLOP** in testo libero. Ogni REAL appartiene a una galleria, anche con indicazioni vuote. L’owner può chiedere una
 proposta di indicazioni al modello dopo aver confermato una chiamata. Il testo entra nel modulo, dove si può modificare, e diventa
 operativo con il salvataggio. Indicazioni vuote o composte di soli spazi bloccano la preparazione automatica in dashboard e API.
@@ -88,7 +91,7 @@ una galleria per ogni immagine e batch. Agisce esclusivamente sul D1.
 
 Il **flusso manuale** genera nella galleria scelta e conserva il proprio brief. La valutazione riceve l’intera candidata, l’ID
 del tentativo, il brief, il prompt corrente e la tolleranza, con Base e Valutazione attive. Il massimo è `1 + 2N` chiamate
-per N tentativi, inclusa l’analisi dei tag dopo l’accettazione. Le REAL si aggiungono attraverso il Caricamento REAL e si
+per N tentativi, inclusa l’analisi dei tag dopo l’accettazione. Le REAL si aggiungono con «Carica REAL» e si
 estraggono solo in modo casuale dalla galleria selezionata.
 
 La SLOP è identificata dal suo ID. L’analisi riceve prompt e descrizione aggiuntiva se presente. Per la copia si conservano

@@ -24,12 +24,23 @@ export async function galleries(env: Env) {
     FROM galleries g ORDER BY g.title COLLATE NOCASE,g.id`).all<Gallery & {available: number}>()).results;
   return rows.map(g => ({...g, ready: galleryReady(g)}));
 }
+async function galleryPreviews(env: Env) {
+  const rows = (await env.DB.prepare(`SELECT g.*,
+    (SELECT count(*) FROM images WHERE gallery_id=g.id AND ${GALLERY_SOURCE}) AS available,
+    (SELECT count(*) FROM images WHERE gallery_id=g.id AND status<>'trash') AS photos,
+    (SELECT json_group_array(file) FROM (
+      SELECT '/api/admin/library/'||id||'/file?v='||substr(COALESCE(copy_sha256,original_sha256),1,12) AS file
+      FROM images WHERE gallery_id=g.id AND status<>'trash' ORDER BY created_at DESC,id LIMIT 3
+    )) AS preview
+    FROM galleries g ORDER BY g.title COLLATE NOCASE,g.id`).all<Gallery & {available: number; photos: number; preview: string}>()).results;
+  return rows.map(g => ({...g, ready: galleryReady(g), preview: JSON.parse(g.preview) as string[]}));
+}
 function field(value: unknown, max: number, name: string, required = false) {
   if (typeof value !== "string" || value.length > max || (required && !value.trim())) throw new HttpError(400, `Campo non valido: ${name}`);
   return value.trim();
 }
 export async function galleryRoute(env: Env, method: string, target: string, data: Record<string, unknown>) {
-  if (!target && method === "GET") return {galleries: await galleries(env), paid_calls: !!env.OPENAI_API_KEY, text_model: await chosenModel(env, "text_model")};
+  if (!target && method === "GET") return {galleries: await galleryPreviews(env), paid_calls: !!env.OPENAI_API_KEY, text_model: await chosenModel(env, "text_model")};
   if (method !== "POST" && method !== "PATCH") throw new HttpError(405, "Metodo non consentito");
   const [key, action, extra] = target.split("/");
   if (method === "POST" && action === "suggest" && !extra) {

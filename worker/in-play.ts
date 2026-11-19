@@ -47,12 +47,15 @@ export async function sweepRetired(env: Env): Promise<number> {
   return free.length;
 }
 
+/** Only count classifications of the current copy. */
+export const currentCopyViews = "(SELECT count(*) FROM game_rounds r WHERE r.image_id=i.id AND r.copy_key=i.copy_key AND r.presented_at IS NOT NULL)";
+export const currentCopyCorrect = "(SELECT count(*) FROM game_rounds r JOIN answers a ON a.round_id=r.id WHERE r.image_id=i.id AND r.copy_key=i.copy_key AND a.correct=1)";
+
 /** Views and correct classifications of each image, counted on its current copy only. */
 export async function statsOf(env: Env, ids: readonly string[]): Promise<Map<string, { views: number; correct: number }>> {
   if (!ids.length) return new Map();
   const rows = (await env.DB.prepare(`SELECT i.id,
-    (SELECT count(*) FROM game_rounds r WHERE r.image_id=i.id AND r.copy_key=i.copy_key AND r.presented_at IS NOT NULL) AS views,
-    (SELECT count(*) FROM game_rounds r JOIN answers a ON a.round_id=r.id WHERE r.image_id=i.id AND r.copy_key=i.copy_key AND a.correct=1) AS correct
+    ${currentCopyViews} AS views, ${currentCopyCorrect} AS correct
     FROM images i WHERE i.id IN (SELECT value FROM json_each(?))`).bind(JSON.stringify(ids)).all<{ id: string; views: number; correct: number }>()).results;
   return new Map(rows.map(r => [r.id, { views: r.views, correct: r.correct }]));
 }

@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 8.0.0
+# Libreria delle immagini, tag e analisi — specifica 8.1.0
 
-Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
+Stato: implementata nel ramo 1.43.0, da rilasciare. Aggiornata: 2026-11-19T15:59:47Z.
 
 ## 1. Decisioni dell'owner
 
@@ -32,14 +32,14 @@ Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45
 
 Una sola raccolta di immagini REAL e SLOP.
 
-- **Ingresso.** Le REAL entrano dal wizard REAL (Wikimedia Commons, specifica `dashboard-admin-wizard-real`), le SLOP dallo studio
-  e dai batch automatici (specifica `generazione-slop`). La sezione Database non carica file né cerca su Commons. Esiste ancora
+- **Ingresso.** Nella galleria aperta, «Carica REAL» cerca e acquisisce foto da Wikimedia Commons (specifica `dashboard-admin-wizard-real`).
+  «Genera SLOP» apre la generazione manuale e automatica per la stessa galleria (specifica `generazione-slop`). Esiste ancora
   la rotta `POST /upload`, usata dai test.
 - **Campi.** Origine, titolo solo REAL (≤200 caratteri), descrizione (≤1000), fonte, autore e
   licenza (REAL), prompt e modello (SLOP), tag con le categorie, stato, originale e copia di gioco, revisione per le modifiche
   concorrenti. Per una SLOP generata anche batch, processo, impostazioni del trattamento e qualità della generazione; nessuna copia dei tag di partenza sulla foto.
 - **Descrizione.** Per le REAL arriva da Commons (testo ripulito, al massimo 500 caratteri) e l'owner la corregge nel passo 2 del wizard
-  o nella sezione Database. Il giocatore la legge nella lista di fine partita (specifica `gioco-a-livelli`). Entra anche nel
+  o nella galleria. Il giocatore la legge nella lista di fine partita (specifica `gioco-a-livelli`). Entra anche nel
   contesto dell'analisi.
 - **Limiti dei file.** JPEG, PNG o WebP fino a 12 MB e 32 megapixel; copia di gioco WebP fino a 4 MB.
 
@@ -132,9 +132,9 @@ alla copia per estrarre le foto; i crediti REAL e il prompt SLOP vengono letti n
 
 Per una REAL l’unica analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Il modello vede la REAL **intera**, cioè l’originale caricato (JPEG, PNG o WebP fino a 12 MB), mai il ritaglio 4:5 (decisione dell’owner del 2026-11-15). Modello, hash dell’originale, revisione e data sono conservati come provenienza. La descrizione è privata, modificabile senza alterare tag o testo Commons; quest’ultimo è conservato separatamente per le nuove acquisizioni. Per una SLOP l’analisi restituisce soltanto tag, anch’essa sull’originale intero.
 
-Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova generazione richiede compilazione manuale o una nuova analisi combinata confermata (`refresh_description:true`), anche se già approvata/pubblicata. Nessun backfill. L'analisi combinata si lancia dalla scheda o in gruppo dal Database (azione «Analisi combinata tag e descrizione» sulle immagini selezionate), con conferma del numero massimo di chiamate, una per foto; le immagini con esito incerto o interrotto sono incluse e la conferma le nomina. La modifica della sola descrizione privata non ritira una pubblicata.
+Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova generazione richiede compilazione manuale o una nuova analisi combinata confermata (`refresh_description:true`), anche se già approvata/pubblicata. Nessun backfill. L'analisi combinata si lancia dalla scheda o in gruppo dalla galleria (azione «Analisi combinata tag e descrizione» sulle immagini selezionate), con conferma del numero massimo di chiamate, una per foto; le immagini con esito incerto o interrotto sono incluse e la conferma le nomina. La modifica della sola descrizione privata non ritira una pubblicata.
 
-- Su richiesta dell'owner (wizard, dettaglio o gruppo nel Database, studio SLOP), solo per immagini nuove. Il modello di testo scelto
+- Su richiesta dell'owner (wizard, dettaglio o gruppo nella galleria, studio SLOP), solo per immagini nuove. Il modello di testo scelto
   nelle Impostazioni, che deve leggere immagini, riceve l'originale intero (vede i pixel, non i metadati del file) con titolo e
   descrizione (REAL) o con il prompt (SLOP)
   e i 300 tag più usati divisi per categoria; mai l'origine. La base comune e la parte «Tag» si applicano ad entrambe
@@ -150,7 +150,7 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
   Supporto soltanto da ciò che si vede nell'immagine, mai da titolo, descrizione o altro testo. Vale per REAL e SLOP allo stesso modo e
   non parla di immagini generate.
 - **Completamento di Genere, Colore e Supporto** (eccezione alla regola seguente, decisione dell'owner del 2026-11-14): per le immagini
-  fuori dal cestino che hanno già un'analisi riuscita e non hanno ancora tutte e tre le categorie. Dal Database, su una o più immagini
+  fuori dal cestino che hanno già un'analisi riuscita e non hanno ancora tutte e tre le categorie. Dalla galleria, su una o più immagini
   (azione in gruppo), con conferma esplicita del numero di chiamate: una chiamata a pagamento per immagine, con la stessa immagine dell'analisi e le
   stesse istruzioni dell'analisi, che restituisce solo le tre categorie. Sostituisce i tag di quelle tre categorie e lascia gli altri.
   Non ritira le pubblicate, perché non cambia nulla di ciò che vede il giocatore. Una sola volta per immagine (`categories_completed_at`);
@@ -159,7 +159,7 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
   e «Ripristina i tag generati» li riporta senza costi. Fanno eccezione l’analisi combinata confermata di una REAL storica senza descrizione e una nuova SLOP accettata da un nuovo processo.
 - Una sola analisi alla volta per immagine; un segno interrotto resta sospeso e viene marcato incerto dalla manutenzione.
 - **Esito incerto o segno interrotto** (più di dieci minuti): mai ripetuto in automatico. Dalla scheda dell'immagine, o in gruppo dal
-  Database e dal wizard, l'owner può ripeterlo con una conferma che lo nomina e avverte del possibile addebito già avvenuto; un'analisi
+  dettaglio della galleria e dal wizard, l'owner può ripeterlo con una conferma che lo nomina e avverte del possibile addebito già avvenuto; un'analisi
   ancora in corso da meno di dieci minuti resta esclusa. La richiesta porta
   `repeat_uncertain: true`, senza la quale il server rifiuta. La chiamata pendente dell'analisi interrotta passa a `uncertain`.
   La dashboard tratta allo stesso modo un'analisi ancora «in corso» dopo dieci minuti: la mostra come interrotta e offre la

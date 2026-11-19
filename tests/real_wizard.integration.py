@@ -12,6 +12,7 @@ from PIL import Image
 from playwright.sync_api import expect, sync_playwright
 from game_copy import game_copy
 from long_press import long_press
+from catalog import open_gallery
 
 base = os.environ['ROS_TEST_BASE']
 token = Path('.dev.vars').read_text().strip().split('=', 1)[1]
@@ -49,9 +50,10 @@ with sync_playwright() as p:
         assert alternate.ok,alternate.text()
         alternate_id=alternate.json()['id']
         page.goto(base + '/admin')
+        expect(page.locator('#admin-galleries')).to_be_visible()
+        open_gallery(page, gallery_id)
+        page.get_by_role('button', name='Carica REAL').click()
         expect(page.get_by_role('heading', name='Caricamento REAL')).to_be_visible()
-        expect(page.get_by_role('button', name='Generazione SLOP')).to_be_visible()
-        expect(page.get_by_role('button', name='Impostazioni')).to_be_visible()
 
         calls = []
 
@@ -120,12 +122,8 @@ with sync_playwright() as p:
         preview.get_by_role('button', name="Chiudi l'anteprima").click()
         expect(preview).to_be_hidden()
         expect(page.get_by_text('Seleziona tutta la pagina')).to_have_count(0)
-        links = page.locator('#rw-links-section')
-        expect(links).not_to_have_attribute('open', '')
-        expect(page.locator('#rw-links')).to_be_hidden()
-        assert page.evaluate("document.querySelector('.rw-panel').compareDocumentPosition(document.querySelector('#rw-links-section')) & 4")  # after the search
-        links.locator('summary').click()
-        expect(page.locator('#rw-links')).to_be_visible()
+        expect(page.locator('#rw-links-section, #rw-links')).to_have_count(0)
+        expect(page.get_by_text('Aggiungi link di Wikimedia Commons')).to_have_count(0)
         tracks = "() => getComputedStyle(document.querySelector('.rw-results')).gridTemplateColumns.split(' ').length"
         page.locator('#rw-columns').select_option('3')
         assert page.evaluate(tracks) == 3, page.evaluate(tracks)
@@ -177,14 +175,21 @@ with sync_playwright() as p:
         found = {i['title']: i for i in response.json()['items']}
         first, second, third, fourth = (found[title + suffix] for suffix in ('-a', '-b', '-c', '-d'))
         assert first['copy'] and second['copy'] and first['analysis']['status'] == 'none', first
-        page.evaluate("""ids => sessionStorage.setItem('ros-real-wizard-v2',
-            JSON.stringify({ids, stage:2}))""", [first['id'], second['id'], third['id'], fourth['id']])
+        page.evaluate("""([gallery, ids]) => sessionStorage.setItem('ros-real-wizard-v2:' + gallery,
+            JSON.stringify({ids, stage:2}))""", [gallery_id, [first['id'], second['id'], third['id'], fourth['id']]])
         page.reload()
+        open_gallery(page, alternate_id)
+        page.get_by_role('button', name='Carica REAL').click()
+        expect(page.locator('#rw-search')).to_be_visible()
+        expect(page.locator('.rw-editor')).to_have_count(0)
+        page.locator('[data-gallery-close]').click()
+        open_gallery(page, gallery_id)
+        page.get_by_role('button', name='Carica REAL').click()
         expect(page.locator('.rw-editor')).to_have_count(4)
         # A photo trashed elsewhere (the Database section) leaves the wizard when the owner comes back to it.
         r = page.request.post(base + f"/api/admin/library/{third['id']}/trash", data='{}', headers={'Content-Type': 'application/json'}); assert r.ok, r.text()
-        page.locator('[data-admin-tab=database]').click()
-        page.locator('[data-admin-tab=real]').click()
+        page.locator('[data-gallery-pane=photos]').click()
+        page.get_by_role('button', name='Carica REAL').click()
         expect(page.locator('.rw-editor')).to_have_count(3)
         expect(page.locator('.rw-message')).to_contain_text('Una foto è stata tolta dal caricamento')
         # «Togli dal caricamento» moves a photo of step 2 to the trash.
@@ -317,18 +322,13 @@ with sync_playwright() as p:
             route.fulfill(status=response.status,content_type='application/json',body=response.text())
         page.route('**/api/admin/library/commons', mock_acquisition)
         page.get_by_role('button', name='Inizia un nuovo caricamento').click()
-        page.locator('#rw-import-gallery').select_option(gallery_id)
         page.locator('#rw-search [name=q]').fill('bridge')
         page.locator('#rw-search').get_by_role('button', name='Cerca', exact=True).click()
         page.locator('.rw-hit img').click()
-        expect(page.locator('#rw-import-gallery')).to_have_value(gallery_id)
         page.get_by_role('button', name='Avanti: tag').click()
-        expect(page.locator('[data-rw-gallery]')).to_have_value(gallery_id)
+        expect(page.locator('.rw-editor')).to_have_count(1)
         stored=page.request.get(base+'/api/admin/library/'+acquired[0]).json()
         assert stored['gallery_id']==gallery_id and stored['status']=='new' and stored['copy']
-        page.locator('[data-rw-gallery]').select_option(alternate_id)
-        expect(page.locator('[data-rw-gallery]')).to_have_value(alternate_id)
-        page.locator('[data-rw-gallery]').select_option(gallery_id)
         page.locator('[data-rw=discard]').click()
         expect(page.locator('.rw-message')).to_contain_text('Foto tolta dal caricamento')
         discarded=page.request.get(base+'/api/admin/library/'+acquired[0]).json()

@@ -1,6 +1,6 @@
-# Statistiche e Impostazioni — specifica 4.2.0
+# Statistiche e Impostazioni — specifica 4.3.0
 
-Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
+Stato: implementata nel ramo 1.43.0, da rilasciare. Aggiornata: 2026-11-19T15:59:47Z.
 
 ## 1. Decisioni dell'owner (2026-11-12)
 
@@ -22,12 +22,14 @@ si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ri
 - **Vocabolario dei tag:** elenco per categoria con il numero di immagini, cambio di categoria con conferma, alias, «Unisci».
 - **Classifica:** verifica di un codice partita (soprannome, livello, punteggio, data), Nascondi, Mostra, Cancella (per sempre, per le
   richieste di cancellazione).
-- **Studio SLOP:** tentativi massimi (1–5, default 3), tolleranza (0–2, default 1). Quantità e modalità si scelgono in Generazione SLOP. Nessuna proposta da attivare o spegnere; lo sbilanciamento è solo una notifica. La 0055 rimuove `slop_auto_enabled`, rifiutato dall’API. La 0056 elimina anche i vincoli e le chiavi legacy dei gruppi, conservando le impostazioni attive.
+- **Studio SLOP:** tentativi massimi (1–5, default 3), tolleranza (0–2, default 1). Quantità e modalità si scelgono con «Genera SLOP» nella galleria. Nessuna proposta da attivare o spegnere; lo sbilanciamento è solo una notifica. La 0055 rimuove `slop_auto_enabled`, rifiutato dall’API. La 0056 elimina anche i vincoli e le chiavi legacy dei gruppi, conservando le impostazioni attive.
 - **Partite:** durata massima di una partita aperta in ore (24, da 1 a 168): oltre, una partita non conclusa non trattiene più le copie
   ritirate e non conta tra le aperte.
 - Dati in `app_settings`; una riga mancante vale il predefinito del codice.
 
 ## 3. Statistiche (solo visualizzazione)
+
+«Distribuzione delle immagini» mostra REAL e SLOP approvate e pubblicate, nel totale e per tag (specifica `database-immagini`).
 
 Periodo: ultimi 7 giorni, ultimi 30 (predefinito) o da sempre; «Aggiorna». API `GET /api/admin/library/stats?period=7|30|all`, gratuita.
 

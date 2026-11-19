@@ -1,6 +1,5 @@
-import { galleryOptions, type Gallery } from "./galleries";
 /** REAL wizard (spec `dashboard-admin-wizard-real`, section 4), four steps: select on Commons (search, pages, columns,
- * a tap ticks and adds at once, press and hold for the preview, pasted links), tags (editable description, tags with categories,
+ * a tap ticks and adds at once, press and hold for the preview), tags (editable description, tags with categories,
  * paid generation once per image, restore, «Togli dal caricamento»), crop, summary and publication. The draft lives in the
  * browser session; photos trashed or deleted elsewhere leave the wizard. */
 import "./real-wizard.css";
@@ -30,21 +29,13 @@ interface Image {
 interface Hit { title: string; page_url: string; thumb_url: string; preview_url?: string; width: number; height: number; date?: string; description?: string }
 interface Browse { files: Hit[]; next: string | null }
 interface Analysis { enabled: boolean; reason: string; model: string }
-const BASE = "/api/admin/library", DRAFT_KEY = "ros-real-wizard-v2";
+const BASE = "/api/admin/library";
 
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(BASE + path, { credentials: "same-origin", ...options, headers: { "Content-Type": "application/json", ...options.headers } });
   const data = await response.json().catch(() => ({})) as T & { error?: string };
   if (!response.ok) throw Error(data.error || "Richiesta non riuscita");
   return data;
-}
-function commonsLink(value: string): string | null {
-  try {
-    const url = new URL(value.trim());
-    if (url.protocol !== "https:" || !["commons.wikimedia.org", "upload.wikimedia.org", "thumb.wikimedia.org"].includes(url.hostname)) return null;
-    if (url.username || url.password || url.port) return null;
-    return url.href;
-  } catch { return null; }
 }
 /** Paid generation runs once, only on new images with a game copy and no analysis in progress. */
 const generable = (i: Image) => i.status === "new" && !!i.copy && i.analysis.status !== "running" && i.analysis.status !== "done";
@@ -56,8 +47,8 @@ const errorText = (error: unknown) => error instanceof Error ? error.message : S
 const short = (value: string, count = 90) => value.length > count ? value.slice(0, count - 1) + "…" : value;
 
 export interface RealWizard { sync(): Promise<void> }
-export async function mountRealWizard(root: HTMLElement, onPublished: () => Promise<void>, galleries: () => Gallery[]): Promise<RealWizard> {
-  let importGallery = "";
+export async function mountRealWizard(root: HTMLElement, onPublished: () => Promise<void>, galleryId: string): Promise<RealWizard> {
+  const draftKey = "ros-real-wizard-v2:" + galleryId;
   let stage: Stage = 1, images: Image[] = [], notice = "", busy = false, query = "", sort = "relevance";
   /** Pages of Commons results already loaded: files and the offset of the following page. */
   /** Columns of the Commons results: 0 = automatic, otherwise 1 to 6; kept in this browser. */
@@ -65,16 +56,15 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   let columns = 0;
   try { const saved = Number(localStorage.getItem(COLUMNS_KEY)); if (Number.isInteger(saved) && saved >= 1 && saved <= 6) columns = saved; } catch { /* private browsing */ }
   const editorialDrafts = new Map<string, {id:string;key:string;value:string}>();
-  let linksOpen = false;
   let searchPages: { files: Hit[]; next: string | null }[] = [], page = 0, searched = false;
   const knownHits = new Map<string, Hit>();
   let searchCategories: string[] = [], vocabulary: string[] = [];
   let tagCategories = new Map<string, Category>();
   let analysis: Analysis | null = null;
-  const pending = new Map<string, Hit | null>();
+  const pending = new Map<string, Hit>();
   const staged = () => images.filter(i => i.origin === "REAL" && (i.status === "new" || i.status === "approved"));
   const persist = () => {
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ids: staged().map(i => i.id), stage })); } catch { /* private browsing */ }
+    try { sessionStorage.setItem(draftKey, JSON.stringify({ ids: staged().map(i => i.id), stage })); } catch { /* private browsing */ }
   };
   let saving: Promise<unknown> = Promise.resolve();
   const replace = (updated: Image) => { images = images.map(i => i.id === updated.id ? updated : i); persist(); };
@@ -88,7 +78,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         if (response.status === 404) return { item, fresh: null, gone: true };
         if (!response.ok) return { item, fresh: null, gone: false };
         const fresh = await response.json() as Image;
-        return { item, fresh, gone: fresh.origin !== "REAL" || (fresh.status !== "new" && fresh.status !== "approved") };
+        return { item, fresh, gone: fresh.origin !== "REAL" || fresh.gallery_id !== galleryId || (fresh.status !== "new" && fresh.status !== "approved") };
       } catch { return { item, fresh: null, gone: false }; }
     }));
     const gone = new Set(checks.filter(c => c.gone).map(c => c.item.id));
@@ -98,7 +88,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     return gone.size;
   };
   const goneNotice = (count: number) => count ? (count === 1 ? "Una foto è stata tolta dal caricamento" : count + " foto sono state tolte dal caricamento") +
-    ": è nel cestino, pubblicata o eliminata nella sezione Database." : "";
+    ": è stata spostata, pubblicata o eliminata dalla galleria." : "";
   /** Edits go one after the other, each with the latest revision of its photo: a description saved on leaving the field and a tag
    * added with the next tap never conflict. */
   const update = (image: Image, changes: Record<string, unknown>) => {
@@ -124,16 +114,15 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   const progress = () => '<ol class="rw-steps" aria-label="Fasi del caricamento">' +
     ["Seleziona le immagini", "Tag", "Inquadratura", "Riepilogo e pubblicazione"].map((label, index) =>
       '<li ' + (stage === index + 1 ? 'aria-current="step"' : "") + '><span>' + (index + 1) + "</span>" + label + "</li>").join("") + "</ol>";
-  /** A chosen photo: its thumbnail, which opens the Commons page in a new tab, and × to remove it. Pasted links have no thumbnail. */
-  const cardSelected = () => [...pending.entries()].map(([url, hit]) => { const name = (hit?.title || url).replace(/^File:/, "");
+  /** A chosen photo: its thumbnail, which opens the Commons page in a new tab, and × to remove it. */
+  const cardSelected = () => [...pending.entries()].map(([url, hit]) => { const name = hit.title.replace(/^File:/, "");
     return '<li class="rw-pick"><a href="' + escape(url) + '" target="_blank" rel="noopener noreferrer" title="' + escape(name) +
-      ' (apre la pagina di Commons in una nuova scheda)">' + (hit ? '<img src="' + escape(hit.thumb_url) + '" alt="' + escape(name) + '" loading="lazy">'
-      : '<span class="rw-pick-link">Pagina Commons</span>') + '</a><button type="button" data-rw="remove-pending" data-url="' +
+      ' (apre la pagina di Commons in una nuova scheda)"><img src="' + escape(hit.thumb_url) + '" alt="' + escape(name) + '" loading="lazy"></a><button type="button" data-rw="remove-pending" data-url="' +
       escape(url) + '" aria-label="Rimuovi ' + escape(short(name, 60)) + ' dalla selezione">×</button></li>'; }).join("");
   const selectedSection = () => '<h3>Immagini selezionate (' + pending.size + ')</h3>' +
-    (pending.size ? '<ul class="rw-picks">' + cardSelected() + "</ul>" : '<p>Tocca le fotografie nei risultati oppure incolla i link.</p>') +
+    (pending.size ? '<ul class="rw-picks">' + cardSelected() + "</ul>" : '<p>Tocca le fotografie nei risultati.</p>') +
     (images.length ? '<p class="hint">Già acquisite in questa sessione: ' + staged().length + ' immagini in revisione.</p>' : "");
-  const importDisabled = () => pending.size ? !importGallery : !staged().length;
+  const importDisabled = () => !pending.size && !staged().length;
   const importButton = () => '<button type="button" class="primary" data-rw="import" ' + (importDisabled() ? "disabled" : "") + '>Avanti: tag</button>';
   const first = () => '<div class="rw-stack">' +
     '<section class="rw-panel"><h3>Cerca su Commons</h3><form id="rw-search" class="rw-search">' +
@@ -157,13 +146,8 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       '<button type="button" data-rw="prev-results" aria-label="Pagina precedente" ' + (page > 0 ? "" : "disabled") + '>←</button>' +
       '<span aria-current="page">Pagina ' + (page + 1) + '</span>' +
       '<button type="button" data-rw="next-results" aria-label="Pagina successiva" ' + (searchPages[page]?.next ? "" : "disabled") + '>→</button></nav>' : "") +
-    "</section>" +
-    '<details class="rw-panel rw-links" id="rw-links-section" ' + (linksOpen ? "open" : "") + '><summary><h3>Aggiungi link di Wikimedia Commons</h3></summary>' +
-    '<p class="hint">Incolla più collegamenti, uno per riga. Non vengono pubblicati finché non confermi il riepilogo.</p>' +
-    '<label for="rw-links">Link delle immagini</label><textarea id="rw-links" rows="5" placeholder="https://commons.wikimedia.org/wiki/File:..."></textarea>' +
-    '<button type="button" data-rw="add-links">Aggiungi alla selezione</button></details></div>' +
+    "</section></div>" +
     '<div class="rw-selected">' + selectedSection() + '</div><div class="rw-actions rw-bottom">' +
-    (galleries().length ? `<label>Galleria del caricamento<select id="rw-import-gallery" required><option value="">Scegli una galleria</option>${galleryOptions(galleries(), importGallery)}</select></label>` : '<p class="hint">Crea una galleria in Database immagini → Gallerie prima di acquisire le foto.</p>') +
     importButton() + '</div>';
   const metadata = (item: Image) => '<details class="rw-metadata"><summary>Titolo e metadati</summary><dl>' +
     [["Titolo Commons", item.title], ["Autore", item.author],
@@ -183,7 +167,6 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     legend() + '<div class="rw-editor-grid">' + staged().map(item => '<article class="rw-editor" data-rw-image="' + escape(item.id) + '">' +
       '<div class="rw-image"><img src="' + escape(item.file) + '" alt="' + escape(item.title) + '" loading="lazy"></div>' +
       '<div class="rw-editor-fields"><h3>' + escape(short(item.title, 90)) + '</h3>' +
-      (galleries().length ? `<label>Galleria<select data-rw-gallery="${escape(item.id)}">${galleryOptions(galleries(), item.gallery_id)}</select></label>` : "") +
       '<label class="rw-description">Descrizione <small>(la leggono i giocatori alla fine della partita)</small><textarea data-rw-description="' +
         escape(item.id) + '" maxlength="1000" rows="3" placeholder="Che cosa mostra la foto, dove e quando">' + escape(item.description) + '</textarea></label>' +
       descriptionFields(item.id, item.real_description, false, item.commons_description || "") +
@@ -275,7 +258,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       if (field) field.value = value;
     }
     const target = focused ? root.querySelector<HTMLElement>(focused) : null;
-    if (target && !target.closest("dialog")) target.focus({ preventScroll: true });
+    if (target && target.closest("dialog") === root.closest("dialog")) target.focus({ preventScroll: true });
     else if (focused) root.querySelector<HTMLElement>(".rw-message")?.focus({ preventScroll: true });
   };
   /** Redraws only the chosen photos and the button under them, so that the results keep their scroll. */
@@ -286,17 +269,6 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     next.disabled = importDisabled();
     const message = root.querySelector<HTMLElement>(".rw-message");
     if (message) message.textContent = notice;
-  };
-  const addLinks = (links: string[], hits = new Map<string, Hit>()) => {
-    const invalid: string[] = [];
-    for (const source of links) {
-      const url = commonsLink(source);
-      if (url && pending.size < 100) pending.set(url, hits.get(source) || null);
-      else invalid.push(source);
-    }
-    notice = invalid.length ? "Link non validi oppure limite di 100 superato: " + invalid.map(s => short(s, 80)).join("; ") :
-      pending.size + (pending.size === 1 ? " immagine" : " immagini") + " nella selezione.";
-    render();
   };
   /** First page of a new search, or the page after the current one (fetched once, then kept). */
   const current = () => searchPages[page]?.files || [];
@@ -322,7 +294,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       try {
         notice = "Acquisizione privata " + (done + failures.length + 1) + " di " + pending.size + "…";
         render();
-        const item = await api<Image>("/commons", { method: "POST", body: JSON.stringify({ url, gallery_id: importGallery }) });
+        const item = await api<Image>("/commons", { method: "POST", body: JSON.stringify({ url, gallery_id: galleryId }) });
         images.push(item); pending.delete(url); persist(); done++;
         // The game copy (4:5, centred) is made here, in the browser, from the stored original.
         try { replace(await prepareLibraryCopy<Image>(item.id)); }
@@ -423,21 +395,8 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       if (clear) clear.disabled = !target.value;
     }
   });
-  // «toggle» does not bubble: listen in the capture phase to keep the links section open across re-renders.
-  root.addEventListener("toggle", event => {
-    const section = event.target as HTMLDetailsElement;
-    if (section.id === "rw-links-section") linksOpen = section.open;
-  }, true);
   root.addEventListener("change", event => {
     const target = event.target as HTMLInputElement;
-    if (target.id === "rw-import-gallery") { importGallery = target.value; renderSelected(); return; }
-    if (target.dataset.rwGallery) {
-      const item = images.find(i => i.id === target.dataset.rwGallery);
-      if (!item) return;
-      if (busy) { target.value = item.gallery_id; return; }
-      void update(item, {gallery_id: target.value}).catch(error => { notice = errorText(error); render(); });
-      return;
-    }
     if (target.id === "rw-columns") {
       const n = Number(target.value);
       columns = Number.isInteger(n) && n >= 1 && n <= 6 ? n : 0;
@@ -451,7 +410,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       const url = target.dataset.rwHit!;
       if (!target.checked) { pending.delete(url); notice = ""; }
       else if (pending.size >= 100) { target.checked = false; notice = "Limite di 100 immagini per caricamento raggiunto."; }
-      else { pending.set(url, knownHits.get(url) || null); notice = ""; }
+      else { const hit = knownHits.get(url); if (hit) pending.set(url, hit); notice = ""; }
       renderSelected();
       return;
     }
@@ -530,10 +489,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     }
     busy = true;
     try {
-      if (action === "add-links") {
-        const input = root.querySelector<HTMLTextAreaElement>("#rw-links")!;
-        addLinks(input.value.split(/\s+/).filter(Boolean));
-      } else if (action === "remove-pending") {
+      if (action === "remove-pending") {
         const url = button.dataset.url!;
         pending.delete(url); notice = "";
         const box = [...root.querySelectorAll<HTMLInputElement>("[data-rw-hit]")].find(c => c.dataset.rwHit === url);
@@ -606,7 +562,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         if (choice) { replace(await saveFrame<Image>(item, choice)); notice = "Inquadratura salvata."; render(); }
       } else if (action === "discard") {
         const item = images.find(i => i.id === id)!;
-        if (!window.confirm("Togliere «" + short(item.title, 60) + "» dal caricamento? La foto va nel cestino e si può ripristinare dalla sezione Database.")) return;
+        if (!window.confirm("Togliere «" + short(item.title, 60) + "» dal caricamento? La foto va nel cestino e si può ripristinare dal cestino della galleria.")) return;
         await saving.catch(() => {});
         await api("/" + encodeURIComponent(id) + "/trash", { method: "POST", body: "{}" });
         images = images.filter(i => i.id !== id);
@@ -627,14 +583,14 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     finally { busy = false; render(); }
   });
   try {
-    const raw = sessionStorage.getItem(DRAFT_KEY);
+    const raw = sessionStorage.getItem(draftKey) ?? sessionStorage.getItem("ros-real-wizard-v2");
     if (raw) {
       const draft = JSON.parse(raw) as { ids?: string[]; stage?: Stage };
       const ids = Array.isArray(draft.ids) ? draft.ids.filter(x => typeof x === "string").slice(0, 100) : [];
       for (const id of ids) {
         try {
           const item = await api<Image>("/" + encodeURIComponent(id));
-          if (item.origin === "REAL" && (item.status === "new" || item.status === "approved")) images.push(item);
+          if (item.origin === "REAL" && item.gallery_id === galleryId && (item.status === "new" || item.status === "approved")) images.push(item);
         } catch { /* inaccessible draft */ }
       }
       stage = images.length && (draft.stage === 2 || draft.stage === 3 || draft.stage === 4) ? draft.stage : 1;

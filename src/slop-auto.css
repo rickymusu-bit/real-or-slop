@@ -12,8 +12,6 @@
 .library .slop-auto-photo { display:block; width:100%; padding:0; overflow:hidden; border-radius:8px; }
 .slop-auto-photo img { display:block; width:100%; aspect-ratio:4 / 5; object-fit:contain; }
 
-.slop-auto-gallery { display:grid; gap:.35rem; max-inline-size:30rem; }
-.slop-auto-gallery select { min-inline-size:0; }
 .slop-auto-proposals { grid-template-columns:minmax(0,1fr); max-inline-size:48rem; }
 .slop-auto-proposals li {
   display:grid;

@@ -4,22 +4,33 @@ import "./galleries.css";
 export interface Gallery {
   id: string; title: string; description: string; slop_instructions: string; revision: number; available: number; ready: boolean;
 }
-export interface GalleryList {galleries: Gallery[]; paid_calls: boolean; text_model: string}
+interface GalleryPreview extends Gallery { photos: number; preview: string[] }
+export interface GalleryList {galleries: GalleryPreview[]; paid_calls: boolean; text_model: string}
 
 export function galleryOptions(galleries: Gallery[], value: string) {
   return galleries.map(g => `<option value="${escape(g.id)}" ${g.id === value ? "selected" : ""}>${escape(g.title)}</option>`).join("");
 }
 
-export function mountGalleries(root: HTMLElement, request: <T>(path: string, init?: RequestInit) => Promise<T>, changed: () => Promise<void>) {
+export function galleryCards(galleries: GalleryList["galleries"]) {
+  if (!galleries.length) return '<p class="gallery-empty">Crea una galleria per iniziare a raccogliere REAL e SLOP.</p>';
+  return `<ul class="gallery-grid">${galleries.map(g => `<li><button type="button" class="gallery-card" data-gallery-open="${escape(g.id)}">
+    <span class="gallery-contact-sheet" data-photos="${g.preview.length}">${g.preview.map(src =>
+      `<img src="${escape(src)}" alt="" loading="lazy" draggable="false">`).join("") || '<span>Nessuna foto</span>'}</span>
+    <span class="gallery-card-copy"><strong>${escape(g.title)}</strong>${g.description ? `<span class="gallery-description">${escape(g.description)}</span>` : ""}
+    <small>${g.photos} foto</small></span></button></li>`).join("")}</ul>`;
+}
+
+export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path: string, init?: RequestInit) => Promise<T>, changed: (id: string) => Promise<void>) {
+  const root = dialog.querySelector<HTMLElement>("[data-gallery-form]")!;
   let list: GalleryList | null = null, selected = "", busy = false;
   const render = () => {
     const gallery = list?.galleries.find(g => g.id === selected);
-    root.innerHTML = `<h3>Gallerie tematiche</h3>
-      <label>Galleria<select id="gallery-editor-select"><option value="">Nuova galleria</option>${galleryOptions(list?.galleries || [], selected)}</select></label>
+    dialog.querySelector("#gallery-editor-title")!.textContent = gallery ? "Modifica galleria" : "Nuova galleria";
+    root.innerHTML = `
       <p class="hint" id="gallery-readiness">${gallery?.ready ? "Pronta per la generazione automatica."
         : "Salva le Indicazioni SLOP per abilitare la generazione automatica. Puoi già assegnare le REAL a una galleria salvata."}</p>
       <form class="gallery-form">
-        <label>Titolo<input name="title" required maxlength="200" value="${escape(gallery?.title || "")}"></label>
+        <label>Titolo<input name="title" autofocus required maxlength="200" value="${escape(gallery?.title || "")}"></label>
         <label>Descrizione<textarea name="description" rows="3" maxlength="3000">${escape(gallery?.description || "")}</textarea></label>
         <label>Indicazioni SLOP<textarea name="slop_instructions" rows="7" maxlength="4000">${escape(gallery?.slop_instructions || "")}</textarea></label>
         <div class="library-inline"><button class="primary" type="submit">${gallery ? "Salva modifiche" : "Crea galleria"}</button>
@@ -30,7 +41,7 @@ export function mountGalleries(root: HTMLElement, request: <T>(path: string, ini
   const message = (text: string) => { root.querySelector("#gallery-message")!.textContent = text; };
   const setBusy = (value: boolean) => {
     busy = value;
-    root.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, select, textarea, button").forEach(control => { control.disabled = busy; });
+    dialog.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, textarea, button").forEach(control => { control.disabled = busy; });
   };
   const report = (error: unknown) => message(error instanceof Error ? error.message : String(error));
   const fields = (form: HTMLFormElement) => ({
@@ -38,11 +49,9 @@ export function mountGalleries(root: HTMLElement, request: <T>(path: string, ini
     description: (form.elements.namedItem("description") as HTMLTextAreaElement).value,
     slop_instructions: (form.elements.namedItem("slop_instructions") as HTMLTextAreaElement).value,
   });
-  root.addEventListener("change", event => {
-    const picker = (event.target as HTMLElement).closest<HTMLSelectElement>("#gallery-editor-select");
-    if (!picker || busy) return;
-    selected = picker.value;
-    render();
+  dialog.addEventListener("cancel", event => { if (busy) event.preventDefault(); });
+  dialog.addEventListener("click", event => {
+    if ((event.target as HTMLElement).closest("[data-gallery-editor-close]") && !busy) dialog.close();
   });
   root.addEventListener("submit", async event => {
     const form = event.target as HTMLFormElement;
@@ -54,11 +63,18 @@ export function mountGalleries(root: HTMLElement, request: <T>(path: string, ini
     try {
       const saved = await request<Gallery>("/galleries" + (gallery ? "/" + encodeURIComponent(gallery.id) : ""),
         {method: gallery ? "PATCH" : "POST", body: JSON.stringify({...data, ...(gallery ? {revision: gallery.revision} : {})})});
-      selected = saved.id;
-      list = await request<GalleryList>("/galleries");
-      render();
-      message("Galleria salvata.");
-      await changed();
+      try {
+        await changed(saved.id);
+      } catch (error) {
+        // The write succeeded. A retry should update that gallery, even if refreshing the overview failed.
+        selected = saved.id;
+        list!.galleries = [...list!.galleries.filter(g => g.id !== saved.id),
+          { ...saved, available: gallery?.available ?? 0, photos: gallery?.photos ?? 0, preview: gallery?.preview ?? [], ready: !!saved.slop_instructions.trim() }];
+        render();
+        message("Galleria salvata. " + (error instanceof Error ? error.message : String(error)));
+        return;
+      }
+      dialog.close();
     } catch (error) { report(error); }
     finally { setBusy(false); }
   });
@@ -81,13 +97,12 @@ export function mountGalleries(root: HTMLElement, request: <T>(path: string, ini
     finally { setBusy(false); }
   });
   return {
-    show(value: GalleryList) {
+    open(value: GalleryList, gallery = "") {
+      if (busy || dialog.open) return;
       list = value;
-      if (!root.querySelector("form")) render();
-      else if (!busy) {
-        const picker = root.querySelector<HTMLSelectElement>("#gallery-editor-select")!;
-        picker.innerHTML = '<option value="">Nuova galleria</option>' + galleryOptions(value.galleries, selected);
-      }
+      selected = gallery;
+      render();
+      dialog.showModal();
     },
   };
 }
