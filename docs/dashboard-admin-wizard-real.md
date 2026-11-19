@@ -1,11 +1,12 @@
-# Dashboard e wizard REAL — specifica 4.2.0
+# Dashboard e wizard REAL — specifica 4.3.0
 
-Stato: implementata nel ramo 1.45.0, da rilasciare. Aggiornata: 2026-11-19T19:19:49Z.
+Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:04:42Z.
 
 ## 1. Decisioni dell'owner
 
 - All’apertura si vedono le Gallerie. La finestra di una galleria contiene le foto e apre i wizard REAL e SLOP (2026-11-19).
 - I wizard REAL e SLOP si aprono su indirizzi dedicati nella stessa scheda (2026-11-19).
+- Durante l’acquisizione REAL la pagina è bloccata e mostra le foto acquisite sul totale selezionato con una barra di progresso (2026-11-19).
 - La dashboard segnala il caricamento invece di restare vuota (2026-11-13).
 - Wizard REAL in quattro passi, con l'inquadratura dopo acquisizione e tag (2026-11-13).
 - Nella ricerca su Commons il tasto che svuota il campo sta in una casella separata alla fine del campo, perché non copra il testo; un
@@ -65,9 +66,12 @@ acquisite sono comunque nella libreria privata.
   caricamento». Al massimo 100 immagini.
 - Le selezionate sono miniature senza titolo che aprono la loro pagina di Commons in una nuova scheda.
 - Le foto provengono dai risultati della ricerca e vengono acquisite nella galleria aperta, anche con indicazioni SLOP vuote.
-- «Avanti: tag» acquisisce ogni immagine nella quarantena privata; il browser ne prepara subito la copia di gioco (specifica
-  `copie-di-gioco`, sezione 3). Duplicati, link non validi
-  e licenze ND vengono rifiutati con il motivo; una copia fallita si ripete dal passo 3.
+- «Avanti: tag» acquisisce ogni immagine nella quarantena privata. Il browser ne prepara subito la copia di gioco (specifica
+  `copie-di-gioco`, sezione 3). La finestra «Acquisizione privata» blocca i comandi e lo scorrimento della pagina per tutta
+  l’operazione, compresa la preparazione delle copie. Mostra «Foto acquisite: X di Y» e la barra di progresso. Y è il totale
+  selezionato all’avvio e X cresce solo quando un originale viene salvato. Per l’uscita tramite il browser si applica la sua
+  conferma. Alla fine la finestra si chiude e compaiono il conteggio e gli eventuali errori. Duplicati, link non validi e licenze
+  ND vengono rifiutati con il motivo. Una copia fallita si può riprovare dal passo 3.
 
 **2. Tag.**
 - Per ogni foto: anteprima, titolo, **descrizione** modificabile (fino a 1000 caratteri, precompilata da Commons, salvata uscendo dal

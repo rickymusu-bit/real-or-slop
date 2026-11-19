@@ -1,12 +1,13 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-19T22:52:22Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-19T23:04:42Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.46.0 — 2026-11-19T22:52:22Z
+## 1.46.0 — 2026-11-19T23:04:42Z
 
 - La barra delle foto selezionate è sotto la griglia. Offre «Approva», «Pubblica», «Nel cestino» e «Cambia galleria».
 - REAL e SLOP si possono spostare insieme. Le SLOP spostate si rivedono nella galleria di destinazione.
+- L’acquisizione REAL mostra «Foto acquisite: X di Y» con il totale fisso e una barra di progresso. La pagina resta bloccata fino alla fine della preparazione delle copie di gioco.
 
 ## 1.45.0 — 2026-11-19T19:19:49Z
 

@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 34.3.0, aggiornata il 2026-11-19T22:52:22Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 34.4.0, aggiornata il 2026-11-19T23:04:42Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -10,6 +10,7 @@ in `CHANGELOG.md`.
 ## Stato
 
 - **Ramo 1.46.0:** barra compatta sotto la griglia per approvare, pubblicare, cestinare o spostare le foto selezionate.
+  Acquisizione REAL con conteggio sul totale selezionato, barra di progresso e pagina bloccata fino alla fine delle copie di gioco.
 - **Integrata in main la 1.45.0 (PR #161):** pagine dedicate per i wizard REAL e SLOP, ritorno alla galleria e indirizzo della revisione filtrata per batch.
 - **Integrata in main la 1.44.0 (PR #160):** eliminazione definitiva da «Modifica galleria» con conferma, rimozione atomica dal catalogo e coda R2.
 - **Integrata in main la 1.43.0 (PR #159):** dashboard aperta su Gallerie con anteprime e creazione. Ogni galleria apre la griglia e i wizard di caricamento
@@ -73,7 +74,7 @@ nome.
 | Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 8.2.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.3.1 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.3.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 4.2.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 4.3.0 |
 | SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 10.3.0 |
 | Foto e gallerie | `docs/database-immagini.md` | 8.3.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.1.0 |

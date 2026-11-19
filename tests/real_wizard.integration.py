@@ -1,6 +1,6 @@
 """REAL wizard in the browser, desktop and mobile: Commons search (clear box, pages, columns, a tap adds at once, selection
-kept across searches, press-and-hold preview), tags with categories, paid generation and restore, description, «Togli dal
-caricamento», crop step, summary and publication."""
+kept across searches, press-and-hold preview), blocking acquisition progress, tags with categories, paid generation and restore,
+description, «Togli dal caricamento», crop step, summary and publication."""
 import io
 import os
 import re
@@ -313,30 +313,84 @@ with sync_playwright() as p:
         assert published.ok and {first['id'], second['id']} <= {i['id'] for i in published.json()['items']}
         # Commons is simulated at the browser boundary. The wizard passes the selected gallery,
         # and the real upload API stores that membership while the instructions are empty.
-        acquired=[]
-        def mock_acquisition(route):
-            data=route.request.post_data_json
-            assert data['gallery_id']==gallery_id and 'File:Bridge1.jpg' in data['url'], data
-            photo=image_file('commons-'+name, seed+60)
-            response=page.request.post(base+'/api/admin/library/upload?'+urllib.parse.urlencode({
-                'origin':'REAL','title':'Commons '+name,'gallery_id':data['gallery_id']}),
-                data=photo['buffer'],headers={'Content-Type':photo['mimeType']})
-            assert response.ok,response.text()
-            acquired.append(response.json()['id'])
-            route.fulfill(status=response.status,content_type='application/json',body=response.text())
-        page.route('**/api/admin/library/commons', mock_acquisition)
+        commons_api = '**/api/admin/library/commons'
+        requests = []
+        page.route(commons_api, lambda route: requests.append(route))
+
+        def finish_acquisition(number):
+            route = requests.pop(0)
+            data = route.request.post_data_json
+            assert data['gallery_id'] == gallery_id and f'File:Bridge{number}.jpg' in data['url'], data
+            photo = image_file('commons-' + name, seed + 60 + number)
+            response = page.request.post(base + '/api/admin/library/upload?' + urllib.parse.urlencode({
+                'origin': 'REAL', 'title': f'Commons {name} {number}', 'gallery_id': gallery_id}),
+                data=photo['buffer'], headers={'Content-Type': photo['mimeType']})
+            assert response.ok, response.text()
+            route.fulfill(response=response)
+            return response.json()['id']
+
         page.get_by_role('button', name='Inizia un nuovo caricamento').click()
-        page.locator('#rw-search [name=q]').fill('bridge')
-        page.locator('#rw-search').get_by_role('button', name='Cerca', exact=True).click()
+        search.locator('[name=q]').fill('bridge')
+        search.get_by_role('button', name='Cerca', exact=True).click()
         page.locator('.rw-hit img').click()
-        page.get_by_role('button', name='Avanti: tag').click()
-        expect(page.locator('.rw-editor')).to_have_count(1)
-        stored=page.request.get(base+'/api/admin/library/'+acquired[0]).json()
-        assert stored['gallery_id']==gallery_id and stored['status']=='new' and stored['copy']
-        page.locator('[data-rw=discard]').click()
+        page.get_by_role('button', name='Pagina successiva').click()
+        page.locator('.rw-hit img').click()
+        search.locator('[name=q]').fill('tower')
+        search.get_by_role('button', name='Cerca', exact=True).click()
+        page.locator('.rw-hit img').click()
+        expect(page.locator('.rw-pick')).to_have_count(3)
+        with page.expect_request(commons_api):
+            page.get_by_role('button', name='Avanti: tag').click()
+        acquisition = page.get_by_role('dialog', name='Acquisizione privata')
+        count = acquisition.get_by_role('status')
+        progress = acquisition.get_by_role('progressbar', name='Progresso acquisizione foto REAL')
+        expect(count).to_have_text('Foto acquisite: 0 di 3')
+        expect(progress).to_have_attribute('max', '3')
+        expect(progress).to_have_attribute('value', '0')
+        assert acquisition.evaluate('el => el.matches(":modal")')
+        assert page.evaluate('getComputedStyle(document.documentElement).overflow') == 'hidden'
+        unload = 'window.dispatchEvent(new Event("beforeunload", { cancelable: true }))'
+        assert not page.evaluate(unload)
+        page.keyboard.press('Escape')
+        page.mouse.click(2, 2)
+        expect(acquisition).to_be_visible()
+        for outside in (page.locator('[data-gallery-return]'), search.locator('[name=q]')):
+            outside.evaluate('el => el.focus()')
+            expect(outside).not_to_be_focused()
+        page.screenshot(path=str(folder / (name + '-acquisition.png')))
+
+        with page.expect_request(commons_api):
+            first_acquired = finish_acquisition(1)
+        expect(count).to_have_text('Foto acquisite: 1 di 3')
+        expect(progress).to_have_attribute('value', '1')
+        with page.expect_request(commons_api):
+            failed = requests.pop(0)
+            assert 'File:Bridge2.jpg' in failed.request.post_data_json['url']
+            failed.fulfill(status=409, json={'error': 'Foto già presente'})
+        expect(count).to_have_text('Foto acquisite: 1 di 3')
+
+        copy_api = '**/api/admin/library/*/copy?*'
+        copy_requests = []
+        page.route(copy_api, lambda route: copy_requests.append(route))
+        with page.expect_request(copy_api):
+            last_acquired = finish_acquisition(3)
+        expect(count).to_have_text('Foto acquisite: 2 di 3')
+        expect(progress).to_have_attribute('value', '2')
+        expect(acquisition.locator('.hint')).to_have_text('Preparazione della copia di gioco…')
+        copy_requests.pop(0).continue_()
+        expect(acquisition).to_be_hidden()
+        assert page.evaluate(unload)
+        expect(page.locator('.rw-message')).to_contain_text('Foto acquisite: 2 di 3. Errori:')
+        expect(page.locator('.rw-editor')).to_have_count(2)
+        for photo_id in (first_acquired, last_acquired):
+            stored = page.request.get(base + '/api/admin/library/' + photo_id).json()
+            assert stored['gallery_id'] == gallery_id and stored['status'] == 'new' and stored['copy']
+        page.locator(f'[data-rw-image="{first_acquired}"] [data-rw=discard]').click()
         expect(page.locator('.rw-message')).to_contain_text('Foto tolta dal caricamento')
-        discarded=page.request.get(base+'/api/admin/library/'+acquired[0]).json()
-        assert discarded['gallery_id']==gallery_id and discarded['status']=='trash', discarded
+        discarded = page.request.get(base + '/api/admin/library/' + first_acquired).json()
+        assert discarded['gallery_id'] == gallery_id and discarded['status'] == 'trash', discarded
+        page.get_by_role('button', name='Indietro', exact=True).click()
+        expect(page.locator('.rw-picks img')).to_have_attribute('alt', 'Bridge2.jpg')
         assert not errors, errors
         context.close()
         print('REAL wizard browser E2E 1.15.0 passed (search clear box, tap adds at once, selection kept across searches, press-and-hold preview, description edited and summarised, four steps, crop step, search clear button, no captions, photos trashed elsewhere leave the wizard):', name)

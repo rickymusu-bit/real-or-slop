@@ -62,6 +62,16 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
   let tagCategories = new Map<string, Category>();
   let analysis: Analysis | null = null;
   const pending = new Map<string, Hit>();
+  const acquisition = document.createElement("dialog");
+  acquisition.className = "rw-dialog rw-acquisition";
+  acquisition.setAttribute("aria-labelledby", "rw-acquisition-title");
+  acquisition.innerHTML = '<h2 id="rw-acquisition-title" tabindex="-1" autofocus>Acquisizione privata</h2>' +
+    '<p role="status"></p><progress aria-label="Progresso acquisizione foto REAL"></progress><p class="hint"></p>';
+  const acquisitionCount = acquisition.querySelector<HTMLParagraphElement>('[role="status"]')!;
+  const acquisitionProgress = acquisition.querySelector<HTMLProgressElement>("progress")!;
+  const acquisitionPhase = acquisition.querySelector<HTMLParagraphElement>(".hint")!;
+  acquisition.addEventListener("cancel", event => event.preventDefault());
+  root.after(acquisition);
   const editable = (item: Image) => item.origin === "REAL" && item.gallery_id === galleryId && (item.status === "new" || item.status === "approved");
   const staged = () => images.filter(i => i.origin === "REAL" && (i.status === "new" || i.status === "approved"));
   const persist = () => {
@@ -291,23 +301,42 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
     render();
   };
   const acquire = async () => {
-    if (!pending.size && staged().length) { stage = 2; persist(); render(); return; }
-    const failures: string[] = [];
-    let done = 0;
-    for (const [url] of [...pending]) {
-      try {
-        notice = "Acquisizione privata " + (done + failures.length + 1) + " di " + pending.size + "…";
-        render();
-        const item = await api<Image>("/commons", { method: "POST", body: JSON.stringify({ url, gallery_id: galleryId }) });
-        images.push(item); pending.delete(url); persist(); done++;
-        // The game copy (4:5, centred) is made here, in the browser, from the stored original.
-        try { replace(await prepareLibraryCopy<Image>(item.id)); }
-        catch (copyError) { failures.push(short(item.title, 40) + ": copia di gioco non pronta (" + errorText(copyError) + ")"); }
-      } catch (error) { failures.push(short(url, 40) + ": " + errorText(error)); }
+    const urls = [...pending.keys()];
+    if (!urls.length) {
+      if (staged().length) { stage = 2; persist(); }
+      return;
     }
-    stage = staged().length ? 2 : 1;
-    notice = done + (done === 1 ? " immagine acquisita e preparata" : " immagini acquisite e preparate") + " in WebP." + (failures.length ? " Errori: " + failures.join(" | ") : "");
-    persist(); render();
+    const failures: string[] = [];
+    let acquired = 0;
+    const countText = () => `Foto acquisite: ${acquired} di ${urls.length}`;
+    acquisitionCount.textContent = countText();
+    acquisitionProgress.max = urls.length;
+    acquisitionProgress.value = 0;
+    acquisitionPhase.textContent = "Acquisizione delle foto…";
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = true; };
+    acquisition.showModal();
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    try {
+      for (const url of urls) {
+        acquisitionPhase.textContent = "Acquisizione delle foto…";
+        try {
+          const item = await api<Image>("/commons", { method: "POST", body: JSON.stringify({ url, gallery_id: galleryId }) });
+          images.push(item); pending.delete(url); persist();
+          acquired++;
+          acquisitionCount.textContent = countText();
+          acquisitionProgress.value = acquired;
+          acquisitionPhase.textContent = "Preparazione della copia di gioco…";
+          try { replace(await prepareLibraryCopy<Image>(item.id)); }
+          catch (copyError) { failures.push(short(item.title, 40) + ": copia di gioco non pronta (" + errorText(copyError) + ")"); }
+        } catch (error) { failures.push(short(url, 40) + ": " + errorText(error)); }
+      }
+      stage = staged().length ? 2 : 1;
+      notice = countText() + "." + (failures.length ? " Errori: " + failures.join(" | ") : "");
+      persist();
+    } finally {
+      window.removeEventListener("beforeunload", warnBeforeLeaving);
+      acquisition.close();
+    }
   };
   let conflictNotes: string[] = [];
   const generate = async (ids: string[]) => {
@@ -445,6 +474,7 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
     }
   });
   onLongPress(root, "[data-rw-preview]", element => {
+    if (acquisition.open) return;
     const hit = knownHits.get(element.dataset.rwPreview || "");
     if (!hit) return;
     openPreview({ src: hit.preview_url || hit.thumb_url, alt: hit.title.replace(/^File:/, ""), title: hit.title.replace(/^File:/, ""),

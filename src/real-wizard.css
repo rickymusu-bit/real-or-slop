@@ -61,6 +61,11 @@
 .rw-metadata a { text-decoration: underline; }
 .rw-dialog { width: min(520px, 95vw); max-height: 80svh; color: var(--text); background: var(--surface); border: 1px solid var(--hairline); border-radius: 8px; }
 .rw-dialog::backdrop { background: rgb(0 0 0 / 70%); }
+html:has(.rw-acquisition[open]) { overflow: hidden; }
+.rw-acquisition { width: min(440px, calc(100vw - 32px)); padding: 20px; overscroll-behavior: contain; }
+.rw-acquisition h2 { margin: 0 0 12px; }
+.rw-acquisition p { margin: 8px 0; }
+.rw-acquisition progress { display: block; width: 100%; height: 16px; accent-color: var(--real); }
 .rw-gen-list { display: grid; gap: 8px; max-height: 45svh; overflow: auto; margin: 14px 0; }
 .rw-preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 .rw-final { min-width: 0; }
