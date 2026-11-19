@@ -69,6 +69,7 @@ try:
             status, view = call(f'{base}/api/sessions/{sid}', opener=opener)
             q = view['question']; assert q['number'] == position + 1 and view['expiresAt'] is None, view
             assert 'view' not in q and 'caption' not in q, q
+            assert not view['credits'], view['credits']
             if check and position == 0:
                 assert call(f'{base}/api/sessions/{sid}/answer', {'roundId': q['id'], 'choice': 'REAL'}, opener=opener)[0] == 409  # not shown yet
             status, view = call(f'{base}/api/sessions/{sid}/ready', {'roundId': q['id']}, opener=opener)
@@ -99,9 +100,20 @@ try:
     credits = view['credits']; assert len(credits) == 10 and credits[5]['timedOut'] and not credits[5]['correct'], credits[5]
     for credit in credits:
         if credit['answer'] == 'AI': assert credit['prompt'].startswith('A street scene') and 'source' not in credit and 'description' not in credit, credit
-        else: assert credit['title'].startswith('gm-REAL') and 'prompt' not in credit and credit['changes'].startswith('Ritagliata,') \
-            and credit['description'].startswith('Descrizione della foto '), credit
+        else:
+            index = credit['title'].removeprefix('gm-REAL-')
+            assert index.isdigit() and credit['changes'].startswith('Ritagliata,'), credit
+            assert not {'prompt', 'real_description', 'commons_description'} & credit.keys(), credit
+            assert credit['description'] == f'Descrizione editoriale {index}\n\nContesto documentato {index}', credit
+            assert credit['author'] == f'Autrice {index}' and credit['source'] == f'https://commons.wikimedia.org/wiki/File:gm-{index}.jpg', credit
+            assert credit['licenseUrl'] == 'https://creativecommons.org/licenses/by/4.0/', credit
         assert call(base + credit['image'], opener=first_player)[0] == 200  # the photos of a concluded game stay visible to its player
+    # A published REAL without editorial copy still has its attribution in the same game's results.
+    sql("UPDATE images SET real_description=NULL WHERE title LIKE 'gm-REAL-%'")
+    _, without_description = call(f'{base}/api/sessions/{sid}', opener=first_player)
+    for credit in without_description['credits']:
+        if credit['answer'] == 'REAL':
+            assert credit['description'] == '' and credit['author'] and credit['source'], credit
     # Leaderboard: nickname check, one entry per game, a code shown once, stored as a hash.
     for bad in ('m3rda', 'ab', 'x' * 21, '<b>'):
         assert call(f'{base}/api/sessions/{sid}/leaderboard', {'nickname': bad, 'age_ok': True}, opener=first_player)[0] == 400, bad

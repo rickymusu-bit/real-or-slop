@@ -209,7 +209,7 @@ with sync_playwright() as p:
         # The owner writes first; the generation will replace this on the chosen image only.
         # «Tower» has a wrong form: converted to «tower» and saved, without a notice.
         expect(page.locator('[data-rw-caption]')).to_have_count(0)
-        # The description, read by the players after the game, is edited here and saved on leaving the field.
+        # The source description stays in the catalogue and is saved on leaving the field.
         description = a.locator('[data-rw-description]')
         expect(description).to_have_value('')
         description.fill('Un ponte di pietra sul fiume, anni Sessanta')
@@ -248,8 +248,12 @@ with sync_playwright() as p:
         expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(1)
         expect(a.locator('.rw-pill', has_text='bridge')).to_have_count(0)
         expect(a.locator('[data-editorial=visible]')).not_to_have_value('')
-        private = a.locator('[data-editorial=visible]')
-        private.fill('Owner corrected the visible street scene.'); private.blur()
+        visible = a.locator('[data-editorial=visible]')
+        visible.fill('Owner corrected the visible street scene.'); visible.blur()
+        context_field = a.locator('[data-editorial=documented_context]')
+        context_field.fill('Documented context for the players.'); context_field.blur()
+        notes = a.locator('[data-editorial=uncertainties]')
+        notes.fill('Internal notes for the editor.'); notes.blur()
         expect(a.locator('[data-editorial=visible]')).to_have_value('Owner corrected the visible street scene.')
         expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(1)
 
@@ -302,7 +306,11 @@ with sync_playwright() as p:
         expect(page.locator('.rw-final img[data-game-media]').first).to_be_visible()
         expect(page.locator('.rw-final .rs-mark').first).to_be_visible()
         expect(page.locator('.rw-final .play-caption')).to_have_count(0)
-        expect(page.locator('.rw-final-description')).to_have_text(['Un ponte di pietra sul fiume, anni Sessanta'])
+        expect(page.locator('.rw-final-description')).to_have_count(1)
+        expect(page.locator('.rw-final-description')).to_contain_text('Owner corrected the visible street scene.')
+        expect(page.locator('.rw-final-description')).to_contain_text('Documented context for the players.')
+        expect(page.locator('.rw-preview-grid')).not_to_contain_text('Un ponte di pietra sul fiume, anni Sessanta')
+        expect(page.locator('.rw-preview-grid')).not_to_contain_text('Internal notes for the editor.')
         page.screenshot(path=str(folder / (name + '-step4.png')), full_page=True)
         page.get_by_role('button', name='Conferma e pubblica').click()
         expect(page.locator('.rw-message')).to_contain_text('Devi confermare')

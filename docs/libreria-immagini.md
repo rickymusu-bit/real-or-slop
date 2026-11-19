@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 8.3.0
+# Libreria delle immagini, tag e analisi — specifica 8.4.0
 
-Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:18:01Z.
+Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:29:53Z.
 
 ## 1. Decisioni dell'owner
 
@@ -15,6 +15,7 @@ Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:18
 - L'analisi a pagamento genera i tag una sola volta per immagine e sostituisce quelli delle immagini scelte; i tag generati si
   ripristinano senza costi (2026-11-09).
 - Dal dettaglio di una foto nuova o approvata si può rifare l’analisi a pagamento con conferma esplicita (2026-11-19).
+- I risultati mostrano elementi visibili e contesto documentato della descrizione editoriale, con l’attribuzione della REAL (2026-11-19).
 - Niente prezzi né budget: ogni chiamata a pagamento si conferma e si registra senza importi; il limite di spesa è quello del progetto
   OpenAI (2026-11-10).
 - Niente didascalie, né nel gioco né nella dashboard; quelle scritte sono state cancellate (2026-11-13).
@@ -49,10 +50,10 @@ Una sola raccolta di immagini REAL e SLOP.
 | Campi | REAL | SLOP | Funzione attuale |
 |---|---|---|---|
 | Titolo | sì | no | Titolo REAL nei crediti e nell’analisi; SLOP identificate dall’ID |
-| Descrizione | sì | sì | Contesto dell’analisi; la descrizione REAL appare nei crediti finali |
+| Descrizione della fonte (REAL) o descrizione (SLOP) | sì | sì | Contesto dell’analisi e del catalogo |
 | Fonte, autore, nome e URL licenza | sì | no | Provenienza, diritti, controllo ND e attribuzione della REAL |
 | Prompt e modello | no | sì | Analisi, ricostruzione della generazione e prompt nei crediti finali |
-| Descrizione editoriale, provenienza dell'analisi e contesto Commons | sì | no | Brief automatico, correzioni private e contesto documentato |
+| Descrizione editoriale, provenienza dell'analisi e contesto Commons | sì | no | Brief automatico. Elementi visibili e contesto documentato della descrizione editoriale nei risultati |
 | Tag correnti e generati, contesti/esito dell'analisi | sì | sì | Ricerca, controllo dell'analisi e ripristino gratuito dei tag |
 | Originale/copia, hash, dimensioni, MIME, crop e misure | sì | sì | Archivio, verifica file, copie identiche nel gioco e rifacimento nel browser |
 | Batch, slot, qualità e trattamento | no | sì | Revisione, idempotenza e rifacimento delle copie SLOP |
@@ -132,9 +133,9 @@ alla copia per estrarre le foto; i crediti REAL e il prompt SLOP vengono letti n
 
 ## 5. Analisi a pagamento
 
-Per una REAL ogni analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Il modello vede la REAL **intera**, cioè l’originale caricato (JPEG, PNG o WebP fino a 12 MB), mai il ritaglio 4:5 (decisione dell’owner del 2026-11-15). Modello, hash dell’originale, revisione e data sono conservati come provenienza. La descrizione è privata, modificabile senza alterare tag o testo Commons; quest’ultimo è conservato separatamente per le nuove acquisizioni. Per una SLOP l’analisi restituisce soltanto tag, anch’essa sull’originale intero.
+Per una REAL ogni analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Il modello vede la REAL **intera**, cioè l’originale caricato (JPEG, PNG o WebP fino a 12 MB), mai il ritaglio 4:5 (decisione dell’owner del 2026-11-15). Modello, hash dell’originale, revisione e data sono conservati come provenienza. Gli elementi visibili e il contesto documentato compaiono nei risultati con l’attribuzione della foto. Il testo Commons, le incertezze e la provenienza dell’analisi restano nel catalogo. Per una SLOP l’analisi restituisce soltanto tag, anch’essa sull’originale intero.
 
-Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova generazione richiede compilazione manuale o una nuova analisi combinata confermata (`refresh_description:true`), anche se già approvata/pubblicata. Nessun backfill. L’analisi combinata si lancia dal dettaglio con conferma di una chiamata per foto. La conferma segnala gli esiti incerti o interrotti. La modifica della sola descrizione privata non ritira una pubblicata.
+Una REAL senza descrizione editoriale mostra i crediti disponibili nei risultati. Dal dettaglio la descrizione si può compilare a mano o generare con una nuova analisi combinata confermata (`refresh_description:true`), anche per una foto già approvata o pubblicata. La conferma segnala gli esiti incerti o interrotti. La modifica della sola descrizione editoriale conserva lo stato della foto.
 
 - Su richiesta dell'owner dal wizard o dallo studio SLOP per immagini nuove, dal dettaglio in galleria anche per le approvate. Il modello di testo scelto
   nelle Impostazioni, che deve leggere immagini, riceve l'originale intero (vede i pixel, non i metadati del file) con titolo e

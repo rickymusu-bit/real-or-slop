@@ -4,7 +4,7 @@
  * browser session; photos trashed or deleted elsewhere leave the wizard. */
 import "./real-wizard.css";
 import { descriptionFields, readDescription } from "./editorial-ui";
-import type { RealDescription } from "../shared/editorial";
+import { publicRealDescription, type RealDescription } from "../shared/editorial";
 import { onLongPress, openPreview } from "./image-preview";
 import { escape } from "../shared/html";
 import { CATEGORY_LABELS, isCategory, type Category } from "../shared/tag-categories";
@@ -178,7 +178,7 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
     legend() + '<div class="rw-editor-grid">' + staged().map(item => '<article class="rw-editor" data-rw-image="' + escape(item.id) + '">' +
       '<div class="rw-image"><img src="' + escape(item.file) + '" alt="' + escape(item.title) + '" loading="lazy"></div>' +
       '<div class="rw-editor-fields"><h3>' + escape(short(item.title, 90)) + '</h3>' +
-      '<label class="rw-description">Descrizione <small>(la leggono i giocatori alla fine della partita)</small><textarea data-rw-description="' +
+      '<label class="rw-description">Descrizione della fonte <small>(contesto per il catalogo)</small><textarea data-rw-description="' +
         escape(item.id) + '" maxlength="1000" rows="3" placeholder="Che cosa mostra la foto, dove e quando">' + escape(item.description) + '</textarea></label>' +
       descriptionFields(item.id, item.real_description, false, item.commons_description || "") +
       '<label>Tag</label><div class="rw-tagbox"><div class="rw-pills">' +
@@ -227,12 +227,15 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
     '<button type="button" data-rw="review" class="primary">Avanti: riepilogo</button></div>';
   const fourth = () => '<p class="hint">Anteprima della copia WebP effettivamente servita dal gioco, nel suo formato. Il marchio RS è sovrapposto ' +
     'all’immagine e non viene incorporato nei pixel del WebP.</p>' +
-    '<div class="rw-preview-grid">' + staged().map(i => '<article class="rw-final">' +
+    '<div class="rw-preview-grid">' + staged().map(i => {
+      const description = publicRealDescription(i.real_description);
+      return '<article class="rw-final">' +
       '<div class="game-media-surface rw-final-image"><img data-game-media src="' + escape(i.file) +
       '" alt="' + escape(i.title) + '"></div>' +
-      (i.description ? '<p class="rw-final-description">' + escape(i.description) + '</p>' : '<p class="hint">Nessuna descrizione.</p>') +
+      (description ? '<p class="rw-final-description">' + escape(description) + '</p>' : '<p class="hint">Nessuna descrizione editoriale.</p>') +
       '<p class="hint">' + escape(i.tags.join(", ")) + '</p>' +
-      '<small>' + escape(i.copy ? "WebP · " + i.copy.width + " × " + i.copy.height : "Copia non pronta") + '</small></article>').join("") + "</div>" +
+      '<small>' + escape(i.copy ? "WebP · " + i.copy.width + " × " + i.copy.height : "Copia non pronta") + '</small></article>';
+    }).join("") + "</div>" +
     '<div class="rw-confirm"><label><input type="checkbox" id="rw-rights"> Ho verificato autenticità, fonte e diritti di ' +
     'utilizzo delle fotografie selezionate, incluse le condizioni di attribuzione della licenza.</label></div>' +
     '<p class="hint">La pubblicazione avviene immagine per immagine: eventuali errori saranno indicati senza ripetere quelle già pubblicate.</p>' +

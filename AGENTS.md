@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 30.3.0, aggiornata il 2026-11-19T22:52:22Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 30.4.0, aggiornata il 2026-11-19T23:29:53Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -23,6 +23,8 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   e il contesto Commons, ma **non conosce l'esistenza delle SLOP**.
   Il modello successivo prepara premessa e prompt SLOP dalla REAL intera, dal profilo editoriale e dal contesto documentato, e
   riceve le indicazioni della galleria. I contesti restano distinti.
+- **Risultati REAL** (decisione del 2026-11-19). A fine partita il giocatore vede la descrizione editoriale con elementi visibili
+  e contesto documentato, seguita dall’autore, dalla fonte e dalla licenza. Il testo Commons e le note di incertezza restano nel catalogo.
 - **Dashboard** (decisione del 2026-11-19). Gallerie è la sezione iniziale. Ogni galleria apre la propria griglia e i wizard
   «Carica REAL» e «Genera SLOP» su indirizzi dedicati nella stessa scheda. Il wizard REAL acquisisce dalle ricerche su Commons.
   Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino e

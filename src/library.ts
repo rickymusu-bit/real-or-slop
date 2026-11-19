@@ -411,7 +411,7 @@ export async function showLibrary() {
       ${editable && item.copy && !legacyAnalysis ? `<p class="library-analysis">${analysisLine(item)} ${canAnalyze
         ? `<button type="button" id="library-analyze">${analysisLabel[item.analysis.status]} (a pagamento)</button>` : ""}</p>` : ""}
       ${editable && item.generated ? '<p><button type="button" id="library-restore">Ripristina i tag generati</button></p>' : ""}
-      ${fields.map(([key, label, max, area]) => `<label>${label}${area
+      ${fields.map(([key, label, max, area]) => `<label>${key === "description" && item.origin === "REAL" ? "Descrizione della fonte" : label}${area
         ? `<textarea data-field="${key}" maxlength="${max}" rows="3" ${editable ? "" : "readonly"}>${escape(item[key])}</textarea>`
         : `<input data-field="${key}" maxlength="${max}" value="${escape(item[key])}" ${editable ? "" : "readonly"}>`}</label>`).join("")}
       ${item.origin === "REAL" ? descriptionFields(item.id, item.real_description, item.status === "trash", item.commons_description || "") : ""}
@@ -443,7 +443,7 @@ export async function showLibrary() {
     }
     const editorial = (event.target as HTMLElement).closest<HTMLTextAreaElement>("[data-editorial]");
     if (editorial && open && !editorial.disabled) {
-      try { open = await save(open, {real_description: readDescription(detail, open.id)}); detailMessage("Descrizione privata salvata; tag invariati."); }
+      try { open = await save(open, {real_description: readDescription(detail, open.id)}); detailMessage("Descrizione editoriale salvata. I tag restano invariati."); }
       catch (e) { detailMessage(String(e)); } return;
     }
     const field = (event.target as HTMLElement).closest<HTMLInputElement | HTMLTextAreaElement>("[data-field]");
@@ -498,7 +498,7 @@ export async function showLibrary() {
     try {
       if (analyzePhoto && analysis) {
         const repeat = unsure(open);
-        const replaceFields = open.origin === "REAL" ? "I tag e la descrizione privata saranno sostituiti." : "I tag attuali saranno sostituiti.";
+        const replaceFields = open.origin === "REAL" ? "I tag e la descrizione editoriale saranno sostituiti." : "I tag attuali saranno sostituiti.";
         const warning = repeat ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
         if (!window.confirm(`Analizzare «${imageLabel(open)}» con ${analysis.model}? È una chiamata a pagamento. ${replaceFields}${warning}`)) return;
         detailMessage("Analisi in corso…");
@@ -755,7 +755,7 @@ export async function showLibrary() {
   // Model context: four texts, each saved as a new version; an old version can become the current one again.
   const CONTEXT_LABELS: Record<string, [string, string]> = {
     base: ["Base comune", "Inviata in ogni chiamata. Non deve parlare di immagini generate: il modello che scrive i tag non deve sapere che esistono."],
-    analysis: ["Tag", "Inviato insieme alla base a ogni analisi: tag e, per le REAL, descrizione privata."],
+    analysis: ["Tag", "Inviato insieme alla base a ogni analisi: tag e, per le REAL, descrizione editoriale."],
     slop_gallery_prompt: ["Premessa e prompt di galleria", "Inviato insieme alla base, all’originale intero e alle indicazioni della galleria."],
     slop_evaluation: ["Valutazione delle SLOP", "Inviato insieme alla base a ogni valutazione di una candidata intera. Decisioni, tolleranza e formato della risposta restano fissati nel codice."],
   };

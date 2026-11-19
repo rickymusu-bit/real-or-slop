@@ -1,10 +1,11 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-19T23:18:01Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-19T23:29:53Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.46.0 — 2026-11-19T23:18:01Z
+## 1.46.0 — 2026-11-19T23:29:53Z
 
+- Nei risultati le REAL mostrano la descrizione editoriale, l’autore, il link alla foto originale e la licenza. Il wizard anticipa la stessa descrizione.
 - La barra delle foto selezionate è sotto la griglia. Offre «Approva», «Pubblica», «Nel cestino», «Cambia galleria» e «Deseleziona». «Togli dalla pubblicazione» compare per le selezioni con foto pubblicate e ritira solo queste.
 - Il dettaglio aperto toccando una foto riunisce i comandi per tag, inquadratura, trattamento SLOP e analisi IA. Si può rifare un’analisi con conferma esplicita.
 - REAL e SLOP si possono spostare insieme. Le SLOP spostate si rivedono nella galleria di destinazione.

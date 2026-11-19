@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 4.3.0
+# Dashboard e wizard REAL — specifica 4.4.0
 
-Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:04:42Z.
+Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:29:53Z.
 
 ## 1. Decisioni dell'owner
 
@@ -13,9 +13,8 @@ Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:04
   tocco breve su una foto la seleziona e la mette subito tra le selezionate; la selezione resta con una nuova ricerca (2026-11-14).
 - Una pressione prolungata su una miniatura la ingrandisce con titolo, descrizione e link a Commons; la finestra resta aperta e si
   chiude con una × nell'angolo. Vale anche nella galleria e nello studio SLOP (2026-11-14).
-- La **descrizione Commons modificabile dall'owner** è quella mostrata alla fine della partita (2026-11-14).
-  La nuova **descrizione editoriale generata con i tag** rimane privata; il suo contenuto può essere corretto durante
-  il caricamento senza sostituire automaticamente quello mostrato nel gioco.
+- La **descrizione editoriale generata con i tag** fornisce il testo per i risultati del gioco, con elementi visibili e contesto
+  documentato modificabili dall’owner. Le incertezze e il testo Commons restano nel catalogo (2026-11-19).
 
 ## 2. Dashboard `/admin`
 
@@ -74,19 +73,19 @@ acquisite sono comunque nella libreria privata.
   ND vengono rifiutati con il motivo. Una copia fallita si può riprovare dal passo 3.
 
 **2. Tag.**
-- Per ogni foto: anteprima, titolo, **descrizione** modificabile (fino a 1000 caratteri, precompilata da Commons, salvata uscendo dal
-  campo, «la leggono i giocatori alla fine della partita»), tag come pillole colorate per categoria, campo per un nuovo tag con
+- Per ogni foto: anteprima, titolo, **descrizione della fonte** modificabile (fino a 1000 caratteri, precompilata da Commons, salvata
+  uscendo dal campo), tag come pillole colorate per categoria, campo per un nuovo tag con
   suggerimenti dal vocabolario e scelta della categoria, avviso se manca il tag di Tempo, «Titolo e metadati» (autore, licenza,
   dimensioni, link alla fonte e alla licenza), «Togli dal caricamento» (sposta nel cestino, ripristinabile dal cestino della galleria).
 - **Genera tag e descrizione con IA:** dialogo di scelta delle REAL da analizzare (preselezionate quelle mai analizzate o
   rifiutate senza addebito; esiti incerti deselezionati con avviso), poi una conferma per **una chiamata per REAL**.
-  Produce contemporaneamente tag e descrizione editoriale privata, distinta dal campo Commons. I tag delle foto selezionate
+  Produce contemporaneamente tag e descrizione editoriale sull’originale intero. I tag delle foto selezionate
   vengono sostituiti; una REAL già analizzata non è selezionabile per ripetere automaticamente una chiamata pagata, ma
   può ricevere un'analisi nuova su richiesta esplicita, con conferma, nella galleria. Le altre REAL non cambiano.
 - **Descrizione editoriale:** mostrare nella scheda della REAL il contenuto **visibile**, il **contesto documentato Commons**
   e le **incertezze**, ciascuno modificabile dall'owner. Se Commons non documenta un fatto, non inventarlo per riempire
-  la descrizione. Le correzioni del testo non cancellano i tag. Non sostituisce automaticamente la descrizione destinata
-  ai giocatori né altera l'attribuzione/licenza.
+  la descrizione. Le correzioni degli elementi visibili e del contesto documentato si riflettono nei risultati e conservano tag e
+  attribuzione.
 - **Ripristina i tag generati:** per le immagini scelte, senza costi; le modifiche dell'owner ai tag si perdono. La descrizione
   editoriale ha una propria revisione: ripristinare i tag non deve sovrascriverla.
 - Le modifiche di una foto partono una dopo l'altra, ciascuna con la revisione più recente.
@@ -99,7 +98,8 @@ ritaglio (specifica `copie-di-gioco`, sezione 3); «Prepara la copia di gioco» 
   Se l'inquadratura cambia dopo l'analisi, non effettuare nuove chiamate automatiche; l'owner può correggere manualmente
   la descrizione quando qualche dettaglio secondario non è più visibile.
 
-**4. Riepilogo e pubblicazione.** Ogni foto con la copia servita dal gioco e il marchio «RS» sovrapposto, la descrizione e i tag.
+**4. Riepilogo e pubblicazione.** Ogni foto con la copia servita dal gioco e il marchio «RS» sovrapposto, la descrizione editoriale che
+comparirà nei risultati e i tag.
 L'owner dichiara di aver verificato autenticità, provenienza e condizioni della licenza; poi le immagini si approvano e si pubblicano una
 alla volta. Dopo un errore quelle già pubblicate non si ripetono; gli errori restano indicati.
 
@@ -107,10 +107,4 @@ alla volta. Dopo un errore quelle già pubblicate non si ripetono; gli errori re
 
 - Commons non certifica l'autenticità: una pagina e una licenza compatibile non dimostrano che una foto sia REAL. La verifica è
   dell'owner.
-- La descrizione di Commons è spesso in inglese e tagliata: ora la leggono i giocatori, quindi va riletta. Una descrizione riscritta è un
-  testo dell'owner e nel gioco sta in un paragrafo separato dai crediti dell'autore.
 - La pubblicazione di un gruppo non è transazionale: dopo un errore di rete alcune foto possono restare approvate.
-
-## Descrizione editoriale privata
-
-Nel passo dei tag, tre campi modificabili: elementi visibili, contesto Commons documentato e incertezze. La stessa chiamata che genera i tag li compila, sulla REAL intera (l’originale, non il ritaglio 4:5: decisione dell’owner del 2026-11-15). Le modifiche si salvano senza rifare i tag e senza sovrascrivere la descrizione destinata ai giocatori. Inquadratura conserva gli elementi fondamentali della REAL.

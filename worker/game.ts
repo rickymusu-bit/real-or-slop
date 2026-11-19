@@ -8,6 +8,7 @@ import { preparationTtlMs } from "../shared/preloading";
 import { curatedSample } from "./sampling";
 import { isLevel, LEVEL_IDS, LEVELS, scoreOf, type Level, type Outcome } from "../shared/levels";
 import { enter } from "./leaderboard";
+import { publicRealDescription, realDescription } from "../shared/editorial";
 
 /** An answer sent in time but arriving shortly after the deadline (network) still counts. */
 export const GRACE_MS = 500;
@@ -70,17 +71,22 @@ const round = (sid: string, r: { id: string; position: number }) => ({
   id: r.id, number: r.position + 1, image: `/api/sessions/${sid}/media/${r.id}`, alt: "Foto da classificare" });
 
 interface Credit { id: string; position: number; type: "REAL" | "AI"; choice: "REAL" | "AI" | null; timed_out: number;
-  title: string; description: string; author: string; source_url: string; license_name: string; license_url: string; prompt: string }
+  title: string; real_description: string | null; author: string; source_url: string; license_name: string; license_url: string; prompt: string }
+function creditDescription(stored: string | null): string {
+  if (!stored) return "";
+  try { return publicRealDescription(realDescription(JSON.parse(stored))); }
+  catch { return ""; }
+}
 /** The game's photos after the end: the player's answer, the origin, description and source for a REAL, the prompt for a SLOP. */
 async function credits(env: Env, sid: string) {
   const rows = (await env.DB.prepare(`SELECT r.id,r.position,CASE i.origin WHEN 'SLOP' THEN 'AI' ELSE 'REAL' END AS type,a.choice,r.timed_out,
-    i.title,i.description,i.author,i.source_url,i.license_name,i.license_url,i.prompt
+    i.title,i.real_description,i.author,i.source_url,i.license_name,i.license_url,i.prompt
     FROM game_rounds r JOIN images i ON i.id=r.image_id LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? ORDER BY r.position`)
     .bind(sid).all<Credit>()).results;
   return rows.map(r => ({ number: r.position + 1, image: `/api/sessions/${sid}/media/${r.id}`, answer: r.type,
     choice: r.choice, correct: r.choice === r.type, timedOut: !!r.timed_out,
     // Licences such as CC BY and CC BY-SA ask to say that the work was changed: the game copy is cropped, scaled and re-encoded.
-    ...(r.type === "REAL" ? { title: r.title, description: r.description || "", author: r.author, source: r.source_url || null, license: r.license_name, licenseUrl: r.license_url || null,
+    ...(r.type === "REAL" ? { title: r.title, description: creditDescription(r.real_description), author: r.author, source: r.source_url || null, license: r.license_name, licenseUrl: r.license_url || null,
         changes: "Ritagliata, ridotta e ricompressa per il gioco" }
       : { prompt: r.prompt }) }));
 }

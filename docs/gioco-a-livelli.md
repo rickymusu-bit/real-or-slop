@@ -1,6 +1,6 @@
-# Partita a livelli e classifica — specifica 3.1.0
+# Partita a livelli e classifica — specifica 3.2.0
 
-Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
+Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:29:53Z.
 
 **Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
 descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
@@ -23,6 +23,7 @@ comprese quelle estratte come riferimenti temporanei per un batch SLOP.
 - Foto intera nel suo formato su ogni schermo, esplorabile; pulsanti REAL e SLOP sempre visibili; niente swipe (2026-11-13).
 - Niente didascalie (2026-11-13). Alla fine, per ogni REAL la descrizione e le fonti, per ogni SLOP il prompt in inglese (2026-11-12 e
   2026-11-14).
+- Nei risultati la descrizione delle REAL è il testo editoriale preparato per il gioco, con autore e link alla foto originale (2026-11-19).
 - Classifica nella home con soprannome controllato e codice partita; nessuna precedenza alle foto non ancora viste: «contiamo sul gran
   numero di foto» (2026-11-12).
 
@@ -53,8 +54,9 @@ sono le sue foto, altrimenti resta disattivato con il motivo.
 7. **Pagina lasciata:** la foto si oscura («Mostra la foto» per tornare), il tempo continua. Una partita ripresa dopo aver ricaricato
    continua dalla foto di turno.
 8. **Fine:** punteggio, REAL e SLOP riconosciute, accuratezza bilanciata, foto scadute; modulo per la classifica; lista delle foto intere
-   con la risposta data e, per le REAL, la **descrizione** e poi titolo, autore, licenza, fonte e le modifiche («Ritagliata, ridotta e
-   ricompressa per il gioco; la versione modificata ha la stessa licenza dell'originale»), per le SLOP il prompt.
+   con la risposta data. Per le REAL, la **descrizione editoriale** unisce elementi visibili e contesto documentato. Seguono titolo,
+   autore, licenza, link «Foto originale» e indicazione del ritaglio e della ricompressione. Se manca la descrizione editoriale si
+   mostrano i crediti disponibili. Il testo Commons e le note di incertezza restano nel catalogo. Per le SLOP si mostra il prompt.
 
 Le risposte non arrivano mai al browser prima della risposta del giocatore. Le partite già iniziate continuano con le copie dei loro
 round anche se nel frattempo una foto viene modificata o ritirata.

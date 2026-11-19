@@ -96,9 +96,17 @@ try:
             expect(page.locator('.credit .credit-prompt').first).to_contain_text('A street scene')
             reals = page.locator('.credit:not(:has(.credit-prompt))').count()  # REAL or SLOP is a coin at each position
             expect(page.locator('.credit .credit-description')).to_have_count(reals)
-            if reals: expect(page.locator('.credit .credit-description').first).to_contain_text('Descrizione della foto ')
+            description = page.locator('.credit .credit-description').first
+            expect(description).to_contain_text('Descrizione editoriale ')
+            expect(description).to_contain_text('Contesto documentato ')
+            expect(page.locator('.credits')).not_to_contain_text('Testo Commons della foto')
+            expect(page.locator('.credits')).not_to_contain_text('Nota interna')
             expect(page.locator('.credit:has(.credit-prompt) .credit-description')).to_have_count(0)
-            expect(page.locator('.credit a', has_text='Fonte')).to_have_count(0)  # uploaded REAL fixtures have no source page
+            links = page.locator('.credits').get_by_role('link', name='Foto originale')
+            expect(links).to_have_count(reals)
+            expect(links.first).to_have_attribute('href', re.compile(r'^https://commons\.wikimedia\.org/wiki/File:gb-\d+\.jpg$'))
+            expect(page.locator('.credit-source').first).to_contain_text('Autore: Autrice ')
+            expect(page.locator('.credits').get_by_role('link', name='CC BY 4.0')).to_have_count(reals)
             expect(page.locator('.credit-changes').first).to_contain_text('Ritagliata, ridotta e ricompressa')
             # The photos of the list are whole: the box has the copy's format.
             page.locator('.credit-image img').first.scroll_into_view_if_needed()
@@ -124,6 +132,7 @@ try:
             expect(page.locator('#content')).to_contain_text('Le SLOP possono essere anche ridotte, sgranate o sbiadite')
             expect(page.locator('#content')).not_to_contain_text('stessa preparazione')
             page.goto(base + '/crediti')
+            expect(page.locator('#content')).to_contain_text('La descrizione nei risultati è preparata')
             expect(page.locator('#content')).to_contain_text('ritagliata in verticale nel rapporto 4:5')
             expect(page.locator('#content')).to_contain_text('possono essere state ridotte, sgranate o sbiadite')
             expect(page.locator('#content')).to_contain_text('4:5')

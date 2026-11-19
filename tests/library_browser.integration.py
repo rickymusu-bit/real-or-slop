@@ -221,7 +221,7 @@ with sync_playwright() as p:
                 redo = dialog.get_by_role('button', name='Rifai l’analisi con IA (a pagamento)')
                 redo.click()
                 expect(dialog.locator('#library-detail-message')).to_contain_text('Analisi completata.')
-                assert 'descrizione privata saranno sostituiti' in confirms[-1]
+                assert 'descrizione editoriale saranno sostituiti' in confirms[-1]
             expect(dialog.locator('#library-crop')).to_be_visible()
             expect(dialog.locator('[data-field=caption], [data-field=explanation]')).to_have_count(0)
             for key in ('source_url', 'author', 'license_name', 'license_url'):

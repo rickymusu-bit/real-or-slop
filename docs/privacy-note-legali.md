@@ -1,6 +1,6 @@
-# Privacy e note legali — specifica 1.3.0
+# Privacy e note legali — specifica 1.3.1
 
-Stato: vigente, la 1.2.0 in produzione con l'app 1.25.0. Aggiornata: 2026-11-15T09:00:00Z.
+Stato: vigente. Aggiornata: 2026-11-19T23:29:53Z.
 1.2.0: su richiesta dell'owner del 2026-11-14 i Termini d'uso (aggiornati il 14 novembre 2026) dicono che le SLOP sono generate «senza
 parti di fotografie vere, e spesso ridotte, sfocate, sgranate o sbiadite come lo sono le immagini che circolano», al posto di «generate
 integralmente», per il trattamento delle SLOP (specifica `copie-di-gioco`, sezione 4); «Fonti e crediti» lo dice allo stesso modo.
@@ -65,5 +65,5 @@ Casella obbligatoria sull'età (rifiutata anche dal server senza `age_ok: true`)
 Le licenze CC BY e CC BY-SA chiedono di indicare le modifiche; la CC BY-SA chiede la stessa licenza per l'opera modificata. La copia di
 gioco è ritagliata al formato comune più vicino, ridotta e ricompressa: i crediti di fine partita dicono «Ritagliata, ridotta e
 ricompressa per il gioco; la versione modificata ha la stessa licenza dell'originale», e la pagina «Fonti e crediti» lo spiega. Le
-licenze ND sono escluse. La descrizione di una REAL, che l'owner può riscrivere, compare in un paragrafo separato dai crediti dell'autore;
-«Fonti e crediti» avverte che può essere stata corretta o riscritta per il gioco.
+licenze ND sono escluse. La descrizione editoriale di una REAL compare separata dall’attribuzione, che include autore, licenza e link
+alla fonte. «Fonti e crediti» spiega che la descrizione è preparata per il gioco a partire dalla foto e dal contesto documentato.

@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 8.4.0
+# Foto e gallerie — specifica 8.5.0
 
-Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:18:01Z.
+Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:29:53Z.
 
 ## 1. Decisioni dell'owner
 
@@ -68,8 +68,10 @@ suo batch originario, ma esce dalla sua revisione operativa.
   anche «Completa Genere, Colore e Supporto», «Ripristina i tag generati», «Approva», «Pubblica nel gioco», «Togli dalla pubblicazione»,
   «Elimina (nel cestino)», «Ripristina» ed «Elimina definitivamente» secondo lo stato della foto.
 - **Rigenerare una SLOP:** richiede un nuovo processo nello studio con conferma ed esame dell’immagine intera.
-- **Descrizione REAL privata:** elementi visibili, contesto documentato e incertezze, modificabili indipendentemente dai tag, anche per una pubblicata. Per una REAL storica senza descrizione, compilazione manuale o analisi combinata tag+descrizione con conferma separata.
-- **Analisi combinata:** dal dettaglio di una REAL senza descrizione privata e fuori dal cestino, con conferma di una chiamata a
+- **Descrizione editoriale REAL:** elementi visibili e contesto documentato compaiono nei risultati. Le incertezze restano nel catalogo.
+  Questi campi si modificano indipendentemente dai tag, anche per una pubblicata. Per una REAL senza descrizione si possono compilare
+  i campi a mano oppure avviare l’analisi combinata con conferma separata.
+- **Analisi combinata:** dal dettaglio di una REAL senza descrizione editoriale e fuori dal cestino, con conferma di una chiamata a
   pagamento sull’originale intero. Sostituisce i tag. Se l’analisi precedente è interrotta o incerta, la conferma segnala il possibile
   addebito già avvenuto. La foto pubblicata resta nel gioco.
 - **Copie e misure:** «Inquadratura» prepara la copia con il ritaglio scelto. Aprendo la galleria si misurano in background le copie

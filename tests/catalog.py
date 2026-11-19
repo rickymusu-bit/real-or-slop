@@ -31,10 +31,14 @@ def publish(api, token, prefix, real=10, slop=10, seed=0):
         out = io.BytesIO(); picture.save(out, 'PNG')
         item = _call(api, token, '/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': origin, 'title': f'{prefix}-{origin}-{index}',
                      'prompt': f'A street scene number {index}, 1960s' if origin == 'SLOP' else '',
-                     'description': f'Descrizione della foto {index}' if origin == 'REAL' else ''}), raw=out.getvalue(), mime='image/png')
+                     'description': f'Testo Commons della foto {index}' if origin == 'REAL' else ''}), raw=out.getvalue(), mime='image/png')
         item = _call(api, token, f'/{item["id"]}/copy', raw=game_copy(out.getvalue()), mime='image/webp')
+        credits = {'author': f'Autrice {index}', 'source_url': f'https://commons.wikimedia.org/wiki/File:{prefix}-{index}.jpg',
+                   'license_name': 'CC BY 4.0', 'license_url': 'https://creativecommons.org/licenses/by/4.0/',
+                   'real_description': {'visible': f'Descrizione editoriale {index}', 'documented_context': f'Contesto documentato {index}',
+                                        'uncertainties': f'Nota interna {index}'}} if origin == 'REAL' else {}
         item = _call(api, token, f'/{item["id"]}', {'revision': item['revision'], 'tags': [f'{prefix}-tag'],
-                     'tag_categories': {f'{prefix}-tag': 'other'}}, method='PATCH')
+                     'tag_categories': {f'{prefix}-tag': 'other'}, **credits}, method='PATCH')
         _call(api, token, f'/{item["id"]}/approve', {'rights_confirmed': True})
         _call(api, token, f'/{item["id"]}/publish', {})
         ids[origin].append(item['id'])
