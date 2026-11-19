@@ -194,7 +194,7 @@ export async function showLibrary() {
     savedGallery = id;
   }, id => {
     if (galleryList) showGalleries({ ...galleryList, galleries: galleries().filter(g => g.id !== id) });
-    if (galleryDialog.open) galleryDialog.close();
+    closeGallery();
     $("[data-gallery-create]").focus({ preventScroll: true });
     void Promise.allSettled([autoBox.refresh(), refreshTags()]);
   });
@@ -581,7 +581,7 @@ export async function showLibrary() {
     }
     if (button?.hasAttribute("data-gallery-create") && galleryList) { galleryEditor.open(galleryList); return; }
     if (button?.dataset.galleryOpen) { await openGallery(button.dataset.galleryOpen).catch(report); return; }
-    if (button?.hasAttribute("data-gallery-close")) { galleryDialog.close(); return; }
+    if (button?.hasAttribute("data-gallery-close")) { closeGallery(); return; }
     if (button?.hasAttribute("data-gallery-edit") && galleryList) { galleryEditor.open(galleryList, filter.gallery); return; }
     if (button?.id === "library-more") { await load(true).catch(report); return; }
     if (button?.hasAttribute("data-batch-clear")) {
@@ -905,16 +905,21 @@ export async function showLibrary() {
     }
     await load();
   };
-  galleryDialog.addEventListener("close", () => {
-    if (galleryDialog.open) return;
+  const closeGallery = () => {
+    if (!galleryDialog.open) return;
     const id = filter.gallery;
     filter.gallery = "";
     ++loadSeq;
     history.replaceState(history.state, "", "/admin");
+    galleryDialog.close();
     window.clearTimeout(searchTimer);
     if (!document.activeElement?.closest("#admin-galleries"))
       page.querySelector<HTMLElement>(`[data-gallery-open="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
     void refreshGalleries().catch(showGalleryError);
+  };
+  galleryDialog.addEventListener("cancel", event => {
+    event.preventDefault();
+    closeGallery();
   });
   const activeBatch = $<HTMLAnchorElement>("#gallery-active-batch");
   const autoBox = mountSlopAuto($("#slop-auto"), null, "", {
@@ -935,7 +940,7 @@ export async function showLibrary() {
       const batch = query.get("batch") || "";
       await openGallery(id, /^[\w-]{1,64}$/.test(batch) ? batch : "").catch(report);
     } else {
-      if (galleryDialog.open) galleryDialog.close();
+      closeGallery();
       const status = $("#gallery-navigation-status");
       status.hidden = false;
       status.textContent = "Galleria non disponibile.";

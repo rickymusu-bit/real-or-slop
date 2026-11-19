@@ -264,6 +264,7 @@ with sync_playwright() as p:
         if name == 'desktop':
             # A long gallery can be scrolled in pages, without pulling in other galleries.
             page.locator('[data-gallery-close]').click()
+            expect(page).to_have_url(base + '/admin')
             paged = make_gallery(API, token, 'Test pagination')
             sql(f"""WITH RECURSIVE photos(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM photos WHERE n<73)
                 INSERT INTO images(id, gallery_id, origin, title, original_key, original_sha256, original_mime, width, height, created_at, updated_at)
