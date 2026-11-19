@@ -481,7 +481,7 @@ export async function showLibrary() {
       open = await save(open, { tags: [...new Set([...open.tags, checked.tag])], tag_categories: { [checked.tag]: category } });
       showDetail(open); render(); void refreshTags(); detail.querySelector<HTMLInputElement>("#library-tag-input")?.focus();
     } catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
-    finally { busy = false; }
+    finally { busy = false; selectionBar(); }
   });
   detail.addEventListener("click", async event => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
@@ -568,7 +568,7 @@ export async function showLibrary() {
       }
       if (detail.open && open?.id === id) detailMessage(String(error instanceof Error ? error.message : error));
     }
-    finally { busy = false; }
+    finally { busy = false; selectionBar(); }
   });
 
   const moveGallery = $<HTMLDialogElement>("#library-move-gallery");
