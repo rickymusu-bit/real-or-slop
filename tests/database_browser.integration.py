@@ -114,7 +114,7 @@ with sync_playwright() as p:
         page.locator('[data-filter-remove="dbb-paris"]').click(); page.locator('[data-filter-remove="dbb-beach"]').click()
         tag_input.fill('dbb-riot'); tag_input.press('Enter')
         expect(cards).to_have_count(2)
-        # Select REAL through the origin filter, then explicitly analyse the selection with the exact maximum.
+        # Select REAL through the origin filter and clear the selection before opening the detail.
         page.locator('#library-origin').select_option('REAL')
         expect(cards).to_have_count(1)
         # «Seleziona tutte» takes exactly the photos the filters show.
@@ -123,13 +123,14 @@ with sync_playwright() as p:
         expect(page.locator('#library-select-all')).to_be_hidden()
         expect(page.get_by_role('checkbox', name=f'Seleziona {prefix}-barricate')).to_be_checked()
         shown = page.locator('#library-grid [data-select]').count()
-        expect(page.locator('#library-selection strong')).to_have_text(f'{shown} selezionate')
+        expect(page.locator('#library-selection strong')).to_have_text(f"{shown} {'selezionata' if shown == 1 else 'selezionate'}")
         page.locator('[data-bulk=none]').click(); expect(page.locator('#library-select-all')).to_be_visible()
-        page.get_by_role('checkbox', name=f'Seleziona {prefix}-barricate').check()
+        page.get_by_role('button', name=f'Apri {prefix}-barricate').click()
         openai([{'tags': ['dbb-riot', 'dbb-paris', '1960s']}])
-        page.locator('[data-bulk=describe]').click()
-        expect(page.locator('#library-message')).to_contain_text('1 di 1 analizzate', timeout=30000)
-        assert 'al massimo 1 chiamata' in confirms[-1] and "sull'originale intero" in confirms[-1], confirms[-1]
+        page.locator('#library-description-analysis').click()
+        expect(page.locator('#library-detail #library-description-analysis')).to_have_count(0, timeout=30000)
+        assert 'una chiamata a pagamento' in confirms[-1].lower(), confirms[-1]
+        page.locator('#library-detail .library-detail-close button').click()
         described = call(f'{API}/{real["id"]}')
         assert described['real_description']['visible'] and described['status'] == 'published', described
         expect(cards).to_have_count(1)
@@ -148,26 +149,9 @@ with sync_playwright() as p:
         assert 'esito incerto' in confirms[-1], confirms[-1]
         assert call(f'{API}/{stuck["id"]}')['real_description']['visible']
         page.locator('#library-detail .library-detail-close button').click()
-        # The same case in the group action: included, named in the confirmation, repeated explicitly. One still running is left alone.
-        again = seed(prefix, 'REAL', 'interrotta-gruppo', 40 + index, ['dbb-riot'], False)
-        fresh = seed(prefix, 'REAL', 'in-corso', 50 + index, ['dbb-riot'], False)
-        sql(f"UPDATE images SET analysis_status='running',updated_at='2000-01-01T00:00:00.000Z' WHERE id='{again['id']}'")
-        sql(f"UPDATE images SET analysis_status='running',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id='{fresh['id']}'")
+        call(f'{API}/bulk', {'action': 'trash', 'ids': [stuck['id']]})
+        call(f'{API}/bulk', {'action': 'delete', 'ids': [stuck['id']]})
         page.locator('#library-search').fill('')
-        expect(cards).to_have_count(5)
-        page.get_by_role('checkbox', name=f'Seleziona {prefix}-interrotta-gruppo',exact=True).check()
-        page.get_by_role('checkbox', name=f'Seleziona {prefix}-in-corso',exact=True).check()
-        openai([{'tags': ['dbb-riot']}])
-        with page.expect_response(f'{API}/{again["id"]}/analyze') as analysis:
-            page.locator('[data-bulk=describe]').click()
-        assert analysis.value.ok
-        expect(cards).to_have_count(5, timeout=30000)  # analysis no longer hides images from the catalogue
-        expect(page.locator('#library-message')).to_contain_text('1 di 1 analizzate')
-        assert "un'analisi precedente interrotta o con esito incerto" in confirms[-1] and 'al massimo 1 chiamata' in confirms[-1], confirms[-1]
-        assert call(f'{API}/{again["id"]}')['real_description']['visible'] and call(f'{API}/{fresh["id"]}')['real_description'] is None
-        ids = [stuck['id'], again['id'], fresh['id']]
-        call(f'{API}/bulk', {'action': 'trash', 'ids': ids}); call(f'{API}/bulk', {'action': 'delete', 'ids': ids})
-        page.locator('[data-view=library]').click()
         expect(cards).to_have_count(2)
 
         # Edit a published SLOP: confirmation, out of publication, approved; then the prompt and a regeneration.

@@ -66,7 +66,8 @@ export async function processViews(env: Env, batchId: string) {
 }
 async function show(env: Env, batchId: string) {
   const processes = await processViews(env, batchId), row = await load(env, batchId);
-  const ids = (await env.DB.prepare("SELECT id FROM images WHERE generation_batch=? ORDER BY created_at,rowid").bind(batchId).all<{id: string}>()).results;
+  const ids = (await env.DB.prepare("SELECT id FROM images WHERE generation_batch=? AND gallery_id=? ORDER BY created_at,rowid")
+    .bind(batchId, row.gallery_id).all<{id: string}>()).results;
   const config = parse<Snapshot | null>(row.loop_settings, null);
   const maxCalls = config && processes.reduce((total, p) => {
     const rendering = row.origin === "auto" && !p.premise ? 0 : 1 + 2 * config.max_generation_attempts;
@@ -285,7 +286,7 @@ export async function acceptProcess(env: Env, processId: string, data: Record<st
   return {image: {id: image.id}, tags_error: tags.slice(0, 300), attention: await attention(env)};
 }
 async function recent(env: Env, gallery: string) {
-  const rows = (await env.DB.prepare(`SELECT b.id,b.slots,b.prompts_status,b.updated_at,(SELECT count(*) FROM images i WHERE i.generation_batch=b.id) AS images
+  const rows = (await env.DB.prepare(`SELECT b.id,b.slots,b.prompts_status,b.updated_at,(SELECT count(*) FROM images i WHERE i.generation_batch=b.id AND i.gallery_id=b.gallery_id) AS images
     FROM slop_batches b WHERE (?1='' OR b.gallery_id=?1) ORDER BY b.updated_at DESC LIMIT 10`).bind(gallery).all<Batch & {images: number}>()).results;
   return {batches: rows.map(r => ({id: r.id, count: itemsOf(r).length, prompts_status: r.prompts_status, images: r.images, updated_at: r.updated_at}))};
 }

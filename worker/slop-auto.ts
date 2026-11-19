@@ -13,13 +13,16 @@ interface AutoRow extends GalleryBatch {
 }
 const parse = <T>(value: string | null, fallback: T): T => { try { return value ? JSON.parse(value) as T : fallback; } catch { return fallback; } };
 const now = () => new Date().toISOString();
+const pendingInGallery = (env: Env, row: AutoRow) => env.DB.prepare(
+  "SELECT count(*) AS n FROM images WHERE generation_batch=? AND gallery_id=? AND status='new'",
+).bind(row.id, row.gallery_id).first<{ n: number }>();
 
 /** The open automatic batch, after closing it if it is in review and every image has been decided. */
 async function openBatch(env: Env): Promise<AutoRow | null> {
   await expireGalleryBatches(env);
   const row = await env.DB.prepare("SELECT * FROM slop_batches WHERE origin='auto' AND auto_status IN ('running','review') LIMIT 1").first<AutoRow>();
   if (!row || row.auto_status !== "review") return row;
-  const pending = await env.DB.prepare("SELECT count(*) AS n FROM images WHERE generation_batch=? AND status='new'").bind(row.id).first<{ n: number }>();
+  const pending = await pendingInGallery(env, row);
   const unresolved = await env.DB.prepare("SELECT count(*) AS n FROM slop_processes WHERE batch_id=? AND state IN ('review_needed','uncertain','failed','exhausted','running','prompting','retry','ready','draft')").bind(row.id).first<{n:number}>();
   if (pending?.n || unresolved?.n) return row;
   await env.DB.prepare("UPDATE slop_batches SET auto_status='closed',updated_at=? WHERE id=? AND auto_status='review'").bind(now(), row.id).run();
@@ -27,8 +30,8 @@ async function openBatch(env: Env): Promise<AutoRow | null> {
 }
 
 async function batchView(env: Env, row: AutoRow) {
-  const images = (await env.DB.prepare(`SELECT id,status,generation_slot,copy_key,analysis_status FROM images WHERE generation_batch=?
-    ORDER BY created_at,rowid`).bind(row.id).all<{ id: string; status: string; generation_slot: string | null; copy_key: string | null; analysis_status: string }>()).results;
+  const images = (await env.DB.prepare(`SELECT id,status,generation_slot,copy_key,analysis_status FROM images WHERE generation_batch=? AND gallery_id=?
+    ORDER BY created_at,rowid`).bind(row.id, row.gallery_id).all<{ id: string; status: string; generation_slot: string | null; copy_key: string | null; analysis_status: string }>()).results;
   const processes = await processViews(env, row.id);
   return { id: row.id, gallery_id: row.gallery_id, size: row.auto_size, status: row.auto_status, prompts_status: row.prompts_status,
     prompts_error: row.prompts_error, slots: row.auto_size, attempted: processes.filter(p => p.attempts.length).map(p => p.slot),
@@ -104,7 +107,7 @@ export async function autoRoute(env: Env, method: string, rest: string, data: Re
     const row = await openBatch(env);
     if (!row || row.auto_status !== "review" || (data.batch !== undefined && data.batch !== row.id)) throw new HttpError(409, "Prima interrompi o termina la generazione");
     if (runnerView(row)?.alive) throw new HttpError(409, "Attendi la fine del passo in corso sul server");
-    const pending = await env.DB.prepare("SELECT count(*) AS n FROM images WHERE generation_batch=? AND status='new'").bind(row.id).first<{n:number}>();
+    const pending = await pendingInGallery(env, row);
     if (pending?.n) throw new HttpError(409, "Decidi prima le immagini nuove del batch");
     await env.DB.prepare("UPDATE slop_processes SET state='closed',updated_at=? WHERE batch_id=? AND image_id IS NULL AND state IN ('draft','ready','retry')").bind(now(), row.id).run();
     await env.DB.prepare("UPDATE slop_batches SET auto_status='closed',updated_at=? WHERE id=?").bind(now(),row.id).run();

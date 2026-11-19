@@ -21,7 +21,6 @@
 .library .library-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:16px; }
 .library .library-card { border-radius:12px; overflow:hidden; }
 .library .library-open img { aspect-ratio:4/5; }
-.library .library-selection { border:1px solid var(--real); border-radius:12px; box-shadow:0 6px 24px #0004; }
 .library .rw-steps { position:sticky; top:0; z-index:2; background:var(--bg); padding:12px 0; border-bottom:1px solid var(--hairline); gap:8px; }
 .library .rw-steps li { font-size:12px; padding:10px 12px; border-radius:8px; }
 .library :is(.rw-card,.rw-final,.slop-prompts > li,.stats-block,.library-vocabulary) { background:color-mix(in srgb,var(--surface) 65%,var(--bg)); border:1px solid var(--hairline); border-radius:14px; padding:20px; margin-bottom:18px; }
@@ -67,5 +66,4 @@
   .library .library-toolbar select { width:100%; }
   .library :is(.rw-card,.rw-final,.slop-prompts > li,.stats-block,.library-vocabulary) { padding:14px; }
   .library .slop-auto { padding:14px; }
-  .library .library-selection { max-height:40svh; overflow-y:auto; }
 }

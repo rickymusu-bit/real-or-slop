@@ -1,6 +1,6 @@
-# Copie di gioco — specifica 12.2.0
+# Copie di gioco — specifica 12.3.0
 
-Stato: implementata nel ramo 1.39.0, da rilasciare. Aggiornata: 2026-11-17T19:34:55Z.
+Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T22:52:22Z.
 
 ## 1. Decisioni dell'owner
 
@@ -55,7 +55,7 @@ di testo non sceglie più il formato.
   Database per un'immagine senza copia. Le copie senza misure della versione corrente si misurano in background aprendo il Database.
 - **Un solo codificatore** per REAL e SLOP, quello del browser dell'owner: due codificatori diversi (Images sul server per alcune,
   il browser per altre) potrebbero distinguere l'origine dalla compressione. Usare sempre lo stesso browser (Chrome, Edge o Firefox:
-  Safari non esporta WebP). Le copie preparate dal Worker con la 1.32–1.33 vanno rifatte con «Rifai la copia di gioco».
+  Safari non esporta WebP). Per aggiornare una vecchia copia si apre «Inquadratura» nel dettaglio della foto.
 - **Inquadratura** (passo 3 del wizard REAL, revisione dello studio SLOP e dettaglio del Database, per nuove e approvate): un riquadro
   4:5 che l'owner sposta o rimpicciolisce sull'originale. Salvato in `copy_crop` (`{x, y, width, height, format: "4:5"}`). Salvare lo
   stesso ritaglio non rifà la copia e lascia le statistiche. Il formato non si sceglie.
@@ -150,7 +150,7 @@ Decisione dell'owner del 2026-11-16: il trattamento della copia si modifica come
 - **Anteprima nella pagina:** ogni modifica, dopo una breve pausa, ridisegna la copia con quelle impostazioni (trattamento e JPEG
   intermedio, come la copia), con le sue misure e lo scarto dalla REAL; nulla viene salvato. Manca solo la codifica WebP finale.
 - **Salvare** rifà la copia con le impostazioni dell'owner e la carica, come «Inquadratura»: azzera le statistiche. Salvare i valori
-  proposti torna al trattamento proposto. Le impostazioni restano quando la copia si rifà («Rifai la copia di gioco», nuova
+  proposti torna al trattamento proposto. Le impostazioni restano quando la copia si rifà (nuova
   inquadratura, «Senza/Con trattamento»), finché la REAL di riferimento è la stessa.
 - Tutto è gratuito: nessun modello è chiamato.
 
@@ -180,9 +180,7 @@ Colore e supporto del riferimento sono salvati come parametri tecnici `copy_styl
 
 - Al rilascio le copie esistenti hanno il formato della foto. Una migrazione ritira dal gioco le pubblicate (tornano approvate) e
   nessuna copia non 4:5 si può approvare o pubblicare.
-- Nel Database l'azione in gruppo «Rifai la copia di gioco» sulle immagini selezionate (nella pagina, una foto alla volta,
-  gratis: il ritaglio 4:5 salvato o, per un formato precedente, quello centrato; le pubblicate tornano approvate)
-  rifanno le copie; l'owner rivede le inquadrature e ripubblica. Le statistiche delle foto ripartono, perché contano solo i
-  round giocati con la copia attuale.
+- Dal dettaglio della foto si può scegliere l’inquadratura 4:5. La nuova copia fa ripartire le statistiche della foto, che contano
+  i round giocati con la copia attuale.
 - Le partite in corso finiscono con le copie con cui sono iniziate.
 

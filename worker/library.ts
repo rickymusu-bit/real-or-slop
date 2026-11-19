@@ -292,7 +292,6 @@ async function storeCopy(request: Request, env: Env, row: Row) {
 
 /** Gallery membership is editorial metadata and does not withdraw or restore a photo. */
 async function assignGallery(env: Env, row: Row, gallery: string, revision = row.revision) {
-  if (row.origin !== "REAL") throw new HttpError(409, "Le SLOP ereditano la galleria del batch");
   if (row.gallery_id === gallery) return;
   const result = await env.DB.prepare("UPDATE images SET gallery_id=?,revision=revision+1,updated_at=? WHERE id=? AND revision=?")
     .bind(gallery, now(), row.id, revision).run();
@@ -387,6 +386,20 @@ export async function transition(env: Env, row: Row, action: string, data: Recor
     await env.DB.prepare(`UPDATE images SET status=trashed_from,trashed_from=NULL,trashed_at=NULL,revision=revision+1,updated_at=? WHERE id=? AND status='trash'`)
       .bind(stamp, row.id).run();
   } else throw new HttpError(404, "Azione inesistente");
+}
+
+/** Group status choices reuse approval, publication and withdrawal, including their existing checks and game copies. */
+async function setPhotoStatus(env: Env, row: Row, status: "approved" | "published", data: Record<string, unknown>) {
+  if (row.status === status) return;
+  if (row.status === "trash") throw new HttpError(409, "Ripristina prima la foto dal cestino");
+  if (row.status === "new") {
+    await transition(env, row, "approve", data);
+    if (status === "approved") return;
+    row = await find(env, row.id);
+  }
+  await transition(env, row, status === "approved" ? "withdraw" : "publish", data);
+  const final = await env.DB.prepare("SELECT status FROM images WHERE id=?").bind(row.id).first<{ status: string }>();
+  if (final?.status !== status) throw new HttpError(409, "Foto modificata altrove. Riprova.");
 }
 
 /** Deletes trashed images for good: every row (cascade) and every file. An image still in a game in progress waits in the
@@ -532,7 +545,9 @@ export async function library(request: Request, env: Env, path: string): Promise
       try {
         const row = await find(env, target);
         if (gallery) await assignGallery(env, row, gallery);
-        else if (action === "tag-add" || action === "tag-remove") {
+        else if (action === "set-approved" || action === "set-published") {
+          await setPhotoStatus(env, row, action === "set-approved" ? "approved" : "published", data);
+        } else if (action === "tag-add" || action === "tag-remove") {
           const current = (await tagsOf(env, [row.id])).get(row.id) || [], change = await resolveAliases(env, labels(data.tags));
           const wanted = action === "tag-add" ? [...new Set([...current, ...change])] : current.filter(t => !change.includes(t));
           await edit(env, row, { revision: row.revision, tags: wanted,

@@ -141,8 +141,14 @@ try:
         assert not json.load(response)['levels'][0]['available']
     call('/'+two['id']+'/publish',{},library=True)
     remove_catalog(LIBRARY,TOKEN,catalogue); catalogue=[]
-    remove([child['id']])
+    # Moving an undecided SLOP keeps the generation snapshot but frees the source gallery's review.
+    code, moved = call('/bulk', {'action': 'gallery', 'ids': [child['id']], 'gallery_id': other['id']}, library=True)
+    assert code == 200 and moved == {'done': 1, 'failed': []}, moved
+    moved = call('/'+child['id'], library=True)[1]
+    assert moved['status'] == 'new' and moved['gallery_id'] == other['id'] and moved['generation'] == generated['generation']
+    assert call('batches/'+bid)[1]['images'] == []
     assert call('auto')[1]['batch'] is None
+    remove([child['id']])
     assert {r['id'] for r in extract(gallery,2)[1]['references']}=={one['id'],two['id']}
 
     # Changing instructions after proposals prevents confirmation. Cancel drops references and cannot be replayed.

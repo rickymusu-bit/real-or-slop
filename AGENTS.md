@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 30.2.0, aggiornata il 2026-11-19T19:19:49Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 30.3.0, aggiornata il 2026-11-19T22:52:22Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -25,8 +25,9 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   riceve le indicazioni della galleria. I contesti restano distinti.
 - **Dashboard** (decisione del 2026-11-19). Gallerie è la sezione iniziale. Ogni galleria apre la propria griglia e i wizard
   «Carica REAL» e «Genera SLOP» su indirizzi dedicati nella stessa scheda. Il wizard REAL acquisisce dalle ricerche su Commons.
-  Le altre sezioni sono Statistiche e Impostazioni.
-- **Generazione SLOP manuale o automatica** (decisione del 2026-11-18, #157, specifica `generazione-slop` 10.2.0).
+  Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino e
+  cambio galleria. La barra lascia visibile la griglia.
+- **Generazione SLOP manuale o automatica** (decisione del 2026-11-18, #157, specifica `generazione-slop` 10.3.0).
   Manuale: galleria, prompt, tag di partenza e ancoraggi scritti dall’owner. Automatica: galleria con indicazioni salvate, estrazione casuale gratuita
   e anteprima delle REAL idonee. Prima conferma per preparare premessa e prompt, seconda per generare dai prompt presentati. Le
   proposte cambiate, annullate o scadute non autorizzano chiamate immagine. Le SLOP ereditano la galleria e le REAL restano

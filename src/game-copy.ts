@@ -163,30 +163,6 @@ export async function saveFrame<T>(item: T & TreatableItem, choice: { crop: Crop
   return same ? item : prepareItemCopy<T>(item, choice.crop);
 }
 
-/** «Rifai la copia di gioco» for a selection, in this page, one image at a time; the page must stay open. */
-export async function remakeCopies(items: TreatableItem[], progress: (text: string) => void): Promise<{ done: number; failed: { id: string; error: string }[] }> {
-  let done = 0;
-  const failed: { id: string; error: string }[] = [];
-  for (const [index, item] of items.entries()) {
-    progress(`Copie in preparazione in questa pagina: ${index + 1} di ${items.length}. Non chiuderla.`);
-    try {
-      const response = await fetch(API + encodeURIComponent(item.id), { credentials: "same-origin", cache: "no-store" });
-      if (!response.ok) throw Error("Immagine non trovata");
-      let fresh = await response.json() as TreatableItem & { status: string };
-      if (fresh.status === "published") {
-        const withdrawn = await fetch(API + encodeURIComponent(item.id) + "/withdraw", { method: "POST", credentials: "same-origin",
-          headers: { "Content-Type": "application/json" }, body: "{}" });
-        if (!withdrawn.ok) throw Error("Ritiro dal gioco non riuscito");
-        fresh = await withdrawn.json() as typeof fresh;
-      }
-      // Made again even with the same crop and treatment (a copy of an earlier recipe).
-      await prepareItemCopy(fresh, undefined, { force: true });
-      done++;
-    } catch (error) { failed.push({ id: item.id, error: error instanceof Error ? error.message : String(error) }); }
-  }
-  return { done, failed };
-}
-
 /** Measures the copies that have no measures of the current version, one at a time, from the copy itself. Free. */
 export async function measureMissing(items: { id: string; metrics?: Metrics | null; copy?: { sha256: string | null } | null }[]): Promise<number> {
   let done = 0;
