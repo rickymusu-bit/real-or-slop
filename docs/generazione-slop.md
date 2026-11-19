@@ -1,13 +1,13 @@
-# Generazione SLOP — specifica 10.1.0
+# Generazione SLOP — specifica 10.2.0
 
-Stato: implementata nel ramo 1.43.0, da rilasciare. Aggiornata: 2026-11-19T15:59:47Z.
+Stato: implementata nel ramo 1.45.0, da rilasciare. Aggiornata: 2026-11-19T19:19:49Z.
 
 ## 1. Modalità e bilanciamento
 
 L’avviso in Statistiche confronta i conteggi di REAL e SLOP approvate o pubblicate e mostra a parte le SLOP nuove. L’owner decide la
 quantità da generare, da 1 a 10 per batch automatico. I tag descrivono le immagini e si usano come filtri nella galleria.
 
-«Genera SLOP» usa la galleria aperta per entrambe le modalità. Le generazioni recenti e le eccezioni mostrate nello studio sono della
+«Genera SLOP» apre la pagina dedicata della galleria e la usa per entrambe le modalità. Le generazioni recenti e le eccezioni mostrate nello studio sono della
 galleria. Se esiste già un batch automatico, Gallerie e la modalità automatica delle altre gallerie offrono un accesso al batch aperto.
 
 **Manuale.** L’owner scrive prompt inglese, tag di partenza e brief con ancoraggi, preferenze, elementi liberi ed esclusioni. Preparare

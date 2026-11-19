@@ -25,11 +25,11 @@ interface AutoBatch {
 }
 export interface AutoState { config: Config; max_batch: number; galleries: Gallery[]; expired: boolean; paid_calls: boolean; batch: AutoBatch | null; balance: {real:number; slop:number; pending:number; missing:number} }
 interface Hooks {
-  loop: (batchId: string) => Promise<void>;
-  review: (batchId: string) => Promise<void>;
-  openGallery: (galleryId: string) => Promise<void>;
-  changed: () => Promise<void>;
-  indicator: (gallery: Gallery | undefined) => void;
+  loop?: (batchId: string) => Promise<void>;
+  review?: (batchId: string) => void;
+  openGallery?: (galleryId: string) => void;
+  changed?: () => Promise<void>;
+  indicator?: (gallery: Gallery | undefined) => void;
 }
 
 const LIBRARY = "/api/admin/library", SLOP = LIBRARY + "/slop/";
@@ -59,9 +59,9 @@ function observeLibrary(changed: () => void) {
   };
 }
 
-export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: Hooks) {
-  let preview: AutoPreview | null = null, extraction = 0, galleryId = "";
-  let state: AutoState | null = null, running = false, quantity = 1, progress = "", notice = "", timer = 0;
+export function mountSlopAuto(root: HTMLElement | null, controls: HTMLElement | null, galleryId: string, hooks: Hooks) {
+  let preview: AutoPreview | null = null, extraction = 0;
+  let state: AutoState | null = null, running = false, copying = false, quantity = 1, progress = "", notice = "", timer = 0;
 
   const gallery = () => state?.galleries.find(g => g.id === galleryId);
   const validProposals = (batch: AutoBatch) => batch.processes.filter(p => p.state === "ready" && p.premise);
@@ -75,12 +75,14 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
     const activeGallery = state?.galleries.find(g => g.id === activeBatch?.gallery_id);
     window.clearTimeout(check);
     if (activeBatch && preview) { preview = null; extraction++; }
-    hooks.indicator(activeGallery);
-    root.innerHTML = balance && balance.real !== balance.slop ? `<p role="status"><strong>Dataset sbilanciato</strong>: ${balance.real} REAL e ${balance.slop} SLOP approvate o pubblicate; ${balance.pending} SLOP nuove da decidere.${balance.missing ? ` Mancano ${balance.missing} SLOP al pareggio, contando le nuove.` : ""}</p>` : "";
-    root.hidden = !root.innerHTML;
+    hooks.indicator?.(activeGallery);
+    if (root) {
+      root.innerHTML = balance && balance.real !== balance.slop ? `<p role="status"><strong>Dataset sbilanciato</strong>: ${balance.real} REAL e ${balance.slop} SLOP approvate o pubblicate; ${balance.pending} SLOP nuove da decidere.${balance.missing ? ` Mancano ${balance.missing} SLOP al pareggio, contando le nuove.` : ""}</p>` : "";
+      root.hidden = !root.innerHTML;
+    }
+    if (!controls) return;
     let html = "";
-    if (!galleryId) html = "";
-    else if (activeBatch && !batch) {
+    if (activeBatch && !batch) {
       html = activeGallery ? `<p>Batch automatico aperto in <strong>${escape(activeGallery.title)}</strong>.</p>
         <button type="button" data-auto="open-gallery">Apri il batch automatico</button>` : '<p>È già aperto un batch automatico.</p>';
     } else if (batch?.proposal_review) {
@@ -131,7 +133,7 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
         <p class="hint">Massimo ${preview.references.length} ${preview.references.length === 1 ? "chiamata" : "chiamate"} con ${escape(c.text_model)} per preparare premessa e prompt. L’estrazione vale 15 minuti.</p>
         <div class="slop-auto-actions"><button type="button" class="primary" data-auto="prepare" ${state.paid_calls ? "" : "disabled"}>Prepara ${preview.references.length} ${preview.references.length === 1 ? "proposta" : "proposte"}</button><button type="button" data-auto="discard">Annulla estrazione</button></div></section>`;
     }
-    if (galleryId && notice) html += `<p class="slop-auto-notice" role="status">${escape(notice)}</p>`;
+    if (notice) html += `<p class="slop-auto-notice" role="status">${escape(notice)}</p>`;
     controls.innerHTML = html;
   };
 
@@ -152,20 +154,27 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
   const refresh = async () => {
     await load();
     if (state?.batch?.status === "running" && state.batch.runner?.alive) void follow();
-    else if (state?.batch?.status === "review") void pickup().then(load);
+    else if (state?.batch?.status === "review") void pickup().then(async copied => {
+      if (copied) { await load(); await hooks.changed?.(); }
+    });
   };
 
   /** Prepare the game copies in the browser after acceptance. */
   const pickup = async () => {
     const batch = state?.batch;
-    if (!batch || running) return;
-    for (const image of batch.images) {
-      if (image.status !== "new" || image.copy) continue;
-      progress = "Copia di gioco di un'immagine del batch…"; render();
-      try { await prepareItemCopy(await call<TreatableItem>(LIBRARY + "/" + encodeURIComponent(image.id))); }
-      catch (error) { notice = errorText(error); break; }
-    }
-    progress = "";
+    if (!batch || running || copying) return false;
+    copying = true;
+    let copied = false;
+    try {
+      for (const image of batch.images) {
+        if (image.status !== "new" || image.copy) continue;
+        progress = "Copia di gioco di un'immagine del batch…"; render();
+        await prepareItemCopy(await call<TreatableItem>(LIBRARY + "/" + encodeURIComponent(image.id)));
+        copied = true;
+      }
+    } catch (error) { notice = errorText(error); }
+    finally { copying = false; progress = ""; render(); }
+    return copied;
   };
   /** The loop runs on Cloudflare: the dashboard only follows it, and closing it stops nothing. */
   const follow = async () => {
@@ -182,9 +191,11 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
       }
     } finally { running = false; progress = ""; }
     if (state?.batch?.status === "review") { await pickup(); notice = notice || "Batch generato: le immagini sono tra le nuove da decidere."; }
-    await load(); await hooks.changed();
+    await load(); await hooks.changed?.();
   };
 
+  observeLibrary(() => { window.clearTimeout(timer); timer = window.setTimeout(() => { if (!running) void load(); }, 400); });
+  if (!controls) return { refresh };
   controls.addEventListener("input", event => {
     const input = event.target as HTMLInputElement;
     if (input.id !== "slop-auto-size") return;
@@ -209,7 +220,7 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
     if (!button || !state) return;
     const action = button.dataset.auto!;
     const active = state.batch;
-    if (action === "open-gallery" && active) { await hooks.openGallery(active.gallery_id); return; }
+    if (action === "open-gallery" && active) { hooks.openGallery?.(active.gallery_id); return; }
     if (active && active.gallery_id !== galleryId) return;
     notice = "";
     try {
@@ -226,9 +237,9 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
         } catch (error) { if (request === extraction) throw error; }
         return;
       }
-      if (action === "loop" && state.batch) { await hooks.loop(state.batch.id); return; }
+      if (action === "loop" && state.batch) { await hooks.loop?.(state.batch.id); return; }
       if (action === "close" && active) { state = await call<AutoState>(SLOP + "auto/close", {batch: active.id}); render(); return; }
-      if (action === "review" && state.batch) { await hooks.review(state.batch.id); return; }
+      if (action === "review" && state.batch) { hooks.review?.(state.batch.id); return; }
       if (action === "stop" && active) { await call(SLOP + "auto/stop", {batch: active.id}); notice = "Batch interrotto: il server si ferma prima della prossima chiamata."; await load(); return; }
       if (action === "resume") {
         const batch = state.batch;
@@ -263,15 +274,6 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
     } catch (error) { if (action === "prepare" || action === "preview") preview = null; notice = errorText(error); await load(); }
   });
 
-  observeLibrary(() => { window.clearTimeout(timer); timer = window.setTimeout(() => { if (!running) void load(); }, 400); });
-  return { refresh, selectGallery(id: string) {
-    if (id === galleryId) return;
-    galleryId = id;
-    preview = null;
-    notice = "";
-    quantity = 1;
-    extraction++;
-    render();
-  } };
+  return { refresh };
 }
 

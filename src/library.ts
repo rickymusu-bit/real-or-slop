@@ -8,7 +8,6 @@ import "./admin-navigation.css";
 import "./caption-count.css";
 import "./admin-loading.css";
 import "./model-context.css";
-import { mountSlopStudio } from "./slop-studio";
 import { mountSlopAuto } from "./slop-auto";
 import { mountStats, type Stats } from "./stats";
 import { mountDistribution, type Distribution } from "./database-chart";
@@ -16,7 +15,7 @@ import "./database.css";
 import { CATEGORIES, CATEGORY_LABELS, isCategory, type Category } from "../shared/tag-categories";
 import { imageLabel } from "../shared/image-label";
 import { categoryOf, categorySelect, legend, pill, sortByCategory, suggestedCategory } from "./tag-ui";
-import { mountRealWizard, type RealWizard } from "./real-wizard";
+import { galleryPhotosPath, galleryWizardPath } from "./gallery-paths";
 import { onLongPress, openPreview } from "./image-preview";
 import { content, escape } from "./main";
 import { type TreatableItem, measureMissing, prepareItemCopy, remakeCopies, saveFrame } from "./game-copy";
@@ -107,16 +106,16 @@ export async function showLibrary() {
     </nav>
     <section id="admin-galleries" class="admin-panel" aria-labelledby="galleries-title">
       <div class="gallery-section-head"><h2 id="galleries-title">Gallerie</h2><button type="button" class="primary" data-gallery-create disabled>Nuova galleria</button></div>
-      <button type="button" id="gallery-active-batch" hidden></button>
+      <a class="button" id="gallery-active-batch" hidden></a>
+      <p id="gallery-navigation-status" role="status" hidden></p>
       <div id="gallery-cards">${loading("Caricamento delle gallerie…")}</div>
     </section>
     <dialog id="gallery-workspace" class="gallery-workspace" aria-labelledby="gallery-title">
       <div class="gallery-workspace-head">
         <div class="gallery-title-row"><h2 id="gallery-title" tabindex="-1" autofocus></h2><button type="button" data-gallery-close aria-label="Chiudi galleria">×</button></div>
         <div class="gallery-actions">
-          <button type="button" data-gallery-pane="photos" hidden>← Foto della galleria</button>
-          <button type="button" class="primary" data-gallery-pane="real">Carica REAL</button>
-          <button type="button" data-gallery-pane="slop">Genera SLOP</button>
+          <a class="button primary" id="gallery-upload-link">Carica REAL</a>
+          <a class="button" id="gallery-generation-link">Genera SLOP</a>
           <button type="button" data-gallery-edit>Modifica galleria</button>
         </div>
       </div>
@@ -141,12 +140,6 @@ export async function showLibrary() {
     <ul id="library-grid" class="library-grid" aria-label="Immagini"><li class="library-grid-loading">${loading("Caricamento delle immagini…")}</li></ul>
     <button type="button" id="library-more" hidden>Carica altre foto</button>
     </div>
-    <section id="gallery-real" hidden></section>
-    <section id="gallery-slop" hidden><h3>Generazione SLOP</h3>
-      <nav class="db-tabs" aria-label="Modalità di generazione"><button type="button" data-generation-mode="manual" aria-pressed="true">Generazione manuale</button><button type="button" data-generation-mode="automatic" aria-pressed="false">Generazione automatica</button></nav>
-      <section id="slop-manual"></section>
-      <section id="slop-automatic" hidden><div id="slop-auto-controls">${loading()}</div></section>
-    </section>
     </div></dialog>
     <dialog id="gallery-editor" class="gallery-editor" aria-labelledby="gallery-editor-title">
       <div class="gallery-title-row"><h2 id="gallery-editor-title"></h2><button type="button" data-gallery-editor-close aria-label="Chiudi il modulo">×</button></div>
@@ -201,8 +194,6 @@ export async function showLibrary() {
     savedGallery = id;
   }, id => {
     if (galleryList) showGalleries({ ...galleryList, galleries: galleries().filter(g => g.id !== id) });
-    realWizards.delete(id);
-    slopStudios.delete(id);
     if (galleryDialog.open) galleryDialog.close();
     $("[data-gallery-create]").focus({ preventScroll: true });
     void Promise.allSettled([autoBox.refresh(), refreshTags()]);
@@ -221,15 +212,6 @@ export async function showLibrary() {
   };
   const refreshGalleries = async () => { showGalleries(await call<GalleryList>("/galleries")); };
   const report = (error: unknown) => message(error instanceof Error ? error.message : String(error));
-
-  const setGenerationMode = (mode: string) => {
-    $("#slop-manual").hidden = mode !== "manual";
-    $("#slop-automatic").hidden = mode !== "automatic";
-    page.querySelectorAll<HTMLButtonElement>("[data-generation-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.generationMode === mode)));
-    sessionStorage.setItem("ros-generation-mode", mode);
-  };
-  page.querySelectorAll<HTMLButtonElement>("[data-generation-mode]").forEach(b => b.addEventListener("click", () => setGenerationMode(b.dataset.generationMode!)));
-  setGenerationMode(sessionStorage.getItem("ros-generation-mode") === "automatic" ? "automatic" : "manual");
 
   let searchTimer = 0;
   $("#library-search").addEventListener("input", event => {
@@ -599,12 +581,15 @@ export async function showLibrary() {
     }
     if (button?.hasAttribute("data-gallery-create") && galleryList) { galleryEditor.open(galleryList); return; }
     if (button?.dataset.galleryOpen) { await openGallery(button.dataset.galleryOpen).catch(report); return; }
-    if (button?.id === "gallery-active-batch" && button.dataset.gallery) { await openAutomatic(button.dataset.gallery).catch(report); return; }
     if (button?.hasAttribute("data-gallery-close")) { galleryDialog.close(); return; }
     if (button?.hasAttribute("data-gallery-edit") && galleryList) { galleryEditor.open(galleryList, filter.gallery); return; }
-    if (button?.dataset.galleryPane) { await showGalleryPane(button.dataset.galleryPane).catch(report); return; }
     if (button?.id === "library-more") { await load(true).catch(report); return; }
-    if (button?.hasAttribute("data-batch-clear")) { filter.batch = ""; await load(); return; }
+    if (button?.hasAttribute("data-batch-clear")) {
+      filter.batch = "";
+      history.replaceState(history.state, "", galleryPhotosPath(filter.gallery));
+      await load();
+      return;
+    }
     if (button?.dataset.filterRemove) {
       filter.tags = filter.tags.filter(t => t !== button.dataset.filterRemove); tagPills(); await load(); return;
     }
@@ -887,55 +872,6 @@ export async function showLibrary() {
     if ($<HTMLDetailsElement>("#stats-distribution").open) void distribution.refresh();
   });
 
-  const realWizards = new Map<string, { root: HTMLElement; wizard: Promise<RealWizard> }>();
-  const slopStudios = new Map<string, { root: HTMLElement; studio: ReturnType<typeof mountSlopStudio> }>();
-  const loadRealWizard = async (id: string) => {
-    let entry = realWizards.get(id);
-    if (!entry) {
-      const root = document.createElement("div");
-      root.id = "real-wizard";
-      root.innerHTML = loading("Caricamento del wizard…");
-      const wizard = mountRealWizard(root, async () => {
-        await Promise.allSettled([refreshGalleries(), refreshTags(), refreshAnalysis()]);
-      }, id);
-      entry = { root, wizard };
-      realWizards.set(id, entry);
-      $("#gallery-real").replaceChildren(root);
-      await wizard;
-    } else {
-      $("#gallery-real").replaceChildren(entry.root);
-      await (await entry.wizard).sync();
-    }
-  };
-  const loadSlopStudio = async (id: string, batch?: string) => {
-    let entry = slopStudios.get(id);
-    if (!entry) {
-      const root = document.createElement("div");
-      root.id = "slop-studio";
-      root.innerHTML = loading("Caricamento del wizard…");
-      entry = { root, studio: mountSlopStudio(root, id) };
-      slopStudios.set(id, entry);
-    }
-    $("#slop-manual").replaceChildren(entry.root);
-    await entry.studio.refresh(batch);
-  };
-  let pane = "photos";
-  const showGalleryPane = async (view: string, batch?: string) => {
-    if (!galleryDialog.open || !filter.gallery) return;
-    pane = view;
-    $("#db-images").hidden = view !== "photos";
-    $("#gallery-real").hidden = view !== "real";
-    $("#gallery-slop").hidden = view !== "slop";
-    for (const button of galleryDialog.querySelectorAll<HTMLButtonElement>("[data-gallery-pane]"))
-      button.hidden = (button.dataset.galleryPane === "photos") === (view === "photos");
-    $(".gallery-workspace-scroll").scrollTop = 0;
-    $("#gallery-title").focus({ preventScroll: true });
-    if (view === "real") await loadRealWizard(filter.gallery);
-    else if (view === "slop") {
-      autoBox.selectGallery(filter.gallery);
-      await Promise.all([loadSlopStudio(filter.gallery, batch), autoBox.refresh()]);
-    } else await load();
-  };
   const resetGallery = (gallery: string, batch = "") => {
     window.clearTimeout(searchTimer);
     Object.assign(filter, { gallery, batch, status: "library", origin: "all", q: "", tags: [], match: "all" });
@@ -954,49 +890,70 @@ export async function showLibrary() {
     page.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === filter.status)));
     tagPills();
   };
-  const openGallery = async (id: string, view = "photos", batch = "") => {
+  const openGallery = async (id: string, batch = "") => {
     const gallery = galleries().find(g => g.id === id);
     if (!gallery) throw Error("Galleria non disponibile.");
-    if (filter.gallery !== id || batch) resetGallery(id, batch);
+    if (filter.gallery !== id || filter.batch !== batch) resetGallery(id, batch);
     $("#gallery-title").textContent = gallery.title;
-    if (!galleryDialog.open) galleryDialog.showModal();
-    await showGalleryPane(view);
-  };
-  const openAutomatic = async (id: string) => {
-    setGenerationMode("automatic");
-    await openGallery(id, "slop");
+    $<HTMLAnchorElement>("#gallery-upload-link").href = galleryWizardPath(id, "real");
+    $<HTMLAnchorElement>("#gallery-generation-link").href = galleryWizardPath(id, "slop");
+    $("#gallery-navigation-status").hidden = true;
+    history.replaceState(history.state, "", galleryPhotosPath(id, batch));
+    if (!galleryDialog.open) {
+      galleryDialog.showModal();
+      $(".gallery-workspace-scroll").scrollTop = 0;
+    }
+    await load();
   };
   galleryDialog.addEventListener("close", () => {
     if (galleryDialog.open) return;
     const id = filter.gallery;
     filter.gallery = "";
     ++loadSeq;
-    autoBox.selectGallery("");
+    history.replaceState(history.state, "", "/admin");
     window.clearTimeout(searchTimer);
     if (!document.activeElement?.closest("#admin-galleries"))
       page.querySelector<HTMLElement>(`[data-gallery-open="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
     void refreshGalleries().catch(showGalleryError);
   });
-  const activeBatch = $<HTMLButtonElement>("#gallery-active-batch");
-  const autoBox = mountSlopAuto($("#slop-auto"), $("#slop-auto-controls"), {
-    loop: async batchId => { setGenerationMode("manual"); await showGalleryPane("slop", batchId); },
-    review: async batchId => { await openGallery(filter.gallery, "photos", batchId); },
-    openGallery: openAutomatic,
-    changed: async () => { await Promise.allSettled([pane === "photos" ? load() : Promise.resolve(), refreshGalleries(), refreshTags()]); },
+  const activeBatch = $<HTMLAnchorElement>("#gallery-active-batch");
+  const autoBox = mountSlopAuto($("#slop-auto"), null, "", {
+    changed: async () => { await Promise.allSettled([load(), refreshGalleries(), refreshTags()]); },
     indicator: gallery => {
       activeBatch.hidden = !gallery;
-      if (gallery) { activeBatch.dataset.gallery = gallery.id; activeBatch.textContent = `Batch automatico · ${gallery.title}`; }
+      if (gallery) {
+        activeBatch.href = galleryWizardPath(gallery.id, "slop", true);
+        activeBatch.textContent = `Batch automatico · ${gallery.title}`;
+      }
     },
+  });
+  const restoreGallery = async () => {
+    await refreshGalleries();
+    const query = new URLSearchParams(location.search), id = query.get("gallery");
+    if (!id) return;
+    if (galleries().some(g => g.id === id)) {
+      const batch = query.get("batch") || "";
+      await openGallery(id, /^[\w-]{1,64}$/.test(batch) ? batch : "").catch(report);
+    } else {
+      if (galleryDialog.open) galleryDialog.close();
+      const status = $("#gallery-navigation-status");
+      status.hidden = false;
+      status.textContent = "Galleria non disponibile.";
+      history.replaceState(history.state, "", "/admin");
+    }
+  };
+  window.addEventListener("pageshow", event => {
+    if (event.persisted) void Promise.allSettled([restoreGallery(), refreshTags(), refreshAnalysis(), autoBox.refresh()]);
   });
   const showGalleryError = (error: unknown) => {
     if (galleryList) return;
     $("#gallery-cards").innerHTML = `<p role="status">${escape(error instanceof Error ? error.message : String(error))}</p><button type="button" data-gallery-retry>Riprova</button>`;
   };
   $("#gallery-cards").addEventListener("click", event => {
-    if ((event.target as HTMLElement).closest("[data-gallery-retry]")) void refreshGalleries().catch(showGalleryError);
+    if ((event.target as HTMLElement).closest("[data-gallery-retry]")) void restoreGallery().catch(showGalleryError);
   });
   await Promise.all([
-    refreshGalleries().catch(showGalleryError),
+    restoreGallery().catch(showGalleryError),
     Promise.all([refreshTags(), refreshAnalysis()]).catch(report),
     refreshContexts().catch(error => settingsMessage(String(error instanceof Error ? error.message : error))),
     refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error))),

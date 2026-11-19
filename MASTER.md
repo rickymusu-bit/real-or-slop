@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 34.1.0, aggiornata il 2026-11-19T17:27:23Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 34.2.0, aggiornata il 2026-11-19T19:19:49Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,8 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.44.0:** eliminazione definitiva da «Modifica galleria» con conferma, rimozione atomica dal catalogo e coda R2.
+- **Ramo 1.45.0:** pagine dedicate per i wizard REAL e SLOP, ritorno alla galleria e indirizzo della revisione filtrata per batch.
+- **Integrata in main la 1.44.0 (PR #160):** eliminazione definitiva da «Modifica galleria» con conferma, rimozione atomica dal catalogo e coda R2.
 - **Integrata in main la 1.43.0 (PR #159):** dashboard aperta su Gallerie con anteprime e creazione. Ogni galleria apre la griglia e i wizard di caricamento
   REAL da ricerca Commons e di generazione SLOP. Distribuzione in Statistiche.
 - **Integrata in main la 1.42.0 (PR #158, issue #157):** gallerie obbligatorie, estrazione casuale per galleria e conferme separate per
@@ -71,9 +72,9 @@ nome.
 | Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 8.1.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.3.1 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.2.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 4.1.0 |
-| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 10.1.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 8.1.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 4.2.0 |
+| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 10.2.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 8.2.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.1.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.3.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
@@ -113,7 +114,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - Gioco: `play.ts` e `play.css`, foto esplorabile `photo-viewer.ts`, precaricamento `preload.ts`, marchio «RS» `media-mark.ts`,
   protezioni `media-privacy.ts`.
 - Dashboard: `library.ts` (finestra della galleria, Statistiche e Impostazioni; CSS `library.css`, `database.css`, `admin-navigation.css`,
-  `admin-loading.css`, `model-context.css`, `caption-count.css`), gallerie `galleries.ts` e `galleries.css`, wizard REAL `real-wizard.ts` e `real-wizard.css`, studio SLOP
+  `admin-loading.css`, `model-context.css`, `caption-count.css`), gallerie `galleries.ts` e `galleries.css`, pagine dei wizard `gallery-wizard.ts` e `gallery-paths.ts`, wizard REAL `real-wizard.ts` e `real-wizard.css`, studio SLOP
   `slop-studio.ts` e `slop-studio.css`, campi editoriali `editorial-ui.ts`, riquadro dei batch automatici `slop-auto.ts` e `slop-auto.css`, statistiche `stats.ts` e
   `stats.css`, grafico della distribuzione `database-chart.ts`, anteprima a pressione prolungata `image-preview.ts` e
   `image-preview.css`, pillole e categorie dei tag `tag-ui.ts` e `tag-categories.css`, editor di formato e ritaglio `crop-editor.ts` e

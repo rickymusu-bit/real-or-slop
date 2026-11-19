@@ -41,6 +41,7 @@ function field(value: unknown, max: number, name: string, required = false) {
 }
 export async function galleryRoute(env: Env, method: string, target: string, data: Record<string, unknown>) {
   if (!target && method === "GET") return {galleries: await galleryPreviews(env), paid_calls: !!env.OPENAI_API_KEY, text_model: await chosenModel(env, "text_model")};
+  if (method === "GET" && /^[\w-]{1,64}$/.test(target)) return findGallery(env, target);
   if (method !== "POST" && method !== "PATCH") throw new HttpError(405, "Metodo non consentito");
   const [key, action, extra] = target.split("/");
   if (method === "POST" && action === "suggest" && !extra) {

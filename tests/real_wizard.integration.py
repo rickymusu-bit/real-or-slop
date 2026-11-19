@@ -52,7 +52,7 @@ with sync_playwright() as p:
         page.goto(base + '/admin')
         expect(page.locator('#admin-galleries')).to_be_visible()
         open_gallery(page, gallery_id)
-        page.get_by_role('button', name='Carica REAL').click()
+        page.get_by_role('link', name='Carica REAL').click()
         expect(page.get_by_role('heading', name='Caricamento REAL')).to_be_visible()
 
         calls = []
@@ -161,6 +161,9 @@ with sync_playwright() as p:
         expect(page.locator('.rw-pick img')).to_have_count(2)
         expect(page.locator('.rw-picks')).not_to_contain_text('Bridge')
         page.screenshot(path=str(folder / (name + '-step1.png')), full_page=True)
+        page.locator('[data-gallery-return]').click()
+        page.get_by_role('link', name='Carica REAL').click()
+        expect(page.locator('.rw-pick')).to_have_count(2)
         page.get_by_role('button', name='Inizia un nuovo caricamento').click()
 
         # Two REAL photos added through the API with their WebP copies (no external Commons requests).
@@ -178,18 +181,19 @@ with sync_playwright() as p:
         page.evaluate("""([gallery, ids]) => sessionStorage.setItem('ros-real-wizard-v2:' + gallery,
             JSON.stringify({ids, stage:2}))""", [gallery_id, [first['id'], second['id'], third['id'], fourth['id']]])
         page.reload()
-        open_gallery(page, alternate_id)
-        page.get_by_role('button', name='Carica REAL').click()
+        expect(page.locator('.rw-editor')).to_have_count(4)
+        page.goto(f'{base}/admin/gallerie/{alternate_id}/real')
         expect(page.locator('#rw-search')).to_be_visible()
         expect(page.locator('.rw-editor')).to_have_count(0)
+        page.locator('[data-gallery-return]').click()
         page.locator('[data-gallery-close]').click()
         open_gallery(page, gallery_id)
-        page.get_by_role('button', name='Carica REAL').click()
+        page.get_by_role('link', name='Carica REAL').click()
         expect(page.locator('.rw-editor')).to_have_count(4)
         # A photo trashed elsewhere (the Database section) leaves the wizard when the owner comes back to it.
         r = page.request.post(base + f"/api/admin/library/{third['id']}/trash", data='{}', headers={'Content-Type': 'application/json'}); assert r.ok, r.text()
-        page.locator('[data-gallery-pane=photos]').click()
-        page.get_by_role('button', name='Carica REAL').click()
+        page.locator('[data-gallery-return]').click()
+        page.get_by_role('link', name='Carica REAL').click()
         expect(page.locator('.rw-editor')).to_have_count(3)
         expect(page.locator('.rw-message')).to_contain_text('Una foto è stata tolta dal caricamento')
         # «Togli dal caricamento» moves a photo of step 2 to the trash.

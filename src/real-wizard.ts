@@ -47,7 +47,7 @@ const errorText = (error: unknown) => error instanceof Error ? error.message : S
 const short = (value: string, count = 90) => value.length > count ? value.slice(0, count - 1) + "…" : value;
 
 export interface RealWizard { sync(): Promise<void> }
-export async function mountRealWizard(root: HTMLElement, onPublished: () => Promise<void>, galleryId: string): Promise<RealWizard> {
+export async function mountRealWizard(root: HTMLElement, galleryId: string): Promise<RealWizard> {
   const draftKey = "ros-real-wizard-v2:" + galleryId;
   let stage: Stage = 1, images: Image[] = [], notice = "", busy = false, query = "", sort = "relevance";
   /** Pages of Commons results already loaded: files and the offset of the following page. */
@@ -62,9 +62,10 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   let tagCategories = new Map<string, Category>();
   let analysis: Analysis | null = null;
   const pending = new Map<string, Hit>();
+  const editable = (item: Image) => item.origin === "REAL" && item.gallery_id === galleryId && (item.status === "new" || item.status === "approved");
   const staged = () => images.filter(i => i.origin === "REAL" && (i.status === "new" || i.status === "approved"));
   const persist = () => {
-    try { sessionStorage.setItem(draftKey, JSON.stringify({ ids: staged().map(i => i.id), stage })); } catch { /* private browsing */ }
+    try { sessionStorage.setItem(draftKey, JSON.stringify({ ids: staged().map(i => i.id), stage, pending: [...pending.values()] })); } catch { /* private browsing */ }
   };
   let saving: Promise<unknown> = Promise.resolve();
   const replace = (updated: Image) => { images = images.map(i => i.id === updated.id ? updated : i); persist(); };
@@ -78,7 +79,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         if (response.status === 404) return { item, fresh: null, gone: true };
         if (!response.ok) return { item, fresh: null, gone: false };
         const fresh = await response.json() as Image;
-        return { item, fresh, gone: fresh.origin !== "REAL" || fresh.gallery_id !== galleryId || (fresh.status !== "new" && fresh.status !== "approved") };
+        return { item, fresh, gone: !editable(fresh) };
       } catch { return { item, fresh: null, gone: false }; }
     }));
     const gone = new Set(checks.filter(c => c.gone).map(c => c.item.id));
@@ -239,11 +240,12 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       (active.dataset.id ? '[data-id="' + CSS.escape(active.dataset.id) + '"]' : "");
     return null;
   };
+  let renderedStage: Stage | undefined;
   const render = () => {
     const focused = focusKey();
     // A description being typed (not yet saved) survives a redraw.
     const drafts = [...root.querySelectorAll<HTMLTextAreaElement>("[data-rw-description]")].map(t => [t.dataset.rwDescription!, t.value] as const);
-    root.innerHTML = '<div class="rw"><h2>Caricamento REAL</h2>' + progress() +
+    root.innerHTML = '<div class="rw">' + progress() +
       '<p class="rw-message" role="status" aria-live="polite" tabindex="-1">' + escape(notice) + '</p>' +
       (busy ? '<p class="rw-busy" role="status">Operazione in corso…</p>' : "") +
       (stage === 1 ? first() : stage === 2 ? second() : stage === 3 ? third() : fourth()) +
@@ -260,6 +262,8 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
     const target = focused ? root.querySelector<HTMLElement>(focused) : null;
     if (target && target.closest("dialog") === root.closest("dialog")) target.focus({ preventScroll: true });
     else if (focused) root.querySelector<HTMLElement>(".rw-message")?.focus({ preventScroll: true });
+    if (renderedStage !== undefined && renderedStage !== stage) root.scrollIntoView({ block: "start" });
+    renderedStage = stage;
   };
   /** Redraws only the chosen photos and the button under them, so that the results keep their scroll. */
   const renderSelected = () => {
@@ -373,7 +377,6 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         done++;
       } catch (error) { failures.push(short(original.title, 40) + ": " + errorText(error)); }
     }
-    await onPublished();
     stage = failures.length ? 4 : 1;
     if (!failures.length) { images = []; pending.clear(); }
     notice = done + (done === 1 ? " immagine pubblicata." : " immagini pubblicate.") + (failures.length ? " Errori da correggere: " + failures.join(" | ") : "");
@@ -411,6 +414,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
       if (!target.checked) { pending.delete(url); notice = ""; }
       else if (pending.size >= 100) { target.checked = false; notice = "Limite di 100 immagini per caricamento raggiunto."; }
       else { const hit = knownHits.get(url); if (hit) pending.set(url, hit); notice = ""; }
+      persist();
       renderSelected();
       return;
     }
@@ -494,6 +498,7 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
         pending.delete(url); notice = "";
         const box = [...root.querySelectorAll<HTMLInputElement>("[data-rw-hit]")].find(c => c.dataset.rwHit === url);
         if (box) box.checked = false;
+        persist();
         renderSelected();
       } else if (action === "next-results") await browse(true);
       else if (action === "prev-results" && page > 0) { page--; notice = ""; render(); }
@@ -585,14 +590,25 @@ export async function mountRealWizard(root: HTMLElement, onPublished: () => Prom
   try {
     const raw = sessionStorage.getItem(draftKey) ?? sessionStorage.getItem("ros-real-wizard-v2");
     if (raw) {
-      const draft = JSON.parse(raw) as { ids?: string[]; stage?: Stage };
+      const draft = JSON.parse(raw) as { ids?: string[]; stage?: Stage; pending?: Hit[] };
       const ids = Array.isArray(draft.ids) ? draft.ids.filter(x => typeof x === "string").slice(0, 100) : [];
+      for (const hit of Array.isArray(draft.pending) ? draft.pending.slice(0, 100) : []) {
+        if (typeof hit?.page_url === "string" && hit.page_url.startsWith("https://commons.wikimedia.org/") && typeof hit.title === "string")
+          pending.set(hit.page_url, hit);
+      }
+      let dropped = 0;
       for (const id of ids) {
         try {
-          const item = await api<Image>("/" + encodeURIComponent(id));
-          if (item.origin === "REAL" && item.gallery_id === galleryId && (item.status === "new" || item.status === "approved")) images.push(item);
+          const response = await fetch(BASE + "/" + encodeURIComponent(id), { cache: "no-store" });
+          if (response.status === 404) dropped++;
+          if (response.ok) {
+            const item = await response.json() as Image;
+            if (editable(item)) images.push(item);
+            else dropped++;
+          }
         } catch { /* inaccessible draft */ }
       }
+      if (dropped) notice = goneNotice(dropped);
       stage = images.length && (draft.stage === 2 || draft.stage === 3 || draft.stage === 4) ? draft.stage : 1;
     }
     await refreshMeta();

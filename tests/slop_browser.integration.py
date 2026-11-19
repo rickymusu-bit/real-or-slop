@@ -26,17 +26,15 @@ try:
                 stuck_source=real('browser-stuck-'+name);generated.append(stuck_source['id']);stuck=batch(stuck_source['gallery_id'])
                 control([None,{'evaluation':'review_needed'}]);assert generate(stuck)[1]['process']['state']=='review_needed'
                 page.goto(BASE+'/admin');open_gallery(page,stuck_source['gallery_id'])
-                page.get_by_role('button',name='Genera SLOP').click()
+                page.get_by_role('link',name='Genera SLOP').click()
                 studio=page.locator('#slop-studio')
                 card=studio.locator('[data-attention="'+stuck['processes'][0]['id']+'"]')
                 expect(card).to_contain_text('il valutatore chiede la tua revisione')
                 card.locator(':scope > summary').click();card.locator('details > summary').first.click()
                 expect(card.locator('img')).to_be_visible();expect(card.locator('p[lang=en]')).to_be_visible()
                 # Refreshing the studio preserves the expanded attempt, including its prompt and evaluation.
-                previous=card.locator('p[lang=en]').element_handle()
-                page.locator('[data-gallery-pane=photos]').click()
-                page.get_by_role('button',name='Genera SLOP').click()
-                previous.wait_for_element_state('hidden')
+                page.locator('[data-gallery-return]').click()
+                page.get_by_role('link',name='Genera SLOP').click()
                 expect(card.locator('p[lang=en]')).to_be_visible()
                 expect(studio.locator('.slop-attention h3')).to_contain_text('Da vedere')
                 page.screenshot(path=str(folder/(name+'-attention.png')),full_page=True)
@@ -46,8 +44,8 @@ try:
                 # The owner can accept critical/minor findings and uncertainty, after a cancellable confirmation.
                 review_source=real('browser-review-'+name);generated.append(review_source['id']);review=batch(review_source['gallery_id'])
                 control([None,{'evaluation':'review_needed','critical':['A hand has six fingers'],'minor':['Soft focus on the edge'],'uncertainty':['Place cannot be confirmed'],'constraints':False}]);assert generate(review)[1]['process']['state']=='review_needed'
-                page.reload();open_gallery(page,review_source['gallery_id'])
-                page.get_by_role('button',name='Genera SLOP').click()
+                page.goto(BASE+'/admin');open_gallery(page,review_source['gallery_id'])
+                page.get_by_role('link',name='Genera SLOP').click()
                 card=studio.locator('[data-attention="'+review['processes'][0]['id']+'"]')
                 card.locator(':scope > summary').click()
                 control([]);dismiss_next[0]=True;card.locator('[data-slop=accept-process]').click()
@@ -71,8 +69,8 @@ try:
                 minor_source=real('browser-minor-'+name,gallery=minor_gallery['id']);generated.append(minor_source['id']);minor=batch(minor_source['gallery_id'])
                 call('/settings',{'max_generation_attempts':old['max_generation_attempts']},method='PUT',library=True)
                 control([None,{'evaluation':'retry_same_prompt','minor':['Visible banding']}]);assert generate(minor)[1]['process']['state']=='exhausted'
-                page.reload();open_gallery(page,minor_source['gallery_id'])
-                page.get_by_role('button',name='Genera SLOP').click()
+                page.goto(BASE+'/admin');open_gallery(page,minor_source['gallery_id'])
+                page.get_by_role('link',name='Genera SLOP').click()
                 minor_proc=load(minor)['processes'][0]
                 card=studio.locator('[data-attention="'+minor_proc['id']+'"]');card.locator(':scope > summary').click()
                 control([]);card.locator('[data-slop=accept-process]').click();expect(card).to_have_count(0,timeout=20000)
