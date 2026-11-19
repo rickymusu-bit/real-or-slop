@@ -2,9 +2,9 @@
  * OpenAI, the browser everything else): 4:5 crop of the oriented original, size of the recipe, light treatment of a SLOP from its
  * source REAL (proposed or set with the sliders), WebP, measures; the Worker checks and stores the upload. */
 import type { OwnerAcceptance } from "../shared/editorial";
-import { centredCrop, copyDimensions, cropQuery, GAME_COPY, type Crop } from "../shared/game-copy";
+import { centredCrop, copyDimensions, cropQuery, frameLongSide, GAME_COPY, type Crop } from "../shared/game-copy";
 import {
-  gap, measure, METRICS_VERSION, settingsOf, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Settings, type Treatment, type CopyStyle,
+  gap, measure, METRICS_VERSION, SETTING_LIMITS, settingsOf, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Settings, type Treatment, type CopyStyle,
 } from "../shared/copy-treatment";
 
 const API = "/api/admin/library/";
@@ -44,9 +44,21 @@ export interface TreatmentPlan {
 
 /** The crop of an oriented original drawn at the size of the copy (`side` long): the pixels the treatment starts from. */
 export function drawBase(bitmap: ImageBitmap, frame: Crop, side: number): ImageData {
-  const { width, height } = copyDimensions(frame, side), { context } = canvasOf(width, height);
+  const size = copyDimensions(frame, side), width = size.width;
+  const height = frame.mode === "fit-width" ? Math.min(size.height, Math.max(1, Math.round(frame.height * width / frame.width))) : size.height;
+  const { context } = canvasOf(width, height);
   context.drawImage(bitmap, frame.x, frame.y, frame.width, frame.height, 0, 0, width, height);
   return context.getImageData(0, 0, width, height);
+}
+/** Letterbox the picture after any treatment so the bands stay black. */
+export function frameCanvas(picture: HTMLCanvasElement, frame: Crop, side: number): HTMLCanvasElement {
+  const { width, height } = copyDimensions(frame, side);
+  if (picture.height === height) return picture;
+  const { canvas, context } = canvasOf(width, height);
+  context.fillStyle = "#000";
+  context.fillRect(0, 0, width, height);
+  context.drawImage(picture, 0, Math.floor((height - picture.height) / 2));
+  return canvas;
 }
 /** The original oriented, cut along `crop` (centred 4:5 if absent) and drawn at the size of the copy. */
 export async function basePixels(source: Blob, crop: Crop | undefined, long: (frame: Crop) => number): Promise<{ pixels: ImageData; frame: Crop; long: number }> {
@@ -57,9 +69,11 @@ export async function basePixels(source: Blob, crop: Crop | undefined, long: (fr
   } finally { bitmap.close(); }
 }
 /** Long side of a copy: the recipe's, or for a treated SLOP the owner's or the one proposed from the source REAL. */
+const fitSettingsLong = (asked: number, limit: number) =>
+  Math.max(Math.min(SETTING_LIMITS.long.min, limit), Math.min(asked, limit, GAME_COPY.maxSide));
 export const longOf = (frame: Crop, plan?: TreatmentPlan | null) => {
-  const cropLong = Math.max(frame.width, frame.height);
-  return !plan || plan.off ? GAME_COPY.maxSide : plan.settings ? Math.min(plan.settings.long, cropLong, GAME_COPY.maxSide)
+  const cropLong = frameLongSide(frame);
+  return !plan || plan.off ? GAME_COPY.maxSide : plan.settings ? fitSettingsLong(plan.settings.long, cropLong)
     : treatedLong(plan.sample.metrics.long, cropLong, GAME_COPY.maxSide);
 };
 
@@ -82,7 +96,7 @@ export async function encodeGameCopy(source: Blob, crop?: Crop, plan?: Treatment
   const { pixels, frame, long } = await basePixels(source, crop, f => longOf(f, plan));
   let canvas: HTMLCanvasElement;
   let treatment: Treatment | null = plan ? { version: TREATMENT_VERSION, off: plan.off, seed: plan.seed, long, medium: plan.medium, color: plan.color,
-    sample: plan.sample, ...(plan.settings ? { settings: { ...plan.settings, long: plan.off ? plan.settings.long : long } } : {}) } : null;
+    sample: plan.sample, ...(plan.settings ? { settings: { ...plan.settings, long: fitSettingsLong(plan.settings.long, frameLongSide(frame)) } } : {}) } : null;
   if (plan && !plan.off) {
     const done = await treatedCanvas(pixels, plan);
     canvas = done.canvas; treatment = { ...treatment!, applied: done.applied };
@@ -90,7 +104,7 @@ export async function encodeGameCopy(source: Blob, crop?: Crop, plan?: Treatment
     ({ canvas } = canvasOf(pixels.width, pixels.height));
     canvas.getContext("2d")!.putImageData(pixels, 0, 0);
   }
-  const copy = await blobOf(canvas, GAME_COPY.mime, GAME_COPY.quality);
+  const copy = await blobOf(frameCanvas(canvas, frame, long), GAME_COPY.mime, GAME_COPY.quality);
   if (!copy || copy.type !== GAME_COPY.mime) throw Error("Questo browser non esporta WebP: usare Chrome, Edge o Firefox");
   if (copy.size > GAME_COPY.maxBytes) throw Error("Copia di gioco oltre 4 MB");
   const metrics = await measureBlob(copy);
@@ -159,7 +173,7 @@ export async function prepareItemCopy<T>(item: TreatableItem, crop?: Crop, asked
 
 /** Saves the owner's choice from the frame editor: a new copy when the crop changed; the same item when it did not. */
 export async function saveFrame<T>(item: T & TreatableItem, choice: { crop: Crop }): Promise<T> {
-  const same = item.copy?.crop && JSON.stringify(item.copy.crop) === JSON.stringify(choice.crop);
+  const same = item.copy?.crop && cropQuery(item.copy.crop) === cropQuery(choice.crop);
   return same ? item : prepareItemCopy<T>(item, choice.crop);
 }
 

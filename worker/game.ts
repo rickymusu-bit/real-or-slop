@@ -85,9 +85,9 @@ async function credits(env: Env, sid: string) {
     .bind(sid).all<Credit>()).results;
   return rows.map(r => ({ number: r.position + 1, image: `/api/sessions/${sid}/media/${r.id}`, answer: r.type,
     choice: r.choice, correct: r.choice === r.type, timedOut: !!r.timed_out,
-    // Licences such as CC BY and CC BY-SA ask to say that the work was changed: the game copy is cropped, scaled and re-encoded.
+    // The 4:5 copy is adapted and re-encoded. Credit these changes on both cropped and letterboxed rounds.
     ...(r.type === "REAL" ? { title: r.title, description: creditDescription(r.real_description), author: r.author, source: r.source_url || null, license: r.license_name, licenseUrl: r.license_url || null,
-        changes: "Ritagliata, ridotta e ricompressa per il gioco" }
+        changes: "Adattata al formato 4:5 e ricompressa per il gioco" }
       : { prompt: r.prompt }) }));
 }
 export async function outcomes(env: Env, sid: string): Promise<Outcome[]> {

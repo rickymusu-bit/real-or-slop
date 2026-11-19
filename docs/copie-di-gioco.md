@@ -1,6 +1,6 @@
-# Copie di gioco — specifica 12.3.0
+# Copie di gioco — specifica 12.4.0
 
-Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T22:52:22Z.
+Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:44:53Z.
 
 ## 1. Decisioni dell'owner
 
@@ -8,6 +8,9 @@ Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T22:52
   un errore troppo evidente e le dà un'inquadratura diversa da quella della REAL di riferimento. Annulla la decisione del 2026-11-13
   (copia nel formato più vicino a quello della foto), presa perché con il 4:5 le REAL apparivano tagliate e le SLOP composte per quel
   riquadro. Quel difetto non torna: una SLOP viene generata nel formato derivato dalla REAL e poi ritagliata in 4:5; **non** deve però assomigliare alla REAL per composizione o soggetti.
+- «Adatta alla larghezza» conserva l’intero originale con bande nere sopra e sotto quando c’è spazio nel 4:5. Il ritaglio si
+  ridimensiona anche con due dita. Durante il salvataggio l’editor resta visibile sotto un avviso di elaborazione che blocca i
+  comandi e si chiude all’esito (2026-11-19).
 - La foto si mostra **intera su ogni schermo**; il giocatore la esplora con le dita o il mouse; niente swipe per rispondere
   (2026-11-13, invariato). Nessuna vista iniziale diversa dalla foto intera.
 - Trattamento delle SLOP: copia le REAL, non le supera (2026-11-14). Le misure vengono dalla **REAL di riferimento** (2026-11-15): prese
@@ -24,7 +27,7 @@ Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T22:52
 - **Copia di gioco:** sempre 4:5 verticale. Altezza al massimo 1536 px, larghezza `round(0,8 × altezza)` (al massimo 1229 × 1536),
   mai ingrandita.
 - **Generazione delle SLOP:** il generatore riceve la dimensione del formato comune più vicino alle proporzioni dell'originale della
-  REAL di origine; la copia 4:5 si ritaglia da lì. Insieme fisso nel codice:
+  REAL di origine. La copia 4:5 viene preparata a partire dal file generato. Insieme fisso nel codice:
 
 | Formato | Dimensione chiesta al generatore |
 |---|---|
@@ -42,11 +45,12 @@ di testo non sceglie più il formato.
 
 ## 3. Ricetta
 
-- Uguale per REAL e SLOP, dopo il trattamento delle SLOP (sezione 4): ritaglio 4:5, WebP qualità 0,85, altezza al massimo 1536 px,
+- Uguale per REAL e SLOP, dopo il trattamento delle SLOP (sezione 4): inquadratura 4:5, WebP qualità 0,85, altezza al massimo 1536 px,
   mai ingrandita, sRGB, sfondo bianco per le trasparenze, nessun metadato.
 - **La copia la prepara il browser** (`src/game-copy.ts`) dall'originale privato: orientamento applicato, ritaglio 4:5 (il più grande,
   centrato, se l'owner non ne ha scelto uno), ridimensionamento del canvas in qualità alta, trattamento delle SLOP (sezione 4) con la
-  compressione JPEG intermedia del browser, WebP qualità 85, misure della copia decodificata di nuovo. Il browser la carica
+  compressione JPEG intermedia del browser, eventuali bande nere aggiunte dopo il trattamento, WebP qualità 85 e misure della copia
+  decodificata di nuovo. Il browser la carica
   (`POST /:id/copy?crop=…`, misure e trattamento nelle intestazioni `X-Copy-Metrics` e `X-Copy-Treatment`); il Worker toglie i
   metadati e rifiuta un file non WebP, con dimensioni diverse da quelle della ricetta (o del lato lungo del trattamento), oltre 4 MB,
   o un trattamento non valido (sezione 4). Le stesse inquadratura e trattamento non rifanno la copia, salvo `force=1`.
@@ -56,14 +60,14 @@ di testo non sceglie più il formato.
 - **Un solo codificatore** per REAL e SLOP, quello del browser dell'owner: due codificatori diversi (Images sul server per alcune,
   il browser per altre) potrebbero distinguere l'origine dalla compressione. Usare sempre lo stesso browser (Chrome, Edge o Firefox:
   Safari non esporta WebP). Per aggiornare una vecchia copia si apre «Inquadratura» nel dettaglio della foto.
-- **Inquadratura** (passo 3 del wizard REAL, revisione dello studio SLOP e dettaglio del Database, per nuove e approvate): un riquadro
-  4:5 che l'owner sposta o rimpicciolisce sull'originale. Salvato in `copy_crop` (`{x, y, width, height, format: "4:5"}`). Salvare lo
-  stesso ritaglio non rifà la copia e lascia le statistiche. Il formato non si sceglie.
+- **Inquadratura** (passo 3 del wizard REAL, revisione dello studio SLOP e dettaglio della galleria, per nuove e approvate): il riquadro
+  4:5 si sposta con il trascinamento o le frecce e si ridimensiona con due dita o con il cursore. «Adatta alla larghezza» mostra
+  un’anteprima 4:5 con la foto centrata e le bande nere. `copy_crop` conserva `{x, y, width, height, format: "4:5"}`, con
+  `mode: "fit-width"` quando si usa l’intero originale. L’API riceve il suffisso `,fit-width` dopo il formato e verifica che il
+  rettangolo coincida con l’originale e possa avere bande sopra e sotto. Ripetere la stessa inquadratura conserva copia e statistiche.
 - Approvare e pubblicare richiedono una copia 4:5. Una copia di una ricetta precedente (formato diverso) va rifatta: il server rifiuta
   di approvarla o pubblicarla, e le pubblicate con una copia non 4:5 escono dal gioco al rilascio (sezione 7).
-- **Licenze ND** escluse dal gioco: il ritaglio è una modifica.
-- Il ritaglio toglie molto a una REAL orizzontale: di una 3:2 resta poco più di metà della larghezza. È il costo accettato della
-  decisione; l'owner sceglie l'inquadratura, e una foto che non regge il ritaglio non si carica.
+- **Licenze ND** escluse dal gioco: la copia è una versione modificata.
 
 ## 4. SLOP
 
@@ -103,7 +107,7 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
 - **Passi** (versione 5 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile. Ogni valore è
   proposto dalle misure della REAL; l'owner può sostituirli tutti con i cursori (sezione 4.4), che applicano gli stessi passi con i
   suoi valori:
-  1. ritaglio 4:5 dell'inquadratura;
+  1. selezione dei pixel dell’inquadratura, con l’intera foto quando si adatta alla larghezza;
   2. riduzione all'altezza della copia della REAL di origine (mai un ingrandimento, mai sotto 480 px);
   3. contrasto verso quello della REAL, con un fattore tra 0,85 e 1,2;
   4. bianco e nero o seppia, con la tinta della REAL (registrata come dominante; la sua dominante se è stata misurata prima della tinta), se il Colore della REAL lo è.

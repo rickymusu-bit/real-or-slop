@@ -9,7 +9,7 @@ import { browseCommonsCategory, browseCommonsSearch, commonsFile, MAX_IMAGE_BYTE
 import { imageMime } from "../shared/image-format";
 import { imageGeometry } from "../shared/image-geometry";
 import { cleanImage } from "../shared/media-clean";
-import { centredCrop, copyDimensions, cropError, GAME_COPY, parseCrop, storedCrop } from "../shared/game-copy";
+import { centredCrop, copyDimensions, cropError, frameLongSide, GAME_COPY, parseCrop, storedCrop } from "../shared/game-copy";
 import { imageDimensions } from "../shared/image-dimensions";
 import { isNoDerivatives } from "../shared/licenses";
 import { checkTag } from "../shared/tags";
@@ -235,7 +235,7 @@ const treatmentKey = (t: ReturnType<typeof validTreatment>) =>
 
 /** POST /:id/copy?crop=…[&force=1]: stores the WebP game copy made in the owner's browser from the original (spec `copie-di-gioco`; owner
  * decision of 2026-11-16: the Worker handles what concerns OpenAI, the browser everything else). The crop is «x,y,width,height,4:5»
- * on the oriented original (centred if absent); the copy has the size of the recipe, or the long side of the SLOP's treatment. Its
+ * on the oriented original (centred if absent), with «,fit-width» for a full-width copy with bands. The copy has the size of the recipe or the SLOP treatment. Its
  * measures and, for a SLOP, its treatment come in headers. A new or approved image may change its copy: the new copy replaces the
  * old one, which leaves the quarantine; the image keeps its state (owner decision of 2026-11-11 on edits). Its statistics restart.
  * The same crop and treatment are «already prepared», unless «force» asks to store the new bytes (a copy of an earlier recipe). */
@@ -256,7 +256,7 @@ async function storeCopy(request: Request, env: Env, row: Row) {
   const treatment = treatmentHeader === null ? null : validTreatment(readJson(treatmentHeader));
   if (treatmentHeader !== null && !treatment) throw new HttpError(400, "Trattamento non valido");
   if (treatment && row.origin !== "SLOP") throw new HttpError(400, "Il trattamento vale solo per le SLOP");
-  const cropLong = Math.max(crop.width, crop.height);
+  const cropLong = frameLongSide(crop);
   if (treatment?.settings && !validSettings(treatment.settings, cropLong)) throw new HttpError(400, "Impostazioni del trattamento fuori dai limiti");
   // The long side: the owner's (sliders), else the one proposed from the source REAL, else the recipe's.
   const maxSide = !treatment || treatment.off ? GAME_COPY.maxSide : treatment.settings ? Math.min(treatment.settings.long, cropLong, GAME_COPY.maxSide)
@@ -343,7 +343,7 @@ export async function transition(env: Env, row: Row, action: string, data: Recor
     if (!row.copy_key) throw new HttpError(409, "Prepara prima la copia di gioco: si approva ciò che vedrà il giocatore");
     if (!cropOf(row)) throw new HttpError(409, "Rifai la copia di gioco in 4:5: scegli l'inquadratura");
     if (row.origin === "REAL" && isNoDerivatives(row.license_name, row.license_url))
-      throw new HttpError(409, "Licenza senza opere derivate (ND): la foto è esclusa dal gioco, perché la copia di gioco la ritaglia");
+      throw new HttpError(409, "Licenza senza opere derivate (ND): la copia di gioco è una versione modificata");
     if (!((await tagsOf(env, [row.id])).get(row.id) || []).length) throw new HttpError(409, "Aggiungi almeno un tag");
     if (row.origin === "REAL" && data.rights_confirmed !== true && row.rights_confirmed !== 1)
       throw new HttpError(409, "Conferma di aver verificato diritti e licenza della foto");
@@ -519,7 +519,7 @@ export async function library(request: Request, env: Env, path: string): Promise
     const gallery = await galleryId(env, data.gallery_id);
     const file = await commonsFile(data.url);
     if (isNoDerivatives(file.license_name, file.license_url))
-      throw new HttpError(409, `Licenza ${file.license_name || "senza opere derivate"}: le foto ND sono escluse dal gioco, perché la copia di gioco le ritaglia`);
+      throw new HttpError(409, `Licenza ${file.license_name || "senza opere derivate"}: la copia di gioco è una versione modificata`);
     return json(await create(env, { origin: "REAL", gallery_id: gallery, bytes: file.bytes, title: file.title.replace(/^File:/, "").replace(/\.[a-z]+$/i, "").slice(0, 200),
       description: file.description.slice(0, 1000), source_url: file.source_url, author: file.author.slice(0, 300),
       license_name: file.license_name, license_url: /^https:\/\//.test(file.license_url) ? file.license_url : "" }), 201);

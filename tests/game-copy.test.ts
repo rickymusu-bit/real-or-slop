@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  FORMATS, GAME_COPY_RECIPE, GENERATION_SIZES, centredCrop, centredView, copyDimensions, cropError, formatsFor, generationSize,
+  FORMATS, GAME_COPY_RECIPE, GENERATION_SIZES, centredCrop, centredView, copyDimensions, cropError, cropQuery, fitWidthCrop, formatsFor, generationSize,
   nearestFormat, parseCrop, parseView, storedCrop, viewError, viewFractions, viewWidth,
 } from "../shared/game-copy.ts";
 
@@ -47,6 +47,19 @@ test("copies keep the format and have a long side of at most 1536 px, never enla
   assert.deepEqual(copyDimensions({ width: 800, height: 600, format: "4:3" }), { width: 800, height: 600 });
   assert.deepEqual(copyDimensions({ width: 960, height: 1280, format: "3:4" }), { width: 960, height: 1280 });
   assert.match(GAME_COPY_RECIPE, /max1536/);
+});
+
+test("a 4:5 copy can fit the whole original at full width", () => {
+  const frame = fitWidthCrop(6000, 4000)!;
+  assert.equal(cropError(6000, 4000, frame), "");
+  assert.deepEqual(parseCrop(cropQuery(frame)), frame);
+  assert.deepEqual(storedCrop(JSON.stringify(frame)), frame);
+  assert.deepEqual(copyDimensions(frame), { width: 1229, height: 1536 });
+  assert.deepEqual(copyDimensions(fitWidthCrop(840, 600)!), { width: 840, height: 1050 });
+  assert.equal(fitWidthCrop(800, 1200), null);
+  assert.match(cropError(6000, 4000, { ...frame, x: 1 }), /fuori/);
+  assert.match(cropError(6000, 4000, { ...frame, width: 5000 }), /fuori/);
+  assert.match(cropError(6000, 4000, { ...frame, format: "3:2" }), /non previsto/);
 });
 
 test("the initial view is the largest centred 4:5 frame, inside the copy", () => {

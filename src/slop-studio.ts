@@ -1,8 +1,9 @@
 /** Editorial studio: textual briefs, bounded full-image evaluation, accepted copies and manual review. */
 import "./slop-studio.css";
-import { prepareItemCopy, saveFrame, type TreatableItem } from "./game-copy";
+import { prepareItemCopy, type TreatableItem } from "./game-copy";
 import { chooseTreatment } from "./treatment-editor";
-import { chooseFrame } from "./crop-editor";
+import { editFrame } from "./crop-editor";
+import { withPhotoProcessing } from "./photo-processing";
 import { escape } from "../shared/html";
 import { BRIEF_KEYS, type Brief, type Evaluation } from "../shared/editorial";
 import type { InspirationItem } from "../shared/slop-proposals";
@@ -11,7 +12,7 @@ import { onLongPress, openPreview } from "./image-preview";
 import { startPills } from "./tag-ui";
 interface Config { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string; mode?: "manual" | "gallery" }
 interface Image extends TreatableItem { id: string; status: string; revision: number; tags: string[]; categories: Record<string,string>; file: string; original: string;
-  width: number; height: number; copy: Parameters<typeof chooseFrame>[3]; prompt: string; analysis: { status: string; error: string } }
+  width: number; height: number; copy: TreatableItem["copy"]; prompt: string; analysis: { status: string; error: string } }
 interface Attempt {id: string; number: number; prompt: string; status: string; evaluation: Evaluation | null; file: string | null}
 interface Process {id: string; slot: number; state: string; prompt: string; snapshot?: {mode?: string}; brief: Brief | null; premise?: string | null; attempts: Attempt[]; error: string; calls: number; image_id: string | null}
 interface Batch {origin: string; id: string; items: InspirationItem[]; gallery_id: string; processes: Process[]; config: Config | null; max_calls: number;
@@ -231,10 +232,15 @@ export function mountSlopStudio(root: HTMLElement, galleryId: string) {
       if(action==="images"){page=3;batch=await call<Batch>("batches/"+batchId+"/run",{confirm:true,phase:"images"});await follow();page=4;state=await call<State>("state"+scope);}
       else if(action==="save")notice="Brief e prompt salvati.";
       else if(image){
-        if(action==="frame"){const choice=await chooseFrame(image.id,image.width,image.height,image.copy);if(choice)await saveFrame(image,choice);}
-        else if(action==="treatment-edit"){const choice=await chooseTreatment(image);if(choice)await prepareItemCopy(image,image.copy?.crop || undefined,choice);}
-        else if(action==="treatment-off"||action==="treatment-on")await prepareItemCopy(image,image.copy?.crop || undefined,{off:action==="treatment-off"});
-        else await call("/"+image.id+"/"+action,action==="analyze"?{confirm:true}:{},"POST",LIBRARY);
+        if (action === "frame") await editFrame(image);
+        else if (action === "treatment-edit") {
+          const choice = await chooseTreatment(image);
+          if (choice) await withPhotoProcessing("Applico il trattamento alla foto…", () => prepareItemCopy(image, undefined, choice));
+        } else if (action === "treatment-off" || action === "treatment-on") {
+          await withPhotoProcessing("Elaboro la copia di gioco…", () => prepareItemCopy(image, undefined, { off: action === "treatment-off" }));
+        } else if (action === "analyze") {
+          await withPhotoProcessing("Analisi della foto in corso…", () => call("/" + image.id + "/analyze", { confirm: true }, "POST", LIBRARY));
+        } else await call("/" + image.id + "/" + action, {}, "POST", LIBRARY);
         await loadBatch();
       }
     }catch(e){notice=String(e);if(page===3)page=4;await loadBatch().catch(()=>{});}finally{busy=false;progress="";render();}

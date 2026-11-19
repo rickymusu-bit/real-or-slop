@@ -102,7 +102,7 @@ try:
         if credit['answer'] == 'AI': assert credit['prompt'].startswith('A street scene') and 'source' not in credit and 'description' not in credit, credit
         else:
             index = credit['title'].removeprefix('gm-REAL-')
-            assert index.isdigit() and credit['changes'].startswith('Ritagliata,'), credit
+            assert index.isdigit() and credit['changes'].startswith('Adattata al formato 4:5'), credit
             assert not {'prompt', 'real_description', 'commons_description'} & credit.keys(), credit
             assert credit['description'] == f'Descrizione editoriale {index}\n\nContesto documentato {index}', credit
             assert credit['author'] == f'Autrice {index}' and credit['source'] == f'https://commons.wikimedia.org/wiki/File:gm-{index}.jpg', credit

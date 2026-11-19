@@ -243,6 +243,16 @@ with sync_playwright() as p:
         assert treatment['settings']['grain'] == 8 and treatment['applied']['grain'] == 8, treatment
         assert treatment['settings']['monochrome'] == 'sepia' and treatment['settings']['cast'] == [15, -1, -24] and treatment['version'] == 5, treatment
         expect(dialog).to_contain_text("regolato dall'owner")
+        # Changing the frame of a treated SLOP preserves the owner's settings and leaves the bands black.
+        dialog.locator('#library-crop').click()
+        editor.locator('[data-crop-mode]').select_option('fit-width')
+        editor.locator('[data-crop=ok]').click()
+        expect(dialog.locator('#library-detail-message')).to_have_text('Inquadratura salvata.')
+        framed = call(f'{API}/{beach["id"]}')
+        assert (framed['copy']['width'], framed['copy']['height']) == (60, 75), framed['copy']
+        assert framed['copy']['crop']['mode'] == 'fit-width' and framed['treatment']['settings']['grain'] == 8
+        picture = Image.open(io.BytesIO(page.request.get(base + framed['file']).body())).convert('RGB')
+        assert max(picture.getpixel((30, 5))) < 8 and max(picture.getpixel((30, 70))) < 8
         dialog.locator('.library-detail-close button').click()
 
         if name == 'desktop':

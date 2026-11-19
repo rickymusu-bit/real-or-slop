@@ -1,9 +1,10 @@
 /** Owner-controlled treatment of a SLOP's game copy (owner requests of 2026-11-16): sliders that start on the treatment proposed from
  * the source REAL; the preview is made here, in the browser, with the same steps as the copy (treatment and intermediate JPEG). */
 import "./treatment-editor.css";
-import { centredCrop } from "../shared/game-copy";
+import { centredCrop, frameLongSide } from "../shared/game-copy";
 import { castFor, gap, measure, SETTING_LIMITS, type Metrics, type Settings } from "../shared/copy-treatment";
-import { drawBase, longOf, originalOf, proposalOf, treatedCanvas, treatmentPlan, type TreatableItem } from "./game-copy";
+import { drawBase, frameCanvas, longOf, originalOf, proposalOf, treatedCanvas, treatmentPlan, type TreatableItem } from "./game-copy";
+import { withPhotoProcessing } from "./photo-processing";
 
 type Scalar = "contrast" | "saturation" | "blur" | "grain" | "grainSize" | "jpeg" | "long";
 const SLIDERS: [Scalar | "cast0" | "cast1" | "cast2", string][] = [
@@ -18,10 +19,12 @@ const safe = (text: string) => text.replace(/[<>&"]/g, "");
 
 /** Opens the editor for a SLOP. Resolves with the settings to save (null: the proposal) or undefined if cancelled. */
 export async function chooseTreatment(item: TreatableItem, title = ""): Promise<{ settings: Settings | null } | undefined> {
-  const plan = await treatmentPlan(item, { off: false });
-  if (!plan) throw Error("Il processo non ha misure fotografiche: copia senza trattamento");
-  const bitmap = await createImageBitmap(await originalOf(item.id), { imageOrientation: "from-image" });
-  const frame = item.copy?.crop || centredCrop(bitmap.width, bitmap.height), cropLong = Math.max(frame.width, frame.height);
+  const { plan, bitmap } = await withPhotoProcessing("Preparo l’anteprima del trattamento…", async () => {
+    const plan = await treatmentPlan(item, { off: false });
+    if (!plan) throw Error("Il processo non ha misure fotografiche: copia senza trattamento");
+    return { plan, bitmap: await createImageBitmap(await originalOf(item.id), { imageOrientation: "from-image" }) };
+  });
+  const frame = item.copy?.crop || centredCrop(bitmap.width, bitmap.height), cropLong = frameLongSide(frame);
   // The proposal on the stored crop, at the long side proposed from the source REAL.
   const proposedPlan = { ...plan, settings: null }, proposedLong = longOf(frame, proposedPlan);
   const bases = new Map<number, ImageData>([[proposedLong, drawBase(bitmap, frame, proposedLong)]]);
@@ -67,8 +70,9 @@ export async function chooseTreatment(item: TreatableItem, title = ""): Promise<
     await new Promise(resolve => requestAnimationFrame(resolve));  // the status is shown before the computation
     const long = Math.min(settings.long, cropLong);
     if (!bases.has(long)) bases.set(long, drawBase(bitmap, frame, long));
-    const base = bases.get(long)!, { canvas } = await treatedCanvas(base, { ...plan, settings });
+    const base = bases.get(long)!, treated = await treatedCanvas(base, { ...plan, settings });
     if (turn !== drawn) return;  // a newer change is on its way
+    const canvas = frameCanvas(treated.canvas, frame, long);
     preview.width = canvas.width; preview.height = canvas.height;
     const context = preview.getContext("2d")!;
     context.drawImage(canvas, 0, 0);

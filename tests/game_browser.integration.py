@@ -107,7 +107,7 @@ try:
             expect(links.first).to_have_attribute('href', re.compile(r'^https://commons\.wikimedia\.org/wiki/File:gb-\d+\.jpg$'))
             expect(page.locator('.credit-source').first).to_contain_text('Autore: Autrice ')
             expect(page.locator('.credits').get_by_role('link', name='CC BY 4.0')).to_have_count(reals)
-            expect(page.locator('.credit-changes').first).to_contain_text('Ritagliata, ridotta e ricompressa')
+            expect(page.locator('.credit-changes').first).to_contain_text('Adattata al formato 4:5 e ricompressa')
             # The photos of the list are whole: the box has the copy's format.
             page.locator('.credit-image img').first.scroll_into_view_if_needed()
             page.wait_for_function("document.querySelector('.credit-image img').naturalWidth > 0")
@@ -133,7 +133,7 @@ try:
             expect(page.locator('#content')).not_to_contain_text('stessa preparazione')
             page.goto(base + '/crediti')
             expect(page.locator('#content')).to_contain_text('La descrizione nei risultati è preparata')
-            expect(page.locator('#content')).to_contain_text('ritagliata in verticale nel rapporto 4:5')
+            expect(page.locator('#content')).to_contain_text('formato verticale 4:5 con ritaglio o bande nere')
             expect(page.locator('#content')).to_contain_text('possono essere state ridotte, sgranate o sbiadite')
             expect(page.locator('#content')).to_contain_text('4:5')
             page.goto(base + '/')

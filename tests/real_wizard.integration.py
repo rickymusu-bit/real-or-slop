@@ -290,11 +290,58 @@ with sync_playwright() as p:
         editor = page.locator('dialog.crop-dialog')
         expect(editor.locator('.crop-frame')).to_be_visible()
         expect(editor.locator('.crop-format select')).to_have_value('4:5')
+        if name == 'mobile':
+            stage = editor.locator('.crop-stage')
+            stage.scroll_into_view_if_needed()
+            area = stage.bounding_box()
+            x, y = round(area['x'] + area['width'] / 2), round(area['y'] + area['height'] / 2)
+            touch = context.new_cdp_session(page)
+
+            def pinch(event, spread):
+                points = [{'x': x - spread, 'y': y, 'id': 1}, {'x': x + spread, 'y': y, 'id': 2}] if spread else []
+                touch.send('Input.dispatchTouchEvent', {'type': event, 'touchPoints': points})
+
+            size = editor.locator('[data-size=crop]')
+            expect(size).to_have_value('280')
+            pinch('touchStart', 30)
+            pinch('touchMove', 60)
+            expect(size).to_have_value('140')
+            pinch('touchMove', 30)
+            expect(size).to_have_value('280')
+            pinch('touchEnd', 0)
+            touch.detach()
+        editor.locator('[data-crop-mode]').select_option('fit-width')
+        expect(editor.get_by_alt_text('Foto intera con bande nere')).to_be_visible()
+        expect(editor.locator('.crop-frame')).to_be_hidden()
+        copy_route = '**/api/admin/library/' + first['id'] + '/copy?*'
+        uploads = []
+        page.route(copy_route, lambda route: uploads.append(route))
+        with page.expect_request(copy_route):
+            editor.locator('[data-crop=ok]').click()
+        processing = page.get_by_role('dialog', name='Elaborazione foto')
+        expect(processing).to_contain_text('Salvo l’inquadratura')
+        expect(editor).to_have_attribute('open', '')
+        assert processing.evaluate('el => el.matches(":modal") && Math.abs(el.getBoundingClientRect().top + el.offsetHeight / 2 - innerHeight / 2) < 2')
+        page.keyboard.press('Escape')
+        page.mouse.click(2, 2)
+        expect(processing).to_be_visible()
+        uploads.pop(0).fulfill(status=503, json={'error': 'Copia temporaneamente non disponibile'})
+        expect(processing).to_be_hidden()
+        expect(editor.locator('.crop-error')).to_have_text('Copia temporaneamente non disponibile')
+        page.unroute(copy_route)
         editor.locator('[data-crop=ok]').click()
         expect(page.locator('.rw-message')).to_have_text('Inquadratura salvata.')
         expect(crop_a).to_contain_text('4:5 verticale')
-        saved = page.request.get(base + '/api/admin/library/' + first['id']).json()['copy']
-        assert saved['crop']['format'] == '4:5' and saved['width'] == round(saved['height']*0.8), saved
+        saved = page.request.get(base + '/api/admin/library/' + first['id']).json()
+        copy = saved['copy']
+        assert (copy['width'], copy['height']) == (420, 525), copy
+        assert copy['crop'] == {'x': 0, 'y': 0, 'width': 420, 'height': 280, 'format': '4:5', 'mode': 'fit-width'}, copy
+        picture = Image.open(io.BytesIO(page.request.get(base + saved['file']).body())).convert('RGB')
+        assert max(picture.getpixel((210, 20))) < 8 and max(picture.getpixel((210, 504))) < 8
+        assert picture.getpixel((10, 260))[2] > 150 and picture.getpixel((410, 260))[2] > 150
+        crop_a.get_by_role('button', name='Cambia inquadratura').click()
+        expect(editor.locator('[data-crop-mode]')).to_have_value('fit-width')
+        editor.locator('[data-crop=cancel]').click()
         page.screenshot(path=str(folder / (name + '-step3-crop.png')), full_page=True)
         page.get_by_role('button', name='Indietro: tag').click()
         expect(page.locator('.rw-editor')).to_have_count(2)

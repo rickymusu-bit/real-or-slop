@@ -1,6 +1,6 @@
-# Privacy e note legali — specifica 1.3.1
+# Privacy e note legali — specifica 1.3.2
 
-Stato: vigente. Aggiornata: 2026-11-19T23:29:53Z.
+Stato: vigente. Aggiornata: 2026-11-19T23:44:53Z.
 1.2.0: su richiesta dell'owner del 2026-11-14 i Termini d'uso (aggiornati il 14 novembre 2026) dicono che le SLOP sono generate «senza
 parti di fotografie vere, e spesso ridotte, sfocate, sgranate o sbiadite come lo sono le immagini che circolano», al posto di «generate
 integralmente», per il trattamento delle SLOP (specifica `copie-di-gioco`, sezione 4); «Fonti e crediti» lo dice allo stesso modo.
@@ -16,8 +16,8 @@ Privacy e Termini non cambiano.
 **Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
 descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
 
-- **Fonti e crediti, Come funziona, crediti di fine partita:** la copia di gioco è ritagliata in formato verticale 4:5, non più «al
-  formato comune più vicino». Sono testi descrittivi, fuori da Privacy e Termini: i testi di Privacy e Termini non cambiano.
+- **Fonti e crediti, Come funziona, crediti di fine partita:** la copia di gioco è adattata al formato verticale 4:5. Sono testi
+  descrittivi, fuori da Privacy e Termini.
 
 ## 1. Decisioni dell'owner (2026-11-12)
 
@@ -63,7 +63,7 @@ Casella obbligatoria sull'età (rifiutata anche dal server senza `age_ok: true`)
 ## 6. Licenze delle foto REAL
 
 Le licenze CC BY e CC BY-SA chiedono di indicare le modifiche; la CC BY-SA chiede la stessa licenza per l'opera modificata. La copia di
-gioco è ritagliata al formato comune più vicino, ridotta e ricompressa: i crediti di fine partita dicono «Ritagliata, ridotta e
-ricompressa per il gioco; la versione modificata ha la stessa licenza dell'originale», e la pagina «Fonti e crediti» lo spiega. Le
+gioco è adattata al formato 4:5 e ricompressa. I crediti di fine partita indicano le modifiche e la licenza dell’originale. La pagina
+«Fonti e crediti» spiega le due modalità di adattamento, ritaglio e bande nere. Le
 licenze ND sono escluse. La descrizione editoriale di una REAL compare separata dall’attribuzione, che include autore, licenza e link
 alla fonte. «Fonti e crediti» spiega che la descrizione è preparata per il gioco a partire dalla foto e dal contesto documentato.

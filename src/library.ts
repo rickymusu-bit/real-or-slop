@@ -18,10 +18,11 @@ import { categoryOf, categorySelect, legend, pill, sortByCategory, suggestedCate
 import { galleryPhotosPath, galleryWizardPath } from "./gallery-paths";
 import { onLongPress, openPreview } from "./image-preview";
 import { content, escape } from "./main";
-import { type TreatableItem, measureMissing, prepareItemCopy, saveFrame } from "./game-copy";
+import { type TreatableItem, measureMissing, prepareItemCopy } from "./game-copy";
 import { chooseTreatment } from "./treatment-editor";
 import { METRICS_VERSION, type Metrics, type Treatment } from "../shared/copy-treatment";
-import { chooseFrame } from "./crop-editor";
+import { editFrame } from "./crop-editor";
+import { withPhotoProcessing } from "./photo-processing";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
 import { tagFromInput } from "../shared/tag-input";
@@ -400,7 +401,7 @@ export async function showLibrary() {
       ${item.in_play ? `<p class="hint">In ${item.in_play} ${item.in_play === 1 ? "partita" : "partite"} in corso: continuano con la versione con cui sono iniziate; le modifiche valgono dalle partite nuove.</p>` : ""}
       ${item.status === "published" ? '<div class="db-edit-note"><p>«Modifica foto» apre i comandi di modifica e ritira la foto dalla pubblicazione. Le partite in corso mantengono la versione attuale.</p><button type="button" data-action="edit" class="primary">Modifica foto</button></div>' : ""}
       ${item.status === "approved" ? '<p class="hint">Le modifiche si salvano subito e la foto resta approvata. Pubblicala quando hai finito.</p>' : ""}
-      ${item.no_derivatives ? '<p class="db-edit-note">Licenza senza opere derivate (ND): la foto è esclusa dal gioco, perché la copia di gioco la ritaglia.</p>' : ""}
+      ${item.no_derivatives ? '<p class="db-edit-note">Licenza senza opere derivate (ND): la copia di gioco è una versione modificata.</p>' : ""}
       ${!item.copy && item.status === "new" ? '<p><button type="button" id="library-copy">Prepara la copia di gioco</button></p>' : ""}
       ${editable ? '<p><button type="button" id="library-crop">Inquadratura</button></p>' : ""}
       ${categoriesBlock(item)}
@@ -501,10 +502,9 @@ export async function showLibrary() {
         const replaceFields = open.origin === "REAL" ? "I tag e la descrizione editoriale saranno sostituiti." : "I tag attuali saranno sostituiti.";
         const warning = repeat ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
         if (!window.confirm(`Analizzare «${imageLabel(open)}» con ${analysis.model}? È una chiamata a pagamento. ${replaceFields}${warning}`)) return;
-        detailMessage("Analisi in corso…");
-        const analysed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(id)}/analyze`, { method: "POST",
+        const analysed = await withPhotoProcessing("Analisi della foto in corso…", () => call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(id)}/analyze`, { method: "POST",
           body: JSON.stringify({ confirm: true, ...(legacyAnalysis ? { refresh_description: true } : { reanalyze: true }),
-            ...(repeat ? { repeat_uncertain: true } : {}) }) });
+            ...(repeat ? { repeat_uncertain: true } : {}) }) }));
         if (detail.open && open?.id === id) {
           open = analysed;
           detailMessage("Analisi completata." + conflictText(analysed.tag_conflicts));
@@ -512,32 +512,35 @@ export async function showLibrary() {
         void Promise.all([refreshTags(), refreshAnalysis()]);
       }
       else if (button.dataset.tagRemove) open = await save(open, { tags: open.tags.filter(t => t !== button.dataset.tagRemove) });
-      else if (button.id === "library-copy") { detailMessage("Preparo la copia di gioco…"); open = await prepareItemCopy<Item>(open); }
+      else if (button.id === "library-copy") {
+        const item = open;
+        open = await withPhotoProcessing("Preparo la copia di gioco…", () => prepareItemCopy<Item>(item));
+        detailMessage("Copia di gioco pronta.");
+      }
       else if (button.id === "library-complete" && analysis) {
         if (!window.confirm(`Completare Genere, Colore e Supporto di «${imageLabel(open)}» con ${analysis.model}? È una chiamata a pagamento, una sola volta per l'immagine; gli altri tag restano.`)) return;
-        detailMessage("Completamento in corso…");
-        const completed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(open.id)}/categories`, { method: "POST", body: JSON.stringify({ confirm: true }) });
+        const completed = await withPhotoProcessing("Completamento dell’analisi in corso…", () => call<Item & { tag_conflicts?: Conflict[] }>(
+          `/${encodeURIComponent(id)}/categories`, { method: "POST", body: JSON.stringify({ confirm: true }) }));
         open = completed; detailMessage("Completamento fatto." + conflictText(completed.tag_conflicts));
         void Promise.all([refreshTags(), refreshAnalysis()]);
       }
       else if (button.id === "library-treatment-edit") {
         const choice = await chooseTreatment(open, imageLabel(open));
         if (!choice) return;
-        detailMessage("Rifaccio la copia con il trattamento scelto…");
-        open = await prepareItemCopy<Item>(open, open.copy?.crop || undefined, choice);
+        const item = open;
+        open = await withPhotoProcessing("Applico il trattamento alla foto…", () => prepareItemCopy<Item>(item, undefined, choice));
         detailMessage(choice.settings ? "Trattamento regolato salvato." : "Trattamento proposto salvato.");
       }
       else if (button.id.startsWith("library-treatment-")) {
         const off = button.id === "library-treatment-off";
-        detailMessage(off ? "Rifaccio la copia senza trattamento…" : "Rifaccio la copia con il trattamento…");
-        open = await prepareItemCopy<Item>(open, open.copy?.crop || undefined, { off });
+        const item = open;
+        open = await withPhotoProcessing("Elaboro la copia di gioco…", () => prepareItemCopy<Item>(item, undefined, { off }));
         detailMessage(open.treatment && !open.treatment.off ? "Copia trattata." : open.treatment ? "Copia senza trattamento." : "Misure della REAL di riferimento non disponibili: copia senza trattamento.");
       }
       else if (button.id === "library-crop") {
-        const choice = await chooseFrame(open.id, open.width, open.height, open.copy ? { crop: open.copy.crop } : null, imageLabel(open));
-        if (!choice) return;
-        detailMessage("Rifaccio la copia con la nuova inquadratura…");
-        open = await saveFrame<Item>(open, choice);
+        const updated = await editFrame(open, imageLabel(open));
+        if (!updated) return;
+        open = updated;
         detailMessage("Inquadratura salvata.");
       }
       else if (button.id === "library-restore" && open.generated) {

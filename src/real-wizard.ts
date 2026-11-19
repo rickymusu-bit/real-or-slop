@@ -10,8 +10,9 @@ import { escape } from "../shared/html";
 import { CATEGORY_LABELS, isCategory, type Category } from "../shared/tag-categories";
 import { categoryOf, categorySelect, legend, pill, sortByCategory, suggestedCategory } from "./tag-ui";
 import { tagFromInput } from "../shared/tag-input";
-import { prepareLibraryCopy, saveFrame } from "./game-copy";
-import { chooseFrame } from "./crop-editor";
+import { prepareLibraryCopy } from "./game-copy";
+import { editFrame } from "./crop-editor";
+import { withPhotoProcessing } from "./photo-processing";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
 
@@ -350,23 +351,25 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
     if (!window.confirm("Confermi " + ids.length + (ids.length === 1 ? " chiamata a " : " chiamate a ") + analysis.model +
       " per generare i tag? Sono chiamate a pagamento. I tag attuali di queste immagini saranno sostituiti; ogni immagine si genera una sola volta." + repeat)) return;
     const failures: string[] = []; let done = 0;
-    for (const id of ids) {
-      const item = images.find(i => i.id === id);
-      if (!item || !generable(item)) continue;
-      notice = "Generazione " + (done + failures.length + 1) + " di " + ids.length + "…"; render();
-      try {
-        // The confirmation above names the uncertain outcomes: only those carry the explicit repeat.
-        const result = await api<Image>("/" + encodeURIComponent(id) + "/analyze", {
-          method: "POST", body: JSON.stringify(item.analysis.status === "uncertain" ? { confirm: true, repeat_uncertain: true } : { confirm: true }),
-        });
-        replace(result); done++;
-        const extra = result as Image & { tag_conflicts?: { label: string; proposed: Category; existing: Category }[] };
-        for (const c of extra.tag_conflicts || []) conflictNotes.push("«" + c.label + "» proposto come " + CATEGORY_LABELS[c.proposed] + ", nel vocabolario è " + CATEGORY_LABELS[c.existing]);
-      } catch (error) {
-        failures.push(short(item.title, 35) + ": " + errorText(error));
-        if (/OpenAI:/.test(errorText(error))) break;
+    await withPhotoProcessing("Analisi delle foto in corso…", async setMessage => {
+      for (const id of ids) {
+        const item = images.find(i => i.id === id);
+        if (!item || !generable(item)) continue;
+        setMessage(`Analisi della foto ${done + failures.length + 1} di ${ids.length}…`);
+        try {
+          // The confirmation above names the uncertain outcomes: only those carry the explicit repeat.
+          const result = await api<Image>("/" + encodeURIComponent(id) + "/analyze", {
+            method: "POST", body: JSON.stringify(item.analysis.status === "uncertain" ? { confirm: true, repeat_uncertain: true } : { confirm: true }),
+          });
+          replace(result); done++;
+          const extra = result as Image & { tag_conflicts?: { label: string; proposed: Category; existing: Category }[] };
+          for (const c of extra.tag_conflicts || []) conflictNotes.push("«" + c.label + "» proposto come " + CATEGORY_LABELS[c.proposed] + ", nel vocabolario è " + CATEGORY_LABELS[c.existing]);
+        } catch (error) {
+          failures.push(short(item.title, 35) + ": " + errorText(error));
+          if (/OpenAI:/.test(errorText(error))) break;
+        }
       }
-    }
+    });
     try { await refreshMeta(); } catch { /* show per-image errors, if any */ }
     const conflicts = conflictNotes; conflictNotes = [];
     notice = done + (done === 1 ? " immagine elaborata." : " immagini elaborate.") +
@@ -591,13 +594,12 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
         root.querySelector<HTMLDialogElement>("#rw-reset-dialog")?.close();
         await restore(ids);
       } else if (action === "copy") {
-        notice = "Preparo la copia di gioco…"; render();
-        const copy = await prepareLibraryCopy<Image>(id);
+        const copy = await withPhotoProcessing("Preparo la copia di gioco…", () => prepareLibraryCopy<Image>(id));
         replace(copy); notice = "Copia di gioco pronta."; render();
       } else if (action === "crop") {
         const item = images.find(i => i.id === id)!;
-        const choice = await chooseFrame(id, item.width, item.height, item.copy ? { crop: item.copy.crop } : null, item.title);
-        if (choice) { replace(await saveFrame<Image>(item, choice)); notice = "Inquadratura salvata."; render(); }
+        const updated = await editFrame(item, item.title);
+        if (updated) { replace(updated); notice = "Inquadratura salvata."; render(); }
       } else if (action === "discard") {
         const item = images.find(i => i.id === id)!;
         if (!window.confirm("Togliere «" + short(item.title, 60) + "» dal caricamento? La foto va nel cestino e si può ripristinare dal cestino della galleria.")) return;
