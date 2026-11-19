@@ -50,8 +50,8 @@ def photo(color, size=(64, 40), exif=True, fmt='JPEG'):
         image.save(out, fmt, quality=95, exif=meta)
     else: image.save(out, fmt)
     return out.getvalue()
-def upload(source, origin='REAL', title='Fixture photo'):
-    return call(f'{API}/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': origin, 'title': title}), raw=source, mime='image/jpeg')
+def upload(source, origin='REAL', title='Fixture photo', gallery=gallery_id):
+    return call(f'{API}/upload?' + urllib.parse.urlencode({'gallery_id': gallery, 'origin': origin, 'title': title}), raw=source, mime='image/jpeg')
 def copy(item_id, data, mime='image/webp', query=''):
     return call(f'{API}/{item_id}/copy' + query, raw=data, mime=mime)
 def patch(item, change):
@@ -194,4 +194,43 @@ status, result, _ = call(f'{API}/trash/empty', {}); assert result['deleted'] == 
 status, tags, _ = call(f'{API}/tags')
 assert {t['label']: t['images'] for t in tags['tags']}.get('riot') == 1, tags  # the SLOP keeps its tags
 assert call(f'{API}/commons', {'url': 'https://example.com/not-commons.jpg'})[0] in (400, 404)
+
+# Gallery deletion is atomic, covers every image state and leaves other galleries' trash alone.
+target = make_gallery(API, token, 'Galleria da eliminare')
+route = f'{API}/galleries/{target}'
+confirmation = {'confirm': True, 'revision': 0}
+assert call(route, confirmation, method='DELETE', auth=False)[0] == 401
+assert call(route, {'revision': 0}, method='DELETE')[0] == 400
+assert call(route, {**confirmation, 'revision': 1}, method='DELETE')[0] == 409
+assert call(f'{API}/{slop["id"]}/trash', {})[0] == 200
+assert call(f'{API}/trash/empty?gallery={target}', {})[1]['deleted'] == 0
+assert call(f'{API}?gallery={gallery_id}&status=trash')[1]['items'][0]['id'] == slop['id']
+assert call(f'{API}?gallery={target}&status=trash')[1]['items'] == []
+
+status, live, _ = upload(real_source, gallery=target)
+assert status == 201 and copy(live['id'], game_copy(real_source))[0] == 201
+live = call(f'{API}/{live["id"]}')[1]
+assert patch(live, {'tags': ['gallery-fixture']})[0] == 200
+assert call(f'{API}/{live["id"]}/approve', {'rights_confirmed': True})[0] == 200
+assert call(f'{API}/{live["id"]}/publish', {})[0] == 200
+status, discarded, _ = upload(photo((13, 0, 0)), origin='SLOP', gallery=target)
+assert status == 201 and call(f'{API}/{discarded["id"]}/trash', {})[0] == 200
+keys = sql(f"SELECT original_key,copy_key FROM images WHERE id='{live['id']}'")[0]
+sql(f"""INSERT INTO game_sessions(id,mode,created_at,owner_hash,phase) VALUES('gallery-delete-game','training',{int(time.time()*1000)},'fixture','active');
+    INSERT INTO game_rounds(id,session_id,image_id,position,copy_key)
+    SELECT 'gallery-delete-round','gallery-delete-game',id,0,copy_key FROM images WHERE id='{live['id']}'""")
+status, blocked, _ = call(route, confirmation, method='DELETE')
+assert status == 409 and 'partite in corso' in blocked['error'], blocked
+assert call(f'{API}/{live["id"]}')[1]['status'] == 'published'
+assert call(f'{API}/{discarded["id"]}')[1]['status'] == 'trash'
+assert stored(IMAGES, keys['copy_key'])
+sql("DELETE FROM game_sessions WHERE id='gallery-delete-game'")
+assert call(route, confirmation, method='DELETE')[0] == 200
+assert call(route, confirmation, method='DELETE')[1] == {'deleted': True}
+assert not sql(f"SELECT id FROM galleries WHERE id='{target}'")
+assert not sql(f"SELECT id FROM images WHERE gallery_id='{target}'")
+assert not sql("SELECT object_key FROM gallery_files_to_delete")
+assert not stored(IMAGES, keys['copy_key']) and not stored(QUARANTINE, keys['copy_key']) and not stored(QUARANTINE, keys['original_key'])
+assert call(f'{API}/{slop["id"]}')[1]['status'] == 'trash'
+assert call(f'{API}/{slop["id"]}/restore', {})[0] == 200
 print('Library integration 1.9.0 passed: no captions; no initial view; trash withdraws a published photo; level game seeded; copies with 4:5 crop, ND refused; add, copy, edit kept approved, publish, play without captions, withdraw with the game in progress, trash, delete with every row and file, upload again, bulk.')

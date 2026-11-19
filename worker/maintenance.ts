@@ -4,12 +4,14 @@ import { type Env } from "./core";
 import { GAME_RETENTION_MS } from "../shared/legal";
 import { expireGalleryBatches } from "./slop-gallery";
 import { sweepRetired } from "./in-play";
+import { sweepGalleryFiles } from "./gallery-removal";
 
 export async function maintenance(env: Env, now = Date.now()) {
   await expireGalleryBatches(env, now);
   const games = await env.DB.prepare("DELETE FROM game_sessions WHERE created_at<?").bind(now - GAME_RETENTION_MS).run();
   await env.DB.prepare("DELETE FROM rate_limits WHERE resets_at<?").bind(now).run();
   const copies = await sweepRetired(env);
+  await sweepGalleryFiles(env).catch(error => console.error("gallery file cleanup", error));
   const interrupted = new Date(now - 10 * 60_000).toISOString();
   await env.DB.batch([
     env.DB.prepare("UPDATE slop_processes SET state='uncertain',error='Operazione interrotta: nessuna chiamata ripetuta' WHERE state IN ('running','prompting') AND updated_at<?").bind(interrupted),

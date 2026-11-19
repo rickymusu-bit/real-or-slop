@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 4.0.0
+# Dashboard e wizard REAL — specifica 4.1.0
 
-Stato: implementata nel ramo 1.43.0, da rilasciare. Aggiornata: 2026-11-19T15:59:47Z.
+Stato: implementata nel ramo 1.44.0, da rilasciare. Aggiornata: 2026-11-19T17:27:23Z.
 
 ## 1. Decisioni dell'owner
 
@@ -23,7 +23,9 @@ tre miniature delle foto più recenti fuori dal cestino. I moduli indicano il ca
 
 Selezionando una scheda si apre una finestra con le foto della galleria. La griglia scorre, «Carica altre foto» prosegue l’elenco e ogni
 foto mantiene il dettaglio e l’anteprima. Conteggi, ricerca, filtri e cestino si riferiscono alla galleria aperta (specifica `database-immagini`).
-La finestra si chiude con × o Esc. L’owner può modificare titolo, descrizione e indicazioni dal pulsante «Modifica galleria».
+La finestra si chiude con × o Esc. Da «Modifica galleria» l’owner può cambiare titolo, descrizione e indicazioni oppure scegliere
+«Elimina galleria». La conferma riguarda la galleria, tutte le sue foto compreso il cestino e le sue generazioni. Dopo l’eliminazione
+si torna all’elenco delle gallerie.
 
 «Carica REAL» apre i quattro passi nella galleria corrente. «Genera SLOP» apre le modalità manuale e automatica. Le bozze dei due wizard
 sono per galleria e «Foto della galleria» torna alla griglia. I batch automatici in corso hanno un collegamento in Gallerie e si gestiscono

@@ -17,15 +17,23 @@ try:
             old_gallery=make_gallery('Galleria di partenza '+name)
             source=real('auto-browser-'+name,gallery=old_gallery['id']);generated=[]
             context=browser.new_context(**options,http_credentials={'username':'owner','password':TOKEN})
-            page=context.new_page();errors=[];confirmations=[]
+            page=context.new_page();errors=[];confirmations=[];dismiss_delete=[True]
             page.on('pageerror',lambda e:errors.append(str(e)))
-            page.on('dialog',lambda d:(confirmations.append(d.message),d.accept()))
+            def answer(dialog):
+                confirmations.append(dialog.message)
+                if dismiss_delete[0] and dialog.message.startswith('Eliminare definitivamente'):
+                    dismiss_delete[0]=False
+                    dialog.dismiss()
+                else:
+                    dialog.accept()
+            page.on('dialog', answer)
             try:
                 title='Galleria '+name
                 control([]);page.goto(BASE+'/admin')
                 expect(page.locator('#admin-galleries')).to_be_visible()
                 page.get_by_role('button',name='Nuova galleria').click()
                 form=page.locator('#gallery-editor form')
+                expect(page.get_by_role('button',name='Elimina galleria')).to_have_count(0)
                 form.get_by_label('Titolo').fill(title)
                 form.get_by_label('Descrizione').fill('Fotografie di strada nella piazza.')
                 form.get_by_role('button',name='Crea galleria').click()
@@ -118,8 +126,26 @@ try:
                 expect(page.locator('[data-open="'+generated[0]+'"]')).to_be_visible()
                 assert len(control())==3
                 page.screenshot(path=str(folder/(name+'-review.png')),full_page=True)
+                page.locator('[data-gallery-edit]').click()
+                delete=page.get_by_role('button',name='Elimina galleria')
+                delete.click()
+                expect(page.locator('#gallery-editor')).to_be_visible()
+                assert title in confirmations[-1] and 'anche quelle nel cestino' in confirmations[-1]
+                assert call('/'+generated[0],library=True)[0]==200
+                delete.click()
+                expect(page.locator('#gallery-editor')).to_be_hidden()
+                expect(page.locator('#gallery-workspace')).to_be_hidden()
+                expect(card).to_have_count(0)
+                expect(other_card).to_be_visible()
+                assert call('/'+source['id'],library=True)[0]==404
+                assert call('/'+generated[0],library=True)[0]==404
+                assert call('batches/'+auto['batch']['id'])[0]==404
+                assert not sql("SELECT object_key FROM gallery_files_to_delete")
+                generated=[]
                 assert errors==[],errors
-            finally:context.close();remove(generated+[source['id']])
+            finally:
+                context.close()
+                if call('/'+source['id'],library=True)[0]==200: remove(generated+[source['id']])
         browser.close()
 finally:call('/settings',old,method='PUT',library=True)
 print('Editorial galleries and both automatic confirmations passed on desktop and mobile.')

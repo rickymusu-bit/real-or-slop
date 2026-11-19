@@ -1,7 +1,12 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-19T15:59:47Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-19T17:27:23Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.44.0 — 2026-11-19T17:27:23Z
+
+- «Elimina galleria» nel modulo di modifica, con conferma per foto, cestino e generazioni della galleria.
+- Le partite e le generazioni in corso bloccano l’eliminazione fino alla conclusione. La migrazione 0062 registra i file R2 da rimuovere per consentire i tentativi di pulizia successivi.
 
 ## 1.43.0 — 2026-11-19T15:59:47Z
 
