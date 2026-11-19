@@ -8,7 +8,7 @@ import urllib.parse
 from pathlib import Path
 from PIL import Image
 from playwright.sync_api import expect, sync_playwright
-from catalog import make_gallery
+from catalog import make_gallery, open_gallery
 from game_copy import game_copy
 
 base = os.environ['ROS_TEST_BASE']
@@ -51,10 +51,16 @@ with sync_playwright() as p:
         assert page.request.put(base + '/api/admin/library/models', data={'image_quality':'medium'}, headers={'Origin':base}).status == 200
         page.goto(base + '/admin')
         expect(page.locator('#dashboard-loading')).to_have_count(0, timeout=15000)  # the loading line goes once all sections are in
-        expect(page.locator('#real-wizard .admin-loading')).to_have_count(0)
+        expect(page.locator('#admin-galleries')).to_be_visible()
+        expect(page.locator('.admin-tabs button')).to_have_text(['Gallerie', 'Statistiche', 'Impostazioni'])
+        expect(page.locator('[data-gallery-create]')).to_be_enabled()
+        expect(page.locator('#gallery-workspace')).to_be_hidden()
+        open_gallery(page, gallery_id)
+        expect(page.locator('#gallery-title')).to_have_text('Test library_browser')
+        page.get_by_role('button', name='Carica REAL').click()
         expect(page.locator('#real-wizard .rw-steps li')).to_have_count(4)
-        page.get_by_role('button', name='Database immagini').click()
-        expect(page.get_by_role('heading', name='Database immagini')).to_be_visible()
+        page.locator('[data-gallery-pane=photos]').click()
+        page.locator('.db-filter-panel summary').click()
         # No upload, copy filter, «Da Commons» or drop zone in the Database section any more.
         for gone in ('#library-files', '#library-copy-filter', '#library-commons-toggle', '#library-drop', '#library-redo-copy', '#library-undescribed', '#library-incomplete', '#library-group'):
             expect(page.locator(gone)).to_have_count(0)
@@ -91,14 +97,20 @@ with sync_playwright() as p:
         expect(page.locator('#library-sort')).to_have_value('added'); expect(page.locator('#library-order')).to_have_value('desc')
         assert titles()[:3] == [slop_label, f'{name}-spare', f'{name}-rivoli'], titles()
         page.locator('#library-order').select_option('asc')
+        expect(page.locator(f'.library-open[aria-label^="Apri {name}-"], .library-open[data-open="{slop["id"]}"]').first).to_have_attribute('aria-label', f'Apri {name}-rivoli')
         mine = titles(); assert mine.index(f'{name}-rivoli') < mine.index(f'{name}-spare') < mine.index(slop_label), mine
         page.locator('#library-sort').select_option('views')
+        expect(page.locator(f'.library-open[aria-label^="Apri {name}-"], .library-open[data-open="{slop["id"]}"]').first).to_have_attribute('aria-label', f'Apri {slop_label}')
         mine = titles(); assert mine.index(slop_label) < mine.index(f'{name}-spare') < mine.index(f'{name}-rivoli'), mine  # ties: newest first
-        page.reload(); page.get_by_role('button', name='Database immagini').click()
+        page.reload()
+        open_gallery(page,gallery_id)
+        page.locator('.db-filter-panel summary').click()
         expect(page.locator('#library-sort')).to_have_value('views'); expect(page.locator('#library-order')).to_have_value('asc')  # remembered
         page.locator('#library-sort').select_option('added'); page.locator('#library-order').select_option('desc')
         expect(page.locator('.badge-warn')).to_have_count(0)  # every image has its game copy
         page.screenshot(path=str(folder / f'{name}-grid.png'))
+        page.locator('[data-gallery-close]').click()
+        expect(page.locator(f'[data-gallery-open="{gallery_id}"] img')).to_have_count(3)
         # Settings: model selectors, no budget.
         page.get_by_role('button', name='Impostazioni').click()
         expect(page.locator('#library-budget')).to_have_count(0)
@@ -171,7 +183,8 @@ with sync_playwright() as p:
         page.locator('[data-tag-category=street]').select_option('setting')
         expect(page.locator('#library-settings-message')).to_have_text('«street»: categoria Ambiente.')
         expect(page.locator('#library-vocabulary-list li.tag-cat-setting', has_text='street')).to_have_count(1)
-        page.get_by_role('button', name='Database immagini').click()
+        page.locator('[data-admin-tab=galleries]').click()
+        open_gallery(page, gallery_id)
 
         def edit_and_publish(title, description, tags, real):
             page.get_by_role('button', name=f'Apri {title}').click()
@@ -245,8 +258,20 @@ with sync_playwright() as p:
         page.locator('[data-bulk=withdraw]').click()
         expect(page.locator('#library-message')).to_contain_text('2 aggiornate')
         expect(page.locator(f'.library-card:has([aria-label="Apri {name}-rivoli"])')).to_have_count(0)
-        # The redesigned workspace remains usable in both viewports; capture every section.
-        for section in ('real','slop','database','stats','settings'):
+        # The gallery window and both wizards fit on desktop and mobile.
+        page.locator('[data-gallery-pane=slop]').click()
+        page.locator('[data-generation-mode=manual]').click()
+        expect(page.locator('[data-manual=prompt]')).to_be_visible()
+        expect(page.locator('[data-manual=tags]')).to_be_visible()
+        page.locator('[data-generation-mode=automatic]').click()
+        expect(page.locator('#slop-auto-controls')).to_be_visible()
+        expect(page.locator('#slop-manual')).to_be_hidden()
+        expect(page.locator('[data-auto=start]')).to_have_count(0)
+        assert page.evaluate('document.querySelector("#gallery-workspace").getBoundingClientRect().right <= innerWidth + 1')
+        page.screenshot(path=str(folder / f'{name}-workspace-slop.png'))
+        page.keyboard.press('Escape')
+        expect(page.locator('#gallery-workspace')).to_be_hidden()
+        for section in ('galleries', 'stats', 'settings'):
             page.locator('[data-admin-tab="'+section+'"]').click()
             expect(page.locator('#admin-'+section)).to_be_visible()
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), section
@@ -257,16 +282,6 @@ with sync_playwright() as p:
                     return nav.right < panel.left && [...document.querySelectorAll('[data-admin-tab]')].every(button =>
                         button.getBoundingClientRect().right <= nav.right + 1);
                 }'''), 'navigation overlaps ' + section
-            if section == 'slop':
-                page.locator('[data-generation-mode=manual]').click()
-                expect(page.locator('[data-manual=prompt]')).to_be_visible()
-                expect(page.locator('[data-manual=tags]')).to_be_visible()
-                page.locator('[data-generation-mode=automatic]').click()
-                expect(page.locator('#slop-auto-controls')).to_be_visible()
-                expect(page.locator('#slop-manual')).to_be_hidden()
-                expect(page.locator('#slop-auto [data-auto=start]')).to_have_count(0)
-                assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
-                page.locator('[data-generation-mode=manual]').click()
             page.evaluate('window.scrollTo(0, 0)')
             page.screenshot(path=str(folder / f'{name}-workspace-{section}.png'), full_page=True)
         page.locator('[data-admin-tab=stats]').click()

@@ -232,9 +232,10 @@ export async function generateImage(env: Env, batchId: string, data: Record<stri
 /** Processes that ended without a SLOP: exhausted attempts, a review requested by the evaluator, a failure or an uncertain outcome.
  * They are exceptional and wait for the owner, with every attempt (whole candidate, prompt, evaluation), until closed. */
 export const ATTENTION = ["exhausted", "review_needed", "failed", "uncertain"] as const;
-export async function attention(env: Env) {
+export async function attention(env: Env, gallery = "") {
   const batches = (await env.DB.prepare(`SELECT DISTINCT p.batch_id,b.slots FROM slop_processes p JOIN slop_batches b ON b.id=p.batch_id
-    WHERE p.state IN ('exhausted','review_needed','failed','uncertain') AND (b.gallery_review IS NULL OR b.gallery_review='confirmed') ORDER BY p.batch_id`).all<{batch_id: string; slots: string}>()).results;
+    WHERE p.state IN ('exhausted','review_needed','failed','uncertain') AND (b.gallery_review IS NULL OR b.gallery_review='confirmed')
+    AND (?1='' OR b.gallery_id=?1) ORDER BY p.batch_id`).bind(gallery).all<{batch_id: string; slots: string}>()).results;
   const out = [];
   for (const b of batches) {
     const items = itemsOf(b);
@@ -283,9 +284,9 @@ export async function acceptProcess(env: Env, processId: string, data: Record<st
   catch (e) { tags = e instanceof Error ? e.message : String(e); }
   return {image: {id: image.id}, tags_error: tags.slice(0, 300), attention: await attention(env)};
 }
-async function recent(env: Env) {
+async function recent(env: Env, gallery: string) {
   const rows = (await env.DB.prepare(`SELECT b.id,b.slots,b.prompts_status,b.updated_at,(SELECT count(*) FROM images i WHERE i.generation_batch=b.id) AS images
-    FROM slop_batches b ORDER BY b.updated_at DESC LIMIT 10`).all<Batch & {images: number}>()).results;
+    FROM slop_batches b WHERE (?1='' OR b.gallery_id=?1) ORDER BY b.updated_at DESC LIMIT 10`).bind(gallery).all<Batch & {images: number}>()).results;
   return {batches: rows.map(r => ({id: r.id, count: itemsOf(r).length, prompts_status: r.prompts_status, images: r.images, updated_at: r.updated_at}))};
 }
 /** Authenticated private temporary preview. The main router handles this before JSON serialization. */
@@ -311,8 +312,8 @@ async function stopBatch(env: Env, batchId: string, data: Record<string, unknown
   await env.DB.prepare("UPDATE slop_batches SET runner_status='stopping' WHERE id=? AND runner_status='running'").bind(batchId).run();
   return show(env, batchId);
 }
-export async function batchRoute(env: Env, method: string, rest: string, data: Record<string, unknown>) {
-  if (!rest && method === "GET") return recent(env);
+export async function batchRoute(env: Env, method: string, rest: string, data: Record<string, unknown>, gallery = "") {
+  if (!rest && method === "GET") return recent(env, gallery);
   if (!rest && method === "POST") return createBatch(env, data);
   const match = /^([\w-]{1,64})(?:\/(images|run|stop))?$/.exec(rest);
   if (!match) throw new HttpError(404, "Batch inesistente");

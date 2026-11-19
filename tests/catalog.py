@@ -17,6 +17,10 @@ def _call(api, token, path, data=None, raw=None, mime='application/json', method
 def make_gallery(api, token, title, instructions=''):
     return _call(api,token,'/galleries',{'title':title,'slop_instructions':instructions})['id']
 
+def open_gallery(page, gallery_id):
+    page.locator(f'[data-gallery-open="{gallery_id}"]').click()
+
+
 def publish(api, token, prefix, real=10, slop=10, seed=0):
     """Uploads, copies (nearest format, spec `copie-di-gioco`), tags, approves and publishes `real` REAL and `slop` SLOP photos; returns their ids by origin."""
     ids = {'REAL': [], 'SLOP': []}

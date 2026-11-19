@@ -1,8 +1,5 @@
-import { galleryOptions, mountGalleries, type Gallery, type GalleryList } from "./galleries";
-/** Admin dashboard (spec `dashboard-admin-wizard-real`, section 2): the five sections, the loading notice, the box of
- * the automatic SLOP batches; the Database section (spec `database-immagini`: views, filters, sorting, cards with press-and-hold
- * preview, selection, detail with editing, crop, analysis, regeneration, observed tags of a generated SLOP, distribution) and Settings
- * (spec `statistiche-impostazioni`: models, model context, vocabulary, leaderboard, thresholds, open games). */
+import { galleryCards, galleryOptions, mountGalleryEditor, type GalleryList } from "./galleries";
+/** Admin dashboard, with the gallery browser and wizards, statistics and settings. */
 import "./library.css";
 import { mountAdminWorkspace } from "./admin-workspace";
 import { descriptionFields, readDescription } from "./editorial-ui";
@@ -74,45 +71,62 @@ const conflictText = (list: Conflict[] = []) => list.length ? " Categorie in con
   `«${c.label}» proposto come ${CATEGORY_LABELS[c.proposed as Category] || c.proposed}, nel vocabolario è ${CATEGORY_LABELS[c.existing as Category] || c.existing}`).join("; ") + "." : "";
 const kb = (bytes: number) => bytes < 1024 ? bytes + " byte" : Math.round(bytes / 1024) + " kB";
 
+async function bulkUpdate(action: string, ids: string[], fields: Record<string, unknown>) {
+  const result = { done: 0, deleted: 0, postponed: 0, failed: [] as { error: string }[] };
+  for (let start = 0; start < ids.length; start += 500) {
+    const part = await call<Partial<typeof result>>("/bulk", { method: "POST",
+      body: JSON.stringify({ ...fields, action, ids: ids.slice(start, start + 500) }) });
+    result.done += part.done ?? 0;
+    result.deleted += part.deleted ?? 0;
+    result.postponed += part.postponed ?? 0;
+    result.failed.push(...(part.failed ?? []));
+  }
+  return result;
+}
+
 export async function showLibrary() {
-  let galleries: Gallery[] = [];
+  let galleryList: GalleryList | null = null;
+  const galleries = () => galleryList?.galleries || [];
   let items: Item[] = [], selected = new Set<string>(), open: Item | null = null, busy = false;
   const SORT_KEY = "ros-library-sort";
   let sort = { by: "added", order: "desc" };
   try { const saved = JSON.parse(localStorage.getItem(SORT_KEY) || "null") as typeof sort | null;
     if (saved && ["added", "views", "accuracy"].includes(saved.by) && ["asc", "desc"].includes(saved.order)) sort = saved; } catch { /* private browsing */ }
   let measuring = false;
-  let slopStudio: { refresh: () => Promise<void> } = { refresh: async () => {} };
   const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "", gallery: "" };
-  let autoBox: { refresh: () => Promise<void> } = { refresh: async () => {} };
   let models: Models | null = null;
   let statsView: { refresh: () => Promise<void> } = { refresh: async () => {} };
-  let realWizard: RealWizard | null = null;
   let distribution: { refresh: () => Promise<void> } = { refresh: async () => {} };
   let analysis: Analysis | null = null;
   content().innerHTML = `<section class="library page" aria-labelledby="library-title">
-    <div class="library-head"><div><p class="admin-eyebrow">REAL or SLOP / Studio</p><h1 id="library-title">Il tuo archivio, in ordine.</h1><p class="admin-intro">Scegli le fotografie, crea le SLOP e prepara il prossimo gioco.</p></div><span id="dashboard-loading">${loading("Caricamento della dashboard…")}</span></div>
-    <div id="slop-auto" class="slop-auto" role="region" aria-label="Equilibrio del dataset" hidden></div>
+    <header class="library-head"><h1 id="library-title">Dashboard</h1><span id="dashboard-loading">${loading("Caricamento della dashboard…")}</span></header>
     <nav class="admin-tabs" aria-label="Sezioni amministrazione">
-      <button type="button" data-admin-tab="real" aria-pressed="true">Caricamento REAL</button>
-      <button type="button" data-admin-tab="slop" aria-pressed="false">Generazione SLOP<span id="slop-auto-count"></span><span id="slop-attention-count"></span></button>
-      <button type="button" data-admin-tab="database" aria-pressed="false">Database immagini</button>
+      <button type="button" data-admin-tab="galleries" aria-pressed="true">Gallerie</button>
       <button type="button" data-admin-tab="stats" aria-pressed="false">Statistiche</button>
       <button type="button" data-admin-tab="settings" aria-pressed="false">Impostazioni</button>
     </nav>
-    <section id="admin-real" class="admin-panel"><div id="real-wizard">${loading("Caricamento del wizard…")}</div></section>
-    <section id="admin-database" class="admin-panel" hidden>
-    <h2>Database immagini</h2>
-    <nav class="db-tabs" aria-label="Schede del database"><button type="button" data-db-tab="images" aria-pressed="true">Immagini</button><button type="button" data-db-tab="galleries" aria-pressed="false">Gallerie</button><button type="button" data-db-tab="distribution" aria-pressed="false">Distribuzione</button></nav>
-    <section id="db-galleries" hidden></section>
-    <section id="db-distribution" hidden></section>
+    <section id="admin-galleries" class="admin-panel" aria-labelledby="galleries-title">
+      <div class="gallery-section-head"><h2 id="galleries-title">Gallerie</h2><button type="button" class="primary" data-gallery-create disabled>Nuova galleria</button></div>
+      <button type="button" id="gallery-active-batch" hidden></button>
+      <div id="gallery-cards">${loading("Caricamento delle gallerie…")}</div>
+    </section>
+    <dialog id="gallery-workspace" class="gallery-workspace" aria-labelledby="gallery-title">
+      <div class="gallery-workspace-head">
+        <div class="gallery-title-row"><h2 id="gallery-title" tabindex="-1" autofocus></h2><button type="button" data-gallery-close aria-label="Chiudi galleria">×</button></div>
+        <div class="gallery-actions">
+          <button type="button" data-gallery-pane="photos" hidden>← Foto della galleria</button>
+          <button type="button" class="primary" data-gallery-pane="real">Carica REAL</button>
+          <button type="button" data-gallery-pane="slop">Genera SLOP</button>
+          <button type="button" data-gallery-edit>Modifica galleria</button>
+        </div>
+      </div>
+      <div class="gallery-workspace-scroll">
     <div id="db-images">
     <p id="library-counts" aria-live="polite"></p><p id="library-analysis" class="hint"></p>
-    <div class="db-search-row"><label>Cerca nel catalogo<input id="library-search" type="search" placeholder="ID, titolo REAL, descrizione o prompt"></label></div><details class="db-filter-panel" open><summary>Filtri e ordinamento</summary><div class="library-toolbar">
+    <div class="db-search-row"><label>Cerca nella galleria<input id="library-search" type="search" placeholder="ID, titolo REAL, descrizione o prompt"></label></div><details class="db-filter-panel"><summary>Filtri e ordinamento</summary><div class="library-toolbar">
       <nav class="library-views" aria-label="Viste">${Object.entries(STATUS_LABEL).map(([key, label]) =>
         `<button type="button" data-view="${key}" aria-pressed="${key === "library"}">${label}</button>`).join("")}</nav>
       <label>Origine<select id="library-origin"><option value="all">REAL e SLOP</option><option value="REAL">REAL</option><option value="SLOP">SLOP</option></select></label>
-      <label>Galleria<select id="library-gallery"><option value="">Tutte le gallerie</option></select></label>
       <div class="db-tag-filter"><span>Tag</span><div class="db-tag-entry"><input id="library-tag" list="library-tag-list" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="es. riot, Invio" aria-label="Aggiungi un tag al filtro">
         <select id="library-tag-match" aria-label="Come combinare i tag"><option value="all">con tutti i tag</option><option value="any">con almeno un tag</option></select></div>
         <div class="rw-pills" id="library-tag-pills"></div></div>
@@ -125,8 +139,23 @@ export async function showLibrary() {
     <div id="library-selection" class="library-selection" hidden></div>
     <p id="library-message" role="status" aria-live="polite"></p>
     <ul id="library-grid" class="library-grid" aria-label="Immagini"><li class="library-grid-loading">${loading("Caricamento delle immagini…")}</li></ul>
-    </div></section>
-    <section id="admin-stats" class="admin-panel" hidden><h2>Statistiche</h2><div id="stats-body">${loading()}</div></section>
+    <button type="button" id="library-more" hidden>Carica altre foto</button>
+    </div>
+    <section id="gallery-real" hidden></section>
+    <section id="gallery-slop" hidden><h3>Generazione SLOP</h3>
+      <nav class="db-tabs" aria-label="Modalità di generazione"><button type="button" data-generation-mode="manual" aria-pressed="true">Generazione manuale</button><button type="button" data-generation-mode="automatic" aria-pressed="false">Generazione automatica</button></nav>
+      <section id="slop-manual"></section>
+      <section id="slop-automatic" hidden><div id="slop-auto-controls">${loading()}</div></section>
+    </section>
+    </div></dialog>
+    <dialog id="gallery-editor" class="gallery-editor" aria-labelledby="gallery-editor-title">
+      <div class="gallery-title-row"><h2 id="gallery-editor-title"></h2><button type="button" data-gallery-editor-close aria-label="Chiudi il modulo">×</button></div>
+      <div data-gallery-form></div>
+    </dialog>
+    <section id="admin-stats" class="admin-panel" hidden><h2>Statistiche</h2><div id="slop-auto" class="slop-auto" role="region" aria-label="Equilibrio del dataset" hidden></div>
+      <div id="stats-body">${loading()}</div>
+      <details id="stats-distribution"><summary>Distribuzione delle immagini</summary><div id="db-distribution">${loading()}</div></details>
+    </section>
     <section id="admin-settings" class="admin-panel" hidden><h2>Impostazioni</h2>
     <p id="library-settings-message" role="status" aria-live="polite"></p>
     <details id="library-contexts" class="library-vocabulary"><summary>Contesto dei modelli</summary>
@@ -146,19 +175,15 @@ export async function showLibrary() {
       <p class="hint">Modelli OpenAI usati dalle chiamate a pagamento. Il modello di testo scrive i tag e i prompt delle SLOP, e deve leggere immagini; quello di immagini genera le SLOP. Ogni chiamata chiede conferma; il limite di spesa che conta è quello impostato sul progetto OpenAI (platform.openai.com).</p>
       <form id="library-models-form" class="library-inline"><label>Modello di testo<select name="text_model"></select></label><label>Modello di immagini<select name="image_model"></select></label><label>Qualità delle immagini<select name="image_quality"></select></label></form>
       <p id="library-models-note" class="hint"></p>
-      <p class="hint">La qualità vale per lo studio SLOP e per la rigenerazione nella sezione Database.</p></details>
+      <p class="hint">La qualità vale per lo studio SLOP e per la rigenerazione dalla galleria.</p></details>
     <details id="library-thresholds" class="library-vocabulary"><summary>Studio SLOP</summary>
       <form id="library-thresholds-form" class="library-inline">
         <label>Tentativi massimi per SLOP<input type="number" name="max_generation_attempts" required></label><label>Tolleranza (0 rigorosa, 1 normale, 2 permissiva)<input type="number" name="editorial_tolerance" required></label>
         <button>Salva</button></form>
-      <p class="hint">In Generazione SLOP scegli la modalità manuale oppure automatica e la quantità. Lo sbilanciamento del catalogo è solo una notifica. Una REAL resta occupata finché la sua SLOP esiste, anche nel cestino.</p></details>
+      <p class="hint">Apri una galleria e scegli «Genera SLOP» per accedere alle modalità manuale e automatica. La modalità automatica estrae le REAL di riferimento dalla galleria.</p></details>
     <details id="library-games" class="library-vocabulary"><summary>Partite</summary>
       <form id="library-games-form" class="library-inline"><label>Durata massima di una partita aperta (ore)<input type="number" name="open_game_hours" required></label><button>Salva</button></form>
       <p class="hint">Oltre questo tempo una partita non conclusa non trattiene più le copie delle foto ritirate o modificate, e la sua foto può non essere più disponibile. I livelli del gioco sono fissi nel codice.</p></details></section>
-    <section id="admin-slop" class="admin-panel" hidden><h2>Generazione SLOP</h2>
-      <nav class="db-tabs" aria-label="Modalità di generazione"><button type="button" data-generation-mode="manual" aria-pressed="true">Generazione manuale</button><button type="button" data-generation-mode="automatic" aria-pressed="false">Generazione automatica</button></nav>
-      <section id="slop-manual"><div id="slop-studio">${loading("Caricamento dello studio SLOP…")}</div></section>
-      <section id="slop-automatic" hidden><div id="slop-auto-controls">${loading()}</div></section></section>
     <dialog id="library-detail" class="library-detail" aria-labelledby="library-detail-title"></dialog>
   </section>`;
   const page = content().querySelector<HTMLElement>(".library")!;
@@ -168,16 +193,28 @@ export async function showLibrary() {
   const settingsMessage = (text: string) => { $("#library-settings-message").textContent = text; };
   const progress = (text: string) => { $("#library-progress").textContent = text; };
 
-  const galleriesPanel = mountGalleries($("#db-galleries"), call, async () => {
+  const galleryDialog = $<HTMLDialogElement>("#gallery-workspace");
+  const galleryEditorDialog = $<HTMLDialogElement>("#gallery-editor");
+  let savedGallery = "";
+  const galleryEditor = mountGalleryEditor(galleryEditorDialog, call, async id => {
     await refreshGalleries();
-    await autoBox?.refresh();
+    savedGallery = id;
+  });
+  galleryEditorDialog.addEventListener("close", () => {
+    if (savedGallery) { const id = savedGallery; savedGallery = ""; void openGallery(id).catch(report); }
   });
   const refreshGalleries = async () => {
     const list = await call<GalleryList>("/galleries");
-    galleries = list.galleries;
-    galleriesPanel.show(list);
-    $<HTMLSelectElement>("#library-gallery").innerHTML = `<option value="">Tutte le gallerie</option>${galleryOptions(galleries, filter.gallery)}`;
+    galleryList = list;
+    const cards = $("#gallery-cards"), focused = (document.activeElement as HTMLElement | null)?.dataset.galleryOpen;
+    cards.innerHTML = galleryCards(list.galleries);
+    if (focused) cards.querySelector<HTMLElement>(`[data-gallery-open="${CSS.escape(focused)}"]`)?.focus({ preventScroll: true });
+    $<HTMLButtonElement>("[data-gallery-create]").disabled = false;
+    const current = list.galleries.find(g => g.id === filter.gallery);
+    if (current) $("#gallery-title").textContent = current.title;
   };
+  const report = (error: unknown) => message(error instanceof Error ? error.message : String(error));
+
   const setGenerationMode = (mode: string) => {
     $("#slop-manual").hidden = mode !== "manual";
     $("#slop-automatic").hidden = mode !== "automatic";
@@ -252,23 +289,36 @@ export async function showLibrary() {
     message(`${done} di ${ids.length} analizzate.` + conflictText(conflicts) + (errors.length ? " " + [...new Set(errors)].join(" / ") : ""));
   };
   // The list of the last request wins: a slower, older answer never overwrites a newer one.
-  let loadSeq = 0;
-  const load = async () => {
-    const seq = ++loadSeq;
-    const params = new URLSearchParams({ status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q, batch: filter.batch, gallery: filter.gallery });
+  let loadSeq = 0, nextPage: number | null = null;
+  const load = async (append = false) => {
+    const offset = append ? nextPage : 0;
+    if (!filter.gallery || offset === null) return;
+    const seq = ++loadSeq, more = $<HTMLButtonElement>("#library-more");
+    more.disabled = true;
+    if (!append) { more.hidden = true; nextPage = null; }
+    const params = new URLSearchParams({
+      status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q,
+      batch: filter.batch, gallery: filter.gallery, offset: String(offset), sort: sort.by, order: sort.order,
+    });
     $("#library-batch-filter").hidden = !filter.batch;
-    const data = await call<{ items: Item[]; counts: { status: string; origin: string; n: number }[] }>("?" + params);
-    if (seq !== loadSeq) return;
-    items = data.items;
-    selected = new Set([...selected].filter(id => items.some(item => item.id === id)));
-    const count = (status: string) => data.counts.filter(c => c.status === status).reduce((n, c) => n + c.n, 0);
-    $("#library-counts").textContent = `${count("new")} nuove / ${count("approved")} approvate / ${count("published")} pubblicate / ${count("trash")} nel cestino`;
-    $("#library-empty-trash").hidden = filter.status !== "trash" || !count("trash");
-    render();
-    // Copies without measures of the current version are measured in this page, in the background, one at a time (free).
-    if (!measuring && items.some(i => i.metrics?.v !== METRICS_VERSION && i.copy)) {
-      measuring = true;
-      void measureMissing(items.map(i => ({ id: i.id, metrics: i.metrics, copy: i.copy ? { sha256: i.copy.sha256 } : null }))).finally(() => { measuring = false; });
+    try {
+      const data = await call<{ items: Item[]; next: number | null; counts: { status: string; origin: string; n: number }[] }>("?" + params);
+      if (seq !== loadSeq) return;
+      const added = append ? data.items.filter(item => !items.some(i => i.id === item.id)) : data.items;
+      items = append ? [...items, ...added] : added;
+      nextPage = data.next;
+      selected = new Set([...selected].filter(id => items.some(item => item.id === id)));
+      const count = (status: string) => data.counts.filter(c => c.status === status).reduce((n, c) => n + c.n, 0);
+      $("#library-counts").textContent = `${count("new")} nuove / ${count("approved")} approvate / ${count("published")} pubblicate / ${count("trash")} nel cestino`;
+      $("#library-empty-trash").hidden = filter.status !== "trash" || !count("trash");
+      render(append ? added : undefined);
+      // Copies without current-version measurements are measured in the browser, one at a time.
+      if (!measuring && added.some(i => i.metrics?.v !== METRICS_VERSION && i.copy)) {
+        measuring = true;
+        void measureMissing(added.map(i => ({ id: i.id, metrics: i.metrics, copy: i.copy ? { sha256: i.copy.sha256 } : null }))).finally(() => { measuring = false; });
+      }
+    } finally {
+      if (seq === loadSeq) { more.disabled = false; more.hidden = nextPage === null; }
     }
   };
   const rate = (item: Item) => item.stats.views ? ` (${Math.round(item.stats.correct / item.stats.views * 100)}%)` : "";
@@ -298,22 +348,13 @@ export async function showLibrary() {
       ? '<button data-bulk="restore">Ripristina</button><button data-bulk="delete" class="danger">Elimina definitivamente</button>'
       : '<button data-bulk="trash">Sposta nel cestino</button><label><input type="checkbox" id="library-bulk-rights"> Diritti delle REAL verificati</label><button data-bulk="copy-portrait">Rifai la copia di gioco</button><button data-bulk="analyze">Analizza con IA</button><button data-bulk="describe">Analisi combinata tag e descrizione</button><button data-bulk="complete">Completa Genere, Colore e Supporto</button><button data-bulk="approve">Approva</button><button data-bulk="publish">Pubblica</button><button data-bulk="withdraw">Ritira dal gioco</button>' +
         '<label>Tag<input id="library-bulk-tag" autocomplete="off" autocapitalize="none" spellcheck="false"></label>' + categorySelect('id="library-bulk-category"') + '<button data-bulk="tag-add">Aggiungi tag</button><button data-bulk="tag-remove">Togli tag</button>') +
-      (items.some(item => selected.has(item.id) && item.origin === "REAL") ? `<label>Galleria delle REAL<select id="library-bulk-gallery"><option value="">Scegli una galleria</option>${galleryOptions(galleries, "")}</select></label><button type="button" data-bulk="gallery">Assegna galleria</button>` : "") +
+      (items.some(item => selected.has(item.id) && item.origin === "REAL") ? `<label>Galleria delle REAL<select id="library-bulk-gallery"><option value="">Scegli una galleria</option>${galleryOptions(galleries(), "")}</select></label><button type="button" data-bulk="gallery">Assegna galleria</button>` : "") +
       '<button data-bulk="none">Deseleziona</button>';
   };
-  /** Order of the grid: date added, views or accuracy (correct over views), descending or ascending. For accuracy, photos never
-   * seen have none and go last either way; ties keep the most recent first. */
-  const sorted = () => {
-    const sign = sort.order === "asc" ? 1 : -1, added = (i: Item) => Date.parse(i.created_at) || 0;
-    const key = (i: Item): number | null => sort.by === "views" ? i.stats.views : sort.by === "accuracy" ? (i.stats.views ? i.stats.correct / i.stats.views : null) : added(i);
-    return [...items].sort((a, b) => {
-      const ka = key(a), kb = key(b);
-      if (ka === null || kb === null) return ka === kb ? added(b) - added(a) : ka === null ? 1 : -1;
-      return (ka - kb) * sign || added(b) - added(a);
-    });
-  };
-  const render = () => {
-    $("#library-grid").innerHTML = items.length ? sorted().map(card).join("") : `<li class="library-empty">${filter.status === "trash" ? "Il cestino è vuoto." : "Nessuna immagine. Aggiungi le REAL con «Caricamento REAL» e genera le SLOP con «Generazione SLOP»."}</li>`;
+  const render = (added?: Item[]) => {
+    const grid = $("#library-grid");
+    if (added) grid.insertAdjacentHTML("beforeend", added.map(card).join(""));
+    else grid.innerHTML = items.length ? items.map(card).join("") : `<li class="library-empty">${filter.status === "trash" ? "Il cestino è vuoto." : "Non ci sono foto in questa vista."}</li>`;
     // «Seleziona tutte» takes every photo shown by the current view and filters, never the hidden ones.
     const all = $<HTMLButtonElement>("#library-select-all");
     all.hidden = !items.length || items.every(i => selected.has(i.id));
@@ -371,8 +412,8 @@ export async function showLibrary() {
       <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / originale ${item.width}×${item.height}${item.copy ? ` / copia di gioco WebP ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}: è ciò che vedranno i giocatori` : " / copia di gioco non pronta"}</p>
       <div class="library-detail-body"><div class="game-media-surface library-preview"><img data-game-media draggable="false" src="${escape(item.file)}" alt="${escape(imageLabel(item))}"></div>
       <div class="library-fields"><p>${statsLine(item)}</p>
-      ${item.origin === "REAL" ? `<label>Galleria<select id="library-detail-gallery">${galleryOptions(galleries, item.gallery_id)}</select></label>`
-        : item.gallery_id ? `<p>Galleria · ${escape(galleries.find(g => g.id === item.gallery_id)?.title || "")}</p>` : ""}
+      ${item.origin === "REAL" ? `<label>Galleria<select id="library-detail-gallery">${galleryOptions(galleries(), item.gallery_id)}</select></label>`
+        : item.gallery_id ? `<p>Galleria · ${escape(galleries().find(g => g.id === item.gallery_id)?.title || "")}</p>` : ""}
       ${item.in_play ? `<p class="hint">In ${item.in_play} ${item.in_play === 1 ? "partita" : "partite"} in corso: continuano con la versione con cui sono iniziate; le modifiche valgono dalle partite nuove.</p>` : ""}
       ${item.status === "published" ? '<p class="db-edit-note">Pubblicata: per modificarla avvia la modifica. La foto esce subito dalla pubblicazione, quindi non entra in nuove partite; quelle in corso finiscono con la versione attuale. Finita la modifica resta approvata: la ripubblichi quando vuoi.</p>' : ""}
       ${item.status === "approved" ? '<p class="hint">Le modifiche si salvano subito e la foto resta approvata. Pubblicala quando hai finito.</p>' : ""}
@@ -536,33 +577,26 @@ export async function showLibrary() {
 
   page.addEventListener("click", async event => {
     const target = event.target as HTMLElement, button = target.closest<HTMLButtonElement>("button");
-    if (target.closest("dialog") || target.closest("#real-wizard") || target.closest("#slop-auto")) return;
+    if (target.closest("dialog") && !target.closest("#db-images, .gallery-actions, .gallery-title-row")) return;
     if (button?.dataset.adminTab) {
       const tab = button.dataset.adminTab;
-      try { sessionStorage.setItem("ros-admin-section", tab); } catch { /* storage unavailable */ }
-      for (const panel of ["real", "slop", "database", "stats", "settings"])
+      for (const panel of ["galleries", "stats", "settings"])
         $<HTMLElement>("#admin-" + panel).hidden = panel !== tab;
       page.querySelectorAll<HTMLButtonElement>("[data-admin-tab]").forEach(b => b.setAttribute("aria-pressed", String(b === button)));
-      if (tab === "database") {
-        await refreshGalleries().catch(error => message(String(error)));
-        await load();
-        if (!$("#db-distribution").hidden) await distribution.refresh();
+      if (tab === "galleries") await refreshGalleries().catch(showGalleryError);
+      if (tab === "stats") {
+        await statsView.refresh();
+        if ($<HTMLDetailsElement>("#stats-distribution").open) await distribution.refresh();
       }
-      if (tab === "slop") await slopStudio.refresh();
-      if (tab === "real") await realWizard?.sync();
-      if (tab === "stats") await statsView.refresh();
       return;
     }
-    if (button?.dataset.dbTab) {
-      const tab = button.dataset.dbTab;
-      $("#db-images").hidden = tab !== "images";
-      $("#db-distribution").hidden = tab !== "distribution";
-      $("#db-galleries").hidden = tab !== "galleries";
-      page.querySelectorAll<HTMLButtonElement>("[data-db-tab]").forEach(b => b.setAttribute("aria-pressed", String(b === button)));
-      if (tab === "images") await load();
-      else if (tab === "distribution") await distribution.refresh();
-      return;
-    }
+    if (button?.hasAttribute("data-gallery-create") && galleryList) { galleryEditor.open(galleryList); return; }
+    if (button?.dataset.galleryOpen) { await openGallery(button.dataset.galleryOpen).catch(report); return; }
+    if (button?.id === "gallery-active-batch" && button.dataset.gallery) { await openAutomatic(button.dataset.gallery).catch(report); return; }
+    if (button?.hasAttribute("data-gallery-close")) { galleryDialog.close(); return; }
+    if (button?.hasAttribute("data-gallery-edit") && galleryList) { galleryEditor.open(galleryList, filter.gallery); return; }
+    if (button?.dataset.galleryPane) { await showGalleryPane(button.dataset.galleryPane).catch(report); return; }
+    if (button?.id === "library-more") { await load(true).catch(report); return; }
     if (button?.hasAttribute("data-batch-clear")) { filter.batch = ""; await load(); return; }
     if (button?.dataset.filterRemove) {
       filter.tags = filter.tags.filter(t => t !== button.dataset.filterRemove); tagPills(); await load(); return;
@@ -581,7 +615,7 @@ export async function showLibrary() {
     busy = true;
     try {
       if (button.id === "library-empty-trash") {
-        const result = await call<{ deleted: number; postponed: number }>("/trash/empty", { method: "POST", body: "{}" });
+        const result = await call<{ deleted: number; postponed: number }>("/trash/empty?" + new URLSearchParams({gallery: filter.gallery}), { method: "POST", body: "{}" });
         await Promise.all([load(), refreshTags()]);
         message(`${result.deleted} immagini eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} restano nel cestino finché le partite o le generazioni in corso non finiscono.` : ""));
       } else if (button.dataset.bulk) {
@@ -624,7 +658,7 @@ export async function showLibrary() {
           const ids = items.filter(i => selected.has(i.id) && i.origin === "REAL").map(i => i.id);
           const gallery_id = $<HTMLSelectElement>("#library-bulk-gallery").value;
           if (!gallery_id) { message("Scegli una galleria."); return; }
-          const result = await call<{done: number; failed: {error: string}[]}>("/bulk", {method: "POST", body: JSON.stringify({action, ids, gallery_id})});
+          const result = await bulkUpdate(action, ids, {gallery_id});
           selected.clear();
           await load();
           message(`${result.done} REAL aggiornate.` + (result.failed.length ? " " + result.failed.map(f => f.error).join(" / ") : ""));
@@ -643,9 +677,11 @@ export async function showLibrary() {
           }
           bulkCategory = isCategory(chosen) ? chosen : "";
         }
-        const result = await call<{ done?: number; deleted?: number; postponed?: number; failed?: { error: string }[] }>("/bulk", { method: "POST",
-          body: JSON.stringify({ action, ids: [...selected], tags: tag ? [tag] : [], ...(bulkCategory ? { category: bulkCategory } : {}), rights_confirmed: action === "approve" && Boolean($<HTMLInputElement>("#library-bulk-rights")?.checked) }) });
-        const completedMessage = result.deleted !== undefined ? `${result.deleted} eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} in partite in corso: restano nel cestino per ora.` : "") :
+        const result = await bulkUpdate(action, [...selected], {
+          tags: tag ? [tag] : [], ...(bulkCategory ? { category: bulkCategory } : {}),
+          rights_confirmed: action === "approve" && Boolean($<HTMLInputElement>("#library-bulk-rights")?.checked),
+        });
+        const completedMessage = action === "delete" ? `${result.deleted} eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} in partite in corso: restano nel cestino per ora.` : "") :
           `${result.done} aggiornate.` + (result.failed?.length ? ` ${result.failed.length} non aggiornate: ${[...new Set(result.failed.map(f => f.error))].join("; ")}.` : "");
         if (action !== "tag-add" && action !== "tag-remove") selected.clear();
         await Promise.all([load(), refreshTags()]);
@@ -656,14 +692,13 @@ export async function showLibrary() {
   });
   page.addEventListener("change", event => {
     const target = event.target as HTMLInputElement;
-    if (target.closest("dialog")) return;
+    if (target.closest("dialog") && !target.closest("#db-images")) return;
     if (target.dataset.select) { if (target.checked) selected.add(target.dataset.select); else selected.delete(target.dataset.select); render(); }
-    else if (target.id === "library-gallery") { filter.gallery = target.value; void load(); }
     else if (target.id === "library-origin") { filter.origin = target.value; void load(); }
     else if (target.id === "library-sort" || target.id === "library-order") {
       sort = { by: $<HTMLSelectElement>("#library-sort").value, order: $<HTMLSelectElement>("#library-order").value };
       try { localStorage.setItem(SORT_KEY, JSON.stringify(sort)); } catch { /* private browsing */ }
-      render();
+      void load().catch(report);
     }
     else if (target.id === "library-tag") addFilterTag(target);
     else if (target.id === "library-tag-match") { filter.match = target.value; void load(); }
@@ -793,7 +828,7 @@ export async function showLibrary() {
     const form = event.target as HTMLFormElement;
     try {
       renderNumbers(await call<Numbers>("/settings", { method: "PUT", body: JSON.stringify(Object.fromEntries(fields.map(f => [f, Number((form.elements.namedItem(f) as HTMLInputElement).value)]))) }), fields);
-      settingsMessage(done); await slopStudio.refresh(); await autoBox.refresh();
+      settingsMessage(done); await autoBox.refresh();
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
   numbersForm("#library-thresholds-form", ["max_generation_attempts", "editorial_tolerance"], "Soglie dello studio SLOP salvate.");
@@ -841,36 +876,126 @@ export async function showLibrary() {
   // Opened while the dashboard was still loading: the toggle came before this listener, so load the entries now.
   if (($("#library-leaderboard") as HTMLDetailsElement).open) void refreshEntries().catch(error => settingsMessage(String(error)));
   distribution = mountDistribution($<HTMLElement>("#db-distribution"), () => call<Distribution>("/distribution"));
-  // Bind every command before startup requests: visible forms must never submit natively while data loads.
-  // The REAL wizard is the section shown first: it is mounted before the others load.
-  await refreshGalleries().catch(error => { $("#db-galleries").textContent = String(error); });
-  realWizard = await mountRealWizard($<HTMLElement>("#real-wizard"), async () => { await Promise.all([load(), refreshTags(), refreshAnalysis()]); }, () => galleries)
-    .catch(error => { $("#real-wizard").textContent = String(error instanceof Error ? error.message : error); return null; });
-  await Promise.all([load(), refreshTags(), refreshAnalysis()]).catch(error => message(String(error instanceof Error ? error.message : error)));
-  await refreshContexts().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
-  await refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
-  await call<Numbers>("/settings").then(n => renderNumbers(n)).catch(error => settingsMessage(String(error instanceof Error ? error.message : error)));
-  tagPills();
-  slopStudio = await mountSlopStudio($<HTMLElement>("#slop-studio"), n => { $("#slop-attention-count").textContent = n ? ` / ${n} da vedere` : ""; }, () => galleries);
-  // Automatic generation controls, balance notification, progress and review (spec `generazione-slop`).
-  autoBox = mountSlopAuto($<HTMLElement>("#slop-auto"), $<HTMLElement>("#slop-auto-controls"), {
-    loop: async batchId => {
-      sessionStorage.setItem("ros-editorial-studio-v2",batchId);
-      page.querySelector<HTMLButtonElement>('[data-admin-tab="slop"]')!.click();
-      page.querySelector<HTMLButtonElement>('[data-generation-mode="manual"]')!.click();
-      await slopStudio.refresh();
-    },
-    review: async batchId => {
-      filter.batch = batchId; filter.status = "library"; filter.gallery = ""; selected.clear();
-      page.querySelector<HTMLButtonElement>('[data-db-tab="images"]')!.click();
-      page.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === "library")));
-      page.querySelector<HTMLButtonElement>('[data-admin-tab="database"]')!.click();
-    },
-    changed: async () => { await Promise.all([load(), refreshTags()]); },
-    indicator: n => { $("#slop-auto-count").textContent = n ? ` (${n})` : ""; },
+  $("#stats-distribution").addEventListener("toggle", () => {
+    if ($<HTMLDetailsElement>("#stats-distribution").open) void distribution.refresh();
   });
-  await autoBox.refresh();
-  $("#dashboard-loading").remove();
-  try { const saved = sessionStorage.getItem("ros-admin-section"); if (saved && ["real","slop","database","stats","settings"].includes(saved)) page.querySelector<HTMLButtonElement>(`[data-admin-tab="${saved}"]`)?.click(); } catch { /* storage unavailable */ }
-}
 
+  const realWizards = new Map<string, { root: HTMLElement; wizard: Promise<RealWizard> }>();
+  const slopStudios = new Map<string, { root: HTMLElement; studio: ReturnType<typeof mountSlopStudio> }>();
+  const loadRealWizard = async (id: string) => {
+    let entry = realWizards.get(id);
+    if (!entry) {
+      const root = document.createElement("div");
+      root.id = "real-wizard";
+      root.innerHTML = loading("Caricamento del wizard…");
+      const wizard = mountRealWizard(root, async () => {
+        await Promise.allSettled([refreshGalleries(), refreshTags(), refreshAnalysis()]);
+      }, id);
+      entry = { root, wizard };
+      realWizards.set(id, entry);
+      $("#gallery-real").replaceChildren(root);
+      await wizard;
+    } else {
+      $("#gallery-real").replaceChildren(entry.root);
+      await (await entry.wizard).sync();
+    }
+  };
+  const loadSlopStudio = async (id: string, batch?: string) => {
+    let entry = slopStudios.get(id);
+    if (!entry) {
+      const root = document.createElement("div");
+      root.id = "slop-studio";
+      root.innerHTML = loading("Caricamento del wizard…");
+      entry = { root, studio: mountSlopStudio(root, id) };
+      slopStudios.set(id, entry);
+    }
+    $("#slop-manual").replaceChildren(entry.root);
+    await entry.studio.refresh(batch);
+  };
+  let pane = "photos";
+  const showGalleryPane = async (view: string, batch?: string) => {
+    if (!galleryDialog.open || !filter.gallery) return;
+    pane = view;
+    $("#db-images").hidden = view !== "photos";
+    $("#gallery-real").hidden = view !== "real";
+    $("#gallery-slop").hidden = view !== "slop";
+    for (const button of galleryDialog.querySelectorAll<HTMLButtonElement>("[data-gallery-pane]"))
+      button.hidden = (button.dataset.galleryPane === "photos") === (view === "photos");
+    $(".gallery-workspace-scroll").scrollTop = 0;
+    $("#gallery-title").focus({ preventScroll: true });
+    if (view === "real") await loadRealWizard(filter.gallery);
+    else if (view === "slop") {
+      autoBox.selectGallery(filter.gallery);
+      await Promise.all([loadSlopStudio(filter.gallery, batch), autoBox.refresh()]);
+    } else await load();
+  };
+  const resetGallery = (gallery: string, batch = "") => {
+    window.clearTimeout(searchTimer);
+    Object.assign(filter, { gallery, batch, status: "library", origin: "all", q: "", tags: [], match: "all" });
+    selected.clear();
+    items = [];
+    nextPage = null;
+    render();
+    $("#library-grid").innerHTML = `<li class="library-grid-loading">${loading("Caricamento delle immagini…")}</li>`;
+    $("#library-counts").textContent = "";
+    $("#library-empty-trash").hidden = true;
+    message("");
+    $<HTMLInputElement>("#library-search").value = "";
+    $<HTMLSelectElement>("#library-origin").value = filter.origin;
+    $<HTMLSelectElement>("#library-tag-match").value = filter.match;
+    $<HTMLInputElement>("#library-tag").value = "";
+    page.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === filter.status)));
+    tagPills();
+  };
+  const openGallery = async (id: string, view = "photos", batch = "") => {
+    const gallery = galleries().find(g => g.id === id);
+    if (!gallery) throw Error("Galleria non disponibile.");
+    if (filter.gallery !== id || batch) resetGallery(id, batch);
+    $("#gallery-title").textContent = gallery.title;
+    if (!galleryDialog.open) galleryDialog.showModal();
+    await showGalleryPane(view);
+  };
+  const openAutomatic = async (id: string) => {
+    setGenerationMode("automatic");
+    await openGallery(id, "slop");
+  };
+  galleryDialog.addEventListener("close", () => {
+    if (galleryDialog.open) return;
+    const id = filter.gallery;
+    filter.gallery = "";
+    ++loadSeq;
+    autoBox.selectGallery("");
+    window.clearTimeout(searchTimer);
+    if (!document.activeElement?.closest("#admin-galleries"))
+      page.querySelector<HTMLElement>(`[data-gallery-open="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
+    void refreshGalleries().catch(showGalleryError);
+  });
+  const activeBatch = $<HTMLButtonElement>("#gallery-active-batch");
+  const autoBox = mountSlopAuto($("#slop-auto"), $("#slop-auto-controls"), {
+    loop: async batchId => { setGenerationMode("manual"); await showGalleryPane("slop", batchId); },
+    review: async batchId => { await openGallery(filter.gallery, "photos", batchId); },
+    openGallery: openAutomatic,
+    changed: async () => { await Promise.allSettled([pane === "photos" ? load() : Promise.resolve(), refreshGalleries(), refreshTags()]); },
+    indicator: gallery => {
+      activeBatch.hidden = !gallery;
+      if (gallery) { activeBatch.dataset.gallery = gallery.id; activeBatch.textContent = `Batch automatico · ${gallery.title}`; }
+    },
+  });
+  const showGalleryError = (error: unknown) => {
+    if (galleryList) return;
+    $("#gallery-cards").innerHTML = `<p role="status">${escape(error instanceof Error ? error.message : String(error))}</p><button type="button" data-gallery-retry>Riprova</button>`;
+  };
+  $("#gallery-cards").addEventListener("click", event => {
+    if ((event.target as HTMLElement).closest("[data-gallery-retry]")) void refreshGalleries().catch(showGalleryError);
+  });
+  await Promise.all([
+    refreshGalleries().catch(showGalleryError),
+    Promise.all([refreshTags(), refreshAnalysis()]).catch(report),
+    refreshContexts().catch(error => settingsMessage(String(error instanceof Error ? error.message : error))),
+    refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error))),
+    call<Numbers>("/settings").then(n => renderNumbers(n)).catch(error => settingsMessage(String(error instanceof Error ? error.message : error))),
+    autoBox.refresh(),
+  ]);
+  tagPills();
+  $("#dashboard-loading").remove();
+}

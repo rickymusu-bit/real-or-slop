@@ -1,7 +1,13 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-18T19:45:07Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-19T15:59:47Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.43.0 — 2026-11-19T15:59:47Z
+
+- La dashboard si apre su Gallerie, con anteprime e creazione. Ogni galleria ha una finestra con la griglia scorrevole, i filtri, il dettaglio e il cestino di quella galleria.
+- «Carica REAL» mantiene il wizard di ricerca Commons, tag, inquadratura e pubblicazione. Rimosso il campo per incollare link. «Genera SLOP» apre entrambe le modalità nella galleria corrente, con estrazione casuale delle sue REAL nella modalità automatica.
+- Statistiche include la distribuzione delle immagini. Impostazioni resta accessibile dalla navigazione principale.
 
 ## 1.42.0 — 2026-11-18T19:45:07Z
 

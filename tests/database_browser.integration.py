@@ -10,7 +10,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from PIL import Image
-from catalog import make_gallery
+from catalog import make_gallery, open_gallery
 from game_copy import game_copy
 from playwright.sync_api import expect, sync_playwright
 from long_press import long_press
@@ -64,7 +64,8 @@ with sync_playwright() as p:
             confirms.append(dialog.message); dialog.accept()
         page.on('dialog', answer)
         page.goto(base + '/admin')
-        page.get_by_role('button', name='Database immagini').click()
+        open_gallery(page, gallery_id)
+        page.locator('.db-filter-panel summary').click()
         # Filters: one tag, then two (all of them), then any of them, then the origin.
         tag_input = page.locator('#library-tag')
         tag_input.fill('dbb-riot'); tag_input.press('Enter')
@@ -260,8 +261,28 @@ with sync_playwright() as p:
         expect(dialog).to_contain_text("regolato dall'owner")
         dialog.locator('.library-detail-close button').click()
 
-        # Distribution tab.
-        page.locator('[data-db-tab=distribution]').click()
+        if name == 'desktop':
+            # A long gallery can be scrolled in pages, without pulling in other galleries.
+            page.locator('[data-gallery-close]').click()
+            paged = make_gallery(API, token, 'Test pagination')
+            sql(f"""WITH RECURSIVE photos(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM photos WHERE n<73)
+                INSERT INTO images(id, gallery_id, origin, title, original_key, original_sha256, original_mime, width, height, created_at, updated_at)
+                SELECT printf('gallery-page-%02d',n), '{paged}', 'REAL', printf('Pagina %02d',n), printf('test/page-%02d',n),
+                    printf('%064x',n), 'image/png', 60, 40, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z' FROM photos""")
+            page.reload()
+            open_gallery(page, paged)
+            expect(page.locator('#library-counts')).to_contain_text('73 nuove')
+            expect(page.locator('#library-grid .library-card')).to_have_count(72)
+            page.get_by_role('button', name='Carica altre foto').click()
+            expect(page.locator('#library-grid .library-card')).to_have_count(73)
+            expect(page.locator('[data-open="gallery-page-73"]')).to_be_visible()
+            expect(page.get_by_role('button', name='Carica altre foto')).to_be_hidden()
+            sql(f"DELETE FROM images WHERE gallery_id='{paged}'")
+
+        # Distribution is available in Statistics.
+        page.locator('[data-gallery-close]').click()
+        page.locator('[data-admin-tab=stats]').click()
+        page.locator('#stats-distribution summary').click()
         chart = page.locator('#db-distribution')
         expect(chart.locator('.dist-overview')).to_be_visible()
         expect(chart.locator('.dist-legend')).to_contain_text('REAL pubblicate')

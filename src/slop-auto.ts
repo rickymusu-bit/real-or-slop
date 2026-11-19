@@ -18,13 +18,19 @@ interface AutoPreview {
 interface AutoBatch {
   config: Config; processes: {slot: number; state: string; updated_at: string; attempts: unknown[]; premise: string | null; prompt: string; error: string}[];
   runner: { id: string; status: string | null; updated_at: string | null; alive: boolean } | null;
-  id: string; size: number; status: "running" | "review"; prompts_status: string; prompts_error: string; slots: number;
+  id: string; gallery_id: string; size: number; status: "running" | "review"; prompts_status: string; prompts_error: string; slots: number;
   attempted: number[];
   gallery_review: "pending" | "confirmed" | null;
   proposal_review: {gallery: {id: string; title: string}; expires: number; invalid: boolean; references: {slot: number; real: Reference | null}[]} | null; images: AutoImage[]; undecided: number; updated_at: string;
 }
 export interface AutoState { config: Config; max_batch: number; galleries: Gallery[]; expired: boolean; paid_calls: boolean; batch: AutoBatch | null; balance: {real:number; slop:number; pending:number; missing:number} }
-interface Hooks { loop: (batchId:string) => void | Promise<void>; review: (batchId: string) => void | Promise<void>; changed: () => Promise<void>; indicator: (imbalances: number) => void }
+interface Hooks {
+  loop: (batchId: string) => Promise<void>;
+  review: (batchId: string) => Promise<void>;
+  openGallery: (galleryId: string) => Promise<void>;
+  changed: () => Promise<void>;
+  indicator: (gallery: Gallery | undefined) => void;
+}
 
 const LIBRARY = "/api/admin/library", SLOP = LIBRARY + "/slop/";
 const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -53,7 +59,7 @@ function observeLibrary(changed: () => void) {
   };
 }
 
-export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: Hooks): { refresh: () => Promise<void> } {
+export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: Hooks) {
   let preview: AutoPreview | null = null, extraction = 0, galleryId = "";
   let state: AutoState | null = null, running = false, quantity = 1, progress = "", notice = "", timer = 0;
 
@@ -64,14 +70,20 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
   const card = (r: Reference) => `<button type="button" class="slop-auto-photo" data-auto-reference="${escape(r.id)}" aria-label="Ingrandisci ${escape(r.title)}" data-long-press><img src="${escape(r.file)}" alt="" draggable="false"></button>
     <strong>${escape(r.title)}</strong><div class="rw-pills">${startPills(r)}</div>`;
   const render = () => {
-    const batch = state?.batch, balance = state?.balance;
+    const activeBatch = state?.batch, balance = state?.balance;
+    const batch = activeBatch?.gallery_id === galleryId ? activeBatch : null;
+    const activeGallery = state?.galleries.find(g => g.id === activeBatch?.gallery_id);
     window.clearTimeout(check);
-    if (batch) { preview = null; extraction++; }
-    hooks.indicator(balance?.missing ? 1 : 0);
+    if (activeBatch && preview) { preview = null; extraction++; }
+    hooks.indicator(activeGallery);
     root.innerHTML = balance && balance.real !== balance.slop ? `<p role="status"><strong>Dataset sbilanciato</strong>: ${balance.real} REAL e ${balance.slop} SLOP approvate o pubblicate; ${balance.pending} SLOP nuove da decidere.${balance.missing ? ` Mancano ${balance.missing} SLOP al pareggio, contando le nuove.` : ""}</p>` : "";
     root.hidden = !root.innerHTML;
     let html = "";
-    if (batch?.proposal_review) {
+    if (!galleryId) html = "";
+    else if (activeBatch && !batch) {
+      html = activeGallery ? `<p>Batch automatico aperto in <strong>${escape(activeGallery.title)}</strong>.</p>
+        <button type="button" data-auto="open-gallery">Apri il batch automatico</button>` : '<p>È già aperto un batch automatico.</p>';
+    } else if (batch?.proposal_review) {
       const review = batch.proposal_review, valid = validProposals(batch).length;
       const live = !!batch.runner?.alive, prompting = batch.processes.some(p => p.state === "prompting");
       if (!live) nextCheck(prompting ? 10_000 : review.expires - Date.now() + 100);
@@ -103,14 +115,11 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
         Decidi le immagini nuove prima di avviare un altro batch. Esaurite: ${batch.processes.filter(p=>p.state==="exhausted").length}; sospese: ${batch.processes.filter(p=>["review_needed","uncertain","failed"].includes(p.state)).length}.</p>
         ${(() => { const left = batch.processes.filter(p => ["draft", "ready", "retry"].includes(p.state)).length;
           return left ? `<p class="hint">${left} SLOP ancora da generare dalle proposte approvate.</p>` : ""; })()}
-        <div class="slop-auto-actions">${batch.processes.some(p => ["draft", "ready", "retry"].includes(p.state)) && !batch.runner?.alive ? '<button type="button" class="primary" data-auto="resume">Riprendi sul server</button>' : ""}<button type="button" data-auto="review">Rivedi nel Database</button><button type="button" data-auto="loop">Dettagli dei tentativi</button>${batch.undecided ? "" : '<button type="button" data-auto="close">Chiudi revisione</button>'}</div>`;
+        <div class="slop-auto-actions">${batch.processes.some(p => ["draft", "ready", "retry"].includes(p.state)) && !batch.runner?.alive ? '<button type="button" class="primary" data-auto="resume">Riprendi sul server</button>' : ""}<button type="button" data-auto="review">Rivedi nella galleria</button><button type="button" data-auto="loop">Dettagli dei tentativi</button>${batch.undecided ? "" : '<button type="button" data-auto="close">Chiudi revisione</button>'}</div>`;
     } else if (state) {
       const selected = gallery(), max = state.max_batch, c = preview?.config || state.config;
-      const options = state.galleries.map(g => `<option value="${escape(g.id)}" ${g.id === galleryId ? "selected" : ""}>${escape(g.title)}${g.ready ? "" : " · Indicazioni mancanti"}</option>`).join("");
       html = `<h3>Generazione automatica</h3>
-        <label class="slop-auto-gallery">Galleria<select id="slop-auto-gallery"><option value="">Scegli una galleria</option>${options}</select></label>
-        ${!state.galleries.length ? '<p class="hint">Crea una galleria in Database immagini → Gallerie.</p>' : ""}
-        ${selected ? `<p role="status">${selected.ready ? `REAL disponibili: ${selected.available}.` : "Salva le Indicazioni SLOP in Database immagini → Gallerie per abilitare la generazione automatica."}</p>` : ""}
+        ${selected ? `<p role="status">${selected.ready ? `REAL disponibili: ${selected.available}.` : "Salva le Indicazioni SLOP con «Modifica galleria» per abilitare la generazione automatica."}</p>` : ""}
         <label>Numero di SLOP<input id="slop-auto-size" type="number" required min="1" max="${max}" value="${quantity}" ${selected?.ready ? "" : "disabled"}></label>
         ${state.paid_calls ? "" : '<p class="hint">Manca la chiave OpenAI.</p>'}
         <button type="button" data-auto="preview" ${selected?.ready ? "" : "disabled"}>${preview ? "Estrai di nuovo le REAL" : "Estrai le REAL"}</button>
@@ -122,7 +131,7 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
         <p class="hint">Massimo ${preview.references.length} ${preview.references.length === 1 ? "chiamata" : "chiamate"} con ${escape(c.text_model)} per preparare premessa e prompt. L’estrazione vale 15 minuti.</p>
         <div class="slop-auto-actions"><button type="button" class="primary" data-auto="prepare" ${state.paid_calls ? "" : "disabled"}>Prepara ${preview.references.length} ${preview.references.length === 1 ? "proposta" : "proposte"}</button><button type="button" data-auto="discard">Annulla estrazione</button></div></section>`;
     }
-    if (notice) html += `<p class="slop-auto-notice" role="status">${escape(notice)}</p>`;
+    if (galleryId && notice) html += `<p class="slop-auto-notice" role="status">${escape(notice)}</p>`;
     controls.innerHTML = html;
   };
 
@@ -176,14 +185,6 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
     await load(); await hooks.changed();
   };
 
-  controls.addEventListener("change", event => {
-    const input = event.target as HTMLSelectElement;
-    if (input.id !== "slop-auto-gallery") return;
-    galleryId = input.value;
-    preview = null;
-    extraction++;
-    render();
-  });
   controls.addEventListener("input", event => {
     const input = event.target as HTMLInputElement;
     if (input.id !== "slop-auto-size") return;
@@ -207,6 +208,9 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-auto]");
     if (!button || !state) return;
     const action = button.dataset.auto!;
+    const active = state.batch;
+    if (action === "open-gallery" && active) { await hooks.openGallery(active.gallery_id); return; }
+    if (active && active.gallery_id !== galleryId) return;
     notice = "";
     try {
       if (action === "discard") { preview = null; extraction++; render(); return; }
@@ -223,9 +227,9 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
         return;
       }
       if (action === "loop" && state.batch) { await hooks.loop(state.batch.id); return; }
-      if (action === "close") { state = await call<AutoState>(SLOP + "auto/close", {}); render(); return; }
+      if (action === "close" && active) { state = await call<AutoState>(SLOP + "auto/close", {batch: active.id}); render(); return; }
       if (action === "review" && state.batch) { await hooks.review(state.batch.id); return; }
-      if (action === "stop") { await call(SLOP + "auto/stop", {}); notice = "Batch interrotto: il server si ferma prima della prossima chiamata."; await load(); return; }
+      if (action === "stop" && active) { await call(SLOP + "auto/stop", {batch: active.id}); notice = "Batch interrotto: il server si ferma prima della prossima chiamata."; await load(); return; }
       if (action === "resume") {
         const batch = state.batch;
         if (!batch) return;
@@ -234,7 +238,7 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
           ? `Riprendere le proposte sul server? Massimo ${remaining} ${remaining === 1 ? "chiamata" : "chiamate"} con ${batch.config.text_model} per le proposte ancora da preparare.`
           : "Riprendere il batch sul server entro il massimo di chiamate confermato all’avvio?";
         if (!window.confirm(question)) return;
-        button.disabled = true; state = await call<AutoState>(SLOP + "auto/resume", { confirm: true }); render(); void follow(); return;
+        button.disabled = true; state = await call<AutoState>(SLOP + "auto/resume", { batch: batch.id, confirm: true }); render(); void follow(); return;
       }
       if (action === "cancel" && state.batch?.proposal_review) {
         button.disabled = true;
@@ -260,6 +264,14 @@ export function mountSlopAuto(root: HTMLElement, controls: HTMLElement, hooks: H
   });
 
   observeLibrary(() => { window.clearTimeout(timer); timer = window.setTimeout(() => { if (!running) void load(); }, 400); });
-  return { refresh };
+  return { refresh, selectGallery(id: string) {
+    if (id === galleryId) return;
+    galleryId = id;
+    preview = null;
+    notice = "";
+    quantity = 1;
+    extraction++;
+    render();
+  } };
 }
 

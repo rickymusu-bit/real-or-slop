@@ -40,7 +40,6 @@
 .rw-pick { position: relative; min-width: 0; border: 1px solid var(--hairline); border-radius: 5px; padding: 3px; background: var(--bg); }
 .rw-pick a { display: block; }
 .rw-pick img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; }
-.rw-pick-link { display: grid; place-items: center; aspect-ratio: 4 / 3; font-size: 12px; text-decoration: underline; }
 .rw .rw-pick button { position: absolute; top: 4px; right: 4px; min-height: 30px; width: 30px; padding: 0; border-radius: 50%; background: rgb(0 0 0 / 65%); }
 .rw-editor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 430px), 1fr)); gap: 18px; align-items: start; }
 .rw-editor { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
@@ -81,9 +80,6 @@
 .rw label.rw-columns-pick { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin: 0; }
 .rw .rw-columns-pick select { width: auto; padding: 6px 8px; }
 .rw-stack { display: grid; gap: 16px; }
-.rw-links summary { cursor: pointer; list-style-position: inside; }
-.rw-links summary h3 { display: inline; margin: 0; }
-.rw-links[open] summary { margin-bottom: 12px; }
 /* The Commons search field ends with a button that clears it (the browser's own clear mark is hidden, since phones lack it); the «Inquadratura» step shows each copy with its format and the buttons under it. */
 .rw-search-field { position: relative; display: flex; align-items: stretch; }
 .rw-search-field input { flex: 1; min-width: 0; padding-right: 44px; }

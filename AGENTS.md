@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 30.0.0, aggiornata il 2026-11-18T19:45:07Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 30.1.0, aggiornata il 2026-11-19T15:59:47Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -23,7 +23,9 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   e il contesto Commons, ma **non conosce l'esistenza delle SLOP**.
   Il modello successivo prepara premessa e prompt SLOP dalla REAL intera, dal profilo editoriale e dal contesto documentato, e
   riceve le indicazioni della galleria. I contesti restano distinti.
-- **Generazione SLOP manuale o automatica** (decisione del 2026-11-18, #157, specifica `generazione-slop` 9.0.0).
+- **Dashboard** (decisione del 2026-11-19). Gallerie è la sezione iniziale. Ogni galleria apre la propria griglia e i wizard
+  «Carica REAL» e «Genera SLOP». Il wizard REAL acquisisce dalle ricerche su Commons. Le altre sezioni sono Statistiche e Impostazioni.
+- **Generazione SLOP manuale o automatica** (decisione del 2026-11-18, #157, specifica `generazione-slop` 10.1.0).
   Manuale: galleria, prompt, tag di partenza e ancoraggi scritti dall’owner. Automatica: galleria con indicazioni salvate, estrazione casuale gratuita
   e anteprima delle REAL idonee. Prima conferma per preparare premessa e prompt, seconda per generare dai prompt presentati. Le
   proposte cambiate, annullate o scadute non autorizzano chiamate immagine. Le SLOP ereditano la galleria e le REAL restano
@@ -32,7 +34,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   dei legami. L’azzeramento riguarda il database, con impostazioni e dati di gioco. La migrazione agisce esclusivamente sul D1.
   Le persone raffigurate nelle generazioni sono inventate.
 - **Bilanciamento del dataset per numero di foto** (decisioni del 2026-11-17 e 2026-11-18). I tag, compresi Genere e Tempo,
-  sono descrittivi e servono al Database. L’estrazione automatica usa l’appartenenza alla galleria.
+  sono descrittivi e servono come filtri nella galleria. L’estrazione automatica usa l’appartenenza alla galleria.
 - **Credibilità prima dell'aderenza letterale al prompt.** Il valutatore esamina **l'immagine generata intera**, senza crop
   né trattamento 4:5; decide accettazione, nuovo tentativo, revisione del prompt o revisione umana. Il ritaglio 4:5 è preparato
   **soltanto dopo l'accettazione** e non dà feedback al generatore. Nell’accettazione automatica i difetti critici non sono compensabili con altri punti forti; tentativi

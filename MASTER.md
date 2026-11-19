@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 33.0.0, aggiornata il 2026-11-18T19:45:07Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 34.0.0, aggiornata il 2026-11-19T15:59:47Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,9 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.42.0 (PR #158, issue #157):** gallerie obbligatorie, estrazione casuale per galleria e conferme separate per
+- **Ramo 1.43.0:** dashboard aperta su Gallerie con anteprime e creazione. Ogni galleria apre la griglia e i wizard di caricamento
+  REAL da ricerca Commons e di generazione SLOP. Distribuzione in Statistiche.
+- **Integrata in main la 1.42.0 (PR #158, issue #157):** gallerie obbligatorie, estrazione casuale per galleria e conferme separate per
   proposte e immagini. Migrazioni 0060 e 0061. La 0061 azzera il D1 attuale al rilascio su decisione dell’owner e rimuove
   la genealogia tra REAL e SLOP. Il browser usa nuove chiavi per le bozze del wizard e dello studio.
 - **In produzione la 1.41.0 (PR #156):** scelta esplicita dal Database o da Commons, estrazione casuale disponibile, ritiro
@@ -65,14 +67,14 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 8.0.0 |
+| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 8.1.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.3.1 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.2.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 3.7.0 |
-| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 10.0.0 |
-| Sezione Database | `docs/database-immagini.md` | 7.0.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 4.0.0 |
+| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 10.1.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 8.0.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.1.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.2.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.3.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -109,7 +111,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - Sito: home con classifica, «Come funziona», «Fonti e crediti» (`main.ts`, `style.css`); pagine legali (`legal.ts`, `legal.css`).
 - Gioco: `play.ts` e `play.css`, foto esplorabile `photo-viewer.ts`, precaricamento `preload.ts`, marchio «RS» `media-mark.ts`,
   protezioni `media-privacy.ts`.
-- Dashboard: `library.ts` (sezioni, Database, Impostazioni; CSS `library.css`, `database.css`, `admin-navigation.css`,
+- Dashboard: `library.ts` (finestra della galleria, Statistiche e Impostazioni; CSS `library.css`, `database.css`, `admin-navigation.css`,
   `admin-loading.css`, `model-context.css`, `caption-count.css`), gallerie `galleries.ts` e `galleries.css`, wizard REAL `real-wizard.ts` e `real-wizard.css`, studio SLOP
   `slop-studio.ts` e `slop-studio.css`, campi editoriali `editorial-ui.ts`, riquadro dei batch automatici `slop-auto.ts` e `slop-auto.css`, statistiche `stats.ts` e
   `stats.css`, grafico della distribuzione `database-chart.ts`, anteprima a pressione prolungata `image-preview.ts` e

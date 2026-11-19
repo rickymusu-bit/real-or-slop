@@ -1,4 +1,3 @@
-import { galleryOptions, type Gallery } from "./galleries";
 /** Editorial studio: textual briefs, bounded full-image evaluation, accepted copies and manual review. */
 import "./slop-studio.css";
 import { prepareItemCopy, saveFrame, type TreatableItem } from "./game-copy";
@@ -30,18 +29,23 @@ async function call<T>(path: string, body?: unknown, method?: string, base = API
   const data = await response.json() as T & {error?: string};
   if (!response.ok) throw Error(data.error || "Richiesta non riuscita"); return data;
 }
-export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number) => void, galleries: () => Gallery[]): Promise<{refresh: () => Promise<void>}> {
+export function mountSlopStudio(root: HTMLElement, galleryId: string) {
   let state: State | null = null, batch: Batch | null = null, config: Config | null = null, page = 1, busy = false, notice = "", progress = "";
-  const manual = {gallery_id: "", prompt: "", tags: "", required: "", preferred: "", flexible: "", exclusions: ""};
-  let batchId = sessionStorage.getItem(DRAFT) || "", recent: {id: string; count: number}[] = [];
-  const loadBatch = async () => { if (batchId) batch = await call<Batch>("batches/" + batchId); };
+  const manual = {prompt: "", tags: "", required: "", preferred: "", flexible: "", exclusions: ""};
+  const draftKey = DRAFT + ":" + galleryId;
+  const scope = "?" + new URLSearchParams({gallery: galleryId});
+  let batchId = sessionStorage.getItem(draftKey) ?? sessionStorage.getItem(DRAFT) ?? "", recent: {id: string; count: number}[] = [];
+  const loadBatch = async () => {
+    if (!batchId) return;
+    const result = await call<Batch>("batches/" + batchId);
+    if (result.gallery_id === galleryId) batch = result;
+    else { batchId = ""; batch = null; }
+  };
   const evaluation = (a: Attempt, open = false) => `<details data-evaluation="${escape(a.id)}"${open ? " open" : ""}><summary>Tentativo ${a.number}: ${escape(a.evaluation?.decision || a.status)}</summary>` +
     (a.file ? `<img src="${escape(a.file)}" alt="Candidata intera del tentativo ${a.number}" style="max-width:100%;max-height:360px;object-fit:contain">` : "") +
     `<p lang="en">${escape(a.prompt)}</p>` + (a.evaluation ? `<p>${escape(a.evaluation.action_reason)}</p><p>Difetti critici: ${escape(a.evaluation.critical_findings.join("; ") || "nessuno")}</p><p>Difetti minori: ${escape(a.evaluation.minor_findings.join("; ") || "nessuno")}</p><p>Incertezze: ${escape(a.evaluation.uncertainty_notes.join("; ") || "nessuna")}</p><p>Vincoli editoriali: ${a.evaluation.editorial_constraints_met ? "rispettati" : "non rispettati"}</p>` : "") + "</details>";
   const summary = () => batch?.config ? `<p class="hint">${batch.config.max_generation_attempts} tentativi massimi per SLOP; tolleranza ${["rigorosa","normale","permissiva"][batch.config.editorial_tolerance]}. Massimo ${batch.max_calls} chiamate (${batch.origin === "auto" ? "proposte, generazioni, valutazioni e tag dopo accettazione" : "generazioni, valutazioni e tag dopo accettazione"}). Effettive: ${batch.processes.reduce((n,p) => n+p.calls,0)}. Modelli: ${escape(batch.config.text_model)}, ${escape(batch.config.image_model)}, qualità ${escape(batch.config.quality)}.</p>` : "";
-  const first = () => `<div class="studio-intro"><h3>Generazione manuale</h3><p>Scegli la galleria e scrivi prompt, tag di partenza e ancoraggi.</p></div>
-    <label>Galleria<select data-manual="gallery_id" required><option value="">Scegli una galleria</option>${galleryOptions(galleries(), manual.gallery_id)}</select></label>
-    ${galleries().length ? "" : '<p class="hint">Crea una galleria in Database immagini → Gallerie.</p>'}
+  const first = () => `<h3>Generazione manuale</h3>
     <label>Prompt in inglese<textarea data-manual="prompt" rows="6" maxlength="4000" required>${escape(manual.prompt)}</textarea></label>
     <label>Tag di partenza (separati da virgole)<textarea data-manual="tags" rows="2" required>${escape(manual.tags)}</textarea></label>
     <p class="hint">I tag finali descriveranno l'immagine effettivamente generata: quelli di partenza restano disponibili per il confronto.</p>` +
@@ -74,7 +78,6 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
   const acceptable = (a: Attempt) => a.status === "completed" && !!a.file && !!a.evaluation;
   const attentionView = () => {
     const list = state?.attention || [];
-    onAttention(list.length);
     if (!list.length) return "";
     return `<section class="slop-attention" aria-labelledby="slop-attention-title"><h3 id="slop-attention-title">Da vedere: ${list.length} ${list.length === 1 ? "processo senza SLOP" : "processi senza SLOP"}</h3>` +
       list.map(p => `<details class="slop-closed" data-attention="${escape(p.id)}"><summary>${escape(p.title)}: ${escape(STATE_LABELS[p.state] || p.state)}</summary>` +
@@ -95,15 +98,22 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
     }
     if (busy) root.querySelectorAll<HTMLButtonElement>("button:not([data-slop=stop-run])").forEach(b => b.disabled = true);
   };
-  const refresh = async () => {
+  const refresh = async (id?: string) => {
+    if (busy) return;
+    if (id) { batchId = id; sessionStorage.setItem(draftKey, id); }
     try {
-      batchId = sessionStorage.getItem(DRAFT) || batchId;
-      state = await call<State>("state");
-      const values = await call<{values: {max_generation_attempts: number; editorial_tolerance: number}}>("/settings", undefined, "GET", LIBRARY);
-      const models = await call<{text_model: string; image_model: string; image_quality: string}>("/models", undefined, "GET", LIBRARY);
+      const [current, values, models, history] = await Promise.all([
+        call<State>("state" + scope),
+        call<{values: {max_generation_attempts: number; editorial_tolerance: number}}>("/settings", undefined, "GET", LIBRARY),
+        call<{text_model: string; image_model: string; image_quality: string}>("/models", undefined, "GET", LIBRARY),
+        call<{batches: typeof recent}>("batches" + scope),
+      ]);
+      state = current;
       config = {...values.values, ...models, quality: models.image_quality};
-      recent = (await call<{batches: typeof recent}>("batches")).batches;
-      await loadBatch(); if (batch) page = working() ? 3 : 4;
+      recent = history.batches;
+      const resume = !batch || id;
+      await loadBatch();
+      if (batch && resume) page = working() ? 3 : 4;
     } catch (e) { notice = String(e); } render();
     // Following an existing server job must not hold the dashboard's initial loading promise.
     // busy also prevents a second polling loop when the owner reopens this section.
@@ -111,7 +121,7 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
       busy = true; render();
       void follow().catch(error => { notice = String(error); }).finally(async () => {
         busy = false; page = batch?.processes.some(p => p.attempts.length) ? 4 : 2;
-        state = await call<State>("state").catch(() => state); render();
+        state = await call<State>("state" + scope).catch(() => state); render();
       });
     }
   };
@@ -154,7 +164,7 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
   });
   root.addEventListener("change", event => {
     const input = event.target as HTMLInputElement;
-    if (input.matches("[data-recent]") && input.value) {batchId=input.value;sessionStorage.setItem(DRAFT,batchId);void loadBatch().then(()=>{page=4;render();});}
+    if (input.matches("[data-recent]") && input.value) void refresh(input.value);
   });
   root.addEventListener("click", async event => {
     const button=(event.target as HTMLElement).closest<HTMLButtonElement>("[data-slop]");if(!button)return;
@@ -171,14 +181,14 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
         ...(e.editorial_constraints_met ? [] : ["Il valutatore non ha potuto confermare i vincoli editoriali."])].join("\n");
       if(!window.confirm(`Accettare questa candidata (tentativo ${attempt.number}) nonostante la valutazione?\n\n${findings}\n\n${e.action_reason}\n\nLa tua decisione sarà registrata senza modificare la valutazione. Entra nella libreria come SLOP nuova, da approvare dopo la copia 4:5. Massimo 1 chiamata a pagamento per i tag.`))return;
       busy=true;notice="Accettazione e analisi dei tag…";render();
-      try{const done=await call<{attention: Attention[]; tags_error: string}>("processes/"+button.dataset.process+"/accept",{confirm:true,attempt:button.dataset.attempt});
-        state={...state!,attention:done.attention};notice=done.tags_error?`SLOP accettata; analisi dei tag non riuscita: ${done.tags_error}. Si ripete dal Database.`:"SLOP accettata: la trovi nella revisione del suo batch.";}
+      try{const done=await call<{tags_error: string}>("processes/"+button.dataset.process+"/accept",{confirm:true,attempt:button.dataset.attempt});
+        state=await call<State>("state"+scope);notice=done.tags_error?`SLOP accettata; analisi dei tag non riuscita: ${done.tags_error}. Puoi ripeterla dalla galleria.`:"SLOP accettata: la trovi nella revisione del suo batch.";}
       catch(e){notice=String(e);}finally{busy=false;} render();return;}
     if(action==="close-process"){
       if(!window.confirm("Chiudere questo processo? Sparisce dall'elenco e le immagini dei suoi tentativi vengono cancellate dopo sette giorni."))return;
-      try{state={...state!,...await call<{attention: Attention[]}>("processes/"+button.dataset.process+"/close",{})};notice="Processo chiuso.";}
+      try{await call("processes/"+button.dataset.process+"/close",{});state=await call<State>("state"+scope);notice="Processo chiuso.";}
       catch(e){notice=String(e);} render();return;}
-    if(action==="new-batch"){batch=null;batchId="";sessionStorage.removeItem(DRAFT);page=1;notice="";await refresh();return;}
+    if(action==="new-batch"){batch=null;batchId="";sessionStorage.setItem(draftKey,"");page=1;notice="";await refresh();return;}
     if(action==="to-prompts"||action==="to-review"){page=action==="to-prompts"?2:4;render();return;}
     try {
       if(action==="manual-draft") {
@@ -187,8 +197,8 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
         if (tags.some(t=>!t.ok)) throw Error(tags.find(t=>!t.ok)!.reason);
         const brief = Object.fromEntries(BRIEF_KEYS.map(k=>[k, manual[k].split("\n").map(t=>t.trim()).filter(Boolean)]));
         busy=true;render();
-        batch=await call<Batch>("batches",{mode:"manual",gallery_id:manual.gallery_id,prompt:manual.prompt,tags:tags.filter(t=>t.ok).map(t=>t.tag),brief});
-        batchId=batch.id;sessionStorage.setItem(DRAFT,batchId);page=2;notice="Pronta: controlla e avvia quando vuoi.";
+        batch=await call<Batch>("batches",{mode:"manual",gallery_id:galleryId,prompt:manual.prompt,tags:tags.filter(t=>t.ok).map(t=>t.tag),brief});
+        batchId=batch.id;sessionStorage.setItem(draftKey,batchId);page=2;notice="Pronta: controlla e avvia quando vuoi.";
         return;
       }
       if(action==="images"||action==="save") await save();
@@ -197,7 +207,7 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
         analyze:"Analizzare questa SLOP? Una chiamata a pagamento."};
       if(messages[action]&&!window.confirm(messages[action]))return;
       busy=true;notice="";render();
-      if(action==="images"){page=3;batch=await call<Batch>("batches/"+batchId+"/run",{confirm:true,phase:"images"});await follow();page=4;state=await call<State>("state");}
+      if(action==="images"){page=3;batch=await call<Batch>("batches/"+batchId+"/run",{confirm:true,phase:"images"});await follow();page=4;state=await call<State>("state"+scope);}
       else if(action==="save")notice="Brief e prompt salvati.";
       else if(image){
         if(action==="frame"){const choice=await chooseFrame(image.id,image.width,image.height,image.copy);if(choice)await saveFrame(image,choice);}
@@ -208,6 +218,6 @@ export async function mountSlopStudio(root: HTMLElement, onAttention: (n: number
       }
     }catch(e){notice=String(e);if(page===3)page=4;await loadBatch().catch(()=>{});}finally{busy=false;progress="";render();}
   });
-  await refresh();return {refresh};
+  return {refresh};
 }
 

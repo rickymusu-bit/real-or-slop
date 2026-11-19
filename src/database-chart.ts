@@ -1,4 +1,4 @@
-/** Database section, «Distribuzione» tab (spec `database-immagini`, section 5): REAL and SLOP overall and per tag,
+/** Statistics, «Distribuzione delle immagini» (spec `database-immagini`, section 5): REAL and SLOP overall and per tag,
  * published and approved stacked, with the spread; filters, sorting, compact view, tooltip and table view. */
 import "./database.css";
 import { escape } from "../shared/html";

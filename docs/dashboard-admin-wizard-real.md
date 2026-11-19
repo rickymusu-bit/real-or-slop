@@ -1,34 +1,34 @@
-# Dashboard e wizard REAL — specifica 3.7.0
+# Dashboard e wizard REAL — specifica 4.0.0
 
-Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
+Stato: implementata nel ramo 1.43.0, da rilasciare. Aggiornata: 2026-11-19T15:59:47Z.
 
 ## 1. Decisioni dell'owner
 
-- Cinque sezioni; le Impostazioni contengono solo comandi, le Statistiche solo visualizzazioni (2026-11-12).
+- All’apertura si vedono le Gallerie. La finestra di una galleria contiene le foto e apre i wizard REAL e SLOP (2026-11-19).
 - La dashboard segnala il caricamento invece di restare vuota (2026-11-13).
 - Wizard REAL in quattro passi, con l'inquadratura dopo acquisizione e tag (2026-11-13).
 - Nella ricerca su Commons il tasto che svuota il campo sta in una casella separata alla fine del campo, perché non copra il testo; un
   tocco breve su una foto la seleziona e la mette subito tra le selezionate; la selezione resta con una nuova ricerca (2026-11-14).
 - Una pressione prolungata su una miniatura la ingrandisce con titolo, descrizione e link a Commons; la finestra resta aperta e si
-  chiude con una × nell'angolo. Vale anche nel Database e nello studio SLOP (2026-11-14).
+  chiude con una × nell'angolo. Vale anche nella galleria e nello studio SLOP (2026-11-14).
 - La **descrizione Commons modificabile dall'owner** è quella mostrata alla fine della partita (2026-11-14).
   La nuova **descrizione editoriale generata con i tag** rimane privata; il suo contenuto può essere corretto durante
   il caricamento senza sostituire automaticamente quello mostrato nel gioco.
 
 ## 2. Dashboard `/admin`
 
-Riprogettazione 1.37.0: navigazione laterale desktop con descrizione delle cinque attività; su mobile barra orizzontale scorrevole. La barra laterale e i suoi pulsanti restano nella propria colonna, senza coprire i pannelli; le descrizioni dei pulsanti sono sotto il titolo. Su mobile la barra scorre mantenendo le voci compatte. Ultima sezione ricordata nella sessione. Testata compatta, pannelli coerenti, comandi tattili e focus visibile. I quattro passi REAL restano espliciti con schede e azioni raggruppate. Le eccezioni SLOP e i loro tentativi sono espandibili singolarmente; un aggiornamento della sezione conserva anche i tentativi aperti o chiusi; modalità manuale con galleria, prompt, tag e ancoraggi, modalità automatica con galleria e quantità (1–10). L’estrazione gratuita mostra miniature, titoli e tag. Tocco o pressione prolungata apre l’originale intero e la descrizione editoriale. Dopo l’estrazione si conferma prima il massimo di chiamate per scrivere premesse e prompt, poi il massimo per generare e valutare gli esiti validi (specifica `generazione-slop`).
+L’owner accede a `/admin` con le sue credenziali. Le sezioni sono Gallerie, Statistiche e Impostazioni. Aprendo la dashboard
+si parte da Gallerie, con un pulsante «Nuova galleria» e una scheda per galleria con titolo, descrizione, numero di foto e fino a
+tre miniature delle foto più recenti fuori dal cestino. I moduli indicano il caricamento finché i dati sono in arrivo.
 
-Database con ricerca per ID e testo; le SLOP usano un’etichetta con ID abbreviato senza campo titolo né riquadro «Tag di partenza». Restano i tag osservati e modificabili, con filtri di origine, galleria e tag (nessun gruppo di genere/decennio) e ordinamento richiudibili, griglia 4:5 e barra di selezione durante lo scorrimento. Rimossi i tre checkbox di manutenzione: copia da rifare in 4:5, REAL senza descrizione, categorie visive mancanti (decisione dell’owner del 2026-11-17). Statistiche con viste Panoramica, Adesso, Gioco, Chiamate IA e Catalogo. Impostazioni con indice per Modelli, Generazione, Istruzioni IA, Tag, Partite e Classifica; ogni gruppo mantiene il proprio salvataggio.
+Selezionando una scheda si apre una finestra con le foto della galleria. La griglia scorre, «Carica altre foto» prosegue l’elenco e ogni
+foto mantiene il dettaglio e l’anteprima. Conteggi, ricerca, filtri e cestino si riferiscono alla galleria aperta (specifica `database-immagini`).
+La finestra si chiude con × o Esc. L’owner può modificare titolo, descrizione e indicazioni dal pulsante «Modifica galleria».
 
-
-- Accesso con le credenziali dell'owner (`ADMIN_TOKEN`).
-- **Sezioni:** Caricamento REAL (predefinita), Generazione SLOP (specifica `generazione-slop`), Database immagini
-  (specifica `database-immagini`), Statistiche e Impostazioni (specifica `statistiche-impostazioni`).
-- **Caricamento:** accanto al titolo «Caricamento della dashboard…» con un indicatore che gira (fermo con «riduci movimento») finché
-  tutte le sezioni non sono pronte; ogni sezione ha il suo segnaposto. Il wizard REAL si monta per primo.
-- **Avviso sullo sbilanciamento** in cima alla dashboard, senza proposta né comandi di avvio. I controlli dei batch e il numero di SLOP stanno nella modalità automatica di «Generazione SLOP»; la modalità scelta resta nella sessione. I dettagli e la revisione dei processi restano consultabili nello studio.
-- Tornando a «Caricamento REAL», il wizard toglie le foto spostate nel cestino, pubblicate o eliminate altrove, con un avviso.
+«Carica REAL» apre i quattro passi nella galleria corrente. «Genera SLOP» apre le modalità manuale e automatica. Le bozze dei due wizard
+sono per galleria e «Foto della galleria» torna alla griglia. I batch automatici in corso hanno un collegamento in Gallerie e si gestiscono
+dalla galleria che li ha avviati. Statistiche contiene anche l’avviso sullo sbilanciamento e la distribuzione per tag. I comandi di
+Impostazioni restano nei rispettivi gruppi (specifica `statistiche-impostazioni`).
 
 Nelle eccezioni SLOP, «Accetta comunque il tentativo N» è disponibile per ogni candidata salvata e valutata, anche con difetti critici, minori o incertezze. La conferma elenca le segnalazioni e il massimo di una chiamata per i tag; annullare è gratuito. La scelta manuale è visibile nella revisione, separata dalla valutazione originale. Il processo deve essere concluso o sospeso; foto nuova, copia, approvazione e pubblicazione restano passaggi separati (decisione del 2026-11-17).
 
@@ -40,12 +40,11 @@ Nelle eccezioni SLOP, «Accetta comunque il tentativo N» è disponibile per ogn
 - **Finestra:** immagine grande, larga quanto la finestra e alta al più il 70% dello schermo; sotto, i testi. Resta aperta finché non si
   tocca la × nell'angolo in alto a destra (o Esc); il tocco sullo sfondo non la chiude.
 - **Contenuti:** risultato di Commons: anteprima da 1280 px, titolo del file, descrizione di Commons (300 caratteri), «Apri la pagina su
-  Commons». REAL del Database: copia di gioco, titolo, descrizione, link alla fonte. SLOP del Database: copia, titolo, prompt, tag di
-  partenza. Immagine della revisione nello studio: prompt, tag di partenza, tag dell'analisi.
+  Commons». REAL della galleria: copia di gioco, titolo, descrizione, link alla fonte. SLOP della galleria: copia, ID abbreviato e prompt. Immagine della revisione nello studio: prompt, tag di partenza, tag dell'analisi.
 
 ## 4. Wizard REAL
 
-Quattro passi; «Indietro» torna al precedente. La bozza (immagini acquisite e passo) resta nella sessione del browser; le immagini
+Quattro passi; «Indietro» torna al precedente. La bozza di ogni galleria (immagini acquisite e passo) resta nella sessione del browser; le immagini
 acquisite sono comunque nella libreria privata.
 
 **1. Seleziona le immagini.**
@@ -58,8 +57,7 @@ acquisite sono comunque nella libreria privata.
   scelta, la toglie. La selezione resta cambiando pagina e con nuove ricerche; si svuota con l'acquisizione o con «Inizia un nuovo
   caricamento». Al massimo 100 immagini.
 - Le selezionate sono miniature senza titolo che aprono la loro pagina di Commons in una nuova scheda.
-- «Aggiungi link di Wikimedia Commons», chiuso all'inizio: più link incollati, uno per riga.
-- Prima di acquisire le foto scegli una galleria. Si può usare una galleria con indicazioni SLOP ancora vuote. Nel passo Tag si può cambiare la galleria di una singola REAL.
+- Le foto provengono dai risultati della ricerca e vengono acquisite nella galleria aperta, anche con indicazioni SLOP vuote.
 - «Avanti: tag» acquisisce ogni immagine nella quarantena privata; il browser ne prepara subito la copia di gioco (specifica
   `copie-di-gioco`, sezione 3). Duplicati, link non validi
   e licenze ND vengono rifiutati con il motivo; una copia fallita si ripete dal passo 3.
@@ -68,12 +66,12 @@ acquisite sono comunque nella libreria privata.
 - Per ogni foto: anteprima, titolo, **descrizione** modificabile (fino a 1000 caratteri, precompilata da Commons, salvata uscendo dal
   campo, «la leggono i giocatori alla fine della partita»), tag come pillole colorate per categoria, campo per un nuovo tag con
   suggerimenti dal vocabolario e scelta della categoria, avviso se manca il tag di Tempo, «Titolo e metadati» (autore, licenza,
-  dimensioni, link alla fonte e alla licenza), «Togli dal caricamento» (sposta nel cestino, ripristinabile dal Database).
+  dimensioni, link alla fonte e alla licenza), «Togli dal caricamento» (sposta nel cestino, ripristinabile dal cestino della galleria).
 - **Genera tag e descrizione con IA:** dialogo di scelta delle REAL da analizzare (preselezionate quelle mai analizzate o
   rifiutate senza addebito; esiti incerti deselezionati con avviso), poi una conferma per **una chiamata per REAL**.
   Produce contemporaneamente tag e descrizione editoriale privata, distinta dal campo Commons. I tag delle foto selezionate
   vengono sostituiti; una REAL già analizzata non è selezionabile per ripetere automaticamente una chiamata pagata, ma
-  può ricevere un'analisi nuova su richiesta esplicita, con conferma, nel Database. Le altre REAL non cambiano.
+  può ricevere un'analisi nuova su richiesta esplicita, con conferma, nella galleria. Le altre REAL non cambiano.
 - **Descrizione editoriale:** mostrare nella scheda della REAL il contenuto **visibile**, il **contesto documentato Commons**
   e le **incertezze**, ciascuno modificabile dall'owner. Se Commons non documenta un fatto, non inventarlo per riempire
   la descrizione. Le correzioni del testo non cancellano i tag. Non sostituisce automaticamente la descrizione destinata
