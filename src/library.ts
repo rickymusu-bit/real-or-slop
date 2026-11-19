@@ -147,12 +147,13 @@ export async function showLibrary() {
         <div class="library-selection-actions">
           <button type="button" data-bulk="set-approved">Approva</button>
           <button type="button" data-bulk="set-published">Pubblica</button>
+          <button type="button" data-bulk="withdraw" hidden>Togli dalla pubblicazione</button>
           <button type="button" data-bulk="trash" aria-label="Sposta nel cestino">Nel cestino</button>
           <button type="button" data-bulk="restore" hidden>Ripristina</button>
           <button type="button" data-bulk="delete" class="danger" hidden>Elimina definitivamente</button>
           <button type="button" data-bulk="gallery">Cambia galleria</button>
         </div>
-        <button type="button" data-bulk="none" aria-label="Deseleziona tutte" title="Deseleziona tutte">×</button>
+        <button type="button" data-bulk="none">Deseleziona</button>
       </div>
       <p id="library-message" role="status" aria-live="polite"></p>
     </div>
@@ -314,9 +315,12 @@ export async function showLibrary() {
     bar.hidden = !selected.size;
     $("#library-selection-count").textContent = `${selected.size} ${selected.size === 1 ? "selezionata" : "selezionate"}`;
     const trash = filter.status === "trash";
+    const chosen = items.filter(item => selected.has(item.id));
     for (const button of bar.querySelectorAll<HTMLButtonElement>("[data-bulk]")) {
       const action = button.dataset.bulk;
-      if (action !== "none" && action !== "gallery") button.hidden = trash !== (action === "restore" || action === "delete");
+      if (action === "withdraw") button.hidden = trash || !chosen.some(item => item.status === "published");
+      else if (action === "set-approved") button.hidden = trash || !chosen.some(item => item.status === "new");
+      else if (action !== "none" && action !== "gallery") button.hidden = trash !== (action === "restore" || action === "delete");
       button.disabled = busy || (action === "gallery" && !galleries().some(g => g.id !== filter.gallery));
     }
     const all = $<HTMLButtonElement>("#library-select-all");
@@ -357,8 +361,10 @@ export async function showLibrary() {
   const interrupted = (item: Item) => item.analysis.status === "running" && Date.now() - Date.parse(item.updated_at) > 10 * 60_000;
   const unsure = (item: Item) => item.analysis.status === "uncertain" || interrupted(item);
   const analysisLine = (item: Item) => interrupted(item) ? "Analisi interrotta: esito incerto, forse già addebitata." : ({ none: "Non ancora analizzata.", running: "Analisi in corso…",
-    done: "Analizzata: tag generati una volta sola, da rivedere prima di approvare.",
+    done: "Analizzata.",
     uncertain: "Esito incerto: " + item.analysis.error, failed: "Analisi non riuscita: " + item.analysis.error })[item.analysis.status];
+  const analysisLabel = { none: "Analizza con IA", done: "Rifai l’analisi con IA", running: "Riprova l’analisi con IA",
+    uncertain: "Riprova l’analisi con IA", failed: "Riprova l’analisi con IA" };
   const metricText = (m: Metrics) => `lato ${m.long} px / rumore ${m.noise.toFixed(1)} / nitidezza ${m.sharpness.toFixed(1)} / contrasto ${m.contrast} / saturazione ${m.saturation.toFixed(2)}`;
   /** Missing categories and the paid completion. */
   const categoriesBlock = (item: Item) => {
@@ -381,6 +387,9 @@ export async function showLibrary() {
   const showDetail = (item: Item) => {
     open = item;
     const editable = item.status === "new" || item.status === "approved";
+    const canAnalyze = analysis?.enabled && item.copy && (item.analysis.status !== "running" || interrupted(item));
+    const legacyAnalysis = item.origin === "REAL" && !item.real_description && item.status !== "trash"
+      && (item.status === "published" || item.analysis.status !== "none");
     const fields = FIELDS.filter(([key]) => item.origin === "REAL" ? key !== "prompt" && key !== "model" : !["title", "source_url", "author", "license_name", "license_url"].includes(key));
     detail.innerHTML = `<form method="dialog" class="library-detail-close"><button aria-label="Chiudi">×</button></form>
       <h2 id="library-detail-title">${escape(imageLabel(item))}</h2>
@@ -389,28 +398,28 @@ export async function showLibrary() {
       <div class="library-fields"><p>${statsLine(item)}</p>
       <label>Galleria<select id="library-detail-gallery">${galleryOptions(galleries(), item.gallery_id)}</select></label>
       ${item.in_play ? `<p class="hint">In ${item.in_play} ${item.in_play === 1 ? "partita" : "partite"} in corso: continuano con la versione con cui sono iniziate; le modifiche valgono dalle partite nuove.</p>` : ""}
-      ${item.status === "published" ? '<p class="db-edit-note">Pubblicata: per modificarla avvia la modifica. La foto esce subito dalla pubblicazione, quindi non entra in nuove partite; quelle in corso finiscono con la versione attuale. Finita la modifica resta approvata: la ripubblichi quando vuoi.</p>' : ""}
+      ${item.status === "published" ? '<div class="db-edit-note"><p>«Modifica foto» apre i comandi di modifica e ritira la foto dalla pubblicazione. Le partite in corso mantengono la versione attuale.</p><button type="button" data-action="edit" class="primary">Modifica foto</button></div>' : ""}
       ${item.status === "approved" ? '<p class="hint">Le modifiche si salvano subito e la foto resta approvata. Pubblicala quando hai finito.</p>' : ""}
       ${item.no_derivatives ? '<p class="db-edit-note">Licenza senza opere derivate (ND): la foto è esclusa dal gioco, perché la copia di gioco la ritaglia.</p>' : ""}
       ${!item.copy && item.status === "new" ? '<p><button type="button" id="library-copy">Prepara la copia di gioco</button></p>' : ""}
       ${editable ? '<p><button type="button" id="library-crop">Inquadratura</button></p>' : ""}
       ${categoriesBlock(item)}
       ${measuresBlock(item, editable)}
+      <div class="library-tags"><span>Tag</span>${legend()}<ul>${sortByCategory(item.tags, item.categories).map(t => `<li class="tag-cat tag-cat-${categoryOf(item.categories, t)}" title="${escape(CATEGORY_LABELS[categoryOf(item.categories, t)])}">${escape(t)}${editable ? ` <button type="button" data-tag-remove="${escape(t)}" aria-label="Togli ${escape(t)}">×</button>` : ""}</li>`).join("") || "<li>nessuno</li>"}</ul>
+        ${item.origin === "REAL" && !item.tags.some(t => categoryOf(item.categories, t) === "time") ? '<p class="hint" data-no-time>Nessun tag di Tempo: aggiungi il decennio se è noto.</p>' : ""}
+        ${editable ? '<form id="library-tag-form" class="library-tag-entry"><input id="library-tag-input" list="library-tag-list" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Nuovo tag" placeholder="Nuovo tag">' + categorySelect('id="library-tag-category"') + '<button type="submit">Aggiungi tag</button></form><p id="library-tag-hint" class="hint" role="status">Scegli la categoria per un tag nuovo. Maiuscole, accenti e spazi vengono convertiti (São Paulo → sao-paulo). Usa l’inglese per i nomi comuni.</p>' : ""}</div>
+      ${editable && item.copy && !legacyAnalysis ? `<p class="library-analysis">${analysisLine(item)} ${canAnalyze
+        ? `<button type="button" id="library-analyze">${analysisLabel[item.analysis.status]} (a pagamento)</button>` : ""}</p>` : ""}
+      ${editable && item.generated ? '<p><button type="button" id="library-restore">Ripristina i tag generati</button></p>' : ""}
       ${fields.map(([key, label, max, area]) => `<label>${label}${area
         ? `<textarea data-field="${key}" maxlength="${max}" rows="3" ${editable ? "" : "readonly"}>${escape(item[key])}</textarea>`
         : `<input data-field="${key}" maxlength="${max}" value="${escape(item[key])}" ${editable ? "" : "readonly"}>`}</label>`).join("")}
       ${item.origin === "REAL" ? descriptionFields(item.id, item.real_description, item.status === "trash", item.commons_description || "") : ""}
-      ${item.origin === "REAL" && !item.real_description && item.copy && item.status !== "trash" ? (unsure(item) ? `<p class="hint" data-analysis-unsure>${escape(analysisLine(item))}</p>` : "") + '<button type="button" id="library-description-analysis">Analisi combinata tag e descrizione (a pagamento)</button>' : ""}
-      <div class="library-tags"><span>Tag</span>${legend()}<ul>${sortByCategory(item.tags, item.categories).map(t => `<li class="tag-cat tag-cat-${categoryOf(item.categories, t)}" title="${escape(CATEGORY_LABELS[categoryOf(item.categories, t)])}">${escape(t)}${editable ? ` <button type="button" data-tag-remove="${escape(t)}" aria-label="Togli ${escape(t)}">×</button>` : ""}</li>`).join("") || "<li>nessuno</li>"}</ul>
-        ${item.origin === "REAL" && !item.tags.some(t => categoryOf(item.categories, t) === "time") ? '<p class="hint" data-no-time>Nessun tag di Tempo: aggiungi il decennio se è noto.</p>' : ""}
-        ${editable ? '<div class="library-tag-entry library-inline"><input id="library-tag-input" list="library-tag-list" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="nuovo tag, Invio">' + categorySelect('id="library-tag-category"') + '</div><p id="library-tag-hint" class="hint">Scegli la categoria per un tag nuovo. Maiuscole, accenti e spazi vengono convertiti (São Paulo → sao-paulo); inglese per i nomi comuni.</p>' : ""}</div>
-      ${item.status === "new" && item.copy ? `<p class="library-analysis">${analysisLine(item)} ${analysis?.enabled && (item.analysis.status !== "running" || interrupted(item)) && item.analysis.status !== "done"
-        ? `<button type="button" id="library-analyze">${item.analysis.status === "none" ? "Analizza con IA" : "Riprova l'analisi"} (a pagamento)</button>` : ""}</p>` : ""}
-      ${editable && item.generated ? '<p><button type="button" id="library-restore">Ripristina i tag generati</button></p>' : ""}
+      ${legacyAnalysis && item.copy ? `<p class="library-analysis"${unsure(item) ? " data-analysis-unsure" : ""}>${escape(analysisLine(item))} ${canAnalyze ? '<button type="button" id="library-description-analysis">Analisi combinata tag e descrizione (a pagamento)</button>' : ""}</p>` : ""}
       ${editable && item.origin === "SLOP" ? '<p class="hint">Per rigenerare: cestina questa SLOP e avvia un nuovo processo nello studio, con conferma e valutazione.</p>' : ""}
       <div class="library-actions">${item.status === "new" ? `${item.origin === "REAL" ? `<label><input type="checkbox" id="library-rights" ${item.rights_confirmed ? "checked" : ""}> Ho verificato diritti e licenza</label>` : ""}<button type="button" data-action="approve" class="primary">Approva</button>` : ""}
         ${item.status === "approved" ? '<button type="button" data-action="publish" class="primary">Pubblica nel gioco</button>' : ""}
-        ${item.status === "published" ? '<button type="button" data-action="edit" class="primary">Modifica</button><button type="button" data-action="withdraw">Ritira dal gioco</button><button type="button" data-action="remove">Elimina (nel cestino)</button>' : ""}
+        ${item.status === "published" ? '<button type="button" data-action="withdraw">Togli dalla pubblicazione</button><button type="button" data-action="remove">Elimina (nel cestino)</button>' : ""}
         ${item.status === "trash" ? '<button type="button" data-action="restore">Ripristina</button><button type="button" data-action="delete" class="danger">Elimina definitivamente</button>'
           : item.status !== "published" ? '<button type="button" data-action="trash">Elimina (nel cestino)</button>' : ""}</div>
       <p id="library-detail-message" role="status" aria-live="polite"></p></div></div>`;
@@ -449,16 +458,18 @@ export async function showLibrary() {
     const suggested = checked.ok ? suggestedCategory(checked.tag, tagCategories) : "";
     if (picker && suggested) picker.value = suggested;
   });
-  detail.addEventListener("keydown", async event => {
-    const input = event.target as HTMLInputElement;
-    if (input.id !== "library-tag-input" || event.key !== "Enter" || !open) return;
+  detail.addEventListener("submit", async event => {
+    if ((event.target as HTMLElement).id !== "library-tag-form") return;
     event.preventDefault();
+    if (!open || busy) return;
+    const input = detail.querySelector<HTMLInputElement>("#library-tag-input")!;
     const checked = tagFromInput(input.value);
     const hint = detail.querySelector("#library-tag-hint")!;
     if (!checked.ok) { hint.textContent = checked.reason; return; }
     const chosen = detail.querySelector<HTMLSelectElement>("#library-tag-category")?.value || "";
     const existing = tagCategories.get(checked.tag), category = existing && !chosen ? existing : chosen;
     if (!isCategory(category)) { hint.textContent = "Scegli la categoria del tag."; return; }
+    busy = true;
     try {
       if (existing && existing !== category) {
         if (!window.confirm(`«${checked.tag}» è già un tag della categoria ${CATEGORY_LABELS[existing]}. Vuoi spostarlo in ${CATEGORY_LABELS[category]}? Il cambio vale per tutte le immagini che lo usano. Altrimenti usa una parola più specifica.`)) {
@@ -470,6 +481,7 @@ export async function showLibrary() {
       open = await save(open, { tags: [...new Set([...open.tags, checked.tag])], tag_categories: { [checked.tag]: category } });
       showDetail(open); render(); void refreshTags(); detail.querySelector<HTMLInputElement>("#library-tag-input")?.focus();
     } catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
+    finally { busy = false; }
   });
   detail.addEventListener("click", async event => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
@@ -479,12 +491,25 @@ export async function showLibrary() {
     }
     if (!button || !open || busy || !(button.dataset.tagRemove || button.dataset.action || ["library-description-analysis", "library-copy", "library-analyze", "library-restore", "library-regenerate",
       "library-crop", "library-complete", "library-treatment-off", "library-treatment-on", "library-treatment-edit"].includes(button.id))) return;
+    const id = open.id;
+    const legacyAnalysis = button.id === "library-description-analysis";
+    const analyzePhoto = legacyAnalysis || button.id === "library-analyze";
     busy = true;
     try {
-      if (button.id === "library-description-analysis") {
+      if (analyzePhoto && analysis) {
         const repeat = unsure(open);
-        if (!window.confirm(`Analizzare nuovamente tag e descrizione di «${imageLabel(open)}»? Una chiamata a pagamento con ${analysis?.model}. I tag saranno sostituiti.${repeat ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : ""}`)) return;
-        open = await call<Item>(`/${open.id}/analyze`, {method:"POST",body:JSON.stringify(repeat ? {confirm:true,refresh_description:true,repeat_uncertain:true} : {confirm:true,refresh_description:true})});
+        const replaceFields = open.origin === "REAL" ? "I tag e la descrizione privata saranno sostituiti." : "I tag attuali saranno sostituiti.";
+        const warning = repeat ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
+        if (!window.confirm(`Analizzare «${imageLabel(open)}» con ${analysis.model}? È una chiamata a pagamento. ${replaceFields}${warning}`)) return;
+        detailMessage("Analisi in corso…");
+        const analysed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(id)}/analyze`, { method: "POST",
+          body: JSON.stringify({ confirm: true, ...(legacyAnalysis ? { refresh_description: true } : { reanalyze: true }),
+            ...(repeat ? { repeat_uncertain: true } : {}) }) });
+        if (detail.open && open?.id === id) {
+          open = analysed;
+          detailMessage("Analisi completata." + conflictText(analysed.tag_conflicts));
+        }
+        void Promise.all([refreshTags(), refreshAnalysis()]);
       }
       else if (button.dataset.tagRemove) open = await save(open, { tags: open.tags.filter(t => t !== button.dataset.tagRemove) });
       else if (button.id === "library-copy") { detailMessage("Preparo la copia di gioco…"); open = await prepareItemCopy<Item>(open); }
@@ -515,15 +540,6 @@ export async function showLibrary() {
         open = await saveFrame<Item>(open, choice);
         detailMessage("Inquadratura salvata.");
       }
-      else if (button.id === "library-analyze" && analysis) {
-        const repeat = unsure(open) ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
-        if (!window.confirm(`Analizzare «${imageLabel(open)}» con ${analysis.model}? È una chiamata a pagamento. I tag attuali saranno sostituiti.${repeat}`)) return;
-        detailMessage("Analisi in corso…");
-        const analysed = await call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(open.id)}/analyze`, { method: "POST",
-          body: JSON.stringify(repeat ? { confirm: true, repeat_uncertain: true } : { confirm: true }) });
-        open = analysed; detailMessage("Analisi completata." + conflictText(analysed.tag_conflicts));
-        void Promise.all([refreshTags(), refreshAnalysis()]);
-      }
       else if (button.id === "library-restore" && open.generated) {
         open = await save(open, { tags: open.generated.tags }); void refreshTags();
       }
@@ -544,14 +560,21 @@ export async function showLibrary() {
       await load();
       // The detail is drawn again: the last message stays.
       const said = detail.querySelector("#library-detail-message")?.textContent || "";
-      if (open) { showDetail(items.find(i => i.id === open!.id) || open); detailMessage(said); }
-    } catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
+      if (detail.open && open) { showDetail(items.find(i => i.id === open!.id) || open); detailMessage(said); }
+    } catch (error) {
+      if (detail.open && open?.id === id && analyzePhoto) {
+        const latest = await call<Item>("/" + encodeURIComponent(id)).catch(() => null);
+        if (latest && detail.open && open?.id === id) showDetail(latest);
+      }
+      if (detail.open && open?.id === id) detailMessage(String(error instanceof Error ? error.message : error));
+    }
     finally { busy = false; }
   });
 
   const moveGallery = $<HTMLDialogElement>("#library-move-gallery");
   const applySelection = async (action: string, destination = "") => {
-    const chosen = items.filter(item => selected.has(item.id));
+    const chosen = items.filter(item => selected.has(item.id) && (action !== "withdraw" || item.status === "published")
+      && (action !== "set-approved" || item.status === "new"));
     if (!chosen.length || busy) return;
     const scope = filter.gallery, ids = chosen.map(item => item.id);
     const rights = ["set-approved", "set-published"].includes(action)
@@ -559,7 +582,7 @@ export async function showLibrary() {
     const removing = chosen.filter(item => item.status === "published").length;
     const notes: string[] = [];
     if (action === "trash" && removing) notes.push(`${removing} ${removing === 1 ? "immagine è pubblicata ed esce" : "immagini sono pubblicate ed escono"} subito dal gioco. Le partite in corso proseguono con la versione attuale.`);
-    if (action === "set-approved" && removing) notes.push(`${removing} ${removing === 1 ? "immagine pubblicata torna approvata" : "immagini pubblicate tornano approvate"} ed ${removing === 1 ? "esce" : "escono"} dal gioco. Le partite in corso proseguono con la versione attuale.`);
+    if (action === "withdraw") notes.push(`${removing} ${removing === 1 ? "immagine pubblicata torna approvata ed esce" : "immagini pubblicate tornano approvate ed escono"} dal gioco. Le partite in corso proseguono con la versione attuale.`);
     if (rights) notes.push("Confermi di aver verificato i diritti e la licenza delle REAL selezionate da approvare?");
     if (notes.length && !window.confirm(notes.join("\n\n") + (rights ? "" : "\n\nContinuare?"))) return;
 

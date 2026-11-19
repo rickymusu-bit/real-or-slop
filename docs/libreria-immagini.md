@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 8.2.0
+# Libreria delle immagini, tag e analisi — specifica 8.3.0
 
-Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T22:52:22Z.
+Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:18:01Z.
 
 ## 1. Decisioni dell'owner
 
@@ -14,6 +14,7 @@ Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T22:52
   sull'origine dell'immagine (2026-11-10).
 - L'analisi a pagamento genera i tag una sola volta per immagine e sostituisce quelli delle immagini scelte; i tag generati si
   ripristinano senza costi (2026-11-09).
+- Dal dettaglio di una foto nuova o approvata si può rifare l’analisi a pagamento con conferma esplicita (2026-11-19).
 - Niente prezzi né budget: ogni chiamata a pagamento si conferma e si registra senza importi; il limite di spesa è quello del progetto
   OpenAI (2026-11-10).
 - Niente didascalie, né nel gioco né nella dashboard; quelle scritte sono state cancellate (2026-11-13).
@@ -82,7 +83,7 @@ alla copia per estrarre le foto; i crediti REAL e il prompt SLOP vengono letti n
   stato di provenienza; una SLOP non si ripristina se la REAL ha già una SLOP attiva o un processo in corso; una pubblicata torna approvata. «Svuota cestino» ed «Elimina definitivamente» cancellano ogni riga dell'immagine
   (tag, round, risposte) e ogni suo file; un'immagine ancora usata da una partita in corso si elimina quando la partita finisce.
 - **Partita in corso:** in preparazione o attiva e iniziata da meno della durata massima delle Impostazioni (24 ore predefinite).
-- La selezione in galleria permette di approvare, pubblicare, cestinare o cambiare galleria. Il Cestino offre ripristino ed eliminazione definitiva.
+- La selezione in galleria permette di approvare, pubblicare, togliere dalla pubblicazione, cestinare o cambiare galleria. Il Cestino offre ripristino ed eliminazione definitiva.
   Le azioni si applicano alle foto selezionate e riusano i controlli delle transizioni di stato. Il limite dell’API è 500 foto per richiesta.
 
 ## 4. Tag
@@ -131,11 +132,11 @@ alla copia per estrarre le foto; i crediti REAL e il prompt SLOP vengono letti n
 
 ## 5. Analisi a pagamento
 
-Per una REAL l’unica analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Il modello vede la REAL **intera**, cioè l’originale caricato (JPEG, PNG o WebP fino a 12 MB), mai il ritaglio 4:5 (decisione dell’owner del 2026-11-15). Modello, hash dell’originale, revisione e data sono conservati come provenienza. La descrizione è privata, modificabile senza alterare tag o testo Commons; quest’ultimo è conservato separatamente per le nuove acquisizioni. Per una SLOP l’analisi restituisce soltanto tag, anch’essa sull’originale intero.
+Per una REAL ogni analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Il modello vede la REAL **intera**, cioè l’originale caricato (JPEG, PNG o WebP fino a 12 MB), mai il ritaglio 4:5 (decisione dell’owner del 2026-11-15). Modello, hash dell’originale, revisione e data sono conservati come provenienza. La descrizione è privata, modificabile senza alterare tag o testo Commons; quest’ultimo è conservato separatamente per le nuove acquisizioni. Per una SLOP l’analisi restituisce soltanto tag, anch’essa sull’originale intero.
 
 Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova generazione richiede compilazione manuale o una nuova analisi combinata confermata (`refresh_description:true`), anche se già approvata/pubblicata. Nessun backfill. L’analisi combinata si lancia dal dettaglio con conferma di una chiamata per foto. La conferma segnala gli esiti incerti o interrotti. La modifica della sola descrizione privata non ritira una pubblicata.
 
-- Su richiesta dell'owner (wizard, dettaglio nella galleria, studio SLOP), solo per immagini nuove. Il modello di testo scelto
+- Su richiesta dell'owner dal wizard o dallo studio SLOP per immagini nuove, dal dettaglio in galleria anche per le approvate. Il modello di testo scelto
   nelle Impostazioni, che deve leggere immagini, riceve l'originale intero (vede i pixel, non i metadati del file) con titolo e
   descrizione (REAL) o con il prompt (SLOP)
   e i 300 tag più usati divisi per categoria; mai l'origine. La base comune e la parte «Tag» si applicano ad entrambe
@@ -155,8 +156,10 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
   stesse istruzioni dell'analisi, che restituisce solo le tre categorie. Sostituisce i tag di quelle tre categorie e lascia gli altri.
   Non ritira le pubblicate, perché non cambia nulla di ciò che vede il giocatore. Una sola volta per immagine (`categories_completed_at`);
   registrata in `paid_calls` come analisi.
-- **Una generazione per immagine:** dopo un esito riuscito il server rifiuta un'altra analisi. I tag generati restano nel database
-  e «Ripristina i tag generati» li riporta senza costi. Fanno eccezione l’analisi combinata confermata di una REAL storica senza descrizione e una nuova SLOP accettata da un nuovo processo.
+- **Ripetizione dal dettaglio:** «Rifai l’analisi con IA» richiede conferma per una nuova chiamata (`confirm: true`, `reanalyze: true`)
+  e indica quali campi sostituisce. La nuova analisi riuscita sostituisce anche i tag generati che «Ripristina i tag generati» recupera
+  senza costi. Il wizard e lo studio continuano a generare i tag una volta sola dopo un esito riuscito. Rimane disponibile l’analisi
+  combinata confermata per una REAL storica senza descrizione.
 - Una sola analisi alla volta per immagine; un segno interrotto resta sospeso e viene marcato incerto dalla manutenzione.
 - **Esito incerto o segno interrotto** (più di dieci minuti): mai ripetuto in automatico. Dal dettaglio della foto e dal wizard, l'owner può ripeterlo con una conferma che lo nomina e avverte del possibile addebito già avvenuto; un'analisi
   ancora in corso da meno di dieci minuti resta esclusa. La richiesta porta

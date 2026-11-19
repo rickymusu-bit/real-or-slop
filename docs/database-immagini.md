@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 8.3.0
+# Foto e gallerie — specifica 8.4.0
 
-Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T22:52:22Z.
+Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:18:01Z.
 
 ## 1. Decisioni dell'owner
 
@@ -12,6 +12,7 @@ Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T22:52
 - La sezione non carica file e non cerca su Commons; ordinamento per data di aggiunta, visualizzazioni o accuratezza; le schede mostrano
   solo miniatura, origine e stato (2026-11-13).
 - Con le foto spuntate si possono cambiare stato o galleria da una barra che lascia visibile la griglia (2026-11-19).
+- Tag, inquadratura, trattamento e analisi IA si gestiscono dal dettaglio aperto toccando una foto (2026-11-19).
 
 ## 2. Finestra della galleria
 
@@ -33,8 +34,9 @@ La griglia 4:5 ha due colonne su mobile. «Carica altre foto» aggiunge le pagin
 - **Seleziona tutte (N)** (decisione dell'owner del 2026-11-15): seleziona tutte le immagini già caricate nella vista con i filtri
   correnti; sparisce quando sono già tutte selezionate. «Deseleziona» nella barra le toglie.
 - **Selezione multipla** (decisione dell’owner del 2026-11-19). La barra sotto la griglia offre «Approva», «Pubblica», «Nel cestino»
-  e «Cambia galleria». Approvare una pubblicata la ritira. Pubblicare una nuova la approva prima. Si applicano i controlli di copia di gioco,
-  tag e diritti e le partite in corso terminano con la copia già assegnata. «Cambia galleria» apre la scelta della destinazione.
+  e «Cambia galleria». «Approva» agisce sulle nuove. «Togli dalla pubblicazione» compare quando la selezione include almeno una
+  pubblicata e riporta solo le pubblicate allo stato approvato, dopo conferma. Pubblicare una nuova la approva prima. Si applicano i
+  controlli di copia di gioco, tag e diritti. Le partite in corso terminano con la copia già assegnata. «Cambia galleria» apre la scelta della destinazione.
   Nel Cestino si possono ripristinare, eliminare definitivamente o spostare in un’altra galleria le foto selezionate.
 
 ### Gallerie
@@ -60,10 +62,11 @@ suo batch originario, ma esce dalla sua revisione operativa.
   percentuale; partite in corso che la includono; avvisi (licenza ND, copia mancante con «Prepara la copia di gioco», categorie mancanti); misure della copia e, per una SLOP trattata, misure anonime di riferimento e scarto dall'obiettivo.
 - **Campi:** descrizione per entrambe le origini; titolo solo per le REAL; fonte, autore e licenza solo per le REAL; prompt e modello solo per le SLOP; tag per categoria con aggiunta e
   rimozione; nessun riquadro «Tag di partenza» sulle SLOP, identificate dall’ID abbreviato e con i soli tag effettivi dell’immagine; avviso se una REAL non ha il tag di Tempo. Ogni modifica si salva subito. La migrazione 0058 rimuove i titoli SLOP e la copia dei tag di partenza dai metadati delle figlie, conservando i titoli REAL e i parametri tecnici del trattamento. Rimossa «Spiegazione dopo la risposta», inutilizzata dal gioco; l’API rifiuta il campo e i metadati dell’origine sbagliata. La migrazione 0057 elimina anche le colonne obsolete di didascalie e vista iniziale.
-- **Azioni:** Inquadratura (nuove e approvate), comandi del trattamento per le SLOP (specifica `copie-di-gioco`, sezione 4.3),
-  Completa Genere, Colore e Supporto, Analizza con IA (nuove con copia, mai analizzate o non riuscite), Ripristina i tag
-  generati, Approva, Pubblica nel gioco, Modifica e Ritira dal gioco (pubblicate), Elimina (nel cestino), Ripristina ed Elimina
-  definitivamente (cestino).
+- **Azioni:** per nuove e approvate il dettaglio offre «Aggiungi tag», rimozione dei tag, «Inquadratura» e i comandi del trattamento per le
+  SLOP (specifica `copie-di-gioco`, sezione 4.3). Con una copia pronta e l’IA disponibile offre anche analisi o nuova analisi confermata.
+  Per le pubblicate, «Modifica foto» rende disponibili questi comandi nella stessa finestra dopo il ritiro confermato. Sono disponibili
+  anche «Completa Genere, Colore e Supporto», «Ripristina i tag generati», «Approva», «Pubblica nel gioco», «Togli dalla pubblicazione»,
+  «Elimina (nel cestino)», «Ripristina» ed «Elimina definitivamente» secondo lo stato della foto.
 - **Rigenerare una SLOP:** richiede un nuovo processo nello studio con conferma ed esame dell’immagine intera.
 - **Descrizione REAL privata:** elementi visibili, contesto documentato e incertezze, modificabili indipendentemente dai tag, anche per una pubblicata. Per una REAL storica senza descrizione, compilazione manuale o analisi combinata tag+descrizione con conferma separata.
 - **Analisi combinata:** dal dettaglio di una REAL senza descrizione privata e fuori dal cestino, con conferma di una chiamata a

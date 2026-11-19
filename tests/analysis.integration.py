@@ -103,7 +103,7 @@ assert schema_tags['properties']['color']['items']['enum'] == ['color', 'black-a
 assert 'newspaper-print' in schema_tags['properties']['medium']['items']['enum'] and schema_tags['properties']['genre']['minItems'] == 1
 assert 'generat' not in sent['body']['instructions'], 'the base and the tag rules must not mention generated images'
 assert spend() == [{'kind': 'analysis', 'model': 'gpt-6.1-sol', 'status': 'completed', 'input_tokens': 1200, 'output_tokens': 60}], spend()
-# Once per image: a second generation is refused before anything is sent or held.
+# Without the detail's explicit repeat, a second analysis is refused before anything is sent.
 openai([])
 status, result = analyze(place); assert status == 409 and 'già generati' in result['error'], result
 assert openai() == [] and len(spend()) == 1
@@ -291,8 +291,18 @@ openai([])
 code, legacy = call(f'{API}/{legacy["id"]}/analyze', {'confirm':True,'refresh_description':True})
 assert code == 200 and legacy['status']=='approved' and legacy['real_description']['visible'], legacy
 assert len(openai())==1 and legacy['description']=='Original Commons source text.'
+redo = f'{API}/{legacy["id"]}/analyze'
+openai([])
+assert call(redo, {'reanalyze': True})[0] == 400 and openai() == []
+assert call(redo, {'confirm': True, 'reanalyze': False})[0] == 400 and openai() == []
+openai([{'tags': ['catalogue-print']}])
+code, legacy = call(redo, {'confirm': True, 'reanalyze': True})
+assert code == 200 and legacy['status'] == 'approved' and legacy['tags'] == ['catalogue-print'], legacy
+assert legacy['generated']['tags'] == ['catalogue-print'] and len(openai()) == 1
 _, legacy = call(f'{API}/{legacy["id"]}/publish', {})
+openai([])
+assert call(redo, {'confirm': True, 'reanalyze': True})[0] == 409 and openai() == []
 legacy = patch(legacy, {'real_description':{**legacy['real_description'],'visible':'Privately corrected while published.'}})
-assert legacy['status']=='published' and legacy['tags']==['crowd','street']
+assert legacy['status']=='published' and legacy['tags']==['catalogue-print']
 call(f'{API}/{legacy["id"]}/trash', {});call(f'{API}/{legacy["id"]}',method='DELETE')
 print('Analysis integration passed: atomic REAL tags+description, independent private edits, confirmed legacy recovery, no partial output, model contexts, aliases, categories and paid-call outcomes.')

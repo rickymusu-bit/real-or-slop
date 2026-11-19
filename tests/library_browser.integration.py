@@ -47,7 +47,9 @@ with sync_playwright() as p:
         confirms = []
         def answer(dialog):
             confirms.append(dialog.message)
-            dialog.accept() if dialog.message.startswith(('Analizzare «', 'Ripristinare questa versione', 'Spostare', '1 immagine è pubblicata', '2 immagini pubblicate', 'Confermi di aver verificato')) else dialog.dismiss()
+            accepted = ('Analizzare «', 'Ripristinare questa versione', 'Spostare', '1 immagine è pubblicata',
+                        '1 immagine pubblicata torna', '2 immagini pubblicate', 'Confermi di aver verificato')
+            dialog.accept() if dialog.message.startswith(accepted) else dialog.dismiss()
         page.on('dialog', answer)
         assert page.request.put(base + '/api/admin/library/models', data={'image_quality':'medium'}, headers={'Origin':base}).status == 200
         page.goto(base + '/admin')
@@ -83,13 +85,14 @@ with sync_playwright() as p:
         page.locator('[data-view=library]').click()
         assert 'chiamata a pagamento' in confirms[0] and '$' not in confirms[0], confirms
 
-        # Selecting an image keeps keyboard focus and shows only the four commands below the scroll viewport.
+        # Selecting a new image keeps keyboard focus and shows the matching commands below the scroll viewport.
         spare = page.get_by_role('checkbox', name=f'Seleziona {name}-spare')
         spare.check()
         expect(spare).to_be_focused()
         bar = page.locator('#library-selection')
         expect(bar.locator('.library-selection-actions').get_by_role('button')).to_have_text(
             ['Approva', 'Pubblica', 'Nel cestino', 'Cambia galleria'])
+        expect(bar.get_by_role('button', name='Deseleziona')).to_be_visible()
         assert page.evaluate("""() => {
             const scroll = document.querySelector('.gallery-workspace-scroll');
             const bar = document.querySelector('#library-selection');
@@ -213,7 +216,13 @@ with sync_playwright() as p:
             page.get_by_role('button', name=f'Apri {title}').click()
             dialog = page.locator('#library-detail')
             expect(dialog).to_contain_text('copia di gioco WebP')
-            if real: expect(dialog.locator('.library-analysis')).to_contain_text('Analizzata')
+            if real:
+                expect(dialog.locator('.library-analysis')).to_contain_text('Analizzata')
+                redo = dialog.get_by_role('button', name='Rifai l’analisi con IA (a pagamento)')
+                redo.click()
+                expect(dialog.locator('#library-detail-message')).to_contain_text('Analisi completata.')
+                assert 'descrizione privata saranno sostituiti' in confirms[-1]
+            expect(dialog.locator('#library-crop')).to_be_visible()
             expect(dialog.locator('[data-field=caption], [data-field=explanation]')).to_have_count(0)
             for key in ('source_url', 'author', 'license_name', 'license_url'):
                 expect(dialog.locator(f'[data-field={key}]')).to_have_count(1 if real else 0)
@@ -236,7 +245,7 @@ with sync_playwright() as p:
                 expect(dialog.locator('.library-tags li.tag-cat', has_text=tag)).to_have_count(1)
             # A wrong form is converted and saved, without a notice; an origin word is refused.
             dialog.locator('#library-tag-input').fill('São Paulo'); dialog.locator('#library-tag-category').select_option('place')
-            dialog.locator('#library-tag-input').press('Enter')
+            dialog.get_by_role('button', name='Aggiungi tag').click()
             expect(dialog.locator('[data-tag-remove=sao-paulo]')).to_have_count(1)
             expect(dialog.locator('#library-detail-message')).not_to_contain_text('sao-paulo')
             dialog.locator('[data-tag-remove=sao-paulo]').click()
@@ -253,6 +262,27 @@ with sync_playwright() as p:
             dialog.locator('.library-detail-close button').click()
         edit_and_publish(f'{name}-rivoli', 'Parigi, maggio 1968. Barricate in rue de Rivoli.', ['riot', 'paris'], True)
         edit_and_publish(slop_label, 'Parigi, 1968. Una strada bloccata.', ['riot', 'street'], False)
+        rivoli_check = page.get_by_role('checkbox', name=f'Seleziona {name}-rivoli')
+        spare.check()
+        rivoli_check.check()
+        withdraw = bar.get_by_role('button', name='Togli dalla pubblicazione')
+        expect(withdraw).to_be_visible()
+        bar.get_by_role('button', name='Deseleziona').click()
+        expect(rivoli_check).not_to_be_checked()
+        expect(spare).not_to_be_checked()
+        expect(bar).to_be_hidden()
+        spare.check()
+        rivoli_check.check()
+        withdraw.click()
+        expect(page.locator('#library-message')).to_have_text('1 aggiornate.')
+        expect(rivoli_check).not_to_be_checked()
+        expect(spare).to_be_checked()
+        expect(withdraw).to_be_hidden()
+        expect(rivoli_card.locator('.badge-status')).to_have_text('approvata')
+        bar.get_by_role('button', name='Deseleziona').click()
+        rivoli_check.check()
+        page.locator('[data-bulk=set-published]').click()
+        expect(rivoli_card.locator('.badge-status')).to_have_text('pubblicata')
         # Multi-selection: the spare photo and a published one go to the trash together (the published one leaves the game at once,
         # after a confirmation), then the spare is deleted for good and the published one comes back approved.
         page.get_by_role('checkbox', name=f'Seleziona {name}-spare').check()
@@ -278,7 +308,7 @@ with sync_playwright() as p:
         # Withdraw both, so that the next viewport works with its own images.
         page.locator('[data-view=published]').click()
         for title in (f'{name}-rivoli', slop_label): page.get_by_role('checkbox', name=f'Seleziona {title}').check()
-        page.locator('[data-bulk=set-approved]').click()
+        bar.get_by_role('button', name='Togli dalla pubblicazione').click()
         expect(page.locator('#library-message')).to_contain_text('2 aggiornate')
         expect(page.locator(f'.library-card:has([aria-label="Apri {name}-rivoli"])')).to_have_count(0)
         # Move a mixed selection to another gallery, preserving both approved states.
