@@ -1,7 +1,7 @@
 /** The two confirmations and short-lived REAL references for gallery batches. */
 import { HttpError, id, type Env } from "./core";
 import { findGallery, galleryReady, GALLERY_SOURCE, type Gallery } from "./galleries";
-import { tagRowsOf, type Row } from "./library";
+import { type Row } from "./library";
 import { currentContext, type ContextVersion } from "./model-context";
 import { loopSnapshot } from "./slop-generation";
 import { PREVIEW_TTL_MS, readPreview, signPreview } from "./slop-preview";
@@ -36,8 +36,8 @@ function editorial(row: Row) {
 function requireInstructions(gallery: Gallery) {
   if (!galleryReady(gallery)) throw new HttpError(409, "Salva le Indicazioni SLOP della galleria per abilitare la generazione automatica");
 }
-function reference(row: Row, tags: Awaited<ReturnType<typeof tagRowsOf>>) {
-  return {id: row.id, title: row.title, tags: tags.get(row.id) || [], description: editorial(row),
+function reference(row: Row) {
+  return {id: row.id, title: row.title, description: editorial(row),
     file: `/api/admin/library/${row.id}/file`, original: `/api/admin/library/${row.id}/original`};
 }
 
@@ -59,8 +59,7 @@ export async function previewGallery(env: Env, data: Record<string, unknown>) {
   const rows = chosen.slice(0, size), config = await loopSnapshot(env), expires = Date.now() + PREVIEW_TTL_MS;
   const token = await signPreview(env, {version: 1, id: id(), expires, gallery: {id: gallery.id, revision: gallery.revision},
     sources: rows.map(r => ({id: r.id, revision: r.revision})), config});
-  const tags = await tagRowsOf(env, rows.map(r => r.id));
-  return {token, expires, config, references: rows.map(r => reference(r, tags))};
+  return {token, expires, config, references: rows.map(reference)};
 }
 const sources = async (env: Env, batchId: string) =>
   (await env.DB.prepare(`SELECT p.slot,s.process_id,s.source_id,s.revision FROM slop_gallery_sources s
@@ -92,7 +91,6 @@ export async function prepareGallery(env: Env, data: Record<string, unknown>) {
     throw new HttpError(409, "Galleria o configurazione cambiata: estrai di nuovo le REAL");
   const rows = await checkedSources(env, gallery.id, selected.sources);
   if (rows.some(r => !r)) throw new HttpError(409, "Una REAL è cambiata o non è più disponibile: estrai di nuovo");
-  const tags = await tagRowsOf(env, selected.sources.map(r => r.id));
   const [base, proposal, evaluation] = await Promise.all(contextParts.map(part => currentContext(env, part)));
   const settings: GallerySnapshot = {gallery, base, proposal, evaluation};
   const time = stamp(), expires = Date.now() + REVIEW_TTL_MS;
@@ -104,10 +102,8 @@ export async function prepareGallery(env: Env, data: Record<string, unknown>) {
         .bind(selected.id, time, time, rows.length, JSON.stringify(settings), GALLERY_PIPELINE, JSON.stringify(config), expires, gallery.id, gallery.revision),
       ...rows.flatMap((value, slot) => {
         const row = value!, processId = id();
-        const technicalTags = tags.get(row.id) || [];
-        const technical = {width: row.width, height: row.height, target_metrics: validMetrics(JSON.parse(row.copy_metrics || "null")),
-          copy_style: {color: technicalTags.find(t => t.category === "color")?.label || "",
-            medium: technicalTags.find(t => t.category === "medium")?.label || ""}};
+        // Only measures and format of the REAL: black and white, sepia or colour follow from its measures (spec `copie-di-gioco`).
+        const technical = {width: row.width, height: row.height, target_metrics: validMetrics(JSON.parse(row.copy_metrics || "null"))};
         return [
           env.DB.prepare("INSERT INTO slop_processes(id,batch_id,slot,snapshot,created_at,updated_at) VALUES(?,?,?,?,?,?)")
             .bind(processId, selected.id, slot, JSON.stringify({...config, mode: "gallery", ...technical}), time, time),
@@ -132,11 +128,10 @@ export async function galleryReview(env: Env, batch: GalleryBatch) {
   const {gallery} = JSON.parse(batch.auto_snapshot) as GallerySnapshot;
   const selected = await sources(env, batch.id);
   const rows = await checkedSources(env, gallery.id, selected.map(s => ({id: s.source_id, revision: s.revision})));
-  const tags = await tagRowsOf(env, selected.map(s => s.source_id));
   const current = await findGallery(env, gallery.id);
   const invalid = current.revision !== gallery.revision || rows.some(r => !r);
   return {gallery: {id: gallery.id, title: gallery.title}, expires: batch.gallery_expires, invalid,
-    references: selected.map((s, i) => ({slot: s.slot, real: rows[i] ? reference(rows[i]!, tags) : null}))};
+    references: selected.map((s, i) => ({slot: s.slot, real: rows[i] ? reference(rows[i]!) : null}))};
 }
 
 export async function confirmGallery(env: Env, batch: GalleryBatch, data: Record<string, unknown>) {

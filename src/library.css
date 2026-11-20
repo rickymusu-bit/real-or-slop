@@ -60,10 +60,6 @@
 .library-fields { display: grid; gap: 10px; align-content: start; }
 .library-fields label { display: grid; gap: 4px; font-size: 14px; }
 .library-fields input, .library-fields textarea { width: 100%; }
-.library-tags ul { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 6px 0; }
-.library-tags li { border: 1px solid var(--hairline, #555); padding: 2px 8px; }
-.library-tag-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.library-tag-entry input { flex: 1 1 10rem; width: auto; min-width: 0; }
 .library-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 button.danger { color: #ff8a80; border-color: #ff8a80; }
 .play-caption { margin: 8px 0 0; font-size: 15px; line-height: 1.4; color: var(--text); }

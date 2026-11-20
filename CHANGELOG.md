@@ -1,7 +1,19 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-20T09:55:15Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-20T16:30:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.50.0 — 2026-11-20T16:30:00Z
+
+- Le foto non hanno più tag (decisione dell'owner): spariscono filtri, pillole, vocabolario, alias, categorie, completamento di Genere,
+  Colore e Supporto, ripristino e distribuzione per tag. Approvare una foto non richiede tag. Migrazione 0063.
+- L'analisi a pagamento riguarda solo le REAL e restituisce la descrizione editoriale. Il passo 2 del wizard REAL diventa
+  «Descrizione», con un avviso non bloccante per le foto senza descrizione.
+- Le SLOP non si analizzano: nessuna chiamata dopo l'accettazione, automatica o manuale. Il tetto è `2N` chiamate per SLOP invece di
+  `1 + 2N`. La generazione manuale non chiede più tag di partenza.
+- Il trattamento delle SLOP sceglie bianco e nero, seppia o colore dalla crominanza residua della REAL (misure 4, trattamento 6),
+  non più dal suo tag Colore. Le copie esistenti si rimisurano da sole all'apertura della galleria.
+- Nuove proposte di testo per «Base comune» e «Descrizione delle REAL» nelle Impostazioni, da salvare.
 
 ## 1.49.0 — 2026-11-20T09:55:15Z
 

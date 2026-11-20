@@ -1,4 +1,4 @@
-"""Database section through the API: tag and origin filters, statistics on the current copy, edit of a published photo
+"""Database section through the API: text, gallery and origin filters (no tags since 2026-11-20), statistics on the current copy, edit of a published photo
 during a game (the game keeps its copy), regeneration of a SLOP (confirmed, statistics reset, new analysis), distribution."""
 from local_db import sql
 import http.cookiejar
@@ -49,56 +49,47 @@ def picture(seed, size=(48, 32)):
     image = Image.new('RGB', size); image.putdata([(seed % 256, (x * 7 + seed) % 256, (y * 11) % 256) for y in range(size[1]) for x in range(size[0])])
     out = io.BytesIO(); image.save(out, 'PNG'); return out.getvalue()
 def webp(source): return game_copy(source)
-def add(origin, title, seed, tags, prompt=''):
+def add(origin, title, seed, prompt=''):
     source = picture(seed)
     status, item = call(f'{API}/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': origin, 'title': title, 'prompt': prompt}), raw=source, mime='image/png')
     assert status == 201, item
     status, item = call(f'{API}/{item["id"]}/copy', raw=webp(source), mime='image/webp'); assert status == 201, item
-    status, item = call(f'{API}/{item["id"]}', {'revision': item['revision'], 'tags': tags,
-                                                'tag_categories': {t: 'event' if t == 'db-riot' else 'place' if t == 'db-paris' else 'setting' for t in tags}}, method='PATCH')
-    assert status == 200, item
     status, item = call(f'{API}/{item["id"]}/approve', {'rights_confirmed': True}); assert item['status'] == 'approved', item
     return item
 def listing(**params):
-    status, data = call(API + '?' + urllib.parse.urlencode(params)); assert status == 200, data
+    status, data = call(API + '?' + urllib.parse.urlencode({'gallery': gallery_id, **params})); assert status == 200, data
     return {i['id']: i for i in data['items']}
 
 # Published images from earlier scripts would join the games: take them out first, so the game below uses only ours.
 for row in sql("SELECT id FROM images WHERE status='published'"): call(f'{API}/{row["id"]}/withdraw', {})
-real = add('REAL', 'Barricate', 3, ['db-riot', 'db-paris'])
-slop = add('SLOP', 'Scontri', 5, ['db-riot'], prompt='A riot in a square, 1969')
-beach = add('SLOP', 'Spiaggia', 7, ['db-beach'], prompt='A crowded beach, 1975')
+real = add('REAL', 'Barricate', 3)
+slop = add('SLOP', 'Scontri', 5, prompt='A riot in a square, 1969')
+beach = add('SLOP', 'Spiaggia', 7, prompt='A crowded beach, 1975')
 ours = {real['id'], slop['id'], beach['id']}
 status, real = call(f'{API}/{real["id"]}', {'revision': real['revision'], 'description': 'Catalog description searchable-marker'}, method='PATCH')
 assert status == 200, real
 for item in (real, slop): assert call(f'{API}/{item["id"]}/publish', {})[1]['status'] == 'published'
 
-# Text search and filters remain combined across title, description and prompt.
-assert set(listing(q='barrICATE', tags='db-riot')) == {real['id']}
-assert set(listing(q='searchable-marker', tags='db-riot')) == {real['id']}
-assert set(listing(q='crowded beach', tags='db-beach')) == {beach['id']}
+# Text search across identifier, title, description and prompt, combined with origin and status.
+assert set(listing(q='barrICATE')) == {real['id']}
+assert set(listing(q='searchable-marker')) == {real['id']}
+assert set(listing(q='crowded beach')) == {beach['id']}
+assert set(listing(q='crowded beach', origin='SLOP')) == {beach['id']}
 assert not listing(q='crowded beach', origin='REAL')
 assert not listing(q='crowded beach', status='published')
 assert not listing(q='no-such-catalogue-text')
 assert set(listing(q=slop['id'][:12])) == {slop['id']}
-# Filters: one tag, all of several tags, any of several tags, origin.
-assert set(listing(tags='db-riot')) == {real['id'], slop['id']}
-assert set(listing(tags='db-riot,db-paris')) == {real['id']}
-assert set(listing(tags='db-paris,db-beach', match='any')) == {real['id'], beach['id']}
-assert set(listing(tags='db-riot', origin='SLOP')) == {slop['id']}
-assert set(listing(tags='db-riot,db-unknown')) == set()
-assert call(API + '?match=some')[0] == 400
-item = listing(tags='db-riot')[real['id']]
-assert item['stats'] == {'views': 0, 'correct': 0} and item['in_play'] == 0 and item['tags'] == ['db-paris', 'db-riot'], item
+# Filters: origin and status; the tag filters are gone.
+assert set(listing(origin='SLOP')) == {slop['id'], beach['id']}
+assert set(listing(status='published')) == {real['id'], slop['id']}
+for gone in ({'tags': 'db-riot'}, {'tag': 'db-riot'}, {'match': 'any'}, {'incomplete': '1'}):
+    assert call(API + '?' + urllib.parse.urlencode(gone))[0] == 400, gone
+item = listing()[real['id']]
+assert item['stats'] == {'views': 0, 'correct': 0} and item['in_play'] == 0 and 'tags' not in item, item
 
-# Distribution: approved and published, overall and by tag, with the spread.
+# Distribution: approved and published REAL and SLOP, without the old distribution by tag.
 status, dist = call(API + '/distribution'); assert status == 200, dist
-by_tag = {t['label']: t for t in dist['tags']}
-assert by_tag['db-riot'] == {'label': 'db-riot', 'category': 'event', 'real_approved': 0, 'real_published': 1, 'slop_approved': 0,
-                             'slop_published': 1, 'spread': 0}, by_tag['db-riot']
-assert by_tag['db-beach']['slop_approved'] == 1 and by_tag['db-beach']['spread'] == -1, by_tag['db-beach']
-assert dist['totals']['REAL']['published'] >= 1 and dist['totals']['SLOP']['approved'] >= 1, dist
-assert [t['spread'] for t in dist['tags']] == sorted((t['spread'] for t in dist['tags']), reverse=True)
+assert set(dist) == {'totals'} and dist['totals']['REAL']['published'] >= 1 and dist['totals']['SLOP']['approved'] >= 1, dist
 
 # A game in progress with these two photos, seeded in the local D1: the REAL is classified right, then, while the SLOP is on screen,
 # the owner starts editing it; the game keeps its copy; the SLOP is classified wrong.
@@ -128,7 +119,7 @@ for position, image_id in enumerate((real['id'], slop['id'])):
 status, view = call(f'{base}/api/sessions/{sid}', auth=False, opener=player)
 assert view['phase'] == 'completed' and not any('caption' in c for c in view['credits']), view
 assert call(f'{API}/{slop["id"]}/publish', {})[1]['status'] == 'published'
-items = listing(tags='db-riot')
+items = listing()
 assert items[real['id']]['stats'] == {'views': 1, 'correct': 1}, items[real['id']]['stats']
 assert items[slop['id']]['stats'] == {'views': 1, 'correct': 0}, items[slop['id']]['stats']
 assert items[slop['id']]['status'] == 'published' and items[slop['id']]['description'] == 'Descrizione modificata.'
@@ -152,4 +143,4 @@ assert not stored(old['copy_key'])
 for image_id in ours:
     call(f'{API}/{image_id}/withdraw', {}); call(f'{API}/{image_id}/trash', {})
 status, result = call(f'{API}/bulk', {'action': 'delete', 'ids': sorted(ours)}); assert result == {'deleted': 3, 'postponed': 0}, result
-print('Database integration 1.4.0 passed: no captions; tag filters, statistics, edit during a game, regeneration with reset statistics, distribution.')
+print('Database integration passed: no captions, no tags; text and origin filters, statistics, edit during a game, regeneration with reset statistics, distribution.')

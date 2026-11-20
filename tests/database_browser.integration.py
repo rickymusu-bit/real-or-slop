@@ -1,4 +1,4 @@
-"""Database section in the browser, desktop and mobile: filters, cards, press-and-hold preview, detail with tags and
+"""Database section in the browser, desktop and mobile: filters, cards, press-and-hold preview, detail without tags and
 statistics, edit of a published photo, crop, regeneration of a SLOP, trash, «Distribuzione» tab. Seeds rows in the local D1."""
 from local_db import sql
 import io
@@ -33,13 +33,10 @@ def png(seed, size):
     image = Image.new('RGB', size); image.putdata([((seed * 41) % 256, (x * 5 + seed) % 256, (y * 9) % 256) for y in range(size[1]) for x in range(size[0])])
     out = io.BytesIO(); image.save(out, 'PNG'); return out.getvalue()
 def webp(source): return game_copy(source)
-CATEGORIES = {'dbb-riot': 'event', 'dbb-paris': 'place', 'dbb-beach': 'setting', '1960s': 'time'}
-def seed(prefix, origin, title, number, tags, publish, prompt='', description=''):
+def seed(prefix, origin, title, number, publish, prompt='', description=''):
     source = png(number, (60, 40))
     item = call(f'{API}/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': origin, 'title': f'{prefix}-{title}', 'prompt': prompt, 'description': description}), raw=source, mime='image/png')
     item = call(f'{API}/{item["id"]}/copy', raw=webp(source), mime='image/webp')
-    item = call(f'{API}/{item["id"]}', {'revision': item['revision'], 'tags': tags,
-                                        'tag_categories': {t: CATEGORIES[t] for t in tags}}, method='PATCH')
     item = call(f'{API}/{item["id"]}/approve', {'rights_confirmed': True})
     if publish: item = call(f'{API}/{item["id"]}/publish', {})
     return item
@@ -48,9 +45,9 @@ with sync_playwright() as p:
     browser = p.chromium.launch(executable_path=os.environ.get('ROS_CHROMIUM_PATH') or shutil.which('chromium'), args=['--no-sandbox'])
     for index, (name, options) in enumerate((('desktop', {'viewport': {'width': 1280, 'height': 900}}), ('mobile', {**p.devices['Pixel 7']}))):
         prefix = 'dbb' + name[0]
-        real = seed(prefix, 'REAL', 'barricate', 10 + index * 10, ['dbb-riot', 'dbb-paris', '1960s'], True, description='Barricate in una strada di Parigi')
-        slop = seed(prefix, 'SLOP', 'scontri', 11 + index * 10, ['dbb-riot'], True, prompt='A riot in a square, 1960s')
-        beach = seed(prefix, 'SLOP', 'spiaggia', 12 + index * 10, ['dbb-beach'], False, prompt='A beach, 1960s')
+        real = seed(prefix, 'REAL', 'barricate', 10 + index * 10, True, description='Barricate in una strada di Parigi')
+        slop = seed(prefix, 'SLOP', 'scontri', 11 + index * 10, True, prompt='A riot in a square, 1960s')
+        beach = seed(prefix, 'SLOP', 'spiaggia', 12 + index * 10, False, prompt='A beach, 1960s')
         # Statistics: three rounds of the REAL (two right), one of the SLOP (wrong), played on the current copies.
         session = f'{prefix}-session'
         sql(f"INSERT INTO game_sessions(id,mode,created_at,owner_hash,phase,completed) VALUES('{session}','training',0,'x','completed',1); " +
@@ -66,22 +63,19 @@ with sync_playwright() as p:
         page.goto(base + '/admin')
         open_gallery(page, gallery_id)
         page.locator('.db-filter-panel summary').click()
-        # Filters: one tag, then two (all of them), then any of them, then the origin.
-        tag_input = page.locator('#library-tag')
-        tag_input.fill('dbb-riot'); tag_input.press('Enter')
-        expect(page.locator('#library-tag-pills .rw-pill')).to_have_count(1)
+        # Filters: text search and origin; the tag filter is gone (owner decision of 2026-11-20).
+        expect(page.locator('#library-tag, #library-tag-match, #library-tag-pills')).to_have_count(0)
+        search = page.locator('#library-search')
         cards = page.locator(f'.library-card:has([aria-label^="Apri {prefix}"]),.library-card[data-id="{slop["id"]}"],.library-card[data-id="{beach["id"]}"]')
-        expect(cards).to_have_count(2)
-        tag_input.fill('DBB Paris'); tag_input.press('Enter')  # converted like a typed tag
-        expect(page.locator('#library-tag-pills .rw-pill', has_text='dbb-paris')).to_have_count(1)
+        expect(cards).to_have_count(3)
+        search.fill(f'{prefix}-barricate')
         expect(cards).to_have_count(1)
         card = page.locator(f'.library-card:has([aria-label="Apri {prefix}-barricate"])')
-        # The card: thumbnail, origin and state only; tags (in category order) and views in the detail.
+        # The card: thumbnail, origin and state only; views in the detail.
         expect(card.locator('.badge')).to_have_text(['REAL', 'pubblicata'])
         for hidden in ('.db-tag', '.library-card-title', '[data-stats]'): expect(card.locator(hidden)).to_have_count(0)
         card.locator('.library-open').click()
-        expect(page.locator('#library-detail .library-tags li.tag-cat')).to_have_count(3)
-        for i, tag in enumerate(['1960s', 'dbb-paris', 'dbb-riot']): expect(page.locator('#library-detail .library-tags li.tag-cat').nth(i)).to_contain_text(tag)
+        expect(page.locator('#library-detail .library-tags')).to_have_count(0)
         expect(page.locator('#library-detail [data-stats]')).to_have_text('Vista 1 volta / classificata correttamente 1 (100%)')
         page.locator('#library-detail .library-detail-close button').click()
         # Press and hold: the large preview, not the detail; it stays open until its ×.
@@ -98,11 +92,10 @@ with sync_playwright() as p:
         preview.get_by_role('button', name="Chiudi l'anteprima").click()
         expect(preview).to_be_hidden()
         expect(page.locator('#library-detail')).to_be_hidden()
-        page.locator('[data-filter-remove="dbb-riot"]').click()
-        tag_input.fill('dbb-beach'); tag_input.press('Enter')
-        expect(cards).to_have_count(0)
-        page.locator('#library-tag-match').select_option('any')
+        search.fill('1960s')  # the prompts of both SLOP
         expect(cards).to_have_count(2)
+        search.fill('A beach')
+        expect(cards).to_have_count(1)
         page.locator('#library-origin').select_option('SLOP')
         expect(cards).to_have_count(1)
         expect(cards.locator('.library-open')).to_have_attribute('aria-label', 'Apri SLOP '+beach['id'][:8])
@@ -111,9 +104,8 @@ with sync_playwright() as p:
         page.locator('dialog.image-preview').get_by_role('button', name="Chiudi l'anteprima").click()
         page.screenshot(path=str(folder / f'{name}-images.png'), full_page=True)
         page.locator('#library-origin').select_option('all')
-        page.locator('[data-filter-remove="dbb-paris"]').click(); page.locator('[data-filter-remove="dbb-beach"]').click()
-        tag_input.fill('dbb-riot'); tag_input.press('Enter')
-        expect(cards).to_have_count(2)
+        search.fill('')
+        expect(cards).to_have_count(3)
         # Select REAL through the origin filter and clear the selection before opening the detail.
         page.locator('#library-origin').select_option('REAL')
         expect(cards).to_have_count(1)
@@ -126,7 +118,7 @@ with sync_playwright() as p:
         expect(page.locator('#library-selection strong')).to_have_text(f"{shown} {'selezionata' if shown == 1 else 'selezionate'}")
         page.locator('[data-bulk=none]').click(); expect(page.locator('#library-select-all')).to_be_visible()
         page.get_by_role('button', name=f'Apri {prefix}-barricate').click()
-        openai([{'tags': ['dbb-riot', 'dbb-paris', '1960s']}])
+        openai([])
         page.locator('#library-description-analysis').click()
         expect(page.locator('#library-detail #library-description-analysis')).to_have_count(0, timeout=30000)
         assert 'una chiamata a pagamento' in confirms[-1].lower(), confirms[-1]
@@ -135,15 +127,15 @@ with sync_playwright() as p:
         assert described['real_description']['visible'] and described['status'] == 'published', described
         expect(cards).to_have_count(1)
         page.locator('#library-origin').select_option('all')
-        expect(cards).to_have_count(2)
+        expect(cards).to_have_count(3)
         # An analysis left «running» by a request that died (more than ten minutes ago) is repeated from the card, with the warning.
-        stuck = seed(prefix, 'REAL', 'interrotta', 30 + index, ['dbb-riot'], False)
+        stuck = seed(prefix, 'REAL', 'interrotta', 30 + index, False)
         sql(f"UPDATE images SET analysis_status='running',updated_at='2000-01-01T00:00:00.000Z' WHERE id='{stuck['id']}'")
         page.locator('#library-search').fill(f'{prefix}-interrotta')
         expect(cards).to_have_count(1)
         page.get_by_role('button', name=f'Apri {prefix}-interrotta').click()
         expect(page.locator('#library-detail [data-analysis-unsure]')).to_contain_text('interrotta')
-        openai([{'tags': ['dbb-riot']}])
+        openai([])
         page.locator('#library-description-analysis').click()
         expect(page.locator('#library-detail [data-analysis-unsure]')).to_have_count(0, timeout=30000)
         assert 'esito incerto' in confirms[-1], confirms[-1]
@@ -152,7 +144,7 @@ with sync_playwright() as p:
         call(f'{API}/bulk', {'action': 'trash', 'ids': [stuck['id']]})
         call(f'{API}/bulk', {'action': 'delete', 'ids': [stuck['id']]})
         page.locator('#library-search').fill('')
-        expect(cards).to_have_count(2)
+        expect(cards).to_have_count(3)
 
         # Edit a published SLOP: confirmation, out of publication, approved; then the prompt and a regeneration.
         page.locator(f'.library-card[data-id="{slop["id"]}"] .library-open').click()
@@ -185,8 +177,6 @@ with sync_playwright() as p:
         dialog.locator('.library-detail-close button').click()
 
         # The old crop reopens at the same position on the 60×75 canvas with bands.
-        page.locator('#library-tag-match').select_option('any')
-        tag_input.fill('dbb-beach'); tag_input.press('Enter')
         page.locator(f'.library-card[data-id="{beach["id"]}"] .library-open').click()
         expect(dialog).to_contain_text('copia di gioco WebP 32×40, 4:5 verticale')
         dialog.locator('#library-crop').click()
@@ -240,8 +230,9 @@ with sync_playwright() as p:
         expect(dialog.locator('#library-detail-message')).to_have_text('Trattamento regolato salvato.')
         treatment = call(f'{API}/{beach["id"]}')['treatment']
         assert treatment['settings']['grain'] == 8 and treatment['applied']['grain'] == 8, treatment
-        assert treatment['settings']['monochrome'] == 'sepia' and treatment['settings']['cast'] == [15, -1, -24] and treatment['version'] == 5, treatment
-        expect(dialog).to_contain_text("regolato dall'owner")
+        assert treatment['settings']['monochrome'] == 'sepia' and treatment['settings']['cast'] == [15, -1, -24] and treatment['version'] == 6, treatment
+        assert 'medium' not in treatment and 'color' not in treatment, treatment  # no tags of the REAL in the record
+        expect(dialog).to_contain_text("Trattamento fotografico seppia, regolato dall'owner")
         # Changing the frame of a treated SLOP preserves the owner's settings and leaves the bands black.
         dialog.locator('#library-crop').click()
         for _ in range(8): crop_frame.press('+')
@@ -282,20 +273,14 @@ with sync_playwright() as p:
         chart = page.locator('#db-distribution')
         expect(chart.locator('.dist-overview')).to_be_visible()
         expect(chart.locator('.dist-legend')).to_contain_text('REAL pubblicate')
-        page.locator('[data-dist-search]').fill('dbb-')
-        rows = chart.locator('.dist-chart .dist-row')
-        expect(rows.filter(has_text='dbb-beach')).to_have_count(1)
-        beach_row = rows.filter(has_text='dbb-beach')
-        expect(beach_row.locator('.dist-left .dist-slop.dist-approved')).to_have_count(1)
-        expect(beach_row.locator('.dist-value')).to_have_text('-1')
-        beach_row.hover()
-        expect(chart.locator('.dist-tip')).to_contain_text('SLOP 1 (pubblicate 0, approvate 1)')
-        chart.locator('[data-dist-cat=setting]').click()
-        expect(rows.filter(has_text='dbb-beach')).to_have_count(0)
-        chart.locator('[data-dist-cat=all]').click()
+        # Only the overall REAL/SLOP bars: the distribution by tag went with the tags.
+        total = chart.locator('.dist-total')
+        expect(total).to_have_count(1)
+        expect(total.locator('.dist-left .dist-slop.dist-approved')).to_have_count(1)
+        expect(chart.locator('[data-dist-search], [data-dist-cat], [data-dist=table], .dist-chart, .dist-table')).to_have_count(0)
+        total.hover()
+        expect(chart.locator('.dist-tip')).to_contain_text('Tutte le immagini: REAL')
         page.screenshot(path=str(folder / f'{name}-distribution.png'), full_page=True)
-        chart.locator('[data-dist=table]').click()
-        expect(chart.locator('.dist-table tbody tr', has_text='dbb-beach')).to_have_count(1)
         assert not errors, errors
         context.close()
         # Clean up: the rows of this viewport go to the trash and away (the game rows go with them).

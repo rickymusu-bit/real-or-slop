@@ -62,7 +62,7 @@
   .library .admin-tabs button { flex:0 0 auto; width:auto; white-space:nowrap; padding:10px 13px; }
   .library .rw-steps { position:static; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
   .library .library-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-  .library .library-toolbar > label,.library .db-tag-filter { flex:1 1 100%; min-width:0; }
+  .library .library-toolbar > label { flex:1 1 100%; min-width:0; }
   .library .library-toolbar select { width:100%; }
   .library :is(.rw-card,.rw-final,.slop-prompts > li,.stats-block,.library-vocabulary) { padding:14px; }
   .library .slop-auto { padding:14px; }

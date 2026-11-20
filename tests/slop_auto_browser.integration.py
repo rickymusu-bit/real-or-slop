@@ -121,15 +121,15 @@ try:
                     page.goto(BASE+'/admin')
                     page.locator('#gallery-active-batch').click()
                 expect(page.locator('[data-auto=review]')).to_be_visible(timeout=30000)
-                assert len(control())==3,control()
-                assert 'Massimo 5 chiamate' in confirmations[2],confirmations
+                assert len(control())==2,control()  # generation and evaluation, no analysis after acceptance
+                assert 'Massimo 4 chiamate' in confirmations[2] and 'analisi' not in confirmations[2],confirmations
                 auto=call('auto')[1];assert auto['batch']['status']=='review'
                 generated=[i['id'] for i in auto['batch']['images']];assert len(generated)==1
                 assert call('/'+generated[0],library=True)[1]['gallery_id']==gallery_id
                 page.locator('[data-auto=review]').click()
                 expect(page).to_have_url(f'{BASE}/admin?gallery={gallery_id}&batch={auto["batch"]["id"]}')
                 expect(page.locator('[data-open="'+generated[0]+'"]')).to_be_visible()
-                assert len(control())==3
+                assert len(control())==2
                 page.screenshot(path=str(folder/(name+'-review.png')),full_page=True)
                 page.locator('[data-gallery-edit]').click()
                 delete=page.get_by_role('button',name='Elimina galleria')

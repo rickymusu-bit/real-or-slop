@@ -49,9 +49,8 @@ def real(prefix='editorial', described=True, gallery=None):
     # Match the production browser's WebP upload.
     req=urllib.request.Request(LIBRARY+'/'+item['id']+'/copy',data=game_copy(out.getvalue()),method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'image/webp'})
     with urllib.request.urlopen(req) as r:item=json.loads(r.read())
-    patch={'revision':item['revision'],'tags':['street-scene','1960s'],'tag_categories':{'street-scene':'genre','1960s':'time'}}
-    if described:patch['real_description']=DESCRIPTION
-    code,item=call('/'+item['id'],patch,method='PATCH',library=True);assert code==200,item
+    if described:
+        code,item=call('/'+item['id'],{'revision':item['revision'],'real_description':DESCRIPTION},method='PATCH',library=True);assert code==200,item
     code,item=call('/'+item['id']+'/approve',{'rights_confirmed':True},library=True);assert code==200,item
     return item
 
@@ -67,7 +66,7 @@ def assign_gallery(image, gallery):
 
 def batch(gallery_id, **fields):
     data={'mode':'manual','gallery_id':gallery_id,'prompt':'An ordinary documentary street photograph.',
-          'tags':['street-scene','1960s'],'brief':BRIEF,**fields}
+          'brief':BRIEF,**fields}
     code,b=call('batches',data);assert code==200,b
     return b
 

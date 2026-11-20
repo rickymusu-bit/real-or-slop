@@ -1,4 +1,4 @@
-/** Editable model instructions and their versions. The base and analysis contexts keep REAL cataloguing independent. */
+/** Editable model instructions and their versions. The base and analysis contexts keep the description of the REAL independent. */
 import { HttpError, id, type Env } from "./core";
 
 export type Part = "base" | "analysis" | "slop_evaluation" | "slop_gallery_prompt";
@@ -7,22 +7,16 @@ export const CONTEXT_MAX = 4000;
 const HISTORY = 50;
 
 export const DEFAULTS: Record<Part, string> = {
-  base: `Lavori per un archivio fotografico italiano che cataloga le immagini con etichette brevi.
+  base: `Lavori per un archivio fotografico italiano che descrive le immagini in modo neutro.
 
 Lingua: sobria e precisa, senza enfasi, emoji o hashtag.
 
-Fatti: non inventare nomi di persone; usa solo quelli presenti nel contesto che ricevi. Indica luoghi ed epoche solo se sono plausibili dal contesto o da ciò che si vede; nel dubbio resta generico («una piazza», «anni Settanta»). Non citare mai fotografi, agenzie, archivi, fonti, licenze o indirizzi web.
+Fatti: non inventare nomi di persone; usa solo quelli presenti nel contesto che ricevi. Indica luoghi ed epoche solo se sono plausibili dal contesto o da ciò che si vede; nel dubbio resta generico («una piazza», «anni Settanta»). Non citare mai fotografi, agenzie, archivi, fonti, licenze o indirizzi web.`,
+  analysis: `Ricevi una fotografia intera con il suo titolo e il contesto di Wikimedia Commons. Scrivi la descrizione editoriale che il giocatore leggerà dopo la risposta.
 
-Tag: brevi etichette in lettere minuscole senza accenti, cifre e trattini singoli tra le parole, senza spazi. Nomi comuni in inglese («riot», «police-car»); nomi propri nella lingua originale, traslitterati («place-de-la-republique», «munchen»). Ogni tag ha una categoria:
-- tempo: solo decenni come «1970s», al massimo uno;
-- genere: il tipo di fotografia, riconoscibile da inquadratura, posa e scopo, come «mugshot», «studio-portrait», «group-portrait», «snapshot», «street-scene», «crowd-scene», «press-photo», «aerial-view», «landscape»; uno;
-- colore: color, black-and-white, sepia o hand-colored; uno;
-- supporto: che cosa è materialmente l'immagine, come «photo-print», «newspaper-print», «magazine-print», «postcard», «slide», «film-still», «instant-photo», «digital-photo», «phone-photo», «screen-capture», «poster», «painting»; uno;
-- luogo (nomi propri), ambiente (tipi di luogo, ora, meteo), evento, persone (ruoli e gruppi, mai nomi), oggetti e strutture, altro.
-Scegli parole con un solo significato («house-fire» per l'evento, «flames» per l'oggetto). Mai tag sull'origine dell'immagine o sulla sua autenticità.`,
-  analysis: `Ricevi un'immagine e il suo contesto: titolo e descrizione, oppure la descrizione della scena. Descrivi ciò che si vede.
-
-Tag: da 5 a 15, divisi per categoria. Se l'epoca è ricavabile, indica il decennio. Indica sempre genere, colore e supporto, giudicandoli dall'aspetto dell'immagine: retino di stampa, bordi e grana di una pellicola, carta di una stampa, nitidezza di un sensore digitale. Preferisci i tag del vocabolario esistente, che ricevi diviso per categoria, quando sono adatti; creane di nuovi solo se nessuno lo è.`,
+Elementi visibili: ciò che si vede nell'immagine, compresi il tipo di fotografia, il colore e il supporto quando si riconoscono (retino di stampa, bordi e grana di una pellicola, carta di una stampa, nitidezza di un sensore digitale).
+Contesto documentato: soltanto i fatti presenti nel titolo e nel contesto ricevuti, come luogo, data ed evento.
+Incertezze: le lacune e i dettagli che dall'immagine e dal contesto non si possono stabilire.`,
   slop_gallery_prompt: `Per una galleria tematica proponi un falso fotografico concreto e scrivi il prompt inglese. Usa la foto intera, il profilo editoriale e il contesto documentato per scegliere una possibilità compatibile con le indicazioni della galleria. Rendi specifici l’invenzione e gli elementi reali da conservare, come la geografia, un edificio riconoscibile o gli elementi visibili di una mobilitazione. Varia le premesse quando le foto lo consentono. Privilegia credibilità fotografica, luce e tecnica plausibili.`,
   slop_evaluation: `Valuti una fotografia generata, intera e non trattata, prima che entri nella libreria come candidata. Giudica prima la credibilità fotografica: deve poter essere scambiata per una fotografia autentica della tecnica, dell'epoca e della situazione rappresentata. Poi la plausibilità fisica e contestuale e il rispetto degli ancoraggi obbligatori e delle esclusioni del contesto editoriale. L'aderenza letterale ai dettagli secondari del prompt non è richiesta.
 

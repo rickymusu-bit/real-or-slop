@@ -1,7 +1,7 @@
 /** Bounded full-image generation and evaluation with private attempts.
  * All paid steps are claimed before sending. Interrupted/uncertain steps are never automatically repeated. */
 import { HttpError, id, type Env } from "./core";
-import { create, viewOf, find, labels, categorize } from "./library";
+import { create, viewOf } from "./library";
 import { chosenModel, chosenQuality } from "./models";
 import { currentContext } from "./model-context";
 import type { Metrics } from "../shared/copy-treatment";
@@ -9,24 +9,23 @@ import { numberSettings } from "./app-settings";
 import { generationSize, nearestFormat } from "../shared/game-copy";
 import type { InspirationItem } from "../shared/slop-proposals";
 import { validBrief, validEvaluation, DECISIONS, type Brief, type Evaluation, type OwnerAcceptance } from "../shared/editorial";
-import { byCategory } from "./slop-references";
 import { paid, PaidError, responseJson } from "./paid";
 import { IMAGE_MARK, jsonWithImage } from "./image-body";
 import { imageMime } from "../shared/image-format";
 import { imageGeometry } from "../shared/image-geometry";
 import { runnerView, startRun } from "./slop-runner";
-import { analyze } from "./analysis";
 import { galleryId } from "./galleries";
 import { GALLERY_PIPELINE, type GalleryBatch, type GallerySnapshot } from "./slop-gallery";
 
 const now = () => new Date().toISOString();
 const parse = <T>(s: string | null, fallback: T): T => { try { return s ? JSON.parse(s) as T : fallback; } catch { return fallback; } };
-interface Snapshot { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string; source_tags?: ReturnType<typeof byCategory>; width?: number; height?: number; target_metrics?: Metrics | null; copy_style?: {color?: string; medium?: string}; mode?: "manual" | "gallery" }
+/** `source_tags` and `copy_style` only in processes prepared before the tags were retired (1.50.0). */
+interface Snapshot { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string; source_tags?: unknown; width?: number; height?: number; target_metrics?: Metrics | null; copy_style?: {color?: string}; mode?: "manual" | "gallery" }
 interface Batch extends GalleryBatch { origin: string; slots: string; prompts_status: string; prompts_error: string; pipeline_version: number; loop_settings: string; created_at: string; updated_at: string; runner: string | null; runner_status: string | null; runner_updated: string | null }
 interface Process { id: string; batch_id: string; slot: number; image_id: string | null; state: string; brief: string | null; brief_hash: string | null; premise: string | null; prompt: string; snapshot: string; attempts: number; error: string; updated_at: string }
 interface Attempt { id: string; process_id: string; number: number; prompt: string; status: string; candidate_key: string | null; evaluation: string | null }
 export const itemsOf = (row: { slots: string }): InspirationItem[] => parse<unknown[]>(row.slots, []).filter((i): i is InspirationItem =>
-  !!i && Array.isArray((i as InspirationItem).tags));
+  !!i && typeof (i as InspirationItem).title === "string");
 const confirmOnly = (data: Record<string, unknown>, allowed: string[]) => {
   if (Object.keys(data).some(k => !["confirm", ...allowed].includes(k))) throw new HttpError(400, "Campi non previsti");
   if (data.confirm !== true) throw new HttpError(400, "Conferma il massimo delle chiamate a pagamento");
@@ -70,7 +69,7 @@ async function show(env: Env, batchId: string) {
     .bind(batchId, row.gallery_id).all<{id: string}>()).results;
   const config = parse<Snapshot | null>(row.loop_settings, null);
   const maxCalls = config && processes.reduce((total, p) => {
-    const rendering = row.origin === "auto" && !p.premise ? 0 : 1 + 2 * config.max_generation_attempts;
+    const rendering = row.origin === "auto" && !p.premise ? 0 : 2 * config.max_generation_attempts;
     return total + p.prompt_calls + rendering;
   }, 0);
   return { origin: row.origin, id: row.id, items: itemsOf(row), gallery_id: row.gallery_id, processes, config,
@@ -78,18 +77,15 @@ async function show(env: Env, batchId: string) {
     prompts_status: row.prompts_status, prompts_error: row.prompts_error, created_at: row.created_at, updated_at: row.updated_at, runner: runnerView(row),
     images: await Promise.all(ids.map(i => viewOf(env, i.id))) };
 }
-/** A manual draft is free: the owner supplies the whole prompt, target tags and immutable anchors. */
+/** A manual draft is free: the owner supplies the whole prompt and the immutable anchors. */
 async function createManualBatch(env: Env, data: Record<string, unknown>) {
-  if (Object.keys(data).some(k => !["mode", "prompt", "tags", "brief", "gallery_id"].includes(k))) throw new HttpError(400, "Campi non previsti");
+  if (Object.keys(data).some(k => !["mode", "prompt", "brief", "gallery_id"].includes(k))) throw new HttpError(400, "Campi non previsti");
   const gallery = await galleryId(env, data.gallery_id);
   const brief = validBrief(data.brief);
   if (!brief || typeof data.prompt !== "string" || !data.prompt.trim() || data.prompt.length > 4000)
     throw new HttpError(400, "Inserisci un prompt e almeno un ancoraggio obbligatorio");
-  const tags = labels(data.tags);
-  if (!tags.length) throw new HttpError(400, "Inserisci almeno un tag");
-  const categories = await categorize(env, tags);
-  const item = {title: "SLOP manuale", tags: tags.map(label => ({label, category: categories.get(label)!}))};
-  const snapshot = {...await loopSnapshot(env), mode: "manual" as const, source_tags: byCategory(item.tags)};
+  const item: InspirationItem = {title: "SLOP manuale"};
+  const snapshot = {...await loopSnapshot(env), mode: "manual" as const};
   const batchId = id(), stamp = now();
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO slop_batches(id,theme,slots,pipeline_version,loop_settings,prompts_status,created_at,updated_at,gallery_id)
@@ -140,8 +136,7 @@ async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array
     bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, prompt: p.prompt, model: config.image_model,
     gallery_id: batch.gallery_id,
     generation: {batch: batch.id, quality: config.quality,
-      slot: {index: p.slot, target_metrics: config.target_metrics || null, copy_style: {color: config.copy_style?.color || config.source_tags?.color?.[0] || "", medium: config.copy_style?.medium || config.source_tags?.medium?.[0] || ""},
-        process: p.id, ...(p.premise ? {} : {brief: parse(p.brief, null), brief_hash: p.brief_hash}), evaluation, ...(acceptance ? {acceptance} : {}), attempts: p.attempts}} });
+      slot: {index: p.slot, target_metrics: config.target_metrics || null, process: p.id, ...(p.premise ? {} : {brief: parse(p.brief, null), brief_hash: p.brief_hash}), evaluation, ...(acceptance ? {acceptance} : {}), attempts: p.attempts}} });
   await env.DB.prepare("UPDATE slop_processes SET image_id=?,state='accepted',updated_at=? WHERE id=?").bind(image.id, now(), p.id).run();
   return {...image, process: {id: p.id, state: "accepted", attempts: p.attempts}};
 }
@@ -181,7 +176,7 @@ export async function generateImage(env: Env, batchId: string, data: Record<stri
   try {
     const size = generationSize(config.image_model, nearestFormat(config.width || 1024, config.height || 1024));
     const sentPrompt = config.mode === "manual" ? p.prompt + "\n\nEditorial context (do not render labels): " +
-      JSON.stringify({tags: config.source_tags, brief: constraints}) : p.prompt;
+      JSON.stringify({brief: constraints}) : p.prompt;
     const payload = await paid(env, "images", config.image_model, {model: config.image_model, prompt: sentPrompt, n: 1, size, quality: config.quality}, {process: p.id, attempt: attemptId});
     const encoded = (payload.data as {b64_json?: string}[] | undefined)?.[0]?.b64_json;
     if (!encoded) throw new HttpError(502, "Risposta del generatore non leggibile");
@@ -254,7 +249,7 @@ export async function closeProcess(env: Env, processId: string, data: Record<str
   return {attention: await attention(env)};
 }
 /** The owner may accept a completed, evaluated candidate of a stopped process despite any findings.
- * Original evaluation and owner acceptance stay separate; only the later tag analysis is paid. */
+ * Original evaluation and owner acceptance stay separate; accepting is free (no tag analysis since 1.50.0). */
 export async function acceptProcess(env: Env, processId: string, data: Record<string, unknown>) {
   confirmOnly(data, ["attempt"]);
   if (!env.QUARANTINE) throw new HttpError(503, "Quarantena mancante");
@@ -279,11 +274,7 @@ export async function acceptProcess(env: Env, processId: string, data: Record<st
     await env.DB.prepare("UPDATE slop_processes SET state=?,updated_at=? WHERE id=? AND state='running' AND image_id IS NULL").bind(p.state, now(), p.id).run();
     throw e;
   }
-  // The SLOP is accepted whatever happens to its tags: a failed or uncertain analysis shows on its card, as for the runner.
-  let tags = "";
-  try { await analyze(env, await find(env, image.id), {confirm: true}); }
-  catch (e) { tags = e instanceof Error ? e.message : String(e); }
-  return {image: {id: image.id}, tags_error: tags.slice(0, 300), attention: await attention(env)};
+  return {image: {id: image.id}, attention: await attention(env)};
 }
 async function recent(env: Env, gallery: string) {
   const rows = (await env.DB.prepare(`SELECT b.id,b.slots,b.prompts_status,b.updated_at,(SELECT count(*) FROM images i WHERE i.generation_batch=b.id AND i.gallery_id=b.gallery_id) AS images

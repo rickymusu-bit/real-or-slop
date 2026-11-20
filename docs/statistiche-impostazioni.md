@@ -1,6 +1,6 @@
-# Statistiche e Impostazioni — specifica 4.3.0
+# Statistiche e Impostazioni — specifica 4.4.0
 
-Stato: implementata nel ramo 1.43.0, da rilasciare. Aggiornata: 2026-11-19T15:59:47Z.
+Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30:00Z.
 
 ## 1. Decisioni dell'owner (2026-11-12)
 
@@ -16,10 +16,9 @@ si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ri
 
 - **Modelli:** modello di testo, modello di immagini (con la data di dismissione dove nota) e qualità delle immagini tra quelle ammesse;
   se il modello scelto non ammette la qualità salvata, si torna a `high`. Lo studio SLOP la conserva nello snapshot.
-- **Contesto dei modelli:** i quattro testi (Base, Tag, Premessa e prompt di galleria, Valutazione delle SLOP) con le versioni, il
+- **Contesto dei modelli:** i quattro testi (Base, Descrizione delle REAL, Premessa e prompt di galleria, Valutazione delle SLOP) con le versioni, il
   ripristino e la proposta del codice; un avviso quando il testo in vigore dei prompt è stato scritto per le gemelle e blocca lo
   studio (specifica `libreria-immagini`, sezione 7).
-- **Vocabolario dei tag:** elenco per categoria con il numero di immagini, cambio di categoria con conferma, alias, «Unisci».
 - **Classifica:** verifica di un codice partita (soprannome, livello, punteggio, data), Nascondi, Mostra, Cancella (per sempre, per le
   richieste di cancellazione).
 - **Studio SLOP:** tentativi massimi (1–5, default 3), tolleranza (0–2, default 1). Quantità e modalità si scelgono con «Genera SLOP» nella galleria. Nessuna proposta da attivare o spegnere; lo sbilanciamento è solo una notifica. La 0055 rimuove `slop_auto_enabled`, rifiutato dall’API. La 0056 elimina anche i vincoli e le chiavi legacy dei gruppi, conservando le impostazioni attive.
@@ -29,7 +28,8 @@ si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ri
 
 ## 3. Statistiche (solo visualizzazione)
 
-«Distribuzione delle immagini» mostra REAL e SLOP approvate e pubblicate, nel totale e per tag (specifica `database-immagini`).
+«Distribuzione delle immagini» mostra REAL e SLOP approvate e pubblicate nel totale (specifica `database-immagini`); la vista per tag
+è stata tolta con i tag il 2026-11-20.
 
 Periodo: ultimi 7 giorni, ultimi 30 (predefinito) o da sempre; «Aggiorna». API `GET /api/admin/library/stats?period=7|30|all`, gratuita.
 

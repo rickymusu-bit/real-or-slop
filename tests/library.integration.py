@@ -1,5 +1,5 @@
 """Library through the API on a local Worker with real D1 and R2: add, game copy and crop, ND licences refused, edit,
-tags, approve, publish, play, withdraw, trash (also of a published photo), delete for good with every row and file, bulk actions."""
+approve without tags, publish, play, withdraw, trash (also of a published photo), delete for good with every row and file, bulk actions."""
 from local_db import sql
 import http.cookiejar
 import time
@@ -94,12 +94,11 @@ status, real, _ = copy(real['id'], game_copy(real_source, frame), query=crop_que
 assert call(f'{API}/{real["id"]}/view', {'revision': real['revision'], 'view': {'x': 0, 'y': 10, 'height': 50}})[0] == 404
 status, served, headers = call(base + real['file'])
 assert status == 200 and served[:4] == b'RIFF' and b'Canon' not in served
-# Edit in place: removed fields refused, ASCII tags, optimistic revision.
-status, result, _ = patch(real, {'caption': 'Parigi, 1968.'}); assert status == 400 and 'Campi non previsti' in result['error'], result
-status, result, _ = patch(real, {'tags': ['São Paulo']}); assert status == 400 and 'sao-paulo' in result['error'], result
-status, real, _ = patch(real, {'title': 'Barricate in rue de Rivoli',
-                              'description': 'Owner-written description.', 'tags': ['riot', 'paris', 'rue-de-rivoli']})
-assert status == 200 and real['tags'] == ['paris', 'riot', 'rue-de-rivoli'] and 'caption' not in real, real
+# Edit in place: removed fields refused (captions, tags), optimistic revision.
+for change in ({'caption': 'Parigi, 1968.'}, {'tags': ['paris']}, {'tag_categories': {}}):
+    status, result, _ = patch(real, change); assert status == 400 and 'Campi non previsti' in result['error'], result
+status, real, _ = patch(real, {'title': 'Barricate in rue de Rivoli', 'description': 'Owner-written description.'})
+assert status == 200 and 'tags' not in real and 'caption' not in real, real
 assert patch({**real, 'revision': real['revision'] - 1}, {'title': 'Stale'})[0] == 409
 # A copy of an earlier recipe (4:5 frame without format, or no frame) and a licence without derivatives block the approval.
 for old in ("'" + json.dumps({'x': 0, 'y': 7, 'height': 50}) + "'", 'NULL'):
@@ -114,8 +113,7 @@ status, real, _ = call(f'{API}/{real["id"]}')
 status, result, _ = call(f'{API}/{real["id"]}/approve', {}); assert status == 409 and 'diritti' in result['error'], result
 status, real, _ = call(f'{API}/{real["id"]}/approve', {'rights_confirmed': True}); assert real['status'] == 'approved', real
 status, real, _ = patch(real, {'description': 'Fotografia scattata durante il maggio francese.'}); assert real['status'] == 'approved', real
-status, result, _ = patch(real, {'tags': []}); assert status == 409 and 'almeno un tag' in result['error'], result
-# A SLOP image: no rights checkbox, but copy and tags are required.
+# A SLOP image: no rights checkbox, but the copy is required; no tags (owner decision of 2026-11-20).
 slop_source = photo((0, 0, 200), (48, 48), exif=False, fmt='PNG')
 status, slop, _ = call(f'{API}/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': 'SLOP', 'prompt': 'A street in 1968'}),
                        raw=slop_source, mime='image/png')
@@ -128,8 +126,6 @@ for item, change in [(real, {'explanation': 'Unused'}), (real, {'prompt': 'Not a
     assert status == 400 and 'Campi non previsti' in result['error'], result
 assert call(f'{API}/{slop["id"]}/approve', {})[0] == 409  # no copy
 status, slop, _ = copy(slop['id'], game_copy(slop_source)); assert status == 201
-assert call(f'{API}/{slop["id"]}/approve', {})[0] == 409  # no tag
-status, slop, _ = patch(slop, {'tags': ['riot', 'street']})
 status, slop, _ = call(f'{API}/{slop["id"]}/approve', {}); assert slop['status'] == 'approved', slop
 # Publish: the approved copy goes to the game bucket; published images are read-only.
 for item in (real, slop):
@@ -185,18 +181,17 @@ status, real, _ = call(f'{API}/{real["id"]}/restore', {}); assert real['status']
 status, real, _ = call(f'{API}/{real["id"]}/trash', {})
 assert call(f'{API}/{slop["id"]}', method='DELETE')[0] == 409  # only from the trash
 status, result, _ = call(f'{API}/{real["id"]}', method='DELETE'); assert status == 200 and result['deleted'] == 1, result
-for table, column in (('images', 'id'), ('image_tags', 'image_id'), ('game_rounds', 'image_id')):
+for table, column in (('images', 'id'), ('game_rounds', 'image_id')):
     assert sql(f"SELECT count(*) AS n FROM {table} WHERE {column}='{real['id']}'")[0]['n'] == 0, table
 assert not stored(QUARANTINE, real_keys['original_key']) and not stored(QUARANTINE, real_keys['copy_key'])
 # The deleted photo can be uploaded again, e.g. after a mistake.
 status, again, _ = upload(real_source, title='Ricaricata'); assert status == 201 and again['id'] != real['id'], again
-# Bulk: add tags, trash, empty the trash.
-status, result, _ = call(f'{API}/bulk', {'action': 'tag-add', 'ids': [again['id']], 'tags': ['barricade']}); assert result['done'] == 1, result
+# Bulk: tag actions no longer exist; trash, empty the trash.
+status, result, _ = call(f'{API}/bulk', {'action': 'tag-add', 'ids': [again['id']], 'tags': ['barricade']}); assert result['done'] == 0 and result['failed'], result
 status, result, _ = call(f'{API}/bulk', {'action': 'trash', 'ids': [again['id']]}); assert result['done'] == 1, result
 status, listing, _ = call(f'{API}?status=trash'); assert [i['id'] for i in listing['items']] == [again['id']], listing
 status, result, _ = call(f'{API}/trash/empty', {}); assert result['deleted'] == 1 and result['postponed'] == 0, result
-status, tags, _ = call(f'{API}/tags')
-assert {t['label']: t['images'] for t in tags['tags']}.get('riot') == 1, tags  # the SLOP keeps its tags
+assert call(f'{API}/tags/merge', {'from': 'a', 'into': 'b'})[0] == 404
 assert call(f'{API}/commons', {'url': 'https://example.com/not-commons.jpg'})[0] in (400, 404)
 
 # Gallery deletion is atomic, covers every image state and leaves other galleries' trash alone.
@@ -214,7 +209,6 @@ assert call(f'{API}?gallery={target}&status=trash')[1]['items'] == []
 status, live, _ = upload(real_source, gallery=target)
 assert status == 201 and copy(live['id'], game_copy(real_source))[0] == 201
 live = call(f'{API}/{live["id"]}')[1]
-assert patch(live, {'tags': ['gallery-fixture']})[0] == 200
 publish = {'action': 'set-published', 'ids': [live['id']]}
 denied = call(f'{API}/bulk', publish)[1]
 assert denied['done'] == 0 and 'diritti' in denied['failed'][0]['error'], denied

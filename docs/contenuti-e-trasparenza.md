@@ -1,6 +1,6 @@
-# Contenuti delle SLOP e trasparenza — specifica 1.3.1
+# Contenuti delle SLOP e trasparenza — specifica 1.3.2
 
-Stato: implementata nel ramo 1.42.0, da rilasciare. Aggiornata: 2026-11-18T19:45:07Z.
+Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30:00Z.
 Valgono per ogni modello che produce contenuti del sito e per la revisione dell'owner.
 
 ## 1. Che cosa può comparire in una SLOP
@@ -30,7 +30,7 @@ Valgono per ogni modello che produce contenuti del sito e per la revisione dell'
 - Nel batch di galleria l’owner legge le premesse e può aprire i prompt prima di confermare la generazione. Le indicazioni possono
   richiedere luoghi o edifici riconoscibili e un fatto inventato significativo per un evento, trattato come ipotesi editoriale.
   L’owner rivede anche le immagini generate, compresi elementi aggiunti dal generatore come volti e scritte.
-- Il modello che scrive i tag non sa che esistono immagini generate: la base comune del contesto non ne parla.
+- Il modello che descrive le REAL non sa che esistono immagini generate: la base comune del contesto non ne parla.
 - Le REAL di Commons possono ritrarre persone vive: sono foto autentiche. Le valuta l'owner al caricamento.
 
 ## 3. Trasparenza e protezioni

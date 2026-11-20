@@ -15,7 +15,6 @@
 .spread-track { display: grid; grid-template-columns: 1fr 1fr; height: 14px; }
 .spread-half { display: flex; align-items: stretch; }
 .spread-neg { justify-content: flex-end; border-right: 1px solid var(--control-border); }
-.spread-bar { display: block; background: var(--tag-colour); }
 .spread-pos .spread-bar { border-radius: 0 4px 4px 0; }
 .spread-neg .spread-bar { border-radius: 4px 0 0 4px; }
 .spread-tip { position: absolute; z-index: 2; max-width: 22em; padding: 6px 8px; font-size: 12px; background: var(--bg);
@@ -38,7 +37,6 @@
 .slop-prompts textarea { width: 100%; margin: 6px 0; }
 .slop-generate { margin: 12px 0; align-items: center; gap: 12px; }
 .slop-progress { color: var(--text); }
-.slop-review .rw-pills { margin: 6px 0; }
 .slop-waiting { list-style: none; padding: 0; margin: 12px 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 .slop-waiting li { border: 1px solid var(--hairline); border-radius: 6px; overflow: hidden; }
 .slop-waiting li.is-chosen { outline: 2px solid var(--accent, #6b8cff); }

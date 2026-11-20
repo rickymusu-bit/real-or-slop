@@ -4,17 +4,23 @@
 
 /** 4: the parameters are settings the owner can change (`settings`), the tint of a monochrome copy is in `cast`.
  * 5: the tint of a monochrome copy is strongest in the midtones and fades towards black and white, as in a toned print; until 4
- * it was the same on every pixel, so blacks and whites took it too. */
-export const TREATMENT_VERSION = 5;
+ * it was the same on every pixel, so blacks and whites took it too.
+ * 6: whether the proposal is black and white, sepia or colour follows the measures of the source REAL (`monochromeOf`); until 5 it
+ * followed its Colour tag, and the record kept Medium and Colour, which tags no longer give (owner decision of 2026-11-20). */
+export const TREATMENT_VERSION = 6;
 /** Tint at the midtones that «Seppia» starts from when the source REAL is not sepia: warm, about neutral in luminance. */
 export const SEPIA_TINT: [number, number, number] = [15, -1, -24];
 /** The one JPEG generation a photo from an archive has gone through before the game copy. */
 const JPEG_QUALITY = 0.85;
-/** Version of the measures: 2 leaves burnt-out areas out of the noise; 3 adds the tint of a monochrome image. Copies measured
- * before are measured again. */
-export const METRICS_VERSION = 3;
-/** Technical colour and medium of the treatment reference, without inherited catalogue tags. */
-export interface CopyStyle { color: string; medium: string }
+/** Version of the measures: 2 leaves burnt-out areas out of the noise; 3 adds the tint of a monochrome image; 4 the chroma left
+ * once that tint is taken out, which tells a monochrome image from a colour one. Copies measured before are measured again. */
+export const METRICS_VERSION = 4;
+/** Below this residual chroma (`Metrics.chroma`) an image is monochrome: black and white or toned. Calibrated on 2026-11-20 on sample
+ * photos made grey, warm or sepia, with and without noise, through the JPEG and WebP of a copy: monochrome at most 0.013, colour from
+ * 0.048, colour reduced to a third of its saturation from 0.017. */
+export const MONOCHROME_CHROMA = 0.025;
+/** A monochrome image whose midtone tint spreads at least this much between channels is sepia (toned), else black and white. */
+const SEPIA_SPREAD = 10;
 export interface Metrics {
   /** Long side in pixels. */ long: number;
   /** Standard deviation of the noise of the luminance in uniform areas (0–255 scale). */ noise: number;
@@ -24,6 +30,8 @@ export interface Metrics {
   /** Mean deviation of R, G, B from the luminance in neutral areas. */ cast: [number, number, number];
   /** Tint at the midtones, fitted on every pixel (`tintWeight`): what a sepia or toned print has; near zero in a neutral black and
    * white. Measured from version 3. */ tint?: [number, number, number];
+  /** Mean chroma of the midtones once the tint is taken out, (max − min) / 255: near zero when every pixel has the colour its
+   * luminance gives, as in a black-and-white or toned print. Measured from version 4. */ chroma?: number;
   /** Version of the algorithm; absent on the first measures. */ v?: number;
 }
 export type Monochrome = "" | "black-and-white" | "sepia";
@@ -39,9 +47,11 @@ export interface Settings {
   /** Quality of the intermediate JPEG (0–1). */ jpeg: number;
   /** Long side of the copy in pixels. */ long: number;
 }
-export interface Applied extends Omit<Settings, "long"> { medium: string }
+/** `medium` only in records made before version 6. */
+export interface Applied extends Omit<Settings, "long"> { medium?: string }
 export interface Treatment {
-  version: number; off: boolean; seed: number; long: number; medium: string; color: string;
+  version: number; off: boolean; seed: number; long: number;
+  /** Medium and Colour of the source REAL from its tags, only in records made before version 6. */ medium?: string; color?: string;
   sample: { metrics: Metrics }; applied?: Applied; result?: Metrics; gap?: number;
   /** Settings chosen by the owner (version 4); absent when the copy follows the proposal. */ settings?: Settings;
 }
@@ -137,6 +147,17 @@ function tintOf(rgb: Float32Array, y: Float32Array): [number, number, number] {
   }
   return tint.map(v => weights ? v / weights : 0) as [number, number, number];
 }
+/** Residual chroma of the midtones: the mean spread between channels once `tint` is taken out, on pixels neither nearly black nor
+ * nearly white (bands of a padded copy, burnt highlights). */
+function chromaOf(rgb: Float32Array, y: Float32Array, tint: readonly number[]): number {
+  let sum = 0, counted = 0;
+  for (let i = 0; i < y.length; i++) {
+    if (y[i] < CLIP_LOW || y[i] > CLIP_HIGH) continue;
+    const w = tintWeight(y[i]), r = rgb[3 * i] - y[i] - tint[0] * w, g = rgb[3 * i + 1] - y[i] - tint[1] * w, b = rgb[3 * i + 2] - y[i] - tint[2] * w;
+    sum += (Math.max(r, g, b) - Math.min(r, g, b)) / 255; counted++;
+  }
+  return counted ? sum / counted : 0;
+}
 function chromaStats(rgb: Float32Array, y: Float32Array): { saturation: number; cast: [number, number, number] } {
   const n = y.length;
   let chroma = 0, neutral = 0;
@@ -152,9 +173,10 @@ function chromaStats(rgb: Float32Array, y: Float32Array): { saturation: number; 
 
 function measureRgb(rgb: Float32Array, width: number, height: number): Metrics {
   const y = luminance(rgb, width * height), [p2, , p98] = percentiles(y, 0.02, 0.98), { saturation, cast } = chromaStats(rgb, y);
+  const tint = tintOf(rgb, y);
   return { long: Math.max(width, height), noise: round(noiseOf(y, width, height)), sharpness: round(sharpnessOf(y, width, height)),
     contrast: p98 - p2, saturation: round(saturation), cast: cast.map(v => round(v, 2)) as [number, number, number],
-    tint: tintOf(rgb, y).map(v => round(v, 2)) as [number, number, number], v: METRICS_VERSION };
+    tint: tint.map(v => round(v, 2)) as [number, number, number], chroma: round(chromaOf(rgb, y, tint), 4), v: METRICS_VERSION };
 }
 /** Measures of an image given as RGBA bytes. */
 export function measure(rgba: ArrayLike<number>, width: number, height: number): Metrics {
@@ -169,9 +191,19 @@ export function validMetrics(value: unknown): Metrics | null {
   if (!finite(m.long, 1, 100_000) || !finite(m.noise, 0, 255) || !finite(m.sharpness, 0, 2000) || !finite(m.contrast, 0, 255)
     || !finite(m.saturation, 0, 1) || !Array.isArray(m.cast) || m.cast.length !== 3 || !m.cast.every(v => finite(v, -255, 255))) return null;
   const tint = m.tint === undefined ? undefined : Array.isArray(m.tint) && m.tint.length === 3 && m.tint.every(v => finite(v, -255, 255)) ? m.tint as [number, number, number] : null;
-  if (tint === null) return null;
+  if (tint === null || (m.chroma !== undefined && !finite(m.chroma, 0, 1))) return null;
   return { long: Math.round(m.long as number), noise: m.noise as number, sharpness: m.sharpness as number, contrast: m.contrast as number,
-    saturation: m.saturation as number, cast: m.cast as [number, number, number], ...(tint ? { tint } : {}), ...(m.v === METRICS_VERSION ? { v: METRICS_VERSION } : {}) };
+    saturation: m.saturation as number, cast: m.cast as [number, number, number], ...(tint ? { tint } : {}),
+    ...(m.chroma !== undefined ? { chroma: m.chroma as number } : {}), ...(m.v === METRICS_VERSION ? { v: METRICS_VERSION } : {}) };
+}
+/** Black and white, sepia or colour («»), from the measures of the source REAL (owner decision of 2026-11-20, which retired the
+ * Colour tag). Measures taken before version 4 have no residual chroma: `legacy` is the Colour tag their record kept, if any; without
+ * it only an image with almost no chroma at all counts as monochrome. */
+export function monochromeOf(m: Metrics, legacy = ""): Monochrome {
+  if (m.chroma === undefined && (legacy === "black-and-white" || legacy === "sepia")) return legacy;
+  if ((m.chroma ?? m.saturation) >= MONOCHROME_CHROMA) return "";
+  const tint = m.tint || m.cast;
+  return Math.max(...tint) - Math.min(...tint) >= SEPIA_SPREAD ? "sepia" : "black-and-white";
 }
 /** Relative distance between two measures: the mean of the relative differences of noise, sharpness, contrast and saturation. */
 export function gap(a: Metrics, b: Metrics): number {
@@ -234,11 +266,11 @@ const blur = (data: Float32Array, width: number, height: number, channels: numbe
  * sample (the source REAL); with them, the owner's values are applied as they are. Deterministic for a given seed. Every proposed step
  * follows a measure of the sample: nothing is drawn that the REAL do not have. Version 1 also painted effects by medium (halftone
  * screen, vignette, glow): invented looks, some undone at once by the next step, and possible signs of the origin. */
-export function treat(rgba: ArrayLike<number>, width: number, height: number, target: Metrics, medium: string, color: string, seed: number,
-  settings?: Omit<Settings, "long">): { rgba: Uint8ClampedArray<ArrayBuffer>; applied: Applied } {
+export function treat(rgba: ArrayLike<number>, width: number, height: number, target: Metrics, seed: number,
+  settings?: Omit<Settings, "long">, proposed: Monochrome = monochromeOf(target)): { rgba: Uint8ClampedArray<ArrayBuffer>; applied: Applied } {
   const n = width * height;
   const rgb = toRgb(rgba, width, height);
-  const monochrome: Monochrome = settings ? settings.monochrome : color === "black-and-white" || color === "sepia" ? color : "";
+  const monochrome: Monochrome = settings ? settings.monochrome : proposed;
   // Contrast around the median.
   let y = luminance(rgb, n);
   const [p2, median, p98] = percentiles(y, 0.02, 0.98);
@@ -288,7 +320,7 @@ export function treat(rgba: ArrayLike<number>, width: number, height: number, ta
     for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) rgb[3 * i + k] = clamp(rgb[3 * i + k] + field[i] * scale, 0, 255);
   }
   return { rgba: toRgba(rgb, width, height),
-    applied: { medium, contrast, cast: [...cast] as [number, number, number], saturation,
+    applied: { contrast, cast: [...cast] as [number, number, number], saturation,
       monochrome, blur: sigma, grain, grainSize, jpeg: settings ? settings.jpeg : JPEG_QUALITY } };
 }
 
@@ -322,8 +354,9 @@ export function validTreatment(value: unknown): Treatment | null {
   if (!value || typeof value !== "object") return null;
   const t = value as Record<string, unknown>, sample = t.sample as Record<string, unknown> | undefined;
   if (typeof t.version !== "number" || t.version < 1 || t.version > TREATMENT_VERSION || typeof t.off !== "boolean" || typeof t.seed !== "number" || !Number.isSafeInteger(t.seed)
-    || typeof t.long !== "number" || !Number.isSafeInteger(t.long) || t.long < 1 || typeof t.medium !== "string" || t.medium.length > 40
-    || typeof t.color !== "string" || t.color.length > 40 || !sample || typeof sample !== "object" || Array.isArray(sample) || "id" in sample
+    || typeof t.long !== "number" || !Number.isSafeInteger(t.long) || t.long < 1
+    || (t.medium !== undefined && (typeof t.medium !== "string" || t.medium.length > 40))
+    || (t.color !== undefined && (typeof t.color !== "string" || t.color.length > 40)) || !sample || typeof sample !== "object" || Array.isArray(sample) || "id" in sample
     || !validMetrics(sample.metrics)) return null;
   if (t.result !== undefined && !validMetrics(t.result)) return null;
   if (t.settings !== undefined && !validSettings(t.settings, Math.max(t.long, (t.settings as { long?: number } | null)?.long ?? 0))) return null;

@@ -3,14 +3,12 @@ import "./slop-auto.css";
 import { prepareItemCopy, type TreatableItem } from "./game-copy";
 import { escape } from "../shared/html";
 import { onLongPress, openPreview } from "./image-preview";
-import { startPills } from "./tag-ui";
-import type { Tag } from "../shared/slop-proposals";
 import type { RealDescription } from "../shared/editorial";
 
 import { type Gallery } from "./galleries";
 interface AutoImage { id: string; status: string; index: number | null; copy: boolean; analysis: string }
 interface Config { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string }
-interface Reference {id: string; title: string; tags: Tag[]; description: RealDescription; file: string; original: string}
+interface Reference {id: string; title: string; description: RealDescription; file: string; original: string}
 interface AutoPreview {
   token: string; expires: number; config: Config;
   references: Reference[];
@@ -65,10 +63,10 @@ export function mountSlopAuto(root: HTMLElement | null, controls: HTMLElement | 
 
   const gallery = () => state?.galleries.find(g => g.id === galleryId);
   const validProposals = (batch: AutoBatch) => batch.processes.filter(p => p.state === "ready" && p.premise);
-  const settings = (c: Config) => `Immagini: ${c.image_model}, qualità ${c.quality}, pianificazione predefinita dal modello. Valutazione e tag: ${c.text_model}. Tentativi massimi: ${c.max_generation_attempts} per SLOP. Tolleranza: ${c.editorial_tolerance}.`;
-  const imageCalls = (batch: AutoBatch, size: number) => size * (1 + 2 * batch.config.max_generation_attempts);
+  const settings = (c: Config) => `Immagini: ${c.image_model}, qualità ${c.quality}, pianificazione predefinita dal modello. Valutazione: ${c.text_model}. Tentativi massimi: ${c.max_generation_attempts} per SLOP. Tolleranza: ${c.editorial_tolerance}.`;
+  const imageCalls = (batch: AutoBatch, size: number) => size * 2 * batch.config.max_generation_attempts;
   const card = (r: Reference) => `<button type="button" class="slop-auto-photo" data-auto-reference="${escape(r.id)}" aria-label="Ingrandisci ${escape(r.title)}" data-long-press><img src="${escape(r.file)}" alt="" draggable="false"></button>
-    <strong>${escape(r.title)}</strong><div class="rw-pills">${startPills(r)}</div>`;
+    <strong>${escape(r.title)}</strong>`;
   const render = () => {
     const activeBatch = state?.batch, balance = state?.balance;
     const batch = activeBatch?.gallery_id === galleryId ? activeBatch : null;
@@ -210,7 +208,7 @@ export function mountSlopAuto(root: HTMLElement | null, controls: HTMLElement | 
       state?.batch?.proposal_review?.references.find(r => r.real?.id === key)?.real;
     if (!ref) return;
     openPreview({src: ref.original, alt: "Originale REAL intero", title: ref.title,
-      description: ref.description.visible, extra: `<div class="rw-pills">${startPills(ref)}</div><p>Contesto documentato: ${escape(ref.description.documented_context)}</p><p>Incertezze: ${escape(ref.description.uncertainties)}</p>`});
+      description: ref.description.visible, extra: `<p>Contesto documentato: ${escape(ref.description.documented_context)}</p><p>Incertezze: ${escape(ref.description.uncertainties)}</p>`});
   };
   onLongPress(controls, "[data-auto-reference]", showReference);
   controls.addEventListener("click", async event => {
@@ -266,7 +264,7 @@ export function mountSlopAuto(root: HTMLElement | null, controls: HTMLElement | 
       }
       if (action === "start" && state.batch?.proposal_review) {
         const batch = state.batch, count = validProposals(batch).length, c = batch.config;
-        if (!window.confirm(`Generare ${count} SLOP sulle ${batch.slots} REAL estratte? Massimo ${imageCalls(batch, count)} chiamate: fino a ${count*c.max_generation_attempts} immagini con ${c.image_model} (${c.quality}), altrettante valutazioni con ${c.text_model}, più ${count} analisi dei tag dopo accettazione. Tolleranza ${c.editorial_tolerance}.`)) return;
+        if (!window.confirm(`Generare ${count} SLOP sulle ${batch.slots} REAL estratte? Massimo ${imageCalls(batch, count)} chiamate: fino a ${count*c.max_generation_attempts} immagini con ${c.image_model} (${c.quality}), altrettante valutazioni con ${c.text_model}. Tolleranza ${c.editorial_tolerance}.`)) return;
         button.disabled = true;
         state = await call<AutoState>(SLOP + "auto/start", {batch: batch.id, count, confirm: true});
         render(); void follow();

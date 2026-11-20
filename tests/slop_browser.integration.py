@@ -50,9 +50,9 @@ try:
                 card.locator(':scope > summary').click()
                 control([]);dismiss_next[0]=True;card.locator('[data-slop=accept-process]').click()
                 expect(card).to_be_visible();assert control()==[]
-                assert all(note in confirmations[-1] for note in ['A hand has six fingers','Soft focus on the edge','Place cannot be confirmed','Massimo 1'])
+                assert all(note in confirmations[-1] for note in ['A hand has six fingers','Soft focus on the edge','Place cannot be confirmed','Nessuna chiamata a pagamento'])
                 card.locator('[data-slop=accept-process]').click();expect(card).to_have_count(0,timeout=20000)
-                assert 'Accettare questa candidata' in confirmations[-1] and 'non ha potuto confermare' in confirmations[-1] and len(control())==1
+                assert 'Accettare questa candidata' in confirmations[-1] and 'non ha potuto confermare' in confirmations[-1] and control()==[]
                 expect(studio.get_by_role('status').first).to_contain_text('SLOP accettata')
                 reviewed=sql("SELECT state,image_id FROM slop_processes WHERE id='"+review['processes'][0]['id']+"'")[0]
                 assert reviewed['state']=='accepted' and reviewed['image_id'];generated.append(reviewed['image_id'])
@@ -74,11 +74,11 @@ try:
                 minor_proc=load(minor)['processes'][0]
                 card=studio.locator('[data-attention="'+minor_proc['id']+'"]');card.locator(':scope > summary').click()
                 control([]);card.locator('[data-slop=accept-process]').click();expect(card).to_have_count(0,timeout=20000)
-                assert 'Visible banding' in confirmations[-1] and len(control())==1
+                assert 'Visible banding' in confirmations[-1] and 'Nessuna chiamata a pagamento' in confirmations[-1] and control()==[]
                 generated.append(load(minor)['images'][0]['id'])
                 assert studio.locator(f'[data-recent] option[value="{review["id"]}"]').count() == 0
                 studio.locator('[data-manual=prompt]').fill('A credible street photograph in ordinary daylight.')
-                studio.locator('[data-manual=tags]').fill('street-scene, 1960s')
+                expect(studio.locator('[data-manual=tags]')).to_have_count(0)
                 studio.locator('[data-manual=required]').fill('street-scene')
                 control([]);studio.locator('[data-slop=manual-draft]').click()
                 expect(studio.locator('[data-prompt="0"]')).not_to_have_value('', timeout=20000)
@@ -90,7 +90,7 @@ try:
                 control([None,{'evaluation':'retry_same_prompt'},None,{'evaluation':'accept'}])
                 studio.locator('[data-slop=images]').click()
                 expect(studio.locator('[data-slop=approve]')).to_be_visible(timeout=30000)
-                assert len(control())==5  # two images, two evaluations, final tags
+                assert len(control())==4  # two images, two evaluations, no analysis after acceptance
                 image_id=studio.locator('[data-image]').get_attribute('data-image');generated.append(image_id)
                 saved=call('/'+image_id,library=True)[1]
                 assert saved['status']=='new' and saved['gallery_id']==minor_source['gallery_id']
@@ -107,7 +107,7 @@ try:
                 editor.locator('[data-crop=ok]').click();expect(editor).to_have_count(0)
                 studio.locator('[data-slop=approve]').click();expect(studio.locator('[data-slop=publish]')).to_be_visible()
                 studio.locator('[data-slop=publish]').click();expect(studio.get_by_role('heading',name='SLOP published')).to_be_visible()
-                assert 'Massimo 7' in confirmations[-1]  # generation loop excludes the already paid brief
+                assert 'Massimo 6' in confirmations[-1]  # 2N: generations and evaluations, no analysis after acceptance
                 assert errors==[],errors
             finally:
                 context.close();remove(generated+[source['id']])
