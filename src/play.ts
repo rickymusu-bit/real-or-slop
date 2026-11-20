@@ -24,6 +24,14 @@ const SESSION_KEY = "ros_levels", FEEDBACK_MS = 900;
 let viewer: Viewer | null = null;
 const LABEL: Record<Level, string> = { facile: "Facile", medio: "Medio", difficile: "Difficile", esperto: "Esperto" };
 const points = (n: number) => n.toLocaleString("it-IT", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+function realCredit(credit: Credit) {
+  const details = [escape(credit.title || ""), credit.author ? `Autore: ${escape(credit.author)}` : "",
+    credit.licenseUrl && credit.license ? `<a href="${safeUrl(credit.licenseUrl)}" target="_blank" rel="noopener noreferrer">${escape(credit.license)}</a>` : escape(credit.license || ""),
+    credit.source ? `<a href="${safeUrl(credit.source)}" target="_blank" rel="noopener noreferrer">Foto originale</a>` : ""].filter(Boolean);
+  return `${credit.description ? `<p class="credit-description">${escape(credit.description)}</p>` : ""}
+    ${details.length ? `<p class="credit-source">${details.join(" · ")}</p>` : ""}
+    ${credit.changes ? `<p class="credit-changes">${escape(credit.changes)}; la versione modificata ha la stessa licenza dell'originale.</p>` : ""}`;
+}
 
 export let stopPlay = () => {};
 
@@ -126,7 +134,7 @@ async function play(sid: string) {
       <h2>Le foto della partita</h2><ol class="credits">${state.credits.map(c => `<li class="credit ${c.correct ? "is-right" : "is-wrong"}">
         <div class="game-media-surface credit-image"><img data-game-media draggable="false" src="${escape(c.image)}" alt="Foto ${c.number}" loading="lazy"></div>
         <div class="credit-text"><p class="credit-head"><strong>${c.answer === "REAL" ? "REAL" : "SLOP"}</strong> · ${c.timedOut ? "tempo scaduto" : c.correct ? "✓ risposta giusta" : "✗ risposta sbagliata"}</p>
-        ${c.answer === "REAL" ? `${c.description ? `<p class="credit-description">${escape(c.description)}</p>` : ""}<p class="credit-source">${escape(c.title || "")}${c.author ? " · " + escape(c.author) : ""}${c.license ? " · " + (c.licenseUrl ? `<a href="${safeUrl(c.licenseUrl)}" target="_blank" rel="noopener noreferrer">${escape(c.license)}</a>` : escape(c.license)) : ""}${c.source ? ` · <a href="${safeUrl(c.source)}" target="_blank" rel="noopener noreferrer">Fonte</a>` : ""}</p>${c.changes ? `<p class="credit-changes">${escape(c.changes)}; la versione modificata ha la stessa licenza dell'originale.</p>` : ""}`
+        ${c.answer === "REAL" ? realCredit(c)
           : `<p class="credit-prompt"><span>Prompt</span> <q lang="en">${escape(c.prompt || "")}</q></p>`}</div></li>`).join("")}</ol></section>`;
     markGameMedia(content());
     document.querySelector("#enter-form")?.addEventListener("submit", async event => {

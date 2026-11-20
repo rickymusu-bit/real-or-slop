@@ -1,4 +1,4 @@
-/** Private editorial descriptions and immutable briefs. Never sent to players. */
+/** Editorial descriptions and immutable briefs. Only the player-facing description is shared with players. */
 export interface RealDescription { visible: string; documented_context: string; uncertainties: string }
 export interface Brief { required: string[]; preferred: string[]; flexible: string[]; exclusions: string[] }
 export const DESCRIPTION_KEYS = ["visible", "documented_context", "uncertainties"] as const;
@@ -13,6 +13,9 @@ export function realDescription(value: unknown): RealDescription | null {
   if (Object.keys(v).some(k => !(DESCRIPTION_KEYS as readonly string[]).includes(k)) ||
     DESCRIPTION_KEYS.some(k => typeof v[k] !== "string" || (v[k] as string).length > 3000) || !(v.visible as string).trim()) return null;
   return Object.fromEntries(DESCRIPTION_KEYS.map(k => [k, (v[k] as string).trim()])) as unknown as RealDescription;
+}
+export function publicRealDescription(value: RealDescription | null): string {
+  return value ? [value.visible, value.documented_context].filter(Boolean).join("\n\n") : "";
 }
 export function validBrief(value: unknown): Brief | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;

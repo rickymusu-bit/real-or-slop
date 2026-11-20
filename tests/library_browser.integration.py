@@ -14,6 +14,7 @@ from game_copy import game_copy
 base = os.environ['ROS_TEST_BASE']
 token = Path('.dev.vars').read_text().strip().split('=', 1)[1]
 gallery_id = make_gallery(base + '/api/admin/library', token, 'Test library_browser')
+destination = make_gallery(base + '/api/admin/library', token, 'Destinazione library_browser')
 folder = Path('artifacts/library-browser'); folder.mkdir(parents=True, exist_ok=True)
 
 def picture(name, color, size):
@@ -46,7 +47,9 @@ with sync_playwright() as p:
         confirms = []
         def answer(dialog):
             confirms.append(dialog.message)
-            dialog.accept() if dialog.message.startswith(('Analizzare 2 immagini', 'Ripristinare questa versione', 'Spostare', '1 immagine è pubblicata')) else dialog.dismiss()
+            accepted = ('Analizzare «', 'Ripristinare questa versione', 'Spostare', '1 immagine è pubblicata',
+                        '1 immagine pubblicata torna', '2 immagini pubblicate', 'Confermi di aver verificato')
+            dialog.accept() if dialog.message.startswith(accepted) else dialog.dismiss()
         page.on('dialog', answer)
         assert page.request.put(base + '/api/admin/library/models', data={'image_quality':'medium'}, headers={'Origin':base}).status == 200
         page.goto(base + '/admin')
@@ -70,15 +73,36 @@ with sync_playwright() as p:
         page.locator('#library-search').fill('no-such-dashboard-image')
         expect(page.locator('#library-grid .library-card')).to_have_count(0)
         page.locator('#library-search').fill('')
-        # Two REAL photos added through the API, then analysed together from the selection; then one SLOP.
+        # Each photo can still be analysed in its detail.
         for picture_file in (picture(f'{name}-rivoli.jpg', (180, 40, 30), (320, 200)), picture(f'{name}-spare.jpg', (30, 160, 40), (200, 320))):
             add(page, picture_file, 'REAL')
         page.locator('[data-view=new]').click()
-        for title in (f'{name}-rivoli', f'{name}-spare'): page.get_by_role('checkbox', name=f'Seleziona {title}').check()
-        page.locator('[data-bulk=analyze]').click()
-        expect(page.locator('#library-message')).to_contain_text('2 di 2 analizzate', timeout=30000)
+        for title in (f'{name}-rivoli', f'{name}-spare'):
+            page.get_by_role('button', name=f'Apri {title}').click()
+            page.locator('#library-analyze').click()
+            expect(page.locator('#library-detail-message')).to_contain_text('Analisi completata.')
+            page.locator('.library-detail-close button').click()
         page.locator('[data-view=library]').click()
-        assert 'chiamate a pagamento' in confirms[0] and '$' not in confirms[0], confirms
+        assert 'chiamata a pagamento' in confirms[0] and '$' not in confirms[0], confirms
+
+        # Selecting a new image keeps keyboard focus and shows the matching commands below the scroll viewport.
+        spare = page.get_by_role('checkbox', name=f'Seleziona {name}-spare')
+        spare.check()
+        expect(spare).to_be_focused()
+        bar = page.locator('#library-selection')
+        expect(bar.locator('.library-selection-actions').get_by_role('button')).to_have_text(
+            ['Approva', 'Pubblica', 'Nel cestino', 'Cambia galleria'])
+        expect(bar.get_by_role('button', name='Deseleziona')).to_be_visible()
+        assert page.evaluate("""() => {
+            const scroll = document.querySelector('.gallery-workspace-scroll');
+            const bar = document.querySelector('#library-selection');
+            return !scroll.contains(bar) && scroll.getBoundingClientRect().bottom <= bar.getBoundingClientRect().top;
+        }""")
+        page.screenshot(path=str(folder / f'{name}-selection.png'))
+        page.locator('[data-bulk=set-approved]').click()
+        expect(page.locator('#library-message')).to_contain_text('1 aggiornate')
+        assert 'verificato i diritti e la licenza' in confirms[-1]
+        expect(page.locator('.library-card', has=spare).locator('.badge-status')).to_have_text('approvata')
         rivoli_card = page.locator(f'.library-card:has([aria-label="Apri {name}-rivoli"])')
         # A card shows only thumbnail, origin and state; tags and views are in the detail.
         expect(rivoli_card.locator('.badge')).to_have_text(['REAL', 'nuova'])
@@ -192,7 +216,13 @@ with sync_playwright() as p:
             page.get_by_role('button', name=f'Apri {title}').click()
             dialog = page.locator('#library-detail')
             expect(dialog).to_contain_text('copia di gioco WebP')
-            if real: expect(dialog.locator('.library-analysis')).to_contain_text('Analizzata')
+            if real:
+                expect(dialog.locator('.library-analysis')).to_contain_text('Analizzata')
+                redo = dialog.get_by_role('button', name='Rifai l’analisi con IA (a pagamento)')
+                redo.click()
+                expect(dialog.locator('#library-detail-message')).to_contain_text('Analisi completata.')
+                assert 'descrizione editoriale saranno sostituiti' in confirms[-1]
+            expect(dialog.locator('#library-crop')).to_be_visible()
             expect(dialog.locator('[data-field=caption], [data-field=explanation]')).to_have_count(0)
             for key in ('source_url', 'author', 'license_name', 'license_url'):
                 expect(dialog.locator(f'[data-field={key}]')).to_have_count(1 if real else 0)
@@ -215,7 +245,7 @@ with sync_playwright() as p:
                 expect(dialog.locator('.library-tags li.tag-cat', has_text=tag)).to_have_count(1)
             # A wrong form is converted and saved, without a notice; an origin word is refused.
             dialog.locator('#library-tag-input').fill('São Paulo'); dialog.locator('#library-tag-category').select_option('place')
-            dialog.locator('#library-tag-input').press('Enter')
+            dialog.get_by_role('button', name='Aggiungi tag').click()
             expect(dialog.locator('[data-tag-remove=sao-paulo]')).to_have_count(1)
             expect(dialog.locator('#library-detail-message')).not_to_contain_text('sao-paulo')
             dialog.locator('[data-tag-remove=sao-paulo]').click()
@@ -230,8 +260,32 @@ with sync_playwright() as p:
             dialog.locator('[data-action=publish]').click()
             expect(dialog.locator('[data-action=withdraw]')).to_be_visible()
             dialog.locator('.library-detail-close button').click()
+        spare.check()
         edit_and_publish(f'{name}-rivoli', 'Parigi, maggio 1968. Barricate in rue de Rivoli.', ['riot', 'paris'], True)
+        expect(spare).to_be_checked()
+        bar.get_by_role('button', name='Deseleziona').click()
         edit_and_publish(slop_label, 'Parigi, 1968. Una strada bloccata.', ['riot', 'street'], False)
+        rivoli_check = page.get_by_role('checkbox', name=f'Seleziona {name}-rivoli')
+        spare.check()
+        rivoli_check.check()
+        withdraw = bar.get_by_role('button', name='Togli dalla pubblicazione')
+        expect(withdraw).to_be_visible()
+        bar.get_by_role('button', name='Deseleziona').click()
+        expect(rivoli_check).not_to_be_checked()
+        expect(spare).not_to_be_checked()
+        expect(bar).to_be_hidden()
+        spare.check()
+        rivoli_check.check()
+        withdraw.click()
+        expect(page.locator('#library-message')).to_have_text('1 aggiornate.')
+        expect(rivoli_check).not_to_be_checked()
+        expect(spare).to_be_checked()
+        expect(withdraw).to_be_hidden()
+        expect(rivoli_card.locator('.badge-status')).to_have_text('approvata')
+        bar.get_by_role('button', name='Deseleziona').click()
+        rivoli_check.check()
+        page.locator('[data-bulk=set-published]').click()
+        expect(rivoli_card.locator('.badge-status')).to_have_text('pubblicata')
         # Multi-selection: the spare photo and a published one go to the trash together (the published one leaves the game at once,
         # after a confirmation), then the spare is deleted for good and the published one comes back approved.
         page.get_by_role('checkbox', name=f'Seleziona {name}-spare').check()
@@ -252,14 +306,35 @@ with sync_playwright() as p:
         page.locator('[data-view=approved]').click()
         expect(page.locator(f'.library-card:has([aria-label="Apri {slop_label}"])')).to_have_count(1)
         page.get_by_role('checkbox', name=f'Seleziona {slop_label}').check()
-        page.locator('[data-bulk=publish]').click()
+        page.locator('[data-bulk=set-published]').click()
         expect(page.locator('#library-message')).to_contain_text('1 aggiornate')
         # Withdraw both, so that the next viewport works with its own images.
         page.locator('[data-view=published]').click()
         for title in (f'{name}-rivoli', slop_label): page.get_by_role('checkbox', name=f'Seleziona {title}').check()
-        page.locator('[data-bulk=withdraw]').click()
+        bar.get_by_role('button', name='Togli dalla pubblicazione').click()
         expect(page.locator('#library-message')).to_contain_text('2 aggiornate')
         expect(page.locator(f'.library-card:has([aria-label="Apri {name}-rivoli"])')).to_have_count(0)
+        # Move a mixed selection to another gallery, preserving both approved states.
+        page.locator('[data-view=approved]').click()
+        for title in (f'{name}-rivoli', slop_label): page.get_by_role('checkbox', name=f'Seleziona {title}').check()
+        page.locator('[data-bulk=gallery]').click()
+        move = page.locator('#library-move-gallery')
+        expect(move).to_be_visible()
+        expect(move.locator(f'option[value="{gallery_id}"]')).to_have_count(0)
+        move.get_by_role('button', name='Annulla').click()
+        expect(bar.locator('strong')).to_have_text('2 selezionate')
+        page.locator('[data-bulk=gallery]').click()
+        move.locator('#library-bulk-gallery').select_option(destination)
+        move.get_by_role('button', name='Sposta', exact=True).click()
+        expect(page.locator('#library-message')).to_have_text('2 spostate.')
+        expect(page.get_by_role('button', name=f'Apri {name}-rivoli')).to_have_count(0)
+        page.locator('[data-gallery-close]').click()
+        open_gallery(page, destination)
+        for title in (f'{name}-rivoli', slop_label):
+            photo = page.get_by_role('button', name=f'Apri {title}')
+            expect(photo.locator('.badge-status')).to_have_text('approvata')
+        page.locator('[data-gallery-close]').click()
+        open_gallery(page, gallery_id)
         # The gallery window and both wizards fit on desktop and mobile.
         page.get_by_role('link', name='Genera SLOP').click()
         expect(page).to_have_url(f'{base}/admin/gallerie/{gallery_id}/slop')

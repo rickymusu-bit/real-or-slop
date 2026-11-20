@@ -1,6 +1,6 @@
 """REAL wizard in the browser, desktop and mobile: Commons search (clear box, pages, columns, a tap adds at once, selection
-kept across searches, press-and-hold preview), tags with categories, paid generation and restore, description, «Togli dal
-caricamento», crop step, summary and publication."""
+kept across searches, press-and-hold preview), blocking acquisition progress, tags with categories, paid generation and restore,
+description, «Togli dal caricamento», crop step, summary and publication."""
 import io
 import os
 import re
@@ -209,7 +209,7 @@ with sync_playwright() as p:
         # The owner writes first; the generation will replace this on the chosen image only.
         # «Tower» has a wrong form: converted to «tower» and saved, without a notice.
         expect(page.locator('[data-rw-caption]')).to_have_count(0)
-        # The description, read by the players after the game, is edited here and saved on leaving the field.
+        # The source description stays in the catalogue and is saved on leaving the field.
         description = a.locator('[data-rw-description]')
         expect(description).to_have_value('')
         description.fill('Un ponte di pietra sul fiume, anni Sessanta')
@@ -248,8 +248,12 @@ with sync_playwright() as p:
         expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(1)
         expect(a.locator('.rw-pill', has_text='bridge')).to_have_count(0)
         expect(a.locator('[data-editorial=visible]')).not_to_have_value('')
-        private = a.locator('[data-editorial=visible]')
-        private.fill('Owner corrected the visible street scene.'); private.blur()
+        visible = a.locator('[data-editorial=visible]')
+        visible.fill('Owner corrected the visible street scene.'); visible.blur()
+        context_field = a.locator('[data-editorial=documented_context]')
+        context_field.fill('Documented context for the players.'); context_field.blur()
+        notes = a.locator('[data-editorial=uncertainties]')
+        notes.fill('Internal notes for the editor.'); notes.blur()
         expect(a.locator('[data-editorial=visible]')).to_have_value('Owner corrected the visible street scene.')
         expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(1)
 
@@ -286,11 +290,58 @@ with sync_playwright() as p:
         editor = page.locator('dialog.crop-dialog')
         expect(editor.locator('.crop-frame')).to_be_visible()
         expect(editor.locator('.crop-format select')).to_have_value('4:5')
+        if name == 'mobile':
+            stage = editor.locator('.crop-stage')
+            stage.scroll_into_view_if_needed()
+            area = stage.bounding_box()
+            x, y = round(area['x'] + area['width'] / 2), round(area['y'] + area['height'] / 2)
+            touch = context.new_cdp_session(page)
+
+            def pinch(event, spread):
+                points = [{'x': x - spread, 'y': y, 'id': 1}, {'x': x + spread, 'y': y, 'id': 2}] if spread else []
+                touch.send('Input.dispatchTouchEvent', {'type': event, 'touchPoints': points})
+
+            size = editor.locator('[data-size=crop]')
+            expect(size).to_have_value('280')
+            pinch('touchStart', 30)
+            pinch('touchMove', 60)
+            expect(size).to_have_value('140')
+            pinch('touchMove', 30)
+            expect(size).to_have_value('280')
+            pinch('touchEnd', 0)
+            touch.detach()
+        editor.locator('[data-crop-mode]').select_option('fit-width')
+        expect(editor.get_by_alt_text('Foto intera con bande nere')).to_be_visible()
+        expect(editor.locator('.crop-frame')).to_be_hidden()
+        copy_route = '**/api/admin/library/' + first['id'] + '/copy?*'
+        uploads = []
+        page.route(copy_route, lambda route: uploads.append(route))
+        with page.expect_request(copy_route):
+            editor.locator('[data-crop=ok]').click()
+        processing = page.get_by_role('dialog', name='Elaborazione foto')
+        expect(processing).to_contain_text('Salvo l’inquadratura')
+        expect(editor).to_have_attribute('open', '')
+        assert processing.evaluate('el => el.matches(":modal") && Math.abs(el.getBoundingClientRect().top + el.offsetHeight / 2 - innerHeight / 2) < 2')
+        page.keyboard.press('Escape')
+        page.mouse.click(2, 2)
+        expect(processing).to_be_visible()
+        uploads.pop(0).fulfill(status=503, json={'error': 'Copia temporaneamente non disponibile'})
+        expect(processing).to_be_hidden()
+        expect(editor.locator('.crop-error')).to_have_text('Copia temporaneamente non disponibile')
+        page.unroute(copy_route)
         editor.locator('[data-crop=ok]').click()
         expect(page.locator('.rw-message')).to_have_text('Inquadratura salvata.')
         expect(crop_a).to_contain_text('4:5 verticale')
-        saved = page.request.get(base + '/api/admin/library/' + first['id']).json()['copy']
-        assert saved['crop']['format'] == '4:5' and saved['width'] == round(saved['height']*0.8), saved
+        saved = page.request.get(base + '/api/admin/library/' + first['id']).json()
+        copy = saved['copy']
+        assert (copy['width'], copy['height']) == (420, 525), copy
+        assert copy['crop'] == {'x': 0, 'y': 0, 'width': 420, 'height': 280, 'format': '4:5', 'mode': 'fit-width'}, copy
+        picture = Image.open(io.BytesIO(page.request.get(base + saved['file']).body())).convert('RGB')
+        assert max(picture.getpixel((210, 20))) < 8 and max(picture.getpixel((210, 504))) < 8
+        assert picture.getpixel((10, 260))[2] > 150 and picture.getpixel((410, 260))[2] > 150
+        crop_a.get_by_role('button', name='Cambia inquadratura').click()
+        expect(editor.locator('[data-crop-mode]')).to_have_value('fit-width')
+        editor.locator('[data-crop=cancel]').click()
         page.screenshot(path=str(folder / (name + '-step3-crop.png')), full_page=True)
         page.get_by_role('button', name='Indietro: tag').click()
         expect(page.locator('.rw-editor')).to_have_count(2)
@@ -302,7 +353,11 @@ with sync_playwright() as p:
         expect(page.locator('.rw-final img[data-game-media]').first).to_be_visible()
         expect(page.locator('.rw-final .rs-mark').first).to_be_visible()
         expect(page.locator('.rw-final .play-caption')).to_have_count(0)
-        expect(page.locator('.rw-final-description')).to_have_text(['Un ponte di pietra sul fiume, anni Sessanta'])
+        expect(page.locator('.rw-final-description')).to_have_count(1)
+        expect(page.locator('.rw-final-description')).to_contain_text('Owner corrected the visible street scene.')
+        expect(page.locator('.rw-final-description')).to_contain_text('Documented context for the players.')
+        expect(page.locator('.rw-preview-grid')).not_to_contain_text('Un ponte di pietra sul fiume, anni Sessanta')
+        expect(page.locator('.rw-preview-grid')).not_to_contain_text('Internal notes for the editor.')
         page.screenshot(path=str(folder / (name + '-step4.png')), full_page=True)
         page.get_by_role('button', name='Conferma e pubblica').click()
         expect(page.locator('.rw-message')).to_contain_text('Devi confermare')
@@ -313,30 +368,84 @@ with sync_playwright() as p:
         assert published.ok and {first['id'], second['id']} <= {i['id'] for i in published.json()['items']}
         # Commons is simulated at the browser boundary. The wizard passes the selected gallery,
         # and the real upload API stores that membership while the instructions are empty.
-        acquired=[]
-        def mock_acquisition(route):
-            data=route.request.post_data_json
-            assert data['gallery_id']==gallery_id and 'File:Bridge1.jpg' in data['url'], data
-            photo=image_file('commons-'+name, seed+60)
-            response=page.request.post(base+'/api/admin/library/upload?'+urllib.parse.urlencode({
-                'origin':'REAL','title':'Commons '+name,'gallery_id':data['gallery_id']}),
-                data=photo['buffer'],headers={'Content-Type':photo['mimeType']})
-            assert response.ok,response.text()
-            acquired.append(response.json()['id'])
-            route.fulfill(status=response.status,content_type='application/json',body=response.text())
-        page.route('**/api/admin/library/commons', mock_acquisition)
+        commons_api = '**/api/admin/library/commons'
+        requests = []
+        page.route(commons_api, lambda route: requests.append(route))
+
+        def finish_acquisition(number):
+            route = requests.pop(0)
+            data = route.request.post_data_json
+            assert data['gallery_id'] == gallery_id and f'File:Bridge{number}.jpg' in data['url'], data
+            photo = image_file('commons-' + name, seed + 60 + number)
+            response = page.request.post(base + '/api/admin/library/upload?' + urllib.parse.urlencode({
+                'origin': 'REAL', 'title': f'Commons {name} {number}', 'gallery_id': gallery_id}),
+                data=photo['buffer'], headers={'Content-Type': photo['mimeType']})
+            assert response.ok, response.text()
+            route.fulfill(response=response)
+            return response.json()['id']
+
         page.get_by_role('button', name='Inizia un nuovo caricamento').click()
-        page.locator('#rw-search [name=q]').fill('bridge')
-        page.locator('#rw-search').get_by_role('button', name='Cerca', exact=True).click()
+        search.locator('[name=q]').fill('bridge')
+        search.get_by_role('button', name='Cerca', exact=True).click()
         page.locator('.rw-hit img').click()
-        page.get_by_role('button', name='Avanti: tag').click()
-        expect(page.locator('.rw-editor')).to_have_count(1)
-        stored=page.request.get(base+'/api/admin/library/'+acquired[0]).json()
-        assert stored['gallery_id']==gallery_id and stored['status']=='new' and stored['copy']
-        page.locator('[data-rw=discard]').click()
+        page.get_by_role('button', name='Pagina successiva').click()
+        page.locator('.rw-hit img').click()
+        search.locator('[name=q]').fill('tower')
+        search.get_by_role('button', name='Cerca', exact=True).click()
+        page.locator('.rw-hit img').click()
+        expect(page.locator('.rw-pick')).to_have_count(3)
+        with page.expect_request(commons_api):
+            page.get_by_role('button', name='Avanti: tag').click()
+        acquisition = page.get_by_role('dialog', name='Acquisizione privata')
+        count = acquisition.get_by_role('status')
+        progress = acquisition.get_by_role('progressbar', name='Progresso acquisizione foto REAL')
+        expect(count).to_have_text('Foto acquisite: 0 di 3')
+        expect(progress).to_have_attribute('max', '3')
+        expect(progress).to_have_attribute('value', '0')
+        assert acquisition.evaluate('el => el.matches(":modal")')
+        assert page.evaluate('getComputedStyle(document.documentElement).overflow') == 'hidden'
+        unload = 'window.dispatchEvent(new Event("beforeunload", { cancelable: true }))'
+        assert not page.evaluate(unload)
+        page.keyboard.press('Escape')
+        page.mouse.click(2, 2)
+        expect(acquisition).to_be_visible()
+        for outside in (page.locator('[data-gallery-return]'), search.locator('[name=q]')):
+            outside.evaluate('el => el.focus()')
+            expect(outside).not_to_be_focused()
+        page.screenshot(path=str(folder / (name + '-acquisition.png')))
+
+        with page.expect_request(commons_api):
+            first_acquired = finish_acquisition(1)
+        expect(count).to_have_text('Foto acquisite: 1 di 3')
+        expect(progress).to_have_attribute('value', '1')
+        with page.expect_request(commons_api):
+            failed = requests.pop(0)
+            assert 'File:Bridge2.jpg' in failed.request.post_data_json['url']
+            failed.fulfill(status=409, json={'error': 'Foto già presente'})
+        expect(count).to_have_text('Foto acquisite: 1 di 3')
+
+        copy_api = '**/api/admin/library/*/copy?*'
+        copy_requests = []
+        page.route(copy_api, lambda route: copy_requests.append(route))
+        with page.expect_request(copy_api):
+            last_acquired = finish_acquisition(3)
+        expect(count).to_have_text('Foto acquisite: 2 di 3')
+        expect(progress).to_have_attribute('value', '2')
+        expect(acquisition.locator('.hint')).to_have_text('Preparazione della copia di gioco…')
+        copy_requests.pop(0).continue_()
+        expect(acquisition).to_be_hidden()
+        assert page.evaluate(unload)
+        expect(page.locator('.rw-message')).to_contain_text('Foto acquisite: 2 di 3. Errori:')
+        expect(page.locator('.rw-editor')).to_have_count(2)
+        for photo_id in (first_acquired, last_acquired):
+            stored = page.request.get(base + '/api/admin/library/' + photo_id).json()
+            assert stored['gallery_id'] == gallery_id and stored['status'] == 'new' and stored['copy']
+        page.locator(f'[data-rw-image="{first_acquired}"] [data-rw=discard]').click()
         expect(page.locator('.rw-message')).to_contain_text('Foto tolta dal caricamento')
-        discarded=page.request.get(base+'/api/admin/library/'+acquired[0]).json()
-        assert discarded['gallery_id']==gallery_id and discarded['status']=='trash', discarded
+        discarded = page.request.get(base + '/api/admin/library/' + first_acquired).json()
+        assert discarded['gallery_id'] == gallery_id and discarded['status'] == 'trash', discarded
+        page.get_by_role('button', name='Indietro', exact=True).click()
+        expect(page.locator('.rw-picks img')).to_have_attribute('alt', 'Bridge2.jpg')
         assert not errors, errors
         context.close()
         print('REAL wizard browser E2E 1.15.0 passed (search clear box, tap adds at once, selection kept across searches, press-and-hold preview, description edited and summarised, four steps, crop step, search clear button, no captions, photos trashed elsewhere leave the wizard):', name)

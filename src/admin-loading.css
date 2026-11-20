@@ -5,3 +5,7 @@
 @media (prefers-reduced-motion: reduce) { .admin-loading::before { animation: none; } }
 @keyframes admin-spin { to { transform: rotate(360deg); } }
 .library-head .admin-loading { margin: 0; font-size: 14px; }
+.photo-processing { position: fixed; inset: 0; margin: auto; max-width: min(28rem, calc(100vw - 2rem)); padding: 1.25rem; }
+.photo-processing::backdrop { background: rgb(0 0 0 / 65%); }
+.photo-processing .admin-loading { color: var(--text); margin: 0; }
+html:has(.photo-processing[open]) { overflow: hidden; }

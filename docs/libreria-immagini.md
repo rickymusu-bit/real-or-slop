@@ -1,6 +1,6 @@
-# Libreria delle immagini, tag e analisi — specifica 8.1.0
+# Libreria delle immagini, tag e analisi — specifica 8.4.0
 
-Stato: implementata nel ramo 1.43.0, da rilasciare. Aggiornata: 2026-11-19T15:59:47Z.
+Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:29:53Z.
 
 ## 1. Decisioni dell'owner
 
@@ -14,6 +14,8 @@ Stato: implementata nel ramo 1.43.0, da rilasciare. Aggiornata: 2026-11-19T15:59
   sull'origine dell'immagine (2026-11-10).
 - L'analisi a pagamento genera i tag una sola volta per immagine e sostituisce quelli delle immagini scelte; i tag generati si
   ripristinano senza costi (2026-11-09).
+- Dal dettaglio di una foto nuova o approvata si può rifare l’analisi a pagamento con conferma esplicita (2026-11-19).
+- I risultati mostrano elementi visibili e contesto documentato della descrizione editoriale, con l’attribuzione della REAL (2026-11-19).
 - Niente prezzi né budget: ogni chiamata a pagamento si conferma e si registra senza importi; il limite di spesa è quello del progetto
   OpenAI (2026-11-10).
 - Niente didascalie, né nel gioco né nella dashboard; quelle scritte sono state cancellate (2026-11-13).
@@ -48,10 +50,10 @@ Una sola raccolta di immagini REAL e SLOP.
 | Campi | REAL | SLOP | Funzione attuale |
 |---|---|---|---|
 | Titolo | sì | no | Titolo REAL nei crediti e nell’analisi; SLOP identificate dall’ID |
-| Descrizione | sì | sì | Contesto dell’analisi; la descrizione REAL appare nei crediti finali |
+| Descrizione della fonte (REAL) o descrizione (SLOP) | sì | sì | Contesto dell’analisi e del catalogo |
 | Fonte, autore, nome e URL licenza | sì | no | Provenienza, diritti, controllo ND e attribuzione della REAL |
 | Prompt e modello | no | sì | Analisi, ricostruzione della generazione e prompt nei crediti finali |
-| Descrizione editoriale, provenienza dell'analisi e contesto Commons | sì | no | Brief automatico, correzioni private e contesto documentato |
+| Descrizione editoriale, provenienza dell'analisi e contesto Commons | sì | no | Brief automatico. Elementi visibili e contesto documentato della descrizione editoriale nei risultati |
 | Tag correnti e generati, contesti/esito dell'analisi | sì | sì | Ricerca, controllo dell'analisi e ripristino gratuito dei tag |
 | Originale/copia, hash, dimensioni, MIME, crop e misure | sì | sì | Archivio, verifica file, copie identiche nel gioco e rifacimento nel browser |
 | Batch, slot, qualità e trattamento | no | sì | Revisione, idempotenza e rifacimento delle copie SLOP |
@@ -82,7 +84,8 @@ alla copia per estrarre le foto; i crediti REAL e il prompt SLOP vengono letti n
   stato di provenienza; una SLOP non si ripristina se la REAL ha già una SLOP attiva o un processo in corso; una pubblicata torna approvata. «Svuota cestino» ed «Elimina definitivamente» cancellano ogni riga dell'immagine
   (tag, round, risposte) e ogni suo file; un'immagine ancora usata da una partita in corso si elimina quando la partita finisce.
 - **Partita in corso:** in preparazione o attiva e iniziata da meno della durata massima delle Impostazioni (24 ore predefinite).
-- Azioni in gruppo: fino a 500 immagini per volta.
+- La selezione in galleria permette di approvare, pubblicare, togliere dalla pubblicazione, cestinare o cambiare galleria. Il Cestino offre ripristino ed eliminazione definitiva.
+  Le azioni si applicano alle foto selezionate e riusano i controlli delle transizioni di stato. Il limite dell’API è 500 foto per richiesta.
 
 ## 4. Tag
 
@@ -130,11 +133,11 @@ alla copia per estrarre le foto; i crediti REAL e il prompt SLOP vengono letti n
 
 ## 5. Analisi a pagamento
 
-Per una REAL l’unica analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Il modello vede la REAL **intera**, cioè l’originale caricato (JPEG, PNG o WebP fino a 12 MB), mai il ritaglio 4:5 (decisione dell’owner del 2026-11-15). Modello, hash dell’originale, revisione e data sono conservati come provenienza. La descrizione è privata, modificabile senza alterare tag o testo Commons; quest’ultimo è conservato separatamente per le nuove acquisizioni. Per una SLOP l’analisi restituisce soltanto tag, anch’essa sull’originale intero.
+Per una REAL ogni analisi restituisce insieme `tags` e `real_description` (`visible`, `documented_context`, `uncertainties`), in una transazione con esito della chiamata. Il modello vede la REAL **intera**, cioè l’originale caricato (JPEG, PNG o WebP fino a 12 MB), mai il ritaglio 4:5 (decisione dell’owner del 2026-11-15). Modello, hash dell’originale, revisione e data sono conservati come provenienza. Gli elementi visibili e il contesto documentato compaiono nei risultati con l’attribuzione della foto. Il testo Commons, le incertezze e la provenienza dell’analisi restano nel catalogo. Per una SLOP l’analisi restituisce soltanto tag, anch’essa sull’originale intero.
 
-Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova generazione richiede compilazione manuale o una nuova analisi combinata confermata (`refresh_description:true`), anche se già approvata/pubblicata. Nessun backfill. L'analisi combinata si lancia dalla scheda o in gruppo dalla galleria (azione «Analisi combinata tag e descrizione» sulle immagini selezionate), con conferma del numero massimo di chiamate, una per foto; le immagini con esito incerto o interrotto sono incluse e la conferma le nomina. La modifica della sola descrizione privata non ritira una pubblicata.
+Una REAL senza descrizione editoriale mostra i crediti disponibili nei risultati. Dal dettaglio la descrizione si può compilare a mano o generare con una nuova analisi combinata confermata (`refresh_description:true`), anche per una foto già approvata o pubblicata. La conferma segnala gli esiti incerti o interrotti. La modifica della sola descrizione editoriale conserva lo stato della foto.
 
-- Su richiesta dell'owner (wizard, dettaglio o gruppo nella galleria, studio SLOP), solo per immagini nuove. Il modello di testo scelto
+- Su richiesta dell'owner dal wizard o dallo studio SLOP per immagini nuove, dal dettaglio in galleria anche per le approvate. Il modello di testo scelto
   nelle Impostazioni, che deve leggere immagini, riceve l'originale intero (vede i pixel, non i metadati del file) con titolo e
   descrizione (REAL) o con il prompt (SLOP)
   e i 300 tag più usati divisi per categoria; mai l'origine. La base comune e la parte «Tag» si applicano ad entrambe
@@ -150,16 +153,16 @@ Una REAL storica senza descrizione resta utilizzabile nel catalogo; la nuova gen
   Supporto soltanto da ciò che si vede nell'immagine, mai da titolo, descrizione o altro testo. Vale per REAL e SLOP allo stesso modo e
   non parla di immagini generate.
 - **Completamento di Genere, Colore e Supporto** (eccezione alla regola seguente, decisione dell'owner del 2026-11-14): per le immagini
-  fuori dal cestino che hanno già un'analisi riuscita e non hanno ancora tutte e tre le categorie. Dalla galleria, su una o più immagini
-  (azione in gruppo), con conferma esplicita del numero di chiamate: una chiamata a pagamento per immagine, con la stessa immagine dell'analisi e le
+  fuori dal cestino che hanno già un'analisi riuscita e non hanno ancora tutte e tre le categorie. Dal dettaglio della foto, con conferma esplicita di una chiamata a pagamento, con la stessa immagine dell'analisi e le
   stesse istruzioni dell'analisi, che restituisce solo le tre categorie. Sostituisce i tag di quelle tre categorie e lascia gli altri.
   Non ritira le pubblicate, perché non cambia nulla di ciò che vede il giocatore. Una sola volta per immagine (`categories_completed_at`);
   registrata in `paid_calls` come analisi.
-- **Una generazione per immagine:** dopo un esito riuscito il server rifiuta un'altra analisi. I tag generati restano nel database
-  e «Ripristina i tag generati» li riporta senza costi. Fanno eccezione l’analisi combinata confermata di una REAL storica senza descrizione e una nuova SLOP accettata da un nuovo processo.
+- **Ripetizione dal dettaglio:** «Rifai l’analisi con IA» richiede conferma per una nuova chiamata (`confirm: true`, `reanalyze: true`)
+  e indica quali campi sostituisce. La nuova analisi riuscita sostituisce anche i tag generati che «Ripristina i tag generati» recupera
+  senza costi. Il wizard e lo studio continuano a generare i tag una volta sola dopo un esito riuscito. Rimane disponibile l’analisi
+  combinata confermata per una REAL storica senza descrizione.
 - Una sola analisi alla volta per immagine; un segno interrotto resta sospeso e viene marcato incerto dalla manutenzione.
-- **Esito incerto o segno interrotto** (più di dieci minuti): mai ripetuto in automatico. Dalla scheda dell'immagine, o in gruppo dal
-  dettaglio della galleria e dal wizard, l'owner può ripeterlo con una conferma che lo nomina e avverte del possibile addebito già avvenuto; un'analisi
+- **Esito incerto o segno interrotto** (più di dieci minuti): mai ripetuto in automatico. Dal dettaglio della foto e dal wizard, l'owner può ripeterlo con una conferma che lo nomina e avverte del possibile addebito già avvenuto; un'analisi
   ancora in corso da meno di dieci minuti resta esclusa. La richiesta porta
   `repeat_uncertain: true`, senza la quale il server rifiuta. La chiamata pendente dell'analisi interrotta passa a `uncertain`.
   La dashboard tratta allo stesso modo un'analisi ancora «in corso» dopo dieci minuti: la mostra come interrotta e offre la

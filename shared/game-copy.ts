@@ -7,7 +7,7 @@ export const FORMAT_LABELS: Record<Format, string> = {
 };
 export const GAME_COPY = { mime: "image/webp", maxSide: 1536, quality: 0.85, maxBytes: 4_000_000, minSide: 64, viewRatio: 4 / 5 } as const;
 export const GAME_COPY_RECIPE = `webp-q${GAME_COPY.quality}-format-max${GAME_COPY.maxSide}-srgb-v4-portrait`;
-export interface Crop { x: number; y: number; width: number; height: number; format: Format }
+export interface Crop { x: number; y: number; width: number; height: number; format: Format; mode?: "fit-width" }
 export interface View { x: number; y: number; height: number }
 
 export const isFormat = (value: unknown): value is Format => typeof value === "string" && [...FORMATS, "4:5"].includes(value);
@@ -43,6 +43,15 @@ export function centredCrop(width: number, height: number, format?: Format): Cro
   return { x: Math.floor((width - size.width) / 2), y: Math.floor((height - size.height) / 2), width: size.width, height: size.height, format: f };
 }
 
+/** The entire original at full width, when it leaves space above and below in the 4:5 copy. */
+export function fitWidthCrop(width: number, height: number): Crop | null {
+  return height < Math.round(width / GAME_COPY.viewRatio)
+    ? { x: 0, y: 0, width, height, format: "4:5", mode: "fit-width" } : null;
+}
+const frameHeight = (crop: Pick<Crop, "width" | "height" | "format" | "mode">) =>
+  crop.mode === "fit-width" ? Math.round(crop.width / ratioOf(crop.format)) : crop.height;
+export const frameLongSide = (crop: Crop) => Math.max(crop.width, frameHeight(crop));
+
 /** Smallest height a crop of `format` may have in an image of these dimensions. */
 export const minimumCropHeight = (format: Format, width: number, height: number) =>
   Math.min(Math.ceil(GAME_COPY.minSide / Math.min(1, ratioOf(format))), largest(format, width, height).height);
@@ -54,6 +63,10 @@ export function cropError(width: number, height: number, crop: unknown): string 
   if (!isFormat(c.format)) return "Formato non previsto";
   if (![c.x, c.y, c.width, c.height].every(v => typeof v === "number" && Number.isSafeInteger(v))) return "Inquadratura non valida";
   const { x, y, width: w, height: h, format } = crop as Crop;
+  if (c.mode !== undefined) {
+    if (c.mode !== "fit-width" || format !== "4:5") return "Adattamento non previsto";
+    return x === 0 && y === 0 && w === width && h === height && fitWidthCrop(width, height) ? "" : "Adattamento fuori dall'immagine";
+  }
   if (w !== formatWidth(format, h)) return "Inquadratura non nel formato " + format;
   if (x < 0 || y < 0 || h < minimumCropHeight(format, width, height)) return "Inquadratura troppo piccola o fuori dall'immagine";
   if (x + w > width || y + h > height) return "Inquadratura fuori dall'immagine";
@@ -62,10 +75,10 @@ export function cropError(width: number, height: number, crop: unknown): string 
 
 /** Dimensions of the copy made from a crop: the crop's format, longest side at most 1536 px (or `maxSide`, smaller, for a treated
  * SLOP), never enlarged. */
-export function copyDimensions(crop: Pick<Crop, "width" | "height" | "format">, maxSide: number = GAME_COPY.maxSide): { width: number; height: number } {
+export function copyDimensions(crop: Pick<Crop, "width" | "height" | "format" | "mode">, maxSide: number = GAME_COPY.maxSide): { width: number; height: number } {
   const ratio = ratioOf(crop.format), side = Math.min(maxSide, GAME_COPY.maxSide);
   if (ratio >= 1) { const width = Math.min(crop.width, side); return { width, height: Math.max(1, Math.round(width / ratio)) }; }
-  const height = Math.min(crop.height, side);
+  const height = Math.min(frameHeight(crop), side);
   return { width: Math.max(1, Math.round(height * ratio)), height };
 }
 
@@ -93,11 +106,12 @@ export function fitView(view: View | null, width: number, height: number): View 
   return view && !viewError(width, height, view) ? view : centredView(width, height);
 }
 
-/** Parses «x,y,width,height,format» (query string form). */
+/** Parses «x,y,width,height,format[,fit-width]» (query string form). */
 export function parseCrop(value: string | null): Crop | null {
-  const match = value ? /^(\d{1,6}),(\d{1,6}),(\d{1,6}),(\d{1,6}),(\d{1,2}:\d{1,2})$/.exec(value) : null;
+  const match = value ? /^(\d{1,6}),(\d{1,6}),(\d{1,6}),(\d{1,6}),(\d{1,2}:\d{1,2})(,fit-width)?$/.exec(value) : null;
   if (!match || !isFormat(match[5])) return null;
-  return { x: Number(match[1]), y: Number(match[2]), width: Number(match[3]), height: Number(match[4]), format: match[5] };
+  return { x: Number(match[1]), y: Number(match[2]), width: Number(match[3]), height: Number(match[4]), format: match[5],
+    ...(match[6] ? { mode: "fit-width" } : {}) };
 }
 /** Parses «x,y,height» (query string form). */
 export function parseView(value: string | null): View | null {
@@ -105,12 +119,13 @@ export function parseView(value: string | null): View | null {
   const [x, y, height] = value.split(",").map(Number);
   return { x, y, height };
 }
-export const cropQuery = (c: Crop) => [c.x, c.y, c.width, c.height, c.format].join(",");
+export const cropQuery = (c: Crop) => [c.x, c.y, c.width, c.height, c.format].join(",") + (c.mode ? `,${c.mode}` : "");
 export const viewQuery = (v: View) => [v.x, v.y, v.height].join(",");
 
 /** A stored crop of the current recipe, or null (absent, unreadable, or a 4:5 crop of shared/game-copy.ts). */
 export function storedCrop(value: string | null): Crop | null {
-  try { const crop = value ? JSON.parse(value) as Crop : null; return crop && crop.format === "4:5" && typeof crop.width === "number" ? crop : null; }
+  try { const crop = value ? JSON.parse(value) as Crop : null;
+    return crop && crop.format === "4:5" && typeof crop.width === "number" && (crop.mode === undefined || crop.mode === "fit-width") ? crop : null; }
   catch { return null; }
 }
 export function storedView(value: string | null): View | null {

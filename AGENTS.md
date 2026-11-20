@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 30.2.0, aggiornata il 2026-11-19T19:19:49Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 30.5.0, aggiornata il 2026-11-19T23:44:53Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -23,10 +23,13 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   e il contesto Commons, ma **non conosce l'esistenza delle SLOP**.
   Il modello successivo prepara premessa e prompt SLOP dalla REAL intera, dal profilo editoriale e dal contesto documentato, e
   riceve le indicazioni della galleria. I contesti restano distinti.
+- **Risultati REAL** (decisione del 2026-11-19). A fine partita il giocatore vede la descrizione editoriale con elementi visibili
+  e contesto documentato, seguita dall’autore, dalla fonte e dalla licenza. Il testo Commons e le note di incertezza restano nel catalogo.
 - **Dashboard** (decisione del 2026-11-19). Gallerie è la sezione iniziale. Ogni galleria apre la propria griglia e i wizard
   «Carica REAL» e «Genera SLOP» su indirizzi dedicati nella stessa scheda. Il wizard REAL acquisisce dalle ricerche su Commons.
-  Le altre sezioni sono Statistiche e Impostazioni.
-- **Generazione SLOP manuale o automatica** (decisione del 2026-11-18, #157, specifica `generazione-slop` 10.2.0).
+  Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino e
+  cambio galleria. La barra lascia visibile la griglia.
+- **Generazione SLOP manuale o automatica** (decisione del 2026-11-18, #157, specifica `generazione-slop` 10.3.0).
   Manuale: galleria, prompt, tag di partenza e ancoraggi scritti dall’owner. Automatica: galleria con indicazioni salvate, estrazione casuale gratuita
   e anteprima delle REAL idonee. Prima conferma per preparare premessa e prompt, seconda per generare dai prompt presentati. Le
   proposte cambiate, annullate o scadute non autorizzano chiamate immagine. Le SLOP ereditano la galleria e le REAL restano
@@ -48,6 +51,9 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 - **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP. Tag e descrizione della REAL, e i tag della
   SLOP, descrivono l'immagine intera (l'originale); il ritaglio non deve eliminare elementi **fondamentali** per il significato della fotografia; in caso contrario
   l'owner corregge l'inquadratura. Le SLOP si valutano **intere** prima di creare la copia 4:5.
+- **Inquadratura ed elaborazione** (decisione del 2026-11-19). «Adatta alla larghezza» mantiene l’intera foto con bande nere nel 4:5
+  quando le proporzioni lo permettono. Il ritaglio si regola anche con due dita. Le elaborazioni avviate nella finestra della foto
+  mostrano al centro uno stato di lavorazione e bloccano i comandi fino all’esito.
 - **Il Worker gestisce ciò che riguarda l'API di OpenAI, il browser tutto il resto** (decisione del 2026-11-16, che sostituisce
   quella del 2026-11-15 sul browser come sola interfaccia). Sul Worker: analisi, proposte editoriali, generazione e valutazione (il ciclo SLOP gira
   in un Workflow che continua anche se la dashboard si chiude), oltre a dati e archivio. Nel browser: inquadratura, trattamento delle

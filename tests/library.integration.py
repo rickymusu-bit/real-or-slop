@@ -215,8 +215,13 @@ status, live, _ = upload(real_source, gallery=target)
 assert status == 201 and copy(live['id'], game_copy(real_source))[0] == 201
 live = call(f'{API}/{live["id"]}')[1]
 assert patch(live, {'tags': ['gallery-fixture']})[0] == 200
-assert call(f'{API}/{live["id"]}/approve', {'rights_confirmed': True})[0] == 200
-assert call(f'{API}/{live["id"]}/publish', {})[0] == 200
+publish = {'action': 'set-published', 'ids': [live['id']]}
+denied = call(f'{API}/bulk', publish)[1]
+assert denied['done'] == 0 and 'diritti' in denied['failed'][0]['error'], denied
+assert call(f'{API}/{live["id"]}')[1]['status'] == 'new'
+assert call(f'{API}/bulk', {**publish, 'rights_confirmed': True})[1] == {'done': 1, 'failed': []}
+assert call(f'{API}/{live["id"]}')[1]['status'] == 'published'
+assert call(f'{API}/bulk', publish)[1] == {'done': 1, 'failed': []}
 status, discarded, _ = upload(photo((13, 0, 0)), origin='SLOP', gallery=target)
 assert status == 201 and call(f'{API}/{discarded["id"]}/trash', {})[0] == 200
 keys = sql(f"SELECT original_key,copy_key FROM images WHERE id='{live['id']}'")[0]
