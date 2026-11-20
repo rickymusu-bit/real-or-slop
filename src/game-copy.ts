@@ -2,7 +2,7 @@
  * OpenAI, the browser everything else): 4:5 crop of the oriented original, size of the recipe, light treatment of a SLOP from its
  * source REAL (proposed or set with the sliders), WebP, measures; the Worker checks and stores the upload. */
 import type { OwnerAcceptance } from "../shared/editorial";
-import { centredCrop, copyDimensions, cropQuery, frameLongSide, GAME_COPY, type Crop } from "../shared/game-copy";
+import { copyContentDimensions, copyDimensions, cropQuery, frameLongSide, GAME_COPY, wholePhotoFrame, type Crop } from "../shared/game-copy";
 import {
   gap, measure, METRICS_VERSION, SETTING_LIMITS, settingsOf, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Settings, type Treatment, type CopyStyle,
 } from "../shared/copy-treatment";
@@ -44,8 +44,7 @@ export interface TreatmentPlan {
 
 /** The crop of an oriented original drawn at the size of the copy (`side` long): the pixels the treatment starts from. */
 export function drawBase(bitmap: ImageBitmap, frame: Crop, side: number): ImageData {
-  const size = copyDimensions(frame, side), width = size.width;
-  const height = frame.mode === "fit-width" ? Math.min(size.height, Math.max(1, Math.round(frame.height * width / frame.width))) : size.height;
+  const { width, height } = copyContentDimensions(frame, copyDimensions(frame, side));
   const { context } = canvasOf(width, height);
   context.drawImage(bitmap, frame.x, frame.y, frame.width, frame.height, 0, 0, width, height);
   return context.getImageData(0, 0, width, height);
@@ -53,18 +52,18 @@ export function drawBase(bitmap: ImageBitmap, frame: Crop, side: number): ImageD
 /** Letterbox the picture after any treatment so the bands stay black. */
 export function frameCanvas(picture: HTMLCanvasElement, frame: Crop, side: number): HTMLCanvasElement {
   const { width, height } = copyDimensions(frame, side);
-  if (picture.height === height) return picture;
+  if (picture.width === width && picture.height === height) return picture;
   const { canvas, context } = canvasOf(width, height);
   context.fillStyle = "#000";
   context.fillRect(0, 0, width, height);
-  context.drawImage(picture, 0, Math.floor((height - picture.height) / 2));
+  context.drawImage(picture, Math.floor((width - picture.width) / 2), Math.floor((height - picture.height) / 2));
   return canvas;
 }
-/** The original oriented, cut along `crop` (centred 4:5 if absent) and drawn at the size of the copy. */
+/** The oriented original, fitted whole by default, drawn at the size of the picture inside the copy. */
 export async function basePixels(source: Blob, crop: Crop | undefined, long: (frame: Crop) => number): Promise<{ pixels: ImageData; frame: Crop; long: number }> {
   const bitmap = await createImageBitmap(source, { imageOrientation: "from-image" });
   try {
-    const frame = crop || centredCrop(bitmap.width, bitmap.height), side = long(frame);
+    const frame = crop || wholePhotoFrame(bitmap.width, bitmap.height), side = long(frame);
     return { pixels: drawBase(bitmap, frame, side), frame, long: side };
   } finally { bitmap.close(); }
 }
@@ -151,7 +150,7 @@ export function proposalOf(base: ImageData, plan: TreatmentPlan, long: number): 
   return settingsOf(applied, long);
 }
 
-/** Encodes `source` (or the stored original) along `crop` (centred 4:5 if absent) with the treatment of `plan` for a SLOP, and stores
+/** Encodes `source` (or the stored original) along `crop` (whole photo by default) with the treatment of `plan` for a SLOP, and stores
  * it as the game copy of library image `imageId`; `force` stores it even with the same crop and treatment. Returns the item. */
 export async function prepareLibraryCopy<T>(imageId: string, source?: Blob, crop?: Crop, plan?: TreatmentPlan | null, force = false): Promise<T> {
   if (!/^[\w-]{1,64}$/.test(imageId)) throw Error("Immagine non valida");
@@ -166,7 +165,7 @@ export async function prepareLibraryCopy<T>(imageId: string, source?: Blob, crop
   return result;
 }
 
-/** The copy of a library item along `crop` (its stored crop, else centred) with its treatment: the plan of a SLOP is found first. */
+/** The copy of a library item with its treatment, using the chosen frame, the stored frame or the whole photo. */
 export async function prepareItemCopy<T>(item: TreatableItem, crop?: Crop, asked: { off?: boolean; settings?: Settings | null; force?: boolean } = {}): Promise<T> {
   return prepareLibraryCopy<T>(item.id, undefined, crop || item.copy?.crop || undefined, await treatmentPlan(item, asked), asked.force);
 }

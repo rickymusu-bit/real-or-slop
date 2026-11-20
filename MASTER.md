@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 34.7.0, aggiornata il 2026-11-19T23:44:53Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 34.8.0, aggiornata il 2026-11-20T06:09:53Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,8 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.46.0:** barra compatta sotto la griglia per cambiare stato o galleria e deselezionare. Il dettaglio riunisce i comandi
+- **Ramo 1.47.0:** foto intera di default nel 4:5. Ritaglio facoltativo con maniglie, gesto a due dita corretto e «Salva» visibile su mobile.
+- **Integrata in main la 1.46.0 (PR #162):** barra compatta sotto la griglia per cambiare stato o galleria e deselezionare. Il dettaglio riunisce i comandi
   per tag, inquadratura, trattamento e ripetizione confermata dell’analisi IA.
   Acquisizione REAL con conteggio sul totale selezionato, barra di progresso e pagina bloccata fino alla fine delle copie di gioco.
   I risultati del gioco e il riepilogo del wizard leggono la descrizione editoriale delle REAL. I risultati conservano l’attribuzione.
@@ -76,10 +77,10 @@ nome.
 |---|---|---|
 | Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 8.4.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.3.1 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.4.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 4.5.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.5.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 4.6.0 |
 | SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 10.3.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 8.6.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 8.7.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.2.1 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.3.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.2 |

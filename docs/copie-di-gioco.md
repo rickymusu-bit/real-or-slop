@@ -1,6 +1,6 @@
-# Copie di gioco — specifica 12.4.0
+# Copie di gioco — specifica 12.5.0
 
-Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:44:53Z.
+Stato: implementata nel ramo 1.47.0, da rilasciare. Aggiornata: 2026-11-20T06:09:53Z.
 
 ## 1. Decisioni dell'owner
 
@@ -8,9 +8,10 @@ Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:44
   un errore troppo evidente e le dà un'inquadratura diversa da quella della REAL di riferimento. Annulla la decisione del 2026-11-13
   (copia nel formato più vicino a quello della foto), presa perché con il 4:5 le REAL apparivano tagliate e le SLOP composte per quel
   riquadro. Quel difetto non torna: una SLOP viene generata nel formato derivato dalla REAL e poi ritagliata in 4:5; **non** deve però assomigliare alla REAL per composizione o soggetti.
-- «Adatta alla larghezza» conserva l’intero originale con bande nere sopra e sotto quando c’è spazio nel 4:5. Il ritaglio si
-  ridimensiona anche con due dita. Durante il salvataggio l’editor resta visibile sotto un avviso di elaborazione che blocca i
-  comandi e si chiude all’esito (2026-11-19).
+- «Foto intera» è l’inquadratura predefinita delle nuove copie. L’originale è centrato nel 4:5 con bande nere sopra e sotto o ai
+  lati secondo le proporzioni. «Ritaglia» attiva il riquadro, con maniglie comuni a puntatore e touchscreen. Allontanare due dita
+  allarga il riquadro. Avvicinarle lo restringe (2026-11-20).
+- Durante il salvataggio l’editor resta visibile sotto un avviso di elaborazione che blocca i comandi fino all’esito (2026-11-19).
 - La foto si mostra **intera su ogni schermo**; il giocatore la esplora con le dita o il mouse; niente swipe per rispondere
   (2026-11-13, invariato). Nessuna vista iniziale diversa dalla foto intera.
 - Trattamento delle SLOP: copia le REAL, non le supera (2026-11-14). Le misure vengono dalla **REAL di riferimento** (2026-11-15): prese
@@ -47,8 +48,8 @@ di testo non sceglie più il formato.
 
 - Uguale per REAL e SLOP, dopo il trattamento delle SLOP (sezione 4): inquadratura 4:5, WebP qualità 0,85, altezza al massimo 1536 px,
   mai ingrandita, sRGB, sfondo bianco per le trasparenze, nessun metadato.
-- **La copia la prepara il browser** (`src/game-copy.ts`) dall'originale privato: orientamento applicato, ritaglio 4:5 (il più grande,
-  centrato, se l'owner non ne ha scelto uno), ridimensionamento del canvas in qualità alta, trattamento delle SLOP (sezione 4) con la
+- **La copia la prepara il browser** (`src/game-copy.ts`) dall'originale privato: orientamento applicato, foto intera centrata o ritaglio
+  scelto dall’owner, ridimensionamento del canvas in qualità alta, trattamento delle SLOP (sezione 4) con la
   compressione JPEG intermedia del browser, eventuali bande nere aggiunte dopo il trattamento, WebP qualità 85 e misure della copia
   decodificata di nuovo. Il browser la carica
   (`POST /:id/copy?crop=…`, misure e trattamento nelle intestazioni `X-Copy-Metrics` e `X-Copy-Treatment`); il Worker toglie i
@@ -60,11 +61,13 @@ di testo non sceglie più il formato.
 - **Un solo codificatore** per REAL e SLOP, quello del browser dell'owner: due codificatori diversi (Images sul server per alcune,
   il browser per altre) potrebbero distinguere l'origine dalla compressione. Usare sempre lo stesso browser (Chrome, Edge o Firefox:
   Safari non esporta WebP). Per aggiornare una vecchia copia si apre «Inquadratura» nel dettaglio della foto.
-- **Inquadratura** (passo 3 del wizard REAL, revisione dello studio SLOP e dettaglio della galleria, per nuove e approvate): il riquadro
-  4:5 si sposta con il trascinamento o le frecce e si ridimensiona con due dita o con il cursore. «Adatta alla larghezza» mostra
-  un’anteprima 4:5 con la foto centrata e le bande nere. `copy_crop` conserva `{x, y, width, height, format: "4:5"}`, con
-  `mode: "fit-width"` quando si usa l’intero originale. L’API riceve il suffisso `,fit-width` dopo il formato e verifica che il
-  rettangolo coincida con l’originale e possa avere bande sopra e sotto. Ripetere la stessa inquadratura conserva copia e statistiche.
+- **Inquadratura** (passo 3 del wizard REAL, revisione dello studio SLOP e dettaglio della galleria, per nuove e approvate): si apre
+  con la scelta salvata o con la foto intera. «Ritaglia» mostra il riquadro 4:5 sulla stessa foto. Si sposta trascinandolo o con le
+  frecce. Si ridimensiona con le maniglie, con due dita o con + e −. «Foto intera» torna all’anteprima centrata. «Salva» resta
+  visibile durante lo scorrimento. Ripetere la stessa inquadratura conserva copia e statistiche.
+- `copy_crop` conserva `{x, y, width, height, format: "4:5"}`. Per la foto intera il browser aggiunge `mode: "fit"` e invia
+  `,fit` dopo il formato. Il Worker verifica che il rettangolo coincida con l’originale. Le copie esistenti con `fit-width`
+  si riaprono come foto intere. L’upload dei client precedenti senza il parametro `crop` conserva il ritaglio centrato.
 - Approvare e pubblicare richiedono una copia 4:5. Una copia di una ricetta precedente (formato diverso) va rifatta: il server rifiuta
   di approvarla o pubblicarla, e le pubblicate con una copia non 4:5 escono dal gioco al rilascio (sezione 7).
 - **Licenze ND** escluse dal gioco: la copia è una versione modificata.
@@ -107,7 +110,7 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
 - **Passi** (versione 5 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile. Ogni valore è
   proposto dalle misure della REAL; l'owner può sostituirli tutti con i cursori (sezione 4.4), che applicano gli stessi passi con i
   suoi valori:
-  1. selezione dei pixel dell’inquadratura, con l’intera foto quando si adatta alla larghezza;
+  1. selezione dei pixel dell’inquadratura, con l’intera foto come scelta predefinita;
   2. riduzione all'altezza della copia della REAL di origine (mai un ingrandimento, mai sotto 480 px);
   3. contrasto verso quello della REAL, con un fattore tra 0,85 e 1,2;
   4. bianco e nero o seppia, con la tinta della REAL (registrata come dominante; la sua dominante se è stata misurata prima della tinta), se il Colore della REAL lo è.

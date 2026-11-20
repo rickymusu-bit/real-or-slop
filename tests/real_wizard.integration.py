@@ -19,10 +19,10 @@ token = Path('.dev.vars').read_text().strip().split('=', 1)[1]
 folder = Path('artifacts/wizard-browser')
 folder.mkdir(parents=True, exist_ok=True)
 
-def image_file(name, seed):
-    picture = Image.new('RGB', (420, 280), (60 + seed, 100, 180))
-    for x in range(0, 420, 5):
-        picture.putpixel((x, x % 280), (255, seed, x % 200))
+def image_file(name, seed, size=(420, 280)):
+    picture = Image.new('RGB', size, (60 + seed, 100, 180))
+    for x in range(0, size[0], 5):
+        picture.putpixel((x, x % size[1]), (255, seed, x % 200))
     buffer = io.BytesIO()
     picture.save(buffer, format='JPEG', quality=89)
     return {'name': name + '.jpg', 'mimeType': 'image/jpeg', 'buffer': buffer.getvalue()}
@@ -288,8 +288,11 @@ with sync_playwright() as p:
         expect(crop_a).to_contain_text('4:5 verticale')
         crop_a.get_by_role('button', name='Cambia inquadratura').click()
         editor = page.locator('dialog.crop-dialog')
-        expect(editor.locator('.crop-frame')).to_be_visible()
-        expect(editor.locator('.crop-format select')).to_have_value('4:5')
+        frame = editor.locator('.crop-frame')
+        expect(frame).to_be_visible()  # The existing saved crop reopens directly.
+        expect(editor.get_by_role('heading', name='Inquadratura 4:5')).to_be_visible()
+        expect(editor.locator('select, input[type=range]')).to_have_count(0)
+        expect(frame).to_have_attribute('aria-valuenow', '280')
         if name == 'mobile':
             stage = editor.locator('.crop-stage')
             stage.scroll_into_view_if_needed()
@@ -301,18 +304,38 @@ with sync_playwright() as p:
                 points = [{'x': x - spread, 'y': y, 'id': 1}, {'x': x + spread, 'y': y, 'id': 2}] if spread else []
                 touch.send('Input.dispatchTouchEvent', {'type': event, 'touchPoints': points})
 
-            size = editor.locator('[data-size=crop]')
-            expect(size).to_have_value('280')
-            pinch('touchStart', 30)
-            pinch('touchMove', 60)
-            expect(size).to_have_value('140')
+            pinch('touchStart', 60)
             pinch('touchMove', 30)
-            expect(size).to_have_value('280')
+            expect(frame).to_have_attribute('aria-valuenow', '140')
+            pinch('touchMove', 45)
+            expect(frame).to_have_attribute('aria-valuenow', '210')  # Spread fingers to grow the frame.
+            pinch('touchMove', 30)
+            expect(frame).to_have_attribute('aria-valuenow', '140')  # Bring fingers together to shrink it.
             pinch('touchEnd', 0)
+        handle = editor.locator('[data-crop-corner=se]').bounding_box()
+        x, y = round(handle['x'] + handle['width'] / 2 - 7), round(handle['y'] + handle['height'] / 2 - 7)
+        before = int(frame.get_attribute('aria-valuenow'))
+        if name == 'mobile':
+            for event, offset in (('touchStart', 0), ('touchMove', -28), ('touchEnd', None)):
+                point = [{'x': x + offset, 'y': y + offset, 'id': 1}] if offset is not None else []
+                touch.send('Input.dispatchTouchEvent', {'type': event, 'touchPoints': point})
             touch.detach()
-        editor.locator('[data-crop-mode]').select_option('fit-width')
-        expect(editor.get_by_alt_text('Foto intera con bande nere')).to_be_visible()
-        expect(editor.locator('.crop-frame')).to_be_hidden()
+        else:
+            page.mouse.move(x, y)
+            page.mouse.down()
+            page.mouse.move(x - 28, y - 28, steps=4)
+            page.mouse.up()
+        assert int(frame.get_attribute('aria-valuenow')) < before
+        shape = frame.bounding_box()
+        assert abs(shape['width'] / shape['height'] - 0.8) < 0.02, shape
+        editor.get_by_role('button', name='Foto intera').click()
+        expect(editor.get_by_alt_text('Anteprima della foto intera nel formato 4:5')).to_be_visible()
+        expect(frame).to_be_hidden()
+        if name == 'mobile':
+            viewport = page.viewport_size
+            page.set_viewport_size({'width': 340, 'height': 400})
+            expect(editor.get_by_role('button', name='Salva')).to_be_in_viewport(ratio=1)
+            page.set_viewport_size(viewport)
         copy_route = '**/api/admin/library/' + first['id'] + '/copy?*'
         uploads = []
         page.route(copy_route, lambda route: uploads.append(route))
@@ -335,12 +358,15 @@ with sync_playwright() as p:
         saved = page.request.get(base + '/api/admin/library/' + first['id']).json()
         copy = saved['copy']
         assert (copy['width'], copy['height']) == (420, 525), copy
-        assert copy['crop'] == {'x': 0, 'y': 0, 'width': 420, 'height': 280, 'format': '4:5', 'mode': 'fit-width'}, copy
+        assert copy['crop'] == {'x': 0, 'y': 0, 'width': 420, 'height': 280, 'format': '4:5', 'mode': 'fit'}, copy
         picture = Image.open(io.BytesIO(page.request.get(base + saved['file']).body())).convert('RGB')
         assert max(picture.getpixel((210, 20))) < 8 and max(picture.getpixel((210, 504))) < 8
         assert picture.getpixel((10, 260))[2] > 150 and picture.getpixel((410, 260))[2] > 150
         crop_a.get_by_role('button', name='Cambia inquadratura').click()
-        expect(editor.locator('[data-crop-mode]')).to_have_value('fit-width')
+        expect(editor.get_by_role('button', name='Ritaglia')).to_be_visible()
+        expect(frame).to_be_hidden()
+        editor.get_by_role('button', name='Ritaglia').click()
+        expect(frame).to_have_attribute('aria-valuenow', '224')
         editor.locator('[data-crop=cancel]').click()
         page.screenshot(path=str(folder / (name + '-step3-crop.png')), full_page=True)
         page.get_by_role('button', name='Indietro: tag').click()
@@ -376,7 +402,7 @@ with sync_playwright() as p:
             route = requests.pop(0)
             data = route.request.post_data_json
             assert data['gallery_id'] == gallery_id and f'File:Bridge{number}.jpg' in data['url'], data
-            photo = image_file('commons-' + name, seed + 60 + number)
+            photo = image_file('commons-' + name, seed + 60 + number, (280, 420) if number == 3 else (420, 280))
             response = page.request.post(base + '/api/admin/library/upload?' + urllib.parse.urlencode({
                 'origin': 'REAL', 'title': f'Commons {name} {number}', 'gallery_id': gallery_id}),
                 data=photo['buffer'], headers={'Content-Type': photo['mimeType']})
@@ -440,6 +466,13 @@ with sync_playwright() as p:
         for photo_id in (first_acquired, last_acquired):
             stored = page.request.get(base + '/api/admin/library/' + photo_id).json()
             assert stored['gallery_id'] == gallery_id and stored['status'] == 'new' and stored['copy']
+            assert stored['copy']['crop']['mode'] == 'fit', stored
+            picture = Image.open(io.BytesIO(page.request.get(base + stored['file']).body())).convert('RGB')
+            if photo_id == last_acquired:
+                assert picture.size == (336, 420) and max(picture.getpixel((10, 210))) < 8 and max(picture.getpixel((325, 210))) < 8
+                assert picture.getpixel((170, 15))[2] > 150 and picture.getpixel((170, 405))[2] > 150
+            else:
+                assert picture.size == (420, 525) and max(picture.getpixel((210, 20))) < 8 and max(picture.getpixel((210, 504))) < 8
         page.locator(f'[data-rw-image="{first_acquired}"] [data-rw=discard]').click()
         expect(page.locator('.rw-message')).to_contain_text('Foto tolta dal caricamento')
         discarded = page.request.get(base + '/api/admin/library/' + first_acquired).json()

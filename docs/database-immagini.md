@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 8.6.0
+# Foto e gallerie — specifica 8.7.0
 
-Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:44:53Z.
+Stato: implementata nel ramo 1.47.0, da rilasciare. Aggiornata: 2026-11-20T06:09:53Z.
 
 ## 1. Decisioni dell'owner
 
@@ -74,7 +74,7 @@ suo batch originario, ma esce dalla sua revisione operativa.
 - **Analisi combinata:** dal dettaglio di una REAL senza descrizione editoriale e fuori dal cestino, con conferma di una chiamata a
   pagamento sull’originale intero. Sostituisce i tag. Se l’analisi precedente è interrotta o incerta, la conferma segnala il possibile
   addebito già avvenuto. La foto pubblicata resta nel gioco.
-- **Copie e misure:** «Inquadratura» prepara la copia con il ritaglio o l’adattamento alla larghezza scelto. Durante la preparazione
+- **Copie e misure:** «Inquadratura» prepara la copia con la foto intera adattata al 4:5 o il ritaglio scelto. Durante la preparazione
   della copia, il salvataggio di inquadratura o trattamento e l’analisi, l’avviso al centro blocca la finestra fino all’esito. Le
   misure mancanti delle copie si calcolano in background all’apertura della galleria.
 - **Trattamento di una SLOP:** «Senza/Con trattamento» e «Regola il trattamento», con i cursori e l'anteprima nella pagina

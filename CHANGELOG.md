@@ -1,7 +1,11 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-19T23:44:53Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-20T06:09:53Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.47.0 — 2026-11-20T06:09:53Z
+
+- Le nuove copie 4:5 mostrano l’intera foto, con bande nere secondo le proporzioni. Nell’editor si può scegliere il ritaglio, spostare il riquadro e ridimensionarlo con le maniglie. Su mobile, allontanare le dita allarga il riquadro. «Salva» resta visibile durante lo scorrimento.
 
 ## 1.46.0 — 2026-11-19T23:44:53Z
 
