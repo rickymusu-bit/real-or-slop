@@ -1,8 +1,8 @@
 import { galleryId, galleryRoute } from "./galleries";
 import { removeGallery, sweepGalleryFiles } from "./gallery-removal";
 /** Image library of the dashboard (spec `libreria-immagini`, `database-immagini`): states and transitions, edits with
- * optimistic revision, tags with categories and aliases, vocabulary, game copies with their crop, trash and deletion of every row
- * and file, bulk actions, statistics per image, distribution, Commons acquisition, regeneration of a SLOP, settings and contexts. */
+ * optimistic revision, game copies with their crop, trash and deletion of every row and file, bulk actions, statistics per image,
+ * distribution, Commons acquisition, regeneration of a SLOP, settings and contexts. Tags were retired on 2026-11-20 (owner decision). */
 import { imageLabel } from "../shared/image-label";
 import { body, HttpError, id, json, type Env } from "./core";
 import { browseCommonsCategory, browseCommonsSearch, commonsFile, MAX_IMAGE_BYTES } from "./commons-editorial";
@@ -12,11 +12,9 @@ import { cleanImage } from "../shared/media-clean";
 import { centredCrop, copyDimensions, cropError, frameLongSide, GAME_COPY, parseCrop, storedCrop } from "../shared/game-copy";
 import { imageDimensions } from "../shared/image-dimensions";
 import { isNoDerivatives } from "../shared/licenses";
-import { checkTag } from "../shared/tags";
 import { contextRoute } from "./model-context";
-import { categoryError, forcedCategory, isCategory, limitError, SINGLE, VISUAL, type Category } from "../shared/tag-categories";
 import { treatedLong, validMetrics, validSettings, validTreatment } from "../shared/copy-treatment";
-import { analysisStatus, analyze, completable, completeCategories } from "./analysis";
+import { analysisStatus, analyze } from "./analysis";
 import { modelsRoute } from "./models";
 import { settingsRoute } from "./app-settings";
 import { stats } from "./stats";
@@ -37,11 +35,10 @@ export interface Row {
   rights_confirmed: number; revision: number; created_at: string; updated_at: string; approved_at: string | null;
   published_at: string | null; trashed_at: string | null;
   analysis_status: "none" | "running" | "done" | "uncertain" | "failed"; analysis_error: string; analyzed_at: string | null;
-  generated_tags: string | null;
   real_description: string | null; real_description_provenance: string | null; commons_description: string | null;
   generation_batch: string | null; generation_slot: string | null; generation_quality: string | null;
   analysis_base_context: string | null; analysis_task_context: string | null; copy_crop: string | null;
-  categories_completed_at: string | null; copy_metrics: string | null; copy_treatment: string | null;
+  copy_metrics: string | null; copy_treatment: string | null;
 }
 const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
@@ -73,62 +70,15 @@ export async function find(env: Env, imageIdValue: string): Promise<Row> {
   if (!row) throw new HttpError(404, "Immagine non trovata");
   return row;
 }
-export interface TagRow { label: string; category: Category }
-/** Tags of each image, with their category, by label. */
-export async function tagRowsOf(env: Env, ids: readonly string[]): Promise<Map<string, TagRow[]>> {
-  const out = new Map<string, TagRow[]>();
-  for (let i = 0; i < ids.length; i += 90) {
-    const chunk = ids.slice(i, i + 90);
-    const rows = await env.DB.prepare(`SELECT it.image_id,t.label,t.category FROM image_tags it JOIN tags t ON t.id=it.tag_id
-      WHERE it.image_id IN (${chunk.map(() => "?").join(",")}) ORDER BY t.label`).bind(...chunk).all<{ image_id: string } & TagRow>();
-    for (const row of rows.results) out.set(row.image_id, [...(out.get(row.image_id) || []), { label: row.label, category: row.category }]);
-  }
-  return out;
-}
-export async function tagsOf(env: Env, ids: readonly string[]): Promise<Map<string, string[]>> {
-  return new Map([...(await tagRowsOf(env, ids))].map(([key, rows]) => [key, rows.map(r => r.label)]));
-}
-/** Category of each existing tag among the labels. */
-export async function categoriesOf(env: Env, wanted: readonly string[]): Promise<Map<string, Category>> {
-  if (!wanted.length) return new Map();
-  const rows = (await env.DB.prepare("SELECT label,category FROM tags WHERE label IN (SELECT value FROM json_each(?))")
-    .bind(JSON.stringify(wanted)).all<TagRow>()).results;
-  return new Map(rows.map(r => [r.label, r.category]));
-}
-/** Categories for a set of labels: an existing tag keeps its own; a new one takes the requested category, or its forced one (Time
- * for a decade, Color and Medium for their closed lists), or «other». Refuses labels outside their category and two tags of a
- * single-tag category. A category asked against the forced one is refused, not corrected: the server stays strict. */
-export async function categorize(env: Env, wanted: readonly string[], requested: Record<string, unknown> = {}): Promise<Map<string, Category>> {
-  const existing = await categoriesOf(env, wanted), out = new Map<string, Category>();
-  for (const label of wanted) {
-    const asked = requested[label];
-    if (asked !== undefined && !isCategory(asked)) throw new HttpError(400, "Categoria inesistente per «" + label + "»");
-    const category = existing.get(label) ?? (isCategory(asked) ? asked : forcedCategory(label) ?? "other");
-    const error = categoryError(label, category);
-    if (error) throw new HttpError(400, error);
-    out.set(label, category);
-  }
-  const limit = limitError(out.values());
-  if (limit) throw new HttpError(400, limit);
-  return out;
-}
-/** Texts produced by the one generation of the image, or null if it never happened. */
-function generatedOf(row: Row): { tags: string[] } | null {
-  if (row.generated_tags === null || row.generated_tags === undefined) return null;
-  let tags: unknown = [];
-  try { tags = JSON.parse(row.generated_tags); } catch { /* unreadable: no tags */ }
-  return { tags: Array.isArray(tags) ? tags.filter((t): t is string => typeof t === "string") : [] };
-}
 /** The crop of the copy, or null for a copy of an earlier recipe (4:5, or before migration 0042): to be made again. */
 const cropOf = (row: Pick<Row, "copy_crop">) => storedCrop(row.copy_crop);
-/** Slot of a generated SLOP: index, theme and tags by category. */
+/** Slot of a generated SLOP: index, process, measures and evaluation. */
 function parseSlot(value: string | null): unknown {
   try { return value ? JSON.parse(value) : null; } catch { return null; }
 }
 const parseJson = (value: string | null): unknown => { try { return value ? JSON.parse(value) : null; } catch { return null; } };
 interface Extra { stats?: { views: number; correct: number }; in_play?: number }
-function view(row: Row, rows: TagRow[], extra: Extra = {}) {
-  const tags = rows.map(r => r.label);
+function view(row: Row, extra: Extra = {}) {
   const v = row.copy_sha256 ? row.copy_sha256.slice(0, 12) : row.original_sha256.slice(0, 12);
   return {
     id: row.id, gallery_id: row.gallery_id, origin: row.origin, status: row.status, trashed_from: row.trashed_from,
@@ -140,15 +90,12 @@ function view(row: Row, rows: TagRow[], extra: Extra = {}) {
     width: row.width, height: row.height, original_mime: row.original_mime, original_sha256: row.original_sha256,
     copy: row.copy_key ? { sha256: row.copy_sha256, width: row.copy_width, height: row.copy_height, bytes: row.copy_bytes, crop: cropOf(row) } : null,
     no_derivatives: row.origin === "REAL" && isNoDerivatives(row.license_name, row.license_url),
-    rights_confirmed: row.rights_confirmed === 1, revision: row.revision, tags, categories: Object.fromEntries(rows.map(r => [r.label, r.category])),
+    rights_confirmed: row.rights_confirmed === 1, revision: row.revision,
     created_at: row.created_at, updated_at: row.updated_at, approved_at: row.approved_at, published_at: row.published_at,
     trashed_at: row.trashed_at,
     analysis: { status: row.analysis_status, error: row.analysis_error, at: row.analyzed_at,
       context: row.analysis_task_context ? { base: row.analysis_base_context, task: row.analysis_task_context } : null },
-    generated: generatedOf(row),
     generation: row.generation_batch ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality } : null,
-    missing_categories: VISUAL.filter(c => !rows.some(r => r.category === c)),
-    completable: completable(row, rows.map(r => r.category)),
     metrics: validMetrics(parseJson(row.copy_metrics)), treatment: validTreatment(parseJson(row.copy_treatment)),
     file: `${base}/${row.id}/file?v=${v}`, original: `${base}/${row.id}/original`,
     stats: extra.stats || { views: 0, correct: 0 }, in_play: extra.in_play || 0,
@@ -160,40 +107,8 @@ async function extras(env: Env, ids: string[]): Promise<Map<string, Extra>> {
 }
 export async function viewOf(env: Env, imageIdValue: string) {
   const row = await find(env, imageIdValue);
-  return view(row, (await tagRowsOf(env, [row.id])).get(row.id) || [], (await extras(env, [row.id])).get(row.id));
+  return view(row, (await extras(env, [row.id])).get(row.id));
 }
-export function labels(value: unknown): string[] {
-  if (!Array.isArray(value) || value.length > 40) throw new HttpError(400, "Elenco di tag non valido (massimo 40)");
-  const out = new Set<string>();
-  for (const item of value) {
-    const checked = checkTag(item);
-    if (!checked.ok) throw new HttpError(400, "«" + String(item).slice(0, 60) + "»: " + checked.reason + (checked.suggestion ? ". Prova «" + checked.suggestion + "»" : ""));
-    out.add(checked.tag);
-  }
-  return [...out];
-}
-/** Aliases resolve to their tag before anything is stored (spec `libreria-immagini`). */
-export async function resolveAliases(env: Env, wanted: string[]): Promise<string[]> {
-  if (!wanted.length) return wanted;
-  const rows = (await env.DB.prepare(`SELECT a.alias,t.label FROM tag_aliases a JOIN tags t ON t.id=a.tag_id
-    WHERE a.alias IN (SELECT value FROM json_each(?))`).bind(JSON.stringify(wanted)).all<{ alias: string; label: string }>()).results;
-  const map = new Map(rows.map(r => [r.alias, r.label]));
-  return [...new Set(wanted.map(label => map.get(label) || label))];
-}
-/** Statements that make the image's tags exactly `wanted`; tags rows are created on first use. */
-/** New tags take the category given (default «other»); existing tags keep theirs. */
-export function tagStatements(env: Env, imageIdValue: string, wanted: string[], guard: { sql: string; values: unknown[] }, categories = new Map<string, Category>()) {
-  const stamp = now();
-  return [
-    ...wanted.map(label => env.DB.prepare(`INSERT INTO tags(id,label,category,created_at) SELECT ?,?,?,? WHERE ${guard.sql}
-      ON CONFLICT(label) DO NOTHING`).bind(id(), label, categories.get(label) || "other", stamp, ...guard.values)),
-    env.DB.prepare(`DELETE FROM image_tags WHERE image_id=? AND tag_id NOT IN (SELECT id FROM tags WHERE label IN (SELECT value FROM json_each(?)))
-      AND ${guard.sql}`).bind(imageIdValue, JSON.stringify(wanted), ...guard.values),
-    env.DB.prepare(`INSERT OR IGNORE INTO image_tags(image_id,tag_id) SELECT ?,id FROM tags WHERE label IN (SELECT value FROM json_each(?))
-      AND ${guard.sql}`).bind(imageIdValue, JSON.stringify(wanted), ...guard.values),
-  ];
-}
-
 /** Adds a new image to the library. The original goes to quarantine; the browser then uploads its game copy. */
 export async function create(env: Env, input: { origin: Origin; title?: string; description?: string; bytes: ArrayBuffer;
   source_url?: string; author?: string; license_name?: string; license_url?: string; prompt?: string; model?: string;
@@ -231,7 +146,7 @@ export async function create(env: Env, input: { origin: Origin; title?: string; 
 
 /** What makes two treatments give the same copy. */
 const treatmentKey = (t: ReturnType<typeof validTreatment>) =>
-  t ? JSON.stringify([t.version, t.off, t.seed, t.long, t.medium, t.color, t.sample.metrics, t.settings || null]) : "";
+  t ? JSON.stringify([t.version, t.off, t.seed, t.long, t.sample.metrics, t.settings || null]) : "";
 
 /** POST /:id/copy?crop=…[&force=1]: stores the WebP game copy made in the owner's browser from the original (spec `copie-di-gioco`; owner
  * decision of 2026-11-16: the Worker handles what concerns OpenAI, the browser everything else). The crop is «x,y,width,height,4:5»
@@ -308,7 +223,7 @@ async function edit(env: Env, row: Row, data: Record<string, unknown>) {
   }
   const applicable = Object.keys(TEXT_FIELDS).filter(key => row.origin === "REAL"
     ? !["prompt", "model"].includes(key) : !["title", "source_url", "author", "license_name", "license_url"].includes(key));
-  const allowed = ["revision", "tags", "tag_categories", ...(row.origin === "REAL" ? ["real_description"] : []), ...applicable];
+  const allowed = ["revision", ...(row.origin === "REAL" ? ["real_description"] : []), ...applicable];
   if (Object.keys(data).some(key => !allowed.includes(key))) throw new HttpError(400, "Campi non previsti");
   if (data.revision !== row.revision) throw new HttpError(409, "Immagine modificata altrove: ricaricare");
   if (row.status === "published" && !(row.origin === "REAL" && "real_description" in data && Object.keys(data).every(k => ["revision","real_description"].includes(k)))) throw new HttpError(409, "Immagine pubblicata: avvia la modifica, che la ritira dal gioco");
@@ -320,20 +235,12 @@ async function edit(env: Env, row: Row, data: Record<string, unknown>) {
     if (row.origin !== "REAL" || !description) throw new HttpError(400, "Descrizione editoriale non valida");
     fields.push("real_description"); values.push(JSON.stringify(description));
   }
-  const wanted = data.tags === undefined ? null : await resolveAliases(env, labels(data.tags));
-  const requested = data.tag_categories ?? {};
-  if (typeof requested !== "object" || requested === null || Array.isArray(requested)) throw new HttpError(400, "Categorie dei tag non valide");
-  const categories = wanted ? await categorize(env, wanted, requested as Record<string, unknown>) : undefined;
-  if (row.status === "approved" && wanted && !wanted.length) throw new HttpError(409, "Un'immagine approvata deve avere almeno un tag");
   // Owner decision of 2026-11-11: at the end of an edit the image is approved. The owner edits what the player will see,
   // so an approved image stays approved; a new one stays new until it is approved.
-  const result = await env.DB.batch([
-    env.DB.prepare(`UPDATE images SET ${fields.map(key => key + "=?").join(",")}${fields.length ? "," : ""}
+  const result = await env.DB.prepare(`UPDATE images SET ${fields.map(key => key + "=?").join(",")}${fields.length ? "," : ""}
       revision=revision+1,updated_at=? WHERE id=? AND revision=? AND status IN ('new','approved','published')`)
-      .bind(...values, now(), row.id, row.revision),
-    ...(wanted ? tagStatements(env, row.id, wanted, { sql: "EXISTS(SELECT 1 FROM images WHERE id=? AND revision=?)", values: [row.id, row.revision + 1] }, categories) : []),
-  ]);
-  if (!result[0].meta.changes) throw new HttpError(409, "Immagine modificata altrove: ricaricare");
+      .bind(...values, now(), row.id, row.revision).run();
+  if (!result.meta.changes) throw new HttpError(409, "Immagine modificata altrove: ricaricare");
   return viewOf(env, row.id);
 }
 
@@ -346,12 +253,10 @@ export async function transition(env: Env, row: Row, action: string, data: Recor
     if (!cropOf(row)) throw new HttpError(409, "Rifai la copia di gioco in 4:5: scegli l'inquadratura");
     if (row.origin === "REAL" && isNoDerivatives(row.license_name, row.license_url))
       throw new HttpError(409, "Licenza senza opere derivate (ND): la copia di gioco è una versione modificata");
-    if (!((await tagsOf(env, [row.id])).get(row.id) || []).length) throw new HttpError(409, "Aggiungi almeno un tag");
     if (row.origin === "REAL" && data.rights_confirmed !== true && row.rights_confirmed !== 1)
       throw new HttpError(409, "Conferma di aver verificato diritti e licenza della foto");
     const result = await env.DB.prepare(`UPDATE images SET status='approved',approved_at=?,rights_confirmed=CASE WHEN origin='REAL' THEN 1 ELSE rights_confirmed END,
-      revision=revision+1,updated_at=? WHERE id=? AND status='new' AND copy_key IS NOT NULL
-      AND EXISTS(SELECT 1 FROM image_tags WHERE image_id=images.id)`).bind(stamp, stamp, row.id).run();
+      revision=revision+1,updated_at=? WHERE id=? AND status='new' AND copy_key IS NOT NULL`).bind(stamp, stamp, row.id).run();
     if (!result.meta.changes) throw new HttpError(409, "Immagine cambiata: ricaricare");
   } else if (action === "publish") {
     if (row.status === "published") return;
@@ -427,61 +332,50 @@ async function destroy(env: Env, ids: readonly string[]): Promise<{ deleted: num
   return { deleted: rows.length, postponed };
 }
 
-/** The list: status, origin, text in title/description/prompt and one or more tags («all» or «any»). */
+/** The list: status, origin, text in identifier/title/description/prompt, batch, copy to redo, REAL without description, gallery. */
 async function list(env: Env, url: URL) {
   const status = url.searchParams.get("status") || "library", originFilter = url.searchParams.get("origin") || "all";
-  const q = (url.searchParams.get("q") || "").trim().slice(0, 100), match = url.searchParams.get("match") || "all";
+  const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
   const gallery = url.searchParams.get("gallery") || "";
   const paged = url.searchParams.has("offset");
   const offset = Number(url.searchParams.get("offset"));
   const sort = url.searchParams.get("sort") || "added", order = url.searchParams.get("order") || "desc";
-  const batch = url.searchParams.get("batch") || "", incomplete = url.searchParams.get("incomplete") === "1" ? 1 : 0;
+  const batch = url.searchParams.get("batch") || "";
   if (url.searchParams.has("group")) throw new HttpError(400, "Il filtro per gruppi non è più disponibile");
-  const wanted = [...new Set([url.searchParams.get("tag") || "", ...(url.searchParams.get("tags") || "").split(",")].map(t => t.trim()).filter(Boolean))];
+  if (["tag", "tags", "match", "incomplete"].some(key => url.searchParams.has(key))) throw new HttpError(400, "I tag non esistono più: filtra per testo, stato o origine");
   if (!["library", "new", "approved", "published", "trash"].includes(status) || !["all", "REAL", "SLOP"].includes(originFilter)
-    || !["all", "any"].includes(match) || wanted.length > 20 || (batch && !/^[\w-]{1,64}$/.test(batch)) || (gallery && !/^[\w-]{1,64}$/.test(gallery))) throw new HttpError(400, "Filtro non valido");
+    || (batch && !/^[\w-]{1,64}$/.test(batch)) || (gallery && !/^[\w-]{1,64}$/.test(gallery))) throw new HttpError(400, "Filtro non valido");
   if (paged && (!gallery || !Number.isSafeInteger(offset) || offset < 0 || !["added", "views", "accuracy"].includes(sort) || !["asc", "desc"].includes(order)))
     throw new HttpError(400, "Pagina non valida");
   const where = [status === "library" ? "status<>'trash'" : "status=?1", "(?2='all' OR origin=?2)",
-    `(?3='[]' OR id IN (SELECT it.image_id FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE t.label IN (SELECT value FROM json_each(?3))
-      GROUP BY it.image_id HAVING count(DISTINCT t.label)>=CASE ?5 WHEN 'any' THEN 1 ELSE json_array_length(?3) END))`,
-    "(?4='' OR id LIKE '%'||?4||'%' COLLATE NOCASE OR title LIKE '%'||?4||'%' COLLATE NOCASE OR description LIKE '%'||?4||'%' COLLATE NOCASE OR prompt LIKE '%'||?4||'%' COLLATE NOCASE)", "(?6='' OR generation_batch=?6)",
-    `(?7=0 OR (SELECT count(DISTINCT t.category) FROM image_tags it JOIN tags t ON t.id=it.tag_id WHERE it.image_id=i.id
-      AND t.category IN ('genre','color','medium'))<3)`, `(?8=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, "(?9=0 OR (origin='REAL' AND real_description IS NULL))",
-    gallery ? "gallery_id=?10" : "?10=''"].join(" AND ");
+    "(?3='' OR id LIKE '%'||?3||'%' COLLATE NOCASE OR title LIKE '%'||?3||'%' COLLATE NOCASE OR description LIKE '%'||?3||'%' COLLATE NOCASE OR prompt LIKE '%'||?3||'%' COLLATE NOCASE)", "(?4='' OR generation_batch=?4)",
+    `(?5=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, "(?6=0 OR (origin='REAL' AND real_description IS NULL))",
+    gallery ? "gallery_id=?7" : "?7=''"].join(" AND ");
   await sweepRetired(env);
   const limit = 72;
   const sortKey = sort === "views" ? currentCopyViews : sort === "accuracy" ? `1.0*${currentCopyCorrect}/NULLIF(${currentCopyViews},0)` : "created_at";
-  const ordering = paged ? `${sortKey} ${order === "asc" ? "ASC" : "DESC"} NULLS LAST,created_at DESC,id LIMIT ?11 OFFSET ?12` : "updated_at DESC,id LIMIT 500";
+  const ordering = paged ? `${sortKey} ${order === "asc" ? "ASC" : "DESC"} NULLS LAST,created_at DESC,id LIMIT ?8 OFFSET ?9` : "updated_at DESC,id LIMIT 500";
   const rows = (await env.DB.prepare(`SELECT * FROM images i WHERE ${where} ORDER BY ${ordering}`)
-    .bind(status, originFilter, JSON.stringify(wanted), q, match, batch, incomplete, url.searchParams.get("redo_copy") === "1" ? 1 : 0,
+    .bind(status, originFilter, q, batch, url.searchParams.get("redo_copy") === "1" ? 1 : 0,
       url.searchParams.get("undescribed") === "1" ? 1 : 0, gallery, ...(paged ? [limit + 1, offset] : [])).all<Row>()).results;
   const next = paged && rows.length > limit ? offset + limit : null;
   if (next !== null) rows.pop();
-  const ids = rows.map(r => r.id), [tags, more] = await Promise.all([tagRowsOf(env, ids), extras(env, ids)]);
+  const more = await extras(env, rows.map(r => r.id));
   const countQuery = "SELECT status,origin,count(*) AS n FROM images";
   const counts = (await (gallery
     ? env.DB.prepare(countQuery + " WHERE gallery_id=? GROUP BY status,origin").bind(gallery)
     : env.DB.prepare(countQuery + " GROUP BY status,origin")).all<{ status: string; origin: string; n: number }>()).results;
-  return json({ items: rows.map(r => view(r, tags.get(r.id) || [], more.get(r.id))), counts, ...(paged ? {next} : {}) });
+  return json({ items: rows.map(r => view(r, more.get(r.id))), counts, ...(paged ? {next} : {}) });
 }
 
-/** Distribution of the approved and published images: REAL and SLOP overall and for each tag, with the spread
- * REAL − SLOP over approved and published together (as in the SLOP studio). Free. */
+/** Distribution of the approved and published images: REAL and SLOP, approved and published. Free. */
 async function distribution(env: Env) {
   const totals = (await env.DB.prepare(`SELECT origin,status,count(*) AS n FROM images WHERE status IN ('approved','published')
     GROUP BY origin,status`).all<{ origin: Origin; status: "approved" | "published"; n: number }>()).results;
-  const tags = (await env.DB.prepare(`SELECT t.label,t.category,
-    sum(i.origin='REAL' AND i.status='approved') AS real_approved,sum(i.origin='REAL' AND i.status='published') AS real_published,
-    sum(i.origin='SLOP' AND i.status='approved') AS slop_approved,sum(i.origin='SLOP' AND i.status='published') AS slop_published
-    FROM tags t JOIN image_tags it ON it.tag_id=t.id JOIN images i ON i.id=it.image_id WHERE i.status IN ('approved','published')
-    GROUP BY t.id`).all<{ label: string; category: Category; real_approved: number; real_published: number; slop_approved: number; slop_published: number }>()).results;
   const count = (origin: Origin, state: string) => totals.find(t => t.origin === origin && t.status === state)?.n || 0;
   return {
     totals: { REAL: { approved: count("REAL", "approved"), published: count("REAL", "published") },
       SLOP: { approved: count("SLOP", "approved"), published: count("SLOP", "published") } },
-    tags: tags.map(t => ({ ...t, spread: t.real_approved + t.real_published - t.slop_approved - t.slop_published }))
-      .sort((a, b) => b.spread - a.spread || a.label.localeCompare(b.label)),
   };
 }
 
@@ -498,7 +392,6 @@ export async function library(request: Request, env: Env, path: string): Promise
   if (gallery && request.method === "DELETE") return json(await removeGallery(env, gallery[1], await body(request, 1000)));
   if (path === base + "/galleries" || path.startsWith(base + "/galleries/"))
     return json(await galleryRoute(env, request.method, path.slice((base + "/galleries").length).replace(/^\//, ""), ["POST", "PATCH"].includes(request.method) ? await body(request, 40_000) : {}));
-  if (path === base + "/tags" || path.startsWith(base + "/tags/")) return vocabulary(request, env, path);
   const candidate = /^\/api\/admin\/library\/slop\/batches\/([\w-]{1,64})\/candidate\/([\w-]{1,64})$/.exec(path);
   if (candidate && request.method === "GET") return candidateFile(env, candidate[1], candidate[2]);
   if (path === base + "/analysis" && request.method === "GET") return json(await analysisStatus(env));
@@ -549,18 +442,13 @@ export async function library(request: Request, env: Env, path: string): Promise
         if (gallery) await assignGallery(env, row, gallery);
         else if (action === "set-approved" || action === "set-published") {
           await setPhotoStatus(env, row, action === "set-approved" ? "approved" : "published", data);
-        } else if (action === "tag-add" || action === "tag-remove") {
-          const current = (await tagsOf(env, [row.id])).get(row.id) || [], change = await resolveAliases(env, labels(data.tags));
-          const wanted = action === "tag-add" ? [...new Set([...current, ...change])] : current.filter(t => !change.includes(t));
-          await edit(env, row, { revision: row.revision, tags: wanted,
-            tag_categories: isCategory(data.category) ? Object.fromEntries(change.map(label => [label, data.category])) : {} });
         } else await transition(env, row, action, data);
         done.push(target);
       } catch (error) { failed.push({ id: target, error: error instanceof HttpError ? error.message : "Errore" }); }
     }
     return json({ done: done.length, failed });
   }
-  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|analyze|regenerate|categories|metrics))?$/);
+  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|analyze|regenerate|metrics))?$/);
   if (!match) throw new HttpError(404, "API della libreria inesistente");
   const row = await find(env, match[1]);
   if (match[2] === "file" || match[2] === "original") {
@@ -573,10 +461,6 @@ export async function library(request: Request, env: Env, path: string): Promise
   if (match[2] === "analyze") {
     if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
     return json(await analyze(env, row, await body(request, 1000)));
-  }
-  if (match[2] === "categories") {
-    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
-    return json(await completeCategories(env, row, await body(request, 1000)));
   }
   if (match[2] === "metrics") {
     // Measures of an existing copy, made by the browser from that copy: free, any state, the copy must still be the same.
@@ -610,67 +494,3 @@ export async function library(request: Request, env: Env, path: string): Promise
   }
   throw new HttpError(405, "Metodo non consentito");
 }
-
-/** /tags: vocabulary with counts and aliases; merge a tag into another; add or remove an alias. No paid calls. */
-async function vocabulary(request: Request, env: Env, path: string): Promise<Response> {
-  if (path === base + "/tags" && request.method === "GET") {
-    const tags = (await env.DB.prepare(`SELECT t.id,t.label,t.category,count(it.image_id) AS images,
-      (SELECT json_group_array(alias) FROM (SELECT alias FROM tag_aliases WHERE tag_id=t.id ORDER BY alias)) AS aliases
-      FROM tags t LEFT JOIN image_tags it ON it.tag_id=t.id GROUP BY t.id ORDER BY t.label`).all<{ id: string; label: string; category: Category; images: number; aliases: string }>()).results;
-    return json({ tags: tags.map(t => ({ label: t.label, category: t.category, images: t.images, aliases: JSON.parse(t.aliases) as string[] })) });
-  }
-  if (request.method !== "POST" && request.method !== "DELETE" && request.method !== "PUT") throw new HttpError(405, "Metodo non consentito");
-  const data = await body(request, 2000);
-  const tag = async (label: string) => env.DB.prepare("SELECT id,label,category FROM tags WHERE label=?").bind(label).first<{ id: string; label: string; category: Category }>();
-  /** Images that would hold two tags of a single-tag category if «tagId» took «category» (other than «except»). */
-  const clashes = async (tagId: string, category: Category, except = "") => !SINGLE.includes(category) ? 0
-    : (await env.DB.prepare(`SELECT count(DISTINCT a.image_id) AS n FROM image_tags a JOIN image_tags b ON b.image_id=a.image_id
-      JOIN tags t ON t.id=b.tag_id WHERE a.tag_id=? AND b.tag_id<>? AND b.tag_id<>? AND t.category=?`).bind(tagId, tagId, except, category).first<{ n: number }>())!.n;
-  if (path === base + "/tags/category" && request.method === "PUT") {
-    // The category belongs to the tag: changing it applies to every image that uses it.
-    const [label] = labels([data.label]);
-    if (!isCategory(data.category)) throw new HttpError(400, "Categoria inesistente");
-    const category = data.category, target = await tag(label);
-    if (!target) throw new HttpError(404, "Tag inesistente");
-    const error = categoryError(label, category);
-    if (error) throw new HttpError(400, error);
-    const clash = await clashes(target.id, category);
-    if (clash) throw new HttpError(409, `${clash} ${clash === 1 ? "immagine ha" : "immagini hanno"} già un tag di questa categoria, che ne ammette uno solo`);
-    await env.DB.prepare("UPDATE tags SET category=? WHERE id=?").bind(category, target.id).run();
-    return json({ label, category });
-  }
-  if (path === base + "/tags/merge" && request.method === "POST") {
-    const [from] = labels([data.from]), [into] = labels([data.into]);
-    if (from === into) throw new HttpError(400, "Scegli due tag diversi");
-    const [source, target] = await Promise.all([tag(from), tag(into)]);
-    if (!source || !target) throw new HttpError(404, "Tag inesistente");
-    // The remaining tag keeps its category: images of the merged one must not end up with two Time or Format tags.
-    const clash = await clashes(source.id, target.category, target.id);
-    if (clash) throw new HttpError(409, `${clash} ${clash === 1 ? "immagine avrebbe" : "immagini avrebbero"} due tag di una categoria che ne ammette uno solo`);
-    // Images move to the remaining tag; the merged label becomes its alias, with the aliases it had.
-    await env.DB.batch([
-      env.DB.prepare("INSERT OR IGNORE INTO image_tags(image_id,tag_id) SELECT image_id,? FROM image_tags WHERE tag_id=?").bind(target.id, source.id),
-      env.DB.prepare("UPDATE tag_aliases SET tag_id=? WHERE tag_id=?").bind(target.id, source.id),
-      env.DB.prepare("DELETE FROM image_tags WHERE tag_id=?").bind(source.id),
-      env.DB.prepare("DELETE FROM tags WHERE id=?").bind(source.id),
-      env.DB.prepare("INSERT INTO tag_aliases(alias,tag_id,created_at) VALUES(?,?,?)").bind(from, target.id, now()),
-    ]);
-    return json({ merged: from, into });
-  }
-  if (path === base + "/tags/alias" && request.method === "POST") {
-    const [alias] = labels([data.alias]), [into] = labels([data.into]);
-    const target = await tag(into);
-    if (!target) throw new HttpError(404, "Tag inesistente");
-    if (await tag(alias)) throw new HttpError(409, `«${alias}» è un tag: usa «Unisci» per farlo diventare alias di «${into}»`);
-    try { await env.DB.prepare("INSERT INTO tag_aliases(alias,tag_id,created_at) VALUES(?,?,?)").bind(alias, target.id, now()).run(); }
-    catch { throw new HttpError(409, `«${alias}» è già un alias`); }
-    return json({ alias, into }, 201);
-  }
-  if (path === base + "/tags/alias" && request.method === "DELETE") {
-    const [alias] = labels([data.alias]);
-    await env.DB.prepare("DELETE FROM tag_aliases WHERE alias=?").bind(alias).run();
-    return json({ removed: alias });
-  }
-  throw new HttpError(404, "API dei tag inesistente");
-}
-

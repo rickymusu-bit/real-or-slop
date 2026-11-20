@@ -12,32 +12,26 @@ import { mountSlopAuto } from "./slop-auto";
 import { mountStats, type Stats } from "./stats";
 import { mountDistribution, type Distribution } from "./database-chart";
 import "./database.css";
-import { CATEGORIES, CATEGORY_LABELS, isCategory, type Category } from "../shared/tag-categories";
 import { imageLabel } from "../shared/image-label";
-import { categoryOf, categorySelect, legend, pill, sortByCategory, suggestedCategory } from "./tag-ui";
 import { galleryPhotosPath, galleryWizardPath } from "./gallery-paths";
 import { onLongPress, openPreview } from "./image-preview";
 import { content, escape } from "./main";
 import { type TreatableItem, measureMissing, prepareItemCopy } from "./game-copy";
 import { chooseTreatment } from "./treatment-editor";
-import { METRICS_VERSION, type Metrics, type Treatment } from "../shared/copy-treatment";
+import { METRICS_VERSION, type Metrics, type Monochrome, type Treatment } from "../shared/copy-treatment";
 import { editFrame } from "./crop-editor";
 import { withPhotoProcessing } from "./photo-processing";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
-import { tagFromInput } from "../shared/tag-input";
 
 type Status = "new" | "approved" | "published" | "trash";
 interface Item extends TreatableItem {
   id: string; gallery_id: string; origin: "REAL" | "SLOP"; status: Status; trashed_from: Status | null; title?: string; description: string;
   commons_description: string | null; real_description: RealDescription | null; source_url: string; author: string; license_name: string; license_url: string;
   prompt: string; model: string; width: number; height: number; copy: { width: number; height: number; bytes: number; crop: Crop | null; sha256: string | null } | null;
-  rights_confirmed: boolean; revision: number; tags: string[]; file: string; updated_at: string; created_at: string;
+  rights_confirmed: boolean; revision: number; file: string; updated_at: string; created_at: string;
   analysis: { status: "none" | "running" | "done" | "uncertain" | "failed"; error: string; at: string | null };
-  generated: { tags: string[] } | null;
-  categories: Record<string, string>;
   stats: { views: number; correct: number }; in_play: number; no_derivatives: boolean;
-  missing_categories: string[]; completable: boolean;
   metrics: Metrics | null; treatment: Treatment | null; copy_sha?: string;
 }
 interface Analysis { enabled: boolean; reason: string; model: string; calls_30_days: { total: number; uncertain: number; input_tokens: number; output_tokens: number }; note: string }
@@ -45,7 +39,6 @@ interface ModelOption { id: string; available: boolean | null; qualities?: strin
 interface Models { text_model: string; image_model: string; image_quality: string; text_models: ModelOption[]; image_models: ModelOption[]; note: string }
 interface ContextVersion { id: string; body: string; created_at: string; pipeline: number; used: number }
 interface ContextState { max: number; parts: { part: string; current: { id: string; body: string }; history: ContextVersion[]; proposed?: string | null }[] }
-interface Tag { label: string; category: Category; images: number; aliases: string[] }
 const API = "/api/admin/library";
 const STATUS_LABEL: Record<string, string> = { library: "Tutte", new: "Nuove", approved: "Approvate", published: "Pubblicate", trash: "Cestino" };
 const STATE_LABEL: Record<Status, string> = { new: "nuova", approved: "approvata", published: "pubblicata", trash: "nel cestino" };
@@ -64,11 +57,7 @@ async function call<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!response.ok) throw Error(data.error || "Connessione non disponibile");
   return data;
 }
-interface Conflict { label: string; proposed: string; existing: string }
-/** Tags the model proposed in a category other than the vocabulary's: the vocabulary wins, so the owner must hear about them (a Genre
- * proposed as «mugshot» while «mugshot» is in Altro leaves the image without a Genre). */
-const conflictText = (list: Conflict[] = []) => list.length ? " Categorie in conflitto, da sistemare nel vocabolario: " + list.map(c =>
-  `«${c.label}» proposto come ${CATEGORY_LABELS[c.proposed as Category] || c.proposed}, nel vocabolario è ${CATEGORY_LABELS[c.existing as Category] || c.existing}`).join("; ") + "." : "";
+const COLOUR_LABEL: Record<Monochrome, string> = { "": "a colori", "black-and-white": "in bianco e nero", sepia: "seppia" };
 const kb = (bytes: number) => bytes < 1024 ? bytes + " byte" : Math.round(bytes / 1024) + " kB";
 
 async function bulkUpdate(action: string, ids: string[], fields: Record<string, unknown>) {
@@ -95,7 +84,7 @@ export async function showLibrary() {
   try { const saved = JSON.parse(localStorage.getItem(SORT_KEY) || "null") as typeof sort | null;
     if (saved && ["added", "views", "accuracy"].includes(saved.by) && ["asc", "desc"].includes(saved.order)) sort = saved; } catch { /* private browsing */ }
   let measuring = false;
-  const filter = { status: "library", origin: "all", tags: [] as string[], match: "all", q: "", batch: "", gallery: "" };
+  const filter = { status: "library", origin: "all", q: "", batch: "", gallery: "" };
   let models: Models | null = null;
   let statsView: { refresh: () => Promise<void> } = { refresh: async () => {} };
   let distribution: { refresh: () => Promise<void> } = { refresh: async () => {} };
@@ -129,12 +118,8 @@ export async function showLibrary() {
       <nav class="library-views" aria-label="Viste">${Object.entries(STATUS_LABEL).map(([key, label]) =>
         `<button type="button" data-view="${key}" aria-pressed="${key === "library"}">${label}</button>`).join("")}</nav>
       <label>Origine<select id="library-origin"><option value="all">REAL e SLOP</option><option value="REAL">REAL</option><option value="SLOP">SLOP</option></select></label>
-      <div class="db-tag-filter"><span>Tag</span><div class="db-tag-entry"><input id="library-tag" list="library-tag-list" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="es. riot, Invio" aria-label="Aggiungi un tag al filtro">
-        <select id="library-tag-match" aria-label="Come combinare i tag"><option value="all">con tutti i tag</option><option value="any">con almeno un tag</option></select></div>
-        <div class="rw-pills" id="library-tag-pills"></div></div>
       <label>Ordina per<select id="library-sort"><option value="added">data di aggiunta</option><option value="views">visualizzazioni</option><option value="accuracy">accuratezza</option></select></label>
       <label>Ordine<select id="library-order"><option value="desc">decrescente</option><option value="asc">crescente</option></select></label>
-      <datalist id="library-tag-list"></datalist>
     </div></details>
     <div class="library-add"><button type="button" id="library-select-all" hidden>Seleziona tutte</button><button type="button" id="library-empty-trash" hidden>Svuota cestino</button></div>
     <p id="library-batch-filter" class="library-batch-filter" hidden><span>Batch automatico in corso: solo le sue immagini.</span><button type="button" data-batch-clear>Mostra tutte</button></p>
@@ -177,20 +162,15 @@ export async function showLibrary() {
     <section id="admin-settings" class="admin-panel" hidden><h2>Impostazioni</h2>
     <p id="library-settings-message" role="status" aria-live="polite"></p>
     <details id="library-contexts" class="library-vocabulary"><summary>Contesto dei modelli</summary>
-      <p class="hint">Testi fissi inviati al modello linguistico. Ogni salvataggio crea una nuova versione; le precedenti restano e si possono ripristinare. Ogni generazione registra la versione usata. Formato della risposta e controlli sui tag restano nel codice.</p>
+      <p class="hint">Testi fissi inviati al modello linguistico. Ogni salvataggio crea una nuova versione; le precedenti restano e si possono ripristinare. Ogni generazione registra la versione usata. Formato della risposta e controlli restano nel codice.</p>
       <div id="library-contexts-body">${loading()}</div></details>
-    <details id="library-vocabulary" class="library-vocabulary"><summary>Vocabolario dei tag</summary>
-      <p class="hint">Un tag sparisce con la sua ultima immagine. «Unisci» sposta le immagini sul tag che resta e trasforma l'altro in alias: chi scrive l'alias ottiene il tag.</p>
-      <form id="library-merge" class="library-inline"><label>Unisci<input name="from" list="library-tag-list" required autocapitalize="none"></label><label>in<input name="into" list="library-tag-list" required autocapitalize="none"></label><button>Unisci</button></form>
-      <form id="library-alias" class="library-inline"><label>Nuovo alias<input name="alias" required autocapitalize="none"></label><label>del tag<input name="into" list="library-tag-list" required autocapitalize="none"></label><button>Aggiungi alias</button></form>
-      <ul id="library-vocabulary-list"></ul></details>
     <details id="library-leaderboard" class="library-vocabulary"><summary>Classifica</summary>
       <p class="hint">Chi entra in classifica riceve un codice partita, mostrato una sola volta. Se qualcuno ti mostra un codice, controllalo qui: il sito ne conserva solo l'impronta. Una voce nascosta non compare nella classifica pubblica; «Cancella» la elimina per sempre, per esempio su richiesta del giocatore.</p>
       <form id="library-code" class="library-inline"><label>Codice partita<input name="code" placeholder="ABCD-EFGH-JK" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label><button>Controlla</button></form>
       <p id="library-code-result" role="status" aria-live="polite"></p>
       <ol id="library-entries" class="library-entries"></ol></details>
     <details id="library-models" class="library-vocabulary"><summary>Modelli</summary>
-      <p class="hint">Modelli OpenAI usati dalle chiamate a pagamento. Il modello di testo scrive i tag e i prompt delle SLOP, e deve leggere immagini; quello di immagini genera le SLOP. Ogni chiamata chiede conferma; il limite di spesa che conta è quello impostato sul progetto OpenAI (platform.openai.com).</p>
+      <p class="hint">Modelli OpenAI usati dalle chiamate a pagamento. Il modello di testo scrive la descrizione delle REAL, i prompt delle SLOP e le loro valutazioni, e deve leggere immagini; quello di immagini genera le SLOP. Ogni chiamata chiede conferma; il limite di spesa che conta è quello impostato sul progetto OpenAI (platform.openai.com).</p>
       <form id="library-models-form" class="library-inline"><label>Modello di testo<select name="text_model"></select></label><label>Modello di immagini<select name="image_model"></select></label><label>Qualità delle immagini<select name="image_quality"></select></label></form>
       <p id="library-models-note" class="hint"></p>
       <p class="hint">La qualità vale per lo studio SLOP e per la rigenerazione dalla galleria.</p></details>
@@ -220,7 +200,7 @@ export async function showLibrary() {
     if (galleryList) showGalleries({ ...galleryList, galleries: galleries().filter(g => g.id !== id) });
     closeGallery();
     $("[data-gallery-create]").focus({ preventScroll: true });
-    void Promise.allSettled([autoBox.refresh(), refreshTags()]);
+    void autoBox.refresh().catch(report);
   });
   galleryEditorDialog.addEventListener("close", () => {
     if (savedGallery) { const id = savedGallery; savedGallery = ""; void openGallery(id).catch(report); }
@@ -242,23 +222,9 @@ export async function showLibrary() {
     filter.q = (event.target as HTMLInputElement).value.trim();
     window.clearTimeout(searchTimer); searchTimer = window.setTimeout(() => { void load().catch(error => message(String(error))); }, 250);
   });
-  let tagCategories = new Map<string, Category>();
-  const refreshTags = async () => {
-    const { tags } = await call<{ tags: Tag[] }>("/tags");
-    tagCategories = new Map(tags.map(t => [t.label, isCategory(t.category) ? t.category : "other"]));
-    $("#library-tag-list").innerHTML = tags.map(t => `<option value="${escape(t.label)}">${escape(t.label)} (${t.images})</option>`).join("");
-    $("#library-vocabulary summary").textContent = `Vocabolario dei tag (${tags.length})`;
-    // Grouped by category; the category of a tag changes for every image that uses it.
-    $("#library-vocabulary-list").innerHTML = CATEGORIES.map(c => [c, tags.filter(t => t.category === c)] as const).filter(([, list]) => list.length)
-      .map(([c, list]) => `<li class="tag-category-group">${escape(CATEGORY_LABELS[c])} (${list.length})</li>` + list.map(t =>
-        `<li class="tag-cat tag-cat-${t.category}"><strong>${escape(t.label)}</strong> / ${t.images} ${t.images === 1 ? "immagine" : "immagini"} ` +
-        categorySelect(`data-tag-category="${escape(t.label)}" data-images="${t.images}"`, t.category) + (t.aliases.length
-        ? " / alias: " + t.aliases.map(a => `${escape(a)} <button type="button" data-alias-remove="${escape(a)}" aria-label="Togli l'alias ${escape(a)}">×</button>`).join(" ") : "") + "</li>").join("")).join("")
-      || "<li>Nessun tag.</li>";
-  };
   const refreshAnalysis = async () => {
     analysis = await call<Analysis>("/analysis");
-    $("#library-analysis").textContent = analysis.enabled ? `Analisi IA con ${analysis.model}: una chiamata a pagamento per immagine, con conferma.` : `Analisi IA non disponibile: ${analysis.reason}.`;
+    $("#library-analysis").textContent = analysis.enabled ? `Descrizione delle REAL con ${analysis.model}: una chiamata a pagamento per foto, con conferma.` : `Analisi IA non disponibile: ${analysis.reason}.`;
   };
   // The list of the last request wins: a slower, older answer never overwrites a newer one.
   let loadSeq = 0, nextPage: number | null = null;
@@ -269,7 +235,7 @@ export async function showLibrary() {
     more.disabled = true;
     if (!append) { more.hidden = true; nextPage = null; }
     const params = new URLSearchParams({
-      status: filter.status, origin: filter.origin, tags: filter.tags.join(","), match: filter.match, q: filter.q,
+      status: filter.status, origin: filter.origin, q: filter.q,
       batch: filter.batch, gallery: filter.gallery, offset: String(offset), sort: sort.by, order: sort.order,
     });
     $("#library-batch-filter").hidden = !filter.batch;
@@ -295,11 +261,6 @@ export async function showLibrary() {
   };
   const rate = (item: Item) => item.stats.views ? ` (${Math.round(item.stats.correct / item.stats.views * 100)}%)` : "";
   const statsLine = (item: Item) => `<span class="db-stats" data-stats>Vista <strong>${item.stats.views}</strong> ${item.stats.views === 1 ? "volta" : "volte"} / classificata correttamente <strong>${item.stats.correct}</strong>${rate(item)}</span>`;
-  const tagPills = () => {
-    $("#library-tag-pills").innerHTML = filter.tags.map(t => pill(t, tagCategories.get(t) || "other", "rw-pill",
-      `<button type="button" data-filter-remove="${escape(t)}" aria-label="Togli ${escape(t)} dal filtro">×</button>`)).join("") ||
-      "<small>Nessun tag: tutte le immagini</small>";
-  };
   const preview = (item: Item) => openPreview(item.origin === "REAL"
     ? { src: item.file, alt: imageLabel(item), title: imageLabel(item), description: item.description,
       link: item.source_url ? { href: item.source_url, label: "Apri la pagina su Commons" } : undefined }
@@ -345,10 +306,10 @@ export async function showLibrary() {
   // Press and hold a card: the large preview; a short press opens the detail.
   onLongPress($("#library-grid"), "[data-open]", element => { const item = items.find(i => i.id === element.dataset.open); if (item) preview(item); });
 
-  // Detail: every change is saved at once; tags too.
+  // Detail: every change is saved at once.
   const detail = $<HTMLDialogElement>("#library-detail");
   let saving: Promise<unknown> = Promise.resolve();
-  const save = (item: Item, change: Partial<Record<keyof Item | "tag_categories", unknown>>): Promise<Item> => {
+  const save = (item: Item, change: Partial<Record<keyof Item, unknown>>): Promise<Item> => {
     const request = saving.catch(() => {}).then(async () => {
       const latest = items.find(i=>i.id===item.id) || (open?.id===item.id ? open : item);
       const updated = await call<Item>("/" + encodeURIComponent(item.id), { method: "PATCH", body: JSON.stringify({ revision: latest.revision, ...change }) });
@@ -367,17 +328,11 @@ export async function showLibrary() {
   const analysisLabel = { none: "Analizza con IA", done: "Rifai l’analisi con IA", running: "Riprova l’analisi con IA",
     uncertain: "Riprova l’analisi con IA", failed: "Riprova l’analisi con IA" };
   const metricText = (m: Metrics) => `lato ${m.long} px / rumore ${m.noise.toFixed(1)} / nitidezza ${m.sharpness.toFixed(1)} / contrasto ${m.contrast} / saturazione ${m.saturation.toFixed(2)}`;
-  /** Missing categories and the paid completion. */
-  const categoriesBlock = (item: Item) => {
-    const missing = item.missing_categories.map(c => CATEGORY_LABELS[c as Category] || c);
-    return (missing.length ? `<p class="hint" data-missing-categories>Mancano: ${escape(missing.join(", "))}.</p>` : "") +
-      (item.completable && analysis?.enabled ? '<p><button type="button" id="library-complete">Completa Genere, Colore e Supporto (a pagamento)</button></p>' : "");
-  };
   /** Measures of the copy and, for a SLOP, its treatment with the commands (free; they make the copy again). */
   const measuresBlock = (item: Item, editable: boolean) => {
     const t = item.treatment;
     const treatment = item.origin !== "SLOP" ? "" : !t ? '<p class="hint" data-treatment>Copia senza trattamento.</p>'
-      : `<p class="hint" data-treatment>${t.off ? "Trattamento spento" : `Trattamento fotografico (${escape(t.medium || "supporto non indicato")}, ${escape(t.color || "colore non indicato")})` +
+      : `<p class="hint" data-treatment>${t.off ? "Trattamento spento" : `Trattamento fotografico${t.applied ? " " + COLOUR_LABEL[t.applied.monochrome] : ""}` +
         (t.settings ? ", regolato dall'owner" : "") + (t.gap !== undefined ? `, scarto dall'obiettivo ${Math.round(t.gap * 100)}%` : "") + `: ${metricText(t.sample.metrics)}`}.</p>`;
     const commands = item.origin === "SLOP" && editable && item.copy ? `<div class="library-inline" data-treatment-commands>` +
       (t && !t.off ? '<button type="button" id="library-treatment-off">Senza trattamento</button>'
@@ -388,7 +343,7 @@ export async function showLibrary() {
   const showDetail = (item: Item) => {
     open = item;
     const editable = item.status === "new" || item.status === "approved";
-    const canAnalyze = analysis?.enabled && item.copy && (item.analysis.status !== "running" || interrupted(item));
+    const canAnalyze = item.origin === "REAL" && analysis?.enabled && item.copy && (item.analysis.status !== "running" || interrupted(item));
     const legacyAnalysis = item.origin === "REAL" && !item.real_description && item.status !== "trash"
       && (item.status === "published" || item.analysis.status !== "none");
     const fields = FIELDS.filter(([key]) => item.origin === "REAL" ? key !== "prompt" && key !== "model" : !["title", "source_url", "author", "license_name", "license_url"].includes(key));
@@ -404,19 +359,14 @@ export async function showLibrary() {
       ${item.no_derivatives ? '<p class="db-edit-note">Licenza senza opere derivate (ND): la copia di gioco è una versione modificata.</p>' : ""}
       ${!item.copy && item.status === "new" ? '<p><button type="button" id="library-copy">Prepara la copia di gioco</button></p>' : ""}
       ${editable ? '<p><button type="button" id="library-crop">Inquadratura</button></p>' : ""}
-      ${categoriesBlock(item)}
       ${measuresBlock(item, editable)}
-      <div class="library-tags"><span>Tag</span>${legend()}<ul>${sortByCategory(item.tags, item.categories).map(t => `<li class="tag-cat tag-cat-${categoryOf(item.categories, t)}" title="${escape(CATEGORY_LABELS[categoryOf(item.categories, t)])}">${escape(t)}${editable ? ` <button type="button" data-tag-remove="${escape(t)}" aria-label="Togli ${escape(t)}">×</button>` : ""}</li>`).join("") || "<li>nessuno</li>"}</ul>
-        ${item.origin === "REAL" && !item.tags.some(t => categoryOf(item.categories, t) === "time") ? '<p class="hint" data-no-time>Nessun tag di Tempo: aggiungi il decennio se è noto.</p>' : ""}
-        ${editable ? '<form id="library-tag-form" class="library-tag-entry"><input id="library-tag-input" list="library-tag-list" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Nuovo tag" placeholder="Nuovo tag">' + categorySelect('id="library-tag-category"') + '<button type="submit">Aggiungi tag</button></form><p id="library-tag-hint" class="hint" role="status">Scegli la categoria per un tag nuovo. Maiuscole, accenti e spazi vengono convertiti (São Paulo → sao-paulo). Usa l’inglese per i nomi comuni.</p>' : ""}</div>
-      ${editable && item.copy && !legacyAnalysis ? `<p class="library-analysis">${analysisLine(item)} ${canAnalyze
+      ${editable && item.origin === "REAL" && item.copy && !legacyAnalysis ? `<p class="library-analysis">${analysisLine(item)} ${canAnalyze
         ? `<button type="button" id="library-analyze">${analysisLabel[item.analysis.status]} (a pagamento)</button>` : ""}</p>` : ""}
-      ${editable && item.generated ? '<p><button type="button" id="library-restore">Ripristina i tag generati</button></p>' : ""}
       ${fields.map(([key, label, max, area]) => `<label>${key === "description" && item.origin === "REAL" ? "Descrizione della fonte" : label}${area
         ? `<textarea data-field="${key}" maxlength="${max}" rows="3" ${editable ? "" : "readonly"}>${escape(item[key])}</textarea>`
         : `<input data-field="${key}" maxlength="${max}" value="${escape(item[key])}" ${editable ? "" : "readonly"}>`}</label>`).join("")}
       ${item.origin === "REAL" ? descriptionFields(item.id, item.real_description, item.status === "trash", item.commons_description || "") : ""}
-      ${legacyAnalysis && item.copy ? `<p class="library-analysis"${unsure(item) ? " data-analysis-unsure" : ""}>${escape(analysisLine(item))} ${canAnalyze ? '<button type="button" id="library-description-analysis">Analisi combinata tag e descrizione (a pagamento)</button>' : ""}</p>` : ""}
+      ${legacyAnalysis && item.copy ? `<p class="library-analysis"${unsure(item) ? " data-analysis-unsure" : ""}>${escape(analysisLine(item))} ${canAnalyze ? '<button type="button" id="library-description-analysis">Genera la descrizione con IA (a pagamento)</button>' : ""}</p>` : ""}
       ${editable && item.origin === "SLOP" ? '<p class="hint">Per rigenerare: cestina questa SLOP e avvia un nuovo processo nello studio, con conferma e valutazione.</p>' : ""}
       <div class="library-actions">${item.status === "new" ? `${item.origin === "REAL" ? `<label><input type="checkbox" id="library-rights" ${item.rights_confirmed ? "checked" : ""}> Ho verificato diritti e licenza</label>` : ""}<button type="button" data-action="approve" class="primary">Approva</button>` : ""}
         ${item.status === "approved" ? '<button type="button" data-action="publish" class="primary">Pubblica nel gioco</button>' : ""}
@@ -444,7 +394,7 @@ export async function showLibrary() {
     }
     const editorial = (event.target as HTMLElement).closest<HTMLTextAreaElement>("[data-editorial]");
     if (editorial && open && !editorial.disabled) {
-      try { open = await save(open, {real_description: readDescription(detail, open.id)}); detailMessage("Descrizione editoriale salvata. I tag restano invariati."); }
+      try { open = await save(open, {real_description: readDescription(detail, open.id)}); detailMessage("Descrizione editoriale salvata."); }
       catch (e) { detailMessage(String(e)); } return;
     }
     const field = (event.target as HTMLElement).closest<HTMLInputElement | HTMLTextAreaElement>("[data-field]");
@@ -452,46 +402,14 @@ export async function showLibrary() {
     try { open = await save(open, { [field.dataset.field!]: field.value }); showDetail(open); detailMessage("Salvato."); render(); }
     catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
   });
-  detail.addEventListener("input", event => {
-    const input = event.target as HTMLInputElement;
-    if (input.id !== "library-tag-input") return;
-    const checked = tagFromInput(input.value), picker = detail.querySelector<HTMLSelectElement>("#library-tag-category");
-    const suggested = checked.ok ? suggestedCategory(checked.tag, tagCategories) : "";
-    if (picker && suggested) picker.value = suggested;
-  });
-  detail.addEventListener("submit", async event => {
-    if ((event.target as HTMLElement).id !== "library-tag-form") return;
-    event.preventDefault();
-    if (!open || busy) return;
-    const input = detail.querySelector<HTMLInputElement>("#library-tag-input")!;
-    const checked = tagFromInput(input.value);
-    const hint = detail.querySelector("#library-tag-hint")!;
-    if (!checked.ok) { hint.textContent = checked.reason; return; }
-    const chosen = detail.querySelector<HTMLSelectElement>("#library-tag-category")?.value || "";
-    const existing = tagCategories.get(checked.tag), category = existing && !chosen ? existing : chosen;
-    if (!isCategory(category)) { hint.textContent = "Scegli la categoria del tag."; return; }
-    busy = true;
-    try {
-      if (existing && existing !== category) {
-        if (!window.confirm(`«${checked.tag}» è già un tag della categoria ${CATEGORY_LABELS[existing]}. Vuoi spostarlo in ${CATEGORY_LABELS[category]}? Il cambio vale per tutte le immagini che lo usano. Altrimenti usa una parola più specifica.`)) {
-          hint.textContent = "Tag non aggiunto: usa una parola più specifica."; return;
-        }
-        await call("/tags/category", { method: "PUT", body: JSON.stringify({ label: checked.tag, category }) });
-        open = await call<Item>("/" + encodeURIComponent(open.id));
-      }
-      open = await save(open, { tags: [...new Set([...open.tags, checked.tag])], tag_categories: { [checked.tag]: category } });
-      showDetail(open); render(); void refreshTags(); detail.querySelector<HTMLInputElement>("#library-tag-input")?.focus();
-    } catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
-    finally { busy = false; selectionBar(); }
-  });
   detail.addEventListener("click", async event => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
     if (button?.dataset.openSource && !busy) {
       try { showDetail(await call<Item>("/" + encodeURIComponent(button.dataset.openSource))); } catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
       return;
     }
-    if (!button || !open || busy || !(button.dataset.tagRemove || button.dataset.action || ["library-description-analysis", "library-copy", "library-analyze", "library-restore", "library-regenerate",
-      "library-crop", "library-complete", "library-treatment-off", "library-treatment-on", "library-treatment-edit"].includes(button.id))) return;
+    if (!button || !open || busy || !(button.dataset.action || ["library-description-analysis", "library-copy", "library-analyze", "library-regenerate",
+      "library-crop", "library-treatment-off", "library-treatment-on", "library-treatment-edit"].includes(button.id))) return;
     const id = open.id;
     const legacyAnalysis = button.id === "library-description-analysis";
     const analyzePhoto = legacyAnalysis || button.id === "library-analyze";
@@ -499,30 +417,22 @@ export async function showLibrary() {
     try {
       if (analyzePhoto && analysis) {
         const repeat = unsure(open);
-        const replaceFields = open.origin === "REAL" ? "I tag e la descrizione editoriale saranno sostituiti." : "I tag attuali saranno sostituiti.";
+        const replaceFields = "La descrizione editoriale sarà sostituita.";
         const warning = repeat ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
         if (!window.confirm(`Analizzare «${imageLabel(open)}» con ${analysis.model}? È una chiamata a pagamento. ${replaceFields}${warning}`)) return;
-        const analysed = await withPhotoProcessing("Analisi della foto in corso…", () => call<Item & { tag_conflicts?: Conflict[] }>(`/${encodeURIComponent(id)}/analyze`, { method: "POST",
+        const analysed = await withPhotoProcessing("Analisi della foto in corso…", () => call<Item>(`/${encodeURIComponent(id)}/analyze`, { method: "POST",
           body: JSON.stringify({ confirm: true, ...(legacyAnalysis ? { refresh_description: true } : { reanalyze: true }),
             ...(repeat ? { repeat_uncertain: true } : {}) }) }));
         if (detail.open && open?.id === id) {
           open = analysed;
-          detailMessage("Analisi completata." + conflictText(analysed.tag_conflicts));
+          detailMessage("Analisi completata.");
         }
-        void Promise.all([refreshTags(), refreshAnalysis()]);
+        void refreshAnalysis();
       }
-      else if (button.dataset.tagRemove) open = await save(open, { tags: open.tags.filter(t => t !== button.dataset.tagRemove) });
       else if (button.id === "library-copy") {
         const item = open;
         open = await withPhotoProcessing("Preparo la copia di gioco…", () => prepareItemCopy<Item>(item));
         detailMessage("Copia di gioco pronta.");
-      }
-      else if (button.id === "library-complete" && analysis) {
-        if (!window.confirm(`Completare Genere, Colore e Supporto di «${imageLabel(open)}» con ${analysis.model}? È una chiamata a pagamento, una sola volta per l'immagine; gli altri tag restano.`)) return;
-        const completed = await withPhotoProcessing("Completamento dell’analisi in corso…", () => call<Item & { tag_conflicts?: Conflict[] }>(
-          `/${encodeURIComponent(id)}/categories`, { method: "POST", body: JSON.stringify({ confirm: true }) }));
-        open = completed; detailMessage("Completamento fatto." + conflictText(completed.tag_conflicts));
-        void Promise.all([refreshTags(), refreshAnalysis()]);
       }
       else if (button.id === "library-treatment-edit") {
         const choice = await chooseTreatment(open, imageLabel(open));
@@ -542,9 +452,6 @@ export async function showLibrary() {
         if (!updated) return;
         open = updated;
         detailMessage("Inquadratura salvata.");
-      }
-      else if (button.id === "library-restore" && open.generated) {
-        open = await save(open, { tags: open.generated.tags }); void refreshTags();
       }
       else if (button.dataset.action === "delete") { await call("/" + encodeURIComponent(open.id), { method: "DELETE" }); detail.close(); open = null; }
       else if (button.dataset.action === "edit") {
@@ -600,7 +507,7 @@ export async function showLibrary() {
       if (filter.gallery !== scope) return;
       const failures = new Set(result.failed.map(item => item.id));
       for (const id of ids) if (!failures.has(id)) selected.delete(id);
-      await Promise.allSettled([load(), refreshGalleries(), refreshTags()]);
+      await Promise.allSettled([load(), refreshGalleries()]);
       if (filter.gallery !== scope) return;
       message(action === "delete"
         ? `${result.deleted} eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} restano nel cestino perché in partite in corso.` : "")
@@ -645,9 +552,6 @@ export async function showLibrary() {
       await load();
       return;
     }
-    if (button?.dataset.filterRemove) {
-      filter.tags = filter.tags.filter(t => t !== button.dataset.filterRemove); tagPills(); await load(); return;
-    }
     const opener = target.closest<HTMLElement>("[data-open]");
     if (opener) { const item = items.find(i => i.id === opener.dataset.open); if (item) showDetail(item); return; }
     // Changing view is never blocked by an action still reloading the list (the click used to be dropped).
@@ -676,7 +580,7 @@ export async function showLibrary() {
     busy = true;
     try {
       const result = await call<{ deleted: number; postponed: number }>("/trash/empty?" + new URLSearchParams({gallery: filter.gallery}), { method: "POST", body: "{}" });
-      await Promise.all([load(), refreshTags()]);
+      await load();
       message(`${result.deleted} immagini eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} restano nel cestino finché le partite o le generazioni in corso non finiscono.` : ""));
     } catch (error) { report(error); }
     finally { busy = false; selectionBar(); }
@@ -695,34 +599,8 @@ export async function showLibrary() {
       try { localStorage.setItem(SORT_KEY, JSON.stringify(sort)); } catch { /* private browsing */ }
       void load().catch(report);
     }
-    else if (target.id === "library-tag") addFilterTag(target);
-    else if (target.id === "library-tag-match") { filter.match = target.value; void load(); }
   });
-  /** A tag typed in the filter, converted like a tag written by hand; an alias is resolved by the server only when saving, so
-   * here the label is used as typed. */
-  const addFilterTag = (input: HTMLInputElement) => {
-    const checked = tagFromInput(input.value);
-    if (!input.value.trim()) return;
-    if (!checked.ok) { message(checked.reason); return; }
-    if (!filter.tags.includes(checked.tag)) filter.tags = [...filter.tags, checked.tag];
-    input.value = ""; tagPills(); void load();
-  };
   $<HTMLSelectElement>("#library-sort").value = sort.by; $<HTMLSelectElement>("#library-order").value = sort.order;
-  $("#library-tag").addEventListener("keydown", event => {
-    if (event.key !== "Enter") return;
-    event.preventDefault(); addFilterTag(event.target as HTMLInputElement);
-  });
-  const tagForm = (selector: string, path: string, fields: string[], done: string) =>
-    $(selector).addEventListener("submit", async event => {
-      event.preventDefault();
-      const form = event.target as HTMLFormElement, data = new FormData(form);
-      try {
-        await call(path, { method: "POST", body: JSON.stringify(Object.fromEntries(fields.map(f => [f, String(data.get(f) || "").trim()]))) });
-        settingsMessage(done); form.reset(); await Promise.all([load(), refreshTags()]);
-      } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
-    });
-  tagForm("#library-merge", "/tags/merge", ["from", "into"], "Tag uniti.");
-  tagForm("#library-alias", "/tags/alias", ["alias", "into"], "Alias aggiunto.");
   // Model selectors: a model missing from the OpenAI project is shown but cannot be chosen.
   const renderModels = (m: Models) => {
     const options = (list: ModelOption[], chosen: string) => list.map(o => `<option value="${escape(o.id)}"${o.id === chosen ? " selected" : ""}${o.available === false && o.id !== chosen ? " disabled" : ""}>${escape(o.id)}${o.shutdown ? ` (dismesso da OpenAI il ${new Date(o.shutdown).toLocaleDateString("it-IT")})` : ""}${o.available === false ? " (non disponibile nel progetto)" : ""}</option>`).join("");
@@ -740,25 +618,10 @@ export async function showLibrary() {
       settingsMessage(`${({ text_model: "Modello di testo", image_model: "Modello di immagini", image_quality: "Qualità delle immagini" } as Record<string, string>)[field.name]}: ${field.value}.`); await refreshAnalysis();
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); await refreshModels(); }
   });
-  $("#library-vocabulary-list").addEventListener("change", async event => {
-    const picker = (event.target as HTMLElement).closest<HTMLSelectElement>("[data-tag-category]");
-    if (!picker || !isCategory(picker.value)) return;
-    const label = picker.dataset.tagCategory!, images = Number(picker.dataset.images);
-    if (!window.confirm(`Spostare «${label}» in ${CATEGORY_LABELS[picker.value]}? Vale per ${images === 1 ? "l'immagine che lo usa" : `tutte le ${images} immagini che lo usano`}.`)) { await refreshTags(); return; }
-    try { await call("/tags/category", { method: "PUT", body: JSON.stringify({ label, category: picker.value }) }); settingsMessage(`«${label}»: categoria ${CATEGORY_LABELS[picker.value]}.`); }
-    catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
-    await Promise.all([refreshTags(), load()]);
-  });
-  $("#library-vocabulary-list").addEventListener("click", async event => {
-    const alias = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-alias-remove]")?.dataset.aliasRemove;
-    if (!alias) return;
-    try { await call("/tags/alias", { method: "DELETE", body: JSON.stringify({ alias }) }); settingsMessage("Alias tolto."); await refreshTags(); }
-    catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
-  });
   // Model context: four texts, each saved as a new version; an old version can become the current one again.
   const CONTEXT_LABELS: Record<string, [string, string]> = {
-    base: ["Base comune", "Inviata in ogni chiamata. Non deve parlare di immagini generate: il modello che scrive i tag non deve sapere che esistono."],
-    analysis: ["Tag", "Inviato insieme alla base a ogni analisi: tag e, per le REAL, descrizione editoriale."],
+    base: ["Base comune", "Inviata in ogni chiamata. Non deve parlare di immagini generate: il modello che descrive le REAL non deve sapere che esistono."],
+    analysis: ["Descrizione delle REAL", "Inviato insieme alla base a ogni analisi di una REAL intera, con titolo e contesto Commons: elementi visibili, contesto documentato e incertezze."],
     slop_gallery_prompt: ["Premessa e prompt di galleria", "Inviato insieme alla base, all’originale intero e alle indicazioni della galleria."],
     slop_evaluation: ["Valutazione delle SLOP", "Inviato insieme alla base a ogni valutazione di una candidata intera. Decisioni, tolleranza e formato della risposta restano fissati nel codice."],
   };
@@ -877,7 +740,7 @@ export async function showLibrary() {
 
   const resetGallery = (gallery: string, batch = "") => {
     window.clearTimeout(searchTimer);
-    Object.assign(filter, { gallery, batch, status: "library", origin: "all", q: "", tags: [], match: "all" });
+    Object.assign(filter, { gallery, batch, status: "library", origin: "all", q: "" });
     selected.clear();
     items = [];
     nextPage = null;
@@ -888,10 +751,7 @@ export async function showLibrary() {
     message("");
     $<HTMLInputElement>("#library-search").value = "";
     $<HTMLSelectElement>("#library-origin").value = filter.origin;
-    $<HTMLSelectElement>("#library-tag-match").value = filter.match;
-    $<HTMLInputElement>("#library-tag").value = "";
     page.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === filter.status)));
-    tagPills();
   };
   const openGallery = async (id: string, batch = "") => {
     const gallery = galleries().find(g => g.id === id);
@@ -926,7 +786,7 @@ export async function showLibrary() {
   });
   const activeBatch = $<HTMLAnchorElement>("#gallery-active-batch");
   const autoBox = mountSlopAuto($("#slop-auto"), null, "", {
-    changed: async () => { await Promise.allSettled([load(), refreshGalleries(), refreshTags()]); },
+    changed: async () => { await Promise.allSettled([load(), refreshGalleries()]); },
     indicator: gallery => {
       activeBatch.hidden = !gallery;
       if (gallery) {
@@ -951,7 +811,7 @@ export async function showLibrary() {
     }
   };
   window.addEventListener("pageshow", event => {
-    if (event.persisted) void Promise.allSettled([restoreGallery(), refreshTags(), refreshAnalysis(), autoBox.refresh()]);
+    if (event.persisted) void Promise.allSettled([restoreGallery(), refreshAnalysis(), autoBox.refresh()]);
   });
   const showGalleryError = (error: unknown) => {
     if (galleryList) return;
@@ -962,12 +822,11 @@ export async function showLibrary() {
   });
   await Promise.all([
     restoreGallery().catch(showGalleryError),
-    Promise.all([refreshTags(), refreshAnalysis()]).catch(report),
+    refreshAnalysis().catch(report),
     refreshContexts().catch(error => settingsMessage(String(error instanceof Error ? error.message : error))),
     refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error))),
     call<Numbers>("/settings").then(n => renderNumbers(n)).catch(error => settingsMessage(String(error instanceof Error ? error.message : error))),
     autoBox.refresh(),
   ]);
-  tagPills();
   $("#dashboard-loading").remove();
 }

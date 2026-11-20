@@ -1,4 +1,4 @@
-"""Fake OpenAI for the integration tests: Responses API (tags by category, SLOP prompts with a format in turn), image
+"""Fake OpenAI for the integration tests: Responses API (description of a REAL, SLOP proposals and evaluations), image
 generation and the list of models, with a control endpoint to queue errors (4xx, 5xx, 429, unreadable answers) and read the log."""
 import base64
 import io
@@ -8,7 +8,8 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 queue, log = [], []
-DEFAULT = {'tags': ['street', 'crowd'], 'caption': 'Una strada affollata.'}
+DESCRIPTION = {'visible': 'People standing in a street; documentary framing.', 'documented_context': 'Context only from supplied Commons metadata.',
+               'uncertainties': 'Names and exact date cannot be verified from pixels.'}
 MODELS = ['gpt-6-astra', 'gpt-6.1-sol', 'gpt-6.1-terra', 'gpt-6-luna', 'gpt-6-sol', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
           'gpt-5.5', 'gpt-5.5-pro', 'gpt-5.4', 'gpt-5.4-pro', 'gpt-5.4-mini', 'gpt-5.4-nano', 'gpt-5.2', 'gpt-5.2-pro', 'gpt-5.1', 'gpt-5',
           'gpt-5-mini', 'gpt-5-nano', 'gpt-5-pro', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4o-mini', 'o3-pro', 'o3',
@@ -61,17 +62,12 @@ class Handler(BaseHTTPRequestHandler):
                                   'editorial_constraints_met': (behaviour or {}).get('constraints', True), 'uncertainty_notes': (behaviour or {}).get('uncertainty', []), 'action_reason': 'Visible photographic texture and plausible geometry throughout the frame.',
                                   'revised_prompt': 'A revised documentary scene with a different viewpoint.' if decision in ('revise_prompt', 'replan_scene') else '',
                                   'preserved_required': anchors['required'], 'preserved_exclusions': anchors['exclusions']}}
-        if schema_name == 'image_analysis' and (behaviour is None or 'tags' in behaviour):
-            behaviour = behaviour or DEFAULT
-            result = {'tags': behaviour['tags']}
-            if 'real_description' in data['text']['format']['schema']['properties']:
-                result['real_description'] = {'visible': 'People standing in a street; documentary framing.', 'documented_context': 'Context only from supplied Commons metadata.', 'uncertainties': 'Names and exact date cannot be verified from pixels.'}
-            behaviour = {'json': result}
-        behaviour = behaviour or DEFAULT
-        text = 'not json' if behaviour.get('garbage') else json.dumps(behaviour['json']) if 'json' in behaviour \
-            else json.dumps({'tags': behaviour['tags'], 'caption': behaviour['caption']})
+        if schema_name == 'image_analysis' and (behaviour is None or 'description' in behaviour or 'delay' in behaviour):
+            behaviour = {'json': {'real_description': (behaviour or {}).get('description', DESCRIPTION)}, 'usage': (behaviour or {}).get('usage')}
+        behaviour = behaviour or {'json': {}}
+        text = 'not json' if behaviour.get('garbage') else json.dumps(behaviour['json'])
         self.reply(200, {'output': [{'type': 'message', 'content': [{'type': 'output_text', 'text': text}]}],
-                         'usage': behaviour.get('usage', {'input_tokens': 1200, 'output_tokens': 60})})
+                         'usage': behaviour.get('usage') or {'input_tokens': 1200, 'output_tokens': 60}})
     def log_message(self, *args): pass
 
 if __name__ == '__main__':

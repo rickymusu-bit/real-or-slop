@@ -38,7 +38,7 @@ export async function chooseTreatment(item: TreatableItem, title = ""): Promise<
     const limit = key.startsWith("cast") ? limits.cast : limits[key as Scalar];
     return `<label class="treatment-slider" data-row="${key}"><span>${label}</span><input type="range" data-key="${key}" min="${limit.min}" max="${limit.max}" step="${limit.step}"><output data-out="${key}"></output></label>`;
   };
-  dialog.innerHTML = `<h2>Trattamento</h2><p class="hint">${title ? `«${safe(title)}». ` : ""}I cursori partono dal trattamento proposto in base alle misure fotografiche salvate (${safe(plan.medium || "supporto non indicato")}, ${safe(plan.color || "colore non indicato")}). L'anteprima è calcolata in questa pagina e non viene salvata finché non scegli «Salva il trattamento».</p>
+  dialog.innerHTML = `<h2>Trattamento</h2><p class="hint">${title ? `«${safe(title)}». ` : ""}I cursori partono dal trattamento proposto in base alle misure fotografiche salvate (${MONOCHROME.find(([v]) => v === plan.monochrome)![1].toLowerCase()}). L'anteprima è calcolata in questa pagina e non viene salvata finché non scegli «Salva il trattamento».</p>
     <div class="treatment-views"><figure><canvas data-view="preview" aria-label="Anteprima della copia trattata"></canvas><figcaption data-caption="preview">Anteprima</figcaption></figure>
     <aside class="treatment-target"><h3>Obiettivo fotografico</h3><p>${metricText(plan.sample.metrics)}</p><p>Misure salvate nel processo, indipendenti dalla foto di ispirazione.</p></aside></div>
     <p class="hint" role="status" data-status></p>

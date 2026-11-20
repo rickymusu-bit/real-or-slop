@@ -1,6 +1,6 @@
-# Copie di gioco — specifica 12.7.0
+# Copie di gioco — specifica 13.0.0
 
-Stato: implementata nel ramo 1.49.0, da rilasciare. Aggiornata: 2026-11-20T09:55:15Z.
+Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -17,6 +17,9 @@ Stato: implementata nel ramo 1.49.0, da rilasciare. Aggiornata: 2026-11-20T09:55
 - Trattamento delle SLOP: copia le REAL, non le supera (2026-11-14). Le misure vengono dalla **REAL di riferimento** (2026-11-15): prese
   da un'altra REAL avevano rovinato il lotto del 2026-11-15 (sezione 4.1). Il trattamento è un suggerimento fotografico leggero,
   **non** un vincolo a rendere la scena simile alla REAL; la credibilità della copia finale prevale (specifica `generazione-slop` 5.2.0).
+- **Bianco e nero, seppia o colore dalle misure** (2026-11-20). Con il ritiro dei tag il trattamento non legge più il Colore della
+  REAL: lo ricava dalla crominanza residua misurata sulla sua copia (sezione 4.2). Le foto di una galleria hanno già un trattamento
+  simile, quindi il tag aggiungeva poco. Il Supporto non interveniva nei passi del trattamento e non viene sostituito.
 - **Trattamento regolabile dall'owner** (2026-11-16), come l'inquadratura: cursori per ogni parametro, che partono dal trattamento
   proposto in base alla REAL di riferimento (sezione 4.4).
 - **Le copie le prepara il browser** (2026-11-16): inquadratura, trattamento, conversione in WebP e misure; il Worker controlla e
@@ -99,7 +102,14 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
   (`POST /:id/metrics {metrics, sha256}` registra le misure di una copia esistente, fatte nel browser aprendo il Database):
   lato lungo in pixel; **rumore** (deviazione standard del residuo ad alta frequenza nelle zone più uniformi, escluse quelle bruciate
   a bianco o a nero); **nitidezza** (energia del laplaciano sulla luminanza); **contrasto** (distanza tra i percentili 2 e 98 della
-  luminanza); **saturazione** media; **dominante** (scarto medio dei canali dal grigio nelle zone neutre); **tinta** ai mezzitoni (dalla versione 3 delle misure: scarto di ogni canale dalla luminanza su tutti i pixel, in proporzione al peso dei mezzitoni; quella di una seppia, quasi zero in un bianco e nero neutro); versione dell'algoritmo. La dominante guarda solo i pixel quasi grigi, che in una seppia sono i meno virati: per questo la tinta si misura a parte.
+  luminanza); **saturazione** media; **dominante** (scarto medio dei canali dal grigio nelle zone neutre); **tinta** ai mezzitoni (dalla versione 3 delle misure: scarto di ogni canale dalla luminanza su tutti i pixel, in proporzione al peso dei mezzitoni; quella di una seppia, quasi zero in un bianco e nero neutro); **crominanza residua** (dalla versione 4: differenza media tra il canale più alto e il più basso, divisa per 255, una volta tolta la tinta, sui pixel con luminanza fra 24 e 231, quindi senza bande nere né zone bruciate); versione dell'algoritmo. La dominante guarda solo i pixel quasi grigi, che in una seppia sono i meno virati: per questo la tinta si misura a parte.
+- **Monocromia** (`monochromeOf`). Una REAL con crominanza residua sotto 0,025 è monocroma: seppia se la tinta varia di almeno 10
+  livelli fra i canali, altrimenti bianco e nero. Sopra la soglia è a colori. Taratura del 2026-11-20 su foto campione rese grigie,
+  calde o seppia, con e senza rumore, passate per il JPEG e il WebP della copia: monocrome al massimo 0,013, a colori da 0,048,
+  colori ridotti a un terzo della saturazione da 0,017. Un'immagine con una sola dominante uniforme su tutta la scena è vicina alla
+  soglia e può risultare seppia: l'owner la corregge con il cursore «Colore». Misure precedenti alla versione 4, senza crominanza
+  residua: vale il Colore che il registro della SLOP aveva conservato (`copy_style` o `color` del trattamento); senza quel dato è
+  monocroma solo un'immagine con saturazione sotto la soglia.
 - Limite noto: le copie delle REAL, ridotte da scansioni grandi e ricompresse, hanno poca grana a questa scala (mediana 0,55 sulle 55
   REAL del 2026-11-14), come le SLOP: la differenza che l'occhio vede non sta nel rumore misurato così.
 - Le copie senza misure, o con misure di una versione precedente, si misurano all'apertura della dashboard (gratuito).
@@ -112,13 +122,13 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
 - **Obiettivo indicativo:** le misure anonime salvate nel processo, con i limiti descritti. Nessun identificativo della REAL viene conservato. Senza misure, nessun trattamento. Se il trattamento crea artefatti, colori o illuminazione incoerenti, usare la versione
   senza trattamento o riprogettare la scena; **non** sacrificare la credibilità per la somiglianza delle metriche.
 - Il Worker rifiuta con errore 400 un trattamento con campione malformato o identificativo della REAL; il controllo non deve generare eccezioni per valori JSON primitivi.
-- **Passi** (versione 5 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile. Ogni valore è
+- **Passi** (versione 6 dell'algoritmo), in quest'ordine, con un seme registrato perché il risultato sia ripetibile. Ogni valore è
   proposto dalle misure della REAL; l'owner può sostituirli tutti con i cursori (sezione 4.4), che applicano gli stessi passi con i
   suoi valori:
   1. selezione dei pixel dell’inquadratura, con l’intera foto come scelta predefinita;
   2. riduzione all'altezza della copia della REAL di origine (mai un ingrandimento, mai sotto 480 px);
   3. contrasto verso quello della REAL, con un fattore tra 0,85 e 1,2;
-  4. bianco e nero o seppia, con la tinta della REAL (registrata come dominante; la sua dominante se è stata misurata prima della tinta), se il Colore della REAL lo è.
+  4. bianco e nero o seppia, con la tinta della REAL (registrata come dominante; la sua dominante se è stata misurata prima della tinta), se le misure della REAL sono monocrome (sezione 4.2); fino alla versione 5 decideva il tag Colore della REAL.
      La tinta pesa 4·t·(1−t) con t la luminanza da 0 a 1: piena nei mezzitoni, nulla al nero e al bianco, come in una stampa virata;
      fino alla versione 4 era uguale su ogni pixel, e una seppia senza tinta misurata restava grigia come il bianco e nero; altrimenti dominante (al massimo ±8 per canale) e
      saturazione (fattore tra 0,7 e 1,3) verso quelle della REAL;
@@ -133,11 +143,13 @@ corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP me
   **l'immagine generata intera, prima del ritaglio e del trattamento**. Solo se la candidata è accettata, il browser prepara
   la copia 4:5 e applica il trattamento. L'owner controlla la copia risultante nella revisione; il crop non deve condizionare
   il prompt né innescare una nuova generazione automatica per concentrare i soggetti nel 4:5.
-- **Registro** `copy_treatment`: REAL da cui vengono le misure (identificativo e misure), Colore, parametri applicati di ogni passo,
+- **Registro** `copy_treatment`: misure anonime della REAL, parametri applicati di ogni passo (compresa la scelta fra colore, bianco e
+  nero e seppia),
   seme, versione dell'algoritmo e, se l'owner ha regolato il trattamento, le sue impostazioni (`settings`). Il Worker accetta il
   registro solo se le misure vengono dalla REAL di riferimento della SLOP, le impostazioni sono entro i limiti dei cursori e il lato
   lungo coincide con quello delle impostazioni o, senza, con quello proposto. Una copia fatta con una versione precedente si rifà con quella corrente alla prossima «Inquadratura» o al
-  prossimo comando del trattamento.
+  prossimo comando del trattamento. I registri fino alla versione 5 contengono anche Supporto e Colore, accettati ma non più scritti.
+  Il dettaglio della SLOP scrive «Trattamento fotografico a colori», «in bianco e nero» o «seppia».
 - **Comandi** nel dettaglio del Database di una SLOP nuova o approvata e nella revisione dello studio, gratuiti: «Senza trattamento» e
   «Con trattamento». «Altra REAL campione» sparisce. Cambiare il trattamento rifà la copia come «Inquadratura»: azzera le statistiche
   e, per una pubblicata, passa da «Modifica».
@@ -166,7 +178,9 @@ Decisione dell'owner del 2026-11-16: il trattamento della copia si modifica come
   inquadratura, «Senza/Con trattamento»), finché la REAL di riferimento è la stessa.
 - Tutto è gratuito: nessun modello è chiamato.
 
-Colore e supporto del riferimento sono salvati come parametri tecnici `copy_style`, insieme alle misure anonime: non occorre conservare la lista dei tag della REAL sulla figlia. La 0058 converte i dati pregressi e conserva trattamento già salvato e regolazioni dell’owner. I «Tag di partenza» non compaiono nel dettaglio della SLOP.
+Dalla 1.50.0 il processo conserva della REAL solo formato e misure anonime (`target_metrics`). I processi creati prima conservano
+anche `copy_style` con Colore e Supporto, che la 0058 aveva ricavato dai tag: serve soltanto per le misure senza crominanza residua
+(sezione 4.2).
 
 ## 5. Nella partita
 

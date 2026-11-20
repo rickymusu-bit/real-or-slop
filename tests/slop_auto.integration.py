@@ -111,8 +111,8 @@ try:
         codes=sorted(pool.map(lambda _:call('auto/start',{'batch':bid,'count':1,'confirm':True})[0],range(2)))
     assert codes==[200,409],codes
     auto=wait_for_batch(); assert auto['status']=='review' and auto['config']['max_generation_attempts']==2
-    assert image_count()==2 and len(control())==5
-    first,judge,second,_,analysis=control()
+    assert image_count()==2 and len(control())==4  # two attempts with their evaluations, no analysis after acceptance
+    first,judge,second,_=control()
     assert first['body']['prompt']==original_process['prompt']
     assert second['body']['prompt'].startswith(original_process['prompt']+'\n\n')
     supplied,picture=judge['body']['input'][0]['content']
@@ -120,11 +120,11 @@ try:
     assert 'brief' not in given and given['premise']==original_process['premise'] and given['gallery']['slop_instructions']==instructions
     assert 'recognizable' in judge['body']['instructions'] and 'ENTIRE' in judge['body']['instructions']
     assert Image.open(io.BytesIO(base64.b64decode(picture['image_url'].split(',')[1]))).size==(96,64)
-    assert analysis['body']['text']['format']['name']=='image_analysis'
     [child]=auto['images']; photos.append(child['id'])
     generated=call('/'+child['id'],library=True)[1]
     assert generated['gallery_id']==gallery['id'] and generated['status']=='new' and generated['copy'] is None
-    assert 'brief' not in generated['generation']['slot']
+    assert 'brief' not in generated['generation']['slot'] and 'copy_style' not in generated['generation']['slot']
+    assert generated['generation']['slot']['target_metrics'] is None or 'long' in generated['generation']['slot']['target_metrics']
     assert not sql(f"SELECT source_id FROM slop_gallery_sources s JOIN slop_processes p ON p.id=s.process_id WHERE p.batch_id='{bid}'")
     assert not sql("SELECT name FROM sqlite_schema WHERE name='slop_reference_uses'")
     saved=json.dumps(call('batches/'+bid)[1])

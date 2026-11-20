@@ -8,7 +8,7 @@ import { escape } from "../shared/html";
 export interface PreviewContent {
   src: string; alt: string; title: string; description?: string;
   link?: { href: string; label: string };
-  /** Extra markup, already escaped by the caller (tags, prompt). */
+  /** Extra markup, already escaped by the caller (prompt, context). */
   extra?: string;
 }
 

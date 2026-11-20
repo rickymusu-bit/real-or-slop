@@ -1,7 +1,5 @@
-/** Catalogue counts and categories used by SLOP generation. */
+/** Catalogue counts used by SLOP generation and statistics. */
 import { type Env } from "./core";
-import type { Tag } from "../shared/slop-proposals";
-import type { Category } from "../shared/tag-categories";
 
 /** Catalogue counts for the dashboard and statistics. */
 export async function catalogCounts(env: Env) {
@@ -12,10 +10,3 @@ export async function catalogCounts(env: Env) {
     FROM images`).first<{ real: number; slop: number; pending: number }>();
   return row || { real: 0, slop: 0, pending: 0 };
 }
-/** Tags by category, as the text model reads them. */
-export const byCategory = (tags: readonly Tag[]) => {
-  const out: Partial<Record<Category, string[]>> = {};
-  for (const t of tags) (out[t.category] ||= []).push(t.label);
-  return out;
-};
-

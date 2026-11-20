@@ -1,5 +1,5 @@
 """REAL wizard in the browser, desktop and mobile: Commons search (clear box, pages, columns, a tap adds at once, selection
-kept across searches, press-and-hold preview), blocking acquisition progress, tags with categories, paid generation and restore,
+kept across searches, press-and-hold preview), blocking acquisition progress, editorial description with paid generation once per photo (no tags),
 description, «Togli dal caricamento», crop step, summary and publication."""
 import io
 import os
@@ -206,8 +206,9 @@ with sync_playwright() as p:
         b = page.locator('[data-rw-image="%s"]' % second['id'])
         a.locator('.rw-metadata summary').click()
         expect(a.locator('.rw-metadata')).to_contain_text(title + '-a')
-        # The owner writes first; the generation will replace this on the chosen image only.
-        # «Tower» has a wrong form: converted to «tower» and saved, without a notice.
+        # Step 2 is «Descrizione»: no tags, no categories, no legend (owner decision of 2026-11-20).
+        expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Descrizione')
+        expect(page.locator('[data-rw-new-tag], [data-rw-tag-category], .tag-legend, .rw-pill, [data-rw=choose-reset]')).to_have_count(0)
         expect(page.locator('[data-rw-caption]')).to_have_count(0)
         # The source description stays in the catalogue and is saved on leaving the field.
         description = a.locator('[data-rw-description]')
@@ -218,36 +219,19 @@ with sync_playwright() as p:
         saved = page.request.get(base + '/api/admin/library/' + first['id']).json()
         assert saved['description'] == 'Un ponte di pietra sul fiume, anni Sessanta', saved['description']
         expect(a.locator('[data-rw=crop]')).to_have_count(0)  # the crop is a step of its own
-        for card, tag in ((a, 'bridge'), (b, 'Tower')):
-            card.locator('[data-rw-new-tag]').fill(tag)
-            if not card.locator('[data-rw-tag-category]').input_value():
-                card.locator('[data-rw-new-tag]').press('Enter')
-                expect(page.locator('.rw-message')).to_have_text('Scegli la categoria del tag.')
-                card.locator('[data-rw-tag-category]').select_option('object')
-                card.locator('[data-rw-new-tag]').fill(tag)
-            card.locator('[data-rw-new-tag]').press('Enter')
-            expect(card.locator('.rw-pill', has_text=tag.lower())).to_have_count(1)
-            expect(page.locator('.rw-message')).to_have_text('Tag salvato.')
-            expect(card.locator('[data-rw-new-tag]')).to_be_focused()
-
-        expect(a.locator('.rw-pill.tag-cat-object', has_text='bridge')).to_have_count(1)
-        expect(a.locator('[data-rw-no-time]')).to_be_visible()
-        expect(page.locator('.tag-legend')).to_have_count(1)
-        expect(page.get_by_role('button', name='Genera tag e descrizione con IA')).to_have_count(1)
+        expect(page.get_by_role('button', name='Genera la descrizione con IA')).to_have_count(1)
         expect(page.locator('[data-rw="choose-tags"], [data-rw="choose-caption"]')).to_have_count(0)
-        expect(page.locator('[data-rw=choose-reset]')).to_have_count(0)
-        page.get_by_role('button', name='Genera tag e descrizione con IA').click()
+        page.get_by_role('button', name='Genera la descrizione con IA').click()
         expect(page.locator('#rw-generation-dialog')).to_be_visible()
         expect(page.locator('[data-rw-gen="%s"]' % first['id'])).to_be_checked()
         page.locator('[data-rw-gen="%s"]' % second['id']).uncheck()
         page.locator('#rw-generation-dialog button[data-rw=run-gen]').click()
         expect(page.locator('.rw-message')).to_contain_text('1 immagine elaborata', timeout=30000)
-        asked = [text for text in confirmations if text.startswith('Confermi ') and 'per generare i tag?' in text]
-        assert len(asked) == 1 and 'saranno sostituiti' in asked[0] and 'a pagamento' in asked[0] and '$' not in asked[0], confirmations
-        # Chosen image: owner's texts replaced. The other: untouched.
-        expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(1)
-        expect(a.locator('.rw-pill', has_text='bridge')).to_have_count(0)
+        asked = [text for text in confirmations if text.startswith('Confermi ') and 'per generare la descrizione editoriale?' in text]
+        assert len(asked) == 1 and 'sarà sostituita' in asked[0] and 'a pagamento' in asked[0] and '$' not in asked[0], confirmations
+        # Chosen image: described. The other: untouched.
         expect(a.locator('[data-editorial=visible]')).not_to_have_value('')
+        expect(b.locator('[data-editorial=visible]')).to_have_value('')
         visible = a.locator('[data-editorial=visible]')
         visible.fill('Owner corrected the visible street scene.'); visible.blur()
         context_field = a.locator('[data-editorial=documented_context]')
@@ -255,33 +239,20 @@ with sync_playwright() as p:
         notes = a.locator('[data-editorial=uncertainties]')
         notes.fill('Internal notes for the editor.'); notes.blur()
         expect(a.locator('[data-editorial=visible]')).to_have_value('Owner corrected the visible street scene.')
-        expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(1)
-
-        expect(b.locator('.rw-pill', has_text='tower')).to_have_count(1)
-        expect(b.locator('.rw-pill', has_text='crowd')).to_have_count(0)
         # Once per image: the generated one cannot be chosen again.
-        page.get_by_role('button', name='Genera tag e descrizione con IA').click()
+        page.get_by_role('button', name='Genera la descrizione con IA').click()
         expect(page.locator('[data-rw-gen="%s"]' % first['id'])).to_be_disabled()
         expect(page.locator('.rw-gen-list').first).to_contain_text('già generata')
         expect(page.locator('[data-rw-gen="%s"]' % second['id'])).to_be_checked()
         page.locator('#rw-generation-dialog button[data-rw=close-gen]').click()
         retry = page.request.post(base + '/api/admin/library/%s/analyze' % first['id'], data={'confirm': True}, headers={'Origin': base})
-        assert retry.status == 409 and 'già generati' in retry.json()['error'], retry.text()
-        # Owner edits, then restores the chosen image only, at no cost.
-        a.locator('[data-rw=remove-tag][data-tag=crowd]').click()
-        expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(0)
-        page.locator('[data-rw=choose-reset]').click()
-        expect(page.locator('[data-rw-restore]')).to_have_count(1)
-        page.locator('#rw-reset-all').check()
-        page.locator('#rw-reset-dialog button[data-rw=run-reset]').click()
-        expect(page.locator('.rw-message')).to_contain_text('1 immagine riportata')
-        expect(a.locator('.rw-pill', has_text='crowd')).to_have_count(1)
-        expect(b.locator('.rw-pill', has_text='tower')).to_have_count(1)
+        assert retry.status == 409 and 'già generata' in retry.json()['error'], retry.text()
         page.screenshot(path=str(folder / (name + '-step2.png')), full_page=True)
 
         # Step 3, «Inquadratura»: each copy with its format; the owner reviews the fixed 4:5 frame.
         page.get_by_role('button', name='Avanti: inquadratura').click()
-        expect(page.locator('.rw-message')).to_contain_text('2 immagini non hanno un tag di Tempo')
+        # Not blocking: the photo without a description is named in a notice.
+        expect(page.locator('.rw-message')).to_contain_text('1 foto non ha la descrizione editoriale')
         expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Inquadratura')
         crop_a = page.locator('[data-rw-crop-image="%s"]' % first['id'])
         expect(page.locator('.rw-crop')).to_have_count(2)
@@ -390,7 +361,7 @@ with sync_playwright() as p:
         expect(frame).to_have_attribute('aria-valuetext', crop_position)
         editor.locator('[data-crop=cancel]').click()
         page.screenshot(path=str(folder / (name + '-step3-crop.png')), full_page=True)
-        page.get_by_role('button', name='Indietro: tag').click()
+        page.get_by_role('button', name='Indietro: descrizione').click()
         expect(page.locator('.rw-editor')).to_have_count(2)
         page.get_by_role('button', name='Avanti: inquadratura').click()
         # Step 4: the summary.
@@ -442,7 +413,7 @@ with sync_playwright() as p:
         page.locator('.rw-hit img').click()
         expect(page.locator('.rw-pick')).to_have_count(3)
         with page.expect_request(commons_api):
-            page.get_by_role('button', name='Avanti: tag').click()
+            page.get_by_role('button', name='Avanti: descrizione').click()
         acquisition = page.get_by_role('dialog', name='Acquisizione privata')
         count = acquisition.get_by_role('status')
         progress = acquisition.get_by_role('progressbar', name='Progresso acquisizione foto REAL')
@@ -500,11 +471,6 @@ with sync_playwright() as p:
         assert discarded['gallery_id'] == gallery_id and discarded['status'] == 'trash', discarded
         # A portrait keeps balanced side bands only while the frame is wider than the photograph.
         page.unroute(copy_api)
-        portrait_editor = page.locator(f'[data-rw-image="{last_acquired}"]')
-        portrait_editor.locator('[data-rw-new-tag]').fill('vertical-edge')
-        portrait_editor.locator('[data-rw-tag-category]').select_option('other')
-        portrait_editor.locator('[data-rw=add-tag]').click()
-        expect(page.locator('.rw-message')).to_have_text('Tag salvato.')
         page.get_by_role('button', name='Avanti: inquadratura').click()
         page.locator(f'[data-rw-crop-image="{last_acquired}"] [data-rw=crop]').click()
         expect(frame).to_have_attribute('aria-valuetext', 'x 0, y 0, altezza 420 px')
@@ -532,7 +498,7 @@ with sync_playwright() as p:
         frame.press('ArrowRight')
         assert box_position()[0] > 28
         editor.get_by_role('button', name='Annulla').click()
-        page.get_by_role('button', name='Indietro: tag').click()
+        page.get_by_role('button', name='Indietro: descrizione').click()
         page.get_by_role('button', name='Indietro', exact=True).click()
         expect(page.locator('.rw-picks img')).to_have_attribute('alt', 'Bridge2.jpg')
         assert not errors, errors

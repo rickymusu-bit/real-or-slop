@@ -1,10 +1,8 @@
-/** Workflow for editorial proposals and the generation, evaluation and tag analysis of SLOP. */
+/** Workflow for editorial proposals and the generation and evaluation of SLOP. */
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 import { HttpError, type Env } from "./core";
 import { generateImage } from "./slop-generation";
 import { writeGalleryProposal } from "./slop-gallery";
-import { analyze } from "./analysis";
-import { find } from "./library";
 
 export type Phase = "images" | "proposals";
 export interface RunParams { batchId: string; phase: Phase }
@@ -94,13 +92,9 @@ export class SlopBatchWorkflow extends WorkflowEntrypoint<Env, RunParams> {
             return { id: done.id ?? null, state: done.process?.state };
           }));
           if (result.account) { outcome = "failed"; reason = result.error || ""; return; }
-          if (result.id) {
-            // Tags of the accepted SLOP, from its whole original: one paid call, claimed like any analysis. Its game copy is made
-            // in the owner's browser at the review (owner decision of 2026-11-16).
-            if (!await live(`live-tags-${slot}`)) { outcome = "stopped"; return; }
-            await safely(`tags-${slot}`, () => attempt(async () => { await analyze(env, await find(env, result.id!), { confirm: true }); return {}; }));
-            break;
-          }
+          // An accepted SLOP needs no further call: its game copy is made in the owner's browser at the review (owner decision of
+          // 2026-11-16) and it has no tags (owner decision of 2026-11-20).
+          if (result.id) break;
           if (!result.ok || result.state !== "retry") break;
         }
       }

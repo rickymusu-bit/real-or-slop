@@ -23,7 +23,7 @@ export function select(files, full = false) {
     else if (/^worker\/stats\.ts$/.test(file)) suites = ['stats', 'library_browser'];
     else if (/^src\/(stats|database-chart)\.(ts|css)$/.test(file)) suites = ['library_browser', 'database_browser'];
     else if (/^src\/(play|preload|photo-viewer)\.(ts|css)$/.test(file)) suites = ['game_browser'];
-    else if (/^src\/(library|database|admin-[\w-]+|model-context|caption-count|tag-categories)\.(ts|css)$/.test(file)) suites = BROWSER;
+    else if (/^src\/(library|database|admin-[\w-]+|model-context|caption-count)\.(ts|css)$/.test(file)) suites = BROWSER;
     else return ALL;
     for (const suite of suites) selected.add(suite);
   }

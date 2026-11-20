@@ -1,11 +1,6 @@
 /* Database section: filters, cards, detail and «Distribuzione» chart. */
 .db-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 14px; }
 .db-tabs button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
-.db-tag-filter { display: grid; gap: 4px; font-size: 14px; }
-.db-tag-filter .rw-pills { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; align-items: center; }
-.db-tag-filter .db-tag-entry { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.library-card-tags.db-tags { display: flex; flex-wrap: wrap; gap: 4px; color: var(--text); }
-.db-tags .tag-cat { font-size: 12px; padding: 0 6px; border: 1px solid var(--tag-colour, var(--hairline)); border-radius: 999px; }
 .db-stats { padding: 0 10px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .db-stats strong { color: var(--text); }
 .badge-play { color: #f0b04a; }
@@ -20,19 +15,13 @@
 .dist-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--text); }
 .dist-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .dist-key { display: inline-block; width: 18px; height: 12px; border-radius: 2px; }
-.dist-controls { margin: 6px 0 10px; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
-.dist-controls label { display: inline-flex; align-items: center; gap: 6px; }
-.dist-controls select { width: auto; }
 .dist-axis, .dist-row { display: grid; grid-template-columns: minmax(6em, 13em) 1fr 3.4em; align-items: center; gap: 8px; }
 .dist-axis { font-size: 12px; color: var(--muted); }
 .dist-axis .dist-track span:first-child { text-align: right; padding-right: 6px; }
 .dist-axis .dist-track span:last-child { padding-left: 6px; }
-.dist-chart { position: relative; display: grid; gap: 2px; margin: 4px 0 18px; }
-.dist-chart.dist-expanded { max-height: 65vh; overflow-y: auto; padding-right: 4px; }
 .dist-row { min-height: 28px; padding: 2px 4px; }
 .dist-row:hover, .dist-row:focus-visible { background: var(--surface); outline: 2px solid var(--hairline); outline-offset: -2px; }
 .dist-label { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
-.dist-cat { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--tag-colour); }
 .dist-value { font-size: 12px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 .dist-track { display: grid; grid-template-columns: 1fr 1fr; height: 14px; }
 .dist-axis .dist-track { height: auto; }
@@ -50,11 +39,6 @@
 .dist-tip { position: absolute; z-index: 3; max-width: 300px; padding: 6px 8px; font-size: 12px; background: var(--bg); color: var(--text);
   border: 1px solid var(--control-border); pointer-events: none; }
 #db-distribution { position: relative; }
-.dist-table-wrap { overflow-x: auto; }
-.dist-table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
-.dist-table caption { text-align: left; color: var(--muted); padding: 4px 0; }
-.dist-table th, .dist-table td { border-bottom: 1px solid var(--hairline); padding: 4px 6px; text-align: right; }
-.dist-table th:first-child, .dist-table td:nth-child(2) { text-align: left; }
 @media (forced-colors: active) { .dist-published { background: CanvasText; } .dist-approved { background: none; border: 1px solid CanvasText; } }
 @media (max-width: 600px) { .dist-axis, .dist-row { grid-template-columns: minmax(5em, 8em) 1fr 2.8em; } }
 .library-check-inline { display: inline-flex; align-items: center; gap: 6px; }

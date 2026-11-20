@@ -4,7 +4,8 @@
 import type { OwnerAcceptance } from "../shared/editorial";
 import { copyContentDimensions, copyDimensions, cropQuery, frameLongSide, GAME_COPY, paddedPhotoCanvas, wholePhotoFrame, type Crop } from "../shared/game-copy";
 import {
-  gap, measure, METRICS_VERSION, SETTING_LIMITS, settingsOf, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Settings, type Treatment, type CopyStyle,
+  gap, measure, METRICS_VERSION, monochromeOf, SETTING_LIMITS, settingsOf, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Monochrome,
+  type Settings, type Treatment,
 } from "../shared/copy-treatment";
 
 const API = "/api/admin/library/";
@@ -36,10 +37,10 @@ export async function measureBlob(blob: Blob): Promise<Metrics> {
   return measure(pixels.data, pixels.width, pixels.height);
 }
 
-/** What the treatment of a SLOP needs: the source REAL and its measures, the slot's Medium and Color, the seed, and the owner's
- * settings when chosen with the sliders (else proposed from the measures). */
+/** What the treatment of a SLOP needs: the measures of the source REAL, the black and white, sepia or colour they give, the seed, and
+ * the owner's settings when chosen with the sliders (else proposed from the measures). */
 export interface TreatmentPlan {
-  off: boolean; seed: number; medium: string; color: string; sample: { metrics: Metrics }; settings?: Settings | null;
+  off: boolean; seed: number; monochrome: Monochrome; sample: { metrics: Metrics }; settings?: Settings | null;
 }
 
 /** Draws the part of the original selected by the frame, leaving the bands for composition after treatment. */
@@ -92,7 +93,7 @@ export const longOf = (frame: Crop, plan?: TreatmentPlan | null) => {
 /** The treated pixels with the intermediate JPEG of a photo that has travelled, on a canvas; the applied values. */
 export async function treatedCanvas(base: ImageData, plan: TreatmentPlan) {
   const { width, height } = base;
-  const { rgba, applied } = treat(base.data, width, height, plan.sample.metrics, plan.medium, plan.color, plan.seed, plan.settings || undefined);
+  const { rgba, applied } = treat(base.data, width, height, plan.sample.metrics, plan.seed, plan.settings || undefined, plan.monochrome);
   let { canvas, context } = canvasOf(width, height);
   context.putImageData(new ImageData(rgba, width, height), 0, 0);
   const jpeg = await blobOf(canvas, "image/jpeg", applied.jpeg);
@@ -108,8 +109,7 @@ export async function encodeGameCopy(source: Blob, crop?: Crop, plan?: Treatment
   const { base, frame, long } = await basePixels(source, crop, f => longOf(f, plan));
   const { pixels } = base;
   let canvas: HTMLCanvasElement;
-  let treatment: Treatment | null = plan ? { version: TREATMENT_VERSION, off: plan.off, seed: plan.seed, long, medium: plan.medium, color: plan.color,
-    sample: plan.sample, ...(plan.settings ? { settings: { ...plan.settings, long: fitSettingsLong(plan.settings.long, frameLongSide(frame)) } } : {}) } : null;
+  let treatment: Treatment | null = plan ? { version: TREATMENT_VERSION, off: plan.off, seed: plan.seed, long, sample: plan.sample, ...(plan.settings ? { settings: { ...plan.settings, long: fitSettingsLong(plan.settings.long, frameLongSide(frame)) } } : {}) } : null;
   if (plan && !plan.off) {
     const done = await treatedCanvas(pixels, plan);
     canvas = done.canvas; treatment = { ...treatment!, applied: done.applied };
@@ -136,7 +136,8 @@ export async function originalOf(imageId: string): Promise<Blob> {
 /** Items of the library a treatment plan is built from. */
 export interface TreatableItem {
   id: string; origin: string;
-  generation?: { slot?: { copy_style?: CopyStyle; target_metrics?: Metrics | null; acceptance?: OwnerAcceptance } | null } | null;
+  /** `copy_style` only in SLOP generated before 1.50.0, with the Colour tag of the source REAL. */
+  generation?: { slot?: { copy_style?: { color?: string }; target_metrics?: Metrics | null; acceptance?: OwnerAcceptance } | null } | null;
   treatment?: Treatment | null;
   copy?: { crop: Crop | null } | null;
 }
@@ -154,13 +155,14 @@ export async function treatmentPlan(listed: TreatableItem, asked: { off?: boolea
   const stored = item.treatment, metrics = stored?.sample.metrics || item.generation?.slot?.target_metrics;
   if (!metrics) return null;
   const settings = asked.settings !== undefined ? asked.settings : stored && stored.version >= 4 ? stored.settings || null : null;
+  // Measures taken before the residual chroma existed keep the Colour tag their record had (spec `copie-di-gioco`).
+  const legacy = item.generation?.slot?.copy_style?.color || stored?.color || "";
   return { off: asked.off ?? (asked.settings ? false : stored?.off || false), seed: stored?.seed ?? randomSeed(),
-    color: item.generation?.slot?.copy_style?.color || stored?.color || "",
-    medium: item.generation?.slot?.copy_style?.medium || stored?.medium || "", sample: {metrics}, settings };
+    monochrome: monochromeOf(metrics, legacy), sample: {metrics}, settings };
 }
 /** The settings a plan gives on these pixels: the owner's, or the proposal (what the sliders start from). */
 export function proposalOf(base: ImageData, plan: TreatmentPlan, long: number): Settings {
-  const { applied } = treat(base.data, base.width, base.height, plan.sample.metrics, plan.medium, plan.color, plan.seed);
+  const { applied } = treat(base.data, base.width, base.height, plan.sample.metrics, plan.seed, undefined, plan.monochrome);
   return settingsOf(applied, long);
 }
 

@@ -104,14 +104,13 @@ with sync_playwright() as p:
         assert 'verificato i diritti e la licenza' in confirms[-1]
         expect(page.locator('.library-card', has=spare).locator('.badge-status')).to_have_text('approvata')
         rivoli_card = page.locator(f'.library-card:has([aria-label="Apri {name}-rivoli"])')
-        # A card shows only thumbnail, origin and state; tags and views are in the detail.
+        # A card shows only thumbnail, origin and state; views are in the detail. No tags anywhere (2026-11-20).
         expect(rivoli_card.locator('.badge')).to_have_text(['REAL', 'nuova'])
         for hidden in ('.db-tag', '.library-card-title', '[data-stats]'): expect(rivoli_card.locator(hidden)).to_have_count(0)
         rivoli_card.locator('.library-open').click()
         detail = page.locator('#library-detail')
-        # Tags in category order: on mobile «street» is already in Ambiente (moved during the desktop run), so it comes first.
-        expect(detail.locator('.library-tags li.tag-cat').first).to_contain_text('crowd' if name == 'desktop' else 'street')
-        expect(detail.locator('.library-tags li.tag-cat')).to_have_count(2)
+        expect(detail.locator('.library-tags, #library-tag-input, #library-complete, #library-restore, [data-missing-categories]')).to_have_count(0)
+        expect(detail.locator('[data-editorial=visible]')).not_to_have_value('')
         expect(detail.locator('[data-stats]')).to_have_text('Vista 0 volte / classificata correttamente 0')
         detail.locator('.library-detail-close button').click()
         slop=add(page, picture(f'{name}-street.jpg', (40, 40, 190), (300, 300)), 'SLOP')
@@ -176,9 +175,9 @@ with sync_playwright() as p:
         page.get_by_role('button', name='Statistiche').click()
         stats = page.locator('#stats-body')
         expect(stats.locator('.stat-tile', has_text='partite in corso adesso')).to_be_visible()
-        expect(stats.locator('.stats-calls tbody tr', has_text='Tag').first).to_be_visible()
+        expect(stats.locator('.stats-calls tbody tr', has_text='Analisi delle foto').first).to_be_visible()
         stats.locator('[data-stats-kind]').select_option('images')
-        expect(stats.locator('.stats-calls tbody tr', has_text='Tag')).to_have_count(0)
+        expect(stats.locator('.stats-calls tbody tr', has_text='Analisi delle foto')).to_have_count(0)
         stats.locator('[data-stats-period]').select_option('7')
         expect(stats.locator('[data-stats-period]')).to_have_value('7')
         expect(stats.locator('.stats-levels li')).to_have_count(4)
@@ -203,16 +202,14 @@ with sync_playwright() as p:
         expect(page.locator('[data-context=base]')).to_have_value(approved)
         expect(page.locator('[data-context-part=base] .library-context-history > summary')).to_have_text('Versioni (%d)' % (before + 1))
         page.screenshot(path=str(folder / f'{name}-settings.png'), full_page=True)
-        # Vocabulary by category: «street», created by the (fake) model as «other», moves to Ambiente.
-        page.locator('#library-vocabulary summary').click()
-        expect(page.locator('#library-vocabulary-list .tag-category-group').first).to_be_visible()
-        page.locator('[data-tag-category=street]').select_option('setting')
-        expect(page.locator('#library-settings-message')).to_have_text('«street»: categoria Ambiente.')
-        expect(page.locator('#library-vocabulary-list li.tag-cat-setting', has_text='street')).to_have_count(1)
+        # No vocabulary of tags in Settings any more.
+        expect(page.locator('#library-vocabulary')).to_have_count(0)
+        expect(page.locator('.settings-index button')).to_have_text(['Modelli', 'Generazione', 'Istruzioni IA', 'Partite', 'Classifica'])
+        expect(page.locator('[data-context-part=analysis] h3')).to_have_text('Descrizione delle REAL')
         page.locator('[data-admin-tab=galleries]').click()
         open_gallery(page, gallery_id)
 
-        def edit_and_publish(title, description, tags, real):
+        def edit_and_publish(title, description, real):
             page.get_by_role('button', name=f'Apri {title}').click()
             dialog = page.locator('#library-detail')
             expect(dialog).to_contain_text('copia di gioco WebP')
@@ -221,7 +218,9 @@ with sync_playwright() as p:
                 redo = dialog.get_by_role('button', name='Rifai l’analisi con IA (a pagamento)')
                 redo.click()
                 expect(dialog.locator('#library-detail-message')).to_contain_text('Analisi completata.')
-                assert 'descrizione editoriale saranno sostituiti' in confirms[-1]
+                assert 'descrizione editoriale sarà sostituita' in confirms[-1]
+            else:
+                expect(dialog.locator('#library-analyze, #library-description-analysis')).to_have_count(0)  # a SLOP is never analysed
             expect(dialog.locator('#library-crop')).to_be_visible()
             expect(dialog.locator('[data-field=caption], [data-field=explanation]')).to_have_count(0)
             for key in ('source_url', 'author', 'license_name', 'license_url'):
@@ -233,26 +232,7 @@ with sync_playwright() as p:
             field = dialog.locator('[data-field=description]')
             field.fill(description); field.blur()
             expect(dialog.locator('#library-detail-message')).to_contain_text('Salvato')
-            categories = {'riot': 'event', 'paris': 'place', 'street': 'setting'}
-            for tag in tags:
-                dialog.locator('#library-tag-input').fill(tag)
-                # An existing tag sets the picker by itself; a new one needs a category.
-                if not dialog.locator('#library-tag-category').input_value():
-                    dialog.locator('#library-tag-input').press('Enter')
-                    expect(dialog.locator('#library-tag-hint')).to_have_text('Scegli la categoria del tag.')
-                    dialog.locator('#library-tag-category').select_option(categories[tag])
-                dialog.locator('#library-tag-input').press('Enter')
-                expect(dialog.locator('.library-tags li.tag-cat', has_text=tag)).to_have_count(1)
-            # A wrong form is converted and saved, without a notice; an origin word is refused.
-            dialog.locator('#library-tag-input').fill('São Paulo'); dialog.locator('#library-tag-category').select_option('place')
-            dialog.get_by_role('button', name='Aggiungi tag').click()
-            expect(dialog.locator('[data-tag-remove=sao-paulo]')).to_have_count(1)
-            expect(dialog.locator('#library-detail-message')).not_to_contain_text('sao-paulo')
-            dialog.locator('[data-tag-remove=sao-paulo]').click()
-            expect(dialog.locator('[data-tag-remove=sao-paulo]')).to_have_count(0)
-            dialog.locator('#library-tag-input').fill('AI'); dialog.locator('#library-tag-input').press('Enter')
-            expect(dialog.locator('#library-tag-hint')).to_contain_text('origine')
-            expect(dialog.locator('[data-tag-remove=ai]')).to_have_count(0)
+            expect(dialog.locator('#library-tag-input, .library-tags')).to_have_count(0)
             if real: dialog.locator('#library-rights').check()
             dialog.locator('[data-action=approve]').click()
             expect(dialog.locator('[data-action=publish]')).to_be_visible()
@@ -261,10 +241,10 @@ with sync_playwright() as p:
             expect(dialog.locator('[data-action=withdraw]')).to_be_visible()
             dialog.locator('.library-detail-close button').click()
         spare.check()
-        edit_and_publish(f'{name}-rivoli', 'Parigi, maggio 1968. Barricate in rue de Rivoli.', ['riot', 'paris'], True)
+        edit_and_publish(f'{name}-rivoli', 'Parigi, maggio 1968. Barricate in rue de Rivoli.', True)
         expect(spare).to_be_checked()
         bar.get_by_role('button', name='Deseleziona').click()
-        edit_and_publish(slop_label, 'Parigi, 1968. Una strada bloccata.', ['riot', 'street'], False)
+        edit_and_publish(slop_label, 'Parigi, 1968. Una strada bloccata.', False)
         rivoli_check = page.get_by_role('checkbox', name=f'Seleziona {name}-rivoli')
         spare.check()
         rivoli_check.check()
@@ -344,7 +324,7 @@ with sync_playwright() as p:
             < document.querySelector('[aria-label="Modalità di generazione"]').getBoundingClientRect().top""")
         page.locator('[data-generation-mode=manual]').click()
         expect(page.locator('[data-manual=prompt]')).to_be_visible()
-        expect(page.locator('[data-manual=tags]')).to_be_visible()
+        expect(page.locator('[data-manual=tags]')).to_have_count(0)
         page.locator('[data-generation-mode=automatic]').click()
         expect(page.locator('#slop-auto-controls')).to_be_visible()
         expect(page.locator('#slop-manual')).to_be_hidden()

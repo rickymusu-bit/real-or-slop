@@ -13,18 +13,18 @@ assert 'slop_section_min_real' not in settings['values']
 gallery=make_gallery("Galleria manuale")['id'];images=[]
 try:
     # Manual generation requires no REAL and never pays for writing a prompt.
-    manual_input={'mode':'manual','gallery_id':gallery,'prompt':'An ordinary street photograph.','tags':['street-scene','1960s'],'brief':BRIEF}
+    manual_input={'mode':'manual','gallery_id':gallery,'prompt':'An ordinary street photograph.','brief':BRIEF}
     control([])
     assert call('batches',{**manual_input,'gallery_id':None})[0]==400
-    assert call('batches',{**manual_input,'tags':[]})[0]==400
+    assert call('batches',{**manual_input,'tags':['street-scene']})[0]==400  # starting tags are gone (2026-11-20)
     assert call('batches',{**manual_input,'brief':{**BRIEF,'required':[]}})[0]==400
     code,manual=call('batches',manual_input);assert code==200,manual
-    assert manual['max_calls']==7 and manual['processes'][0]['snapshot']['mode']=='manual'
+    assert manual['max_calls']==6 and manual['processes'][0]['snapshot']['mode']=='manual'  # 2N: generation and evaluation
     assert control()==[] and manual['gallery_id']==gallery
     code,manual_image=generate(manual);assert code==200,manual_image
     images.append(manual_image['id'])
-    assert len(control())==2 and 'Editorial context' in control()[0]['body']['prompt']
-    assert 'tags' not in manual_image['generation']['slot'] and 'title' not in manual_image
+    assert len(control())==2 and 'Editorial context' in control()[0]['body']['prompt'] and '"tags"' not in control()[0]['body']['prompt']
+    assert not {'tags','copy_style'} & set(manual_image['generation']['slot']) and 'title' not in manual_image
     assert manual_image['gallery_id']==gallery
     assert call('batches',{'sources':['real']})[0]==409
     b=batch(gallery)
@@ -75,7 +75,7 @@ try:
     sid=result['id'];crop=copy['copy']['crop'];long=max(crop['width'],crop['height'])
     m={'long':long,'noise':2.0,'sharpness':5.0,'contrast':120,'saturation':0.1,'cast':[1,0,-1],'tint':[0,0,0],'v':3}
     chosen={'contrast':1.1,'saturation':0.9,'cast':[3,0,-3],'monochrome':'sepia','blur':0.5,'grain':4,'grainSize':1,'jpeg':0.8,'long':long}
-    record={'version':5,'off':False,'seed':7,'long':long,'medium':'','color':'','sample':{'metrics':m},'settings':chosen}
+    record={'version':6,'off':False,'seed':7,'long':long,'sample':{'metrics':m},'settings':chosen}
     def upload(treatment):
         q=f"?crop={crop['x']},{crop['y']},{crop['width']},{crop['height']},4:5"
         req=urllib.request.Request(LIBRARY+'/'+sid+'/copy'+q,data=game_copy(original,crop),method='POST',
@@ -89,11 +89,10 @@ try:
     assert upload({**record,'sample':{'id':'another-real','metrics':m}})[0]==400  # identifying treatment payloads are rejected
     code,manual=upload(record);assert code==201 and manual['treatment']['settings']==chosen,manual
     assert upload(record)[1]['already_prepared'] is True
-    assert call('/'+result['id']+'/analyze',{'confirm':True},library=True)[0]==200
-    assert load(b)['processes'][0]['calls']==7  # 1+2N, including the final tags
-    analysed=control()[-1];assert analysed['body']['text']['format']['schema']['required']==['tags']
-    seen=analysed['body']['input'][0]['content'][1]['image_url'];assert seen.startswith('data:image/png;base64,'),seen[:40]
-    assert Image.open(io.BytesIO(base64.b64decode(seen.split(',')[1]))).size==(96,96)  # the whole SLOP, not its 4:5 copy
+    # A SLOP is never analysed: no tags (owner decision of 2026-11-20).
+    control([])
+    code,refused=call('/'+result['id']+'/analyze',{'confirm':True},library=True);assert code==409 and 'solo le REAL' in refused['error'],refused
+    assert control()==[] and load(b)['processes'][0]['calls']==6  # 2N
     # Exhaustion never creates a library image, and cannot consume another attempt after refresh.
     b=batch(gallery)
     control([None,{'evaluation':'retry_same_prompt'}]*3)
@@ -126,33 +125,33 @@ try:
     # review_needed stops early, even with attempts available.
     b=batch(gallery);control([None,{'evaluation':'review_needed'}])
     assert generate(b)[1]['process']['state']=='review_needed';assert generate(b)[0]==409 and len(control())==2
-    # The owner accepts the candidate after the review (owner decision of 2026-11-16): it enters the library as new, then one
-    # paid call analyses its tags; never twice or without confirmation; every finding can be overridden explicitly.
+    # The owner accepts the candidate after the review (owner decision of 2026-11-16): it enters the library as new, with no paid
+    # call; never twice or without confirmation; every finding can be overridden explicitly.
     proc=load(b)['processes'][0];att=proc['attempts'][0]
     assert call('processes/'+proc['id']+'/accept',{'attempt':att['id']})[0]==400
     assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':'another'})[0]==409
     control([])
-    code,accepted=call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']});assert code==200 and not accepted['tags_error'],accepted
+    code,accepted=call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']});assert code==200 and 'tags_error' not in accepted,accepted
     assert all(p['id']!=proc['id'] for p in accepted['attention'])
-    logs=control();assert len(logs)==1 and logs[0]['body']['text']['format']['name']=='image_analysis',logs
+    assert control()==[]
     reviewed=load(b);assert reviewed['processes'][0]['state']=='accepted' and len(reviewed['images'])==1,reviewed['processes'][0]
     images.append(reviewed['images'][0]['id']);assert reviewed['images'][0]['status']=='new'
-    assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']})[0]==409 and len(control())==1
+    assert call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']})[0]==409 and control()==[]
     # Constraints the evaluator could not confirm, with no critical defect, are a doubt the owner settles (2026-11-16).
     b=batch(gallery);control([None,{'evaluation':'review_needed','constraints':False}])
     assert generate(b)[1]['process']['state']=='review_needed';proc=load(b)['processes'][0];control([])
     code,doubted=call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':proc['attempts'][0]['id']});assert code==200,doubted
-    images.append(doubted['image']['id']);assert load(b)['processes'][0]['state']=='accepted' and len(control())==1
+    images.append(doubted['image']['id']);assert load(b)['processes'][0]['state']=='accepted' and control()==[]
     # Critical/minor findings, uncertainty and unmet anchors stay intact after explicit manual acceptance.
     b=batch(gallery)
     control([None,{'evaluation':'review_needed','critical':['Centre: a hand with six fingers'],
         'minor':['Soft focus at the edge'],'uncertainty':['The sign may name another town'],'constraints':False}])
     assert generate(b)[1]['process']['state']=='review_needed';proc=load(b)['processes'][0];att=proc['attempts'][0]
-    control([{'delay':0.2}])
+    control([])
     with concurrent.futures.ThreadPoolExecutor(2) as pool:
         results=list(pool.map(lambda _:call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']}),range(2)))
     assert sorted(r[0] for r in results)==[200,409],results
-    assert len(control())==1  # one tag analysis, no new image or evaluation
+    assert control()==[]  # no paid call: no new image, evaluation or analysis
     saved=load(b)['images'][0];images.append(saved['id'])
     assert saved['status']=='new' and saved['copy'] is None
     assert saved['generation']['slot']['evaluation']==att['evaluation']
@@ -175,7 +174,7 @@ try:
         assert load(b)['processes'][0]['state']==state and control()==[]
         sql("UPDATE slop_attempts SET candidate_key='"+key+"' WHERE id='"+att['id']+"'")
         code,done=call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']});assert code==200,done
-        images.append(done['image']['id']);assert len(control())==1
+        images.append(done['image']['id']);assert control()==[]
         assert load(b)['images'][0]['generation']['slot']['evaluation']==att['evaluation']
     # Network uncertainty in evaluation preserves the private image and never resends.
     b=batch(gallery);control([None,{'status':503}])
@@ -201,7 +200,7 @@ try:
     assert load(strict)['images']==[] and len(control())==4
     proc=load(strict)['processes'][0];att=proc['attempts'][0];control([])
     code,done=call('processes/'+proc['id']+'/accept',{'confirm':True,'attempt':att['id']});assert code==200,done
-    images.append(done['image']['id']);assert len(control())==1
+    images.append(done['image']['id']);assert control()==[]
     chosen=load(strict)['images'][0]
     assert chosen['prompt']==att['prompt'] and chosen['generation']['slot']['evaluation']==att['evaluation']
     assert chosen['generation']['slot']['acceptance']['attempt']==att['id']
@@ -226,8 +225,8 @@ try:
     assert call('batches/'+run['id']+'/run',{'confirm':True,'phase':'images'})[0]==409  # one runner per batch
     run=wait_run(run);p=run['processes'][0]
     assert p['state']=='accepted' and len(p['attempts'])==2 and run['runner']['status']=='done',run
-    images.append(run['images'][0]['id']);assert run['images'][0]['analysis']['status']=='done'
-    assert [r['path'] for r in control()]==['/v1/images/generations','/v1/responses']*2+['/v1/responses']  # 2 attempts, then the tags
+    images.append(run['images'][0]['id']);assert run['images'][0]['analysis']['status']=='none'
+    assert [r['path'] for r in control()]==['/v1/images/generations','/v1/responses']*2  # 2 attempts, no analysis after acceptance
     # «Interrompi»: the step in progress ends, no further paid step starts.
     halt=batch(gallery)
     control([{'delay':2},{'evaluation':'retry_same_prompt'}]+[None,{'evaluation':'retry_same_prompt'}]*4)

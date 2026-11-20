@@ -22,7 +22,7 @@ def open_gallery(page, gallery_id):
 
 
 def publish(api, token, prefix, real=10, slop=10, seed=0):
-    """Uploads, copies (nearest format, spec `copie-di-gioco`), tags, approves and publishes `real` REAL and `slop` SLOP photos; returns their ids by origin."""
+    """Uploads, copies (nearest format, spec `copie-di-gioco`), describes, approves and publishes `real` REAL and `slop` SLOP photos; returns their ids by origin."""
     ids = {'REAL': [], 'SLOP': []}
     gallery_id=make_gallery(api,token,'Galleria '+prefix)
     for index, origin in enumerate(['REAL'] * real + ['SLOP'] * slop):
@@ -37,8 +37,7 @@ def publish(api, token, prefix, real=10, slop=10, seed=0):
                    'license_name': 'CC BY 4.0', 'license_url': 'https://creativecommons.org/licenses/by/4.0/',
                    'real_description': {'visible': f'Descrizione editoriale {index}', 'documented_context': f'Contesto documentato {index}',
                                         'uncertainties': f'Nota interna {index}'}} if origin == 'REAL' else {}
-        item = _call(api, token, f'/{item["id"]}', {'revision': item['revision'], 'tags': [f'{prefix}-tag'],
-                     'tag_categories': {f'{prefix}-tag': 'other'}, **credits}, method='PATCH')
+        if credits: item = _call(api, token, f'/{item["id"]}', {'revision': item['revision'], **credits}, method='PATCH')
         _call(api, token, f'/{item["id"]}/approve', {'rights_confirmed': True})
         _call(api, token, f'/{item["id"]}/publish', {})
         ids[origin].append(item['id'])

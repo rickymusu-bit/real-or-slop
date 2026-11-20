@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 34.10.0, aggiornata il 2026-11-20T09:55:15Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 34.11.0, aggiornata il 2026-11-20T16:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,12 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.49.0:** il riquadro si centra sull’asse in cui supera la foto, per mantenere simmetriche le bande nere.
+- **Ramo 1.50.0:** niente tag (decisione dell'owner del 2026-11-20). L'analisi a pagamento riguarda solo le REAL e restituisce la
+  descrizione editoriale; le SLOP non si analizzano e il tetto del ciclo passa da `1 + 2N` a `2N` chiamate. Bianco e nero, seppia o
+  colore del trattamento SLOP si ricavano dalla crominanza residua misurata sulla REAL (misure 4, trattamento 6). Migrazione 0063.
+  Dopo il rilascio: salvare in Impostazioni le proposte di «Base comune» e «Descrizione delle REAL»; le copie si rimisurano da sole
+  all'apertura delle gallerie.
+- **Integrata in main la 1.49.0 (PR #165):** il riquadro si centra sull’asse in cui supera la foto, per mantenere simmetriche le bande nere.
 - **Integrata in main la 1.48.0 (PR #164):** ritaglio 4:5 direttamente sulla foto adattata, compresa la parte con bande nere.
 - **Integrata in main la 1.47.0 (PR #163):** foto intera di default nel 4:5, maniglie, gesto a due dita corretto e «Salva» visibile su mobile.
 - **Integrata in main la 1.46.0 (PR #162):** barra compatta sotto la griglia per cambiare stato o galleria e deselezionare. Il dettaglio riunisce i comandi
@@ -68,7 +73,7 @@ in `CHANGELOG.md`.
   combinata in gruppo; ripetizione confermata degli esiti incerti anche dal wizard. Nessuna migrazione.
 - **Selezione REAL:** otto principi qualitativi nella issue #138; nessun filtro o scoring automatico.
 - **Da decidere con l'owner:** se e come comunicare al giocatore il processo di generazione dopo la risposta.
-- **Più avanti:** embedding dei tag per Topic Discovery; generatori di immagini alternativi.
+- **Più avanti:** generatori di immagini alternativi. L'idea degli embedding dei tag per Topic Discovery decade con i tag.
 
 ## Specifiche vigenti
 
@@ -77,14 +82,14 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, tag e categorie, analisi, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 8.4.0 |
-| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.3.1 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 12.7.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 4.8.0 |
-| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 10.3.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 8.9.0 |
+| Libreria, stati, analisi delle REAL, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 9.0.0 |
+| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.3.2 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.0.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 5.0.0 |
+| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 11.0.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 9.0.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.2.1 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.3.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.4.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.2 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -125,22 +130,22 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
   `admin-loading.css`, `model-context.css`, `caption-count.css`), gallerie `galleries.ts` e `galleries.css`, pagine dei wizard `gallery-wizard.ts` e `gallery-paths.ts`, wizard REAL `real-wizard.ts` e `real-wizard.css`, studio SLOP
   `slop-studio.ts` e `slop-studio.css`, campi editoriali `editorial-ui.ts`, riquadro dei batch automatici `slop-auto.ts` e `slop-auto.css`, statistiche `stats.ts` e
   `stats.css`, grafico della distribuzione `database-chart.ts`, anteprima a pressione prolungata `image-preview.ts` e
-  `image-preview.css`, pillole e categorie dei tag `tag-ui.ts` e `tag-categories.css`, editor di formato e ritaglio `crop-editor.ts` e
+  `image-preview.css`, editor di formato e ritaglio `crop-editor.ts` e
   `crop-editor.css`, avviso di elaborazione `photo-processing.ts` e `admin-loading.css`, cursori del trattamento delle SLOP con anteprima
   `treatment-editor.ts` e `treatment-editor.css`, copie di gioco preparate nel browser `game-copy.ts`.
 
 **Worker** Cloudflare (`worker/`, ingresso `index.ts`):
 - `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera).
-- Libreria `library.ts` (stati, vocabolario, alias, categorie, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
-  analisi `analysis.ts`, gallerie `galleries.ts`, cancellazione di gallerie e file `gallery-removal.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
+- Libreria `library.ts` (stati, modifiche, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
+  descrizione delle REAL `analysis.ts`, gallerie `galleries.ts`, cancellazione di gallerie e file `gallery-removal.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
-- SLOP: studio `slop.ts`, conteggi e categorie `slop-references.ts`, generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
+- SLOP: studio `slop.ts`, conteggi del catalogo `slop-references.ts`, generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
   `slop-runner.ts`, batch automatici `slop-auto.ts`, preparazione e conferma delle proposte `slop-gallery.ts`, selezioni firmate `slop-preview.ts`.
 - Corpo delle richieste con un'immagine (analisi e valutazione, base64 scritto nei byte) `image-body.ts`.
 - Copie di gioco: controllo e conservazione della copia caricata dal browser in `library.ts` (`POST /:id/copy`).
 - Gioco `game.ts` con `sampling.ts` e `random.ts`, classifica `leaderboard.ts`.
 
-**Codice condiviso** (`shared/`): tag `tags.ts`, tag scritti a mano `tag-input.ts`, categorie `tag-categories.ts`, modelli OpenAI
+**Codice condiviso** (`shared/`): modelli OpenAI
 `models.ts`, tipi dei batch `slop-proposals.ts`, preferenze di composizione `slop-composition.ts`, formati e ricetta della copia
 `game-copy.ts`, misure e trattamento `copy-treatment.ts`, licenze ND
 `licenses.ts`, pulizia dei metadati `media-clean.ts`, livelli e punteggio `levels.ts`, costanti legali `legal.ts`, controllo delle
@@ -184,6 +189,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0060 | gallerie, premesse, riferimenti temporanei e contesto delle proposte |
 | 0061 | azzera i dati applicativi del D1, elimina il registro madre–figlia e rende obbligatoria la galleria |
 | 0062 | rimuove i contenuti insieme alla galleria e registra i file R2 da eliminare |
+| 0063 | elimina tag, alias e categorie con i trigger, `generated_tags` e `categories_completed_at`; ogni altro dato conservato |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 
