@@ -1,7 +1,7 @@
 /** Owner-controlled treatment of a SLOP's game copy (owner requests of 2026-11-16): sliders that start on the treatment proposed from
  * the source REAL; the preview is made here, in the browser, with the same steps as the copy (treatment and intermediate JPEG). */
 import "./treatment-editor.css";
-import { centredCrop, frameLongSide } from "../shared/game-copy";
+import { frameLongSide, wholePhotoFrame } from "../shared/game-copy";
 import { castFor, gap, measure, SETTING_LIMITS, type Metrics, type Settings } from "../shared/copy-treatment";
 import { drawBase, frameCanvas, longOf, originalOf, proposalOf, treatedCanvas, treatmentPlan, type TreatableItem } from "./game-copy";
 import { withPhotoProcessing } from "./photo-processing";
@@ -24,7 +24,7 @@ export async function chooseTreatment(item: TreatableItem, title = ""): Promise<
     if (!plan) throw Error("Il processo non ha misure fotografiche: copia senza trattamento");
     return { plan, bitmap: await createImageBitmap(await originalOf(item.id), { imageOrientation: "from-image" }) };
   });
-  const frame = item.copy?.crop || centredCrop(bitmap.width, bitmap.height), cropLong = frameLongSide(frame);
+  const frame = item.copy?.crop || wholePhotoFrame(bitmap.width, bitmap.height), cropLong = frameLongSide(frame);
   // The proposal on the stored crop, at the long side proposed from the source REAL.
   const proposedPlan = { ...plan, settings: null }, proposedLong = longOf(frame, proposedPlan);
   const bases = new Map<number, ImageData>([[proposedLong, drawBase(bitmap, frame, proposedLong)]]);

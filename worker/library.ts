@@ -235,7 +235,8 @@ const treatmentKey = (t: ReturnType<typeof validTreatment>) =>
 
 /** POST /:id/copy?crop=…[&force=1]: stores the WebP game copy made in the owner's browser from the original (spec `copie-di-gioco`; owner
  * decision of 2026-11-16: the Worker handles what concerns OpenAI, the browser everything else). The crop is «x,y,width,height,4:5»
- * on the oriented original (centred if absent), with «,fit-width» for a full-width copy with bands. The copy has the size of the recipe or the SLOP treatment. Its
+ * on the oriented original, with «,fit» for the whole photo and «,fit-width» for earlier full-width copies. Omission keeps the
+ * centred crop used by older callers. The copy has the size of the recipe or the SLOP treatment. Its
  * measures and, for a SLOP, its treatment come in headers. A new or approved image may change its copy: the new copy replaces the
  * old one, which leaves the quarantine; the image keeps its state (owner decision of 2026-11-11 on edits). Its statistics restart.
  * The same crop and treatment are «already prepared», unless «force» asks to store the new bytes (a copy of an earlier recipe). */

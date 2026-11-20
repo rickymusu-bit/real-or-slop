@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  FORMATS, GAME_COPY_RECIPE, GENERATION_SIZES, centredCrop, centredView, copyDimensions, cropError, cropQuery, fitWidthCrop, formatsFor, generationSize,
+  FORMATS, GAME_COPY_RECIPE, GENERATION_SIZES, centredCrop, centredView, copyContentDimensions, copyDimensions, cropError, cropQuery, wholePhotoFrame, formatsFor, generationSize,
   nearestFormat, parseCrop, parseView, storedCrop, viewError, viewFractions, viewWidth,
 } from "../shared/game-copy.ts";
 
@@ -49,14 +49,23 @@ test("copies keep the format and have a long side of at most 1536 px, never enla
   assert.match(GAME_COPY_RECIPE, /max1536/);
 });
 
-test("a 4:5 copy can fit the whole original at full width", () => {
-  const frame = fitWidthCrop(6000, 4000)!;
+test("a 4:5 copy fits wide and tall originals whole, including older full-width frames", () => {
+  const frame = wholePhotoFrame(6000, 4000);
   assert.equal(cropError(6000, 4000, frame), "");
   assert.deepEqual(parseCrop(cropQuery(frame)), frame);
   assert.deepEqual(storedCrop(JSON.stringify(frame)), frame);
   assert.deepEqual(copyDimensions(frame), { width: 1229, height: 1536 });
-  assert.deepEqual(copyDimensions(fitWidthCrop(840, 600)!), { width: 840, height: 1050 });
-  assert.equal(fitWidthCrop(800, 1200), null);
+  const wide = wholePhotoFrame(840, 600), tall = wholePhotoFrame(640, 1100), exact = wholePhotoFrame(800, 1000);
+  assert.deepEqual(copyDimensions(wide), { width: 840, height: 1050 });
+  assert.deepEqual(copyContentDimensions(wide, copyDimensions(wide)), { width: 840, height: 600 });
+  assert.deepEqual(copyDimensions(tall), { width: 880, height: 1100 });
+  assert.deepEqual(copyContentDimensions(tall, copyDimensions(tall, 550)), { width: 320, height: 550 });
+  assert.deepEqual(copyContentDimensions(exact, copyDimensions(exact)), { width: 800, height: 1000 });
+  const legacy = { ...wide, mode: "fit-width" as const };
+  assert.deepEqual(parseCrop(cropQuery(legacy)), legacy);
+  assert.deepEqual(storedCrop(JSON.stringify(legacy)), legacy);
+  assert.equal(cropError(840, 600, legacy), "");
+  assert.match(cropError(640, 1100, { ...tall, mode: "fit-width" }), /fuori/);
   assert.match(cropError(6000, 4000, { ...frame, x: 1 }), /fuori/);
   assert.match(cropError(6000, 4000, { ...frame, width: 5000 }), /fuori/);
   assert.match(cropError(6000, 4000, { ...frame, format: "3:2" }), /non previsto/);

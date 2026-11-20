@@ -214,7 +214,7 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
       escape(i.id) + '"> ' + escape(short(i.title)) + '</label>').join("") + '</div><div class="rw-actions">' +
     '<button type="button" data-rw="close-reset">Annulla</button><button type="button" class="primary" data-rw="run-reset">Ripristina</button></div></dialog>';
   /** Step 3: the game copy of each photo, cut to the nearest common format at acquisition; the owner may change format and crop. */
-  const third = () => '<p class="hint">Ogni foto ha una copia verticale 4:5 centrata. Controlla che conservi soggetti ed elementi fondamentali per ' +
+  const third = () => '<p class="hint">Ogni foto ha una copia verticale 4:5. Controlla che conservi soggetti ed elementi fondamentali per ' +
     'i giocatori e, se serve, sposta o ridimensiona il ritaglio. Il giocatore vede tutta la copia.</p>' +
     '<div class="rw-preview-grid">' + staged().map(i => '<article class="rw-final rw-crop" data-rw-crop-image="' + escape(i.id) + '">' +
       (i.copy ? '<div class="game-media-surface rw-final-image"><img data-game-media src="' + escape(i.file) + '" alt="' + escape(i.title) + '"></div>'

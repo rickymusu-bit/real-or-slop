@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 30.5.0, aggiornata il 2026-11-19T23:44:53Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 30.6.0, aggiornata il 2026-11-20T06:09:53Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -51,9 +51,10 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 - **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP. Tag e descrizione della REAL, e i tag della
   SLOP, descrivono l'immagine intera (l'originale); il ritaglio non deve eliminare elementi **fondamentali** per il significato della fotografia; in caso contrario
   l'owner corregge l'inquadratura. Le SLOP si valutano **intere** prima di creare la copia 4:5.
-- **Inquadratura ed elaborazione** (decisione del 2026-11-19). «Adatta alla larghezza» mantiene l’intera foto con bande nere nel 4:5
-  quando le proporzioni lo permettono. Il ritaglio si regola anche con due dita. Le elaborazioni avviate nella finestra della foto
-  mostrano al centro uno stato di lavorazione e bloccano i comandi fino all’esito.
+- **Inquadratura ed elaborazione** (decisioni del 2026-11-19 e 2026-11-20). Le nuove copie mostrano la foto intera nel 4:5, con bande
+  nere sopra e sotto o ai lati secondo le proporzioni. Il ritaglio facoltativo usa lo stesso rettangolo con maniglie su puntatore e
+  touchscreen. Allontanare due dita allarga il rettangolo, avvicinarle lo restringe. Le elaborazioni avviate nella finestra della
+  foto mostrano al centro uno stato di lavorazione e bloccano i comandi fino all’esito.
 - **Il Worker gestisce ciò che riguarda l'API di OpenAI, il browser tutto il resto** (decisione del 2026-11-16, che sostituisce
   quella del 2026-11-15 sul browser come sola interfaccia). Sul Worker: analisi, proposte editoriali, generazione e valutazione (il ciclo SLOP gira
   in un Workflow che continua anche se la dashboard si chiude), oltre a dati e archivio. Nel browser: inquadratura, trattamento delle

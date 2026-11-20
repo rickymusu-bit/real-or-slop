@@ -195,7 +195,7 @@ with sync_playwright() as p:
         expect(crop_frame).to_have_count(1)
         expect(crop_frame).to_be_visible()
         expect(crop_frame).to_have_attribute('aria-valuetext', 'x 14, y 0, altezza 40 px')
-        expect(editor.locator('.crop-format select')).to_have_value('4:5')
+        expect(editor.get_by_role('heading', name='Inquadratura 4:5')).to_be_visible()
         expect(crop_frame).to_have_attribute('aria-valuetext', 'x 14, y 0, altezza 40 px')
         for _ in range(3): crop_frame.press('ArrowLeft')
         expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 0, altezza 40 px')
@@ -245,12 +245,12 @@ with sync_playwright() as p:
         expect(dialog).to_contain_text("regolato dall'owner")
         # Changing the frame of a treated SLOP preserves the owner's settings and leaves the bands black.
         dialog.locator('#library-crop').click()
-        editor.locator('[data-crop-mode]').select_option('fit-width')
+        editor.get_by_role('button', name='Foto intera').click()
         editor.locator('[data-crop=ok]').click()
         expect(dialog.locator('#library-detail-message')).to_have_text('Inquadratura salvata.')
         framed = call(f'{API}/{beach["id"]}')
         assert (framed['copy']['width'], framed['copy']['height']) == (60, 75), framed['copy']
-        assert framed['copy']['crop']['mode'] == 'fit-width' and framed['treatment']['settings']['grain'] == 8
+        assert framed['copy']['crop']['mode'] == 'fit' and framed['treatment']['settings']['grain'] == 8
         picture = Image.open(io.BytesIO(page.request.get(base + framed['file']).body())).convert('RGB')
         assert max(picture.getpixel((30, 5))) < 8 and max(picture.getpixel((30, 70))) < 8
         dialog.locator('.library-detail-close button').click()
