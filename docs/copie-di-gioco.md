@@ -1,6 +1,6 @@
-# Copie di gioco — specifica 12.5.0
+# Copie di gioco — specifica 12.6.0
 
-Stato: implementata nel ramo 1.47.0, da rilasciare. Aggiornata: 2026-11-20T06:09:53Z.
+Stato: implementata nel ramo 1.48.0, da rilasciare. Aggiornata: 2026-11-20T07:35:33Z.
 
 ## 1. Decisioni dell'owner
 
@@ -8,8 +8,8 @@ Stato: implementata nel ramo 1.47.0, da rilasciare. Aggiornata: 2026-11-20T06:09
   un errore troppo evidente e le dà un'inquadratura diversa da quella della REAL di riferimento. Annulla la decisione del 2026-11-13
   (copia nel formato più vicino a quello della foto), presa perché con il 4:5 le REAL apparivano tagliate e le SLOP composte per quel
   riquadro. Quel difetto non torna: una SLOP viene generata nel formato derivato dalla REAL e poi ritagliata in 4:5; **non** deve però assomigliare alla REAL per composizione o soggetti.
-- «Foto intera» è l’inquadratura predefinita delle nuove copie. L’originale è centrato nel 4:5 con bande nere sopra e sotto o ai
-  lati secondo le proporzioni. «Ritaglia» attiva il riquadro, con maniglie comuni a puntatore e touchscreen. Allontanare due dita
+- La foto intera è l’inquadratura predefinita delle nuove copie. L’originale è centrato nel 4:5 con bande nere sopra e sotto o ai
+  lati secondo le proporzioni. «Inquadratura» mostra subito il riquadro sulla stessa area, bande comprese. Allontanare due dita
   allarga il riquadro. Avvicinarle lo restringe (2026-11-20).
 - Durante il salvataggio l’editor resta visibile sotto un avviso di elaborazione che blocca i comandi fino all’esito (2026-11-19).
 - La foto si mostra **intera su ogni schermo**; il giocatore la esplora con le dita o il mouse; niente swipe per rispondere
@@ -61,13 +61,15 @@ di testo non sceglie più il formato.
 - **Un solo codificatore** per REAL e SLOP, quello del browser dell'owner: due codificatori diversi (Images sul server per alcune,
   il browser per altre) potrebbero distinguere l'origine dalla compressione. Usare sempre lo stesso browser (Chrome, Edge o Firefox:
   Safari non esporta WebP). Per aggiornare una vecchia copia si apre «Inquadratura» nel dettaglio della foto.
-- **Inquadratura** (passo 3 del wizard REAL, revisione dello studio SLOP e dettaglio della galleria, per nuove e approvate): si apre
-  con la scelta salvata o con la foto intera. «Ritaglia» mostra il riquadro 4:5 sulla stessa foto. Si sposta trascinandolo o con le
-  frecce. Si ridimensiona con le maniglie, con due dita o con + e −. «Foto intera» torna all’anteprima centrata. «Salva» resta
+- **Inquadratura** (passo 3 del wizard REAL, revisione dello studio SLOP e dettaglio della galleria, per nuove e approvate): lo
+  sfondo è sempre la foto adattata al 4:5. Il riquadro occupa inizialmente l’intera area, oppure riprende la scelta salvata.
+  Si può spostare anche nelle bande con trascinamento o frecce e ridimensionare con maniglie, due dita o + e −. «Salva» resta
   visibile durante lo scorrimento. Ripetere la stessa inquadratura conserva copia e statistiche.
-- `copy_crop` conserva `{x, y, width, height, format: "4:5"}`. Per la foto intera il browser aggiunge `mode: "fit"` e invia
-  `,fit` dopo il formato. Il Worker verifica che il rettangolo coincida con l’originale. Le copie esistenti con `fit-width`
-  si riaprono come foto intere. L’upload dei client precedenti senza il parametro `crop` conserva il ritaglio centrato.
+- `copy_crop` conserva `{x, y, width, height, format: "4:5"}`. Per la foto intera il browser invia `,fit` dopo il formato. Per il
+  ritaglio sulla foto adattata invia `,padded` e il Worker valida le coordinate sull’area 4:5 alla risoluzione dell’originale.
+  Il browser disegna i pixel corrispondenti dall’originale e aggiunge le bande comprese nel riquadro. Per le SLOP le bande si
+  aggiungono dopo il trattamento. I ritagli salvati nelle coordinate dell’originale si riaprono nella posizione corrispondente
+  sull’area adattata. Le copie `fit-width` si riaprono intere. L’upload senza `crop` conserva il ritaglio centrato dei client precedenti.
 - Approvare e pubblicare richiedono una copia 4:5. Una copia di una ricetta precedente (formato diverso) va rifatta: il server rifiuta
   di approvarla o pubblicarla, e le pubblicate con una copia non 4:5 escono dal gioco al rilascio (sezione 7).
 - **Licenze ND** escluse dal gioco: la copia è una versione modificata.

@@ -184,7 +184,7 @@ with sync_playwright() as p:
         assert 'va nel cestino' in confirms[-1], confirms
         dialog.locator('.library-detail-close button').click()
 
-        # Crop: the 60×40 SLOP is 3:2, whole; as 1:1 the crop is 40×40 centred, three steps left. One frame only, no view.
+        # The old crop reopens at the same position on the 60×75 canvas with bands.
         page.locator('#library-tag-match').select_option('any')
         tag_input.fill('dbb-beach'); tag_input.press('Enter')
         page.locator(f'.library-card[data-id="{beach["id"]}"] .library-open').click()
@@ -194,21 +194,20 @@ with sync_playwright() as p:
         crop_frame = editor.locator('.crop-frame')
         expect(crop_frame).to_have_count(1)
         expect(crop_frame).to_be_visible()
-        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 14, y 0, altezza 40 px')
+        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 14, y 17, altezza 40 px')
         expect(editor.get_by_role('heading', name='Inquadratura 4:5')).to_be_visible()
-        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 14, y 0, altezza 40 px')
         for _ in range(3): crop_frame.press('ArrowLeft')
-        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 0, altezza 40 px')
+        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 17, altezza 40 px')
         editor.screenshot(path=str(folder / f'{name}-crop.png'))
         editor.locator('[data-crop=ok]').click()
         expect(page.locator('dialog.crop-dialog')).to_have_count(0)
         expect(dialog.locator('#library-detail-message')).to_have_text('Inquadratura salvata.')
         saved = call(f'{API}/{beach["id"]}')['copy']
-        assert saved['crop'] == {'x': 11, 'y': 0, 'width': 32, 'height': 40, 'format': '4:5'} and 'view' not in saved, saved
+        assert saved['crop'] == {'x': 11, 'y': 17, 'width': 32, 'height': 40, 'format': '4:5', 'mode': 'padded'} and 'view' not in saved, saved
         # The same crop: nothing sent, same copy file.
         kept = saved['sha256']
         dialog.locator('#library-crop').click()
-        expect(editor.locator('.crop-frame')).to_have_attribute('aria-valuetext', 'x 11, y 0, altezza 40 px')
+        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 17, altezza 40 px')
         editor.locator('[data-crop=ok]').click()
         expect(dialog.locator('#library-detail-message')).to_have_text('Inquadratura salvata.')
         saved = call(f'{API}/{beach["id"]}')['copy']; assert saved['sha256'] == kept, saved
@@ -245,14 +244,15 @@ with sync_playwright() as p:
         expect(dialog).to_contain_text("regolato dall'owner")
         # Changing the frame of a treated SLOP preserves the owner's settings and leaves the bands black.
         dialog.locator('#library-crop').click()
-        editor.get_by_role('button', name='Foto intera').click()
+        for _ in range(4): crop_frame.press('Shift+ArrowUp')
+        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 0, altezza 40 px')
         editor.locator('[data-crop=ok]').click()
         expect(dialog.locator('#library-detail-message')).to_have_text('Inquadratura salvata.')
         framed = call(f'{API}/{beach["id"]}')
-        assert (framed['copy']['width'], framed['copy']['height']) == (60, 75), framed['copy']
-        assert framed['copy']['crop']['mode'] == 'fit' and framed['treatment']['settings']['grain'] == 8
+        assert (framed['copy']['width'], framed['copy']['height']) == (32, 40), framed['copy']
+        assert framed['copy']['crop']['mode'] == 'padded' and framed['treatment']['settings']['grain'] == 8
         picture = Image.open(io.BytesIO(page.request.get(base + framed['file']).body())).convert('RGB')
-        assert max(picture.getpixel((30, 5))) < 8 and max(picture.getpixel((30, 70))) < 8
+        assert max(picture.getpixel((16, 5))) < 8 and max(picture.getpixel((16, 30))) > 8
         dialog.locator('.library-detail-close button').click()
 
         if name == 'desktop':

@@ -292,7 +292,10 @@ with sync_playwright() as p:
         expect(frame).to_be_visible()  # The existing saved crop reopens directly.
         expect(editor.get_by_role('heading', name='Inquadratura 4:5')).to_be_visible()
         expect(editor.locator('select, input[type=range]')).to_have_count(0)
-        expect(frame).to_have_attribute('aria-valuenow', '280')
+        expect(editor.get_by_alt_text('Foto originale adattata al 4:5')).to_be_visible()
+        expect(editor.get_by_role('button', name='Foto intera')).to_have_count(0)
+        expect(editor.get_by_role('button', name='Ritaglia')).to_have_count(0)
+        expect(frame).to_have_attribute('aria-valuetext', 'x 98, y 122, altezza 280 px')
         if name == 'mobile':
             stage = editor.locator('.crop-stage')
             stage.scroll_into_view_if_needed()
@@ -328,9 +331,12 @@ with sync_playwright() as p:
         assert int(frame.get_attribute('aria-valuenow')) < before
         shape = frame.bounding_box()
         assert abs(shape['width'] / shape['height'] - 0.8) < 0.02, shape
-        editor.get_by_role('button', name='Foto intera').click()
-        expect(editor.get_by_alt_text('Anteprima della foto intera nel formato 4:5')).to_be_visible()
-        expect(frame).to_be_hidden()
+        # Move the frame into the upper black band, keeping some of the original photo inside it.
+        height = int(frame.get_attribute('aria-valuenow'))
+        jump = max(1, int(height / 50 + 0.5)) * 5
+        for _ in range(525 // jump + 1): frame.press('Shift+ArrowUp')
+        for _ in range(max(0, 122 - height // 2) // jump): frame.press('Shift+ArrowDown')
+        crop_position = frame.get_attribute('aria-valuetext')
         if name == 'mobile':
             viewport = page.viewport_size
             page.set_viewport_size({'width': 340, 'height': 400})
@@ -357,16 +363,13 @@ with sync_playwright() as p:
         expect(crop_a).to_contain_text('4:5 verticale')
         saved = page.request.get(base + '/api/admin/library/' + first['id']).json()
         copy = saved['copy']
-        assert (copy['width'], copy['height']) == (420, 525), copy
-        assert copy['crop'] == {'x': 0, 'y': 0, 'width': 420, 'height': 280, 'format': '4:5', 'mode': 'fit'}, copy
+        assert (copy['width'], copy['height']) == (round(height * 0.8), height), copy
+        assert copy['crop']['mode'] == 'padded' and copy['crop']['y'] < 122 < copy['crop']['y'] + height, copy
         picture = Image.open(io.BytesIO(page.request.get(base + saved['file']).body())).convert('RGB')
-        assert max(picture.getpixel((210, 20))) < 8 and max(picture.getpixel((210, 504))) < 8
-        assert picture.getpixel((10, 260))[2] > 150 and picture.getpixel((410, 260))[2] > 150
+        middle = copy['width'] // 2
+        assert max(picture.getpixel((middle, 2))) < 8 and picture.getpixel((middle, height - 5))[2] > 150
         crop_a.get_by_role('button', name='Cambia inquadratura').click()
-        expect(editor.get_by_role('button', name='Ritaglia')).to_be_visible()
-        expect(frame).to_be_hidden()
-        editor.get_by_role('button', name='Ritaglia').click()
-        expect(frame).to_have_attribute('aria-valuenow', '224')
+        expect(frame).to_have_attribute('aria-valuetext', crop_position)
         editor.locator('[data-crop=cancel]').click()
         page.screenshot(path=str(folder / (name + '-step3-crop.png')), full_page=True)
         page.get_by_role('button', name='Indietro: tag').click()
@@ -477,6 +480,25 @@ with sync_playwright() as p:
         expect(page.locator('.rw-message')).to_contain_text('Foto tolta dal caricamento')
         discarded = page.request.get(base + '/api/admin/library/' + first_acquired).json()
         assert discarded['gallery_id'] == gallery_id and discarded['status'] == 'trash', discarded
+        # The entire portrait starts selected. A smaller frame can keep the left band in the saved WebP.
+        page.unroute(copy_api)
+        portrait_editor = page.locator(f'[data-rw-image="{last_acquired}"]')
+        portrait_editor.locator('[data-rw-new-tag]').fill('vertical-edge')
+        portrait_editor.locator('[data-rw-tag-category]').select_option('other')
+        portrait_editor.locator('[data-rw=add-tag]').click()
+        expect(page.locator('.rw-message')).to_have_text('Tag salvato.')
+        page.get_by_role('button', name='Avanti: inquadratura').click()
+        page.locator(f'[data-rw-crop-image="{last_acquired}"] [data-rw=crop]').click()
+        expect(frame).to_have_attribute('aria-valuetext', 'x 0, y 0, altezza 420 px')
+        for _ in range(12): frame.press('-')
+        for _ in range(8): frame.press('Shift+ArrowLeft')
+        editor.get_by_role('button', name='Salva').click()
+        expect(page.locator('.rw-message')).to_have_text('Inquadratura salvata.')
+        portrait = page.request.get(base + '/api/admin/library/' + last_acquired).json()
+        assert portrait['copy']['crop']['x'] == 0 and portrait['copy']['crop']['mode'] == 'padded', portrait['copy']
+        picture = Image.open(io.BytesIO(page.request.get(base + portrait['file']).body())).convert('RGB')
+        assert max(picture.getpixel((2, 30))) < 8 and picture.getpixel((40, 30))[2] > 150
+        page.get_by_role('button', name='Indietro: tag').click()
         page.get_by_role('button', name='Indietro', exact=True).click()
         expect(page.locator('.rw-picks img')).to_have_attribute('alt', 'Bridge2.jpg')
         assert not errors, errors

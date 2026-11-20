@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 4.6.0
+# Dashboard e wizard REAL — specifica 4.7.0
 
-Stato: implementata nel ramo 1.47.0, da rilasciare. Aggiornata: 2026-11-20T06:09:53Z.
+Stato: implementata nel ramo 1.48.0, da rilasciare. Aggiornata: 2026-11-20T07:35:33Z.
 
 ## 1. Decisioni dell'owner
 
@@ -93,8 +93,8 @@ acquisite sono comunque nella libreria privata.
 
 **3. Inquadratura.** Ogni foto con la sua copia di gioco, il formato e le dimensioni; «Cambia inquadratura» apre l'editor di formato e
 ritaglio (specifica `copie-di-gioco`, sezione 3); «Prepara la copia di gioco» se manca. Si passa al 4 solo se ogni foto ha la copia.
-  Le nuove copie mostrano la foto intera. L’editor offre «Ritaglia», maniglie agli angoli e gesto a due dita. «Foto intera» torna
-  all’adattamento iniziale. L’avviso al centro blocca i comandi durante salvataggio e preparazione della copia.
+  Le nuove copie mostrano la foto intera. Il rettangolo di ritaglio è subito disponibile sulla foto adattata, bande nere comprese,
+  con maniglie agli angoli e gesto a due dita. L’avviso al centro blocca i comandi durante salvataggio e preparazione della copia.
   **Vincolo editoriale:** l'inquadratura deve conservare gli elementi che determinano i tag tematici e il significato della foto;
   l'owner corregge eventuali ritagli che li eliminano. Non servono tag distinti per l'originale e per il 4:5.
   Se l'inquadratura cambia dopo l'analisi, non effettuare nuove chiamate automatiche; l'owner può correggere manualmente
