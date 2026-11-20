@@ -4,7 +4,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
-import { checkCommonsSources, CHECKS_PER_NIGHT, dueBefore } from "../worker/commons-check";
+import { checkCommonsSources, dueBefore } from "../worker/commons-check";
+import { LIMITS } from "../worker/app-settings";
+const CHECKS_PER_NIGHT = LIMITS.commons_checks_per_night.default;
 import type { Env } from "../worker/core";
 
 /** The few D1 methods the check uses, on node:sqlite. */
@@ -62,7 +64,7 @@ test("a photo is due three calendar months after its last check", () => {
   assert.equal(dueBefore(Date.parse("2026-05-31T00:00:00.000Z")), "2026-03-03T00:00:00.000Z");
 });
 
-test("only due REAL with a Commons page, never-checked first, fifty at most, in one request", async () => {
+test("only due REAL with a Commons page, never-checked first, fifty by default, in one request", async () => {
   const { db, add, env } = setup();
   for (let i = 0; i < CHECKS_PER_NIGHT + 5; i++) add("due" + String(i).padStart(2, "0"), { checked: `2026-0${1 + (i % 7)}-01T00:00:00.000Z` });
   add("corrected", { checked: null });
@@ -127,11 +129,52 @@ test("the migration counts the acquisition as the first check of every Commons R
     INSERT INTO images(id,gallery_id,origin,title,source_url,original_key,original_sha256,original_mime,width,height,created_at,updated_at)
     VALUES('commons','g','REAL','A','${page("A.jpg")}','a','${"a".repeat(64)}','image/png',4,5,'2026-02-02T00:00:00.000Z','x'),
           ('uploaded','g','REAL','B','','b','${"b".repeat(64)}','image/png',4,5,'2026-02-02T00:00:00.000Z','x'),
-          ('slop','g','SLOP',NULL,'','c','${"c".repeat(64)}','image/png',4,5,'2026-02-02T00:00:00.000Z','x')`);
+          ('slop','g','SLOP',NULL,'','c','${"c".repeat(64)}','image/png',4,5,'2026-02-02T00:00:00.000Z','x');
+    INSERT INTO app_settings(key,value,updated_at) VALUES('open_game_hours','30','t'),('editorial_tolerance','2','t')`);
   db.exec(readFileSync("migrations/0065_commons_source_check.sql", "utf8"));
+  // The settings keep every row and accept the new key.
+  assert.deepEqual(db.prepare("SELECT key,value,updated_at FROM app_settings ORDER BY key").all().map(r => ({ ...r })),
+    [{ key: "editorial_tolerance", value: "2", updated_at: "t" }, { key: "open_game_hours", value: "30", updated_at: "t" }]);
+  db.exec("INSERT INTO app_settings(key,value,updated_at) VALUES('commons_checks_per_night','120','t')");
+  assert.throws(() => db.exec("INSERT INTO app_settings(key,value,updated_at) VALUES('other','1','t')"));
   assert.deepEqual(db.prepare("SELECT id,source_checked_at,source_missing_at FROM images ORDER BY id").all().map(r => ({ ...r })), [
     { id: "commons", source_checked_at: "2026-02-02T00:00:00.000Z", source_missing_at: null },
     { id: "slop", source_checked_at: null, source_missing_at: null },
     { id: "uploaded", source_checked_at: null, source_missing_at: null },
   ]);
+});
+
+test("the number per night comes from the Settings: 0 pauses, more than 50 makes requests of 50 one after the other", async () => {
+  assert.deepEqual(LIMITS.commons_checks_per_night, { min: 0, max: 500, default: 50 });
+  const { db, add, env } = setup();
+  for (let i = 0; i < 130; i++) add("due" + String(i).padStart(3, "0"), {});
+  const setting = (n: number) => db.prepare("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('commons_checks_per_night',?,'now')").run(String(n));
+  setting(0);
+  const none: URL[] = [];
+  commons(none);
+  assert.equal((await checkCommonsSources(env, NOW)).skipped, "Controllo sospeso dalle Impostazioni");
+  assert.equal(none.length, 0);
+  setting(120);
+  const requests: URL[] = [];
+  commons(requests);
+  assert.equal((await checkCommonsSources(env, NOW)).checked, 120);
+  assert.deepEqual(requests.map(r => r.searchParams.get("titles")!.split("|").length), [50, 50, 20]);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM images WHERE source_checked_at=?").get(new Date(NOW).toISOString())!.n, 120);
+  // A value outside the limits stored by hand counts as the default.
+  setting(9999);
+  const later = Date.parse("2027-03-01T00:00:00.000Z"), again: URL[] = [];
+  commons(again);
+  assert.equal((await checkCommonsSources(env, later)).checked, 50);
+});
+
+test("a failure in a later request keeps what the earlier ones answered and leaves the rest due", async () => {
+  const { db, add, env } = setup();
+  for (let i = 0; i < 80; i++) add("due" + String(i).padStart(3, "0"), {});
+  const requests: URL[] = [];
+  let calls = 0;
+  commons(requests, () => ++calls === 1 ? Response.json({ query: { pages: requests[0].searchParams.get("titles")!.split("|").map(title => ({ title, pageid: 1 })) } })
+    : new Response("busy", { status: 503 }));
+  const result = await checkCommonsSources(env, NOW, 80);
+  assert.deepEqual(result, { checked: 50, found: 50, missing: 0, moved: 0, skipped: "Commons HTTP 503" });
+  assert.equal(db.prepare("SELECT count(*) AS n FROM images WHERE source_checked_at=?").get(new Date(NOW).toISOString())!.n, 50);
 });

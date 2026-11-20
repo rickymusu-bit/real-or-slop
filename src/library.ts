@@ -183,7 +183,10 @@ export async function showLibrary() {
       <p class="hint">Apri una galleria e scegli «Genera SLOP» per accedere alle modalità manuale e automatica. La modalità automatica estrae le REAL di riferimento dalla galleria.</p></details>
     <details id="library-games" class="library-vocabulary"><summary>Partite</summary>
       <form id="library-games-form" class="library-inline"><label>Durata massima di una partita aperta (ore)<input type="number" name="open_game_hours" required></label><button>Salva</button></form>
-      <p class="hint">Oltre questo tempo una partita non conclusa non trattiene più le copie delle foto ritirate o modificate, e la sua foto può non essere più disponibile. I livelli del gioco sono fissi nel codice.</p></details></section>
+      <p class="hint">Oltre questo tempo una partita non conclusa non trattiene più le copie delle foto ritirate o modificate, e la sua foto può non essere più disponibile. I livelli del gioco sono fissi nel codice.</p></details>
+    <details id="library-sources" class="library-vocabulary"><summary>Fonti Commons</summary>
+      <form id="library-sources-form" class="library-inline"><label>REAL controllate ogni notte<input type="number" name="commons_checks_per_night" required></label><button>Salva</button></form>
+      <p class="hint">Ogni notte si chiede a Wikimedia Commons se il file di queste REAL esiste ancora, cominciando da quelle controllate da più tempo; ogni foto torna in coda tre mesi dopo l’ultimo controllo. Un file sparito è solo segnalato nella galleria. Le richieste a Commons sono da 50 foto; 0 sospende il controllo.</p></details></section>
     <dialog id="library-detail" class="library-detail" aria-labelledby="library-detail-title"></dialog>
   </section>`;
   const page = content().querySelector<HTMLElement>(".library")!;
@@ -682,7 +685,7 @@ export async function showLibrary() {
       }
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
-  // Thresholds of the SLOP studio and hours of an open game: numbers checked by the server.
+  // Thresholds of the SLOP studio, hours of an open game and nightly Commons checks: numbers checked by the server.
   interface Numbers { values: Record<string, number>; limits: Record<string, { min: number; max: number; default: number }> }
   /** Writes the stored numbers into the fields; after a save only those of the saved form, so that a slower answer never
    * overwrites what the owner is typing in another form. */
@@ -703,6 +706,7 @@ export async function showLibrary() {
   });
   numbersForm("#library-thresholds-form", ["max_generation_attempts", "editorial_tolerance"], "Soglie dello studio SLOP salvate.");
   numbersForm("#library-games-form", ["open_game_hours"], "Durata massima di una partita aperta salvata.");
+  numbersForm("#library-sources-form", ["commons_checks_per_night"], "Numero di REAL controllate ogni notte salvato.");
   statsView = mountStats($<HTMLElement>("#stats-body"), period => call<Stats>("/stats?" + new URLSearchParams({ period })));
   // Leaderboard: check a code, hide or show an entry.
   interface Entry { id: string; nickname: string; level_label: string; score: number; photos: number; balanced_accuracy: number; hidden: boolean; created_at: string }

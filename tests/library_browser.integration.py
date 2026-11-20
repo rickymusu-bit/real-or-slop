@@ -204,7 +204,17 @@ with sync_playwright() as p:
         page.screenshot(path=str(folder / f'{name}-settings.png'), full_page=True)
         # No vocabulary of tags in Settings any more.
         expect(page.locator('#library-vocabulary')).to_have_count(0)
-        expect(page.locator('.settings-index button')).to_have_text(['Modelli', 'Generazione', 'Istruzioni IA', 'Partite', 'Classifica'])
+        expect(page.locator('.settings-index button')).to_have_text(['Modelli', 'Generazione', 'Istruzioni IA', 'Partite', 'Fonti Commons', 'Classifica'])
+        # REAL checked on Commons each night: 50 by default, from 0 (paused) to 500.
+        page.locator('.settings-index button', has_text='Fonti Commons').click()
+        checks = page.locator('[name=commons_checks_per_night]')
+        expect(checks).to_have_value('50')
+        expect(checks).to_have_attribute('max', '500')
+        checks.fill('120'); page.locator('#library-sources-form button').click()
+        expect(page.locator('#library-settings-message')).to_have_text('Numero di REAL controllate ogni notte salvato.')
+        assert page.request.get(base + '/api/admin/library/settings').json()['values']['commons_checks_per_night'] == 120
+        page.locator('[name=commons_checks_per_night]').fill('50'); page.locator('#library-sources-form button').click()
+        expect(page.locator('#library-settings-message')).to_have_text('Numero di REAL controllate ogni notte salvato.')
         expect(page.locator('[data-context-part=analysis] h3')).to_have_text('Descrizione delle REAL')
         page.locator('[data-admin-tab=galleries]').click()
         open_gallery(page, gallery_id)

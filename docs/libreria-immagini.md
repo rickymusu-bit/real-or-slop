@@ -1,6 +1,6 @@
 # Libreria delle immagini e analisi — specifica 9.2.0
 
-Stato: implementata nel ramo 1.52.0, da rilasciare. Aggiornata: 2026-11-20T19:30:00Z.
+Stato: implementata nel ramo 1.52.0, da rilasciare. Aggiornata: 2026-11-20T21:30:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -16,7 +16,7 @@ Stato: implementata nel ramo 1.52.0, da rilasciare. Aggiornata: 2026-11-20T19:30
   superate e restano nella cronologia git.
 - L'analisi a pagamento genera la descrizione editoriale una sola volta per REAL e sostituisce quella delle foto scelte (2026-11-09,
   adattata il 2026-11-20).
-- **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, ciascuna solo tre mesi dopo l'ultimo controllo; un
+- **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, numero modificabile dalle Impostazioni, ciascuna solo tre mesi dopo l'ultimo controllo; un
   file sparito da Commons viene **solo segnalato**, mai ritirato o cancellato in automatico (sezione 9).
 - Dal dettaglio di una foto nuova o approvata si può rifare l’analisi a pagamento con conferma esplicita (2026-11-19).
 - I risultati mostrano elementi visibili e contesto documentato della descrizione editoriale, con l’attribuzione della REAL (2026-11-19).
@@ -173,7 +173,8 @@ Migrazione 0051 (`model_contexts`): parte `slop_evaluation` e colonna `pipeline`
 Migrazione 0063: elimina tag, alias, categorie, `generated_tags` e `categories_completed_at` (sezione 4). Foto, descrizioni, stato
 dell'analisi, copie, processi, chiamate e partite restano. Nessuna chiamata a pagamento.
 Migrazione 0065: `images.source_checked_at` e `images.source_missing_at` per il controllo delle fonti (sezione 9), con indice parziale
-sulle REAL; le REAL già acquisite da Commons ricevono come ultimo controllo la data di acquisizione.
+sulle REAL; le REAL già acquisite da Commons ricevono come ultimo controllo la data di acquisizione. `app_settings` è ricostruita con
+tutte le righe per ammettere la chiave `commons_checks_per_night`.
 
 ## 9. Controllo delle fonti su Commons
 
@@ -184,7 +185,9 @@ controlla solo che la pagina del file esista ancora.
 - **Quando.** Nella manutenzione notturna (Cron Trigger delle 03:17 UTC), dopo le altre operazioni e senza poterle bloccare.
 - **Quali foto.** Le REAL fuori dal cestino la cui fonte è una pagina `https://commons.wikimedia.org/wiki/File:…`, se l'ultimo
   controllo (`source_checked_at`) risale ad almeno tre mesi di calendario prima. Prima quelle mai controllate, poi le più vecchie;
-  al massimo **50 a notte**, cioè una sola richiesta all'API. L'acquisizione da Commons conta come primo controllo; la migrazione 0065
+  al massimo il numero scelto in Impostazioni → Fonti Commons (`commons_checks_per_night`, **50** predefinito, da 0 a 500; 0 sospende il
+  controllo). Le richieste all'API sono da 50 titoli, una dopo l'altra: il primo errore chiude la notte, salva ciò che è già stato
+  risposto e lascia in coda il resto. L'acquisizione da Commons conta come primo controllo; la migrazione 0065
   usa la data di acquisizione per le REAL già presenti.
 - **Richiesta.** `action=query`, `formatversion=2`, `redirects=1`, `maxlag=5`, i titoli dei file, con il `User-Agent` del progetto.
   Nessuna chiamata a pagamento e nessun dato personale.
@@ -196,5 +199,6 @@ controlla solo che la pagina del file esista ancora.
   foto un'etichetta «Fonte rimossa», il dettaglio la data e cosa fare: verificare la pagina, ritirare o cestinare la foto se la
   licenza non regge, oppure correggere la pagina della fonte. Correggerla toglie la segnalazione e rimette la foto in testa alla coda
   della notte successiva. Il dettaglio di una REAL controllata mostra anche «Fonte presente su Commons al …».
-- **Carico.** Una richiesta leggera a notte, qualunque sia la dimensione del catalogo: 5000 REAL si ricontrollano in circa cento
-  giorni, quindi l'intervallo effettivo può superare i tre mesi quando le REAL dovute sono più di 50 a notte.
+- **Carico.** Con il valore predefinito una richiesta leggera a notte, qualunque sia la dimensione del catalogo: 5000 REAL si
+  ricontrollano in circa cento giorni, quindi l'intervallo effettivo supera i tre mesi quando le REAL dovute sono più di quelle
+  controllate ogni notte. Alzando il numero (500 = dieci richieste) l'intervallo torna a tre mesi.

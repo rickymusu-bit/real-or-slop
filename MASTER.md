@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 34.13.0, aggiornata il 2026-11-20T19:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 34.13.0, aggiornata il 2026-11-20T21:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,8 +9,8 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.52.0:** controllo notturno delle fonti Commons delle REAL, 50 a notte dopo tre mesi dall'ultimo controllo, solo
-  segnalazione nella galleria e nel dettaglio. Migrazione 0065. Ramo indipendente dalla PR #167 (1.51.0).
+- **Ramo 1.52.0:** controllo notturno delle fonti Commons delle REAL, 50 a notte (modificabile da Impostazioni → Fonti Commons, da 0
+  a 500) dopo tre mesi dall'ultimo controllo, solo segnalazione nella galleria e nel dettaglio. Migrazione 0065. Ramo indipendente dalla PR #167 (1.51.0).
 - **Integrata in main la 1.50.0 (PR #166):** niente tag (decisione dell'owner del 2026-11-20). L'analisi a pagamento riguarda solo le REAL e restituisce la
   descrizione editoriale; le SLOP non si analizzano e il tetto del ciclo passa da `1 + 2N` a `2N` chiamate. Bianco e nero, seppia o
   colore del trattamento SLOP si ricavano dalla crominanza residua misurata sulla REAL (misure 4, trattamento 6). Migrazione 0063.
@@ -91,7 +91,7 @@ nome.
 | SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 11.0.0 |
 | Foto e gallerie | `docs/database-immagini.md` | 9.2.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.2.1 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.4.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.5.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.2 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -193,7 +193,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0061 | azzera i dati applicativi del D1, elimina il registro madre–figlia e rende obbligatoria la galleria |
 | 0062 | rimuove i contenuti insieme alla galleria e registra i file R2 da eliminare |
 | 0063 | elimina tag, alias e categorie con i trigger, `generated_tags` e `categories_completed_at`; ogni altro dato conservato |
-| 0065 | data dell'ultimo controllo della fonte Commons e della mancanza del file; la data di acquisizione vale come primo controllo |
+| 0065 | data dell'ultimo controllo della fonte Commons e della mancanza del file; la data di acquisizione vale come primo controllo; chiave delle Impostazioni per il numero di controlli a notte |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 
