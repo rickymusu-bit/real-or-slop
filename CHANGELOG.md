@@ -1,7 +1,11 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-20T07:35:33Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-20T09:55:15Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.49.0 — 2026-11-20T09:55:15Z
+
+- Il riquadro 4:5 si muove liberamente entro la foto quando ci sta. Quando supera la foto in altezza o larghezza, si centra automaticamente su quell’asse per pareggiare le bande nere.
 
 ## 1.48.0 — 2026-11-20T07:35:33Z
 

@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 30.7.0, aggiornata il 2026-11-20T07:35:33Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 30.8.0, aggiornata il 2026-11-20T09:55:15Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -53,6 +53,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   l'owner corregge l'inquadratura. Le SLOP si valutano **intere** prima di creare la copia 4:5.
 - **Inquadratura ed elaborazione** (decisioni del 2026-11-19 e 2026-11-20). Le nuove copie mostrano la foto intera nel 4:5 con bande
   nere. Il rettangolo 4:5 è subito disponibile sulla stessa area, bande comprese, con maniglie per puntatore e touchscreen.
+  Si sposta liberamente entro la foto quando ci sta. Quando supera una dimensione della foto, si centra su quell’asse e pareggia le bande.
   Allontanare due dita allarga il rettangolo, avvicinarle lo restringe. Le elaborazioni avviate nella finestra della foto mostrano
   al centro uno stato di lavorazione e bloccano i comandi fino all’esito.
 - **Il Worker gestisce ciò che riguarda l'API di OpenAI, il browser tutto il resto** (decisione del 2026-11-16, che sostituisce
