@@ -331,11 +331,26 @@ with sync_playwright() as p:
         assert int(frame.get_attribute('aria-valuenow')) < before
         shape = frame.bounding_box()
         assert abs(shape['width'] / shape['height'] - 0.8) < 0.02, shape
-        # Move the frame into the upper black band, keeping some of the original photo inside it.
-        height = int(frame.get_attribute('aria-valuenow'))
-        jump = max(1, int(height / 50 + 0.5)) * 5
-        for _ in range(525 // jump + 1): frame.press('Shift+ArrowUp')
-        for _ in range(max(0, 122 - height // 2) // jump): frame.press('Shift+ArrowDown')
+        def box_position():
+            return tuple(map(int, re.findall(r'\d+', frame.get_attribute('aria-valuetext'))))
+
+        # A crop that fits can still move on both axes, and stops at the photo edge.
+        for _ in range(35): frame.press('Shift+ArrowUp')
+        x, y, height = box_position()
+        assert y == 122 and height < 280, (x, y, height)
+        frame.press('ArrowDown')
+        assert box_position()[1] > y
+        # A taller crop centres itself over the photograph. Only horizontal movement remains free.
+        for _ in range(90):
+            if box_position()[2] >= 320: break
+            frame.press('+')
+        x, y, height = box_position()
+        assert 320 <= height < 525 and y == 122 - (height - 280) // 2, (x, y, height)
+        frame.press('Shift+ArrowUp')
+        frame.press('Shift+ArrowDown')
+        assert box_position() == (x, y, height)
+        frame.press('ArrowLeft' if x else 'ArrowRight')
+        assert box_position()[0] != x and box_position()[1:] == (y, height)
         crop_position = frame.get_attribute('aria-valuetext')
         if name == 'mobile':
             viewport = page.viewport_size
@@ -364,10 +379,13 @@ with sync_playwright() as p:
         saved = page.request.get(base + '/api/admin/library/' + first['id']).json()
         copy = saved['copy']
         assert (copy['width'], copy['height']) == (round(height * 0.8), height), copy
-        assert copy['crop']['mode'] == 'padded' and copy['crop']['y'] < 122 < copy['crop']['y'] + height, copy
+        assert copy['crop']['mode'] == 'padded' and copy['crop']['y'] == y, copy
+        top_band, bottom_band = 122 - y, y + height - 402
+        assert top_band > 0 and abs(top_band - bottom_band) <= 1
         picture = Image.open(io.BytesIO(page.request.get(base + saved['file']).body())).convert('RGB')
         middle = copy['width'] // 2
-        assert max(picture.getpixel((middle, 2))) < 8 and picture.getpixel((middle, height - 5))[2] > 150
+        assert max(picture.getpixel((middle, 2))) < 8 and max(picture.getpixel((middle, height - 3))) < 8
+        assert picture.getpixel((middle, height // 2))[2] > 150
         crop_a.get_by_role('button', name='Cambia inquadratura').click()
         expect(frame).to_have_attribute('aria-valuetext', crop_position)
         editor.locator('[data-crop=cancel]').click()
@@ -480,7 +498,7 @@ with sync_playwright() as p:
         expect(page.locator('.rw-message')).to_contain_text('Foto tolta dal caricamento')
         discarded = page.request.get(base + '/api/admin/library/' + first_acquired).json()
         assert discarded['gallery_id'] == gallery_id and discarded['status'] == 'trash', discarded
-        # The entire portrait starts selected. A smaller frame can keep the left band in the saved WebP.
+        # A portrait keeps balanced side bands only while the frame is wider than the photograph.
         page.unroute(copy_api)
         portrait_editor = page.locator(f'[data-rw-image="{last_acquired}"]')
         portrait_editor.locator('[data-rw-new-tag]').fill('vertical-edge')
@@ -490,14 +508,30 @@ with sync_playwright() as p:
         page.get_by_role('button', name='Avanti: inquadratura').click()
         page.locator(f'[data-rw-crop-image="{last_acquired}"] [data-rw=crop]').click()
         expect(frame).to_have_attribute('aria-valuetext', 'x 0, y 0, altezza 420 px')
-        for _ in range(12): frame.press('-')
-        for _ in range(8): frame.press('Shift+ArrowLeft')
+        for _ in range(3): frame.press('-')
+        x, y, height = box_position()
+        width = round(height * 0.8)
+        assert 280 < width < 336 and x == 28 - (width - 280) // 2, (x, y, height)
+        frame.press('Shift+ArrowLeft')
+        frame.press('Shift+ArrowRight')
+        assert box_position() == (x, y, height)
+        frame.press('ArrowUp')
+        assert box_position() == (x, y - max(1, int(height / 50 + 0.5)), height)
         editor.get_by_role('button', name='Salva').click()
         expect(page.locator('.rw-message')).to_have_text('Inquadratura salvata.')
         portrait = page.request.get(base + '/api/admin/library/' + last_acquired).json()
-        assert portrait['copy']['crop']['x'] == 0 and portrait['copy']['crop']['mode'] == 'padded', portrait['copy']
+        assert portrait['copy']['crop']['x'] == x and portrait['copy']['crop']['mode'] == 'padded', portrait['copy']
+        assert abs((28 - x) - (x + width - 308)) <= 1
         picture = Image.open(io.BytesIO(page.request.get(base + portrait['file']).body())).convert('RGB')
-        assert max(picture.getpixel((2, 30))) < 8 and picture.getpixel((40, 30))[2] > 150
+        assert max(picture.getpixel((2, 30))) < 8 and max(picture.getpixel((width - 3, 30))) < 8
+        assert picture.getpixel((width // 2, 30))[2] > 150
+        page.locator(f'[data-rw-crop-image="{last_acquired}"] [data-rw=crop]').click()
+        for _ in range(12): frame.press('-')
+        for _ in range(8): frame.press('Shift+ArrowLeft')
+        assert box_position()[0] == 28
+        frame.press('ArrowRight')
+        assert box_position()[0] > 28
+        editor.get_by_role('button', name='Annulla').click()
         page.get_by_role('button', name='Indietro: tag').click()
         page.get_by_role('button', name='Indietro', exact=True).click()
         expect(page.locator('.rw-picks img')).to_have_attribute('alt', 'Bridge2.jpg')

@@ -1,6 +1,6 @@
-# Copie di gioco — specifica 12.6.0
+# Copie di gioco — specifica 12.7.0
 
-Stato: implementata nel ramo 1.48.0, da rilasciare. Aggiornata: 2026-11-20T07:35:33Z.
+Stato: implementata nel ramo 1.49.0, da rilasciare. Aggiornata: 2026-11-20T09:55:15Z.
 
 ## 1. Decisioni dell'owner
 
@@ -62,9 +62,12 @@ di testo non sceglie più il formato.
   il browser per altre) potrebbero distinguere l'origine dalla compressione. Usare sempre lo stesso browser (Chrome, Edge o Firefox:
   Safari non esporta WebP). Per aggiornare una vecchia copia si apre «Inquadratura» nel dettaglio della foto.
 - **Inquadratura** (passo 3 del wizard REAL, revisione dello studio SLOP e dettaglio della galleria, per nuove e approvate): lo
-  sfondo è sempre la foto adattata al 4:5. Il riquadro occupa inizialmente l’intera area, oppure riprende la scelta salvata.
-  Si può spostare anche nelle bande con trascinamento o frecce e ridimensionare con maniglie, due dita o + e −. «Salva» resta
-  visibile durante lo scorrimento. Ripetere la stessa inquadratura conserva copia e statistiche.
+  sfondo è sempre la foto adattata al 4:5. L’editor parte dall’intera area o applica i vincoli al riquadro salvato. Il riquadro si
+  sposta liberamente dentro la foto quando può esservi contenuto. Se supera l’altezza della foto, si centra in verticale per
+  pareggiare le bande sopra e sotto. Se supera la larghezza, si centra in orizzontale per pareggiare le bande laterali. Sull’altro
+  asse resta libero entro la foto. Con pixel interi le bande possono differire di un pixel. Si sposta con trascinamento o frecce e
+  si ridimensiona con maniglie, due dita o + e −. «Salva» resta visibile durante lo scorrimento. Ripetere la stessa inquadratura
+  conserva copia e statistiche.
 - `copy_crop` conserva `{x, y, width, height, format: "4:5"}`. Per la foto intera il browser invia `,fit` dopo il formato. Per il
   ritaglio sulla foto adattata invia `,padded` e il Worker valida le coordinate sull’area 4:5 alla risoluzione dell’originale.
   Il browser disegna i pixel corrispondenti dall’originale e aggiunge le bande comprese nel riquadro. Per le SLOP le bande si

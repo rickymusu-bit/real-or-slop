@@ -244,15 +244,16 @@ with sync_playwright() as p:
         expect(dialog).to_contain_text("regolato dall'owner")
         # Changing the frame of a treated SLOP preserves the owner's settings and leaves the bands black.
         dialog.locator('#library-crop').click()
-        for _ in range(4): crop_frame.press('Shift+ArrowUp')
-        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 0, altezza 40 px')
+        for _ in range(8): crop_frame.press('+')
+        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 13, altezza 48 px')
         editor.locator('[data-crop=ok]').click()
         expect(dialog.locator('#library-detail-message')).to_have_text('Inquadratura salvata.')
         framed = call(f'{API}/{beach["id"]}')
-        assert (framed['copy']['width'], framed['copy']['height']) == (32, 40), framed['copy']
+        assert (framed['copy']['width'], framed['copy']['height']) == (38, 48), framed['copy']
         assert framed['copy']['crop']['mode'] == 'padded' and framed['treatment']['settings']['grain'] == 8
         picture = Image.open(io.BytesIO(page.request.get(base + framed['file']).body())).convert('RGB')
-        assert max(picture.getpixel((16, 5))) < 8 and max(picture.getpixel((16, 30))) > 8
+        assert max(picture.getpixel((19, 1))) < 8 and max(picture.getpixel((19, 46))) < 8
+        assert max(picture.getpixel((19, 24))) > 8
         dialog.locator('.library-detail-close button').click()
 
         if name == 'desktop':

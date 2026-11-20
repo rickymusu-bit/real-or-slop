@@ -9,14 +9,18 @@ import { withPhotoProcessing } from "./photo-processing";
 interface Box { x: number; y: number; height: number }
 interface Point { x: number; y: number }
 const CORNERS: Record<string, Point> = { nw: { x: -1, y: -1 }, ne: { x: 1, y: -1 }, sw: { x: -1, y: 1 }, se: { x: 1, y: 1 } };
+const positionOnPhoto = (position: number, frameSize: number, photoStart: number, photoSize: number) =>
+  frameSize > photoSize ? photoStart + Math.round((photoSize - frameSize) / 2)
+    : Math.max(photoStart, Math.min(photoStart + photoSize - frameSize, Math.round(position)));
 /** A draggable frame of fixed proportions over the 4:5 canvas at original resolution. */
-function frameControl(stage: HTMLElement, frame: HTMLElement, width: number, height: number, min: number, box: Box) {
+function frameControl(stage: HTMLElement, frame: HTMLElement, width: number, height: number,
+  photo: Point & { width: number; height: number }, min: number, box: Box) {
   const ratio = GAME_COPY.viewRatio, w = (height: number) => formatWidth("4:5", height);
   const max = height;
   const clampedHeight = (h: number, limit = max) => Math.max(min, Math.min(limit, Math.round(h)));
   const draw = (next: Box) => {
     const h = clampedHeight(next.height);
-    box = { height: h, x: Math.max(0, Math.min(width - w(h), Math.round(next.x))), y: Math.max(0, Math.min(height - h, Math.round(next.y))) };
+    box = { height: h, x: positionOnPhoto(next.x, w(h), photo.x, photo.width), y: positionOnPhoto(next.y, h, photo.y, photo.height) };
     frame.style.left = (box.x / width * 100) + "%"; frame.style.top = (box.y / height * 100) + "%";
     frame.style.width = (w(box.height) / width * 100) + "%"; frame.style.height = (box.height / height * 100) + "%";
     frame.setAttribute("aria-valuenow", String(box.height));
@@ -36,8 +40,9 @@ function frameControl(stage: HTMLElement, frame: HTMLElement, width: number, hei
   const resizeFromCorner = (start: Box, corner: Point, dx: number, dy: number) => {
     const anchorX = corner.x > 0 ? start.x : start.x + w(start.height);
     const anchorY = corner.y > 0 ? start.y : start.y + start.height;
-    const availableWidth = corner.x > 0 ? width - anchorX : anchorX;
-    const availableHeight = corner.y > 0 ? height - anchorY : anchorY;
+    // On the padded axis the frame can keep growing after the anchor is replaced by centring.
+    const availableWidth = photo.width < width ? width : corner.x > 0 ? width - anchorX : anchorX;
+    const availableHeight = photo.height < height ? height : corner.y > 0 ? height - anchorY : anchorY;
     const limit = Math.min(Math.ceil((availableWidth + 0.5) / ratio) - 1, availableHeight);
     const h = clampedHeight(start.height + (dx * corner.x * ratio + dy * corner.y) / (1 + ratio * ratio), limit);
     draw({ height: h, x: corner.x > 0 ? anchorX : anchorX - w(h), y: corner.y > 0 ? anchorY : anchorY - h });
@@ -125,7 +130,8 @@ export async function editFrame<T extends TreatableItem & { width: number; heigh
   img.style.top = `${canvas.y / canvas.height * 100}%`;
   img.style.width = `${width / canvas.width * 100}%`;
   img.style.height = `${height / canvas.height * 100}%`;
-  const readCrop = frameControl(cropStage, cropFrame, canvas.width, canvas.height, minimumCropHeight(format, width, height), initialCrop);
+  const photo = { x: canvas.x, y: canvas.y, width, height };
+  const readCrop = frameControl(cropStage, cropFrame, canvas.width, canvas.height, photo, minimumCropHeight(format, width, height), initialCrop);
   try {
     dialog.showModal();
     cropFrame.focus({ preventScroll: true });
