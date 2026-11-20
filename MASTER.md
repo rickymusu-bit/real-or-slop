@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 34.11.0, aggiornata il 2026-11-20T16:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 34.13.0, aggiornata il 2026-11-20T19:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,9 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.50.0:** niente tag (decisione dell'owner del 2026-11-20). L'analisi a pagamento riguarda solo le REAL e restituisce la
+- **Ramo 1.52.0:** controllo notturno delle fonti Commons delle REAL, 50 a notte dopo tre mesi dall'ultimo controllo, solo
+  segnalazione nella galleria e nel dettaglio. Migrazione 0065. Ramo indipendente dalla PR #167 (1.51.0).
+- **Integrata in main la 1.50.0 (PR #166):** niente tag (decisione dell'owner del 2026-11-20). L'analisi a pagamento riguarda solo le REAL e restituisce la
   descrizione editoriale; le SLOP non si analizzano e il tetto del ciclo passa da `1 + 2N` a `2N` chiamate. Bianco e nero, seppia o
   colore del trattamento SLOP si ricavano dalla crominanza residua misurata sulla REAL (misure 4, trattamento 6). Migrazione 0063.
   Dopo il rilascio: salvare in Impostazioni le proposte di «Base comune» e «Descrizione delle REAL»; le copie si rimisurano da sole
@@ -82,12 +84,12 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, analisi delle REAL, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 9.0.0 |
+| Libreria, stati, analisi delle REAL, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, dati | `docs/libreria-immagini.md` | 9.2.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.3.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.0.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 5.0.0 |
 | SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 11.0.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 9.0.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 9.2.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.2.1 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.4.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.2 |
@@ -135,7 +137,8 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
   `treatment-editor.ts` e `treatment-editor.css`, copie di gioco preparate nel browser `game-copy.ts`.
 
 **Worker** Cloudflare (`worker/`, ingresso `index.ts`):
-- `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera).
+- `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera),
+  `commons-check.ts` (controllo notturno delle fonti Commons delle REAL).
 - Libreria `library.ts` (stati, modifiche, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   descrizione delle REAL `analysis.ts`, gallerie `galleries.ts`, cancellazione di gallerie e file `gallery-removal.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
@@ -152,7 +155,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 immagini `editorial.ts` (descrizioni, brief e valutazioni), `image-label.ts` (titolo REAL o ID SLOP), `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
 
 **Test** (`tests/`): unitari `*.test.ts` (`npm test`); d'integrazione `*.integration.py`, eseguiti da `scripts/integration.py` con il
-modello finto `fake_openai.py` e gli aiuti `catalog.py`, `game_copy.py`, `long_press.py`, `local_db.py` (sole fixture nello SQLite di D1 isolato); `cloudflare-workers.mjs` sostituisce in Node
+modello finto `fake_openai.py` (che simula anche l'API di Commons per il controllo delle fonti) e gli aiuti `catalog.py`, `game_copy.py`, `long_press.py`, `local_db.py` (sole fixture nello SQLite di D1 isolato); `cloudflare-workers.mjs` sostituisce in Node
 il modulo `cloudflare:workers` per i test unitari.
 
 **Dati.** D1 con le migrazioni in `migrations/`:
@@ -190,6 +193,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0061 | azzera i dati applicativi del D1, elimina il registro madre–figlia e rende obbligatoria la galleria |
 | 0062 | rimuove i contenuti insieme alla galleria e registra i file R2 da eliminare |
 | 0063 | elimina tag, alias e categorie con i trigger, `generated_tags` e `categories_completed_at`; ogni altro dato conservato |
+| 0065 | data dell'ultimo controllo della fonte Commons e della mancanza del file; la data di acquisizione vale come primo controllo |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

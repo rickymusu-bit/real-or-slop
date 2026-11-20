@@ -1,6 +1,6 @@
-# Libreria delle immagini e analisi — specifica 9.0.0
+# Libreria delle immagini e analisi — specifica 9.2.0
 
-Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30:00Z.
+Stato: implementata nel ramo 1.52.0, da rilasciare. Aggiornata: 2026-11-20T19:30:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -16,6 +16,8 @@ Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30
   superate e restano nella cronologia git.
 - L'analisi a pagamento genera la descrizione editoriale una sola volta per REAL e sostituisce quella delle foto scelte (2026-11-09,
   adattata il 2026-11-20).
+- **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, ciascuna solo tre mesi dopo l'ultimo controllo; un
+  file sparito da Commons viene **solo segnalato**, mai ritirato o cancellato in automatico (sezione 9).
 - Dal dettaglio di una foto nuova o approvata si può rifare l’analisi a pagamento con conferma esplicita (2026-11-19).
 - I risultati mostrano elementi visibili e contesto documentato della descrizione editoriale, con l’attribuzione della REAL (2026-11-19).
 - Niente prezzi né budget: ogni chiamata a pagamento si conferma e si registra senza importi; il limite di spesa è quello del progetto
@@ -170,3 +172,29 @@ Migrazione 0050: descrizioni e provenienza, contesto Commons originale, `slop_pr
 Migrazione 0051 (`model_contexts`): parte `slop_evaluation` e colonna `pipeline` (sezione 7); testi, date e identificativi conservati.
 Migrazione 0063: elimina tag, alias, categorie, `generated_tags` e `categories_completed_at` (sezione 4). Foto, descrizioni, stato
 dell'analisi, copie, processi, chiamate e partite restano. Nessuna chiamata a pagamento.
+Migrazione 0065: `images.source_checked_at` e `images.source_missing_at` per il controllo delle fonti (sezione 9), con indice parziale
+sulle REAL; le REAL già acquisite da Commons ricevono come ultimo controllo la data di acquisizione.
+
+## 9. Controllo delle fonti su Commons
+
+Decisione dell'owner del 2026-11-20. Commons cancella i file soprattutto per problemi di diritti: un file sparito può voler dire che la
+licenza su cui si basa la REAL non era valida. Una licenza Creative Commons invece non si revoca, quindi non si rilegge la licenza: si
+controlla solo che la pagina del file esista ancora.
+
+- **Quando.** Nella manutenzione notturna (Cron Trigger delle 03:17 UTC), dopo le altre operazioni e senza poterle bloccare.
+- **Quali foto.** Le REAL fuori dal cestino la cui fonte è una pagina `https://commons.wikimedia.org/wiki/File:…`, se l'ultimo
+  controllo (`source_checked_at`) risale ad almeno tre mesi di calendario prima. Prima quelle mai controllate, poi le più vecchie;
+  al massimo **50 a notte**, cioè una sola richiesta all'API. L'acquisizione da Commons conta come primo controllo; la migrazione 0065
+  usa la data di acquisizione per le REAL già presenti.
+- **Richiesta.** `action=query`, `formatversion=2`, `redirects=1`, `maxlag=5`, i titoli dei file, con il `User-Agent` del progetto.
+  Nessuna chiamata a pagamento e nessun dato personale.
+- **Esiti.** Pagina presente: data del controllo aggiornata e segnalazione tolta. File spostato con un reindirizzamento: il link della
+  fonte segue il nuovo titolo. Pagina mancante: data del controllo aggiornata e `source_missing_at` impostato alla prima volta in cui
+  manca. Un indirizzo che non è più un file di Commons si mette da parte per tre mesi, senza segnalazione. Errore di rete, risposta
+  HTTP non riuscita, `maxlag` o risposta illeggibile: nulla cambia e le stesse foto tornano la notte successiva.
+- **Solo segnalazione.** La foto resta nel suo stato. La scheda della galleria mostra quante REAL non risultano più su Commons, la
+  foto un'etichetta «Fonte rimossa», il dettaglio la data e cosa fare: verificare la pagina, ritirare o cestinare la foto se la
+  licenza non regge, oppure correggere la pagina della fonte. Correggerla toglie la segnalazione e rimette la foto in testa alla coda
+  della notte successiva. Il dettaglio di una REAL controllata mostra anche «Fonte presente su Commons al …».
+- **Carico.** Una richiesta leggera a notte, qualunque sia la dimensione del catalogo: 5000 REAL si ricontrollano in circa cento
+  giorni, quindi l'intervallo effettivo può superare i tre mesi quando le REAL dovute sono più di 50 a notte.

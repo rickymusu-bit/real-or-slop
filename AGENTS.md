@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 31.0.0, aggiornata il 2026-11-20T16:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 31.2.0, aggiornata il 2026-11-20T19:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -42,6 +42,8 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 - **Niente tag** (decisione del 2026-11-20). Le foto di una galleria condividono quasi gli stessi tag: la galleria basta a
   raggrupparle. Nessun vocabolario, filtro o distribuzione per tag; approvare non richiede tag; le SLOP non si analizzano. Il
   trattamento delle SLOP ricava bianco e nero, seppia o colore dalle misure della REAL.
+- **Fonti REAL controllate su Commons** (decisione del 2026-11-20). Ogni notte 50 REAL, ciascuna tre mesi dopo l'ultimo controllo,
+  per sapere se il file esiste ancora. Un file sparito è solo segnalato all'owner, mai ritirato o cancellato in automatico.
 - **Credibilità prima dell'aderenza letterale al prompt.** Il valutatore esamina **l'immagine generata intera**, senza crop
   né trattamento 4:5; decide accettazione, nuovo tentativo, revisione del prompt o revisione umana. Il ritaglio 4:5 è preparato
   **soltanto dopo l'accettazione** e non dà feedback al generatore. Nell’accettazione automatica i difetti critici non sono compensabili con altri punti forti; tentativi

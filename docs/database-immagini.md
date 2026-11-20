@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 9.0.0
+# Foto e gallerie — specifica 9.2.0
 
-Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30:00Z.
+Stato: implementata nel ramo 1.52.0, da rilasciare. Aggiornata: 2026-11-20T19:30:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -52,6 +52,10 @@ suo batch originario, ma esce dalla sua revisione operativa.
 - Se una foto appartiene a una partita in corso o la galleria ha una generazione in corso, l’operazione viene respinta e si può
   riprovare al termine. Il cestino si apre da «Filtri e ordinamento» nella finestra della galleria.
 
+- **Fonti sparite da Commons** (2026-11-20, specifica `libreria-immagini`, sezione 9): la scheda della galleria nella sezione
+  Gallerie conta le REAL il cui file non risulta più su Commons; nella griglia la foto porta l'etichetta «Fonte rimossa». È solo una
+  segnalazione: stato e pubblicazione non cambiano.
+
 ## 3. Dettaglio
 
 - Origine, stato, dimensioni dell'originale, copia di gioco con formato e peso; visualizzazioni e classificazioni corrette con la
@@ -70,6 +74,8 @@ suo batch originario, ma esce dalla sua revisione operativa.
 - **Genera la descrizione con IA:** dal dettaglio di una REAL senza descrizione editoriale e fuori dal cestino, con conferma di una
   chiamata a pagamento sull’originale intero. Se l’analisi precedente è interrotta o incerta, la conferma segnala il possibile
   addebito già avvenuto. La foto pubblicata resta nel gioco.
+- **Fonte su Commons (REAL):** sopra il corpo del dettaglio, l'ultima data in cui il controllo notturno ha trovato il file oppure,
+  se manca, la data della prima mancanza con le azioni possibili (verificare, ritirare o cestinare, correggere la pagina della fonte).
 - **Copie e misure:** «Inquadratura» mostra il riquadro 4:5 sulla foto adattata. Il riquadro si centra sull’asse in cui supera la foto
   per pareggiare le bande nere. Durante la preparazione
   della copia, il salvataggio di inquadratura o trattamento e l’analisi, l’avviso al centro blocca la finestra fino all’esito. Le

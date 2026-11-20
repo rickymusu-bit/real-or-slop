@@ -38,7 +38,7 @@ export interface Row {
   real_description: string | null; real_description_provenance: string | null; commons_description: string | null;
   generation_batch: string | null; generation_slot: string | null; generation_quality: string | null;
   analysis_base_context: string | null; analysis_task_context: string | null; copy_crop: string | null;
-  copy_metrics: string | null; copy_treatment: string | null;
+  copy_metrics: string | null; copy_treatment: string | null; source_checked_at: string | null; source_missing_at: string | null;
 }
 const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
@@ -85,6 +85,7 @@ function view(row: Row, extra: Extra = {}) {
     real_description: parseJson(row.real_description), real_description_provenance: parseJson(row.real_description_provenance),
     description: row.description,
     ...(row.origin === "REAL" ? { title: row.title, commons_description: row.commons_description, source_url: row.source_url,
+      source_checked_at: row.source_checked_at, source_missing_at: row.source_missing_at,
       author: row.author, license_name: row.license_name, license_url: row.license_url }
       : { prompt: row.prompt, model: row.model }),
     width: row.width, height: row.height, original_mime: row.original_mime, original_sha256: row.original_sha256,
@@ -129,13 +130,16 @@ export async function create(env: Env, input: { origin: Origin; title?: string; 
   await env.QUARANTINE.put(key, bytes, { httpMetadata: { contentType: mime }, customMetadata: { sha256: hash } });
   try {
     await env.DB.prepare(`INSERT INTO images(id,origin,title,description,source_url,author,license_name,license_url,prompt,model,
-      original_key,original_sha256,original_mime,width,height,created_at,updated_at,generation_batch,generation_slot,generation_quality,commons_description,gallery_id)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      original_key,original_sha256,original_mime,width,height,created_at,updated_at,generation_batch,generation_slot,generation_quality,commons_description,gallery_id,
+      source_checked_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(imageIdValue, input.origin, input.origin === "REAL" ? text(input.title, "title", true) : null, text(input.description, "description"),
         text(input.source_url, "source_url"), text(input.author, "author"), text(input.license_name, "license_name"),
         text(input.license_url, "license_url"), text(input.prompt, "prompt"), text(input.model, "model"),
         key, hash, mime, width, height, stamp, stamp, input.generation?.batch ?? null,
-        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null, input.origin === "REAL" ? input.description || "" : null, input.gallery_id).run();
+        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null, input.origin === "REAL" ? input.description || "" : null, input.gallery_id,
+        // Reading the file from Commons at the acquisition is its first check (spec `libreria-immagini`, section 9).
+        input.origin === "REAL" && /^https:\/\/commons\.wikimedia\.org\/wiki\/File:/.test(input.source_url || "") ? stamp : null).run();
   } catch (error) {
     await env.QUARANTINE.delete(key);
     if (error instanceof HttpError) throw error;
@@ -229,11 +233,15 @@ async function edit(env: Env, row: Row, data: Record<string, unknown>) {
   if (row.status === "published" && !(row.origin === "REAL" && "real_description" in data && Object.keys(data).every(k => ["revision","real_description"].includes(k)))) throw new HttpError(409, "Immagine pubblicata: avvia la modifica, che la ritira dal gioco");
   if (row.status === "trash") throw new HttpError(409, "Immagine nel cestino: ripristinala per modificarla");
   const fields = Object.keys(TEXT_FIELDS).filter(key => key in data);
-  const values = fields.map(key => text(data[key], key, key === "title"));
+  const values: (string | null)[] = fields.map(key => text(data[key], key, key === "title"));
   if ("real_description" in data) {
     const description = realDescription(data.real_description);
     if (row.origin !== "REAL" || !description) throw new HttpError(400, "Descrizione editoriale non valida");
     fields.push("real_description"); values.push(JSON.stringify(description));
+  }
+  // A corrected source address is checked on Commons the next night, and its flag goes until then.
+  if (row.origin === "REAL" && "source_url" in data && values[fields.indexOf("source_url")] !== row.source_url) {
+    fields.push("source_checked_at", "source_missing_at"); values.push(null, null);
   }
   // Owner decision of 2026-11-11: at the end of an edit the image is approved. The owner edits what the player will see,
   // so an approved image stays approved; a new one stays new until it is approved.

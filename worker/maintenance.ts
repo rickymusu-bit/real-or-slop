@@ -1,10 +1,12 @@
 /** Daily maintenance (spec `privacy-note-legali`, section 4), run by the Cron Trigger: deletes games older than 12 months
- * with their rounds, answers and events, expired rate limits and withdrawn copies no game uses any more. */
+ * with their rounds, answers and events, expired rate limits and withdrawn copies no game uses any more; checks the Commons
+ * sources of fifty REAL (spec `libreria-immagini`, section 9). */
 import { type Env } from "./core";
 import { GAME_RETENTION_MS } from "../shared/legal";
 import { expireGalleryBatches } from "./slop-gallery";
 import { sweepRetired } from "./in-play";
 import { sweepGalleryFiles } from "./gallery-removal";
+import { checkCommonsSources } from "./commons-check";
 
 export async function maintenance(env: Env, now = Date.now()) {
   await expireGalleryBatches(env, now);
@@ -29,5 +31,7 @@ export async function maintenance(env: Env, now = Date.now()) {
     await env.DB.prepare("UPDATE slop_attempts SET candidate_key=NULL WHERE id=?").bind(a.id).run();
   }
   await env.DB.prepare("DELETE FROM slop_processes WHERE updated_at<? AND image_id IS NULL AND state IN ('closed','draft')").bind(cutoff).run();
-  return { games_deleted: games.meta.changes || 0, retired_copies_deleted: copies };
+  // Last, and never in the way of the rest: a failure of Commons leaves the photos due for the next night.
+  const sources = await checkCommonsSources(env, now).catch(error => ({ skipped: error instanceof Error ? error.message : String(error) }));
+  return { games_deleted: games.meta.changes || 0, retired_copies_deleted: copies, commons_sources: sources };
 }

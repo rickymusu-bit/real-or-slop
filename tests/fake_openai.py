@@ -34,6 +34,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/control': return self.reply(200, {'log': log})
         if self.path == '/v1/models': return self.reply(200, {'object': 'list', 'data': [{'id': m, 'object': 'model'} for m in MODELS]})
+        if self.path.startswith('/commons/w/api.php?'):
+            # Fake Commons for the nightly source check: files whose name contains «Gone» are missing, the others exist.
+            from urllib.parse import parse_qs, urlsplit
+            titles = parse_qs(urlsplit(self.path).query).get('titles', [''])[0].split('|')
+            log.append({'path': '/commons', 'titles': titles})
+            return self.reply(200, {'query': {'pages': [{'title': t, 'missing': True} if 'Gone' in t else {'title': t, 'pageid': 1} for t in titles]}})
         self.reply(404, {})
     def do_POST(self):
         data = json.loads(self.rfile.read(int(self.headers.get('Content-Length') or 0)) or b'{}')

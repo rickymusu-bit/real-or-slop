@@ -48,6 +48,9 @@ with sync_playwright() as p:
         real = seed(prefix, 'REAL', 'barricate', 10 + index * 10, True, description='Barricate in una strada di Parigi')
         slop = seed(prefix, 'SLOP', 'scontri', 11 + index * 10, True, prompt='A riot in a square, 1960s')
         beach = seed(prefix, 'SLOP', 'spiaggia', 12 + index * 10, False, prompt='A beach, 1960s')
+        # The nightly Commons check found the file of the REAL missing: a flag only (spec `libreria-immagini`, section 9).
+        sql(f"UPDATE images SET source_url='https://commons.wikimedia.org/wiki/File:Gone.jpg',source_checked_at='2026-11-01T03:17:00.000Z',"
+            f"source_missing_at='2026-11-01T03:17:00.000Z' WHERE id='{real['id']}'")
         # Statistics: three rounds of the REAL (two right), one of the SLOP (wrong), played on the current copies.
         session = f'{prefix}-session'
         sql(f"INSERT INTO game_sessions(id,mode,created_at,owner_hash,phase,completed) VALUES('{session}','training',0,'x','completed',1); " +
@@ -61,6 +64,7 @@ with sync_playwright() as p:
             confirms.append(dialog.message); dialog.accept()
         page.on('dialog', answer)
         page.goto(base + '/admin')
+        expect(page.locator(f'[data-gallery-open="{gallery_id}"] [data-source-missing]')).to_have_text('1 REAL non risulta più su Commons')
         open_gallery(page, gallery_id)
         page.locator('.db-filter-panel summary').click()
         # Filters: text search and origin; the tag filter is gone (owner decision of 2026-11-20).
@@ -72,10 +76,14 @@ with sync_playwright() as p:
         expect(cards).to_have_count(1)
         card = page.locator(f'.library-card:has([aria-label="Apri {prefix}-barricate"])')
         # The card: thumbnail, origin and state only; views in the detail.
-        expect(card.locator('.badge')).to_have_text(['REAL', 'pubblicata'])
+        expect(card.locator('.badge')).to_have_text(['REAL', 'pubblicata', 'Fonte rimossa'])
         for hidden in ('.db-tag', '.library-card-title', '[data-stats]'): expect(card.locator(hidden)).to_have_count(0)
+        expect(card.locator('[data-source-missing]')).to_have_text('Fonte rimossa')
         card.locator('.library-open').click()
         expect(page.locator('#library-detail .library-tags')).to_have_count(0)
+        expect(page.locator('#library-detail [data-source-missing]')).to_contain_text('il file non risulta più su Wikimedia Commons')
+        expect(page.locator('#library-detail [data-source-missing]')).to_contain_text('1 novembre 2026')
+        assert call(f'{API}/{real["id"]}')['status'] == 'published'  # nothing withdrawn
         expect(page.locator('#library-detail [data-stats]')).to_have_text('Vista 1 volta / classificata correttamente 1 (100%)')
         page.locator('#library-detail .library-detail-close button').click()
         # Press and hold: the large preview, not the detail; it stays open until its ×.
