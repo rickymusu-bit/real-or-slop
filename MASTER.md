@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 34.11.0, aggiornata il 2026-11-20T16:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 34.12.0, aggiornata il 2026-11-20T18:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,11 +9,12 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.50.0:** niente tag (decisione dell'owner del 2026-11-20). L'analisi a pagamento riguarda solo le REAL e restituisce la
+- **Ramo 1.51.0:** la descrizione editoriale delle REAL perde le incertezze; la migrazione 0064 le toglie dai dati e salva come
+  versioni correnti le proposte di «Base comune» e «Descrizione delle REAL» (su richiesta dell'owner).
+- **Integrata in main la 1.50.0 (PR #166):** niente tag (decisione dell'owner del 2026-11-20). L'analisi a pagamento riguarda solo le REAL e restituisce la
   descrizione editoriale; le SLOP non si analizzano e il tetto del ciclo passa da `1 + 2N` a `2N` chiamate. Bianco e nero, seppia o
   colore del trattamento SLOP si ricavano dalla crominanza residua misurata sulla REAL (misure 4, trattamento 6). Migrazione 0063.
-  Dopo il rilascio: salvare in Impostazioni le proposte di «Base comune» e «Descrizione delle REAL»; le copie si rimisurano da sole
-  all'apertura delle gallerie.
+  Le copie si rimisurano da sole all'apertura delle gallerie.
 - **Integrata in main la 1.49.0 (PR #165):** il riquadro si centra sull’asse in cui supera la foto, per mantenere simmetriche le bande nere.
 - **Integrata in main la 1.48.0 (PR #164):** ritaglio 4:5 direttamente sulla foto adattata, compresa la parte con bande nere.
 - **Integrata in main la 1.47.0 (PR #163):** foto intera di default nel 4:5, maniglie, gesto a due dita corretto e «Salva» visibile su mobile.
@@ -82,13 +83,13 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, analisi delle REAL, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 9.0.0 |
+| Libreria, stati, analisi delle REAL, chiamate a pagamento, modelli, contesto dei modelli, dati | `docs/libreria-immagini.md` | 9.1.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.3.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.0.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 5.0.0 |
-| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 11.0.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 9.0.0 |
-| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.2.1 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 5.1.0 |
+| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 11.0.1 |
+| Foto e gallerie | `docs/database-immagini.md` | 9.1.0 |
+| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.2.2 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.4.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.2 |
 
@@ -190,6 +191,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0061 | azzera i dati applicativi del D1, elimina il registro madre–figlia e rende obbligatoria la galleria |
 | 0062 | rimuove i contenuti insieme alla galleria e registra i file R2 da eliminare |
 | 0063 | elimina tag, alias e categorie con i trigger, `generated_tags` e `categories_completed_at`; ogni altro dato conservato |
+| 0064 | versioni correnti di «Base comune» e «Descrizione delle REAL» uguali alle proposte; incertezze tolte da descrizioni e provenienza |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

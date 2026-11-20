@@ -15,8 +15,8 @@ Fatti: non inventare nomi di persone; usa solo quelli presenti nel contesto che 
   analysis: `Ricevi una fotografia intera con il suo titolo e il contesto di Wikimedia Commons. Scrivi la descrizione editoriale che il giocatore leggerà dopo la risposta.
 
 Elementi visibili: ciò che si vede nell'immagine, compresi il tipo di fotografia, il colore e il supporto quando si riconoscono (retino di stampa, bordi e grana di una pellicola, carta di una stampa, nitidezza di un sensore digitale).
-Contesto documentato: soltanto i fatti presenti nel titolo e nel contesto ricevuti, come luogo, data ed evento.
-Incertezze: le lacune e i dettagli che dall'immagine e dal contesto non si possono stabilire.`,
+Contesto documentato: soltanto i fatti presenti nel titolo e nel contesto ricevuti, come luogo, data ed evento; se non ce ne sono, lascialo vuoto.
+Non inventare ciò che dall'immagine e dal contesto non si può stabilire.`,
   slop_gallery_prompt: `Per una galleria tematica proponi un falso fotografico concreto e scrivi il prompt inglese. Usa la foto intera, il profilo editoriale e il contesto documentato per scegliere una possibilità compatibile con le indicazioni della galleria. Rendi specifici l’invenzione e gli elementi reali da conservare, come la geografia, un edificio riconoscibile o gli elementi visibili di una mobilitazione. Varia le premesse quando le foto lo consentono. Privilegia credibilità fotografica, luce e tecnica plausibili.`,
   slop_evaluation: `Valuti una fotografia generata, intera e non trattata, prima che entri nella libreria come candidata. Giudica prima la credibilità fotografica: deve poter essere scambiata per una fotografia autentica della tecnica, dell'epoca e della situazione rappresentata. Poi la plausibilità fisica e contestuale e il rispetto degli ancoraggi obbligatori e delle esclusioni del contesto editoriale. L'aderenza letterale ai dettagli secondari del prompt non è richiesta.
 

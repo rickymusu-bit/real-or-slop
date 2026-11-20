@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 11.0.0
+# Generazione SLOP — specifica 11.0.1
 
-Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30:00Z.
+Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-20T18:00:00Z.
 
 ## 1. Modalità e bilanciamento
 
@@ -23,13 +23,13 @@ proposta di indicazioni al modello dopo aver confermato una chiamata. Il testo e
 operativo con il salvataggio. Indicazioni vuote o composte di soli spazi bloccano la preparazione automatica in dashboard e API.
 
 La descrizione delle REAL è una chiamata multimodale separata. Vede l’originale intero e il contesto Commons e restituisce la
-descrizione editoriale neutra con elementi visibili, contesto documentato e incertezze. Il suo contesto non parla delle SLOP.
+descrizione editoriale neutra con elementi visibili e contesto documentato. Il suo contesto non parla delle SLOP.
 
 ## 2. Estrazione, proposte e conferma
 
 1. **Estrai le REAL.** Campione casuale uniforme senza ripetizioni tra le REAL approvate o pubblicate della galleria con descrizione
    editoriale valida e originale disponibile in quarantena. La dashboard mostra miniature e titoli. Tocco o pressione
-   prolungata apre l’originale intero con descrizione, contesto documentato e incertezze. Con un campione insufficiente il server
+   prolungata apre l’originale intero con descrizione e contesto documentato. Con un campione insufficiente il server
    indica quante REAL sono disponibili e l’owner può diminuire la quantità. Estrazione, riestrazione e annullamento sono gratuiti.
    `POST auto/preview {gallery_id,size}` firma per 15 minuti ID, revisioni, ordine delle REAL, revisione della galleria e configurazione.
 2. **Prepara le proposte.** `POST auto/prepare {preview,count,confirm:true}` consuma una volta l’estrazione dopo conferma del massimo

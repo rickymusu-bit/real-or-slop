@@ -208,7 +208,7 @@ export function mountSlopAuto(root: HTMLElement | null, controls: HTMLElement | 
       state?.batch?.proposal_review?.references.find(r => r.real?.id === key)?.real;
     if (!ref) return;
     openPreview({src: ref.original, alt: "Originale REAL intero", title: ref.title,
-      description: ref.description.visible, extra: `<p>Contesto documentato: ${escape(ref.description.documented_context)}</p><p>Incertezze: ${escape(ref.description.uncertainties)}</p>`});
+      description: ref.description.visible, extra: `<p>Contesto documentato: ${escape(ref.description.documented_context)}</p>`});
   };
   onLongPress(controls, "[data-auto-reference]", showReference);
   controls.addEventListener("click", async event => {

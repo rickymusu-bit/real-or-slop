@@ -1,6 +1,6 @@
-# Partita a livelli e classifica — specifica 3.2.1
+# Partita a livelli e classifica — specifica 3.2.2
 
-Stato: implementata nel ramo 1.46.0, da rilasciare. Aggiornata: 2026-11-19T23:44:53Z.
+Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-20T18:00:00Z.
 
 **Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
 descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
@@ -56,7 +56,7 @@ sono le sue foto, altrimenti resta disattivato con il motivo.
 8. **Fine:** punteggio, REAL e SLOP riconosciute, accuratezza bilanciata, foto scadute; modulo per la classifica; lista delle foto intere
    con la risposta data. Per le REAL, la **descrizione editoriale** unisce elementi visibili e contesto documentato. Seguono titolo,
    autore, licenza, link «Foto originale» e indicazione dell’adattamento al 4:5 e della ricompressione. Se manca la descrizione editoriale si
-   mostrano i crediti disponibili. Il testo Commons e le note di incertezza restano nel catalogo. Per le SLOP si mostra il prompt.
+   mostrano i crediti disponibili. Il testo Commons resta nel catalogo. Per le SLOP si mostra il prompt.
 
 Le risposte non arrivano mai al browser prima della risposta del giocatore. Le partite già iniziate continuano con le copie dei loro
 round anche se nel frattempo una foto viene modificata o ritirata.

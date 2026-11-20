@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 9.0.0
+# Foto e gallerie — specifica 9.1.0
 
-Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30:00Z.
+Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-20T18:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -64,7 +64,7 @@ suo batch originario, ma esce dalla sua revisione operativa.
   anche «Approva», «Pubblica nel gioco», «Togli dalla pubblicazione»,
   «Elimina (nel cestino)», «Ripristina» ed «Elimina definitivamente» secondo lo stato della foto.
 - **Rigenerare una SLOP:** richiede un nuovo processo nello studio con conferma ed esame dell’immagine intera.
-- **Descrizione editoriale REAL:** elementi visibili e contesto documentato compaiono nei risultati. Le incertezze restano nel catalogo.
+- **Descrizione editoriale REAL:** elementi visibili e contesto documentato, gli unici due campi, compaiono nei risultati.
   Questi campi si modificano anche per una pubblicata, senza ritirarla. Per una REAL senza descrizione si possono compilare
   i campi a mano oppure avviare l’analisi combinata con conferma separata.
 - **Genera la descrizione con IA:** dal dettaglio di una REAL senza descrizione editoriale e fuori dal cestino, con conferma di una

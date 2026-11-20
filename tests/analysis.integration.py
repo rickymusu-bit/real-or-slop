@@ -89,6 +89,9 @@ assert sent['body']['instructions'].startswith('Lavori per un archivio fotografi
 assert 'real_description' in sent['body']['instructions'] and 'Tag:' not in sent['body']['instructions'] and 'tag ' not in sent['body']['instructions'].lower()
 schema = sent['body']['text']['format']['schema']
 assert schema['required'] == ['real_description'] and list(schema['properties']) == ['real_description'], schema
+assert schema['properties']['real_description']['required'] == ['visible', 'documented_context'], schema
+assert 'uncertainties' not in sent['body']['instructions'] and 'Incertezze' not in sent['body']['instructions'], sent['body']['instructions']
+assert set(place['real_description_provenance']['generated']) == {'visible', 'documented_context'}, place
 assert 'generat' not in sent['body']['instructions'], 'the base and the description rules must not mention generated images'
 assert spend() == [{'kind': 'analysis', 'model': 'gpt-6.1-sol', 'status': 'completed', 'input_tokens': 1200, 'output_tokens': 60}], spend()
 # Without the detail's explicit repeat, a second analysis is refused before anything is sent.
@@ -210,7 +213,7 @@ redo = f'{API}/{legacy["id"]}/analyze'
 openai([])
 assert call(redo, {'reanalyze': True})[0] == 400 and openai() == []
 assert call(redo, {'confirm': True, 'reanalyze': False})[0] == 400 and openai() == []
-openai([{'description': {'visible': 'A catalogue print.', 'documented_context': '', 'uncertainties': 'Date unknown.'}}])
+openai([{'description': {'visible': 'A catalogue print.', 'documented_context': ''}}])
 code, legacy = call(redo, {'confirm': True, 'reanalyze': True})
 assert code == 200 and legacy['status'] == 'approved' and legacy['real_description']['visible'] == 'A catalogue print.', legacy
 assert len(openai()) == 1

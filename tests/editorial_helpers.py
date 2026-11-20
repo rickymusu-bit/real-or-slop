@@ -34,7 +34,7 @@ def control(queue=None):
 
 counter = 100
 fixture_gallery = None
-DESCRIPTION = {'visible':'A group of people on a street, in flat daylight.', 'documented_context':'Paris in the 1960s, according to Commons.', 'uncertainties':'The individual people cannot be identified.'}
+DESCRIPTION = {'visible':'A group of people on a street, in flat daylight.', 'documented_context':'Paris in the 1960s, according to Commons.'}
 BRIEF = {'required':['street-scene'], 'preferred':['daylight'], 'flexible':['people and viewpoint'], 'exclusions':['identifiable real people']}
 
 def real(prefix='editorial', described=True, gallery=None):

@@ -1,6 +1,6 @@
-# Libreria delle immagini e analisi — specifica 9.0.0
+# Libreria delle immagini e analisi — specifica 9.1.0
 
-Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30:00Z.
+Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-20T18:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -14,6 +14,8 @@ Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30
   completamento di Genere, Colore e Supporto. L'analisi a pagamento di una REAL restituisce solo la descrizione editoriale.
   Approvare una foto non richiede più tag. Le decisioni precedenti sui tag (2026-11-09, 2026-11-10, 2026-11-14 e 2026-11-17) sono
   superate e restano nella cronologia git.
+- **Descrizione senza incertezze** (2026-11-20): restano elementi visibili e contesto documentato. La migrazione 0064 toglie le
+  incertezze dalle descrizioni salvate e dalla loro provenienza. Un client che le invia ancora le vede scartate.
 - L'analisi a pagamento genera la descrizione editoriale una sola volta per REAL e sostituisce quella delle foto scelte (2026-11-09,
   adattata il 2026-11-20).
 - Dal dettaglio di una foto nuova o approvata si può rifare l’analisi a pagamento con conferma esplicita (2026-11-19).
@@ -92,7 +94,7 @@ dell'aspetto (risoluzione, rumore, nitidezza, contrasto, saturazione, tinta e cr
 
 ## 5. Analisi a pagamento
 
-Si analizzano soltanto le REAL: ogni analisi restituisce `real_description` (`visible`, `documented_context`, `uncertainties`), salvata insieme all'esito della chiamata. Il modello vede la REAL **intera**, cioè l’originale caricato (JPEG, PNG o WebP fino a 12 MB), mai il ritaglio 4:5 (decisione dell’owner del 2026-11-15). Modello, hash dell’originale, revisione e data sono conservati come provenienza. Gli elementi visibili e il contesto documentato compaiono nei risultati con l’attribuzione della foto. Il testo Commons, le incertezze e la provenienza dell’analisi restano nel catalogo. Una SLOP non si analizza: il server risponde 409 senza registrare né inviare nulla.
+Si analizzano soltanto le REAL: ogni analisi restituisce `real_description` (`visible`, `documented_context`), salvata insieme all'esito della chiamata. Il modello vede la REAL **intera**, cioè l’originale caricato (JPEG, PNG o WebP fino a 12 MB), mai il ritaglio 4:5 (decisione dell’owner del 2026-11-15). Modello, hash dell’originale, revisione e data sono conservati come provenienza. Gli elementi visibili e il contesto documentato compaiono nei risultati con l’attribuzione della foto. Il testo Commons e la provenienza dell’analisi restano nel catalogo. Una SLOP non si analizza: il server risponde 409 senza registrare né inviare nulla.
 
 Una REAL senza descrizione editoriale mostra i crediti disponibili nei risultati e non entra nelle estrazioni automatiche delle SLOP. Dal dettaglio la descrizione si può compilare a mano o generare con una nuova analisi confermata (`refresh_description:true`), anche per una foto già approvata o pubblicata. La conferma segnala gli esiti incerti o interrotti. La modifica della sola descrizione editoriale conserva lo stato della foto.
 
@@ -146,8 +148,10 @@ Una REAL senza descrizione editoriale mostra i crediti disponibili nei risultati
   il 2026-11-14); con l'app 1.26.0 il «Prompt per le SLOP» delle gemelle (contesto 1.8.0); con l'app 1.27.0 «Brief e prompt per le
   SLOP» della pipeline editoriale e con la 1.28.0 «Valutazione delle SLOP» (contesto 1.9.0). In produzione il 2026-11-15 è ancora in
   vigore il testo delle gemelle del 2026-11-14: va salvata la proposta prima di generare. Con l'app 1.50.0 la base senza le regole
-  dei tag e la parte «Descrizione delle REAL» al posto di «Tag». I testi in vigore nel D1 non cambiano da soli: finché l'owner non
-  salva la proposta, le istruzioni possono ancora parlare di tag, ma lo schema della risposta accetta solo la descrizione.
+  dei tag e la parte «Descrizione delle REAL» al posto di «Tag». Su richiesta dell'owner del 2026-11-20 la migrazione 0064 salva
+  come versioni correnti le proposte di «Base comune» e «Descrizione delle REAL» (questa ormai senza incertezze), se il testo in
+  vigore è diverso; le versioni precedenti restano ripristinabili. È un'eccezione esplicita alla regola che le proposte non si
+  salvano da sole.
 
 ## 8. Dati
 
@@ -170,3 +174,5 @@ Migrazione 0050: descrizioni e provenienza, contesto Commons originale, `slop_pr
 Migrazione 0051 (`model_contexts`): parte `slop_evaluation` e colonna `pipeline` (sezione 7); testi, date e identificativi conservati.
 Migrazione 0063: elimina tag, alias, categorie, `generated_tags` e `categories_completed_at` (sezione 4). Foto, descrizioni, stato
 dell'analisi, copie, processi, chiamate e partite restano. Nessuna chiamata a pagamento.
+Migrazione 0064: nuove versioni correnti di «Base comune» e «Descrizione delle REAL» uguali alle proposte del codice (sezione 7);
+toglie `uncertainties` da `real_description` e da `real_description_provenance.generated`. Nessun'altra riga cambia.

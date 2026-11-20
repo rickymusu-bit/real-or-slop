@@ -236,8 +236,9 @@ with sync_playwright() as p:
         visible.fill('Owner corrected the visible street scene.'); visible.blur()
         context_field = a.locator('[data-editorial=documented_context]')
         context_field.fill('Documented context for the players.'); context_field.blur()
-        notes = a.locator('[data-editorial=uncertainties]')
-        notes.fill('Internal notes for the editor.'); notes.blur()
+        # Only visible elements and documented context: no uncertainties (owner decision of 2026-11-20).
+        expect(a.locator('[data-editorial]')).to_have_count(2)
+        expect(a.locator('[data-editorial=uncertainties]')).to_have_count(0)
         expect(a.locator('[data-editorial=visible]')).to_have_value('Owner corrected the visible street scene.')
         # Once per image: the generated one cannot be chosen again.
         page.get_by_role('button', name='Genera la descrizione con IA').click()
@@ -375,7 +376,6 @@ with sync_playwright() as p:
         expect(page.locator('.rw-final-description')).to_contain_text('Owner corrected the visible street scene.')
         expect(page.locator('.rw-final-description')).to_contain_text('Documented context for the players.')
         expect(page.locator('.rw-preview-grid')).not_to_contain_text('Un ponte di pietra sul fiume, anni Sessanta')
-        expect(page.locator('.rw-preview-grid')).not_to_contain_text('Internal notes for the editor.')
         page.screenshot(path=str(folder / (name + '-step4.png')), full_page=True)
         page.get_by_role('button', name='Conferma e pubblica').click()
         expect(page.locator('.rw-message')).to_contain_text('Devi confermare')

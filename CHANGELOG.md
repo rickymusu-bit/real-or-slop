@@ -1,7 +1,14 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-20T16:30:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-20T18:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.51.0 — 2026-11-20T18:00:00Z
+
+- La descrizione editoriale delle REAL ha solo elementi visibili e contesto documentato: il campo «Incertezze e informazioni
+  mancanti» sparisce da modello, wizard e dettaglio. La migrazione 0064 toglie le incertezze già salvate.
+- La migrazione 0064 salva come versioni correnti «Base comune» e «Descrizione delle REAL» proposte dal codice, senza tag né
+  incertezze. Le versioni precedenti restano ripristinabili dalle Impostazioni.
 
 ## 1.50.0 — 2026-11-20T16:30:00Z
 

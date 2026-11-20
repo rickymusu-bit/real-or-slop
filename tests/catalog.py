@@ -35,8 +35,7 @@ def publish(api, token, prefix, real=10, slop=10, seed=0):
         item = _call(api, token, f'/{item["id"]}/copy', raw=game_copy(out.getvalue()), mime='image/webp')
         credits = {'author': f'Autrice {index}', 'source_url': f'https://commons.wikimedia.org/wiki/File:{prefix}-{index}.jpg',
                    'license_name': 'CC BY 4.0', 'license_url': 'https://creativecommons.org/licenses/by/4.0/',
-                   'real_description': {'visible': f'Descrizione editoriale {index}', 'documented_context': f'Contesto documentato {index}',
-                                        'uncertainties': f'Nota interna {index}'}} if origin == 'REAL' else {}
+                   'real_description': {'visible': f'Descrizione editoriale {index}', 'documented_context': f'Contesto documentato {index}'}} if origin == 'REAL' else {}
         if credits: item = _call(api, token, f'/{item["id"]}', {'revision': item['revision'], **credits}, method='PATCH')
         _call(api, token, f'/{item["id"]}/approve', {'rights_confirmed': True})
         _call(api, token, f'/{item["id"]}/publish', {})

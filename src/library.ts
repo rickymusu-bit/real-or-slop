@@ -621,7 +621,7 @@ export async function showLibrary() {
   // Model context: four texts, each saved as a new version; an old version can become the current one again.
   const CONTEXT_LABELS: Record<string, [string, string]> = {
     base: ["Base comune", "Inviata in ogni chiamata. Non deve parlare di immagini generate: il modello che descrive le REAL non deve sapere che esistono."],
-    analysis: ["Descrizione delle REAL", "Inviato insieme alla base a ogni analisi di una REAL intera, con titolo e contesto Commons: elementi visibili, contesto documentato e incertezze."],
+    analysis: ["Descrizione delle REAL", "Inviato insieme alla base a ogni analisi di una REAL intera, con titolo e contesto Commons: elementi visibili e contesto documentato."],
     slop_gallery_prompt: ["Premessa e prompt di galleria", "Inviato insieme alla base, all’originale intero e alle indicazioni della galleria."],
     slop_evaluation: ["Valutazione delle SLOP", "Inviato insieme alla base a ogni valutazione di una candidata intera. Decisioni, tolleranza e formato della risposta restano fissati nel codice."],
   };

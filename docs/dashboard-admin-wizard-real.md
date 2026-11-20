@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 5.0.0
+# Dashboard e wizard REAL — specifica 5.1.0
 
-Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30:00Z.
+Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-20T18:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -15,7 +15,8 @@ Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30
 - Una pressione prolungata su una miniatura la ingrandisce con titolo, descrizione e link a Commons; la finestra resta aperta e si
   chiude con una × nell'angolo. Vale anche nella galleria e nello studio SLOP (2026-11-14).
 - La **descrizione editoriale generata dall'analisi della REAL** fornisce il testo per i risultati del gioco, con elementi visibili e contesto
-  documentato modificabili dall’owner. Le incertezze e il testo Commons restano nel catalogo (2026-11-19).
+  documentato modificabili dall’owner. Il testo Commons resta nel catalogo (2026-11-19). Le incertezze sono state tolte
+  (2026-11-20).
 
 ## 2. Dashboard `/admin`
 
@@ -83,8 +84,8 @@ acquisite sono comunque nella libreria privata.
   Produce la descrizione editoriale sull’originale intero. La descrizione delle foto selezionate
   viene sostituita; una REAL già analizzata non è selezionabile per ripetere automaticamente una chiamata pagata, ma
   può ricevere un'analisi nuova su richiesta esplicita, con conferma, nella galleria. Le altre REAL non cambiano.
-- **Descrizione editoriale:** mostrare nella scheda della REAL il contenuto **visibile**, il **contesto documentato Commons**
-  e le **incertezze**, ciascuno modificabile dall'owner. Se Commons non documenta un fatto, non inventarlo per riempire
+- **Descrizione editoriale:** mostrare nella scheda della REAL il contenuto **visibile** e il **contesto documentato Commons**,
+  ciascuno modificabile dall'owner. Se Commons non documenta un fatto, non inventarlo per riempire
   la descrizione. Le correzioni degli elementi visibili e del contesto documentato si riflettono nei risultati e conservano
   l'attribuzione.
 - Le modifiche di una foto partono una dopo l'altra, ciascuna con la revisione più recente.

@@ -27,7 +27,7 @@ export async function analysisStatus(env: Env) {
 
 /** The editable context (base and analysis parts) comes first; these technical lines stay in the code. */
 const OUTPUT = "Rispondi solo con JSON conforme allo schema. real_description: visible descrive solo elementi osservabili, " +
-  "documented_context solo fatti documentati nel titolo e contesto Commons forniti; uncertainties segnala lacune o dettagli incerti. " +
+  "documented_context solo fatti documentati nel titolo e contesto Commons forniti, vuoto se non ce ne sono. " +
   "Testo neutro, senza giudizi di autenticità; non inventare contesto.";
 const FORMAT = { type: "json_schema", name: "image_analysis", strict: true, schema: {
   type: "object", additionalProperties: false, required: ["real_description"], properties: { real_description: descriptionSchema } } };
