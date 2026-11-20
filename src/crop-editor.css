@@ -3,9 +3,9 @@
 .crop-layout { display: grid; grid-template-rows: minmax(0, 1fr) auto; max-height: calc(96svh - 26px); }
 .crop-scroll { min-height: 0; overflow: auto; overscroll-behavior: contain; }
 .crop-dialog h2 { margin: 0 0 6px; }
-.crop-stage { position: relative; width: min(100%, 48svh); aspect-ratio: 4 / 5; background: #000; margin: 10px auto; overflow: hidden; user-select: none; }
-.crop-stage.is-cropping { width: min(100%, calc(60svh * var(--crop-image-ratio))); aspect-ratio: var(--crop-image-ratio); touch-action: none; }
-.crop-stage img { display: block; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: contain; }
+.crop-stage { position: relative; width: min(100%, calc(65svh * var(--crop-ratio))); aspect-ratio: var(--crop-ratio); background: #000;
+  margin: 10px auto; overflow: hidden; user-select: none; touch-action: none; }
+.crop-stage img { position: absolute; display: block; max-width: none; max-height: none; }
 .crop-frame { position: absolute; box-sizing: border-box; border: 2px solid #fff; outline: 1px solid #000; cursor: move;
   box-shadow: 0 0 0 9999px rgb(0 0 0 / 60%); touch-action: none; }
 .crop-frame:focus-visible { border-color: var(--real); outline: 1px solid #000; outline-offset: 0; }

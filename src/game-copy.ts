@@ -2,7 +2,7 @@
  * OpenAI, the browser everything else): 4:5 crop of the oriented original, size of the recipe, light treatment of a SLOP from its
  * source REAL (proposed or set with the sliders), WebP, measures; the Worker checks and stores the upload. */
 import type { OwnerAcceptance } from "../shared/editorial";
-import { copyContentDimensions, copyDimensions, cropQuery, frameLongSide, GAME_COPY, wholePhotoFrame, type Crop } from "../shared/game-copy";
+import { copyContentDimensions, copyDimensions, cropQuery, frameLongSide, GAME_COPY, paddedPhotoCanvas, wholePhotoFrame, type Crop } from "../shared/game-copy";
 import {
   gap, measure, METRICS_VERSION, SETTING_LIMITS, settingsOf, treat, treatedLong, TREATMENT_VERSION, type Metrics, type Settings, type Treatment, type CopyStyle,
 } from "../shared/copy-treatment";
@@ -42,29 +42,42 @@ export interface TreatmentPlan {
   off: boolean; seed: number; medium: string; color: string; sample: { metrics: Metrics }; settings?: Settings | null;
 }
 
-/** The crop of an oriented original drawn at the size of the copy (`side` long): the pixels the treatment starts from. */
-export function drawBase(bitmap: ImageBitmap, frame: Crop, side: number): ImageData {
-  const { width, height } = copyContentDimensions(frame, copyDimensions(frame, side));
-  const { context } = canvasOf(width, height);
-  context.drawImage(bitmap, frame.x, frame.y, frame.width, frame.height, 0, 0, width, height);
-  return context.getImageData(0, 0, width, height);
+/** Draws the part of the original selected by the frame, leaving the bands for composition after treatment. */
+export function drawBase(bitmap: ImageBitmap, frame: Crop, side: number) {
+  const size = copyDimensions(frame, side);
+  const content = copyContentDimensions(frame, size);
+  let source = { x: frame.x, y: frame.y, width: frame.width, height: frame.height };
+  let area = { ...content, x: Math.floor((size.width - content.width) / 2), y: Math.floor((size.height - content.height) / 2) };
+  if (frame.mode === "padded") {
+    const canvas = paddedPhotoCanvas(bitmap.width, bitmap.height);
+    const left = Math.max(frame.x, canvas.x), top = Math.max(frame.y, canvas.y);
+    const right = Math.min(frame.x + frame.width, canvas.x + bitmap.width), bottom = Math.min(frame.y + frame.height, canvas.y + bitmap.height);
+    const pixelX = (x: number) => Math.round((x - frame.x) * size.width / frame.width);
+    const pixelY = (y: number) => Math.round((y - frame.y) * size.height / frame.height);
+    source = { x: left - canvas.x, y: top - canvas.y, width: right - left, height: bottom - top };
+    area = { x: pixelX(left), y: pixelY(top), width: Math.max(0, pixelX(right) - pixelX(left)), height: Math.max(0, pixelY(bottom) - pixelY(top)) };
+  }
+  const visible = area.width > 0 && area.height > 0;
+  const { canvas, context } = canvasOf(visible ? area.width : 1, visible ? area.height : 1);
+  if (visible) context.drawImage(bitmap, source.x, source.y, source.width, source.height, 0, 0, area.width, area.height);
+  return { pixels: context.getImageData(0, 0, canvas.width, canvas.height), area, size };
 }
 /** Letterbox the picture after any treatment so the bands stay black. */
-export function frameCanvas(picture: HTMLCanvasElement, frame: Crop, side: number): HTMLCanvasElement {
-  const { width, height } = copyDimensions(frame, side);
-  if (picture.width === width && picture.height === height) return picture;
+export function frameCanvas(picture: HTMLCanvasElement, base: ReturnType<typeof drawBase>): HTMLCanvasElement {
+  const { area, size: { width, height } } = base;
+  if (area.width === width && area.height === height) return picture;
   const { canvas, context } = canvasOf(width, height);
   context.fillStyle = "#000";
   context.fillRect(0, 0, width, height);
-  context.drawImage(picture, Math.floor((width - picture.width) / 2), Math.floor((height - picture.height) / 2));
+  if (area.width && area.height) context.drawImage(picture, area.x, area.y);
   return canvas;
 }
 /** The oriented original, fitted whole by default, drawn at the size of the picture inside the copy. */
-export async function basePixels(source: Blob, crop: Crop | undefined, long: (frame: Crop) => number): Promise<{ pixels: ImageData; frame: Crop; long: number }> {
+export async function basePixels(source: Blob, crop: Crop | undefined, long: (frame: Crop) => number) {
   const bitmap = await createImageBitmap(source, { imageOrientation: "from-image" });
   try {
     const frame = crop || wholePhotoFrame(bitmap.width, bitmap.height), side = long(frame);
-    return { pixels: drawBase(bitmap, frame, side), frame, long: side };
+    return { base: drawBase(bitmap, frame, side), frame, long: side };
   } finally { bitmap.close(); }
 }
 /** Long side of a copy: the recipe's, or for a treated SLOP the owner's or the one proposed from the source REAL. */
@@ -92,7 +105,8 @@ export async function treatedCanvas(base: ImageData, plan: TreatmentPlan) {
 }
 
 export async function encodeGameCopy(source: Blob, crop?: Crop, plan?: TreatmentPlan | null): Promise<{ copy: Blob; metrics: Metrics; treatment: Treatment | null; frame: Crop }> {
-  const { pixels, frame, long } = await basePixels(source, crop, f => longOf(f, plan));
+  const { base, frame, long } = await basePixels(source, crop, f => longOf(f, plan));
+  const { pixels } = base;
   let canvas: HTMLCanvasElement;
   let treatment: Treatment | null = plan ? { version: TREATMENT_VERSION, off: plan.off, seed: plan.seed, long, medium: plan.medium, color: plan.color,
     sample: plan.sample, ...(plan.settings ? { settings: { ...plan.settings, long: fitSettingsLong(plan.settings.long, frameLongSide(frame)) } } : {}) } : null;
@@ -103,7 +117,7 @@ export async function encodeGameCopy(source: Blob, crop?: Crop, plan?: Treatment
     ({ canvas } = canvasOf(pixels.width, pixels.height));
     canvas.getContext("2d")!.putImageData(pixels, 0, 0);
   }
-  const copy = await blobOf(frameCanvas(canvas, frame, long), GAME_COPY.mime, GAME_COPY.quality);
+  const copy = await blobOf(frameCanvas(canvas, base), GAME_COPY.mime, GAME_COPY.quality);
   if (!copy || copy.type !== GAME_COPY.mime) throw Error("Questo browser non esporta WebP: usare Chrome, Edge o Firefox");
   if (copy.size > GAME_COPY.maxBytes) throw Error("Copia di gioco oltre 4 MB");
   const metrics = await measureBlob(copy);

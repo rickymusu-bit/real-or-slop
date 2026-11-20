@@ -27,8 +27,8 @@ export async function chooseTreatment(item: TreatableItem, title = ""): Promise<
   const frame = item.copy?.crop || wholePhotoFrame(bitmap.width, bitmap.height), cropLong = frameLongSide(frame);
   // The proposal on the stored crop, at the long side proposed from the source REAL.
   const proposedPlan = { ...plan, settings: null }, proposedLong = longOf(frame, proposedPlan);
-  const bases = new Map<number, ImageData>([[proposedLong, drawBase(bitmap, frame, proposedLong)]]);
-  const proposed = proposalOf(bases.get(proposedLong)!, proposedPlan, proposedLong);
+  const bases = new Map([[proposedLong, drawBase(bitmap, frame, proposedLong)]]);
+  const proposed = proposalOf(bases.get(proposedLong)!.pixels, proposedPlan, proposedLong);
   let settings: Settings = structuredClone(plan.settings || proposed);
   const limits = { ...SETTING_LIMITS, long: { min: Math.min(SETTING_LIMITS.long.min, cropLong), max: Math.min(SETTING_LIMITS.long.max, cropLong), step: 1 } };
   const dialog = document.createElement("dialog");
@@ -70,9 +70,9 @@ export async function chooseTreatment(item: TreatableItem, title = ""): Promise<
     await new Promise(resolve => requestAnimationFrame(resolve));  // the status is shown before the computation
     const long = Math.min(settings.long, cropLong);
     if (!bases.has(long)) bases.set(long, drawBase(bitmap, frame, long));
-    const base = bases.get(long)!, treated = await treatedCanvas(base, { ...plan, settings });
+    const base = bases.get(long)!, treated = await treatedCanvas(base.pixels, { ...plan, settings });
     if (turn !== drawn) return;  // a newer change is on its way
-    const canvas = frameCanvas(treated.canvas, frame, long);
+    const canvas = frameCanvas(treated.canvas, base);
     preview.width = canvas.width; preview.height = canvas.height;
     const context = preview.getContext("2d")!;
     context.drawImage(canvas, 0, 0);

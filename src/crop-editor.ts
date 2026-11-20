@@ -1,7 +1,7 @@
 /** Owner-controlled 4:5 framing. Keep the photograph’s fundamental subjects and context inside the crop. */
 import "./crop-editor.css";
 import {
-  centredCrop, cropError, formatWidth, GAME_COPY, minimumCropHeight, wholePhotoFrame,
+  cropError, formatWidth, GAME_COPY, minimumCropHeight, paddedPhotoCanvas, wholePhotoFrame,
 } from "../shared/game-copy";
 import { originalOf, saveFrame, type TreatableItem } from "./game-copy";
 import { withPhotoProcessing } from "./photo-processing";
@@ -9,10 +9,10 @@ import { withPhotoProcessing } from "./photo-processing";
 interface Box { x: number; y: number; height: number }
 interface Point { x: number; y: number }
 const CORNERS: Record<string, Point> = { nw: { x: -1, y: -1 }, ne: { x: 1, y: -1 }, sw: { x: -1, y: 1 }, se: { x: 1, y: 1 } };
-/** A draggable frame of fixed proportions over a picture of `width` × `height` pixels shown at the stage's size. */
-function frameControl(stage: HTMLElement, frame: HTMLElement, width: number, height: number, box: Box) {
+/** A draggable frame of fixed proportions over the 4:5 canvas at original resolution. */
+function frameControl(stage: HTMLElement, frame: HTMLElement, width: number, height: number, min: number, box: Box) {
   const ratio = GAME_COPY.viewRatio, w = (height: number) => formatWidth("4:5", height);
-  const max = centredCrop(width, height).height, min = minimumCropHeight("4:5", width, height);
+  const max = height;
   const clampedHeight = (h: number, limit = max) => Math.max(min, Math.min(limit, Math.round(h)));
   const draw = (next: Box) => {
     const h = clampedHeight(next.height);
@@ -44,7 +44,7 @@ function frameControl(stage: HTMLElement, frame: HTMLElement, width: number, hei
   };
   let pinch: (ReturnType<typeof pair> & { box: Box }) | null = null;
   stage.addEventListener("pointerdown", event => {
-    if (frame.hidden || event.button !== 0 || pointers.size === 2) return;
+    if (event.button !== 0 || pointers.size === 2) return;
     const start = { x: event.clientX, y: event.clientY }, target = event.target as HTMLElement;
     if (!pointers.size && frame.contains(target)) {
       const corner = CORNERS[target.closest<HTMLElement>("[data-crop-corner]")?.dataset.cropCorner || ""];
@@ -100,55 +100,49 @@ export async function editFrame<T extends TreatableItem & { width: number; heigh
     catch { URL.revokeObjectURL(source); throw Error("Originale non leggibile"); }
   });
   const saved = current?.format === format && !cropError(width, height, current) ? current : null;
-  const whole = saved?.mode ? saved : wholePhotoFrame(width, height);
-  const largest = centredCrop(width, height);
-  const startHeight = Math.max(minimumCropHeight(format, width, height), Math.round(largest.height * 0.8));
-  const initialCrop = saved && !saved.mode ? saved : {
-    x: Math.floor((width - formatWidth(format, startHeight)) / 2), y: Math.floor((height - startHeight) / 2), height: startHeight,
-  };
-  let cropping = Boolean(saved && !saved.mode);
+  const canvas = paddedPhotoCanvas(width, height);
+  const initialCrop = saved?.mode === "padded" ? saved : saved && !saved.mode
+    ? { x: saved.x + canvas.x, y: saved.y + canvas.y, height: saved.height }
+    : { x: 0, y: 0, height: canvas.height };
   const dialog = document.createElement("dialog");
   dialog.className = "crop-dialog";
   dialog.setAttribute("aria-label", "Inquadratura della copia di gioco");
   const safeTitle = title.replace(/[<>&"]/g, "");
   dialog.innerHTML = `<div class="crop-layout"><div class="crop-scroll"><h2>Inquadratura 4:5</h2>
     ${safeTitle ? `<p class="hint">«${safeTitle}»</p>` : ""}
-    <p class="hint" data-crop-help hidden>Trascina il riquadro per spostarlo. Ridimensionalo con gli angoli o con due dita. Da tastiera, usa le frecce e i tasti + e −.</p>
-    <div class="crop-stage"><div class="crop-frame" tabindex="0" role="slider" aria-label="Dimensione del ritaglio" hidden>
+    <div class="crop-stage"><div class="crop-frame" tabindex="0" role="slider" aria-label="Dimensione del ritaglio">
     ${Object.keys(CORNERS).map(corner => `<span data-crop-corner="${corner}" aria-hidden="true"></span>`).join("")}</div></div></div>
     <div class="crop-footer"><p class="crop-error" role="alert" hidden></p><div class="crop-actions">
-    <button type="button" data-crop="toggle">Ritaglia</button><button type="button" data-crop="cancel">Annulla</button>
-    <button type="button" class="primary" data-crop="ok">Salva</button></div></div></div>`;
+    <button type="button" data-crop="cancel">Annulla</button>
+    <button type="button" class="primary" data-crop="ok" autofocus>Salva</button></div></div></div>`;
   document.body.append(dialog);
-  const toggle = dialog.querySelector<HTMLButtonElement>('[data-crop="toggle"]')!, error = dialog.querySelector<HTMLElement>(".crop-error")!;
-  const help = dialog.querySelector<HTMLElement>("[data-crop-help]")!;
+  const error = dialog.querySelector<HTMLElement>(".crop-error")!;
   const cropStage = dialog.querySelector<HTMLElement>(".crop-stage")!, cropFrame = cropStage.querySelector<HTMLElement>(".crop-frame")!;
   cropStage.prepend(img);
-  cropStage.style.setProperty("--crop-image-ratio", String(width / height));
-  const readCrop = frameControl(cropStage, cropFrame, width, height, initialCrop);
-  const showMode = () => {
-    cropStage.classList.toggle("is-cropping", cropping);
-    cropFrame.hidden = help.hidden = !cropping;
-    img.alt = cropping ? "Foto originale da ritagliare" : "Anteprima della foto intera nel formato 4:5";
-    toggle.textContent = cropping ? "Foto intera" : "Ritaglia";
-    error.hidden = true;
-  };
+  cropStage.style.setProperty("--crop-ratio", String(canvas.width / canvas.height));
+  img.alt = "Foto originale adattata al 4:5";
+  img.style.left = `${canvas.x / canvas.width * 100}%`;
+  img.style.top = `${canvas.y / canvas.height * 100}%`;
+  img.style.width = `${width / canvas.width * 100}%`;
+  img.style.height = `${height / canvas.height * 100}%`;
+  const readCrop = frameControl(cropStage, cropFrame, canvas.width, canvas.height, minimumCropHeight(format, width, height), initialCrop);
   try {
-    showMode();
     dialog.showModal();
-    (cropping ? cropFrame : toggle).focus({ preventScroll: true });
+    cropFrame.focus({ preventScroll: true });
     return await new Promise<T | null>(resolve => {
       let saving = false;
       dialog.addEventListener("click", async event => {
         if (saving) return;
         const action = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-crop]")?.dataset.crop;
-        if (action === "toggle") { cropping = !cropping; showMode(); }
-        else if (action === "cancel") resolve(null);
+        if (action === "cancel") resolve(null);
         else if (action === "ok") {
           saving = true;
           error.hidden = true;
           try {
-            const choice = cropping ? readCrop() : whole;
+            const crop = readCrop();
+            const unchanged = saved && crop.x === initialCrop.x && crop.y === initialCrop.y && crop.height === initialCrop.height;
+            const whole = crop.height === canvas.height;
+            const choice = unchanged ? saved : whole ? wholePhotoFrame(width, height) : { ...crop, mode: "padded" as const };
             resolve(await withPhotoProcessing("Salvo l’inquadratura ed elaboro la foto…", () => saveFrame(item, { crop: choice })));
           } catch (failure) {
             error.textContent = failure instanceof Error ? failure.message : String(failure);

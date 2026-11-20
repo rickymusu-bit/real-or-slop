@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  FORMATS, GAME_COPY_RECIPE, GENERATION_SIZES, centredCrop, centredView, copyContentDimensions, copyDimensions, cropError, cropQuery, wholePhotoFrame, formatsFor, generationSize,
+  FORMATS, GAME_COPY_RECIPE, GENERATION_SIZES, centredCrop, centredView, copyContentDimensions, copyDimensions, cropError, cropQuery, paddedPhotoCanvas, wholePhotoFrame, formatsFor, generationSize,
   nearestFormat, parseCrop, parseView, storedCrop, viewError, viewFractions, viewWidth,
 } from "../shared/game-copy.ts";
 
@@ -69,6 +69,19 @@ test("a 4:5 copy fits wide and tall originals whole, including older full-width 
   assert.match(cropError(6000, 4000, { ...frame, x: 1 }), /fuori/);
   assert.match(cropError(6000, 4000, { ...frame, width: 5000 }), /fuori/);
   assert.match(cropError(6000, 4000, { ...frame, format: "3:2" }), /non previsto/);
+});
+
+test("a padded crop can include the top, bottom or side bands of the original-resolution canvas", () => {
+  assert.deepEqual(paddedPhotoCanvas(420, 280), { x: 0, y: 122, width: 420, height: 525 });
+  assert.deepEqual(paddedPhotoCanvas(280, 420), { x: 28, y: 0, width: 336, height: 420 });
+  const crop = { x: 14, y: 265, width: 208, height: 260, format: "4:5", mode: "padded" } as const;
+  assert.equal(cropError(420, 280, crop), "");
+  assert.deepEqual(parseCrop(cropQuery(crop)), crop);
+  assert.deepEqual(storedCrop(JSON.stringify(crop)), crop);
+  assert.deepEqual(copyDimensions(crop), { width: 208, height: 260 });
+  assert.match(cropError(420, 280, { ...crop, y: 266 }), /fuori/);
+  assert.match(cropError(420, 280, { ...crop, format: "3:2" }), /non previsto/);
+  assert.equal(cropError(60, 40, { x: 11, y: 0, width: 32, height: 40, format: "4:5", mode: "padded" }), "");
 });
 
 test("the initial view is the largest centred 4:5 frame, inside the copy", () => {
