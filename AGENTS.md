@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 32.1.0, aggiornata il 2026-11-21T10:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 32.2.0, aggiornata il 2026-11-21T18:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -18,7 +18,9 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 
 - **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta finale
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
-  al browser prima della risposta. Le REAL non vengono analizzate né descritte da un modello (decisione del 2026-11-20). Il
+  al browser prima della risposta. Le REAL non vengono descritte da un modello (decisione del 2026-11-20); su richiesta confermata
+  un modello ne misura soltanto affollamento e dettaglio, con soglie per galleria e sola segnalazione (decisioni del 2026-11-21,
+  specifica `libreria-immagini`, sezione 10). Il
   modello delle proposte prepara premessa e prompt SLOP dalla REAL **intera** (l'originale, mai il ritaglio 4:5: decisione del
   2026-11-15), dal suo titolo e dalla descrizione della fonte, e riceve le indicazioni della galleria.
 - **Risultati** (decisioni del 2026-11-20, che sostituiscono quella del 2026-11-19). A fine partita, per ogni REAL titolo, autore,

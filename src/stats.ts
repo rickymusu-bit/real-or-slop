@@ -5,7 +5,7 @@ import { escape } from "../shared/html";
 
 type Level = "facile" | "medio" | "difficile" | "esperto";
 const LABEL: Record<Level, string> = { facile: "Facile", medio: "Medio", difficile: "Difficile", esperto: "Esperto" };
-const KIND: Record<string, string> = { analysis: "Analisi delle foto", prompts: "Proposte e prompt SLOP", images: "Immagini", evaluation: "Valutazione SLOP" };
+const KIND: Record<string, string> = { analysis: "Analisi e misure delle REAL", prompts: "Proposte e prompt SLOP", images: "Immagini", evaluation: "Valutazione SLOP" };
 const STATUS: Record<string, string> = { completed: "riuscita", failed: "rifiutata, senza addebito", uncertain: "esito incerto", pending: "in corso" };
 interface Stats {
   processes?: {state:string;n:number;attempts:number}[]; period: string; generated_at: string;

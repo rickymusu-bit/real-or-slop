@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 6.0.0
+# Dashboard e wizard REAL — specifica 6.1.0
 
-Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-21T09:00:00Z.
+Stato: implementata nel ramo 1.53.0, da rilasciare. Aggiornata: 2026-11-21T18:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -25,7 +25,8 @@ tre miniature delle foto più recenti fuori dal cestino. I moduli indicano il ca
 
 Selezionando una scheda si apre una finestra con le foto della galleria. La griglia scorre, «Carica altre foto» prosegue l’elenco e ogni
 foto mantiene il dettaglio e l’anteprima. Conteggi, ricerca, filtri e cestino si riferiscono alla galleria aperta (specifica `database-immagini`).
-La finestra si chiude con × o Esc. Da «Modifica galleria» l’owner può cambiare titolo, descrizione e indicazioni oppure scegliere
+La finestra si chiude con × o Esc. Da «Modifica galleria» l’owner può cambiare titolo, descrizione, indicazioni e soglie di
+affollamento e dettaglio delle REAL (specifica `libreria-immagini`, sezione 10) oppure scegliere
 «Elimina galleria». La conferma riguarda la galleria, tutte le sue foto compreso il cestino e le sue generazioni. Dopo l’eliminazione
 si torna all’elenco delle gallerie.
 
@@ -48,7 +49,8 @@ Nelle eccezioni SLOP, «Accetta comunque il tentativo N» è disponibile per ogn
 - **Finestra:** immagine grande, larga quanto la finestra e alta al più il 70% dello schermo; sotto, i testi. Resta aperta finché non si
   tocca la × nell'angolo in alto a destra (o Esc); il tocco sullo sfondo non la chiude.
 - **Contenuti:** risultato di Commons: anteprima da 1280 px, titolo del file, descrizione di Commons (300 caratteri), «Apri la pagina su
-  Commons». REAL della galleria: copia di gioco, titolo, descrizione, link alla fonte. SLOP della galleria: copia, ID abbreviato e prompt. Immagine della revisione nello studio: prompt.
+  Commons». REAL della galleria: copia di gioco, titolo, descrizione, link alla fonte e, se misurata oltre le soglie della galleria, l'avviso con
+  gli assi oltre soglia. SLOP della galleria: copia, ID abbreviato e prompt. Immagine della revisione nello studio: prompt.
 
 ## 4. Wizard REAL
 

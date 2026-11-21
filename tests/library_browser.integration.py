@@ -1,5 +1,5 @@
 """Dashboard in the browser, desktop and mobile: loading notice, sections, Settings, statistics, sorting, trash of a
-published photo, editing in the detail."""
+published photo, editing in the detail, crowding and detail of the REAL with the thresholds of the gallery."""
 import io
 import os
 import re
@@ -47,7 +47,7 @@ with sync_playwright() as p:
         confirms = []
         def answer(dialog):
             confirms.append(dialog.message)
-            accepted = ('Analizzare «', 'Ripristinare questa versione', 'Spostare', '1 immagine è pubblicata',
+            accepted = ('Analizzare «', 'Misurare affollamento', 'Ripristinare questa versione', 'Spostare', '1 immagine è pubblicata',
                         '1 immagine pubblicata torna', '2 immagini pubblicate', 'Confermi di aver verificato')
             dialog.accept() if dialog.message.startswith(accepted) else dialog.dismiss()
         page.on('dialog', answer)
@@ -83,6 +83,49 @@ with sync_playwright() as p:
         page.locator('.library-detail-close button').click()
         page.locator('[data-view=library]').click()
         expect(page.locator('#library-analysis')).to_have_count(0)
+
+        # Crowding and detail of the REAL (owner decisions of 2026-11-21): the two new REAL are measured together, one call each, by
+        # the fake model (crowding 29, detail 51).
+        page.get_by_role('checkbox', name=f'Seleziona {name}-rivoli').check()
+        page.get_by_role('checkbox', name=f'Seleziona {name}-spare').check()
+        page.locator('#library-selection [data-bulk=measure]').click()
+        expect(page.locator('#library-message')).to_have_text('2 REAL misurate.')
+        assert confirms[-1].startswith('Misurare affollamento e dettaglio di 2 REAL con gpt-6.1-sol? Massimo 2 chiamate'), confirms[-1]
+        expect(page.locator('#library-selection')).to_be_hidden()
+        expect(page.locator('#library-grid [data-over-threshold]')).to_have_count(0)  # within the defaults, 67 and 100
+        # Thresholds of the gallery from «Modifica galleria»: a REAL above them has the symbol and the warning.
+        page.locator('[data-gallery-edit]').click()
+        editor = page.locator('#gallery-editor')
+        expect(editor.locator('[name=max_crowdedness]')).to_have_attribute('placeholder', '67')
+        expect(editor.locator('[name=max_detail]')).to_have_attribute('placeholder', '100')
+        editor.locator('[name=max_crowdedness]').fill('20'); editor.locator('[name=max_detail]').fill('50')
+        editor.get_by_role('button', name='Salva modifiche').click()
+        expect(editor).to_be_hidden()
+        rivoli_symbol = page.locator(f'.library-card:has([aria-label="Apri {name}-rivoli"]) [data-over-threshold]')
+        expect(rivoli_symbol).to_have_attribute('title', 'Oltre la soglia della galleria: affollamento 29 oltre la soglia di 20, dettaglio 51 oltre la soglia di 50')
+        page.get_by_role('button', name=f'Apri {name}-rivoli').click()
+        detail = page.locator('#library-detail')
+        expect(detail.locator('p[data-over-threshold]')).to_contain_text('affollamento 29 oltre la soglia di 20, dettaglio 51 oltre la soglia di 50')
+        expect(detail.locator('[data-measure-values]')).to_contain_text('Affollamento 29/100 (2 oggetti oltre il soggetto), dettaglio 51/100; soglie della galleria 20 e 50.')
+        detail.locator('[data-measure-history] summary').click()
+        expect(detail.locator('.measure-box')).to_have_count(3)
+        expect(detail.locator('.measure-box.is-subject')).to_have_count(1)
+        expect(detail.locator('.measure-objects li').first).to_have_text('Soggetto: Game Boy: scritte e loghi leggibili, motivi ripetuti, parti contabili, texture dei materiali')
+        expect(detail.locator('.measure-history li')).to_have_count(1)
+        detail.locator('.measure-figure').scroll_into_view_if_needed()
+        detail.screenshot(path=str(folder / f'{name}-measure.png'))
+        # Measuring again from the detail asks for one call and keeps the earlier measure.
+        detail.locator('#library-measure').click()
+        expect(detail.locator('#library-detail-message')).to_have_text('Misura salvata.')
+        assert confirms[-1].startswith(f'Misurare affollamento e dettaglio di «{name}-rivoli» con gpt-6.1-sol? Una chiamata'), confirms[-1]
+        detail.locator('[data-measure-history] summary').click()
+        expect(detail.locator('.measure-history li')).to_have_count(2)
+        detail.locator('.library-detail-close button').click()
+        page.locator('[data-gallery-edit]').click()
+        editor.locator('[name=max_crowdedness]').fill(''); editor.locator('[name=max_detail]').fill('')
+        editor.get_by_role('button', name='Salva modifiche').click()
+        expect(editor).to_be_hidden()
+        expect(page.locator('#library-grid [data-over-threshold]')).to_have_count(0)
 
         # Selecting a new image keeps keyboard focus and shows the matching commands below the scroll viewport.
         spare = page.get_by_role('checkbox', name=f'Seleziona {name}-spare')
@@ -169,11 +212,12 @@ with sync_playwright() as p:
         page.locator('[name=open_game_hours]').fill('0'); page.locator('#library-games-form button').click()
         expect(page.locator('[name=open_game_hours]')).to_have_value('0')  # the browser stops it: minimum 1
         page.locator('[name=open_game_hours]').fill('24')
-        # «Statistiche»: this run made no paid call.
+        # «Statistiche»: the only paid calls of this run are the measures of the REAL (kind «analysis», with the old analyses).
         page.get_by_role('button', name='Statistiche').click()
         stats = page.locator('#stats-body')
         expect(stats.locator('.stat-tile', has_text='partite in corso adesso')).to_be_visible()
         expect(stats.locator('.stats-calls tbody tr', has_text='Analisi delle foto')).to_have_count(0)
+        expect(stats.locator('.stats-calls tbody tr', has_text='Analisi e misure delle REAL').first).to_be_visible()
         stats.locator('[data-stats-kind]').select_option('images')
         stats.locator('[data-stats-period]').select_option('7')
         expect(stats.locator('[data-stats-period]')).to_have_value('7')
@@ -184,7 +228,8 @@ with sync_playwright() as p:
         page.locator('#library-contexts summary').first.click()
         base_field = page.locator('[data-context=base]')
         expect(base_field).to_have_value(re.compile('^Lavori per un archivio fotografico italiano'))
-        expect(page.locator('[data-context]')).to_have_count(3)
+        expect(page.locator('[data-context]')).to_have_count(4)
+        expect(page.locator('[data-context=real_measure]')).to_have_value(re.compile('^Misuri una fotografia'))
         expect(page.locator('[data-context=slop_gallery_prompt]')).to_have_value(re.compile('galleria tematica'))
         approved = base_field.input_value()
         base_field.fill(approved + '\nProva dalla dashboard.')
@@ -201,7 +246,17 @@ with sync_playwright() as p:
         page.screenshot(path=str(folder / f'{name}-settings.png'), full_page=True)
         # No vocabulary of tags in Settings any more.
         expect(page.locator('#library-vocabulary')).to_have_count(0)
-        expect(page.locator('.settings-index button')).to_have_text(['Modelli', 'Generazione', 'Istruzioni IA', 'Partite', 'Fonti Commons', 'Classifica'])
+        expect(page.locator('.settings-index button')).to_have_text(['Modelli', 'Generazione', 'Istruzioni IA', 'Partite', 'Misure delle REAL', 'Fonti Commons', 'Classifica'])
+        # Default thresholds of crowding and detail: 67 and 100, from 0 to 100.
+        page.locator('.settings-index button', has_text='Misure delle REAL').click()
+        expect(page.locator('[name=crowdedness_threshold]')).to_have_value('67')
+        expect(page.locator('[name=detail_threshold]')).to_have_value('100')
+        expect(page.locator('[name=detail_threshold]')).to_have_attribute('max', '100')
+        page.locator('[name=crowdedness_threshold]').fill('60'); page.locator('#library-measures-form button').click()
+        expect(page.locator('#library-settings-message')).to_have_text('Soglie predefinite di affollamento e dettaglio salvate.')
+        assert page.request.get(base + '/api/admin/library/settings').json()['values']['crowdedness_threshold'] == 60
+        page.locator('[name=crowdedness_threshold]').fill('67'); page.locator('#library-measures-form button').click()
+        expect(page.locator('#library-settings-message')).to_have_text('Soglie predefinite di affollamento e dettaglio salvate.')
         # REAL checked on Commons each night: 50 by default, from 0 (paused) to 500.
         page.locator('.settings-index button', has_text='Fonti Commons').click()
         checks = page.locator('[name=commons_checks_per_night]')
@@ -212,7 +267,7 @@ with sync_playwright() as p:
         assert page.request.get(base + '/api/admin/library/settings').json()['values']['commons_checks_per_night'] == 120
         page.locator('[name=commons_checks_per_night]').fill('50'); page.locator('#library-sources-form button').click()
         expect(page.locator('#library-settings-message')).to_have_text('Numero di REAL controllate ogni notte salvato.')
-        expect(page.locator('[data-context-part]')).to_have_count(3)
+        expect(page.locator('[data-context-part]')).to_have_count(4)
         expect(page.locator('[data-context-part=analysis]')).to_have_count(0)
         page.locator('[data-admin-tab=galleries]').click()
         open_gallery(page, gallery_id)

@@ -1,7 +1,8 @@
-"""Models and model contexts against a local Worker and the fake OpenAI (never the real one), after the retirement of the paid
-analysis of the REAL (owner decisions of 2026-11-20: no tags, no editorial description, no description of the SLOP): the old routes
-answer 404, the photo fields are gone, the source description of a REAL stays editable, the three contexts keep their versions and
-the model selectors their checks. No paid call is made here."""
+"""Models, model contexts and the measure of crowding and detail of the REAL against a local Worker and the fake OpenAI (never the
+real one). The paid analysis of 2026-11-20 stays retired (no tags, no editorial description, no description of the SLOP): its routes
+answer 404, the photo fields are gone, the source description of a REAL stays editable. The four contexts keep their versions and the
+model selectors their checks. The measure (owner decisions of 2026-11-21) is one confirmed call per REAL, kept with model and context
+versions, with thresholds per gallery and defaults in the settings."""
 from local_db import sql
 import io
 import json
@@ -61,11 +62,12 @@ assert call(f'{API}?' + urllib.parse.urlencode({'gallery': gallery_id, 'q': 'mag
 for item in (real, slop):
     call(f'{API}/{item["id"]}/trash', {}); assert call(f'{API}/{item["id"]}', method='DELETE')[1]['deleted'] == 1
 
-# Model context: three parts with the approved first versions; each save is a version; restore. The base and the gallery prompt
+# Model context: four parts with the approved first versions; each save is a version; restore. The base and the gallery prompt
 # start from the proposals saved by migration 0066; the retired «Descrizione delle REAL» is not offered any more.
 status, contexts = call(f'{API}/contexts'); assert status == 200 and contexts['max'] == 4000, contexts
 parts = {p['part']: p for p in contexts['parts']}
-assert set(parts) == {'base', 'slop_gallery_prompt', 'slop_evaluation'} and all(len(p['history']) == 1 for p in parts.values()), contexts
+assert set(parts) == {'base', 'real_measure', 'slop_gallery_prompt', 'slop_evaluation'} and all(len(p['history']) == 1 for p in parts.values()), contexts
+assert 'Dettaglio' in parts['real_measure']['current']['body'] and 'Altri oggetti' in parts['real_measure']['current']['body'], parts
 assert all(p['proposed'] is None for p in parts.values()), 'the current texts are the proposals of the code'
 base_text = parts['base']['current']['body']
 assert base_text.startswith('Lavori per un archivio fotografico italiano.') and 'Tag' not in base_text and 'descri' not in base_text, base_text
@@ -103,4 +105,73 @@ code, models = call(f'{API}/models', {'image_model': 'gpt-image-2', 'text_model'
 assert code == 200 and models['image_model'] == 'gpt-image-2' and models['text_model'] == 'gpt-5-mini', models
 assert call(f'{API}/models', {'text_model': 'gpt-6.1-sol', 'image_model': 'gpt-image-2.5-flare'}, method='PUT')[0] == 200
 assert openai() == []
-print('Analysis integration passed: no paid analysis or description of the REAL, no description of the SLOP, three model contexts with versions, model selectors.')
+
+# Crowding and detail of a REAL: one confirmed paid call, the scores computed by the Worker, every measure kept.
+import uuid
+def measure(item, **extra):
+    return call(f'{API}/{item["id"]}/measure', {'confirm': True, 'request': str(uuid.uuid4()), **extra})
+def calls(): return sql("SELECT count(*) AS n FROM paid_calls WHERE kind='analysis'")[0]['n']
+real = upload('REAL', 'Game Boy su una scrivania')
+slop = upload('SLOP', prompt='A handheld console.', model='gpt-image-2')
+assert real['measure'] is None and 'measure' not in slop
+openai([])
+for wrong in ({}, {'confirm': True}, {'confirm': False, 'request': str(uuid.uuid4())}, {'confirm': True, 'request': 'x'},
+              {'confirm': True, 'request': str(uuid.uuid4()), 'other': 1}):
+    assert call(f'{API}/{real["id"]}/measure', wrong)[0] == 400, wrong
+assert measure(slop)[0] == 409 and openai() == [] and calls() == 0
+status, measured = measure(real)
+assert status == 201, measured
+m = measured['measure']
+assert (m['crowdedness'], m['detail'], m['objects'], m['model']) == (29, 51, 2, 'gpt-6.1-sol'), m
+assert m['limits'] == {'crowdedness': 67, 'detail': 100} and m['over'] == [], m
+sent = openai()
+assert len(sent) == 1 and sent[0]['body']['text']['format']['name'] == 'real_measure', sent
+body = sent[0]['body']
+assert body['input'][0]['content'][1]['image_url'].startswith('data:image/png;base64,') and body['input'][0]['content'][1]['detail'] == 'high'
+assert json.loads(body['input'][0]['content'][0]['text']) == {'gallery': {'title': 'Test analysis', 'description': ''}}, body['input'][0]['content'][0]
+assert 'Altri oggetti' in body['instructions'] and body['instructions'].startswith('Lavori per un archivio fotografico italiano.')
+assert calls() == 1 and sql("SELECT image_id FROM paid_calls WHERE kind='analysis'")[0]['image_id'] == real['id']
+# The same confirmation sent twice reaches the model once.
+request = str(uuid.uuid4())
+assert call(f'{API}/{real["id"]}/measure', {'confirm': True, 'request': request})[0] == 201
+assert call(f'{API}/{real["id"]}/measure', {'confirm': True, 'request': request})[0] == 409 and calls() == 2
+# Every measure is kept, the latest first, with the objects the model saw and the context versions.
+history = call(f'{API}/{real["id"]}/measures')[1]['measures']
+assert len(history) == 2 and history[0]['observation']['subject']['name'] == 'Game Boy' and len(history[0]['observation']['others']) == 2, history
+measure_context = next(p for p in call(f'{API}/contexts')[1]['parts'] if p['part'] == 'real_measure')['current']['id']
+assert history[0]['measure_context'] == measure_context and history[0]['base_context'], history[0]
+# Thresholds: the gallery's own, else the defaults of the settings; a gallery's thresholds never change its revision.
+gallery = call(f'{API}/galleries/{gallery_id}')[1]
+assert gallery['max_crowdedness'] is None and gallery['max_detail'] is None
+listing = call(f'{API}/galleries')[1]
+assert listing['thresholds'] == {'crowdedness': 67, 'detail': 100}, listing['thresholds']
+edit = {'title': gallery['title'], 'description': gallery['description'], 'slop_instructions': gallery['slop_instructions'], 'revision': gallery['revision']}
+for wrong in (101, -1, 2.5, '50'):
+    assert call(f'{API}/galleries/{gallery_id}', {**edit, 'max_crowdedness': wrong}, method='PATCH')[0] == 400, wrong
+status, changed = call(f'{API}/galleries/{gallery_id}', {**edit, 'max_crowdedness': 20, 'max_detail': 50}, method='PATCH')
+assert status == 200 and (changed['max_crowdedness'], changed['max_detail'], changed['revision']) == (20, 50, gallery['revision']), changed
+m = call(f'{API}/{real["id"]}')[1]['measure']
+assert m['over'] == ['crowdedness', 'detail'] and m['limits'] == {'crowdedness': 20, 'detail': 50}, m
+assert next(i for i in call(f'{API}?' + urllib.parse.urlencode({'gallery': gallery_id}))[1]['items'] if i['id'] == real['id'])['measure']['over'] == ['crowdedness', 'detail']
+status, changed = call(f'{API}/galleries/{gallery_id}', {**edit, 'max_crowdedness': None, 'max_detail': None}, method='PATCH')
+assert status == 200 and changed['max_crowdedness'] is None and changed['revision'] == gallery['revision'], changed
+assert call(f'{API}/settings', {'crowdedness_threshold': 28}, method='PUT')[0] == 200
+for wrong in ({'crowdedness_threshold': 101}, {'detail_threshold': -1}):
+    assert call(f'{API}/settings', wrong, method='PUT')[0] == 400, wrong
+m = call(f'{API}/{real["id"]}')[1]['measure']
+assert m['over'] == ['crowdedness'] and m['limits'] == {'crowdedness': 28, 'detail': 100}, m
+assert call(f'{API}/settings', {'crowdedness_threshold': 67}, method='PUT')[0] == 200
+# Failures: an unreadable or malformed answer stores nothing; a server error is uncertain and never repeated.
+before = len(call(f'{API}/{real["id"]}/measures')[1]['measures'])
+openai([{'garbage': True}, {'json': {'subject': {'name': 'x'}, 'others': [], 'unlisted': 0}}, {'status': 500}])
+assert measure(real)[0] == 502 and measure(real)[0] == 502
+status, result = measure(real); assert status == 502 and 'incerto' in result['error'], result
+assert len(openai()) == 3 and len(call(f'{API}/{real["id"]}/measures')[1]['measures']) == before
+assert sql("SELECT status FROM paid_calls WHERE kind='analysis' ORDER BY created_at DESC LIMIT 1")[0]['status'] == 'uncertain'
+# A photo in the trash is not measured; deleting it deletes its measures.
+call(f'{API}/{real["id"]}/trash', {})
+assert measure(real)[0] == 409
+assert call(f'{API}/{real["id"]}', method='DELETE')[1]['deleted'] == 1
+assert sql(f"SELECT count(*) AS n FROM real_measures WHERE image_id='{real['id']}'")[0]['n'] == 0
+call(f'{API}/{slop["id"]}/trash', {}); call(f'{API}/{slop["id"]}', method='DELETE')
+print('Analysis integration passed: no paid analysis or description of the REAL, no description of the SLOP, four model contexts with versions, model selectors, measures of the REAL with thresholds.')

@@ -3,7 +3,7 @@ import { HttpError, id, type Env } from "./core";
 export class PaidError extends HttpError {
   constructor(message: string, public outcome: "failed" | "uncertain") { super(502, message); }
 }
-export async function paid(env: Env, kind: "prompts" | "images" | "evaluation", model: string, body: unknown,
+export async function paid(env: Env, kind: "analysis" | "prompts" | "images" | "evaluation", model: string, body: unknown,
   links: { process?: string; attempt?: string; image?: string; request?: string } = {}): Promise<Record<string, unknown>> {
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
   const callId = links.request ?? id(), stamp = new Date().toISOString();

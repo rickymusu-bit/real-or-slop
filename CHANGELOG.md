@@ -1,7 +1,20 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-21T10:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-21T18:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.53.0 — 2026-11-21T18:00:00Z
+
+- Affollamento e dettaglio delle REAL, misurati su richiesta da un modello con una chiamata confermata per foto: il modello elenca gli
+  oggetti dell'originale intero con un riquadro e sei categorie di dettaglio leggibili; il Worker calcola affollamento (100·n/(n+5))
+  e dettaglio (media pesata sull'area degli oggetti), da 0 a 100. Ogni misura resta con modello e versioni del contesto.
+- Dettaglio della REAL: punteggi, «Misura» e «Misura di nuovo», oggetti disegnati sull'originale e misure precedenti. Dalla selezione
+  della galleria, «Misura» per le REAL ancora senza misura.
+- Soglie per galleria in «Modifica galleria», con i valori predefiniti in Impostazioni → Misure delle REAL (affollamento 67,
+  dettaglio 100). Una REAL oltre soglia ha un simbolo sulla miniatura e un avviso nel dettaglio e nell'anteprima, e basta.
+- Nuovo testo modificabile «Misura delle REAL» nel contesto dei modelli. Nelle statistiche il tipo di chiamata diventa «Analisi e
+  misure delle REAL».
+- La generazione delle SLOP non cambia: le idee di falsificazione restano sospese. Migrazione 0067.
 
 ## 1.52.0 — 2026-11-21T10:00:00Z
 
