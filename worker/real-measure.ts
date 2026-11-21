@@ -2,7 +2,7 @@
  * One confirmed paid call per measure, never repeated automatically. The model sees the whole original and the gallery's title and
  * description, and only observes objects, boxes and legible kinds of detail; the scores come from shared/real-measure.ts. Every
  * measure is kept with its model and context versions. Thresholds: the gallery's, else the default of the settings. */
-import { MAX_OBJECTS, OBSERVATION_SCHEMA, overThresholds, scores, validObservation, type Observation, type Scores } from "../shared/real-measure";
+import { MAX_OBJECTS, MEASURE_FORMULA, OBSERVATION_SCHEMA, overThresholds, scores, validObservation, type Observation, type Scores } from "../shared/real-measure";
 import { imageMime } from "../shared/image-format";
 import { numberSettings } from "./app-settings";
 import { HttpError, id, type Env } from "./core";
@@ -15,16 +15,17 @@ import { paid, responseJson } from "./paid";
 const MAX_OUTPUT_TOKENS = 8000;
 const OUTPUT = `Rispondi solo con JSON conforme allo schema. subject è il soggetto; others gli altri oggetti, al massimo ${MAX_OBJECTS}; unlisted ` +
   "il numero degli oggetti riconoscibili che non hai elencato. box: x e y dell'angolo in alto a sinistra, width e height, tutti fra 0 e 1 " +
-  "rispetto all'immagine intera. detail: true solo per le categorie leggibili su quell'oggetto.";
+  "rispetto all'immagine intera. detail: per ogni categoria 0 (assente o non leggibile), 1 (presente e leggibile) o 2 (fitto o minuto).";
 
 interface MeasureRow { id: string; image_id: string; model: string; base_context: string; measure_context: string; observation: string;
-  crowdedness: number; detail: number; created_at: string }
-export interface MeasureSummary extends Scores { id: string; model: string; created_at: string; objects: number }
+  crowdedness: number; detail: number; created_at: string; formula: number }
+/** `formula`: 1 for the first measures (six kinds, present or not), 2 since the graded kinds (shared/real-measure.ts). */
+export interface MeasureSummary extends Scores { id: string; model: string; created_at: string; objects: number; formula: number }
 
 const summary = (row: MeasureRow): MeasureSummary => {
   const observation = JSON.parse(row.observation) as Observation;
   return { id: row.id, model: row.model, created_at: row.created_at, crowdedness: row.crowdedness, detail: row.detail,
-    objects: observation.others.length + observation.unlisted };
+    objects: observation.others.length + observation.unlisted, formula: row.formula };
 };
 
 /** Latest measure of each photo. */
@@ -81,9 +82,9 @@ export async function measureReal(env: Env, row: Target, data: Record<string, un
   if (!observation) throw new HttpError(502, "Risposta del modello non valida: misura non salvata");
   const result = scores(observation), stamp = new Date().toISOString(), measureId = id();
   // The photo may have been deleted during the call: then nothing is stored (the call stays in the register).
-  const stored = await env.DB.prepare(`INSERT INTO real_measures(id,image_id,model,base_context,measure_context,observation,crowdedness,detail,created_at)
-    SELECT ?,id,?,?,?,?,?,?,? FROM images WHERE id=?`).bind(measureId, model, base.id, task.id, JSON.stringify(observation),
-    result.crowdedness, result.detail, stamp, row.id).run();
+  const stored = await env.DB.prepare(`INSERT INTO real_measures(id,image_id,model,base_context,measure_context,observation,crowdedness,detail,created_at,formula)
+    SELECT ?,id,?,?,?,?,?,?,?,? FROM images WHERE id=?`).bind(measureId, model, base.id, task.id, JSON.stringify(observation),
+    result.crowdedness, result.detail, stamp, MEASURE_FORMULA, row.id).run();
   if (!stored.meta.changes) throw new HttpError(404, "Foto eliminata durante la misura");
   return measureId;
 }

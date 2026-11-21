@@ -21,7 +21,7 @@ import { editFrame } from "./crop-editor";
 import { withPhotoProcessing } from "./photo-processing";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
-import { DETAIL_KINDS, DETAIL_LABELS, type Observation, type Scores } from "../shared/real-measure";
+import { detailText, MEASURE_FORMULA, type Observation, type Scores } from "../shared/real-measure";
 
 type Status = "new" | "approved" | "published" | "trash";
 interface Item extends TreatableItem {
@@ -36,7 +36,9 @@ interface Item extends TreatableItem {
   /** REAL only: latest crowding and detail and the scores above the gallery's thresholds (spec `libreria-immagini`, section 10). */
   measure?: Measure | null;
 }
-interface Measure extends Scores { id: string; model: string; created_at: string; objects: number; over: (keyof Scores)[]; limits: Scores | null }
+interface Measure extends Scores { id: string; model: string; created_at: string; objects: number; formula: number; over: (keyof Scores)[]; limits: Scores | null }
+/** A REAL with no measure, or measured with an earlier formula: the group «Misura» includes it. */
+const toMeasure = (item: Item) => item.origin === "REAL" && (!item.measure || item.measure.formula < MEASURE_FORMULA);
 interface StoredMeasure extends Omit<Measure, "over" | "limits"> { observation: Observation }
 const SCORE_LABEL: Record<keyof Scores, string> = { crowdedness: "affollamento", detail: "dettaglio" };
 /** Text of the scores above the thresholds, e.g. «affollamento 80 oltre la soglia di 67». */
@@ -190,7 +192,7 @@ export async function showLibrary() {
       <p class="hint">Oltre questo tempo una partita non conclusa non trattiene più le copie delle foto ritirate o modificate, e la sua foto può non essere più disponibile. I livelli del gioco sono fissi nel codice.</p></details>
     <details id="library-measures" class="library-vocabulary"><summary>Misure delle REAL</summary>
       <form id="library-measures-form" class="library-inline"><label>Soglia predefinita di affollamento<input type="number" name="crowdedness_threshold" required></label><label>Soglia predefinita di dettaglio<input type="number" name="detail_threshold" required></label><button>Salva</button></form>
-      <p class="hint">Un modello misura su richiesta, con una chiamata a pagamento per foto, quanto è affollata e dettagliata una REAL. Affollamento: 100·n/(n+5), con n gli oggetti riconoscibili oltre al soggetto (5 oggetti valgono 50, 10 valgono 67). Dettaglio: quota delle sei categorie di dettaglio leggibili su ogni oggetto, media pesata sull’area degli oggetti. Una REAL con un valore oltre la soglia della sua galleria è segnalata nella griglia e nel dettaglio. Ogni galleria può avere soglie proprie in «Modifica galleria»; senza, valgono queste. 100 non pone limiti.</p></details>
+      <p class="hint">Un modello misura su richiesta, con una chiamata a pagamento per foto, quanto è affollata e dettagliata una REAL. Affollamento: 100·n/(n+5), con n gli oggetti riconoscibili oltre al soggetto (5 oggetti valgono 50, 10 valgono 67). Dettaglio: per ogni oggetto sette categorie di dettaglio, ciascuna con grado 0 (assente), 1 (leggibile) o 2 (fitto o minuto), in quota sul massimo; media pesata sull’area degli oggetti. Una REAL con un valore oltre la soglia della sua galleria è segnalata nella griglia e nel dettaglio. Ogni galleria può avere soglie proprie in «Modifica galleria»; senza, valgono queste. 100 non pone limiti.</p></details>
     <details id="library-sources" class="library-vocabulary"><summary>Fonti Commons</summary>
       <form id="library-sources-form" class="library-inline"><label>REAL controllate ogni notte<input type="number" name="commons_checks_per_night" required></label><button>Salva</button></form>
       <p class="hint">Ogni notte si chiede a Wikimedia Commons se il file di queste REAL esiste ancora, cominciando da quelle controllate da più tempo; ogni foto torna in coda tre mesi dopo l’ultimo controllo. Un file sparito è solo segnalato nella galleria. Le richieste a Commons sono da 50 foto; 0 sospende il controllo.</p></details></section>
@@ -293,7 +295,7 @@ export async function showLibrary() {
       const action = button.dataset.bulk;
       if (action === "withdraw") button.hidden = trash || !chosen.some(item => item.status === "published");
       else if (action === "set-approved") button.hidden = trash || !chosen.some(item => item.status === "new");
-      else if (action === "measure") button.hidden = trash || !galleryList?.paid_calls || !chosen.some(item => item.origin === "REAL" && !item.measure);
+      else if (action === "measure") button.hidden = trash || !galleryList?.paid_calls || !chosen.some(toMeasure);
       else if (action !== "none" && action !== "gallery") button.hidden = trash !== (action === "restore" || action === "delete");
       button.disabled = busy || (action === "gallery" && !galleries().some(g => g.id !== filter.gallery));
     }
@@ -362,7 +364,8 @@ export async function showLibrary() {
     return `<section class="library-measure" data-measure><h3>Affollamento e dettaglio</h3>
       ${m ? `<p data-measure-values>Affollamento <strong>${m.crowdedness}</strong>/100 (${m.objects} ${m.objects === 1 ? "oggetto" : "oggetti"} oltre il soggetto),
         dettaglio <strong>${m.detail}</strong>/100${m.limits ? `; soglie della galleria ${m.limits.crowdedness} e ${m.limits.detail}` : ""}.
-        Misura del ${escape(when(m.created_at))} con ${escape(m.model)}.</p>`
+        Misura del ${escape(when(m.created_at))} con ${escape(m.model)}.</p>
+        ${m.formula < MEASURE_FORMULA ? '<p class="hint" data-measure-old>Misura con la formula precedente (sei categorie, senza gradi): il dettaglio non è confrontabile con le misure nuove. Misurala di nuovo.</p>' : ""}`
         : '<p class="hint" data-measure-values>Non ancora misurata.</p>'}
       ${paid ? `<p><button type="button" id="library-measure">${m ? "Misura di nuovo" : "Misura"} (1 chiamata)</button></p>` : ""}
       ${m ? '<details data-measure-history><summary>Oggetti riconosciuti e misure precedenti</summary><div data-measure-history-body></div></details>' : ""}
@@ -373,13 +376,12 @@ export async function showLibrary() {
     const latest = measures[0];
     if (!latest) { target.innerHTML = '<p class="hint">Nessuna misura.</p>'; return; }
     const o = latest.observation, objects = [{ ...o.subject, subject: true }, ...o.others.map(x => ({ ...x, subject: false }))];
-    const kinds = (detail: Record<string, boolean>) => DETAIL_KINDS.filter(k => detail[k]).map(k => DETAIL_LABELS[k]).join(", ") || "nessun dettaglio leggibile";
     target.innerHTML = `<figure class="measure-figure"><div class="measure-frame" style="aspect-ratio:${item.width}/${item.height}"><img src="${escape(item.original)}" alt="Originale di ${escape(imageLabel(item))}" draggable="false">
       ${objects.map((x, i) => `<span class="measure-box${x.subject ? " is-subject" : ""}" style="left:${x.box.x * 100}%;top:${x.box.y * 100}%;width:${x.box.width * 100}%;height:${x.box.height * 100}%"><b>${i + 1}</b></span>`).join("")}</div>
       <figcaption class="hint">Riquadri dell'ultima misura sull'originale intero. Il soggetto è in evidenza.</figcaption></figure>
-      <ol class="measure-objects">${objects.map(x => `<li>${x.subject ? "<strong>Soggetto:</strong> " : ""}${escape(x.name)}: ${escape(kinds(x.detail))}</li>`).join("")}</ol>
+      <ol class="measure-objects">${objects.map(x => `<li>${x.subject ? "<strong>Soggetto:</strong> " : ""}${escape(x.name)}: ${escape(detailText(x.detail))}</li>`).join("")}</ol>
       ${o.unlisted ? `<p class="hint">Altri ${o.unlisted} oggetti contati e non elencati.</p>` : ""}
-      <h4>Misure</h4><ol class="measure-history">${measures.map(m => `<li>${escape(when(m.created_at))}, ${escape(m.model)}: affollamento ${m.crowdedness}, dettaglio ${m.detail}, ${m.objects} oggetti oltre il soggetto</li>`).join("")}</ol>`;
+      <h4>Misure</h4><ol class="measure-history">${measures.map(m => `<li>${escape(when(m.created_at))}, ${escape(m.model)}: affollamento ${m.crowdedness}, dettaglio ${m.detail}, ${m.objects} oggetti oltre il soggetto${m.formula < MEASURE_FORMULA ? ", formula precedente" : ""}</li>`).join("")}</ol>`;
   };
   const showDetail = (item: Item) => {
     open = item;
@@ -546,12 +548,13 @@ if (button.id === "library-measure") {
       if (filter.gallery === scope) { await load().catch(() => {}); report(error); }
     } finally { busy = false; syncSelection(); }
   };
-  /** Measures, one paid call each, the selected REAL that have no measure yet; a REAL already measured is measured again from its
-   * detail. The calls go one at a time with the page open; an account problem («OpenAI: …») stops the rest. */
+  /** Measures, one paid call each, the selected REAL that have no measure yet or only one of an earlier formula; a REAL already
+   * measured with the current formula is measured again from its detail. The calls go one at a time with the page open; an account
+   * problem («OpenAI: …») stops the rest. */
   const measureSelection = async () => {
-    const chosen = items.filter(item => selected.has(item.id) && item.origin === "REAL" && item.status !== "trash" && !item.measure);
+    const chosen = items.filter(item => selected.has(item.id) && item.status !== "trash" && toMeasure(item));
     if (!chosen.length || busy) return;
-    const already = items.filter(item => selected.has(item.id) && item.origin === "REAL" && item.measure).length;
+    const already = items.filter(item => selected.has(item.id) && item.origin === "REAL" && !toMeasure(item)).length;
     if (!window.confirm(`Misurare affollamento e dettaglio di ${chosen.length} REAL con ${galleryList?.text_model || "il modello di testo"}? ` +
       `Massimo ${chosen.length} ${chosen.length === 1 ? "chiamata" : "chiamate"} a pagamento, una per foto, mai ripetute in automatico.` +
       (already ? ` Le ${already} REAL già misurate restano escluse: si misurano di nuovo dal dettaglio.` : ""))) return;

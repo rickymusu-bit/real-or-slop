@@ -57,10 +57,10 @@ class Handler(BaseHTTPRequestHandler):
         if schema_name == 'gallery_instructions' and (behaviour is None or 'delay' in behaviour):
             behaviour = {'json': {'instructions': 'Inventa un fatto visibile e conserva la piazza riconoscibile.'}}
         if schema_name == 'real_measure' and (behaviour is None or 'delay' in behaviour):
-            # A subject with four kinds of detail and two plain objects beside it: crowding 29, detail 51.
-            plain = {k: False for k in ('text', 'repeated', 'countable', 'texture', 'reflective', 'joints')}
+            # A subject with 7 of 14 levels of detail and two plain objects beside it: crowding 29, detail 38.
+            plain = {k: 0 for k in ('text', 'repeated', 'countable', 'texture', 'reflective', 'joints', 'people')}
             behaviour = {'json': {'subject': {'name': 'Game Boy', 'box': {'x': 0.25, 'y': 0.2, 'width': 0.5, 'height': 0.6},
-                                              'detail': {**plain, 'text': True, 'repeated': True, 'countable': True, 'texture': True}},
+                                              'detail': {**plain, 'text': 2, 'repeated': 1, 'countable': 2, 'texture': 1, 'joints': 1}},
                                   'others': [{'name': 'cartuccia', 'box': {'x': 0.8, 'y': 0.7, 'width': 0.15, 'height': 0.2}, 'detail': plain},
                                              {'name': 'scatola', 'box': {'x': 0.0, 'y': 0.6, 'width': 0.2, 'height': 0.3}, 'detail': plain}],
                                   'unlisted': 0}}
