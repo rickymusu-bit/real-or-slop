@@ -52,6 +52,9 @@ export function commonsFileTitle(value: string): string {
   const filename = thumbIndex === 2 ? parts[5] : parts[4];
   return "File:" + decodeName(filename);
 }
+/** The Commons page of a file title, as stored in `source_url`. */
+export const commonsPageUrl = (title: string) =>
+  "https://commons.wikimedia.org/wiki/" + encodeURIComponent(title).replace(/%3A/ig, ":");
 export function commonsApiUrl(title: string): string {
   const api = new URL("https://commons.wikimedia.org/w/api.php");
   for (const [key,value] of Object.entries({
@@ -131,7 +134,7 @@ export async function commonsFile(value: string): Promise<CommonsFile> {
   const license = meta("LicenseUrl");
   const categories = typeof ext.Categories?.value === "string" ? ext.Categories.value.split("|")
     .map(c => c.trim()).filter(c => c && c.length <= 200).slice(0, 40) : [];
-  return {title:page?.title || title,source_url:"https://commons.wikimedia.org/wiki/"+encodeURIComponent(page?.title || title).replace(/%3A/ig,":"),
+  return {title:page?.title || title,source_url:commonsPageUrl(page?.title || title),
     download_url:download,author:meta("Artist"),license_url:license,license_name:meta("LicenseShortName").slice(0,200),description:meta("ImageDescription"),
     width:image.width!,height:image.height!,bytes:file.bytes,mime:file.mime,original_is_preview:chooseThumb,
     categories,date:meta("DateTimeOriginal").slice(0,100) || meta("DateTime").slice(0,100)};

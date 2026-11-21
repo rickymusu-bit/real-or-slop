@@ -1,6 +1,6 @@
-# Statistiche e Impostazioni — specifica 4.5.0
+# Statistiche e Impostazioni — specifica 4.6.0
 
-Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-21T09:00:00Z.
+Stato: implementata nel ramo 1.52.0, da rilasciare. Aggiornata: 2026-11-21T10:00:00Z.
 
 ## 1. Decisioni dell'owner (2026-11-12)
 
@@ -24,7 +24,9 @@ si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ri
 - **Studio SLOP:** tentativi massimi (1–5, default 3), tolleranza (0–2, default 1). Quantità e modalità si scelgono con «Genera SLOP» nella galleria. Nessuna proposta da attivare o spegnere; lo sbilanciamento è solo una notifica. La 0055 rimuove `slop_auto_enabled`, rifiutato dall’API. La 0056 elimina anche i vincoli e le chiavi legacy dei gruppi, conservando le impostazioni attive.
 - **Partite:** durata massima di una partita aperta in ore (24, da 1 a 168): oltre, una partita non conclusa non trattiene più le copie
   ritirate e non conta tra le aperte.
-- Dati in `app_settings`; una riga mancante vale il predefinito del codice.
+- **Fonti Commons:** REAL controllate ogni notte su Wikimedia Commons (50, da 0 a 500; 0 sospende il controllo), richiesta
+  dell'owner del 2026-11-20. Le regole del controllo sono nella specifica `libreria-immagini`, sezione 9.
+- Dati in `app_settings`; una riga mancante, o un valore fuori dai limiti, vale il predefinito del codice.
 
 ## 3. Statistiche (solo visualizzazione)
 

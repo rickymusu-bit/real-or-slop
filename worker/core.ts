@@ -9,6 +9,8 @@ export interface Env {
   OPENAI_API_KEY?: string;
   OPENAI_BASE_URL?: string;
   ANALYSIS_MODEL?: string;
+  /** API of Wikimedia Commons for the nightly check of the REAL sources; only the tests set it (fake Commons). */
+  COMMONS_API_URL?: string;
   /** The SLOP loop on Cloudflare (worker/slop-runner.ts, wrangler.jsonc «workflows»). */
   SLOP_RUNNER?: Workflow<{ batchId: string; phase: "images" | "proposals" }>;
 }

@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.0.0
+# Libreria delle immagini — specifica 10.1.0
 
-Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-21T09:00:00Z.
+Stato: implementata nel ramo 1.52.0, da rilasciare. Aggiornata: 2026-11-21T10:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -20,6 +20,8 @@ Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-21T09:00
   descrizione editoriale, la sua provenienza, il testo Commons originale e i campi dell'analisi, e svuota la descrizione delle SLOP.
   Superano le decisioni del 2026-11-09 (analisi una volta per immagine), del 2026-11-19 (ripetizione dell'analisi, descrizione nei
   risultati) e quella di poche ore prima sulle incertezze.
+- **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, numero modificabile dalle Impostazioni, ciascuna solo tre mesi dopo l'ultimo controllo; un
+  file sparito da Commons viene **solo segnalato**, mai ritirato o cancellato in automatico (sezione 9).
 - Niente prezzi né budget: ogni chiamata a pagamento si conferma e si registra senza importi; il limite di spesa è quello del progetto
   OpenAI (2026-11-10).
 - Niente didascalie, né nel gioco né nella dashboard; quelle scritte sono state cancellate (2026-11-13).
@@ -152,6 +154,36 @@ Migrazione 0050: descrizioni e provenienza, contesto Commons originale, `slop_pr
 Migrazione 0051 (`model_contexts`): parte `slop_evaluation` e colonna `pipeline` (sezione 7); testi, date e identificativi conservati.
 Migrazione 0063: elimina tag, alias, categorie, `generated_tags` e `categories_completed_at` (sezione 4). Foto, descrizioni, stato
 dell'analisi, copie, processi, chiamate e partite restano. Nessuna chiamata a pagamento.
+Migrazione 0065: `images.source_checked_at` e `images.source_missing_at` per il controllo delle fonti (sezione 9), con indice parziale
+sulle REAL; le REAL già acquisite da Commons ricevono come ultimo controllo la data di acquisizione. `app_settings` è ricostruita con
+tutte le righe per ammettere la chiave `commons_checks_per_night`.
 Migrazione 0066: elimina `real_description`, `real_description_provenance`, `commons_description`, `analysis_status`,
 `analysis_error`, `analyzed_at`, `analysis_base_context` e `analysis_task_context`; svuota la descrizione delle SLOP; salva le proposte
 di «Base comune» e «Premessa e prompt di galleria» (sezione 7). Foto, descrizioni della fonte, chiamate e partite restano.
+
+## 9. Controllo delle fonti su Commons
+
+Decisione dell'owner del 2026-11-20. Commons cancella i file soprattutto per problemi di diritti: un file sparito può voler dire che la
+licenza su cui si basa la REAL non era valida. Una licenza Creative Commons invece non si revoca, quindi non si rilegge la licenza: si
+controlla solo che la pagina del file esista ancora.
+
+- **Quando.** Nella manutenzione notturna (Cron Trigger delle 03:17 UTC), dopo le altre operazioni e senza poterle bloccare.
+- **Quali foto.** Le REAL fuori dal cestino la cui fonte è una pagina `https://commons.wikimedia.org/wiki/File:…`, se l'ultimo
+  controllo (`source_checked_at`) risale ad almeno tre mesi di calendario prima. Prima quelle mai controllate, poi le più vecchie;
+  al massimo il numero scelto in Impostazioni → Fonti Commons (`commons_checks_per_night`, **50** predefinito, da 0 a 500; 0 sospende il
+  controllo). Le richieste all'API sono da 50 titoli, una dopo l'altra: il primo errore chiude la notte, salva ciò che è già stato
+  risposto e lascia in coda il resto. L'acquisizione da Commons conta come primo controllo; la migrazione 0065
+  usa la data di acquisizione per le REAL già presenti.
+- **Richiesta.** `action=query`, `formatversion=2`, `redirects=1`, `maxlag=5`, i titoli dei file, con il `User-Agent` del progetto.
+  Nessuna chiamata a pagamento e nessun dato personale.
+- **Esiti.** Pagina presente: data del controllo aggiornata e segnalazione tolta. File spostato con un reindirizzamento: il link della
+  fonte segue il nuovo titolo. Pagina mancante: data del controllo aggiornata e `source_missing_at` impostato alla prima volta in cui
+  manca. Un indirizzo che non è più un file di Commons si mette da parte per tre mesi, senza segnalazione. Errore di rete, risposta
+  HTTP non riuscita, `maxlag` o risposta illeggibile: nulla cambia e le stesse foto tornano la notte successiva.
+- **Solo segnalazione.** La foto resta nel suo stato. La scheda della galleria mostra quante REAL non risultano più su Commons, la
+  foto un'etichetta «Fonte rimossa», il dettaglio la data e cosa fare: verificare la pagina, ritirare o cestinare la foto se la
+  licenza non regge, oppure correggere la pagina della fonte. Correggerla toglie la segnalazione e rimette la foto in testa alla coda
+  della notte successiva. Il dettaglio di una REAL controllata mostra anche «Fonte presente su Commons al …».
+- **Carico.** Con il valore predefinito una richiesta leggera a notte, qualunque sia la dimensione del catalogo: 5000 REAL si
+  ricontrollano in circa cento giorni, quindi l'intervallo effettivo supera i tre mesi quando le REAL dovute sono più di quelle
+  controllate ogni notte. Alzando il numero (500 = dieci richieste) l'intervallo torna a tre mesi.

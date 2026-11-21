@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 10.0.0
+# Foto e gallerie — specifica 10.1.0
 
-Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-21T09:00:00Z.
+Stato: implementata nel ramo 1.52.0, da rilasciare. Aggiornata: 2026-11-21T10:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -52,6 +52,10 @@ suo batch originario, ma esce dalla sua revisione operativa.
 - Se una foto appartiene a una partita in corso o la galleria ha una generazione in corso, l’operazione viene respinta e si può
   riprovare al termine. Il cestino si apre da «Filtri e ordinamento» nella finestra della galleria.
 
+- **Fonti sparite da Commons** (2026-11-20, specifica `libreria-immagini`, sezione 9): la scheda della galleria nella sezione
+  Gallerie conta le REAL il cui file non risulta più su Commons; nella griglia la foto porta l'etichetta «Fonte rimossa». È solo una
+  segnalazione: stato e pubblicazione non cambiano.
+
 ## 3. Dettaglio
 
 - Origine, stato, dimensioni dell'originale, copia di gioco con formato e peso; visualizzazioni e classificazioni corrette con la
@@ -63,6 +67,8 @@ suo batch originario, ma esce dalla sua revisione operativa.
   anche «Approva», «Pubblica nel gioco», «Togli dalla pubblicazione»,
   «Elimina (nel cestino)», «Ripristina» ed «Elimina definitivamente» secondo lo stato della foto.
 - **Rigenerare una SLOP:** richiede un nuovo processo nello studio con conferma ed esame dell’immagine intera.
+- **Fonte su Commons (REAL):** sopra il corpo del dettaglio, l'ultima data in cui il controllo notturno ha trovato il file oppure,
+  se manca, la data della prima mancanza con le azioni possibili (verificare, ritirare o cestinare, correggere la pagina della fonte).
 - **Copie e misure:** «Inquadratura» mostra il riquadro 4:5 sulla foto adattata. Il riquadro si centra sull’asse in cui supera la foto
   per pareggiare le bande nere. Durante la preparazione
   della copia e il salvataggio di inquadratura o trattamento, l’avviso al centro blocca la finestra fino all’esito. Le

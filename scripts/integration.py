@@ -23,7 +23,7 @@ try:
     Path('artifacts').mkdir(exist_ok=True)
     with Path('artifacts/integration-worker.log').open('w') as log:
         # Paid calls on, against the fake model (tests/fake_openai.py); everything lives in the local D1.
-        analysis = {'OPENAI_API_KEY': 'test-openai-key', 'OPENAI_BASE_URL': fake + '/v1/'}
+        analysis = {'OPENAI_API_KEY': 'test-openai-key', 'OPENAI_BASE_URL': fake + '/v1/', 'COMMONS_API_URL': fake + '/commons/w/api.php'}
         model = subprocess.Popen(['python3', 'tests/fake_openai.py', fake.rsplit(':', 1)[1]], stdout=log, stderr=log)
         proc = subprocess.Popen(['npx', 'wrangler', 'dev', '--local', '--port', '8788', '--test-scheduled', '--persist-to', str(state), '--env', 'local',
                                  *[arg for key, value in analysis.items() for arg in ('--var', f'{key}:{value}')]],

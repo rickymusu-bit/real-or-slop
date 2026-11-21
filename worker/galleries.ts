@@ -29,11 +29,12 @@ async function galleryPreviews(env: Env) {
   const rows = (await env.DB.prepare(`SELECT g.*,
     (SELECT count(*) FROM images WHERE gallery_id=g.id AND ${GALLERY_SOURCE}) AS available,
     (SELECT count(*) FROM images WHERE gallery_id=g.id AND status<>'trash') AS photos,
+    (SELECT count(*) FROM images WHERE gallery_id=g.id AND origin='REAL' AND status<>'trash' AND source_missing_at IS NOT NULL) AS source_missing,
     (SELECT json_group_array(file) FROM (
       SELECT '/api/admin/library/'||id||'/file?v='||substr(COALESCE(copy_sha256,original_sha256),1,12) AS file
       FROM images WHERE gallery_id=g.id AND status<>'trash' ORDER BY created_at DESC,id LIMIT 3
     )) AS preview
-    FROM galleries g ORDER BY g.title COLLATE NOCASE,g.id`).all<Gallery & {available: number; photos: number; preview: string}>()).results;
+    FROM galleries g ORDER BY g.title COLLATE NOCASE,g.id`).all<Gallery & {available: number; photos: number; source_missing: number; preview: string}>()).results;
   return rows.map(g => ({...g, ready: galleryReady(g), preview: JSON.parse(g.preview) as string[]}));
 }
 function field(value: unknown, max: number, name: string, required = false) {

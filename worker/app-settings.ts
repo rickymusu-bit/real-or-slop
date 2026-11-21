@@ -1,4 +1,5 @@
-/** Numeric settings of the dashboard: SLOP proposals, attempt limits, tolerance and hours of an open game.
+/** Numeric settings of the dashboard: SLOP proposals, attempt limits, tolerance, hours of an open game and REAL whose Commons source
+ * is checked each night (0 pauses the check).
  * A missing row is the default of the code (spec `statistiche-impostazioni`, section 2). */
 import { HttpError, type Env } from "./core";
 
@@ -6,6 +7,7 @@ export const LIMITS = {
   max_generation_attempts: { min: 1, max: 5, default: 3 },
   editorial_tolerance: { min: 0, max: 2, default: 1 },
   open_game_hours: { min: 1, max: 168, default: 24 },
+  commons_checks_per_night: { min: 0, max: 500, default: 50 },
 } as const;
 export type NumberSetting = keyof typeof LIMITS;
 const KEYS = Object.keys(LIMITS) as NumberSetting[];

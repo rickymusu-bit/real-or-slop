@@ -4,7 +4,8 @@ import "./galleries.css";
 export interface Gallery {
   id: string; title: string; description: string; slop_instructions: string; revision: number; available: number; ready: boolean;
 }
-interface GalleryPreview extends Gallery { photos: number; preview: string[] }
+/** `source_missing`: REAL whose file is gone from Commons (nightly check, spec `libreria-immagini`, section 9). */
+interface GalleryPreview extends Gallery { photos: number; source_missing: number; preview: string[] }
 export interface GalleryList {galleries: GalleryPreview[]; paid_calls: boolean; text_model: string}
 
 export function galleryOptions(galleries: Gallery[], value: string) {
@@ -17,7 +18,8 @@ export function galleryCards(galleries: GalleryList["galleries"]) {
     <span class="gallery-contact-sheet" data-photos="${g.preview.length}">${g.preview.map(src =>
       `<img src="${escape(src)}" alt="" loading="lazy" draggable="false">`).join("") || '<span>Nessuna foto</span>'}</span>
     <span class="gallery-card-copy"><strong>${escape(g.title)}</strong>${g.description ? `<span class="gallery-description">${escape(g.description)}</span>` : ""}
-    <small>${g.photos} foto</small></span></button></li>`).join("")}</ul>`;
+    <small>${g.photos} foto</small>${g.source_missing ? `<small class="gallery-source-missing" data-source-missing>${g.source_missing} ${g.source_missing === 1
+      ? "REAL non risulta" : "REAL non risultano"} più su Commons</small>` : ""}</span></button></li>`).join("")}</ul>`;
 }
 
 export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path: string, init?: RequestInit) => Promise<T>,
@@ -71,7 +73,7 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
         // The write succeeded. A retry should update that gallery, even if refreshing the overview failed.
         selected = saved.id;
         list!.galleries = [...list!.galleries.filter(g => g.id !== saved.id),
-          { ...saved, available: gallery?.available ?? 0, photos: gallery?.photos ?? 0, preview: gallery?.preview ?? [], ready: !!saved.slop_instructions.trim() }];
+          { ...saved, available: gallery?.available ?? 0, photos: gallery?.photos ?? 0, source_missing: gallery?.source_missing ?? 0, preview: gallery?.preview ?? [], ready: !!saved.slop_instructions.trim() }];
         render();
         message("Galleria salvata. " + (error instanceof Error ? error.message : String(error)));
         return;

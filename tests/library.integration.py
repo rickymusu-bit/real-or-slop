@@ -236,4 +236,31 @@ assert not sql("SELECT object_key FROM gallery_files_to_delete")
 assert not stored(IMAGES, keys['copy_key']) and not stored(QUARANTINE, keys['copy_key']) and not stored(QUARANTINE, keys['original_key'])
 assert call(f'{API}/{slop["id"]}')[1]['status'] == 'trash'
 assert call(f'{API}/{slop["id"]}/restore', {})[0] == 200
+# Nightly check of the Commons sources (spec `libreria-immagini`, section 9): only a flag, no withdrawal; a corrected address
+# leaves the flag and waits for the next night.
+def commons_log():
+    with urllib.request.urlopen(os.environ['ROS_TEST_FAKE_OPENAI'] + '/control') as r: return json.loads(r.read())['log']
+checked = {}
+for name in ('Present', 'Gone'):
+    status, item, _ = upload(photo((90 if name == 'Gone' else 70, 0, 0)), title=f'Fonte {name}')
+    assert status == 201 and item['source_checked_at'] is None and item['source_missing_at'] is None, item
+    status, item, _ = patch(item, {'source_url': f'https://commons.wikimedia.org/wiki/File:Source{name}.jpg'}); assert status == 200, item
+    checked[name] = item
+req = urllib.request.Request(os.environ['ROS_TEST_FAKE_OPENAI'] + '/control', data=b'{"queue": []}', headers={'Content-Type': 'application/json'})
+urllib.request.urlopen(req).read()
+with urllib.request.urlopen(base + '/cdn-cgi/handler/scheduled?cron=17+3+*+*+*') as r: assert r.status == 200
+for _ in range(40):
+    gone = call(f'{API}/{checked["Gone"]["id"]}')[1]
+    if gone['source_checked_at']: break
+    time.sleep(0.25)
+present = call(f'{API}/{checked["Present"]["id"]}')[1]
+assert present['source_checked_at'] and present['source_missing_at'] is None, present
+assert gone['source_missing_at'] and gone['status'] == 'new', gone
+asked = [t for entry in commons_log() if entry.get('path') == '/commons' for t in entry['titles']]
+assert {'File:SourcePresent.jpg', 'File:SourceGone.jpg'} <= set(asked), asked
+assert next(g for g in call(f'{API}/galleries')[1]['galleries'] if g['id'] == gallery_id)['source_missing'] == 1
+status, gone, _ = patch(gone, {'source_url': 'https://commons.wikimedia.org/wiki/File:SourceMoved.jpg'})
+assert status == 200 and gone['source_missing_at'] is None and gone['source_checked_at'] is None, gone
+for item in (present, gone):
+    call(f'{API}/{item["id"]}/trash', {}); assert call(f'{API}/{item["id"]}', method='DELETE')[0] == 200
 print('Library integration 1.9.0 passed: no captions; no initial view; trash withdraws a published photo; level game seeded; copies with 4:5 crop, ND refused; add, copy, edit kept approved, publish, play without captions, withdraw with the game in progress, trash, delete with every row and file, upload again, bulk.')

@@ -1,7 +1,14 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-21T09:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-21T10:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.52.0 — 2026-11-21T10:00:00Z
+
+- Controllo notturno delle fonti Commons: 50 REAL a notte, ciascuna tre mesi dopo l'ultimo controllo, con richieste da 50 all'API.
+  Il numero si cambia da Impostazioni → Fonti Commons (da 0 a 500; 0 sospende).
+  Un file sparito da Commons è solo segnalato: conteggio sulla scheda della galleria, etichetta «Fonte rimossa» sulla foto, nota nel
+  dettaglio. Un file spostato aggiorna il link della fonte; correggere la fonte toglie la segnalazione. Migrazione 0065.
 
 ## 1.51.0 — 2026-11-21T09:00:00Z
 

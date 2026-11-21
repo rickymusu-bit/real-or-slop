@@ -30,6 +30,8 @@ interface Item extends TreatableItem {
   rights_confirmed: boolean; revision: number; file: string; updated_at: string; created_at: string;
   stats: { views: number; correct: number }; in_play: number; no_derivatives: boolean;
   metrics: Metrics | null; treatment: Treatment | null; copy_sha?: string;
+  /** REAL only: last nightly check of the Commons page and when the file was found missing (spec `libreria-immagini`, section 9). */
+  source_checked_at?: string | null; source_missing_at?: string | null;
 }
 interface ModelOption { id: string; available: boolean | null; qualities?: string[]; shutdown?: string | null }
 interface Models { text_model: string; image_model: string; image_quality: string; text_models: ModelOption[]; image_models: ModelOption[]; note: string }
@@ -176,7 +178,10 @@ export async function showLibrary() {
       <p class="hint">Apri una galleria e scegli «Genera SLOP» per accedere alle modalità manuale e automatica. La modalità automatica estrae le REAL di riferimento dalla galleria.</p></details>
     <details id="library-games" class="library-vocabulary"><summary>Partite</summary>
       <form id="library-games-form" class="library-inline"><label>Durata massima di una partita aperta (ore)<input type="number" name="open_game_hours" required></label><button>Salva</button></form>
-      <p class="hint">Oltre questo tempo una partita non conclusa non trattiene più le copie delle foto ritirate o modificate, e la sua foto può non essere più disponibile. I livelli del gioco sono fissi nel codice.</p></details></section>
+      <p class="hint">Oltre questo tempo una partita non conclusa non trattiene più le copie delle foto ritirate o modificate, e la sua foto può non essere più disponibile. I livelli del gioco sono fissi nel codice.</p></details>
+    <details id="library-sources" class="library-vocabulary"><summary>Fonti Commons</summary>
+      <form id="library-sources-form" class="library-inline"><label>REAL controllate ogni notte<input type="number" name="commons_checks_per_night" required></label><button>Salva</button></form>
+      <p class="hint">Ogni notte si chiede a Wikimedia Commons se il file di queste REAL esiste ancora, cominciando da quelle controllate da più tempo; ogni foto torna in coda tre mesi dopo l’ultimo controllo. Un file sparito è solo segnalato nella galleria. Le richieste a Commons sono da 50 foto; 0 sospende il controllo.</p></details></section>
     <dialog id="library-detail" class="library-detail" aria-labelledby="library-detail-title"></dialog>
   </section>`;
   const page = content().querySelector<HTMLElement>(".library")!;
@@ -261,7 +266,8 @@ export async function showLibrary() {
     <label class="library-check"><input type="checkbox" data-select="${escape(item.id)}" ${selected.has(item.id) ? "checked" : ""} aria-label="Seleziona ${escape(imageLabel(item))}"></label>
     <button type="button" class="library-open" data-open="${escape(item.id)}" data-long-press aria-label="Apri ${escape(imageLabel(item))}">
       <img src="${escape(item.file)}" alt="" loading="lazy" draggable="false"><span class="library-badges"><span class="badge badge-${item.origin.toLowerCase()}">${item.origin}</span>
-      <span class="badge badge-status">${STATE_LABEL[item.status]}</span></span>
+      <span class="badge badge-status">${STATE_LABEL[item.status]}</span>${item.source_missing_at
+        ? '<span class="badge badge-warn" data-source-missing title="Il file non risulta più su Wikimedia Commons">Fonte rimossa</span>' : ""}</span>
     </button></li>`;
   const selectionBar = () => {
     const bar = $("#library-selection");
@@ -322,6 +328,14 @@ export async function showLibrary() {
       (t ? '<button type="button" id="library-treatment-edit">Regola il trattamento</button>' : "") + "</div>" : "";
     return (item.metrics ? `<p class="hint" data-metrics>Misure della copia: ${metricText(item.metrics)}.</p>` : "") + treatment + commands;
   };
+  const day = (iso: string) => new Date(iso).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" });
+  /** Nightly check of the Commons source: a flag only, the owner decides (spec `libreria-immagini`, section 9). */
+  const sourceCheck = (item: Item) => item.origin !== "REAL" ? "" : item.source_missing_at
+    ? `<p class="db-edit-note" data-source-missing>Dal ${day(item.source_missing_at)} il file non risulta più su Wikimedia Commons. Commons
+      cancella soprattutto per problemi di diritti: verifica la pagina della fonte. Se la licenza non è più sostenibile, togli la foto dalla
+      pubblicazione o spostala nel cestino; se il file è stato spostato, correggi la pagina della fonte, che sarà ricontrollata la notte
+      successiva.</p>`
+    : item.source_checked_at ? `<p class="hint" data-source-checked>Fonte presente su Commons al ${day(item.source_checked_at)}.</p>` : "";
   const showDetail = (item: Item) => {
     open = item;
     const editable = item.status === "new" || item.status === "approved";
@@ -330,6 +344,7 @@ export async function showLibrary() {
     detail.innerHTML = `<form method="dialog" class="library-detail-close"><button aria-label="Chiudi">×</button></form>
       <h2 id="library-detail-title">${escape(imageLabel(item))}</h2>
       <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / originale ${item.width}×${item.height}${item.copy ? ` / copia di gioco WebP ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}: è ciò che vedranno i giocatori` : " / copia di gioco non pronta"}</p>
+      ${sourceCheck(item)}
       <div class="library-detail-body"><div class="game-media-surface library-preview"><img data-game-media draggable="false" src="${escape(item.file)}" alt="${escape(imageLabel(item))}"></div>
       <div class="library-fields"><p>${statsLine(item)}</p>
       <label>Galleria<select id="library-detail-gallery">${galleryOptions(galleries(), item.gallery_id)}</select></label>
@@ -620,7 +635,7 @@ if (button.id === "library-copy") {
       }
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
-  // Thresholds of the SLOP studio and hours of an open game: numbers checked by the server.
+  // Thresholds of the SLOP studio, hours of an open game and nightly Commons checks: numbers checked by the server.
   interface Numbers { values: Record<string, number>; limits: Record<string, { min: number; max: number; default: number }> }
   /** Writes the stored numbers into the fields; after a save only those of the saved form, so that a slower answer never
    * overwrites what the owner is typing in another form. */
@@ -641,6 +656,7 @@ if (button.id === "library-copy") {
   });
   numbersForm("#library-thresholds-form", ["max_generation_attempts", "editorial_tolerance"], "Soglie dello studio SLOP salvate.");
   numbersForm("#library-games-form", ["open_game_hours"], "Durata massima di una partita aperta salvata.");
+  numbersForm("#library-sources-form", ["commons_checks_per_night"], "Numero di REAL controllate ogni notte salvato.");
   statsView = mountStats($<HTMLElement>("#stats-body"), period => call<Stats>("/stats?" + new URLSearchParams({ period })));
   // Leaderboard: check a code, hide or show an entry.
   interface Entry { id: string; nickname: string; level_label: string; score: number; photos: number; balanced_accuracy: number; hidden: boolean; created_at: string }
