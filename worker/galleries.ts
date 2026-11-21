@@ -1,10 +1,14 @@
-/** Gallery editing, readiness and explicitly authorized suggestions. */
+/** Gallery editing, readiness, thresholds of crowding and detail of its REAL, and explicitly authorized suggestions. */
+import { numberSettings } from "./app-settings";
 import { HttpError, id, type Env } from "./core";
 import { chosenModel } from "./models";
 import { currentContext } from "./model-context";
 import { paid, responseJson } from "./paid";
 
-export interface Gallery { id: string; title: string; description: string; slop_instructions: string; revision: number }
+/** max_crowdedness, max_detail: the gallery's thresholds from 0 to 100, NULL for the default of the settings (spec `libreria-immagini`,
+ * section 10). They never change the revision, which guards the SLOP instructions of pending proposals. */
+export interface Gallery { id: string; title: string; description: string; slop_instructions: string; revision: number;
+  max_crowdedness: number | null; max_detail: number | null }
 export const GALLERY_DESCRIPTION_MAX = 3000;
 export const GALLERY_INSTRUCTIONS_MAX = 4000;
 export const galleryReady = (gallery: Gallery) => !!gallery.slop_instructions.trim();
@@ -41,8 +45,18 @@ function field(value: unknown, max: number, name: string, required = false) {
   if (typeof value !== "string" || value.length > max || (required && !value.trim())) throw new HttpError(400, `Campo non valido: ${name}`);
   return value.trim();
 }
+/** A threshold from 0 to 100, or null for the default of the settings. */
+function threshold(value: unknown, name: string): number | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 100) throw new HttpError(400, `Soglia di ${name} da 0 a 100`);
+  return value;
+}
 export async function galleryRoute(env: Env, method: string, target: string, data: Record<string, unknown>) {
-  if (!target && method === "GET") return {galleries: await galleryPreviews(env), paid_calls: !!env.OPENAI_API_KEY, text_model: await chosenModel(env, "text_model")};
+  if (!target && method === "GET") {
+    const defaults = await numberSettings(env);
+    return {galleries: await galleryPreviews(env), paid_calls: !!env.OPENAI_API_KEY, text_model: await chosenModel(env, "text_model"),
+      thresholds: {crowdedness: defaults.crowdedness_threshold, detail: defaults.detail_threshold}};
+  }
   if (method === "GET" && /^[\w-]{1,64}$/.test(target)) return findGallery(env, target);
   if (method !== "POST" && method !== "PATCH") throw new HttpError(405, "Metodo non consentito");
   const [key, action, extra] = target.split("/");
@@ -64,19 +78,24 @@ export async function galleryRoute(env: Env, method: string, target: string, dat
   }
   const editing = method === "PATCH" && key && !action;
   if (!editing && (method !== "POST" || target)) throw new HttpError(404, "API delle gallerie inesistente");
-  if (Object.keys(data).some(k => !["title", "description", "slop_instructions", ...(editing ? ["revision"] : [])].includes(k))) throw new HttpError(400, "Campi non previsti");
+  if (Object.keys(data).some(k => !["title", "description", "slop_instructions", "max_crowdedness", "max_detail", ...(editing ? ["revision"] : [])].includes(k)))
+    throw new HttpError(400, "Campi non previsti");
   const title = field(data.title, 200, "titolo", true), description = field(data.description ?? "", GALLERY_DESCRIPTION_MAX, "descrizione");
   const instructions = field(data.slop_instructions ?? "", GALLERY_INSTRUCTIONS_MAX, "indicazioni SLOP");
   if (!editing) {
     const key = id();
-    await env.DB.prepare("INSERT INTO galleries(id,title,description,slop_instructions) VALUES(?,?,?,?)").bind(key, title, description, instructions).run();
+    await env.DB.prepare("INSERT INTO galleries(id,title,description,slop_instructions,max_crowdedness,max_detail) VALUES(?,?,?,?,?,?)")
+      .bind(key, title, description, instructions, threshold(data.max_crowdedness, "affollamento"), threshold(data.max_detail, "dettaglio")).run();
     return findGallery(env, key);
   }
   const gallery = await findGallery(env, key);
   if (data.revision !== gallery.revision) throw new HttpError(409, "Galleria modificata: ricarica il modulo");
-  if (title === gallery.title && description === gallery.description && instructions === gallery.slop_instructions) return gallery;
-  const updated = await env.DB.prepare("UPDATE galleries SET title=?,description=?,slop_instructions=?,revision=revision+1 WHERE id=? AND revision=?")
-    .bind(title, description, instructions, key, gallery.revision).run();
+  const crowdedness = "max_crowdedness" in data ? threshold(data.max_crowdedness, "affollamento") : gallery.max_crowdedness;
+  const detail = "max_detail" in data ? threshold(data.max_detail, "dettaglio") : gallery.max_detail;
+  const text = title !== gallery.title || description !== gallery.description || instructions !== gallery.slop_instructions;
+  if (!text && crowdedness === gallery.max_crowdedness && detail === gallery.max_detail) return gallery;
+  const updated = await env.DB.prepare(`UPDATE galleries SET title=?,description=?,slop_instructions=?,max_crowdedness=?,max_detail=?,
+    revision=revision+? WHERE id=? AND revision=?`).bind(title, description, instructions, crowdedness, detail, text ? 1 : 0, key, gallery.revision).run();
   if (!updated.meta.changes) throw new HttpError(409, "Galleria modificata: ricarica il modulo");
   return findGallery(env, key);
 }

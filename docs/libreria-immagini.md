@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.1.0
+# Libreria delle immagini — specifica 10.2.0
 
-Stato: implementata nel ramo 1.52.0, da rilasciare. Aggiornata: 2026-11-21T10:00:00Z.
+Stato: implementata nel ramo 1.53.0, da rilasciare. Aggiornata: 2026-11-21T18:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -22,6 +22,12 @@ Stato: implementata nel ramo 1.52.0, da rilasciare. Aggiornata: 2026-11-21T10:00
   risultati) e quella di poche ore prima sulle incertezze.
 - **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, numero modificabile dalle Impostazioni, ciascuna solo tre mesi dopo l'ultimo controllo; un
   file sparito da Commons viene **solo segnalato**, mai ritirato o cancellato in automatico (sezione 9).
+- **Affollamento e dettaglio delle REAL** (decisioni del 2026-11-21). Su richiesta, un modello misura quanto è affollata e quanto è
+  dettagliata una REAL, per capire quanto il generatore di immagini farebbe fatica a riprodurne una simile. Il modello osserva soltanto
+  oggetti, riquadri e categorie di dettaglio; i due punteggi da 0 a 100 li calcola il codice. Soglie per galleria con valore
+  predefinito nelle Impostazioni; una REAL oltre una soglia è **solo segnalata**. Le misure servono per ora a vedere come si comporta
+  il modello: le idee di falsificazione delle SLOP restano sospese e la generazione non cambia (sezione 10). Modifica la decisione del
+  2026-11-20 sulle REAL non analizzate, che resta valida per descrizioni e analisi di ogni altro tipo.
 - Niente prezzi né budget: ogni chiamata a pagamento si conferma e si registra senza importi; il limite di spesa è quello del progetto
   OpenAI (2026-11-10).
 - Niente didascalie, né nel gioco né nella dashboard; quelle scritte sono state cancellate (2026-11-13).
@@ -94,31 +100,33 @@ dell'aspetto (risoluzione, rumore, nitidezza, contrasto, saturazione, tinta e cr
 
 ## 5. Analisi (ritirata)
 
-Dal 2026-11-20 nessuna foto viene analizzata. La rotta `POST /:id/analyze` e `GET /analysis` non esistono più; la manutenzione non
-segue più analisi in corso. Le chiamate di tipo «analisi» già registrate restano in `paid_calls` e nelle statistiche come «Analisi
-delle foto». L'invio dell'immagine al modello come data URL base64 scritta direttamente nei byte della richiesta resta per le
+Dal 2026-11-20 nessuna foto viene analizzata o descritta; dal 2026-11-21 le REAL si possono solo misurare (sezione 10). La rotta `POST /:id/analyze` e `GET /analysis` non esistono più; la
+manutenzione non segue più analisi in corso. Le chiamate di tipo `analysis` già registrate restano in `paid_calls`; dal 2026-11-21
+lo stesso tipo registra le misure di affollamento e dettaglio (sezione 10) e le statistiche lo chiamano «Analisi e misure delle
+REAL». L'invio dell'immagine al modello come data URL base64 scritta direttamente nei byte della richiesta resta per le
 proposte e le valutazioni delle SLOP (il 2026-11-15 cinque analisi su originali da 2 a 6 MB avevano superato i 128 MB del Worker).
 
 ## 6. Chiamate a pagamento e modelli
 
-- Tre tipi: proposte editoriali e prompt SLOP (anche le indicazioni proposte per una galleria), immagini SLOP, valutazione SLOP
-  intera. Le SLOP accettate non richiedono altre chiamate. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
+- Quattro tipi: misure di affollamento e dettaglio delle REAL (`analysis`, sezione 10), proposte editoriali e prompt SLOP (anche le
+  indicazioni proposte per una galleria), immagini SLOP, valutazione SLOP intera. Le SLOP accettate non richiedono altre chiamate. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
 - **Esiti:** risposta valida → `completed`; errore 4xx → `failed`, senza addebito; errore 5xx, timeout o rete → `uncertain`, mai
   ripetuta in automatico. Chiave rifiutata, limite di spesa o credito OpenAI esaurito fermano le serie con un messaggio che rimanda a
   platform.openai.com.
 - **Registro** `paid_calls`: tipo, modello, esito, token, date; nessun importo e collegamenti a immagine, processo e tentativo, azzerati alla cancellazione; nessun archivio delle immagini eliminate.
-- **Modelli:** modello di testo (proposte editoriali e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
+- **Modelli:** modello di testo (misure delle REAL, proposte editoriali e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
   elencati nel codice e presenti nel progetto OpenAI (`GET /v1/models`, in cache per un'ora; se l'elenco non si legge si offrono tutti).
   Ogni chiamata registra il modello usato.
 - Senza il segreto `OPENAI_API_KEY` le chiamate a pagamento sono spente. Nei test solo il modello finto `tests/fake_openai.py`.
 
 ## 7. Contesto dei modelli
 
-- Tre testi modificabili dalle Impostazioni, fino a 4000 caratteri: **Base comune** (ogni chiamata), **Premessa e prompt di
-  galleria** (proposte da originale, titolo e descrizione della fonte) e **Valutazione delle SLOP** (candidata intera). Le versioni
+- Quattro testi modificabili dalle Impostazioni, fino a 4000 caratteri: **Base comune** (ogni chiamata), **Misura delle REAL**
+  (`real_measure`, sezione 10), **Premessa e prompt di galleria** (proposte da originale, titolo e descrizione della fonte) e
+  **Valutazione delle SLOP** (candidata intera). Le versioni
   della parte ritirata «Descrizione delle REAL» (`analysis`) restano nella tabella, non sono offerte e non si ripristinano.
 - Ogni salvataggio di un testo diverso crea una versione datata; ripristinarne una vecchia crea una nuova versione con lo stesso testo.
-  Ogni valutazione registra le versioni usate.
+  Ogni valutazione e ogni misura registrano le versioni usate.
 - Il codice propone un testo (`DEFAULTS` del modulo del contesto) che le Impostazioni mostrano accanto a quello in vigore finché è
   diverso; diventa una versione solo quando l'owner lo salva. Un database nuovo parte dalla proposta.
 - Restano nel codice, qualunque cosa dicano i testi: formato JSON e schema delle risposte, limiti, la lunghezza chiesta ai prompt
@@ -135,7 +143,7 @@ proposte e le valutazioni delle SLOP (il 2026-11-15 cinque analisi su originali 
 
 ## 8. Dati
 
-- D1: `images`, `galleries`, `paid_calls`, `model_contexts`, `app_settings`, `slop_batches`,
+- D1: `images`, `galleries`, `real_measures`, `paid_calls`, `model_contexts`, `app_settings`, `slop_batches`,
   `slop_reference_uses`, `slop_processes`, `slop_attempts`, `retired_copies`, tabelle del gioco (`game_sessions`, `game_rounds`, `answers`, `media_events`,
   `leaderboard`, `rate_limits`). Elenco delle migrazioni in `MASTER.md`.
 - Migrazione 0048 (`images`): `categories_completed_at` (completamento delle tre categorie, eliminata dalla 0063), `copy_metrics` (misure della copia di
@@ -160,6 +168,9 @@ tutte le righe per ammettere la chiave `commons_checks_per_night`.
 Migrazione 0066: elimina `real_description`, `real_description_provenance`, `commons_description`, `analysis_status`,
 `analysis_error`, `analyzed_at`, `analysis_base_context` e `analysis_task_context`; svuota la descrizione delle SLOP; salva le proposte
 di «Base comune» e «Premessa e prompt di galleria» (sezione 7). Foto, descrizioni della fonte, chiamate e partite restano.
+Migrazione 0067: tabella `real_measures` (sezione 10), cancellata con la foto; `galleries.max_crowdedness` e `galleries.max_detail`
+(NULL = valore predefinito); `model_contexts` e `app_settings` ricostruite con tutte le righe per ammettere la parte `real_measure` e
+le chiavi `crowdedness_threshold` e `detail_threshold`. Nessuna chiamata a pagamento.
 
 ## 9. Controllo delle fonti su Commons
 
@@ -187,3 +198,44 @@ controlla solo che la pagina del file esista ancora.
 - **Carico.** Con il valore predefinito una richiesta leggera a notte, qualunque sia la dimensione del catalogo: 5000 REAL si
   ricontrollano in circa cento giorni, quindi l'intervallo effettivo supera i tre mesi quando le REAL dovute sono più di quelle
   controllate ogni notte. Alzando il numero (500 = dieci richieste) l'intervallo torna a tre mesi.
+
+## 10. Affollamento e dettaglio delle REAL
+
+Decisioni dell'owner del 2026-11-21. Per capire quanto un generatore di immagini farebbe fatica a riprodurre una foto simile, una REAL
+si descrive con due assi correlati ma distinti: l'**affollamento**, cioè quanti oggetti riconoscibili ci sono oltre al soggetto, e il
+**dettaglio**, cioè quanto dettaglio leggibile ha ogni oggetto. Una foto con un solo Game Boy su sfondo neutro è poco affollata ma può
+essere molto dettagliata. Il medium fotografico, terzo asse possibile, riguarda soprattutto le foto di eventi e per ora non si misura.
+
+- **Cosa osserva il modello.** L'originale intero, mai il ritaglio 4:5, con titolo e descrizione della galleria; non riceve titolo né
+  descrizione della fonte della REAL. Restituisce il soggetto, al massimo 30 altri oggetti e il numero di quelli non elencati. Per ogni
+  oggetto: un nome breve, un riquadro approssimativo in coordinate normalizzate (x, y, larghezza, altezza da 0 a 1) e quali delle sei
+  categorie di dettaglio sono leggibili: scritte e loghi, motivi ripetuti, parti contabili, texture dei materiali, superfici
+  riflettenti o schermi, giunzioni e meccanismi. Sono le categorie in cui i generatori sbagliano più spesso. Non contano superfici e
+  fondi né ciò che è troppo sfocato per distinguersi; oggetti uguali ripetuti contano uno per uno; contano anche gli altri oggetti del
+  tema della galleria. Il modello non descrive e non giudica l'autenticità.
+- **Calcolo** (`shared/real-measure.ts`). Affollamento = 100·n/(n+5), con n gli oggetti oltre al soggetto, elencati o no: 0 oggetti
+  valgono 0, 5 valgono 50, 10 valgono 67, 20 valgono 80. La curva si appiattisce perché oltre una decina di oggetti il conteggio di un
+  modello è poco affidabile. Dettaglio = media della quota di categorie leggibili di ogni oggetto elencato, soggetto compreso, pesata
+  sull'area del suo riquadro (ritagliato all'immagine) divisa per l'area di tutti i riquadri, non dell'immagine, perché lo sfondo
+  vuoto non diluisca il dettaglio del soggetto. Senza aree misurabili vale la quota del soggetto. Entrambi arrotondati all'intero.
+- **Chiamata.** `POST /:id/measure {confirm: true, request}`, solo per le REAL fuori dal cestino, con il modello di testo delle
+  Impostazioni e schema JSON rigido; `request` è un UUID del browser che rende impossibile inviare due volte la stessa conferma. Una
+  chiamata per misura, di tipo `analysis` in `paid_calls`, collegata alla foto; esito incerto o risposta non valida non salvano nulla e
+  non si ripetono in automatico. Il testo «Misura delle REAL» (sezione 7) si modifica dalle Impostazioni; l'elenco degli oggetti, il
+  formato dei riquadri e il calcolo restano nel codice.
+- **Conservazione.** Ogni misura resta in `real_measures` con modello, versioni di «Base comune» e «Misura delle REAL», oggetti
+  osservati, punteggi e data, per confrontare misure ripetute e modelli diversi. `GET /:id/measures` le elenca dalla più recente. Si
+  cancellano con la foto. La vista di una REAL porta l'ultima misura, le soglie in vigore e gli assi oltre soglia.
+- **Soglie.** Ogni galleria ha due soglie da 0 a 100 in «Modifica galleria»; vuote, valgono quelle predefinite di Impostazioni →
+  Misure delle REAL: affollamento **67** (dieci oggetti) e dettaglio **100** (nessun limite). Il problema vero è la combinazione dei
+  due assi, quindi si parte larghi e si stringe sui dati. Un valore uguale alla soglia è dentro. Cambiare le soglie non cambia la
+  revisione della galleria e non invalida le proposte SLOP in attesa.
+- **Segnalazione, e basta.** Una REAL misurata oltre una soglia ha un simbolo sulla miniatura, un avviso nell'anteprima a pressione
+  prolungata e nel dettaglio. Resta nel suo stato e nelle estrazioni.
+- **Dashboard.** Il dettaglio di una REAL mostra punteggi, numero di oggetti, soglie, data e modello, il comando «Misura» (una
+  chiamata, con conferma) e, a richiesta, gli oggetti dell'ultima misura disegnati sull'originale con le loro categorie e tutte le
+  misure precedenti. Dalla selezione della galleria, «Misura» misura le REAL selezionate ancora senza misura, una chiamata ciascuna
+  dopo una sola conferma del massimo, una dopo l'altra con la pagina aperta; un problema dell'account OpenAI ferma le restanti. Le REAL
+  già misurate si misurano di nuovo dal dettaglio. Il wizard REAL non misura: le REAL appena acquisite si misurano dalla galleria.
+- **Fuori da questa fase.** Le idee di falsificazione generate per ogni REAL, l'estrazione corretta sui due assi e la valutazione per
+  asse delle SLOP sono state discusse con l'owner il 2026-11-21 e sono sospese finché non si vede come il modello misura.

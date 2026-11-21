@@ -1,12 +1,14 @@
 import { escape } from "../shared/html";
 import "./galleries.css";
 
+/** max_crowdedness, max_detail: the gallery's own thresholds of crowding and detail, null for the defaults of the settings. */
 export interface Gallery {
   id: string; title: string; description: string; slop_instructions: string; revision: number; available: number; ready: boolean;
+  max_crowdedness: number | null; max_detail: number | null;
 }
 /** `source_missing`: REAL whose file is gone from Commons (nightly check, spec `libreria-immagini`, section 9). */
 interface GalleryPreview extends Gallery { photos: number; source_missing: number; preview: string[] }
-export interface GalleryList {galleries: GalleryPreview[]; paid_calls: boolean; text_model: string}
+export interface GalleryList {galleries: GalleryPreview[]; paid_calls: boolean; text_model: string; thresholds: {crowdedness: number; detail: number}}
 
 export function galleryOptions(galleries: Gallery[], value: string) {
   return galleries.map(g => `<option value="${escape(g.id)}" ${g.id === value ? "selected" : ""}>${escape(g.title)}</option>`).join("");
@@ -36,6 +38,11 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
         <label>Titolo<input name="title" autofocus required maxlength="200" value="${escape(gallery?.title || "")}"></label>
         <label>Descrizione<textarea name="description" rows="3" maxlength="3000">${escape(gallery?.description || "")}</textarea></label>
         <label>Indicazioni SLOP<textarea name="slop_instructions" rows="7" maxlength="4000">${escape(gallery?.slop_instructions || "")}</textarea></label>
+        <fieldset class="gallery-thresholds"><legend>Soglie delle REAL</legend>
+          <label>Affollamento<input type="number" name="max_crowdedness" min="0" max="100" step="1" inputmode="numeric" placeholder="${list?.thresholds.crowdedness ?? ""}" value="${gallery?.max_crowdedness ?? ""}"></label>
+          <label>Dettaglio<input type="number" name="max_detail" min="0" max="100" step="1" inputmode="numeric" placeholder="${list?.thresholds.detail ?? ""}" value="${gallery?.max_detail ?? ""}"></label>
+          <p class="hint">Da 0 a 100. Una REAL misurata oltre una soglia è segnalata. Vuoto: vale la soglia predefinita delle Impostazioni (${list?.thresholds.crowdedness ?? "?"} e ${list?.thresholds.detail ?? "?"}).</p>
+        </fieldset>
         <div class="library-inline"><button class="primary" type="submit">${gallery ? "Salva modifiche" : "Crea galleria"}</button>
         ${gallery && list?.paid_calls ? '<button type="button" data-gallery-suggest>Proponi indicazioni con IA</button>' : ""}</div>
       </form>
@@ -53,6 +60,11 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
     description: (form.elements.namedItem("description") as HTMLTextAreaElement).value,
     slop_instructions: (form.elements.namedItem("slop_instructions") as HTMLTextAreaElement).value,
   });
+  /** An empty threshold is the default of the settings. */
+  const thresholds = (form: HTMLFormElement) => Object.fromEntries(["max_crowdedness", "max_detail"].map(name => {
+    const value = (form.elements.namedItem(name) as HTMLInputElement).value.trim();
+    return [name, value === "" ? null : Number(value)];
+  }));
   dialog.addEventListener("cancel", event => { if (busy) event.preventDefault(); });
   dialog.addEventListener("click", event => {
     if ((event.target as HTMLElement).closest("[data-gallery-editor-close]") && !busy) dialog.close();
@@ -62,7 +74,7 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
     event.preventDefault();
     if (busy) return;
     const gallery = list?.galleries.find(g => g.id === selected);
-    const data = fields(form);
+    const data = {...fields(form), ...thresholds(form)};
     setBusy(true);
     try {
       const saved = await request<Gallery>("/galleries" + (gallery ? "/" + encodeURIComponent(gallery.id) : ""),

@@ -21,18 +21,26 @@ import { editFrame } from "./crop-editor";
 import { withPhotoProcessing } from "./photo-processing";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
+import { DETAIL_KINDS, DETAIL_LABELS, type Observation, type Scores } from "../shared/real-measure";
 
 type Status = "new" | "approved" | "published" | "trash";
 interface Item extends TreatableItem {
   id: string; gallery_id: string; origin: "REAL" | "SLOP"; status: Status; trashed_from: Status | null; title?: string; description?: string;
   source_url: string; author: string; license_name: string; license_url: string;
   prompt: string; model: string; width: number; height: number; copy: { width: number; height: number; bytes: number; crop: Crop | null; sha256: string | null } | null;
-  rights_confirmed: boolean; revision: number; file: string; updated_at: string; created_at: string;
+  rights_confirmed: boolean; revision: number; file: string; original: string; updated_at: string; created_at: string;
   stats: { views: number; correct: number }; in_play: number; no_derivatives: boolean;
   metrics: Metrics | null; treatment: Treatment | null; copy_sha?: string;
   /** REAL only: last nightly check of the Commons page and when the file was found missing (spec `libreria-immagini`, section 9). */
   source_checked_at?: string | null; source_missing_at?: string | null;
+  /** REAL only: latest crowding and detail and the scores above the gallery's thresholds (spec `libreria-immagini`, section 10). */
+  measure?: Measure | null;
 }
+interface Measure extends Scores { id: string; model: string; created_at: string; objects: number; over: (keyof Scores)[]; limits: Scores | null }
+interface StoredMeasure extends Omit<Measure, "over" | "limits"> { observation: Observation }
+const SCORE_LABEL: Record<keyof Scores, string> = { crowdedness: "affollamento", detail: "dettaglio" };
+/** Text of the scores above the thresholds, e.g. «affollamento 80 oltre la soglia di 67». */
+const overText = (m: Measure) => m.over.map(k => `${SCORE_LABEL[k]} ${m[k]} oltre la soglia di ${m.limits?.[k]}`).join(", ");
 interface ModelOption { id: string; available: boolean | null; qualities?: string[]; shutdown?: string | null }
 interface Models { text_model: string; image_model: string; image_quality: string; text_models: ModelOption[]; image_models: ModelOption[]; note: string }
 interface ContextVersion { id: string; body: string; created_at: string; pipeline: number }
@@ -135,6 +143,7 @@ export async function showLibrary() {
           <button type="button" data-bulk="restore" hidden>Ripristina</button>
           <button type="button" data-bulk="delete" class="danger" hidden>Elimina definitivamente</button>
           <button type="button" data-bulk="gallery">Cambia galleria</button>
+          <button type="button" data-bulk="measure" hidden>Misura</button>
         </div>
         <button type="button" data-bulk="none">Deseleziona</button>
       </div>
@@ -179,6 +188,9 @@ export async function showLibrary() {
     <details id="library-games" class="library-vocabulary"><summary>Partite</summary>
       <form id="library-games-form" class="library-inline"><label>Durata massima di una partita aperta (ore)<input type="number" name="open_game_hours" required></label><button>Salva</button></form>
       <p class="hint">Oltre questo tempo una partita non conclusa non trattiene più le copie delle foto ritirate o modificate, e la sua foto può non essere più disponibile. I livelli del gioco sono fissi nel codice.</p></details>
+    <details id="library-measures" class="library-vocabulary"><summary>Misure delle REAL</summary>
+      <form id="library-measures-form" class="library-inline"><label>Soglia predefinita di affollamento<input type="number" name="crowdedness_threshold" required></label><label>Soglia predefinita di dettaglio<input type="number" name="detail_threshold" required></label><button>Salva</button></form>
+      <p class="hint">Un modello misura su richiesta, con una chiamata a pagamento per foto, quanto è affollata e dettagliata una REAL. Affollamento: 100·n/(n+5), con n gli oggetti riconoscibili oltre al soggetto (5 oggetti valgono 50, 10 valgono 67). Dettaglio: quota delle sei categorie di dettaglio leggibili su ogni oggetto, media pesata sull’area degli oggetti. Una REAL con un valore oltre la soglia della sua galleria è segnalata nella griglia e nel dettaglio. Ogni galleria può avere soglie proprie in «Modifica galleria»; senza, valgono queste. 100 non pone limiti.</p></details>
     <details id="library-sources" class="library-vocabulary"><summary>Fonti Commons</summary>
       <form id="library-sources-form" class="library-inline"><label>REAL controllate ogni notte<input type="number" name="commons_checks_per_night" required></label><button>Salva</button></form>
       <p class="hint">Ogni notte si chiede a Wikimedia Commons se il file di queste REAL esiste ancora, cominciando da quelle controllate da più tempo; ogni foto torna in coda tre mesi dopo l’ultimo controllo. Un file sparito è solo segnalato nella galleria. Le richieste a Commons sono da 50 foto; 0 sospende il controllo.</p></details></section>
@@ -259,7 +271,8 @@ export async function showLibrary() {
   const statsLine = (item: Item) => `<span class="db-stats" data-stats>Vista <strong>${item.stats.views}</strong> ${item.stats.views === 1 ? "volta" : "volte"} / classificata correttamente <strong>${item.stats.correct}</strong>${rate(item)}</span>`;
   const preview = (item: Item) => openPreview(item.origin === "REAL"
     ? { src: item.file, alt: imageLabel(item), title: imageLabel(item), description: item.description,
-      link: item.source_url ? { href: item.source_url, label: "Apri la pagina su Commons" } : undefined }
+      link: item.source_url ? { href: item.source_url, label: "Apri la pagina su Commons" } : undefined,
+      extra: item.measure?.over.length ? `<p class="db-edit-note" data-over-threshold>Oltre la soglia della galleria: ${escape(overText(item.measure))}.</p>` : "" }
     : { src: item.file, alt: imageLabel(item), title: imageLabel(item),
       extra: (item.prompt ? `<p><span class="image-preview-label">Prompt</span><br><q lang="en">${escape(item.prompt)}</q></p>` : "") });
   const card = (item: Item) => `<li class="library-card${selected.has(item.id) ? " is-selected" : ""}" data-id="${escape(item.id)}">
@@ -267,7 +280,8 @@ export async function showLibrary() {
     <button type="button" class="library-open" data-open="${escape(item.id)}" data-long-press aria-label="Apri ${escape(imageLabel(item))}">
       <img src="${escape(item.file)}" alt="" loading="lazy" draggable="false"><span class="library-badges"><span class="badge badge-${item.origin.toLowerCase()}">${item.origin}</span>
       <span class="badge badge-status">${STATE_LABEL[item.status]}</span>${item.source_missing_at
-        ? '<span class="badge badge-warn" data-source-missing title="Il file non risulta più su Wikimedia Commons">Fonte rimossa</span>' : ""}</span>
+        ? '<span class="badge badge-warn" data-source-missing title="Il file non risulta più su Wikimedia Commons">Fonte rimossa</span>' : ""}${item.measure?.over.length
+        ? `<span class="badge badge-warn badge-symbol" data-over-threshold role="img" title="${escape("Oltre la soglia della galleria: " + overText(item.measure))}" aria-label="${escape("Oltre la soglia: " + overText(item.measure))}">\u26a0\ufe0e</span>` : ""}</span>
     </button></li>`;
   const selectionBar = () => {
     const bar = $("#library-selection");
@@ -279,6 +293,7 @@ export async function showLibrary() {
       const action = button.dataset.bulk;
       if (action === "withdraw") button.hidden = trash || !chosen.some(item => item.status === "published");
       else if (action === "set-approved") button.hidden = trash || !chosen.some(item => item.status === "new");
+      else if (action === "measure") button.hidden = trash || !galleryList?.paid_calls || !chosen.some(item => item.origin === "REAL" && !item.measure);
       else if (action !== "none" && action !== "gallery") button.hidden = trash !== (action === "restore" || action === "delete");
       button.disabled = busy || (action === "gallery" && !galleries().some(g => g.id !== filter.gallery));
     }
@@ -336,6 +351,36 @@ export async function showLibrary() {
       pubblicazione o spostala nel cestino; se il file è stato spostato, correggi la pagina della fonte, che sarà ricontrollata la notte
       successiva.</p>`
     : item.source_checked_at ? `<p class="hint" data-source-checked>Fonte presente su Commons al ${day(item.source_checked_at)}.</p>` : "";
+  /** Warning of a REAL above the thresholds of its gallery: a flag only, the owner decides (owner decision of 2026-11-21). */
+  const overWarning = (item: Item) => item.measure?.over.length ? `<p class="db-edit-note" data-over-threshold>Oltre la soglia della
+    galleria: ${escape(overText(item.measure))}. Il generatore di immagini potrebbe faticare a riprodurre una foto simile. Le soglie si
+    cambiano da «Modifica galleria».</p>` : "";
+  /** Crowding and detail of a REAL, with the command of the paid measure and, on request, the objects seen and the earlier measures. */
+  const measureBlock = (item: Item) => {
+    if (item.origin !== "REAL") return "";
+    const m = item.measure, paid = !!galleryList?.paid_calls && item.status !== "trash";
+    return `<section class="library-measure" data-measure><h3>Affollamento e dettaglio</h3>
+      ${m ? `<p data-measure-values>Affollamento <strong>${m.crowdedness}</strong>/100 (${m.objects} ${m.objects === 1 ? "oggetto" : "oggetti"} oltre il soggetto),
+        dettaglio <strong>${m.detail}</strong>/100${m.limits ? `; soglie della galleria ${m.limits.crowdedness} e ${m.limits.detail}` : ""}.
+        Misura del ${escape(when(m.created_at))} con ${escape(m.model)}.</p>`
+        : '<p class="hint" data-measure-values>Non ancora misurata.</p>'}
+      ${paid ? `<p><button type="button" id="library-measure">${m ? "Misura di nuovo" : "Misura"} (1 chiamata)</button></p>` : ""}
+      ${m ? '<details data-measure-history><summary>Oggetti riconosciuti e misure precedenti</summary><div data-measure-history-body></div></details>' : ""}
+    </section>`;
+  };
+  /** The objects of the latest measure drawn on the whole original, with their kinds of detail, and every measure of the photo. */
+  const showMeasures = (item: Item, measures: StoredMeasure[], target: HTMLElement) => {
+    const latest = measures[0];
+    if (!latest) { target.innerHTML = '<p class="hint">Nessuna misura.</p>'; return; }
+    const o = latest.observation, objects = [{ ...o.subject, subject: true }, ...o.others.map(x => ({ ...x, subject: false }))];
+    const kinds = (detail: Record<string, boolean>) => DETAIL_KINDS.filter(k => detail[k]).map(k => DETAIL_LABELS[k]).join(", ") || "nessun dettaglio leggibile";
+    target.innerHTML = `<figure class="measure-figure"><div class="measure-frame" style="aspect-ratio:${item.width}/${item.height}"><img src="${escape(item.original)}" alt="Originale di ${escape(imageLabel(item))}" draggable="false">
+      ${objects.map((x, i) => `<span class="measure-box${x.subject ? " is-subject" : ""}" style="left:${x.box.x * 100}%;top:${x.box.y * 100}%;width:${x.box.width * 100}%;height:${x.box.height * 100}%"><b>${i + 1}</b></span>`).join("")}</div>
+      <figcaption class="hint">Riquadri dell'ultima misura sull'originale intero. Il soggetto è in evidenza.</figcaption></figure>
+      <ol class="measure-objects">${objects.map(x => `<li>${x.subject ? "<strong>Soggetto:</strong> " : ""}${escape(x.name)}: ${escape(kinds(x.detail))}</li>`).join("")}</ol>
+      ${o.unlisted ? `<p class="hint">Altri ${o.unlisted} oggetti contati e non elencati.</p>` : ""}
+      <h4>Misure</h4><ol class="measure-history">${measures.map(m => `<li>${escape(when(m.created_at))}, ${escape(m.model)}: affollamento ${m.crowdedness}, dettaglio ${m.detail}, ${m.objects} oggetti oltre il soggetto</li>`).join("")}</ol>`;
+  };
   const showDetail = (item: Item) => {
     open = item;
     const editable = item.status === "new" || item.status === "approved";
@@ -345,6 +390,7 @@ export async function showLibrary() {
       <h2 id="library-detail-title">${escape(imageLabel(item))}</h2>
       <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / originale ${item.width}×${item.height}${item.copy ? ` / copia di gioco WebP ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}: è ciò che vedranno i giocatori` : " / copia di gioco non pronta"}</p>
       ${sourceCheck(item)}
+      ${overWarning(item)}
       <div class="library-detail-body"><div class="game-media-surface library-preview"><img data-game-media draggable="false" src="${escape(item.file)}" alt="${escape(imageLabel(item))}"></div>
       <div class="library-fields"><p>${statsLine(item)}</p>
       <label>Galleria<select id="library-detail-gallery">${galleryOptions(galleries(), item.gallery_id)}</select></label>
@@ -355,6 +401,7 @@ export async function showLibrary() {
       ${!item.copy && item.status === "new" ? '<p><button type="button" id="library-copy">Prepara la copia di gioco</button></p>' : ""}
       ${editable ? '<p><button type="button" id="library-crop">Inquadratura</button></p>' : ""}
       ${measuresBlock(item, editable)}
+      ${measureBlock(item)}
       ${fields.map(([key, label, max, area]) => `<label>${label}${area
         ? `<textarea data-field="${key}" maxlength="${max}" rows="3" ${editable ? "" : "readonly"}>${escape(item[key])}</textarea>`
         : `<input data-field="${key}" maxlength="${max}" value="${escape(item[key])}" ${editable ? "" : "readonly"}>`}</label>`).join("")}
@@ -369,6 +416,15 @@ export async function showLibrary() {
     markGameMedia(detail);
   };
   detail.addEventListener("close", () => { open = null; });
+  detail.addEventListener("toggle", event => {
+    const history = event.target as HTMLDetailsElement;
+    if (!history.matches?.("[data-measure-history]") || !history.open || !open) return;
+    const item = open, body = history.querySelector<HTMLElement>("[data-measure-history-body]")!;
+    body.innerHTML = loading();
+    void call<{ measures: StoredMeasure[] }>(`/${encodeURIComponent(item.id)}/measures`)
+      .then(data => { if (open?.id === item.id) showMeasures(item, data.measures, body); })
+      .catch(error => { body.textContent = String(error instanceof Error ? error.message : error); });
+  }, true);
   const detailMessage = (text: string) => { const el = detail.querySelector("#library-detail-message"); if (el) el.textContent = text; };
   detail.addEventListener("change", async event => {
     const gallery = (event.target as HTMLElement).closest<HTMLSelectElement>("#library-detail-gallery");
@@ -394,12 +450,19 @@ export async function showLibrary() {
       try { showDetail(await call<Item>("/" + encodeURIComponent(button.dataset.openSource))); } catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
       return;
     }
-    if (!button || !open || busy || !(button.dataset.action || ["library-copy", "library-regenerate",
+    if (!button || !open || busy || !(button.dataset.action || ["library-copy", "library-regenerate", "library-measure",
       "library-crop", "library-treatment-off", "library-treatment-on", "library-treatment-edit"].includes(button.id))) return;
     const id = open.id;
     busy = true;
     try {
-if (button.id === "library-copy") {
+if (button.id === "library-measure") {
+        if (!window.confirm(`Misurare affollamento e dettaglio di «${imageLabel(open)}» con ${galleryList?.text_model || "il modello di testo"}? Una chiamata a pagamento, mai ripetuta in automatico.`)) return;
+        const item = open;
+        open = await withPhotoProcessing("Misuro affollamento e dettaglio…", () => call<Item>(`/${encodeURIComponent(item.id)}/measure`,
+          { method: "POST", body: JSON.stringify({ confirm: true, request: crypto.randomUUID() }) }));
+        detailMessage("Misura salvata.");
+      }
+      else if (button.id === "library-copy") {
         const item = open;
         open = await withPhotoProcessing("Preparo la copia di gioco…", () => prepareItemCopy<Item>(item));
         detailMessage("Copia di gioco pronta.");
@@ -483,6 +546,41 @@ if (button.id === "library-copy") {
       if (filter.gallery === scope) { await load().catch(() => {}); report(error); }
     } finally { busy = false; syncSelection(); }
   };
+  /** Measures, one paid call each, the selected REAL that have no measure yet; a REAL already measured is measured again from its
+   * detail. The calls go one at a time with the page open; an account problem («OpenAI: …») stops the rest. */
+  const measureSelection = async () => {
+    const chosen = items.filter(item => selected.has(item.id) && item.origin === "REAL" && item.status !== "trash" && !item.measure);
+    if (!chosen.length || busy) return;
+    const already = items.filter(item => selected.has(item.id) && item.origin === "REAL" && item.measure).length;
+    if (!window.confirm(`Misurare affollamento e dettaglio di ${chosen.length} REAL con ${galleryList?.text_model || "il modello di testo"}? ` +
+      `Massimo ${chosen.length} ${chosen.length === 1 ? "chiamata" : "chiamate"} a pagamento, una per foto, mai ripetute in automatico.` +
+      (already ? ` Le ${already} REAL già misurate restano escluse: si misurano di nuovo dal dettaglio.` : ""))) return;
+    const scope = filter.gallery;
+    busy = true; selectionBar();
+    let done = 0;
+    const failed: string[] = [];
+    try {
+      for (const [index, item] of chosen.entries()) {
+        if (filter.gallery !== scope) break;
+        message(`Misuro ${index + 1} di ${chosen.length}…`);
+        try {
+          await call(`/${encodeURIComponent(item.id)}/measure`, { method: "POST", body: JSON.stringify({ confirm: true, request: crypto.randomUUID() }) });
+          done++; selected.delete(item.id);
+        } catch (error) {
+          const text = error instanceof Error ? error.message : String(error);
+          failed.push(`${imageLabel(item)}: ${text}`);
+          if (text.startsWith("OpenAI:")) break;
+        }
+      }
+    } finally {
+      busy = false;
+      if (filter.gallery === scope) {
+        await load().catch(report);
+        message(`${done} ${done === 1 ? "REAL misurata" : "REAL misurate"}.` + (failed.length ? ` Non misurate: ${failed.join(" / ")}` : ""));
+      }
+      syncSelection();
+    }
+  };
   $("#library-cancel-move").addEventListener("click", () => moveGallery.close());
   moveGallery.addEventListener("submit", event => {
     event.preventDefault();
@@ -535,6 +633,7 @@ if (button.id === "library-copy") {
     }
     const action = button.dataset.bulk;
     if (action === "none") { selected.clear(); syncSelection(); return; }
+    if (action === "measure") { await measureSelection(); return; }
     if (action === "gallery") {
       const options = galleryOptions(galleries().filter(g => g.id !== filter.gallery), "");
       $<HTMLSelectElement>("#library-bulk-gallery").innerHTML = '<option value="">Scegli una galleria</option>' + options;
@@ -586,7 +685,8 @@ if (button.id === "library-copy") {
   });
   // Model context: three texts, each saved as a new version; an old version can become the current one again.
   const CONTEXT_LABELS: Record<string, [string, string]> = {
-    base: ["Base comune", "Inviata in ogni chiamata: proposte di galleria, indicazioni SLOP proposte e valutazioni."],
+    base: ["Base comune", "Inviata in ogni chiamata: misure delle REAL, proposte di galleria, indicazioni SLOP proposte e valutazioni."],
+    real_measure: ["Misura delle REAL", "Inviato insieme alla base, all’originale intero e a titolo e descrizione della galleria. Elenco degli oggetti, riquadri e categorie di dettaglio restano fissati nel codice, come il calcolo di affollamento e dettaglio."],
     slop_gallery_prompt: ["Premessa e prompt di galleria", "Inviato insieme alla base, all’originale intero e alle indicazioni della galleria."],
     slop_evaluation: ["Valutazione delle SLOP", "Inviato insieme alla base a ogni valutazione di una candidata intera. Decisioni, tolleranza e formato della risposta restano fissati nel codice."],
   };
@@ -646,17 +746,18 @@ if (button.id === "library-copy") {
       if (input) { input.value = String(value); input.min = String(n.limits[key].min); input.max = String(n.limits[key].max); }
     }
   };
-  const numbersForm = (selector: string, fields: string[], done: string) => $(selector).addEventListener("submit", async event => {
+  const numbersForm = (selector: string, fields: string[], done: string, after = async () => {}) => $(selector).addEventListener("submit", async event => {
     event.preventDefault();
     const form = event.target as HTMLFormElement;
     try {
       renderNumbers(await call<Numbers>("/settings", { method: "PUT", body: JSON.stringify(Object.fromEntries(fields.map(f => [f, Number((form.elements.namedItem(f) as HTMLInputElement).value)]))) }), fields);
-      settingsMessage(done); await autoBox.refresh();
+      settingsMessage(done); await Promise.all([autoBox.refresh(), after()]);
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
   numbersForm("#library-thresholds-form", ["max_generation_attempts", "editorial_tolerance"], "Soglie dello studio SLOP salvate.");
   numbersForm("#library-games-form", ["open_game_hours"], "Durata massima di una partita aperta salvata.");
   numbersForm("#library-sources-form", ["commons_checks_per_night"], "Numero di REAL controllate ogni notte salvato.");
+  numbersForm("#library-measures-form", ["crowdedness_threshold", "detail_threshold"], "Soglie predefinite di affollamento e dettaglio salvate.", refreshGalleries);
   statsView = mountStats($<HTMLElement>("#stats-body"), period => call<Stats>("/stats?" + new URLSearchParams({ period })));
   // Leaderboard: check a code, hide or show an entry.
   interface Entry { id: string; nickname: string; level_label: string; score: number; photos: number; balanced_accuracy: number; hidden: boolean; created_at: string }

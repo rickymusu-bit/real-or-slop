@@ -1,5 +1,5 @@
-/** Numeric settings of the dashboard: SLOP proposals, attempt limits, tolerance, hours of an open game and REAL whose Commons source
- * is checked each night (0 pauses the check).
+/** Numeric settings of the dashboard: SLOP proposals, attempt limits, tolerance, hours of an open game, REAL whose Commons source
+ * is checked each night (0 pauses the check) and default thresholds of crowding and detail of the REAL (0-100, a gallery may set its own).
  * A missing row is the default of the code (spec `statistiche-impostazioni`, section 2). */
 import { HttpError, type Env } from "./core";
 
@@ -8,6 +8,9 @@ export const LIMITS = {
   editorial_tolerance: { min: 0, max: 2, default: 1 },
   open_game_hours: { min: 1, max: 168, default: 24 },
   commons_checks_per_night: { min: 0, max: 500, default: 50 },
+  // 67 is ten objects besides the subject; 100 sets no limit on detail (owner decisions of 2026-11-21).
+  crowdedness_threshold: { min: 0, max: 100, default: 67 },
+  detail_threshold: { min: 0, max: 100, default: 100 },
 } as const;
 export type NumberSetting = keyof typeof LIMITS;
 const KEYS = Object.keys(LIMITS) as NumberSetting[];

@@ -32,7 +32,8 @@ call('/models', {'image_quality': 'medium'}, method='PUT')
 
 # Numbers of Settings: defaults, bounds, used by the SLOP studio.
 status, settings = call('/settings')
-assert settings['values'] == {'open_game_hours': 24, 'max_generation_attempts':3, 'editorial_tolerance':1, 'commons_checks_per_night': 50}, settings
+assert settings['values'] == {'open_game_hours': 24, 'max_generation_attempts':3, 'editorial_tolerance':1, 'commons_checks_per_night': 50,
+                              'crowdedness_threshold': 67, 'detail_threshold': 100}, settings
 for wrong in ({'commons_checks_per_night': -1}, {'commons_checks_per_night': 501}, {'commons_checks_per_night': 2.5}):
     assert call('/settings', wrong, method='PUT')[0] == 400, wrong
 for wrong in ({'slop_section_min_real': 50}, {'slop_auto_threshold_percent': 33}, {'slop_group_min_real': 5}, {'open_game_hours': 1.5}, {'open_game_hours': '24'}, {'other': 1}, {}):

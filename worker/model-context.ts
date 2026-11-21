@@ -1,10 +1,10 @@
-/** Editable model instructions and their versions: the base shared by every call, the SLOP proposals of a gallery and the
- * evaluation of the SLOP. The description of the REAL, and its «analysis» part, were retired on 2026-11-20 (owner decision); its old
- * versions stay in the table, unused. */
+/** Editable model instructions and their versions: the base shared by every call, the measure of crowding and detail of a REAL, the
+ * SLOP proposals of a gallery and the evaluation of the SLOP. The description of the REAL, and its «analysis» part, were retired on
+ * 2026-11-20 (owner decision); its old versions stay in the table, unused. */
 import { HttpError, id, type Env } from "./core";
 
-export type Part = "base" | "slop_evaluation" | "slop_gallery_prompt";
-export const PARTS: Part[] = ["base", "slop_gallery_prompt", "slop_evaluation"];
+export type Part = "base" | "real_measure" | "slop_evaluation" | "slop_gallery_prompt";
+export const PARTS: Part[] = ["base", "real_measure", "slop_gallery_prompt", "slop_evaluation"];
 export const CONTEXT_MAX = 4000;
 const HISTORY = 50;
 
@@ -14,6 +14,17 @@ export const DEFAULTS: Record<Part, string> = {
 Lingua: sobria e precisa, senza enfasi, emoji o hashtag.
 
 Fatti: non inventare nomi di persone; usa solo quelli presenti nel contesto che ricevi. Indica luoghi ed epoche solo se sono plausibili dal contesto o da ciò che si vede; nel dubbio resta generico («una piazza», «anni Settanta»). Non citare mai fotografi, agenzie, archivi, fonti, licenze o indirizzi web.`,
+  real_measure: `Misuri una fotografia per capire quanto sarebbe difficile riprodurla con un generatore di immagini. Non descriverla, non interpretarla e non giudicarne l'autenticità: osserva soltanto.
+
+Soggetto: l'oggetto principale della foto, di solito quello del tema della galleria.
+
+Altri oggetti: elenca ogni altro oggetto che chi guarda saprebbe nominare (una cartuccia, una tazza, un cavo, una mano, una persona), compresi altri oggetti del tema della galleria. Non elencare superfici e fondi (muro, pavimento, tavolo, tessuto, cielo) né ciò che è così sfocato da non distinguersi. Oggetti uguali ripetuti contano uno per uno.
+
+Riquadro: per ogni oggetto un rettangolo approssimativo che lo contiene, in coordinate normalizzate sull'immagine intera.
+
+Dettaglio: per ogni oggetto segna soltanto le categorie leggibili nell'immagine: scritte e loghi leggibili; motivi ripetuti (feritoie, griglie, tasti in fila); parti contabili (tasti, viti, porte); texture dei materiali (plastica goffrata, metallo spazzolato, usura); superfici riflettenti o schermi; giunzioni e meccanismi (cerniere, sportelli, fessure tra le parti).
+
+Nomi degli oggetti in italiano, brevi e generici.`,
   slop_gallery_prompt: `Per una galleria tematica proponi un falso fotografico concreto e scrivi il prompt inglese. Usa la foto intera, il suo titolo e la descrizione della fonte per scegliere una possibilità compatibile con le indicazioni della galleria. Rendi specifici l’invenzione e gli elementi reali da conservare, come la geografia, un edificio riconoscibile o gli elementi visibili di una mobilitazione. Varia le premesse quando le foto lo consentono. Privilegia credibilità fotografica, luce e tecnica plausibili.`,
   slop_evaluation: `Valuti una fotografia generata, intera e non trattata, prima che entri nella libreria come candidata. Giudica prima la credibilità fotografica: deve poter essere scambiata per una fotografia autentica della tecnica, dell'epoca e della situazione rappresentata. Poi la plausibilità fisica e contestuale e il rispetto degli ancoraggi obbligatori e delle esclusioni del contesto editoriale. L'aderenza letterale ai dettagli secondari del prompt non è richiesta.
 

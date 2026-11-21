@@ -20,6 +20,7 @@ import { stats } from "./stats";
 import { slopRoute } from "./slop";
 import { candidateFile } from "./slop-generation";
 import { currentCopyCorrect, currentCopyViews, gamesInPlay, retireCopy, reviveCopy, statsOf, sweepRetired } from "./in-play";
+import { galleryThresholds, latestMeasures, measureReal, measuresOf, measureView } from "./real-measure";
 
 const base = "/api/admin/library";
 const MAX_PIXELS = 32_000_000;
@@ -73,7 +74,7 @@ function parseSlot(value: string | null): unknown {
   try { return value ? JSON.parse(value) : null; } catch { return null; }
 }
 const parseJson = (value: string | null): unknown => { try { return value ? JSON.parse(value) : null; } catch { return null; } };
-interface Extra { stats?: { views: number; correct: number }; in_play?: number }
+interface Extra { stats?: { views: number; correct: number }; in_play?: number; measure?: ReturnType<typeof measureView> }
 function view(row: Row, extra: Extra = {}) {
   const v = row.copy_sha256 ? row.copy_sha256.slice(0, 12) : row.original_sha256.slice(0, 12);
   return {
@@ -81,7 +82,9 @@ function view(row: Row, extra: Extra = {}) {
     // REAL: source description (Commons, corrected by the owner); a SLOP has its prompt and model and no description (2026-11-20).
     ...(row.origin === "REAL" ? { title: row.title, description: row.description, source_url: row.source_url,
       source_checked_at: row.source_checked_at, source_missing_at: row.source_missing_at,
-      author: row.author, license_name: row.license_name, license_url: row.license_url }
+      author: row.author, license_name: row.license_name, license_url: row.license_url,
+      // Latest crowding and detail and the scores above the gallery's thresholds (spec `libreria-immagini`, section 10).
+      measure: extra.measure ?? null }
       : { prompt: row.prompt, model: row.model }),
     width: row.width, height: row.height, original_mime: row.original_mime, original_sha256: row.original_sha256,
     copy: row.copy_key ? { sha256: row.copy_sha256, width: row.copy_width, height: row.copy_height, bytes: row.copy_bytes, crop: cropOf(row) } : null,
@@ -95,13 +98,16 @@ function view(row: Row, extra: Extra = {}) {
     stats: extra.stats || { views: 0, correct: 0 }, in_play: extra.in_play || 0,
   };
 }
-async function extras(env: Env, ids: string[]): Promise<Map<string, Extra>> {
-  const [stats, playing] = await Promise.all([statsOf(env, ids), gamesInPlay(env, ids)]);
-  return new Map(ids.map(i => [i, { stats: stats.get(i), in_play: playing.get(i) }]));
+async function extras(env: Env, rows: readonly Pick<Row, "id" | "origin" | "gallery_id">[]): Promise<Map<string, Extra>> {
+  const ids = rows.map(r => r.id), real = rows.filter(r => r.origin === "REAL");
+  const [stats, playing, measures, limits] = await Promise.all([statsOf(env, ids), gamesInPlay(env, ids),
+    latestMeasures(env, real.map(r => r.id)), galleryThresholds(env, real.map(r => r.gallery_id))]);
+  return new Map(rows.map(r => [r.id, { stats: stats.get(r.id), in_play: playing.get(r.id),
+    measure: measureView(measures.get(r.id), limits.get(r.gallery_id)) }]));
 }
 export async function viewOf(env: Env, imageIdValue: string) {
   const row = await find(env, imageIdValue);
-  return view(row, (await extras(env, [row.id])).get(row.id));
+  return view(row, (await extras(env, [row])).get(row.id));
 }
 /** Adds a new image to the library. The original goes to quarantine; the browser then uploads its game copy. */
 export async function create(env: Env, input: { origin: Origin; title?: string; description?: string; bytes: ArrayBuffer;
@@ -356,7 +362,7 @@ async function list(env: Env, url: URL) {
       gallery, ...(paged ? [limit + 1, offset] : [])).all<Row>()).results;
   const next = paged && rows.length > limit ? offset + limit : null;
   if (next !== null) rows.pop();
-  const more = await extras(env, rows.map(r => r.id));
+  const more = await extras(env, rows);
   const countQuery = "SELECT status,origin,count(*) AS n FROM images";
   const counts = (await (gallery
     ? env.DB.prepare(countQuery + " WHERE gallery_id=? GROUP BY status,origin").bind(gallery)
@@ -443,7 +449,7 @@ export async function library(request: Request, env: Env, path: string): Promise
     }
     return json({ done: done.length, failed });
   }
-  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|regenerate|metrics))?$/);
+  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|regenerate|metrics|measure|measures))?$/);
   if (!match) throw new HttpError(404, "API della libreria inesistente");
   const row = await find(env, match[1]);
   if (match[2] === "file" || match[2] === "original") {
@@ -461,6 +467,16 @@ export async function library(request: Request, env: Env, path: string): Promise
     const result = await env.DB.prepare("UPDATE images SET copy_metrics=? WHERE id=? AND copy_sha256=?").bind(JSON.stringify(metrics), row.id, data.sha256).run();
     if (!result.meta.changes) throw new HttpError(409, "Copia cambiata: misure non salvate");
     return json({ id: row.id, metrics });
+  }
+  if (match[2] === "measures") {
+    if (request.method !== "GET") throw new HttpError(405, "Metodo non consentito");
+    return json(await measuresOf(env, row.id));
+  }
+  if (match[2] === "measure") {
+    // Crowding and detail of a REAL: one confirmed paid call (spec `libreria-immagini`, section 10).
+    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    await measureReal(env, row, await body(request, 1000));
+    return json(await viewOf(env, row.id), 201);
   }
   if (match[2] === "regenerate") {
     if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");

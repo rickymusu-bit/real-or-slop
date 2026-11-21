@@ -95,3 +95,6 @@
   .gallery-actions [data-gallery-edit] { margin-left: 0; }
 }
 .gallery-card-copy .gallery-source-missing { color: #f0b04a; }
+.gallery-thresholds { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 12px; margin: 0; padding: 10px; border: 1px solid var(--hairline, #444); }
+.gallery-thresholds label { display: grid; gap: 4px; }
+.gallery-thresholds .hint { grid-column: 1 / -1; margin: 0; }
