@@ -2,17 +2,11 @@
  * verify do not stop it (owner decision of 2026-11-16). */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { realDescription, validBrief, validEvaluation, type Brief, type Evaluation } from "../shared/editorial";
+import { validBrief, validEvaluation, type Brief, type Evaluation } from "../shared/editorial";
 const brief: Brief = {required:["documentary street scene"], preferred:[], flexible:["viewpoint"],exclusions:["real identities"]};
 const result: Evaluation = {attempt_id:"a",decision:"accept",critical_findings:[],minor_findings:[],editorial_constraints_met:true,
   uncertainty_notes:[],action_reason:"Plausible geometry throughout the frame",revised_prompt:"",preserved_required:brief.required,preserved_exclusions:brief.exclusions};
-test("descriptions and briefs reject incomplete or fabricated structure",()=>{
-  assert.equal(realDescription({visible:"street"}),null);
-  assert.equal(realDescription({visible:" ",documented_context:""}),null);
-  assert.deepEqual(realDescription({visible:" street ",documented_context:""}),{visible:"street",documented_context:""});
-  // Uncertainties were retired on 2026-11-20: an older client may still send them; they are dropped, any other field is refused.
-  assert.deepEqual(realDescription({visible:"street",documented_context:"",uncertainties:"unknown date"}),{visible:"street",documented_context:""});
-  assert.equal(realDescription({visible:"street",documented_context:"",notes:"x"}),null);
+test("briefs reject incomplete or fabricated structure",()=>{
   assert.equal(validBrief({...brief,required:[]}),null); assert.ok(validBrief(brief));
 });
 test("critical defects and missing anchors stop acceptance, uncertainty notes do not",()=>{

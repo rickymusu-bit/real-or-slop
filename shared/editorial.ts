@@ -1,25 +1,9 @@
-/** Editorial descriptions and immutable briefs. Only the player-facing description is shared with players. */
-/** Visible elements and documented context; the uncertainties were retired on 2026-11-20 (owner decision). */
-export interface RealDescription { visible: string; documented_context: string }
+/** Immutable briefs of the manual SLOP and the evaluations of the candidates (the editorial description of the REAL was retired on
+ * 2026-11-20). */
 export interface Brief { required: string[]; preferred: string[]; flexible: string[]; exclusions: string[] }
-export const DESCRIPTION_KEYS = ["visible", "documented_context"] as const;
-/** Field of descriptions written before 2026-11-20, accepted from older clients and dropped. */
-const RETIRED_KEYS = ["uncertainties"];
 export const BRIEF_KEYS = ["required", "preferred", "flexible", "exclusions"] as const;
-export const descriptionSchema = { type: "object", additionalProperties: false, required: [...DESCRIPTION_KEYS],
-  properties: Object.fromEntries(DESCRIPTION_KEYS.map(k => [k, { type: "string", maxLength: 3000 }])) };
 export const briefSchema = { type: "object", additionalProperties: false, required: [...BRIEF_KEYS],
   properties: Object.fromEntries(BRIEF_KEYS.map(k => [k, { type: "array", minItems: k === "required" ? 1 : 0, maxItems: 12, items: { type: "string", maxLength: 500 } }])) };
-export function realDescription(value: unknown): RealDescription | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const v = value as Record<string, unknown>;
-  if (Object.keys(v).some(k => !(DESCRIPTION_KEYS as readonly string[]).includes(k) && !RETIRED_KEYS.includes(k)) ||
-    DESCRIPTION_KEYS.some(k => typeof v[k] !== "string" || (v[k] as string).length > 3000) || !(v.visible as string).trim()) return null;
-  return Object.fromEntries(DESCRIPTION_KEYS.map(k => [k, (v[k] as string).trim()])) as unknown as RealDescription;
-}
-export function publicRealDescription(value: RealDescription | null): string {
-  return value ? [value.visible, value.documented_context].filter(Boolean).join("\n\n") : "";
-}
 export function validBrief(value: unknown): Brief | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const v = value as Record<string, unknown>;

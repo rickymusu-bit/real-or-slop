@@ -117,49 +117,24 @@ with sync_playwright() as p:
         shown = page.locator('#library-grid [data-select]').count()
         expect(page.locator('#library-selection strong')).to_have_text(f"{shown} {'selezionata' if shown == 1 else 'selezionate'}")
         page.locator('[data-bulk=none]').click(); expect(page.locator('#library-select-all')).to_be_visible()
+        # No analysis and no editorial description in the detail of a REAL (2026-11-20).
         page.get_by_role('button', name=f'Apri {prefix}-barricate').click()
-        openai([])
-        page.locator('#library-description-analysis').click()
-        expect(page.locator('#library-detail #library-description-analysis')).to_have_count(0, timeout=30000)
-        assert 'una chiamata a pagamento' in confirms[-1].lower(), confirms[-1]
+        expect(page.locator('#library-detail [data-editorial], #library-description-analysis, #library-analyze')).to_have_count(0)
         page.locator('#library-detail .library-detail-close button').click()
-        described = call(f'{API}/{real["id"]}')
-        assert described['real_description']['visible'] and described['status'] == 'published', described
         expect(cards).to_have_count(1)
         page.locator('#library-origin').select_option('all')
         expect(cards).to_have_count(3)
-        # An analysis left «running» by a request that died (more than ten minutes ago) is repeated from the card, with the warning.
-        stuck = seed(prefix, 'REAL', 'interrotta', 30 + index, False)
-        sql(f"UPDATE images SET analysis_status='running',updated_at='2000-01-01T00:00:00.000Z' WHERE id='{stuck['id']}'")
-        page.locator('#library-search').fill(f'{prefix}-interrotta')
-        expect(cards).to_have_count(1)
-        page.get_by_role('button', name=f'Apri {prefix}-interrotta').click()
-        expect(page.locator('#library-detail [data-analysis-unsure]')).to_contain_text('interrotta')
-        openai([])
-        page.locator('#library-description-analysis').click()
-        expect(page.locator('#library-detail [data-analysis-unsure]')).to_have_count(0, timeout=30000)
-        assert 'esito incerto' in confirms[-1], confirms[-1]
-        assert call(f'{API}/{stuck["id"]}')['real_description']['visible']
-        page.locator('#library-detail .library-detail-close button').click()
-        call(f'{API}/bulk', {'action': 'trash', 'ids': [stuck['id']]})
-        call(f'{API}/bulk', {'action': 'delete', 'ids': [stuck['id']]})
-        page.locator('#library-search').fill('')
-        expect(cards).to_have_count(3)
-
         # Edit a published SLOP: confirmation, out of publication, approved; then the prompt and a regeneration.
         page.locator(f'.library-card[data-id="{slop["id"]}"] .library-open').click()
         dialog = page.locator('#library-detail')
         expect(dialog.locator('.db-edit-note')).to_be_visible()
         expect(dialog.locator('[data-field=caption]')).to_have_count(0)
-        expect(dialog.locator('[data-field=description]')).to_have_attribute('readonly', '')
+        expect(dialog.locator('[data-field=description]')).to_have_count(0)  # a SLOP has no description
+        expect(dialog.locator('[data-field=prompt]')).to_have_attribute('readonly', '')
         expect(dialog.locator('[data-stats]')).to_have_text('Vista 1 volta / classificata correttamente 0 (0%)')
         dialog.locator('[data-action=edit]').click()
         expect(dialog.locator('#library-detail-message')).to_have_text('Modifica avviata: la foto non è più pubblicata.')
         assert 'Esce subito dalla pubblicazione' in confirms[-1], confirms
-        expect(dialog).to_contain_text('SLOP / approvata')
-        description = dialog.locator('[data-field=description]')
-        description.fill('Scontri in piazza, 1968.'); description.blur()
-        expect(dialog.locator('#library-detail-message')).to_have_text('Salvato.')
         expect(dialog).to_contain_text('SLOP / approvata')
         prompt = dialog.locator('[data-field=prompt]')
         prompt.fill('A riot in a square at dusk, 1968'); prompt.blur()

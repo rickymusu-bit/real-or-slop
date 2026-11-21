@@ -41,7 +41,7 @@
 .credit-image img { width: 100%; height: auto; display: block; }
 .credit-text p { margin: 4px 0; font-size: 14px; }
 .credit-head strong { color: var(--text); }
-.credit-prompt span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.credit-prompt span, .credit-model span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
 .credit a { color: var(--real); text-decoration: underline; }
 @media (max-width: 600px) { .credit { grid-template-columns: 110px 1fr; } }
 .leaderboards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin: 18px 0; }
@@ -53,5 +53,4 @@
 .enter-age { display: flex !important; align-items: center; gap: 8px; flex-basis: 100%; font-size: 14px; }
 .credit-changes { color: var(--muted); font-size: 12px !important; }
 /* The description of a REAL in the final list, above its credits. */
-.credit-text p.credit-description { margin: 4px 0 6px; font-size: 15px; color: var(--text); white-space: pre-line; overflow-wrap: anywhere; }
 .credit-text p.credit-source { color: var(--muted); }

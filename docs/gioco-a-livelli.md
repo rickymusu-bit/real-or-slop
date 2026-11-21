@@ -1,6 +1,6 @@
-# Partita a livelli e classifica — specifica 3.2.2
+# Partita a livelli e classifica — specifica 4.0.0
 
-Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-20T18:00:00Z.
+Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-21T09:00:00Z.
 
 **Decisioni dell'owner del 2026-11-15, da implementare** (issue rickymusu-bit/real-or-slop#136). Fino al rilascio il resto di questa specifica
 descrive il comportamento in produzione (app 1.26.0); chi implementa aggiorna le sezioni e toglie questo riquadro.
@@ -21,9 +21,10 @@ comprese quelle estratte come riferimenti temporanei per un batch SLOP.
   foto è conclusa e ha punteggio (2026-11-12).
 - Lasciando la pagina la foto si oscura e il tempo continua (2026-11-12).
 - Foto intera nel suo formato su ogni schermo, esplorabile; pulsanti REAL e SLOP sempre visibili; niente swipe (2026-11-13).
-- Niente didascalie (2026-11-13). Alla fine, per ogni REAL la descrizione e le fonti, per ogni SLOP il prompt in inglese (2026-11-12 e
-  2026-11-14).
-- Nei risultati la descrizione delle REAL è il testo editoriale preparato per il gioco, con autore e link alla foto originale (2026-11-19).
+- Niente didascalie (2026-11-13). Alla fine, per ogni REAL i crediti, per ogni SLOP il prompt in inglese e il modello di immagini
+  (2026-11-12, 2026-11-14 e 2026-11-20).
+- Niente descrizione editoriale delle REAL nei risultati (2026-11-20, sostituisce la decisione del 2026-11-19); niente data di
+  consultazione del link (2026-11-20).
 - Classifica nella home con soprannome controllato e codice partita; nessuna precedenza alle foto non ancora viste: «contiamo sul gran
   numero di foto» (2026-11-12).
 
@@ -54,9 +55,8 @@ sono le sue foto, altrimenti resta disattivato con il motivo.
 7. **Pagina lasciata:** la foto si oscura («Mostra la foto» per tornare), il tempo continua. Una partita ripresa dopo aver ricaricato
    continua dalla foto di turno.
 8. **Fine:** punteggio, REAL e SLOP riconosciute, accuratezza bilanciata, foto scadute; modulo per la classifica; lista delle foto intere
-   con la risposta data. Per le REAL, la **descrizione editoriale** unisce elementi visibili e contesto documentato. Seguono titolo,
-   autore, licenza, link «Foto originale» e indicazione dell’adattamento al 4:5 e della ricompressione. Se manca la descrizione editoriale si
-   mostrano i crediti disponibili. Il testo Commons resta nel catalogo. Per le SLOP si mostra il prompt.
+   con la risposta data. Per le REAL: titolo, autore, licenza con link, link «Foto originale» e indicazione dell’adattamento al 4:5
+   e della ricompressione, con la stessa licenza dell'originale. Per le SLOP: il prompt e il modello che le ha generate.
 
 Le risposte non arrivano mai al browser prima della risposta del giocatore. Le partite già iniziate continuano con le copie dei loro
 round anche se nel frattempo una foto viene modificata o ritirata.

@@ -1,23 +1,20 @@
-/** Editable model instructions and their versions. The base and analysis contexts keep the description of the REAL independent. */
+/** Editable model instructions and their versions: the base shared by every call, the SLOP proposals of a gallery and the
+ * evaluation of the SLOP. The description of the REAL, and its «analysis» part, were retired on 2026-11-20 (owner decision); its old
+ * versions stay in the table, unused. */
 import { HttpError, id, type Env } from "./core";
 
-export type Part = "base" | "analysis" | "slop_evaluation" | "slop_gallery_prompt";
-export const PARTS: Part[] = ["base", "analysis", "slop_gallery_prompt", "slop_evaluation"];
+export type Part = "base" | "slop_evaluation" | "slop_gallery_prompt";
+export const PARTS: Part[] = ["base", "slop_gallery_prompt", "slop_evaluation"];
 export const CONTEXT_MAX = 4000;
 const HISTORY = 50;
 
 export const DEFAULTS: Record<Part, string> = {
-  base: `Lavori per un archivio fotografico italiano che descrive le immagini in modo neutro.
+  base: `Lavori per un archivio fotografico italiano.
 
 Lingua: sobria e precisa, senza enfasi, emoji o hashtag.
 
 Fatti: non inventare nomi di persone; usa solo quelli presenti nel contesto che ricevi. Indica luoghi ed epoche solo se sono plausibili dal contesto o da ciò che si vede; nel dubbio resta generico («una piazza», «anni Settanta»). Non citare mai fotografi, agenzie, archivi, fonti, licenze o indirizzi web.`,
-  analysis: `Ricevi una fotografia intera con il suo titolo e il contesto di Wikimedia Commons. Scrivi la descrizione editoriale che il giocatore leggerà dopo la risposta.
-
-Elementi visibili: ciò che si vede nell'immagine, compresi il tipo di fotografia, il colore e il supporto quando si riconoscono (retino di stampa, bordi e grana di una pellicola, carta di una stampa, nitidezza di un sensore digitale).
-Contesto documentato: soltanto i fatti presenti nel titolo e nel contesto ricevuti, come luogo, data ed evento; se non ce ne sono, lascialo vuoto.
-Non inventare ciò che dall'immagine e dal contesto non si può stabilire.`,
-  slop_gallery_prompt: `Per una galleria tematica proponi un falso fotografico concreto e scrivi il prompt inglese. Usa la foto intera, il profilo editoriale e il contesto documentato per scegliere una possibilità compatibile con le indicazioni della galleria. Rendi specifici l’invenzione e gli elementi reali da conservare, come la geografia, un edificio riconoscibile o gli elementi visibili di una mobilitazione. Varia le premesse quando le foto lo consentono. Privilegia credibilità fotografica, luce e tecnica plausibili.`,
+  slop_gallery_prompt: `Per una galleria tematica proponi un falso fotografico concreto e scrivi il prompt inglese. Usa la foto intera, il suo titolo e la descrizione della fonte per scegliere una possibilità compatibile con le indicazioni della galleria. Rendi specifici l’invenzione e gli elementi reali da conservare, come la geografia, un edificio riconoscibile o gli elementi visibili di una mobilitazione. Varia le premesse quando le foto lo consentono. Privilegia credibilità fotografica, luce e tecnica plausibili.`,
   slop_evaluation: `Valuti una fotografia generata, intera e non trattata, prima che entri nella libreria come candidata. Giudica prima la credibilità fotografica: deve poter essere scambiata per una fotografia autentica della tecnica, dell'epoca e della situazione rappresentata. Poi la plausibilità fisica e contestuale e il rispetto degli ancoraggi obbligatori e delle esclusioni del contesto editoriale. L'aderenza letterale ai dettagli secondari del prompt non è richiesta.
 
 Difetti critici, che nessun punto forte compensa: anatomia, fisica, geometria, scritte centrali senza senso, resa artificiale, contraddizioni di contesto, violazioni delle regole sui contenuti, ancoraggi obbligatori mancanti. Per ogni difetto indica la zona dell'immagine e la conseguenza. Segnala le incertezze; non dedurre identità, provenienza, licenza o verità storica dai pixel. La valutazione è una stima editoriale, non una certificazione.
@@ -59,10 +56,9 @@ async function state(env: Env) {
   // A proposal from the code is shown when it differs from the current text; it is never saved by itself.
   for (const which of PARTS) {
     const current = await currentContext(env, which);
-    const history = (await env.DB.prepare(`SELECT c.id,c.body,c.created_at,c.pipeline,
-      (SELECT count(*) FROM images i WHERE i.analysis_base_context=c.id OR i.analysis_task_context=c.id) AS used
+    const history = (await env.DB.prepare(`SELECT c.id,c.body,c.created_at,c.pipeline
       FROM model_contexts c WHERE c.part=? ORDER BY c.created_at DESC,c.rowid DESC LIMIT ?`).bind(which, HISTORY)
-      .all<{ id: string; body: string; created_at: string; pipeline: number; used: number }>()).results;
+      .all<{ id: string; body: string; created_at: string; pipeline: number }>()).results;
     parts.push({part: which, current, history, proposed: current.body === DEFAULTS[which] ? null : DEFAULTS[which]});
   }
   return { max: CONTEXT_MAX, parts };
@@ -85,6 +81,7 @@ export async function contextRoute(env: Env, method: string, restore: boolean, d
     if (Object.keys(data).some(key => key !== "id") || typeof data.id !== "string") throw new HttpError(400, "Versione richiesta");
     const old = await env.DB.prepare("SELECT part,body,pipeline FROM model_contexts WHERE id=?").bind(data.id).first<{ part: Part; body: string; pipeline: number }>();
     if (!old) throw new HttpError(404, "Versione inesistente");
+    if (!PARTS.includes(old.part)) throw new HttpError(409, "Parte del contesto non più in uso");
     return save(env, old.part, old.body);
   }
   if (Object.keys(data).some(key => key !== "part" && key !== "body")) throw new HttpError(400, "Campi non previsti");

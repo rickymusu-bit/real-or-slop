@@ -1,5 +1,5 @@
 """Level game through the API: levels, one photo at a time, countdown from the photo shown, verdicts, timeouts, score,
-credits (description and changes of a REAL, prompt of a SLOP), leaderboard with age declaration and game codes, deletion,
+credits (attribution and changes of a REAL, prompt and model of a SLOP), leaderboard with age declaration and game codes, deletion,
 12-month maintenance."""
 from local_db import sql
 import http.cookiejar
@@ -99,21 +99,18 @@ try:
     assert result['photos'] == 10 and result['timed_out'] == 1 and result['real']['total'] + result['slop']['total'] == 10, result
     credits = view['credits']; assert len(credits) == 10 and credits[5]['timedOut'] and not credits[5]['correct'], credits[5]
     for credit in credits:
-        if credit['answer'] == 'AI': assert credit['prompt'].startswith('A street scene') and 'source' not in credit and 'description' not in credit, credit
+        if credit['answer'] == 'AI':
+            assert credit['prompt'].startswith('A street scene') and credit['model'] == 'gpt-image-2', credit
+            assert not {'source', 'description', 'author', 'license'} & credit.keys(), credit
         else:
             index = credit['title'].removeprefix('gm-REAL-')
             assert index.isdigit() and credit['changes'].startswith('Adattata al formato 4:5'), credit
-            assert not {'prompt', 'real_description', 'commons_description'} & credit.keys(), credit
-            assert credit['description'] == f'Descrizione editoriale {index}\n\nContesto documentato {index}', credit
+            # No editorial description since 2026-11-20: the credits only.
+            assert not {'prompt', 'model', 'description', 'real_description', 'commons_description'} & credit.keys(), credit
+            assert credit['title'] == f'gm-REAL-{index}', credit
             assert credit['author'] == f'Autrice {index}' and credit['source'] == f'https://commons.wikimedia.org/wiki/File:gm-{index}.jpg', credit
             assert credit['licenseUrl'] == 'https://creativecommons.org/licenses/by/4.0/', credit
         assert call(base + credit['image'], opener=first_player)[0] == 200  # the photos of a concluded game stay visible to its player
-    # A published REAL without editorial copy still has its attribution in the same game's results.
-    sql("UPDATE images SET real_description=NULL WHERE title LIKE 'gm-REAL-%'")
-    _, without_description = call(f'{base}/api/sessions/{sid}', opener=first_player)
-    for credit in without_description['credits']:
-        if credit['answer'] == 'REAL':
-            assert credit['description'] == '' and credit['author'] and credit['source'], credit
     # Leaderboard: nickname check, one entry per game, a code shown once, stored as a hash.
     for bad in ('m3rda', 'ab', 'x' * 21, '<b>'):
         assert call(f'{base}/api/sessions/{sid}/leaderboard', {'nickname': bad, 'age_ok': True}, opener=first_player)[0] == 400, bad
@@ -177,4 +174,4 @@ finally:
     sql("DELETE FROM leaderboard WHERE nickname LIKE 'Tester%'")
     sql("UPDATE game_sessions SET phase='completed',completed=1 WHERE phase IN ('preparing','active')")
     assert remove(API, token, catalogue) == {'deleted': 20, 'postponed': 0}
-print('Game integration 2.5.0 passed: descriptions of the REAL in the credits; no captions; photos without initial view; age declaration, deletion, changes of a REAL, 12-month maintenance; levels, one photo at a time, countdown from the photo shown, verdicts, timeouts, score, credits, leaderboard, game codes.')
+print('Game integration 2.5.0 passed: credits of the REAL and prompt and model of the SLOP, no editorial description; no captions; photos without initial view; age declaration, deletion, changes of a REAL, 12-month maintenance; levels, one photo at a time, countdown from the photo shown, verdicts, timeouts, score, credits, leaderboard, game codes.')

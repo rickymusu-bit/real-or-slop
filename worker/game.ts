@@ -1,14 +1,13 @@
 /** The level game (spec `gioco-a-livelli`). The server draws the lot (REAL or SLOP by a coin at each position) and serves
  * one photo at a time; the countdown starts when the browser shows the photo and stops when the answer arrives; the server checks
  * the answer at once. A photo whose time runs out counts as not recognised. Only a game played to its last photo is concluded and has
- * a score. After the end: description and credits of each REAL, prompt of each SLOP. Rounds keep the copy they started with. */
+ * a score. After the end: credits of each REAL, prompt and model of each SLOP. Rounds keep the copy they started with. */
 import { body, GAME_IMAGE, hash, HttpError, id, json, rateLimit, type Env, type ImageRow } from "./core";
 import { media, privateMedia } from "./storage";
 import { preparationTtlMs } from "../shared/preloading";
 import { curatedSample } from "./sampling";
 import { isLevel, LEVEL_IDS, LEVELS, scoreOf, type Level, type Outcome } from "../shared/levels";
 import { enter } from "./leaderboard";
-import { publicRealDescription, realDescription } from "../shared/editorial";
 
 /** An answer sent in time but arriving shortly after the deadline (network) still counts. */
 export const GRACE_MS = 500;
@@ -71,24 +70,20 @@ const round = (sid: string, r: { id: string; position: number }) => ({
   id: r.id, number: r.position + 1, image: `/api/sessions/${sid}/media/${r.id}`, alt: "Foto da classificare" });
 
 interface Credit { id: string; position: number; type: "REAL" | "AI"; choice: "REAL" | "AI" | null; timed_out: number;
-  title: string; real_description: string | null; author: string; source_url: string; license_name: string; license_url: string; prompt: string }
-function creditDescription(stored: string | null): string {
-  if (!stored) return "";
-  try { return publicRealDescription(realDescription(JSON.parse(stored))); }
-  catch { return ""; }
-}
-/** The game's photos after the end: the player's answer, the origin, description and source for a REAL, the prompt for a SLOP. */
+  title: string; author: string; source_url: string; license_name: string; license_url: string; prompt: string; model: string }
+/** The game's photos after the end: the player's answer, the origin, the credits of a REAL (title, author, licence, source and the
+ * changes to the copy), the prompt and the image model of a SLOP (owner decision of 2026-11-20: no editorial description). */
 async function credits(env: Env, sid: string) {
   const rows = (await env.DB.prepare(`SELECT r.id,r.position,CASE i.origin WHEN 'SLOP' THEN 'AI' ELSE 'REAL' END AS type,a.choice,r.timed_out,
-    i.title,i.real_description,i.author,i.source_url,i.license_name,i.license_url,i.prompt
+    i.title,i.author,i.source_url,i.license_name,i.license_url,i.prompt,i.model
     FROM game_rounds r JOIN images i ON i.id=r.image_id LEFT JOIN answers a ON a.round_id=r.id WHERE r.session_id=? ORDER BY r.position`)
     .bind(sid).all<Credit>()).results;
   return rows.map(r => ({ number: r.position + 1, image: `/api/sessions/${sid}/media/${r.id}`, answer: r.type,
     choice: r.choice, correct: r.choice === r.type, timedOut: !!r.timed_out,
     // The 4:5 copy is adapted and re-encoded. Credit these changes on both cropped and letterboxed rounds.
-    ...(r.type === "REAL" ? { title: r.title, description: creditDescription(r.real_description), author: r.author, source: r.source_url || null, license: r.license_name, licenseUrl: r.license_url || null,
+    ...(r.type === "REAL" ? { title: r.title, author: r.author, source: r.source_url || null, license: r.license_name, licenseUrl: r.license_url || null,
         changes: "Adattata al formato 4:5 e ricompressa per il gioco" }
-      : { prompt: r.prompt }) }));
+      : { prompt: r.prompt, model: r.model || null }) }));
 }
 export async function outcomes(env: Env, sid: string): Promise<Outcome[]> {
   return (await env.DB.prepare(`SELECT CASE i.origin WHEN 'SLOP' THEN 'AI' ELSE 'REAL' END AS answer,a.choice FROM game_rounds r

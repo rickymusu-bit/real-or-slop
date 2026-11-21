@@ -1,5 +1,5 @@
 """Level game in the browser, desktop and mobile: level picker, whole explorable photo, buttons and keys, covered photo,
-results, final list with descriptions, leaderboard, «Come funziona» and «Fonti e crediti». Publishes 10 REAL and 10 SLOP locally."""
+results, final list with the credits of the REAL and the prompt and model of the SLOP, leaderboard, «Come funziona» and «Fonti e crediti». Publishes 10 REAL and 10 SLOP locally."""
 from local_db import sql
 import os
 import re
@@ -95,13 +95,12 @@ try:
             expect(page.locator('.credit .play-caption')).to_have_count(0)
             expect(page.locator('.credit .credit-prompt').first).to_contain_text('A street scene')
             reals = page.locator('.credit:not(:has(.credit-prompt))').count()  # REAL or SLOP is a coin at each position
-            expect(page.locator('.credit .credit-description')).to_have_count(reals)
-            description = page.locator('.credit .credit-description').first
-            expect(description).to_contain_text('Descrizione editoriale ')
-            expect(description).to_contain_text('Contesto documentato ')
+            # REAL: the credits only; SLOP: prompt and model (owner decisions of 2026-11-20).
+            expect(page.locator('.credit .credit-description')).to_have_count(0)
             expect(page.locator('.credits')).not_to_contain_text('Testo Commons della foto')
-            expect(page.locator('.credits')).not_to_contain_text('Nota interna')
-            expect(page.locator('.credit:has(.credit-prompt) .credit-description')).to_have_count(0)
+            expect(page.locator('.credit .credit-model')).to_have_count(10 - reals)
+            expect(page.locator('.credit .credit-model').first).to_have_text('Modello gpt-image-2')
+            expect(page.locator('.credit:not(:has(.credit-prompt)) .credit-model')).to_have_count(0)
             links = page.locator('.credits').get_by_role('link', name='Foto originale')
             expect(links).to_have_count(reals)
             expect(links.first).to_have_attribute('href', re.compile(r'^https://commons\.wikimedia\.org/wiki/File:gb-\d+\.jpg$'))
@@ -132,7 +131,8 @@ try:
             expect(page.locator('#content')).to_contain_text('Le SLOP possono essere anche ridotte, sgranate o sbiadite')
             expect(page.locator('#content')).not_to_contain_text('stessa preparazione')
             page.goto(base + '/crediti')
-            expect(page.locator('#content')).to_contain_text('La descrizione nei risultati è preparata')
+            expect(page.locator('#content')).not_to_contain_text('La descrizione nei risultati')
+            expect(page.locator('#content')).to_contain_text('il modello che le ha generate')
             expect(page.locator('#content')).to_contain_text('formato verticale 4:5 con ritaglio o bande nere')
             expect(page.locator('#content')).to_contain_text('possono essere state ridotte, sgranate o sbiadite')
             expect(page.locator('#content')).to_contain_text('4:5')
@@ -178,7 +178,7 @@ try:
             page.locator('#library-entries li', has_text=f'Browser {name}').get_by_role('button', name='Cancella').click()
             expect(page.locator('#library-entries li', has_text=f'Browser {name}')).to_have_count(0)
             admin.close()
-            print('Game browser E2E 1.5.0 passed (descriptions of the REAL in the final list, no captions, whole photo on every screen, double tap, buttons on the phone):', name)
+            print('Game browser E2E 1.5.0 passed (credits of the REAL, prompt and model of the SLOP in the final list, no captions, whole photo on every screen, double tap, buttons on the phone):', name)
         browser.close()
 finally:
     sql("DELETE FROM leaderboard WHERE nickname LIKE 'Browser%'")

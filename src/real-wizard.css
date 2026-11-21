@@ -104,4 +104,4 @@ html:has(.rw-acquisition[open]) { overflow: hidden; }
 .rw-hold-hint { margin: 6px 0 0; }
 .rw-description { display: grid; gap: 4px; margin: 6px 0 10px; }
 .rw-description textarea { width: 100%; min-height: 72px; resize: vertical; }
-.rw-final-description { margin: 6px 0 2px; font-size: 14px; white-space: pre-line; overflow-wrap: anywhere; }
+.rw-final-credits { margin: 6px 0 2px; font-size: 14px; white-space: pre-line; overflow-wrap: anywhere; }

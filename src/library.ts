@@ -2,8 +2,6 @@ import { galleryCards, galleryOptions, mountGalleryEditor, type GalleryList } fr
 /** Admin dashboard, with the gallery browser and wizards, statistics and settings. */
 import "./library.css";
 import { mountAdminWorkspace } from "./admin-workspace";
-import { descriptionFields, readDescription } from "./editorial-ui";
-import type { RealDescription } from "../shared/editorial";
 import "./admin-navigation.css";
 import "./caption-count.css";
 import "./admin-loading.css";
@@ -26,18 +24,16 @@ import { markGameMedia } from "./media-mark";
 
 type Status = "new" | "approved" | "published" | "trash";
 interface Item extends TreatableItem {
-  id: string; gallery_id: string; origin: "REAL" | "SLOP"; status: Status; trashed_from: Status | null; title?: string; description: string;
-  commons_description: string | null; real_description: RealDescription | null; source_url: string; author: string; license_name: string; license_url: string;
+  id: string; gallery_id: string; origin: "REAL" | "SLOP"; status: Status; trashed_from: Status | null; title?: string; description?: string;
+  source_url: string; author: string; license_name: string; license_url: string;
   prompt: string; model: string; width: number; height: number; copy: { width: number; height: number; bytes: number; crop: Crop | null; sha256: string | null } | null;
   rights_confirmed: boolean; revision: number; file: string; updated_at: string; created_at: string;
-  analysis: { status: "none" | "running" | "done" | "uncertain" | "failed"; error: string; at: string | null };
   stats: { views: number; correct: number }; in_play: number; no_derivatives: boolean;
   metrics: Metrics | null; treatment: Treatment | null; copy_sha?: string;
 }
-interface Analysis { enabled: boolean; reason: string; model: string; calls_30_days: { total: number; uncertain: number; input_tokens: number; output_tokens: number }; note: string }
 interface ModelOption { id: string; available: boolean | null; qualities?: string[]; shutdown?: string | null }
 interface Models { text_model: string; image_model: string; image_quality: string; text_models: ModelOption[]; image_models: ModelOption[]; note: string }
-interface ContextVersion { id: string; body: string; created_at: string; pipeline: number; used: number }
+interface ContextVersion { id: string; body: string; created_at: string; pipeline: number }
 interface ContextState { max: number; parts: { part: string; current: { id: string; body: string }; history: ContextVersion[]; proposed?: string | null }[] }
 const API = "/api/admin/library";
 const STATUS_LABEL: Record<string, string> = { library: "Tutte", new: "Nuove", approved: "Approvate", published: "Pubblicate", trash: "Cestino" };
@@ -45,7 +41,7 @@ const STATE_LABEL: Record<Status, string> = { new: "nuova", approved: "approvata
 /** A section still loading: a short line with a spinner (src/admin-loading.css). */
 const loading = (text = "Caricamento…") => `<p class="admin-loading" role="status">${text}</p>`;
 const FIELDS: [keyof Item, string, number, boolean][] = [
-  ["title", "Titolo", 200, false], ["description", "Descrizione", 1000, true], ["source_url", "Pagina della fonte", 1000, false],
+  ["title", "Titolo", 200, false], ["description", "Descrizione della fonte", 1000, true], ["source_url", "Pagina della fonte", 1000, false],
   ["author", "Autore", 300, false], ["license_name", "Licenza", 200, false], ["license_url", "Indirizzo della licenza", 1000, false],
   ["prompt", "Prompt (SLOP)", 4000, true], ["model", "Modello (SLOP)", 100, false],
 ];
@@ -88,7 +84,6 @@ export async function showLibrary() {
   let models: Models | null = null;
   let statsView: { refresh: () => Promise<void> } = { refresh: async () => {} };
   let distribution: { refresh: () => Promise<void> } = { refresh: async () => {} };
-  let analysis: Analysis | null = null;
   content().innerHTML = `<section class="library page" aria-labelledby="library-title">
     <header class="library-head"><h1 id="library-title">Dashboard</h1><span id="dashboard-loading">${loading("Caricamento della dashboard…")}</span></header>
     <nav class="admin-tabs" aria-label="Sezioni amministrazione">
@@ -113,7 +108,7 @@ export async function showLibrary() {
       </div>
       <div class="gallery-workspace-scroll">
     <div id="db-images">
-    <p id="library-counts" aria-live="polite"></p><p id="library-analysis" class="hint"></p>
+    <p id="library-counts" aria-live="polite"></p>
     <div class="db-search-row"><label>Cerca nella galleria<input id="library-search" type="search" placeholder="ID, titolo REAL, descrizione o prompt"></label></div><details class="db-filter-panel"><summary>Filtri e ordinamento</summary><div class="library-toolbar">
       <nav class="library-views" aria-label="Viste">${Object.entries(STATUS_LABEL).map(([key, label]) =>
         `<button type="button" data-view="${key}" aria-pressed="${key === "library"}">${label}</button>`).join("")}</nav>
@@ -170,7 +165,7 @@ export async function showLibrary() {
       <p id="library-code-result" role="status" aria-live="polite"></p>
       <ol id="library-entries" class="library-entries"></ol></details>
     <details id="library-models" class="library-vocabulary"><summary>Modelli</summary>
-      <p class="hint">Modelli OpenAI usati dalle chiamate a pagamento. Il modello di testo scrive la descrizione delle REAL, i prompt delle SLOP e le loro valutazioni, e deve leggere immagini; quello di immagini genera le SLOP. Ogni chiamata chiede conferma; il limite di spesa che conta è quello impostato sul progetto OpenAI (platform.openai.com).</p>
+      <p class="hint">Modelli OpenAI usati dalle chiamate a pagamento. Il modello di testo scrive i prompt delle SLOP e le valuta, e deve leggere immagini; quello di immagini genera le SLOP. Ogni chiamata chiede conferma; il limite di spesa che conta è quello impostato sul progetto OpenAI (platform.openai.com).</p>
       <form id="library-models-form" class="library-inline"><label>Modello di testo<select name="text_model"></select></label><label>Modello di immagini<select name="image_model"></select></label><label>Qualità delle immagini<select name="image_quality"></select></label></form>
       <p id="library-models-note" class="hint"></p>
       <p class="hint">La qualità vale per lo studio SLOP e per la rigenerazione dalla galleria.</p></details>
@@ -222,10 +217,6 @@ export async function showLibrary() {
     filter.q = (event.target as HTMLInputElement).value.trim();
     window.clearTimeout(searchTimer); searchTimer = window.setTimeout(() => { void load().catch(error => message(String(error))); }, 250);
   });
-  const refreshAnalysis = async () => {
-    analysis = await call<Analysis>("/analysis");
-    $("#library-analysis").textContent = analysis.enabled ? `Descrizione delle REAL con ${analysis.model}: una chiamata a pagamento per foto, con conferma.` : `Analisi IA non disponibile: ${analysis.reason}.`;
-  };
   // The list of the last request wins: a slower, older answer never overwrites a newer one.
   let loadSeq = 0, nextPage: number | null = null;
   const load = async (append = false) => {
@@ -318,15 +309,6 @@ export async function showLibrary() {
     });
     saving = request; return request;
   };
-  /** An analysis still marked «running» after ten minutes belongs to a request that died (the server treats it the same way): it may
-   * have been charged, so it is repeated only with the explicit warning, like an uncertain outcome. */
-  const interrupted = (item: Item) => item.analysis.status === "running" && Date.now() - Date.parse(item.updated_at) > 10 * 60_000;
-  const unsure = (item: Item) => item.analysis.status === "uncertain" || interrupted(item);
-  const analysisLine = (item: Item) => interrupted(item) ? "Analisi interrotta: esito incerto, forse già addebitata." : ({ none: "Non ancora analizzata.", running: "Analisi in corso…",
-    done: "Analizzata.",
-    uncertain: "Esito incerto: " + item.analysis.error, failed: "Analisi non riuscita: " + item.analysis.error })[item.analysis.status];
-  const analysisLabel = { none: "Analizza con IA", done: "Rifai l’analisi con IA", running: "Riprova l’analisi con IA",
-    uncertain: "Riprova l’analisi con IA", failed: "Riprova l’analisi con IA" };
   const metricText = (m: Metrics) => `lato ${m.long} px / rumore ${m.noise.toFixed(1)} / nitidezza ${m.sharpness.toFixed(1)} / contrasto ${m.contrast} / saturazione ${m.saturation.toFixed(2)}`;
   /** Measures of the copy and, for a SLOP, its treatment with the commands (free; they make the copy again). */
   const measuresBlock = (item: Item, editable: boolean) => {
@@ -343,10 +325,8 @@ export async function showLibrary() {
   const showDetail = (item: Item) => {
     open = item;
     const editable = item.status === "new" || item.status === "approved";
-    const canAnalyze = item.origin === "REAL" && analysis?.enabled && item.copy && (item.analysis.status !== "running" || interrupted(item));
-    const legacyAnalysis = item.origin === "REAL" && !item.real_description && item.status !== "trash"
-      && (item.status === "published" || item.analysis.status !== "none");
-    const fields = FIELDS.filter(([key]) => item.origin === "REAL" ? key !== "prompt" && key !== "model" : !["title", "source_url", "author", "license_name", "license_url"].includes(key));
+    const fields = FIELDS.filter(([key]) => item.origin === "REAL" ? key !== "prompt" && key !== "model"
+      : !["title", "description", "source_url", "author", "license_name", "license_url"].includes(key));
     detail.innerHTML = `<form method="dialog" class="library-detail-close"><button aria-label="Chiudi">×</button></form>
       <h2 id="library-detail-title">${escape(imageLabel(item))}</h2>
       <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / originale ${item.width}×${item.height}${item.copy ? ` / copia di gioco WebP ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}: è ciò che vedranno i giocatori` : " / copia di gioco non pronta"}</p>
@@ -360,13 +340,9 @@ export async function showLibrary() {
       ${!item.copy && item.status === "new" ? '<p><button type="button" id="library-copy">Prepara la copia di gioco</button></p>' : ""}
       ${editable ? '<p><button type="button" id="library-crop">Inquadratura</button></p>' : ""}
       ${measuresBlock(item, editable)}
-      ${editable && item.origin === "REAL" && item.copy && !legacyAnalysis ? `<p class="library-analysis">${analysisLine(item)} ${canAnalyze
-        ? `<button type="button" id="library-analyze">${analysisLabel[item.analysis.status]} (a pagamento)</button>` : ""}</p>` : ""}
-      ${fields.map(([key, label, max, area]) => `<label>${key === "description" && item.origin === "REAL" ? "Descrizione della fonte" : label}${area
+      ${fields.map(([key, label, max, area]) => `<label>${label}${area
         ? `<textarea data-field="${key}" maxlength="${max}" rows="3" ${editable ? "" : "readonly"}>${escape(item[key])}</textarea>`
         : `<input data-field="${key}" maxlength="${max}" value="${escape(item[key])}" ${editable ? "" : "readonly"}>`}</label>`).join("")}
-      ${item.origin === "REAL" ? descriptionFields(item.id, item.real_description, item.status === "trash", item.commons_description || "") : ""}
-      ${legacyAnalysis && item.copy ? `<p class="library-analysis"${unsure(item) ? " data-analysis-unsure" : ""}>${escape(analysisLine(item))} ${canAnalyze ? '<button type="button" id="library-description-analysis">Genera la descrizione con IA (a pagamento)</button>' : ""}</p>` : ""}
       ${editable && item.origin === "SLOP" ? '<p class="hint">Per rigenerare: cestina questa SLOP e avvia un nuovo processo nello studio, con conferma e valutazione.</p>' : ""}
       <div class="library-actions">${item.status === "new" ? `${item.origin === "REAL" ? `<label><input type="checkbox" id="library-rights" ${item.rights_confirmed ? "checked" : ""}> Ho verificato diritti e licenza</label>` : ""}<button type="button" data-action="approve" class="primary">Approva</button>` : ""}
         ${item.status === "approved" ? '<button type="button" data-action="publish" class="primary">Pubblica nel gioco</button>' : ""}
@@ -392,11 +368,6 @@ export async function showLibrary() {
       }
       return;
     }
-    const editorial = (event.target as HTMLElement).closest<HTMLTextAreaElement>("[data-editorial]");
-    if (editorial && open && !editorial.disabled) {
-      try { open = await save(open, {real_description: readDescription(detail, open.id)}); detailMessage("Descrizione editoriale salvata."); }
-      catch (e) { detailMessage(String(e)); } return;
-    }
     const field = (event.target as HTMLElement).closest<HTMLInputElement | HTMLTextAreaElement>("[data-field]");
     if (!field || !open || field.readOnly) return;
     try { open = await save(open, { [field.dataset.field!]: field.value }); showDetail(open); detailMessage("Salvato."); render(); }
@@ -408,28 +379,12 @@ export async function showLibrary() {
       try { showDetail(await call<Item>("/" + encodeURIComponent(button.dataset.openSource))); } catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
       return;
     }
-    if (!button || !open || busy || !(button.dataset.action || ["library-description-analysis", "library-copy", "library-analyze", "library-regenerate",
+    if (!button || !open || busy || !(button.dataset.action || ["library-copy", "library-regenerate",
       "library-crop", "library-treatment-off", "library-treatment-on", "library-treatment-edit"].includes(button.id))) return;
     const id = open.id;
-    const legacyAnalysis = button.id === "library-description-analysis";
-    const analyzePhoto = legacyAnalysis || button.id === "library-analyze";
     busy = true;
     try {
-      if (analyzePhoto && analysis) {
-        const repeat = unsure(open);
-        const replaceFields = "La descrizione editoriale sarà sostituita.";
-        const warning = repeat ? " L'analisi precedente ha un esito incerto e potrebbe essere già stata addebitata." : "";
-        if (!window.confirm(`Analizzare «${imageLabel(open)}» con ${analysis.model}? È una chiamata a pagamento. ${replaceFields}${warning}`)) return;
-        const analysed = await withPhotoProcessing("Analisi della foto in corso…", () => call<Item>(`/${encodeURIComponent(id)}/analyze`, { method: "POST",
-          body: JSON.stringify({ confirm: true, ...(legacyAnalysis ? { refresh_description: true } : { reanalyze: true }),
-            ...(repeat ? { repeat_uncertain: true } : {}) }) }));
-        if (detail.open && open?.id === id) {
-          open = analysed;
-          detailMessage("Analisi completata.");
-        }
-        void refreshAnalysis();
-      }
-      else if (button.id === "library-copy") {
+if (button.id === "library-copy") {
         const item = open;
         open = await withPhotoProcessing("Preparo la copia di gioco…", () => prepareItemCopy<Item>(item));
         detailMessage("Copia di gioco pronta.");
@@ -472,10 +427,6 @@ export async function showLibrary() {
       const said = detail.querySelector("#library-detail-message")?.textContent || "";
       if (detail.open && open) { showDetail(items.find(i => i.id === open!.id) || open); detailMessage(said); }
     } catch (error) {
-      if (detail.open && open?.id === id && analyzePhoto) {
-        const latest = await call<Item>("/" + encodeURIComponent(id)).catch(() => null);
-        if (latest && detail.open && open?.id === id) showDetail(latest);
-      }
       if (detail.open && open?.id === id) detailMessage(String(error instanceof Error ? error.message : error));
     }
     finally { busy = false; selectionBar(); }
@@ -615,13 +566,12 @@ export async function showLibrary() {
     const field = event.target as HTMLSelectElement;
     try {
       models = await call<Models>("/models", { method: "PUT", body: JSON.stringify({ [field.name]: field.value }) }); renderModels(models);
-      settingsMessage(`${({ text_model: "Modello di testo", image_model: "Modello di immagini", image_quality: "Qualità delle immagini" } as Record<string, string>)[field.name]}: ${field.value}.`); await refreshAnalysis();
+      settingsMessage(`${({ text_model: "Modello di testo", image_model: "Modello di immagini", image_quality: "Qualità delle immagini" } as Record<string, string>)[field.name]}: ${field.value}.`);
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); await refreshModels(); }
   });
-  // Model context: four texts, each saved as a new version; an old version can become the current one again.
+  // Model context: three texts, each saved as a new version; an old version can become the current one again.
   const CONTEXT_LABELS: Record<string, [string, string]> = {
-    base: ["Base comune", "Inviata in ogni chiamata. Non deve parlare di immagini generate: il modello che descrive le REAL non deve sapere che esistono."],
-    analysis: ["Descrizione delle REAL", "Inviato insieme alla base a ogni analisi di una REAL intera, con titolo e contesto Commons: elementi visibili e contesto documentato."],
+    base: ["Base comune", "Inviata in ogni chiamata: proposte di galleria, indicazioni SLOP proposte e valutazioni."],
     slop_gallery_prompt: ["Premessa e prompt di galleria", "Inviato insieme alla base, all’originale intero e alle indicazioni della galleria."],
     slop_evaluation: ["Valutazione delle SLOP", "Inviato insieme alla base a ogni valutazione di una candidata intera. Decisioni, tolleranza e formato della risposta restano fissati nel codice."],
   };
@@ -637,7 +587,7 @@ export async function showLibrary() {
         ${p.proposed ? `<p class="hint" data-context-proposal>È disponibile un testo proposto con l'aggiornamento dell'app. <button type="button" data-context-load="${escape(p.part)}">Carica nel campo</button> (diventa una versione solo se lo salvi).</p>` : ""}
         <div class="library-inline"><button type="button" data-context-save="${escape(p.part)}">Salva nuova versione</button></div>
         <details class="library-context-history"><summary>Versioni (${p.history.length})</summary><ol>${p.history.map((v, index) =>
-          `<li><span>${escape(when(v.created_at))}</span> / ${v.body.length} caratteri${p.part === "base" || p.part === "analysis" ? ` / usata da ${v.used} ${v.used === 1 ? "immagine" : "immagini"}` : ""}${index === 0 ? " / <strong>attuale</strong>" : ` <button type="button" data-context-restore="${escape(v.id)}">Ripristina</button>`}
+          `<li><span>${escape(when(v.created_at))}</span> / ${v.body.length} caratteri${index === 0 ? " / <strong>attuale</strong>" : ` <button type="button" data-context-restore="${escape(v.id)}">Ripristina</button>`}
           <details><summary>Testo</summary><pre>${escape(v.body)}</pre></details></li>`).join("")}</ol></details></section>`;
     }).join("");
   };
@@ -811,7 +761,7 @@ export async function showLibrary() {
     }
   };
   window.addEventListener("pageshow", event => {
-    if (event.persisted) void Promise.allSettled([restoreGallery(), refreshAnalysis(), autoBox.refresh()]);
+    if (event.persisted) void Promise.allSettled([restoreGallery(), autoBox.refresh()]);
   });
   const showGalleryError = (error: unknown) => {
     if (galleryList) return;
@@ -822,7 +772,6 @@ export async function showLibrary() {
   });
   await Promise.all([
     restoreGallery().catch(showGalleryError),
-    refreshAnalysis().catch(report),
     refreshContexts().catch(error => settingsMessage(String(error instanceof Error ? error.message : error))),
     refreshModels().catch(error => settingsMessage(String(error instanceof Error ? error.message : error))),
     call<Numbers>("/settings").then(n => renderNumbers(n)).catch(error => settingsMessage(String(error instanceof Error ? error.message : error))),

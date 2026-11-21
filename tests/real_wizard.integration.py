@@ -1,5 +1,5 @@
 """REAL wizard in the browser, desktop and mobile: Commons search (clear box, pages, columns, a tap adds at once, selection
-kept across searches, press-and-hold preview), blocking acquisition progress, editorial description with paid generation once per photo (no tags),
+kept across searches, press-and-hold preview), blocking acquisition progress, source description without tags, analysis or editorial description,
 description, «Togli dal caricamento», crop step, summary and publication."""
 import io
 import os
@@ -177,7 +177,7 @@ with sync_playwright() as p:
         assert response.ok, response.text()
         found = {i['title']: i for i in response.json()['items']}
         first, second, third, fourth = (found[title + suffix] for suffix in ('-a', '-b', '-c', '-d'))
-        assert first['copy'] and second['copy'] and first['analysis']['status'] == 'none', first
+        assert first['copy'] and second['copy'] and 'analysis' not in first, first
         page.evaluate("""([gallery, ids]) => sessionStorage.setItem('ros-real-wizard-v2:' + gallery,
             JSON.stringify({ids, stage:2}))""", [gallery_id, [first['id'], second['id'], third['id'], fourth['id']]])
         page.reload()
@@ -206,10 +206,10 @@ with sync_playwright() as p:
         b = page.locator('[data-rw-image="%s"]' % second['id'])
         a.locator('.rw-metadata summary').click()
         expect(a.locator('.rw-metadata')).to_contain_text(title + '-a')
-        # Step 2 is «Descrizione»: no tags, no categories, no legend (owner decision of 2026-11-20).
+        # Step 2 is «Descrizione»: the source description only; no tags, no paid analysis, no editorial description (2026-11-20).
         expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Descrizione')
         expect(page.locator('[data-rw-new-tag], [data-rw-tag-category], .tag-legend, .rw-pill, [data-rw=choose-reset]')).to_have_count(0)
-        expect(page.locator('[data-rw-caption]')).to_have_count(0)
+        expect(page.locator('[data-rw-caption], [data-editorial], [data-rw=choose-generation], #rw-generation-dialog')).to_have_count(0)
         # The source description stays in the catalogue and is saved on leaving the field.
         description = a.locator('[data-rw-description]')
         expect(description).to_have_value('')
@@ -219,41 +219,13 @@ with sync_playwright() as p:
         saved = page.request.get(base + '/api/admin/library/' + first['id']).json()
         assert saved['description'] == 'Un ponte di pietra sul fiume, anni Sessanta', saved['description']
         expect(a.locator('[data-rw=crop]')).to_have_count(0)  # the crop is a step of its own
-        expect(page.get_by_role('button', name='Genera la descrizione con IA')).to_have_count(1)
         expect(page.locator('[data-rw="choose-tags"], [data-rw="choose-caption"]')).to_have_count(0)
-        page.get_by_role('button', name='Genera la descrizione con IA').click()
-        expect(page.locator('#rw-generation-dialog')).to_be_visible()
-        expect(page.locator('[data-rw-gen="%s"]' % first['id'])).to_be_checked()
-        page.locator('[data-rw-gen="%s"]' % second['id']).uncheck()
-        page.locator('#rw-generation-dialog button[data-rw=run-gen]').click()
-        expect(page.locator('.rw-message')).to_contain_text('1 immagine elaborata', timeout=30000)
-        asked = [text for text in confirmations if text.startswith('Confermi ') and 'per generare la descrizione editoriale?' in text]
-        assert len(asked) == 1 and 'sarà sostituita' in asked[0] and 'a pagamento' in asked[0] and '$' not in asked[0], confirmations
-        # Chosen image: described. The other: untouched.
-        expect(a.locator('[data-editorial=visible]')).not_to_have_value('')
-        expect(b.locator('[data-editorial=visible]')).to_have_value('')
-        visible = a.locator('[data-editorial=visible]')
-        visible.fill('Owner corrected the visible street scene.'); visible.blur()
-        context_field = a.locator('[data-editorial=documented_context]')
-        context_field.fill('Documented context for the players.'); context_field.blur()
-        # Only visible elements and documented context: no uncertainties (owner decision of 2026-11-20).
-        expect(a.locator('[data-editorial]')).to_have_count(2)
-        expect(a.locator('[data-editorial=uncertainties]')).to_have_count(0)
-        expect(a.locator('[data-editorial=visible]')).to_have_value('Owner corrected the visible street scene.')
-        # Once per image: the generated one cannot be chosen again.
-        page.get_by_role('button', name='Genera la descrizione con IA').click()
-        expect(page.locator('[data-rw-gen="%s"]' % first['id'])).to_be_disabled()
-        expect(page.locator('.rw-gen-list').first).to_contain_text('già generata')
-        expect(page.locator('[data-rw-gen="%s"]' % second['id'])).to_be_checked()
-        page.locator('#rw-generation-dialog button[data-rw=close-gen]').click()
-        retry = page.request.post(base + '/api/admin/library/%s/analyze' % first['id'], data={'confirm': True}, headers={'Origin': base})
-        assert retry.status == 409 and 'già generata' in retry.json()['error'], retry.text()
+        assert page.request.post(base + '/api/admin/library/%s/analyze' % first['id'], data={'confirm': True}, headers={'Origin': base}).status == 404
         page.screenshot(path=str(folder / (name + '-step2.png')), full_page=True)
 
         # Step 3, «Inquadratura»: each copy with its format; the owner reviews the fixed 4:5 frame.
         page.get_by_role('button', name='Avanti: inquadratura').click()
         # Not blocking: the photo without a description is named in a notice.
-        expect(page.locator('.rw-message')).to_contain_text('1 foto non ha la descrizione editoriale')
         expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Inquadratura')
         crop_a = page.locator('[data-rw-crop-image="%s"]' % first['id'])
         expect(page.locator('.rw-crop')).to_have_count(2)
@@ -372,9 +344,9 @@ with sync_playwright() as p:
         expect(page.locator('.rw-final img[data-game-media]').first).to_be_visible()
         expect(page.locator('.rw-final .rs-mark').first).to_be_visible()
         expect(page.locator('.rw-final .play-caption')).to_have_count(0)
-        expect(page.locator('.rw-final-description')).to_have_count(1)
-        expect(page.locator('.rw-final-description')).to_contain_text('Owner corrected the visible street scene.')
-        expect(page.locator('.rw-final-description')).to_contain_text('Documented context for the players.')
+        # The summary shows the credits of each photo, as in the results.
+        expect(page.locator('.rw-final-credits')).to_have_count(2)
+        expect(page.locator('.rw-final-credits').first).to_contain_text(title + '-a')
         expect(page.locator('.rw-preview-grid')).not_to_contain_text('Un ponte di pietra sul fiume, anni Sessanta')
         page.screenshot(path=str(folder / (name + '-step4.png')), full_page=True)
         page.get_by_role('button', name='Conferma e pubblica').click()

@@ -14,13 +14,11 @@ import { imageDimensions } from "../shared/image-dimensions";
 import { isNoDerivatives } from "../shared/licenses";
 import { contextRoute } from "./model-context";
 import { treatedLong, validMetrics, validSettings, validTreatment } from "../shared/copy-treatment";
-import { analysisStatus, analyze } from "./analysis";
 import { modelsRoute } from "./models";
 import { settingsRoute } from "./app-settings";
 import { stats } from "./stats";
 import { slopRoute } from "./slop";
 import { candidateFile } from "./slop-generation";
-import { realDescription } from "../shared/editorial";
 import { currentCopyCorrect, currentCopyViews, gamesInPlay, retireCopy, reviveCopy, statsOf, sweepRetired } from "./in-play";
 
 const base = "/api/admin/library";
@@ -34,10 +32,8 @@ export interface Row {
   copy_key: string | null; copy_sha256: string | null; copy_width: number | null; copy_height: number | null; copy_bytes: number | null;
   rights_confirmed: number; revision: number; created_at: string; updated_at: string; approved_at: string | null;
   published_at: string | null; trashed_at: string | null;
-  analysis_status: "none" | "running" | "done" | "uncertain" | "failed"; analysis_error: string; analyzed_at: string | null;
-  real_description: string | null; real_description_provenance: string | null; commons_description: string | null;
   generation_batch: string | null; generation_slot: string | null; generation_quality: string | null;
-  analysis_base_context: string | null; analysis_task_context: string | null; copy_crop: string | null;
+  copy_crop: string | null;
   copy_metrics: string | null; copy_treatment: string | null;
 }
 const now = () => new Date().toISOString();
@@ -82,9 +78,8 @@ function view(row: Row, extra: Extra = {}) {
   const v = row.copy_sha256 ? row.copy_sha256.slice(0, 12) : row.original_sha256.slice(0, 12);
   return {
     id: row.id, gallery_id: row.gallery_id, origin: row.origin, status: row.status, trashed_from: row.trashed_from,
-    real_description: parseJson(row.real_description), real_description_provenance: parseJson(row.real_description_provenance),
-    description: row.description,
-    ...(row.origin === "REAL" ? { title: row.title, commons_description: row.commons_description, source_url: row.source_url,
+    // REAL: source description (Commons, corrected by the owner); a SLOP has its prompt and model and no description (2026-11-20).
+    ...(row.origin === "REAL" ? { title: row.title, description: row.description, source_url: row.source_url,
       author: row.author, license_name: row.license_name, license_url: row.license_url }
       : { prompt: row.prompt, model: row.model }),
     width: row.width, height: row.height, original_mime: row.original_mime, original_sha256: row.original_sha256,
@@ -93,8 +88,6 @@ function view(row: Row, extra: Extra = {}) {
     rights_confirmed: row.rights_confirmed === 1, revision: row.revision,
     created_at: row.created_at, updated_at: row.updated_at, approved_at: row.approved_at, published_at: row.published_at,
     trashed_at: row.trashed_at,
-    analysis: { status: row.analysis_status, error: row.analysis_error, at: row.analyzed_at,
-      context: row.analysis_task_context ? { base: row.analysis_base_context, task: row.analysis_task_context } : null },
     generation: row.generation_batch ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality } : null,
     metrics: validMetrics(parseJson(row.copy_metrics)), treatment: validTreatment(parseJson(row.copy_treatment)),
     file: `${base}/${row.id}/file?v=${v}`, original: `${base}/${row.id}/original`,
@@ -129,13 +122,14 @@ export async function create(env: Env, input: { origin: Origin; title?: string; 
   await env.QUARANTINE.put(key, bytes, { httpMetadata: { contentType: mime }, customMetadata: { sha256: hash } });
   try {
     await env.DB.prepare(`INSERT INTO images(id,origin,title,description,source_url,author,license_name,license_url,prompt,model,
-      original_key,original_sha256,original_mime,width,height,created_at,updated_at,generation_batch,generation_slot,generation_quality,commons_description,gallery_id)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(imageIdValue, input.origin, input.origin === "REAL" ? text(input.title, "title", true) : null, text(input.description, "description"),
+      original_key,original_sha256,original_mime,width,height,created_at,updated_at,generation_batch,generation_slot,generation_quality,gallery_id)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(imageIdValue, input.origin, input.origin === "REAL" ? text(input.title, "title", true) : null,
+        input.origin === "REAL" ? text(input.description, "description") : "",
         text(input.source_url, "source_url"), text(input.author, "author"), text(input.license_name, "license_name"),
         text(input.license_url, "license_url"), text(input.prompt, "prompt"), text(input.model, "model"),
         key, hash, mime, width, height, stamp, stamp, input.generation?.batch ?? null,
-        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null, input.origin === "REAL" ? input.description || "" : null, input.gallery_id).run();
+        input.generation ? JSON.stringify(input.generation.slot) : null, input.generation?.quality ?? null, input.gallery_id).run();
   } catch (error) {
     await env.QUARANTINE.delete(key);
     if (error instanceof HttpError) throw error;
@@ -222,19 +216,14 @@ async function edit(env: Env, row: Row, data: Record<string, unknown>) {
     return viewOf(env, row.id);
   }
   const applicable = Object.keys(TEXT_FIELDS).filter(key => row.origin === "REAL"
-    ? !["prompt", "model"].includes(key) : !["title", "source_url", "author", "license_name", "license_url"].includes(key));
-  const allowed = ["revision", ...(row.origin === "REAL" ? ["real_description"] : []), ...applicable];
+    ? !["prompt", "model"].includes(key) : !["title", "description", "source_url", "author", "license_name", "license_url"].includes(key));
+  const allowed = ["revision", ...applicable];
   if (Object.keys(data).some(key => !allowed.includes(key))) throw new HttpError(400, "Campi non previsti");
   if (data.revision !== row.revision) throw new HttpError(409, "Immagine modificata altrove: ricaricare");
-  if (row.status === "published" && !(row.origin === "REAL" && "real_description" in data && Object.keys(data).every(k => ["revision","real_description"].includes(k)))) throw new HttpError(409, "Immagine pubblicata: avvia la modifica, che la ritira dal gioco");
+  if (row.status === "published") throw new HttpError(409, "Immagine pubblicata: avvia la modifica, che la ritira dal gioco");
   if (row.status === "trash") throw new HttpError(409, "Immagine nel cestino: ripristinala per modificarla");
   const fields = Object.keys(TEXT_FIELDS).filter(key => key in data);
   const values = fields.map(key => text(data[key], key, key === "title"));
-  if ("real_description" in data) {
-    const description = realDescription(data.real_description);
-    if (row.origin !== "REAL" || !description) throw new HttpError(400, "Descrizione editoriale non valida");
-    fields.push("real_description"); values.push(JSON.stringify(description));
-  }
   // Owner decision of 2026-11-11: at the end of an edit the image is approved. The owner edits what the player will see,
   // so an approved image stays approved; a new one stays new until it is approved.
   const result = await env.DB.prepare(`UPDATE images SET ${fields.map(key => key + "=?").join(",")}${fields.length ? "," : ""}
@@ -332,7 +321,7 @@ async function destroy(env: Env, ids: readonly string[]): Promise<{ deleted: num
   return { deleted: rows.length, postponed };
 }
 
-/** The list: status, origin, text in identifier/title/description/prompt, batch, copy to redo, REAL without description, gallery. */
+/** The list: status, origin, text in identifier/title/description/prompt, batch, copy to redo, gallery. */
 async function list(env: Env, url: URL) {
   const status = url.searchParams.get("status") || "library", originFilter = url.searchParams.get("origin") || "all";
   const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
@@ -349,15 +338,14 @@ async function list(env: Env, url: URL) {
     throw new HttpError(400, "Pagina non valida");
   const where = [status === "library" ? "status<>'trash'" : "status=?1", "(?2='all' OR origin=?2)",
     "(?3='' OR id LIKE '%'||?3||'%' COLLATE NOCASE OR title LIKE '%'||?3||'%' COLLATE NOCASE OR description LIKE '%'||?3||'%' COLLATE NOCASE OR prompt LIKE '%'||?3||'%' COLLATE NOCASE)", "(?4='' OR generation_batch=?4)",
-    `(?5=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, "(?6=0 OR (origin='REAL' AND real_description IS NULL))",
-    gallery ? "gallery_id=?7" : "?7=''"].join(" AND ");
+    `(?5=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, gallery ? "gallery_id=?6" : "?6=''"].join(" AND ");
   await sweepRetired(env);
   const limit = 72;
   const sortKey = sort === "views" ? currentCopyViews : sort === "accuracy" ? `1.0*${currentCopyCorrect}/NULLIF(${currentCopyViews},0)` : "created_at";
-  const ordering = paged ? `${sortKey} ${order === "asc" ? "ASC" : "DESC"} NULLS LAST,created_at DESC,id LIMIT ?8 OFFSET ?9` : "updated_at DESC,id LIMIT 500";
+  const ordering = paged ? `${sortKey} ${order === "asc" ? "ASC" : "DESC"} NULLS LAST,created_at DESC,id LIMIT ?7 OFFSET ?8` : "updated_at DESC,id LIMIT 500";
   const rows = (await env.DB.prepare(`SELECT * FROM images i WHERE ${where} ORDER BY ${ordering}`)
     .bind(status, originFilter, q, batch, url.searchParams.get("redo_copy") === "1" ? 1 : 0,
-      url.searchParams.get("undescribed") === "1" ? 1 : 0, gallery, ...(paged ? [limit + 1, offset] : [])).all<Row>()).results;
+      gallery, ...(paged ? [limit + 1, offset] : [])).all<Row>()).results;
   const next = paged && rows.length > limit ? offset + limit : null;
   if (next !== null) rows.pop();
   const more = await extras(env, rows.map(r => r.id));
@@ -394,7 +382,6 @@ export async function library(request: Request, env: Env, path: string): Promise
     return json(await galleryRoute(env, request.method, path.slice((base + "/galleries").length).replace(/^\//, ""), ["POST", "PATCH"].includes(request.method) ? await body(request, 40_000) : {}));
   const candidate = /^\/api\/admin\/library\/slop\/batches\/([\w-]{1,64})\/candidate\/([\w-]{1,64})$/.exec(path);
   if (candidate && request.method === "GET") return candidateFile(env, candidate[1], candidate[2]);
-  if (path === base + "/analysis" && request.method === "GET") return json(await analysisStatus(env));
   if (path === base + "/distribution" && request.method === "GET") return json(await distribution(env));
   if (path === base + "/contexts" || path === base + "/contexts/restore")
     return json(await contextRoute(env, request.method, path.endsWith("/restore"), request.method === "POST" ? await body(request, 20_000) : {}));
@@ -448,7 +435,7 @@ export async function library(request: Request, env: Env, path: string): Promise
     }
     return json({ done: done.length, failed });
   }
-  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|analyze|regenerate|metrics))?$/);
+  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|regenerate|metrics))?$/);
   if (!match) throw new HttpError(404, "API della libreria inesistente");
   const row = await find(env, match[1]);
   if (match[2] === "file" || match[2] === "original") {
@@ -457,10 +444,6 @@ export async function library(request: Request, env: Env, path: string): Promise
     const file = await env.QUARANTINE?.get(key);
     if (!file) throw new HttpError(404, "File non disponibile");
     return new Response(file.body, { headers: { "Content-Type": file.httpMetadata?.contentType || "image/webp", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
-  }
-  if (match[2] === "analyze") {
-    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
-    return json(await analyze(env, row, await body(request, 1000)));
   }
   if (match[2] === "metrics") {
     // Measures of an existing copy, made by the browser from that copy: free, any state, the copy must still be the same.

@@ -34,10 +34,10 @@ def control(queue=None):
 
 counter = 100
 fixture_gallery = None
-DESCRIPTION = {'visible':'A group of people on a street, in flat daylight.', 'documented_context':'Paris in the 1960s, according to Commons.'}
+DESCRIPTION = 'Original Commons text'
 BRIEF = {'required':['street-scene'], 'preferred':['daylight'], 'flexible':['people and viewpoint'], 'exclusions':['identifiable real people']}
 
-def real(prefix='editorial', described=True, gallery=None):
+def real(prefix='editorial', gallery=None):
     global counter, fixture_gallery
     if not gallery:
         fixture_gallery = fixture_gallery or make_gallery('Galleria dei test editoriali')['id']
@@ -49,8 +49,6 @@ def real(prefix='editorial', described=True, gallery=None):
     # Match the production browser's WebP upload.
     req=urllib.request.Request(LIBRARY+'/'+item['id']+'/copy',data=game_copy(out.getvalue()),method='POST',headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'image/webp'})
     with urllib.request.urlopen(req) as r:item=json.loads(r.read())
-    if described:
-        code,item=call('/'+item['id'],{'revision':item['revision'],'real_description':DESCRIPTION},method='PATCH',library=True);assert code==200,item
     code,item=call('/'+item['id']+'/approve',{'rights_confirmed':True},library=True);assert code==200,item
     return item
 

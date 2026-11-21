@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 11.0.1
+# Generazione SLOP — specifica 12.0.0
 
-Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-20T18:00:00Z.
+Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-21T09:00:00Z.
 
 ## 1. Modalità e bilanciamento
 
@@ -22,20 +22,20 @@ descrizione e **Indicazioni SLOP** in testo libero. Ogni REAL appartiene a una g
 proposta di indicazioni al modello dopo aver confermato una chiamata. Il testo entra nel modulo, dove si può modificare, e diventa
 operativo con il salvataggio. Indicazioni vuote o composte di soli spazi bloccano la preparazione automatica in dashboard e API.
 
-La descrizione delle REAL è una chiamata multimodale separata. Vede l’originale intero e il contesto Commons e restituisce la
-descrizione editoriale neutra con elementi visibili e contesto documentato. Il suo contesto non parla delle SLOP.
+Le REAL non hanno descrizione editoriale né analisi (decisione del 2026-11-20): il modello delle proposte legge direttamente
+l’originale, il titolo e la descrizione della fonte.
 
 ## 2. Estrazione, proposte e conferma
 
-1. **Estrai le REAL.** Campione casuale uniforme senza ripetizioni tra le REAL approvate o pubblicate della galleria con descrizione
-   editoriale valida e originale disponibile in quarantena. La dashboard mostra miniature e titoli. Tocco o pressione
-   prolungata apre l’originale intero con descrizione e contesto documentato. Con un campione insufficiente il server
+1. **Estrai le REAL.** Campione casuale uniforme senza ripetizioni tra le REAL approvate o pubblicate della galleria con
+   originale disponibile in quarantena. La dashboard mostra miniature e titoli. Tocco o pressione
+   prolungata apre l’originale intero con la descrizione della fonte. Con un campione insufficiente il server
    indica quante REAL sono disponibili e l’owner può diminuire la quantità. Estrazione, riestrazione e annullamento sono gratuiti.
    `POST auto/preview {gallery_id,size}` firma per 15 minuti ID, revisioni, ordine delle REAL, revisione della galleria e configurazione.
 2. **Prepara le proposte.** `POST auto/prepare {preview,count,confirm:true}` consuma una volta l’estrazione dopo conferma del massimo
    di una chiamata per REAL. Il Worker ricontrolla galleria, foto e configurazione, congela modelli, qualità, tolleranza, tentativi
    massimi e versioni dei contesti. Il Workflow prepara le proposte in ordine. Per ciascuna REAL il modello riceve l’originale intero
-   prima del ritaglio 4:5, titolo, profilo editoriale, contesto Commons documentato, titolo e descrizione della galleria, indicazioni
+   prima del ritaglio 4:5, titolo e descrizione della fonte della REAL (`reference: {title, description}`), titolo e descrizione della galleria, indicazioni
    SLOP e istruzioni generali. Restituisce una frase in italiano sul falso concreto e il prompt in inglese, oppure il motivo per cui
    non può proporre un falso compatibile. Le premesse precedenti aiutano a variare il batch.
 3. **Conferma le immagini.** Le proposte restano disponibili per un’ora dalla preparazione, anche dopo il ricaricamento. La dashboard
