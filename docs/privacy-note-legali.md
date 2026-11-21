@@ -1,6 +1,6 @@
-# Privacy e note legali — specifica 1.3.2
+# Privacy e note legali — specifica 1.4.0
 
-Stato: vigente. Aggiornata: 2026-11-19T23:44:53Z.
+Stato: vigente; ramo 1.51.0 da rilasciare. Aggiornata: 2026-11-21T09:00:00Z.
 1.2.0: su richiesta dell'owner del 2026-11-14 i Termini d'uso (aggiornati il 14 novembre 2026) dicono che le SLOP sono generate «senza
 parti di fotografie vere, e spesso ridotte, sfocate, sgranate o sbiadite come lo sono le immagini che circolano», al posto di «generate
 integralmente», per il trattamento delle SLOP (specifica `copie-di-gioco`, sezione 4); «Fonti e crediti» lo dice allo stesso modo.
@@ -65,5 +65,6 @@ Casella obbligatoria sull'età (rifiutata anche dal server senza `age_ok: true`)
 Le licenze CC BY e CC BY-SA chiedono di indicare le modifiche; la CC BY-SA chiede la stessa licenza per l'opera modificata. La copia di
 gioco è adattata al formato 4:5 e ricompressa. I crediti di fine partita indicano le modifiche e la licenza dell’originale. La pagina
 «Fonti e crediti» spiega le due modalità di adattamento, ritaglio e bande nere. Le
-licenze ND sono escluse. La descrizione editoriale di una REAL compare separata dall’attribuzione, che include autore, licenza e link
-alla fonte. «Fonti e crediti» spiega che la descrizione è preparata per il gioco a partire dalla foto e dal contesto documentato.
+licenze ND sono escluse. Dal 2026-11-20 i risultati non mostrano una descrizione editoriale delle REAL: restano titolo, autore,
+licenza con link, link alla fonte e indicazione delle modifiche. «Fonti e crediti» non parla più della descrizione e dice che per le
+SLOP sono indicati prompt e modello. Privacy e Termini non cambiano; la frase verificata sul trattamento delle SLOP resta invariata.

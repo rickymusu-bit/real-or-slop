@@ -1,10 +1,8 @@
 /** REAL wizard (spec `dashboard-admin-wizard-real`, section 4), four steps: select on Commons (search, pages, columns,
- * a tap ticks and adds at once, press and hold for the preview), description (source text and editorial description, paid
- * generation once per image, «Togli dal caricamento»), crop, summary and publication. The draft lives in the
+ * a tap ticks and adds at once, press and hold for the preview), description (the source text from Commons, metadata,
+ * «Togli dal caricamento»), crop, summary and publication. The draft lives in the
  * browser session; photos trashed or deleted elsewhere leave the wizard. */
 import "./real-wizard.css";
-import { descriptionFields, readDescription } from "./editorial-ui";
-import { publicRealDescription, type RealDescription } from "../shared/editorial";
 import { onLongPress, openPreview } from "./image-preview";
 import { escape } from "../shared/html";
 import { prepareLibraryCopy } from "./game-copy";
@@ -16,15 +14,13 @@ import { markGameMedia } from "./media-mark";
 type Stage = 1 | 2 | 3 | 4;
 interface Image {
   id: string; gallery_id: string; origin: "REAL" | "SLOP"; status: "new" | "approved" | "published" | "trash";
-  commons_description: string | null; real_description: RealDescription | null; revision: number; title: string; description: string;
+  revision: number; title: string; description: string;
   source_url: string; author: string; license_name: string; license_url: string;
   width: number; height: number; file: string;
   copy: { width: number; height: number; bytes: number; crop: Crop | null } | null;
-  analysis: { status: string; error: string };
 }
 interface Hit { title: string; page_url: string; thumb_url: string; preview_url?: string; width: number; height: number; date?: string; description?: string }
 interface Browse { files: Hit[]; next: string | null }
-interface Analysis { enabled: boolean; reason: string; model: string }
 const BASE = "/api/admin/library";
 
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -33,12 +29,6 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!response.ok) throw Error(data.error || "Richiesta non riuscita");
   return data;
 }
-/** Paid generation runs once, only on new images with a game copy and no analysis in progress. */
-const generable = (i: Image) => i.status === "new" && !!i.copy && i.analysis.status !== "running" && i.analysis.status !== "done";
-/** Preselected: never generated, or refused without charge. «uncertain» may already have been paid. */
-const freshForGeneration = (i: Image) => generable(i) && (i.analysis.status === "none" || i.analysis.status === "failed");
-const generationNote = (i: Image) => i.status !== "new" ? "approvata" : !i.copy ? "WebP non pronto"
-  : ({ running: "in corso", done: "già generata", uncertain: "esito incerto, forse già addebitata", failed: "non riuscita" } as Record<string, string>)[i.analysis.status] || "";
 const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);
 const short = (value: string, count = 90) => value.length > count ? value.slice(0, count - 1) + "…" : value;
 
@@ -51,11 +41,9 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
   const COLUMNS_KEY = "ros-real-wizard-columns";
   let columns = 0;
   try { const saved = Number(localStorage.getItem(COLUMNS_KEY)); if (Number.isInteger(saved) && saved >= 1 && saved <= 6) columns = saved; } catch { /* private browsing */ }
-  const editorialDrafts = new Map<string, {id:string;key:string;value:string}>();
   let searchPages: { files: Hit[]; next: string | null }[] = [], page = 0, searched = false;
   const knownHits = new Map<string, Hit>();
   let searchCategories: string[] = [];
-  let analysis: Analysis | null = null;
   const pending = new Map<string, Hit>();
   const acquisition = document.createElement("dialog");
   acquisition.className = "rw-dialog rw-acquisition";
@@ -109,7 +97,6 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
     saving = run;
     return run;
   };
-  const refreshMeta = async () => { analysis = await api<Analysis>("/analysis"); };
   const progress = () => '<ol class="rw-steps" aria-label="Fasi del caricamento">' +
     ["Seleziona le immagini", "Descrizione", "Inquadratura", "Riepilogo e pubblicazione"].map((label, index) =>
       '<li ' + (stage === index + 1 ? 'aria-current="step"' : "") + '><span>' + (index + 1) + "</span>" + label + "</li>").join("") + "</ol>";
@@ -157,29 +144,18 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
     '" target="_blank" rel="noopener noreferrer">Apri la pagina originale su Commons</a></dd>' +
     (item.license_url ? '<dt>Licenza</dt><dd><a target="_blank" rel="noopener noreferrer" href="' + escape(item.license_url) +
       '">Apri il testo della licenza</a></dd>' : "") + "</dl></details>";
-  const second = () => '<div class="rw-actions"><button type="button" data-rw="choose-generation" ' +
-    (!analysis?.enabled ? "disabled" : "") + '>Genera la descrizione con IA</button><span class="hint">' +
-    (analysis?.enabled ? 'Modello: ' + escape(analysis.model) + '. Una chiamata a pagamento per immagine, con conferma.' :
-      'Generazione non disponibile: ' + escape(analysis?.reason || "configurazione mancante")) + "</span></div>" +
+  const second = () => '<p class="hint">La descrizione della fonte arriva da Commons: correggila se serve. Resta nel catalogo e ' +
+    'accompagna la foto quando ispira le SLOP automatiche.</p>' +
     '<div class="rw-editor-grid">' + staged().map(item => '<article class="rw-editor" data-rw-image="' + escape(item.id) + '">' +
       '<div class="rw-image"><img src="' + escape(item.file) + '" alt="' + escape(item.title) + '" loading="lazy"></div>' +
       '<div class="rw-editor-fields"><h3>' + escape(short(item.title, 90)) + '</h3>' +
       '<label class="rw-description">Descrizione della fonte <small>(contesto per il catalogo)</small><textarea data-rw-description="' +
         escape(item.id) + '" maxlength="1000" rows="3" placeholder="Che cosa mostra la foto, dove e quando">' + escape(item.description) + '</textarea></label>' +
-      descriptionFields(item.id, item.real_description, false, item.commons_description || "") +
       '<div class="rw-actions">' +
       '<button type="button" data-rw="discard" data-id="' + escape(item.id) + '">Togli dal caricamento</button>' +
       '</div>' + metadata(item) + '</div></article>').join("") + '</div>' +
     '<div class="rw-actions rw-bottom"><button type="button" data-rw="back">Indietro</button>' +
-    '<button type="button" data-rw="to-crop" class="primary">Avanti: inquadratura</button></div>' +
-    '<dialog id="rw-generation-dialog" class="rw-dialog"><h3>Seleziona le immagini</h3><p>Seleziona le immagini per generare la descrizione ' +
-    'editoriale. La descrizione attuale delle immagini scelte sarà sostituita; le altre non cambiano. Ogni immagine si genera una sola volta.</p>' +
-    '<label><input type="checkbox" id="rw-generation-all"> Seleziona tutte</label>' +
-    '<div class="rw-gen-list">' + staged().map(i => '<label><input type="checkbox" data-rw-gen="' +
-      escape(i.id) + '" ' + (!generable(i) ? "disabled" : freshForGeneration(i) ? "checked" : "") + '> ' + escape(short(i.title)) +
-      (generationNote(i) ? ' <small>(' + escape(generationNote(i)) + ')</small>' : "") +
-      '</label>').join("") + '</div><div class="rw-actions"><button type="button" data-rw="close-gen">Annulla</button>' +
-      '<button type="button" class="primary" data-rw="run-gen">Genera</button></div></dialog>';
+    '<button type="button" data-rw="to-crop" class="primary">Avanti: inquadratura</button></div>';
   /** Step 3: the game copy of each photo, cut to the nearest common format at acquisition; the owner may change format and crop. */
   const third = () => '<p class="hint">Ogni foto ha una copia verticale 4:5. Controlla che conservi soggetti ed elementi fondamentali per ' +
     'i giocatori e, se serve, sposta o ridimensiona il ritaglio. Il giocatore vede tutta la copia.</p>' +
@@ -196,11 +172,10 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
   const fourth = () => '<p class="hint">Anteprima della copia WebP effettivamente servita dal gioco, nel suo formato. Il marchio RS è sovrapposto ' +
     'all’immagine e non viene incorporato nei pixel del WebP.</p>' +
     '<div class="rw-preview-grid">' + staged().map(i => {
-      const description = publicRealDescription(i.real_description);
       return '<article class="rw-final">' +
       '<div class="game-media-surface rw-final-image"><img data-game-media src="' + escape(i.file) +
       '" alt="' + escape(i.title) + '"></div>' +
-      (description ? '<p class="rw-final-description">' + escape(description) + '</p>' : '<p class="hint">Nessuna descrizione editoriale.</p>') +
+      '<p class="rw-final-credits">' + escape(i.title) + (i.author ? " · " + escape(i.author) : "") + (i.license_name ? " · " + escape(i.license_name) : "") + '</p>' +
       '<small>' + escape(i.copy ? "WebP · " + i.copy.width + " × " + i.copy.height : "Copia non pronta") + '</small></article>';
     }).join("") + "</div>" +
     '<div class="rw-confirm"><label><input type="checkbox" id="rw-rights"> Ho verificato autenticità, fonte e diritti di ' +
@@ -213,7 +188,6 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
     const active = document.activeElement as HTMLElement | null;
     if (!active || !root.contains(active)) return null;
     if (active.id) return "#" + CSS.escape(active.id);
-    if (active.dataset.editorial && active.dataset.editorialId) return `[data-editorial="${CSS.escape(active.dataset.editorial)}"][data-editorial-id="${CSS.escape(active.dataset.editorialId)}"]`;
     for (const name of ["data-rw-hit", "data-rw-description"])
       if (active.hasAttribute(name)) return "[" + name + '="' + CSS.escape(active.getAttribute(name)!) + '"]';
     if (active.dataset.rw) return '[data-rw="' + CSS.escape(active.dataset.rw) + '"]' +
@@ -231,10 +205,6 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
       (stage === 1 ? first() : stage === 2 ? second() : stage === 3 ? third() : fourth()) +
       '<div class="rw-actions rw-reset"><button type="button" data-rw="new">Inizia un nuovo caricamento</button></div></div>';
     if (stage >= 3) markGameMedia(root);
-    for (const d of editorialDrafts.values()) {
-      const field = [...root.querySelectorAll<HTMLTextAreaElement>("[data-editorial]")].find(t => t.dataset.editorialId === d.id && t.dataset.editorial === d.key);
-      if (field) field.value = d.value;
-    }
     for (const [id, value] of drafts) {
       const field = [...root.querySelectorAll<HTMLTextAreaElement>("[data-rw-description]")].find(t => t.dataset.rwDescription === id);
       if (field) field.value = value;
@@ -308,36 +278,6 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
       acquisition.close();
     }
   };
-  const generate = async (ids: string[]) => {
-    if (!analysis?.enabled || !ids.length) { notice = "Nessuna immagine selezionata o generazione non disponibile."; render(); return; }
-    const chosen = images.filter(i => ids.includes(i.id));
-    const uncertain = chosen.filter(i => i.analysis.status === "uncertain").length;
-    const repeat = uncertain ? " " + uncertain + (uncertain === 1 ? " immagine ha" : " immagini hanno") + " un esito incerto che potrebbe essere già stato addebitato." : "";
-    if (!window.confirm("Confermi " + ids.length + (ids.length === 1 ? " chiamata a " : " chiamate a ") + analysis.model +
-      " per generare la descrizione editoriale? Sono chiamate a pagamento. La descrizione attuale di queste immagini sarà sostituita; ogni immagine si genera una sola volta." + repeat)) return;
-    const failures: string[] = []; let done = 0;
-    await withPhotoProcessing("Analisi delle foto in corso…", async setMessage => {
-      for (const id of ids) {
-        const item = images.find(i => i.id === id);
-        if (!item || !generable(item)) continue;
-        setMessage(`Analisi della foto ${done + failures.length + 1} di ${ids.length}…`);
-        try {
-          // The confirmation above names the uncertain outcomes: only those carry the explicit repeat.
-          const result = await api<Image>("/" + encodeURIComponent(id) + "/analyze", {
-            method: "POST", body: JSON.stringify(item.analysis.status === "uncertain" ? { confirm: true, repeat_uncertain: true } : { confirm: true }),
-          });
-          replace(result); done++;
-        } catch (error) {
-          failures.push(short(item.title, 35) + ": " + errorText(error));
-          if (/OpenAI:/.test(errorText(error))) break;
-        }
-      }
-    });
-    try { await refreshMeta(); } catch { /* show per-image errors, if any */ }
-    notice = done + (done === 1 ? " immagine elaborata." : " immagini elaborate.") +
-      (failures.length ? " Problemi: " + failures.join(" | ") : "");
-    render();
-  };
   const publish = async () => {
     const incomplete = staged().filter(i => !i.copy);
     if (incomplete.length) { stage = 3; notice = "Prepara la copia WebP di: " +
@@ -367,8 +307,6 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
   };
   root.addEventListener("input", event => {
     const target = event.target as HTMLTextAreaElement;
-    if (target.matches("[data-editorial]")) editorialDrafts.set(target.dataset.editorialId!+":"+target.dataset.editorial!,
-      {id:target.dataset.editorialId!,key:target.dataset.editorial!,value:target.value});
     if (target.matches('#rw-search [name="q"]')) {
       const clear = root.querySelector<HTMLButtonElement>("[data-rw-clear-search]");
       if (clear) clear.disabled = !target.value;
@@ -394,16 +332,6 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
       renderSelected();
       return;
     }
-    if (target.matches("[data-editorial]")) {
-      const item = staged().find(i => i.id === target.dataset.editorialId);
-      if (item) {
-        const key = item.id+":"+target.dataset.editorial!, value=target.value;
-        void update(item, {real_description:readDescription(root,item.id)}).then(()=>{
-          if(editorialDrafts.get(key)?.value===value)editorialDrafts.delete(key);
-        }).catch(error=>{notice=String(error);render();});
-      }
-      return;
-    }
     if (target.matches("[data-rw-description]")) {
       const item = images.find(i => i.id === target.dataset.rwDescription);
       const value = target.value.trim();
@@ -412,9 +340,6 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
         .catch(error => { notice = errorText(error); })
         .finally(() => { const message = root.querySelector<HTMLElement>(".rw-message"); if (message) message.textContent = notice; });
       return;
-    }
-    if (target.id === "rw-generation-all") {
-      root.querySelectorAll<HTMLInputElement>("[data-rw-gen]:not(:disabled)").forEach(c => { c.checked = target.checked; });
     }
   });
   onLongPress(root, "[data-rw-preview]", element => {
@@ -445,19 +370,6 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-rw]");
     if (!button || busy) return;
     const action = button.dataset.rw!, id = button.dataset.id || "";
-    if (action === "close-gen") { root.querySelector<HTMLDialogElement>("#rw-generation-dialog")?.close(); return; }
-    if (action === "choose-generation") {
-      root.querySelector<HTMLDialogElement>("#rw-generation-dialog")!.showModal();
-      return;
-    }
-    if (action === "run-gen") {
-      const ids = [...root.querySelectorAll<HTMLInputElement>("[data-rw-gen]:checked")].map(x => x.dataset.rwGen!);
-      root.querySelector<HTMLDialogElement>("#rw-generation-dialog")?.close();
-      busy = true;
-      try { await generate(ids); } catch (error) { notice = errorText(error); render(); }
-      finally { busy = false; render(); }
-      return;
-    }
     busy = true;
     try {
       if (action === "remove-pending") {
@@ -475,11 +387,7 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
         const dropped = await syncStaged();
         if (dropped && !staged().length) { notice = goneNotice(dropped); render(); return; }
         stage = 3; persist();
-        // Not blocking: without a description the results show the credits only and the photo cannot inspire automatic SLOP.
-        const undescribed = staged().filter(i => !i.real_description).length;
-        notice = undescribed ? undescribed + (undescribed === 1 ? " foto non ha" : " foto non hanno") +
-          " la descrizione editoriale: nei risultati compariranno solo i crediti e non potrà ispirare le SLOP automatiche. Puoi continuare comunque." : "";
-        if (dropped) notice = goneNotice(dropped) + (notice ? " " + notice : "");
+        notice = dropped ? goneNotice(dropped) : "";
         render();
       } else if (action === "review") {
         const dropped = await syncStaged();
@@ -542,7 +450,6 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
       if (dropped) notice = goneNotice(dropped);
       stage = images.length && (draft.stage === 2 || draft.stage === 3 || draft.stage === 4) ? draft.stage : 1;
     }
-    await refreshMeta();
   } catch (error) { notice = errorText(error); }
   persist(); render();
   return {

@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 31.2.0, aggiornata il 2026-11-20T21:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 32.1.0, aggiornata il 2026-11-21T10:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -8,8 +8,8 @@ Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
 REAL or SLOP è un gioco educativo, personale e non commerciale: per ogni foto il giocatore dice se è una fotografia autentica (REAL, da
 Wikimedia Commons) o un'immagine generata con l'IA (SLOP). Una dashboard privata (`/admin`) gestisce la libreria delle immagini, la
-generazione delle SLOP e le impostazioni. Frontend Vite e TypeScript, Worker Cloudflare con D1 e R2, modelli OpenAI per descrizioni, prompt e
-immagini.
+generazione delle SLOP e le impostazioni. Frontend Vite e TypeScript, Worker Cloudflare con D1 e R2, modelli OpenAI per prompt, immagini e
+valutazioni.
 
 **Dove leggere:** `MASTER.md` per la mappa (file in uso, specifiche vigenti, migrazioni, rilascio), le specifiche in `docs/` per il
 comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
@@ -18,13 +18,12 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 
 - **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta finale
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
-  al browser prima della risposta. Durante il caricamento della REAL, **una chiamata multimodale genera la
-  descrizione editoriale neutra**: vede la REAL **intera** (l'originale, mai il ritaglio 4:5: decisione del 2026-11-15), il titolo
-  e il contesto Commons, ma **non conosce l'esistenza delle SLOP**.
-  Il modello successivo prepara premessa e prompt SLOP dalla REAL intera, dal profilo editoriale e dal contesto documentato, e
-  riceve le indicazioni della galleria. I contesti restano distinti.
-- **Risultati REAL** (decisione del 2026-11-19). A fine partita il giocatore vede la descrizione editoriale con elementi visibili
-  e contesto documentato, seguita dall’autore, dalla fonte e dalla licenza. Il testo Commons e le note di incertezza restano nel catalogo.
+  al browser prima della risposta. Le REAL non vengono analizzate né descritte da un modello (decisione del 2026-11-20). Il
+  modello delle proposte prepara premessa e prompt SLOP dalla REAL **intera** (l'originale, mai il ritaglio 4:5: decisione del
+  2026-11-15), dal suo titolo e dalla descrizione della fonte, e riceve le indicazioni della galleria.
+- **Risultati** (decisioni del 2026-11-20, che sostituiscono quella del 2026-11-19). A fine partita, per ogni REAL titolo, autore,
+  licenza con link, link alla foto originale e indicazione delle modifiche della copia, senza descrizione editoriale né data di
+  consultazione; per ogni SLOP il prompt e il modello. Le SLOP non hanno descrizione.
 - **Dashboard** (decisione del 2026-11-19). Gallerie è la sezione iniziale. Ogni galleria apre la propria griglia e i wizard
   «Carica REAL» e «Genera SLOP» su indirizzi dedicati nella stessa scheda. Il wizard REAL acquisisce dalle ricerche su Commons.
   Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino e
@@ -54,7 +53,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   finché l'owner non lo chiude. L’owner può accettare esplicitamente qualsiasi candidata salvata e valutata di un processo
   concluso o sospeso, anche con difetti critici, minori o incertezze (decisione del 2026-11-17). La conferma elenca le segnalazioni;
   valutazione originale e decisione dell’owner restano distinte. La foto entra come nuova, poi richiede copia, approvazione e pubblicazione.
-- **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP. La descrizione della REAL descrive l'immagine intera (l'originale); il ritaglio non deve eliminare elementi **fondamentali** per il significato della fotografia; in caso contrario
+- **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP. Il ritaglio non deve eliminare elementi **fondamentali** per il significato della fotografia; in caso contrario
   l'owner corregge l'inquadratura. Le SLOP si valutano **intere** prima di creare la copia 4:5.
 - **Inquadratura ed elaborazione** (decisioni del 2026-11-19 e 2026-11-20). Le nuove copie mostrano la foto intera nel 4:5 con bande
   nere. Il rettangolo 4:5 è subito disponibile sulla stessa area, bande comprese, con maniglie per puntatore e touchscreen.
@@ -62,7 +61,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   Allontanare due dita allarga il rettangolo, avvicinarle lo restringe. Le elaborazioni avviate nella finestra della foto mostrano
   al centro uno stato di lavorazione e bloccano i comandi fino all’esito.
 - **Il Worker gestisce ciò che riguarda l'API di OpenAI, il browser tutto il resto** (decisione del 2026-11-16, che sostituisce
-  quella del 2026-11-15 sul browser come sola interfaccia). Sul Worker: analisi, proposte editoriali, generazione e valutazione (il ciclo SLOP gira
+  quella del 2026-11-15 sul browser come sola interfaccia). Sul Worker: proposte editoriali, generazione e valutazione (il ciclo SLOP gira
   in un Workflow che continua anche se la dashboard si chiude), oltre a dati e archivio. Nel browser: inquadratura, trattamento delle
   SLOP con i cursori, conversione in copia di gioco (WebP) e misure, anche in gruppo con la pagina aperta; il Worker controlla e
   conserva la copia caricata. Un solo codificatore per REAL e SLOP: la compressione non deve distinguerle.

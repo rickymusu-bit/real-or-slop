@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 9.2.0
+# Foto e gallerie — specifica 10.1.0
 
-Stato: implementata nel ramo 1.52.0, da rilasciare. Aggiornata: 2026-11-20T19:30:00Z.
+Stato: implementata nel ramo 1.52.0, da rilasciare. Aggiornata: 2026-11-21T10:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -11,7 +11,7 @@ Stato: implementata nel ramo 1.52.0, da rilasciare. Aggiornata: 2026-11-20T19:30
 - La sezione non carica file e non cerca su Commons; ordinamento per data di aggiunta, visualizzazioni o accuratezza; le schede mostrano
   solo miniatura, origine e stato (2026-11-13).
 - Con le foto spuntate si possono cambiare stato o galleria da una barra che lascia visibile la griglia (2026-11-19).
-- Inquadratura, trattamento e analisi IA si gestiscono dal dettaglio aperto toccando una foto (2026-11-19).
+- Inquadratura e trattamento si gestiscono dal dettaglio aperto toccando una foto (2026-11-19; l'analisi IA è stata tolta il 2026-11-20).
 - **Niente tag** (2026-11-20): le foto di una galleria hanno in gran parte gli stessi tag, quindi i filtri per tag non servivano.
   Spariscono filtro, pillole, sezione del dettaglio, completamento, ripristino e distribuzione per tag (specifica `libreria-immagini`).
 
@@ -60,25 +60,18 @@ suo batch originario, ma esce dalla sua revisione operativa.
 
 - Origine, stato, dimensioni dell'originale, copia di gioco con formato e peso; visualizzazioni e classificazioni corrette con la
   percentuale; partite in corso che la includono; avvisi (licenza ND, copia mancante con «Prepara la copia di gioco»); misure della copia e, per una SLOP trattata, colore del trattamento (a colori, bianco e nero o seppia), misure anonime di riferimento e scarto dall'obiettivo.
-- **Campi:** descrizione per entrambe le origini; titolo solo per le REAL; fonte, autore e licenza solo per le REAL; prompt e modello solo per le SLOP; nessun tag. Le SLOP sono identificate dall’ID abbreviato. Ogni modifica si salva subito. La migrazione 0058 rimuove i titoli SLOP e la copia dei tag di partenza dai metadati delle figlie, conservando i titoli REAL e i parametri tecnici del trattamento. Rimossa «Spiegazione dopo la risposta», inutilizzata dal gioco; l’API rifiuta il campo e i metadati dell’origine sbagliata. La migrazione 0057 elimina anche le colonne obsolete di didascalie e vista iniziale.
+- **Campi:** titolo, descrizione della fonte, fonte, autore e licenza solo per le REAL; prompt e modello solo per le SLOP, che non hanno descrizione (2026-11-20); nessun tag. Le SLOP sono identificate dall’ID abbreviato. Ogni modifica si salva subito. La migrazione 0058 rimuove i titoli SLOP e la copia dei tag di partenza dai metadati delle figlie, conservando i titoli REAL e i parametri tecnici del trattamento. Rimossa «Spiegazione dopo la risposta», inutilizzata dal gioco; l’API rifiuta il campo e i metadati dell’origine sbagliata. La migrazione 0057 elimina anche le colonne obsolete di didascalie e vista iniziale.
 - **Azioni:** per nuove e approvate il dettaglio offre «Inquadratura» e i comandi del trattamento per le
-  SLOP (specifica `copie-di-gioco`, sezione 4.3). Per una REAL con copia pronta e IA disponibile offre anche analisi o nuova analisi
-  confermata della descrizione. Le SLOP non si analizzano.
+  SLOP (specifica `copie-di-gioco`, sezione 4.3). Nessuna analisi a pagamento e nessuna descrizione editoriale (2026-11-20).
   Per le pubblicate, «Modifica foto» rende disponibili questi comandi nella stessa finestra dopo il ritiro confermato. Sono disponibili
   anche «Approva», «Pubblica nel gioco», «Togli dalla pubblicazione»,
   «Elimina (nel cestino)», «Ripristina» ed «Elimina definitivamente» secondo lo stato della foto.
 - **Rigenerare una SLOP:** richiede un nuovo processo nello studio con conferma ed esame dell’immagine intera.
-- **Descrizione editoriale REAL:** elementi visibili e contesto documentato compaiono nei risultati. Le incertezze restano nel catalogo.
-  Questi campi si modificano anche per una pubblicata, senza ritirarla. Per una REAL senza descrizione si possono compilare
-  i campi a mano oppure avviare l’analisi combinata con conferma separata.
-- **Genera la descrizione con IA:** dal dettaglio di una REAL senza descrizione editoriale e fuori dal cestino, con conferma di una
-  chiamata a pagamento sull’originale intero. Se l’analisi precedente è interrotta o incerta, la conferma segnala il possibile
-  addebito già avvenuto. La foto pubblicata resta nel gioco.
 - **Fonte su Commons (REAL):** sopra il corpo del dettaglio, l'ultima data in cui il controllo notturno ha trovato il file oppure,
   se manca, la data della prima mancanza con le azioni possibili (verificare, ritirare o cestinare, correggere la pagina della fonte).
 - **Copie e misure:** «Inquadratura» mostra il riquadro 4:5 sulla foto adattata. Il riquadro si centra sull’asse in cui supera la foto
   per pareggiare le bande nere. Durante la preparazione
-  della copia, il salvataggio di inquadratura o trattamento e l’analisi, l’avviso al centro blocca la finestra fino all’esito. Le
+  della copia e il salvataggio di inquadratura o trattamento, l’avviso al centro blocca la finestra fino all’esito. Le
   misure mancanti delle copie si calcolano in background all’apertura della galleria.
 - **Trattamento di una SLOP:** «Senza/Con trattamento» e «Regola il trattamento», con i cursori e l'anteprima nella pagina
   (specifica `copie-di-gioco`, sezione 4.4). Le pubblicate sono ritirate con conferma e restano approvate; le partite in corso mantengono i propri byte. Controllare il nuovo crop prima di ripubblicare.

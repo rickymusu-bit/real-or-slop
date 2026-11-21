@@ -89,9 +89,9 @@ try:
     assert upload({**record,'sample':{'id':'another-real','metrics':m}})[0]==400  # identifying treatment payloads are rejected
     code,manual=upload(record);assert code==201 and manual['treatment']['settings']==chosen,manual
     assert upload(record)[1]['already_prepared'] is True
-    # A SLOP is never analysed: no tags (owner decision of 2026-11-20).
+    # Nothing is analysed any more: no tags, no description (owner decisions of 2026-11-20).
     control([])
-    code,refused=call('/'+result['id']+'/analyze',{'confirm':True},library=True);assert code==409 and 'solo le REAL' in refused['error'],refused
+    code,refused=call('/'+result['id']+'/analyze',{'confirm':True},library=True);assert code==404,refused
     assert control()==[] and load(b)['processes'][0]['calls']==6  # 2N
     # Exhaustion never creates a library image, and cannot consume another attempt after refresh.
     b=batch(gallery)
@@ -225,7 +225,7 @@ try:
     assert call('batches/'+run['id']+'/run',{'confirm':True,'phase':'images'})[0]==409  # one runner per batch
     run=wait_run(run);p=run['processes'][0]
     assert p['state']=='accepted' and len(p['attempts'])==2 and run['runner']['status']=='done',run
-    images.append(run['images'][0]['id']);assert run['images'][0]['analysis']['status']=='none'
+    images.append(run['images'][0]['id']);assert 'analysis' not in run['images'][0]
     assert [r['path'] for r in control()]==['/v1/images/generations','/v1/responses']*2  # 2 attempts, no analysis after acceptance
     # «Interrompi»: the step in progress ends, no further paid step starts.
     halt=batch(gallery)

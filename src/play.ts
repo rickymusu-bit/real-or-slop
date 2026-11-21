@@ -1,6 +1,6 @@
 /** The level game (spec `gioco-a-livelli`): level picker, one photo at a time with its countdown, REAL and SLOP buttons
  * (keys R and S), verdict after each answer, the photo covered when the page is left, results with the leaderboard form and the
- * final list (description and credits of each REAL, prompt of each SLOP). */
+ * final list (credits of each REAL, prompt and image model of each SLOP). */
 import "./play.css";
 import { photoViewer, type Viewer } from "./photo-viewer";
 import { MIN_AGE } from "../shared/legal";
@@ -14,7 +14,7 @@ import type { Level, Score } from "../shared/levels";
 interface LevelInfo { id: Level; label: string; photos: number; seconds: number; available: boolean }
 interface Question { id: string; number: number; image: string; alt: string }
 interface Credit { number: number; image: string; answer: "REAL" | "AI"; choice: "REAL" | "AI" | null; correct: boolean; timedOut: boolean;
-  title?: string; description?: string; author?: string; source?: string | null; license?: string; licenseUrl?: string | null; changes?: string; prompt?: string }
+  title?: string; author?: string; source?: string | null; license?: string; licenseUrl?: string | null; changes?: string; prompt?: string; model?: string | null }
 interface State {
   id: string; level: Level; seconds: number; phase: "preparing" | "active" | "completed" | "invalidated"; invalidReason: string | null;
   done: boolean; serverNow: number; expiresAt: number | null; total: number; answered: number; right: number; timedOut: number;
@@ -28,8 +28,7 @@ function realCredit(credit: Credit) {
   const details = [escape(credit.title || ""), credit.author ? `Autore: ${escape(credit.author)}` : "",
     credit.licenseUrl && credit.license ? `<a href="${safeUrl(credit.licenseUrl)}" target="_blank" rel="noopener noreferrer">${escape(credit.license)}</a>` : escape(credit.license || ""),
     credit.source ? `<a href="${safeUrl(credit.source)}" target="_blank" rel="noopener noreferrer">Foto originale</a>` : ""].filter(Boolean);
-  return `${credit.description ? `<p class="credit-description">${escape(credit.description)}</p>` : ""}
-    ${details.length ? `<p class="credit-source">${details.join(" · ")}</p>` : ""}
+  return `${details.length ? `<p class="credit-source">${details.join(" · ")}</p>` : ""}
     ${credit.changes ? `<p class="credit-changes">${escape(credit.changes)}; la versione modificata ha la stessa licenza dell'originale.</p>` : ""}`;
 }
 
@@ -135,7 +134,8 @@ async function play(sid: string) {
         <div class="game-media-surface credit-image"><img data-game-media draggable="false" src="${escape(c.image)}" alt="Foto ${c.number}" loading="lazy"></div>
         <div class="credit-text"><p class="credit-head"><strong>${c.answer === "REAL" ? "REAL" : "SLOP"}</strong> · ${c.timedOut ? "tempo scaduto" : c.correct ? "✓ risposta giusta" : "✗ risposta sbagliata"}</p>
         ${c.answer === "REAL" ? realCredit(c)
-          : `<p class="credit-prompt"><span>Prompt</span> <q lang="en">${escape(c.prompt || "")}</q></p>`}</div></li>`).join("")}</ol></section>`;
+          : `<p class="credit-prompt"><span>Prompt</span> <q lang="en">${escape(c.prompt || "")}</q></p>` +
+            (c.model ? `<p class="credit-model"><span>Modello</span> ${escape(c.model)}</p>` : "")}</div></li>`).join("")}</ol></section>`;
     markGameMedia(content());
     document.querySelector("#enter-form")?.addEventListener("submit", async event => {
       event.preventDefault();

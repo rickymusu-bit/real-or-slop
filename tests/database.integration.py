@@ -109,7 +109,7 @@ for position, image_id in enumerate((real['id'], slop['id'])):
         status, edited = call(f'{API}/{slop["id"]}/withdraw', {}); assert edited['status'] == 'approved' and edited['in_play'] == 1, edited
         held = sql(f"SELECT copy_key FROM images WHERE id='{slop['id']}'")[0]['copy_key']
         assert stored(held) and sql(f"SELECT count(*) AS n FROM retired_copies WHERE copy_key='{held}'")[0]['n'] == 1
-        status, edited = call(f'{API}/{slop["id"]}', {'revision': edited['revision'], 'description': 'Descrizione modificata.'}, method='PATCH')
+        status, edited = call(f'{API}/{slop["id"]}', {'revision': edited['revision'], 'prompt': 'A riot in a square at dusk, 1969'}, method='PATCH')
         assert status == 200 and edited['status'] == 'approved', edited
         status, again = call(f'{base}/api/sessions/{sid}', auth=False, opener=player)
         assert 'caption' not in again['question'], again['question']
@@ -122,7 +122,7 @@ assert call(f'{API}/{slop["id"]}/publish', {})[1]['status'] == 'published'
 items = listing()
 assert items[real['id']]['stats'] == {'views': 1, 'correct': 1}, items[real['id']]['stats']
 assert items[slop['id']]['stats'] == {'views': 1, 'correct': 0}, items[slop['id']]['stats']
-assert items[slop['id']]['status'] == 'published' and items[slop['id']]['description'] == 'Descrizione modificata.'
+assert items[slop['id']]['status'] == 'published' and items[slop['id']]['prompt'] == 'A riot in a square at dusk, 1969'
 # Start of an edit with no game in progress: out of publication, and its copy leaves the game bucket at once.
 held = sql(f"SELECT copy_key FROM images WHERE id='{slop['id']}'")[0]['copy_key']
 status, slop = call(f'{API}/{slop["id"]}/withdraw', {}); assert slop['status'] == 'approved' and slop['in_play'] == 0, slop

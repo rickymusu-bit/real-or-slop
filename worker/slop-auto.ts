@@ -30,8 +30,8 @@ async function openBatch(env: Env): Promise<AutoRow | null> {
 }
 
 async function batchView(env: Env, row: AutoRow) {
-  const images = (await env.DB.prepare(`SELECT id,status,generation_slot,copy_key,analysis_status FROM images WHERE generation_batch=? AND gallery_id=?
-    ORDER BY created_at,rowid`).bind(row.id, row.gallery_id).all<{ id: string; status: string; generation_slot: string | null; copy_key: string | null; analysis_status: string }>()).results;
+  const images = (await env.DB.prepare(`SELECT id,status,generation_slot,copy_key FROM images WHERE generation_batch=? AND gallery_id=?
+    ORDER BY created_at,rowid`).bind(row.id, row.gallery_id).all<{ id: string; status: string; generation_slot: string | null; copy_key: string | null }>()).results;
   const processes = await processViews(env, row.id);
   return { id: row.id, gallery_id: row.gallery_id, size: row.auto_size, status: row.auto_status, prompts_status: row.prompts_status,
     prompts_error: row.prompts_error, slots: row.auto_size, attempted: processes.filter(p => p.attempts.length).map(p => p.slot),
@@ -40,7 +40,7 @@ async function batchView(env: Env, row: AutoRow) {
     proposal_review: row.gallery_review === "pending" ? await galleryReview(env, row) : null,
     created_at: row.created_at, updated_at: row.updated_at, runner: runnerView(row),
     images: images.map(i => ({ id: i.id, status: i.status, index: parse<{ index?: number }>(i.generation_slot, {}).index ?? null,
-      copy: !!i.copy_key, analysis: i.analysis_status })),
+      copy: !!i.copy_key })),
     undecided: images.filter(i => i.status === "new").length };
 }
 

@@ -1,14 +1,27 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-20T21:30:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-21T10:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.52.0 — 2026-11-20T21:30:00Z
+## 1.52.0 — 2026-11-21T10:00:00Z
 
 - Controllo notturno delle fonti Commons: 50 REAL a notte, ciascuna tre mesi dopo l'ultimo controllo, con richieste da 50 all'API.
   Il numero si cambia da Impostazioni → Fonti Commons (da 0 a 500; 0 sospende).
   Un file sparito da Commons è solo segnalato: conteggio sulla scheda della galleria, etichetta «Fonte rimossa» sulla foto, nota nel
   dettaglio. Un file spostato aggiorna il link della fonte; correggere la fonte toglie la segnalazione. Migrazione 0065.
+
+## 1.51.0 — 2026-11-21T09:00:00Z
+
+- Niente descrizione editoriale delle REAL e niente analisi a pagamento: spariscono il passo di generazione del wizard, i campi del
+  dettaglio, le istruzioni «Descrizione delle REAL» e le API `/analyze` e `/analysis`. Il passo 2 del wizard tiene la descrizione
+  della fonte, che resta nel catalogo e accompagna la REAL nelle proposte SLOP automatiche.
+- Le SLOP non hanno più una descrizione: il campo sparisce dal dettaglio e dall'API.
+- Risultati di fine partita: per le REAL titolo, autore, licenza, link alla foto originale e modifiche della copia; per le SLOP prompt
+  e modello di immagini. «Come funziona» e «Fonti e crediti» lo dicono.
+- Le proposte SLOP automatiche ricevono originale, titolo e descrizione della fonte. Una REAL approvata o pubblicata con originale
+  disponibile può essere estratta anche senza descrizione.
+- Migrazione 0066: elimina i campi della descrizione editoriale e dell'analisi, svuota la descrizione delle SLOP e salva come versioni
+  correnti «Base comune» e «Premessa e prompt di galleria» proposte dal codice (le precedenti restano ripristinabili).
 
 ## 1.50.0 — 2026-11-20T16:30:00Z
 

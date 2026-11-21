@@ -19,7 +19,6 @@ export async function maintenance(env: Env, now = Date.now()) {
     env.DB.prepare("UPDATE slop_processes SET state='uncertain',error='Operazione interrotta: nessuna chiamata ripetuta' WHERE state IN ('running','prompting') AND updated_at<?").bind(interrupted),
     env.DB.prepare("UPDATE slop_attempts SET status='uncertain' WHERE status IN ('pending','generated') AND updated_at<?").bind(interrupted),
     env.DB.prepare("UPDATE paid_calls SET status='uncertain' WHERE status='pending' AND updated_at<?").bind(interrupted),
-    env.DB.prepare("UPDATE images SET analysis_status='uncertain',analysis_error='Analisi interrotta: nessuna chiamata ripetuta' WHERE analysis_status='running' AND updated_at<?").bind(interrupted),
   ]);
   const cutoff = new Date(now - 7 * 86_400_000).toISOString();
   // Candidates stay while a process is open or waits for the owner (no SLOP: every attempt stays visible until closed);

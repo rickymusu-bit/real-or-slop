@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 34.13.0, aggiornata il 2026-11-20T21:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 35.1.0, aggiornata il 2026-11-21T10:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -10,12 +10,15 @@ in `CHANGELOG.md`.
 ## Stato
 
 - **Ramo 1.52.0:** controllo notturno delle fonti Commons delle REAL, 50 a notte (modificabile da Impostazioni → Fonti Commons, da 0
-  a 500) dopo tre mesi dall'ultimo controllo, solo segnalazione nella galleria e nel dettaglio. Migrazione 0065. Ramo indipendente dalla PR #167 (1.51.0).
+  a 500) dopo tre mesi dall'ultimo controllo, solo segnalazione nella galleria e nel dettaglio. Migrazione 0065.
+- **Integrata in main la 1.51.0 (PR #167):** niente descrizione editoriale né analisi a pagamento delle REAL, niente descrizione delle SLOP; nei
+  risultati i crediti delle REAL e prompt e modello delle SLOP. Le proposte SLOP leggono originale, titolo e descrizione della fonte.
+  Migrazione 0066, che salva anche le proposte di «Base comune» e «Premessa e prompt di galleria» (su richiesta dell'owner). La 0064
+  del primo giro della PR, mai applicata in produzione, è stata tolta.
 - **Integrata in main la 1.50.0 (PR #166):** niente tag (decisione dell'owner del 2026-11-20). L'analisi a pagamento riguarda solo le REAL e restituisce la
   descrizione editoriale; le SLOP non si analizzano e il tetto del ciclo passa da `1 + 2N` a `2N` chiamate. Bianco e nero, seppia o
   colore del trattamento SLOP si ricavano dalla crominanza residua misurata sulla REAL (misure 4, trattamento 6). Migrazione 0063.
-  Dopo il rilascio: salvare in Impostazioni le proposte di «Base comune» e «Descrizione delle REAL»; le copie si rimisurano da sole
-  all'apertura delle gallerie.
+  Le copie si rimisurano da sole all'apertura delle gallerie.
 - **Integrata in main la 1.49.0 (PR #165):** il riquadro si centra sull’asse in cui supera la foto, per mantenere simmetriche le bande nere.
 - **Integrata in main la 1.48.0 (PR #164):** ritaglio 4:5 direttamente sulla foto adattata, compresa la parte con bande nere.
 - **Integrata in main la 1.47.0 (PR #163):** foto intera di default nel 4:5, maniglie, gesto a due dita corretto e «Salva» visibile su mobile.
@@ -84,15 +87,15 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, analisi delle REAL, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, dati | `docs/libreria-immagini.md` | 9.2.0 |
-| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.3.2 |
+| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, dati | `docs/libreria-immagini.md` | 10.1.0 |
+| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.0.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 5.0.0 |
-| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 11.0.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 9.2.0 |
-| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 3.2.1 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.5.0 |
-| Privacy e note legali | `docs/privacy-note-legali.md` | 1.3.2 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.0.0 |
+| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 12.0.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 10.1.0 |
+| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.6.0 |
+| Privacy e note legali | `docs/privacy-note-legali.md` | 1.4.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
 delle vecchie pipeline e le snapshot di `AGENTS.md` e `MASTER.md`. Restano nella cronologia git: `git log -- docs/<nome>` trova il
@@ -130,7 +133,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
   protezioni `media-privacy.ts`.
 - Dashboard: `library.ts` (finestra della galleria, Statistiche e Impostazioni; CSS `library.css`, `database.css`, `admin-navigation.css`,
   `admin-loading.css`, `model-context.css`, `caption-count.css`), gallerie `galleries.ts` e `galleries.css`, pagine dei wizard `gallery-wizard.ts` e `gallery-paths.ts`, wizard REAL `real-wizard.ts` e `real-wizard.css`, studio SLOP
-  `slop-studio.ts` e `slop-studio.css`, campi editoriali `editorial-ui.ts`, riquadro dei batch automatici `slop-auto.ts` e `slop-auto.css`, statistiche `stats.ts` e
+  `slop-studio.ts` e `slop-studio.css`, riquadro dei batch automatici `slop-auto.ts` e `slop-auto.css`, statistiche `stats.ts` e
   `stats.css`, grafico della distribuzione `database-chart.ts`, anteprima a pressione prolungata `image-preview.ts` e
   `image-preview.css`, editor di formato e ritaglio `crop-editor.ts` e
   `crop-editor.css`, avviso di elaborazione `photo-processing.ts` e `admin-loading.css`, cursori del trattamento delle SLOP con anteprima
@@ -140,7 +143,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera),
   `commons-check.ts` (controllo notturno delle fonti Commons delle REAL).
 - Libreria `library.ts` (stati, modifiche, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
-  descrizione delle REAL `analysis.ts`, gallerie `galleries.ts`, cancellazione di gallerie e file `gallery-removal.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
+  gallerie `galleries.ts`, cancellazione di gallerie e file `gallery-removal.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
 - SLOP: studio `slop.ts`, conteggi del catalogo `slop-references.ts`, generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
   `slop-runner.ts`, batch automatici `slop-auto.ts`, preparazione e conferma delle proposte `slop-gallery.ts`, selezioni firmate `slop-preview.ts`.
@@ -152,7 +155,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 `models.ts`, tipi dei batch `slop-proposals.ts`, preferenze di composizione `slop-composition.ts`, formati e ricetta della copia
 `game-copy.ts`, misure e trattamento `copy-treatment.ts`, licenze ND
 `licenses.ts`, pulizia dei metadati `media-clean.ts`, livelli e punteggio `levels.ts`, costanti legali `legal.ts`, controllo delle
-immagini `editorial.ts` (descrizioni, brief e valutazioni), `image-label.ts` (titolo REAL o ID SLOP), `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
+immagini `editorial.ts` (brief e valutazioni), `image-label.ts` (titolo REAL o ID SLOP), `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
 
 **Test** (`tests/`): unitari `*.test.ts` (`npm test`); d'integrazione `*.integration.py`, eseguiti da `scripts/integration.py` con il
 modello finto `fake_openai.py` (che simula anche l'API di Commons per il controllo delle fonti) e gli aiuti `catalog.py`, `game_copy.py`, `long_press.py`, `local_db.py` (sole fixture nello SQLite di D1 isolato); `cloudflare-workers.mjs` sostituisce in Node
@@ -194,6 +197,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0062 | rimuove i contenuti insieme alla galleria e registra i file R2 da eliminare |
 | 0063 | elimina tag, alias e categorie con i trigger, `generated_tags` e `categories_completed_at`; ogni altro dato conservato |
 | 0065 | data dell'ultimo controllo della fonte Commons e della mancanza del file; la data di acquisizione vale come primo controllo; chiave delle Impostazioni per il numero di controlli a notte |
+| 0066 | elimina descrizione editoriale, provenienza, testo Commons originale e campi dell'analisi; svuota la descrizione delle SLOP; versioni correnti di «Base comune» e «Premessa e prompt di galleria» uguali alle proposte |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

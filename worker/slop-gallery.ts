@@ -7,7 +7,6 @@ import { loopSnapshot } from "./slop-generation";
 import { PREVIEW_TTL_MS, readPreview, signPreview } from "./slop-preview";
 import { runnerView, RUNNER_STALE_MS } from "./slop-runner";
 import { MAX_BATCH } from "../shared/slop-proposals";
-import { realDescription } from "../shared/editorial";
 import { validMetrics } from "../shared/copy-treatment";
 import { compositionAt } from "../shared/slop-composition";
 import { IMAGE_MARK, jsonWithImage } from "./image-body";
@@ -29,15 +28,11 @@ export interface GalleryBatch {
 }
 interface TemporarySource { slot: number; process_id: string; source_id: string; revision: number }
 
-function editorial(row: Row) {
-  try { return realDescription(JSON.parse(row.real_description || "null")); }
-  catch { return null; }
-}
 function requireInstructions(gallery: Gallery) {
   if (!galleryReady(gallery)) throw new HttpError(409, "Salva le Indicazioni SLOP della galleria per abilitare la generazione automatica");
 }
 function reference(row: Row) {
-  return {id: row.id, title: row.title, description: editorial(row),
+  return {id: row.id, title: row.title, description: row.description,
     file: `/api/admin/library/${row.id}/file`, original: `/api/admin/library/${row.id}/original`};
 }
 
@@ -48,14 +43,14 @@ export async function previewGallery(env: Env, data: Record<string, unknown>) {
   const gallery = await findGallery(env, data.gallery_id);
   requireInstructions(gallery);
   const candidates = (await env.DB.prepare(`SELECT * FROM images WHERE gallery_id=? AND ${GALLERY_SOURCE} ORDER BY random()`)
-    .bind(gallery.id).all<Row>()).results.filter(row => editorial(row));
+    .bind(gallery.id).all<Row>()).results;
   const chosen: Row[] = [];
   // Random order first, then skip originals missing from quarantine. Limit concurrent R2 reads.
   for (let i = 0; i < candidates.length && chosen.length < size; i += 5) {
     const checked = await Promise.all(candidates.slice(i, i + 5).map(async row => await env.QUARANTINE?.head(row.original_key) ? row : null));
     chosen.push(...checked.filter((row): row is Row => row !== null));
   }
-  if (chosen.length < size) throw new HttpError(409, `REAL eleggibili disponibili: ${chosen.length}. Riduci la quantità o aggiungi REAL approvate o pubblicate con originale e descrizione editoriale.`);
+  if (chosen.length < size) throw new HttpError(409, `REAL eleggibili disponibili: ${chosen.length}. Riduci la quantità o aggiungi REAL approvate o pubblicate con originale.`);
   const rows = chosen.slice(0, size), config = await loopSnapshot(env), expires = Date.now() + PREVIEW_TTL_MS;
   const token = await signPreview(env, {version: 1, id: id(), expires, gallery: {id: gallery.id, revision: gallery.revision},
     sources: rows.map(r => ({id: r.id, revision: r.revision})), config});
@@ -68,7 +63,7 @@ const sources = async (env: Env, batchId: string) =>
 async function checkedSource(env: Env, gallery: string, source: {id: string; revision: number}) {
   const row = await env.DB.prepare(`SELECT * FROM images WHERE id=? AND revision=? AND gallery_id=? AND ${GALLERY_SOURCE}`)
     .bind(source.id, source.revision, gallery).first<Row>();
-  if (!row || !editorial(row) || !await env.QUARANTINE?.head(row.original_key)) return null;
+  if (!row || !await env.QUARANTINE?.head(row.original_key)) return null;
   return row;
 }
 async function checkedSources(env: Env, gallery: string, list: {id: string; revision: number}[]) {
@@ -190,7 +185,8 @@ export async function writeGalleryProposal(env: Env, batchId: string, slot: numb
     const result = responseJson(await paid(env, "prompts", model, jsonWithImage({model,
       instructions: [approved.base.body, approved.proposal.body, RULES].join("\n\n"),
       input: [{role: "user", content: [{type: "input_text", text: JSON.stringify({
-        reference: {title: row.title, editorial_description: editorial(row), commons_description: row.commons_description || ""},
+        // The Commons title and source description (corrected by the owner, if needed) with the whole original.
+        reference: {title: row.title, description: row.description},
         gallery: {title: current.title, description: current.description, slop_instructions: current.slop_instructions},
         previous_premises: previous, composition_preference: compositionAt(slot),
       })}, {type: "input_image", image_url: IMAGE_MARK, detail: "high"}]}],
