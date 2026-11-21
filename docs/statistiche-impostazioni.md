@@ -1,6 +1,6 @@
-# Statistiche e Impostazioni — specifica 4.4.0
+# Statistiche e Impostazioni — specifica 4.5.0
 
-Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30:00Z.
+Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-21T09:00:00Z.
 
 ## 1. Decisioni dell'owner (2026-11-12)
 
@@ -16,7 +16,7 @@ si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ri
 
 - **Modelli:** modello di testo, modello di immagini (con la data di dismissione dove nota) e qualità delle immagini tra quelle ammesse;
   se il modello scelto non ammette la qualità salvata, si torna a `high`. Lo studio SLOP la conserva nello snapshot.
-- **Contesto dei modelli:** i quattro testi (Base, Descrizione delle REAL, Premessa e prompt di galleria, Valutazione delle SLOP) con le versioni, il
+- **Contesto dei modelli:** i tre testi (Base, Premessa e prompt di galleria, Valutazione delle SLOP) con le versioni, il
   ripristino e la proposta del codice; un avviso quando il testo in vigore dei prompt è stato scritto per le gemelle e blocca lo
   studio (specifica `libreria-immagini`, sezione 7).
 - **Classifica:** verifica di un codice partita (soprannome, livello, punteggio, data), Nascondi, Mostra, Cancella (per sempre, per le
@@ -38,7 +38,7 @@ Periodo: ultimi 7 giorni, ultimi 30 (predefinito) o da sempre; «Aggiorna». API
 - **Partite del periodo**, per livello: iniziate, concluse, non concluse, scadute prima dell'inizio, punteggio medio delle concluse.
 - **Risposte delle partite concluse:** foto giocate, REAL e SLOP riconosciute, accuratezza bilanciata, foto scadute; voci in classifica
   e nascoste.
-- **Chiamate a pagamento:** per tipo (analisi, proposte editoriali e prompt SLOP, immagini, valutazioni) numero, token in ingresso e in uscita, esiti incerti evidenziati;
+- **Chiamate a pagamento:** per tipo (analisi delle foto, solo storiche dal 2026-11-20; proposte editoriali e prompt SLOP; immagini; valutazioni) numero, token in ingresso e in uscita, esiti incerti evidenziati;
   le ultime 200 chiamate del periodo con filtri per tipo ed esito. Nessun importo.
 - **Equilibrio del catalogo:** REAL e SLOP pubblicate e approvate, quota di REAL tra le pubblicate con la fascia 40–60% e un avviso non
   bloccante fuori fascia, livelli giocabili e foto mancanti agli altri. Le copie nuove sono tutte 4:5.

@@ -3,12 +3,12 @@ import "./slop-auto.css";
 import { prepareItemCopy, type TreatableItem } from "./game-copy";
 import { escape } from "../shared/html";
 import { onLongPress, openPreview } from "./image-preview";
-import type { RealDescription } from "../shared/editorial";
 
 import { type Gallery } from "./galleries";
 interface AutoImage { id: string; status: string; index: number | null; copy: boolean; analysis: string }
 interface Config { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string }
-interface Reference {id: string; title: string; description: RealDescription; file: string; original: string}
+/** A REAL drawn for the gallery: its title and source description (Commons, corrected by the owner). */
+interface Reference {id: string; title: string; description: string; file: string; original: string}
 interface AutoPreview {
   token: string; expires: number; config: Config;
   references: Reference[];
@@ -208,7 +208,7 @@ export function mountSlopAuto(root: HTMLElement | null, controls: HTMLElement | 
       state?.batch?.proposal_review?.references.find(r => r.real?.id === key)?.real;
     if (!ref) return;
     openPreview({src: ref.original, alt: "Originale REAL intero", title: ref.title,
-      description: ref.description.visible, extra: `<p>Contesto documentato: ${escape(ref.description.documented_context)}</p><p>Incertezze: ${escape(ref.description.uncertainties)}</p>`});
+      description: ref.description});
   };
   onLongPress(controls, "[data-auto-reference]", showReference);
   controls.addEventListener("click", async event => {

@@ -1,4 +1,4 @@
-"""Publishes a small catalogue of REAL (with a description) and SLOP photos through the admin API of the local Worker, for
+"""Publishes a small catalogue of REAL (with credits) and SLOP (with prompt and model) photos through the admin API of the local Worker, for
 the game checks, and removes it afterwards."""
 import io
 import json
@@ -31,12 +31,11 @@ def publish(api, token, prefix, real=10, slop=10, seed=0):
         out = io.BytesIO(); picture.save(out, 'PNG')
         item = _call(api, token, '/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': origin, 'title': f'{prefix}-{origin}-{index}',
                      'prompt': f'A street scene number {index}, 1960s' if origin == 'SLOP' else '',
+                     'model': 'gpt-image-2' if origin == 'SLOP' else '',
                      'description': f'Testo Commons della foto {index}' if origin == 'REAL' else ''}), raw=out.getvalue(), mime='image/png')
         item = _call(api, token, f'/{item["id"]}/copy', raw=game_copy(out.getvalue()), mime='image/webp')
         credits = {'author': f'Autrice {index}', 'source_url': f'https://commons.wikimedia.org/wiki/File:{prefix}-{index}.jpg',
-                   'license_name': 'CC BY 4.0', 'license_url': 'https://creativecommons.org/licenses/by/4.0/',
-                   'real_description': {'visible': f'Descrizione editoriale {index}', 'documented_context': f'Contesto documentato {index}',
-                                        'uncertainties': f'Nota interna {index}'}} if origin == 'REAL' else {}
+                   'license_name': 'CC BY 4.0', 'license_url': 'https://creativecommons.org/licenses/by/4.0/'} if origin == 'REAL' else {}
         if credits: item = _call(api, token, f'/{item["id"]}', {'revision': item['revision'], **credits}, method='PATCH')
         _call(api, token, f'/{item["id"]}/approve', {'rights_confirmed': True})
         _call(api, token, f'/{item["id"]}/publish', {})

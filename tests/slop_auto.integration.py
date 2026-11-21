@@ -51,8 +51,10 @@ try:
     instructions=draft['slop_instructions']+' Preserva l’architettura della piazza.'
     gallery=update_gallery(gallery,instructions)
 
-    two=real(gallery=other['id']); no_description=real(described=False,gallery=gallery['id']); outside=real(gallery=other['id'])
-    photos.extend([two['id'],no_description['id'],outside['id']])
+    two=real(gallery=other['id']); unavailable=real(gallery=gallery['id']); outside=real(gallery=other['id'])
+    photos.extend([two['id'],unavailable['id'],outside['id']])
+    # Without its original in the quarantine a REAL cannot be drawn (no editorial description is needed since 2026-11-20).
+    sql(f"UPDATE images SET original_key='missing-unavailable-original' WHERE id='{unavailable['id']}'")
     assert two['id'] in [i['id'] for i in call('?gallery='+other['id'],library=True)[1]['items']]
     code,two=call('/'+two['id']+'/publish',{},library=True); assert code==200,two
     two=assign_gallery(two,gallery['id'])
@@ -95,7 +97,7 @@ try:
         supplied,picture=payload['input'][0]['content']
         given=json.loads(supplied['text'])
         assert given['gallery']=={'title':gallery['title'],'description':gallery['description'],'slop_instructions':instructions}
-        assert given['reference']=={'title':ref['title'],'editorial_description':DESCRIPTION,'commons_description':'Original Commons text'}
+        assert given['reference']=={'title':ref['title'],'description':DESCRIPTION}
         original=call('/'+ref['id']+'/original',library=True)[1]
         assert base64.b64decode(picture['image_url'].split(',')[1])==original
         assert Image.open(io.BytesIO(original)).size==(180,120)

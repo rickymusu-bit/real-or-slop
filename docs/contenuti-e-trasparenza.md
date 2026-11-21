@@ -1,6 +1,6 @@
-# Contenuti delle SLOP e trasparenza — specifica 1.3.2
+# Contenuti delle SLOP e trasparenza — specifica 1.4.0
 
-Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30:00Z.
+Stato: implementata nel ramo 1.51.0, da rilasciare. Aggiornata: 2026-11-21T09:00:00Z.
 Valgono per ogni modello che produce contenuti del sito e per la revisione dell'owner.
 
 ## 1. Che cosa può comparire in una SLOP
@@ -30,7 +30,7 @@ Valgono per ogni modello che produce contenuti del sito e per la revisione dell'
 - Nel batch di galleria l’owner legge le premesse e può aprire i prompt prima di confermare la generazione. Le indicazioni possono
   richiedere luoghi o edifici riconoscibili e un fatto inventato significativo per un evento, trattato come ipotesi editoriale.
   L’owner rivede anche le immagini generate, compresi elementi aggiunti dal generatore come volti e scritte.
-- Il modello che descrive le REAL non sa che esistono immagini generate: la base comune del contesto non ne parla.
+- Dal 2026-11-20 nessun modello descrive le REAL; i modelli che restano (proposte e valutazione delle SLOP) lavorano sulle SLOP.
 - Le REAL di Commons possono ritrarre persone vive: sono foto autentiche. Le valuta l'owner al caricamento.
 
 ## 3. Trasparenza e protezioni
@@ -50,6 +50,6 @@ Valgono per ogni modello che produce contenuti del sito e per la revisione dell'
   possono essere anche ridotte, sgranate o sbiadite, come le immagini false che circolano davvero», al posto di «REAL e SLOP passano per
   la stessa preparazione», che non sarebbe più vera), «Fonti e crediti» e i Termini d'uso (specifica `privacy-note-legali`, sezione 3,
   su richiesta dell'owner del 2026-11-14; la frase dei Termini è stata verificata da un legale lo stesso giorno).
-- **Durante la partita** nessun testo accompagna la foto; descrizione, fonti e prompt arrivano solo alla fine.
+- **Durante la partita** nessun testo accompagna la foto; crediti delle REAL, prompt e modello delle SLOP arrivano solo alla fine.
 - **Licenze:** le SLOP non hanno licenza restrittiva; valgono i termini d'uso del sito, che vietano di diffonderle come vere o di
   togliere il marchio (specifica `privacy-note-legali`).

@@ -8,7 +8,8 @@ export interface Gallery { id: string; title: string; description: string; slop_
 export const GALLERY_DESCRIPTION_MAX = 3000;
 export const GALLERY_INSTRUCTIONS_MAX = 4000;
 export const galleryReady = (gallery: Gallery) => !!gallery.slop_instructions.trim();
-export const GALLERY_SOURCE = "origin='REAL' AND status IN ('approved','published') AND original_key<>'' AND real_description IS NOT NULL";
+/** REAL a gallery can draw on for automatic SLOP: approved or published, with its original (no editorial description since 2026-11-20). */
+export const GALLERY_SOURCE = "origin='REAL' AND status IN ('approved','published') AND original_key<>''";
 
 export async function findGallery(env: Env, value: unknown): Promise<Gallery> {
   if (typeof value !== "string" || !/^[\w-]{1,64}$/.test(value)) throw new HttpError(400, "Scegli una galleria");

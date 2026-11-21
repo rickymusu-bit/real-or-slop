@@ -43,7 +43,7 @@ with sync_playwright() as p:
         page = context.new_page()
         errors = []
         page.on('pageerror', lambda error: errors.append(str(error)))
-        # Cost confirmations: the two REAL photos are analysed (fake model), the SLOP is not.
+        # Confirmations of the dashboard (no paid analysis of the photos since 2026-11-20).
         confirms = []
         def answer(dialog):
             confirms.append(dialog.message)
@@ -73,17 +73,16 @@ with sync_playwright() as p:
         page.locator('#library-search').fill('no-such-dashboard-image')
         expect(page.locator('#library-grid .library-card')).to_have_count(0)
         page.locator('#library-search').fill('')
-        # Each photo can still be analysed in its detail.
+        # The detail of a REAL has no analysis and no editorial description: only its source description (2026-11-20).
         for picture_file in (picture(f'{name}-rivoli.jpg', (180, 40, 30), (320, 200)), picture(f'{name}-spare.jpg', (30, 160, 40), (200, 320))):
             add(page, picture_file, 'REAL')
         page.locator('[data-view=new]').click()
-        for title in (f'{name}-rivoli', f'{name}-spare'):
-            page.get_by_role('button', name=f'Apri {title}').click()
-            page.locator('#library-analyze').click()
-            expect(page.locator('#library-detail-message')).to_contain_text('Analisi completata.')
-            page.locator('.library-detail-close button').click()
+        page.get_by_role('button', name=f'Apri {name}-rivoli').click()
+        expect(page.locator('#library-detail [data-editorial], #library-analyze, #library-description-analysis, .library-analysis')).to_have_count(0)
+        expect(page.locator('#library-detail label', has=page.locator('[data-field=description]'))).to_contain_text('Descrizione della fonte')
+        page.locator('.library-detail-close button').click()
         page.locator('[data-view=library]').click()
-        assert 'chiamata a pagamento' in confirms[0] and '$' not in confirms[0], confirms
+        expect(page.locator('#library-analysis')).to_have_count(0)
 
         # Selecting a new image keeps keyboard focus and shows the matching commands below the scroll viewport.
         spare = page.get_by_role('checkbox', name=f'Seleziona {name}-spare')
@@ -110,7 +109,6 @@ with sync_playwright() as p:
         rivoli_card.locator('.library-open').click()
         detail = page.locator('#library-detail')
         expect(detail.locator('.library-tags, #library-tag-input, #library-complete, #library-restore, [data-missing-categories]')).to_have_count(0)
-        expect(detail.locator('[data-editorial=visible]')).not_to_have_value('')
         expect(detail.locator('[data-stats]')).to_have_text('Vista 0 volte / classificata correttamente 0')
         detail.locator('.library-detail-close button').click()
         slop=add(page, picture(f'{name}-street.jpg', (40, 40, 190), (300, 300)), 'SLOP')
@@ -171,13 +169,12 @@ with sync_playwright() as p:
         page.locator('[name=open_game_hours]').fill('0'); page.locator('#library-games-form button').click()
         expect(page.locator('[name=open_game_hours]')).to_have_value('0')  # the browser stops it: minimum 1
         page.locator('[name=open_game_hours]').fill('24')
-        # «Statistiche»: the analyses of this run are among the paid calls.
+        # «Statistiche»: this run made no paid call.
         page.get_by_role('button', name='Statistiche').click()
         stats = page.locator('#stats-body')
         expect(stats.locator('.stat-tile', has_text='partite in corso adesso')).to_be_visible()
-        expect(stats.locator('.stats-calls tbody tr', has_text='Analisi delle foto').first).to_be_visible()
-        stats.locator('[data-stats-kind]').select_option('images')
         expect(stats.locator('.stats-calls tbody tr', has_text='Analisi delle foto')).to_have_count(0)
+        stats.locator('[data-stats-kind]').select_option('images')
         stats.locator('[data-stats-period]').select_option('7')
         expect(stats.locator('[data-stats-period]')).to_have_value('7')
         expect(stats.locator('.stats-levels li')).to_have_count(4)
@@ -187,7 +184,7 @@ with sync_playwright() as p:
         page.locator('#library-contexts summary').first.click()
         base_field = page.locator('[data-context=base]')
         expect(base_field).to_have_value(re.compile('^Lavori per un archivio fotografico italiano'))
-        expect(page.locator('[data-context]')).to_have_count(4)
+        expect(page.locator('[data-context]')).to_have_count(3)
         expect(page.locator('[data-context=slop_gallery_prompt]')).to_have_value(re.compile('galleria tematica'))
         approved = base_field.input_value()
         base_field.fill(approved + '\nProva dalla dashboard.')
@@ -205,7 +202,8 @@ with sync_playwright() as p:
         # No vocabulary of tags in Settings any more.
         expect(page.locator('#library-vocabulary')).to_have_count(0)
         expect(page.locator('.settings-index button')).to_have_text(['Modelli', 'Generazione', 'Istruzioni IA', 'Partite', 'Classifica'])
-        expect(page.locator('[data-context-part=analysis] h3')).to_have_text('Descrizione delle REAL')
+        expect(page.locator('[data-context-part]')).to_have_count(3)
+        expect(page.locator('[data-context-part=analysis]')).to_have_count(0)
         page.locator('[data-admin-tab=galleries]').click()
         open_gallery(page, gallery_id)
 
@@ -213,14 +211,7 @@ with sync_playwright() as p:
             page.get_by_role('button', name=f'Apri {title}').click()
             dialog = page.locator('#library-detail')
             expect(dialog).to_contain_text('copia di gioco WebP')
-            if real:
-                expect(dialog.locator('.library-analysis')).to_contain_text('Analizzata')
-                redo = dialog.get_by_role('button', name='Rifai l’analisi con IA (a pagamento)')
-                redo.click()
-                expect(dialog.locator('#library-detail-message')).to_contain_text('Analisi completata.')
-                assert 'descrizione editoriale sarà sostituita' in confirms[-1]
-            else:
-                expect(dialog.locator('#library-analyze, #library-description-analysis')).to_have_count(0)  # a SLOP is never analysed
+            expect(dialog.locator('#library-analyze, #library-description-analysis, [data-editorial]')).to_have_count(0)
             expect(dialog.locator('#library-crop')).to_be_visible()
             expect(dialog.locator('[data-field=caption], [data-field=explanation]')).to_have_count(0)
             for key in ('source_url', 'author', 'license_name', 'license_url'):
@@ -229,7 +220,9 @@ with sync_playwright() as p:
             expect(dialog.locator('[data-start-tags]')).to_have_count(0)
             for key in ('prompt', 'model'):
                 expect(dialog.locator(f'[data-field={key}]')).to_have_count(0 if real else 1)
-            field = dialog.locator('[data-field=description]')
+            # The source description of a REAL is editable; a SLOP has no description, its prompt instead.
+            field = dialog.locator('[data-field=description]' if real else '[data-field=prompt]')
+            expect(dialog.locator('[data-field=description]')).to_have_count(1 if real else 0)
             field.fill(description); field.blur()
             expect(dialog.locator('#library-detail-message')).to_contain_text('Salvato')
             expect(dialog.locator('#library-tag-input, .library-tags')).to_have_count(0)
