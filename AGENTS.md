@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 32.2.0, aggiornata il 2026-11-21T18:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 33.0.0, aggiornata il 2026-11-21T23:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -19,22 +19,25 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 - **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta finale
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
   al browser prima della risposta. Le REAL non vengono descritte da un modello (decisione del 2026-11-20); su richiesta confermata
-  un modello ne misura soltanto affollamento e dettaglio, con soglie per galleria e sola segnalazione (decisioni del 2026-11-21,
-  specifica `libreria-immagini`, sezione 10). Il
+  un modello ne misura soltanto affollamento e dettaglio, con soglie per galleria e sola segnalazione, e ne propone fino a tre idee
+  di falsificazione che l'owner approva (decisioni del 2026-11-21, specifiche `libreria-immagini`, sezione 10, e `generazione-slop`). Il
   modello delle proposte prepara premessa e prompt SLOP dalla REAL **intera** (l'originale, mai il ritaglio 4:5: decisione del
-  2026-11-15), dal suo titolo e dalla descrizione della fonte, e riceve le indicazioni della galleria.
+  2026-11-15), dal suo titolo e dalla descrizione della fonte, sviluppa l'idea approvata e riceve le indicazioni della galleria. La REAL
+  ispira la SLOP senza essere copiata: genere di foto, tecnica e livelli sì; scena, composizione, segni dell'esemplare e persone no.
 - **Risultati** (decisioni del 2026-11-20, che sostituiscono quella del 2026-11-19). A fine partita, per ogni REAL titolo, autore,
   licenza con link, link alla foto originale e indicazione delle modifiche della copia, senza descrizione editoriale né data di
   consultazione; per ogni SLOP il prompt e il modello. Le SLOP non hanno descrizione.
 - **Dashboard** (decisione del 2026-11-19). Gallerie è la sezione iniziale. Ogni galleria apre la propria griglia e i wizard
   «Carica REAL» e «Genera SLOP» su indirizzi dedicati nella stessa scheda. Il wizard REAL acquisisce dalle ricerche su Commons.
-  Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino e
-  cambio galleria. La barra lascia visibile la griglia.
-- **Generazione SLOP manuale o automatica** (decisione del 2026-11-18, #157, specifica `generazione-slop` 10.3.0).
-  Manuale: galleria, prompt e ancoraggi scritti dall’owner. Automatica: galleria con indicazioni salvate, estrazione casuale gratuita
-  e anteprima delle REAL idonee. Prima conferma per preparare premessa e prompt, seconda per generare dai prompt presentati. Le
+  Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino,
+  cambio galleria e, per le REAL, misura e proposta di idee a pagamento. La barra lascia visibile la griglia.
+- **Generazione SLOP manuale o automatica** (decisione del 2026-11-18, #157, specifica `generazione-slop` 13.0.0).
+  Manuale: galleria, prompt e ancoraggi scritti dall’owner. Automatica: galleria con indicazioni salvate, estrazione gratuita
+  delle REAL con un'idea approvata libera, una per REAL, corretta su affollamento e dettaglio (decisioni del 2026-11-21), e anteprima. Prima conferma per preparare premessa e prompt, seconda per generare dai prompt presentati. Le
   proposte cambiate, annullate o scadute non autorizzano chiamate immagine. Le SLOP ereditano la galleria e le REAL restano
-  utilizzabili nel gioco e nelle estrazioni. Conservare i riferimenti soltanto fino alla conferma, all’annullamento o alla scadenza.
+  utilizzabili nel gioco e nelle estrazioni. Conservare i riferimenti soltanto fino alla fine di ogni processo (accettazione o
+  chiusura), all’annullamento o alla scadenza; ogni idea dà al massimo una SLOP e diventa usata all'accettazione (decisione del
+  2026-11-21, che sostituisce la cancellazione alla conferma).
   Ogni foto appartiene a una galleria. La decisione di ripartire da zero azzera D1 con la migrazione 0061 e rimuove il registro
   dei legami. L’azzeramento riguarda il database, con impostazioni e dati di gioco. La migrazione agisce esclusivamente sul D1.
   Le persone raffigurate nelle generazioni sono inventate.

@@ -21,6 +21,7 @@ import { slopRoute } from "./slop";
 import { candidateFile } from "./slop-generation";
 import { currentCopyCorrect, currentCopyViews, gamesInPlay, retireCopy, reviveCopy, statsOf, sweepRetired } from "./in-play";
 import { galleryThresholds, latestMeasures, measureReal, measuresOf, measureView } from "./real-measure";
+import { ideaRoute, ideasOf, proposeIdeas } from "./real-ideas";
 
 const base = "/api/admin/library";
 const MAX_PIXELS = 32_000_000;
@@ -36,6 +37,7 @@ export interface Row {
   generation_batch: string | null; generation_slot: string | null; generation_quality: string | null;
   copy_crop: string | null;
   copy_metrics: string | null; copy_treatment: string | null; source_checked_at: string | null; source_missing_at: string | null;
+  ideas_reason: string;
 }
 const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
@@ -74,7 +76,8 @@ function parseSlot(value: string | null): unknown {
   try { return value ? JSON.parse(value) : null; } catch { return null; }
 }
 const parseJson = (value: string | null): unknown => { try { return value ? JSON.parse(value) : null; } catch { return null; } };
-interface Extra { stats?: { views: number; correct: number }; in_play?: number; measure?: ReturnType<typeof measureView> }
+interface Extra { stats?: { views: number; correct: number }; in_play?: number; measure?: ReturnType<typeof measureView>;
+  ideas?: Awaited<ReturnType<typeof ideasOf>> extends Map<string, infer T> ? T : never }
 function view(row: Row, extra: Extra = {}) {
   const v = row.copy_sha256 ? row.copy_sha256.slice(0, 12) : row.original_sha256.slice(0, 12);
   return {
@@ -84,7 +87,9 @@ function view(row: Row, extra: Extra = {}) {
       source_checked_at: row.source_checked_at, source_missing_at: row.source_missing_at,
       author: row.author, license_name: row.license_name, license_url: row.license_url,
       // Latest crowding and detail and the scores above the gallery's thresholds (spec `libreria-immagini`, section 10).
-      measure: extra.measure ?? null }
+      measure: extra.measure ?? null,
+      // Ideas of falsification and why the model proposed none (specification `generazione-slop`, section 2).
+      ideas: extra.ideas ?? [], ideas_reason: row.ideas_reason }
       : { prompt: row.prompt, model: row.model }),
     width: row.width, height: row.height, original_mime: row.original_mime, original_sha256: row.original_sha256,
     copy: row.copy_key ? { sha256: row.copy_sha256, width: row.copy_width, height: row.copy_height, bytes: row.copy_bytes, crop: cropOf(row) } : null,
@@ -100,10 +105,10 @@ function view(row: Row, extra: Extra = {}) {
 }
 async function extras(env: Env, rows: readonly Pick<Row, "id" | "origin" | "gallery_id">[]): Promise<Map<string, Extra>> {
   const ids = rows.map(r => r.id), real = rows.filter(r => r.origin === "REAL");
-  const [stats, playing, measures, limits] = await Promise.all([statsOf(env, ids), gamesInPlay(env, ids),
-    latestMeasures(env, real.map(r => r.id)), galleryThresholds(env, real.map(r => r.gallery_id))]);
+  const [stats, playing, measures, limits, ideas] = await Promise.all([statsOf(env, ids), gamesInPlay(env, ids),
+    latestMeasures(env, real.map(r => r.id)), galleryThresholds(env, real.map(r => r.gallery_id)), ideasOf(env, real.map(r => r.id))]);
   return new Map(rows.map(r => [r.id, { stats: stats.get(r.id), in_play: playing.get(r.id),
-    measure: measureView(measures.get(r.id), limits.get(r.gallery_id)) }]));
+    measure: measureView(measures.get(r.id), limits.get(r.gallery_id)), ideas: ideas.get(r.id) }]));
 }
 export async function viewOf(env: Env, imageIdValue: string) {
   const row = await find(env, imageIdValue);
@@ -403,6 +408,11 @@ export async function library(request: Request, env: Env, path: string): Promise
   if (path === base + "/settings") return json(await settingsRoute(env, request.method, request.method === "PUT" ? await body(request, 500) : {}));
   if (path === base + "/stats" && request.method === "GET") return json(await stats(env, url.searchParams.get("period") || "30"));
   if (path.startsWith(base + "/slop/")) return json(await slopRoute(env, request.method, path.slice((base + "/slop/").length), request.method === "POST" || request.method === "PUT" ? await body(request, 320_000) : {}, url.searchParams.get("gallery") || ""));
+  const idea = /^\/api\/admin\/library\/ideas\/([\w-]{1,64})$/.exec(path);
+  if (idea) {
+    const result = await ideaRoute(env, request.method, idea[1], request.method === "PATCH" ? await body(request, 4000) : request.method === "DELETE" ? await body(request, 100).catch(() => ({})) : {});
+    return json(await viewOf(env, result.image_id));
+  }
   if (path === base + "/upload" && request.method === "POST") {
     const params = url.searchParams;
     const kind = origin(params.get("origin"));
@@ -449,7 +459,7 @@ export async function library(request: Request, env: Env, path: string): Promise
     }
     return json({ done: done.length, failed });
   }
-  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|regenerate|metrics|measure|measures))?$/);
+  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|regenerate|metrics|measure|measures|ideas))?$/);
   if (!match) throw new HttpError(404, "API della libreria inesistente");
   const row = await find(env, match[1]);
   if (match[2] === "file" || match[2] === "original") {
@@ -471,6 +481,12 @@ export async function library(request: Request, env: Env, path: string): Promise
   if (match[2] === "measures") {
     if (request.method !== "GET") throw new HttpError(405, "Metodo non consentito");
     return json(await measuresOf(env, row.id));
+  }
+  if (match[2] === "ideas") {
+    // Ideas of falsification: one confirmed paid call (specification `generazione-slop`, section 2).
+    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    await proposeIdeas(env, row, await body(request, 1000));
+    return json(await viewOf(env, row.id), 201);
   }
   if (match[2] === "measure") {
     // Crowding and detail of a REAL: one confirmed paid call (spec `libreria-immagini`, section 10).

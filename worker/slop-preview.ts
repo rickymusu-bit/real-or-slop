@@ -7,7 +7,8 @@ export const PREVIEW_TTL_MS = 15 * 60_000;
 export interface PreviewSelection {
   version: 1; id: string; expires: number;
   gallery?: {id: string; revision: number};
-  sources: {id: string; revision: number}[];
+  /** `idea`: the approved idea drawn with the REAL (gallery batches since 2026-11-21). */
+  sources: {id: string; revision: number; idea?: string}[];
   config: Awaited<ReturnType<typeof loopSnapshot>>;
 }
 const encode = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -32,7 +33,8 @@ export async function readPreview(env: Env, token: unknown, at = Date.now()): Pr
     if (selection.version !== 1 || !/^[\w-]{1,64}$/.test(selection.id) || !Number.isInteger(selection.expires) ||
       (selection.gallery !== undefined && (!selection.gallery || !/^[\w-]{1,64}$/.test(selection.gallery.id) || !Number.isInteger(selection.gallery.revision) || selection.gallery.revision < 0)) ||
       !Array.isArray(selection.sources) || !selection.sources.length || selection.sources.length > MAX_BATCH ||
-      selection.sources.some(s => !s || !/^[\w-]{1,64}$/.test(s.id) || !Number.isInteger(s.revision) || s.revision < 0) ||
+      selection.sources.some(s => !s || !/^[\w-]{1,64}$/.test(s.id) || !Number.isInteger(s.revision) || s.revision < 0
+        || (s.idea !== undefined && (typeof s.idea !== "string" || !/^[\w-]{1,64}$/.test(s.idea)))) ||
       new Set(selection.sources.map(s => s.id)).size !== selection.sources.length ||
       !selection.config || typeof selection.config !== "object" || Array.isArray(selection.config)) throw Error();
   } catch { throw new HttpError(400, "Estrazione non valida: estrai di nuovo le REAL"); }

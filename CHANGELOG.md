@@ -1,7 +1,19 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-21T20:30:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-21T23:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.55.0 — 2026-11-21T23:00:00Z
+
+- Idee di falsificazione delle REAL: dal dettaglio o dalla selezione, una chiamata confermata propone fino a tre idee per REAL (scena,
+  genere di foto, cosa cambia), con l'ultima misura e le indicazioni della galleria. L'owner le modifica, le approva o le scarta;
+  un cambio di indicazioni o di galleria le rende «da rivedere». Nuovo testo modificabile «Idee SLOP delle REAL».
+- L'estrazione automatica prende solo REAL con un'idea approvata libera, una per REAL, con un'idea a caso fra le sue, e favorisce le
+  fasce di affollamento e dettaglio meno rappresentate fra le SLOP già nate dalle idee della galleria.
+- Le proposte sviluppano l'idea: la REAL ispira genere di foto, tecnica e livelli, mai scena, composizione, segni o persone. Per gli
+  oggetti il fatto inventato non è più richiesto.
+- I riferimenti fra REAL e processo restano fino alla fine del processo: l'idea diventa usata quando la sua SLOP è accettata e torna
+  disponibile se il processo si chiude senza SLOP. Migrazione 0069.
 
 ## 1.54.0 — 2026-11-21T20:30:00Z
 

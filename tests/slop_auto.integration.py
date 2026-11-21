@@ -1,4 +1,5 @@
-"""Gallery membership, free sampling, separate paid confirmations and ephemeral references."""
+"""Gallery membership, free sampling of REAL with an approved idea, separate paid confirmations, references until each process ends and
+ideas marked as used when their SLOP is accepted."""
 import base64
 from concurrent.futures import ThreadPoolExecutor
 import time
@@ -11,6 +12,7 @@ call('/settings',{'max_generation_attempts':2},method='PUT',library=True)
 photos=[]; catalogue=[]
 
 def extract(gallery, size):
+    free_ideas()
     return call('auto/preview',{'gallery_id':gallery['id'],'size':size})
 
 def prepare(selected, confirm=True):
@@ -73,6 +75,10 @@ try:
     selected=extract(gallery,2)[1]
     assert {r['id'] for r in selected['references']}=={one['id'],two['id']}
     assert all(r['description']==DESCRIPTION for r in selected['references'])
+    assert all(r['idea']['idea']=='Idea di prova per '+call('/'+r['id'],library=True)[1]['title'] for r in selected['references'])
+    # A REAL without a free approved idea is never drawn: its only idea busy elsewhere or written for other instructions.
+    sql(f"UPDATE real_ideas SET gallery_revision=gallery_revision-1 WHERE image_id='{two['id']}'")
+    code,short=call('auto/preview',{'gallery_id':gallery['id'],'size':2});assert code==409 and 'disponibili: 1' in short['error'],short
     assert sql("SELECT count(*) AS n FROM slop_batches")[0]['n']==0 and control()==[]
     assert prepare(selected,False)[0]==400
     assert call('auto/start',{'preview':selected['token'],'confirm':True})[0]==409
@@ -91,6 +97,9 @@ try:
     assert [p['state'] for p in review['processes']]==['ready','failed']
     assert all('brief' not in p for p in review['processes'])
     assert review['processes'][1]['error']=='Nessuna invenzione compatibile.'
+    # The links stay while the processes are open, each with its idea.
+    links=sql(f"SELECT s.source_id,s.idea_id FROM slop_gallery_sources s JOIN slop_processes p ON p.id=s.process_id WHERE p.batch_id='{bid}' ORDER BY p.slot")
+    assert [(l['source_id'],l['idea_id']) for l in links]==[(r['id'],r['idea']['id']) for r in selected['references']],links
     for ref, log in zip(selected['references'],control()):
         payload=log['body']
         assert payload['text']['format']['name']=='slop_gallery_proposal'
@@ -98,6 +107,8 @@ try:
         given=json.loads(supplied['text'])
         assert given['gallery']=={'title':gallery['title'],'description':gallery['description'],'slop_instructions':instructions}
         assert given['reference']=={'title':ref['title'],'description':DESCRIPTION}
+        assert given['idea']=={'idea':ref['idea']['idea'],'genre':'Foto di collezione','changes':'Ambiente e punto di vista'} and given['levels'] is None
+        assert 'Develop the idea' in payload['instructions']
         original=call('/'+ref['id']+'/original',library=True)[1]
         assert base64.b64decode(picture['image_url'].split(',')[1])==original
         assert Image.open(io.BytesIO(original)).size==(180,120)
@@ -128,6 +139,12 @@ try:
     assert 'brief' not in generated['generation']['slot'] and 'copy_style' not in generated['generation']['slot']
     assert generated['generation']['slot']['target_metrics'] is None or 'long' in generated['generation']['slot']['target_metrics']
     assert not sql(f"SELECT source_id FROM slop_gallery_sources s JOIN slop_processes p ON p.id=s.process_id WHERE p.batch_id='{bid}'")
+    # The idea of the accepted SLOP is used; the idea of the failed proposal stays available.
+    states={r['id']:sql(f"SELECT status FROM real_ideas WHERE id='{r['idea']['id']}'")[0]['status'] for r in selected['references']}
+    assert states=={selected['references'][0]['id']:'used', selected['references'][1]['id']:'approved'},states
+    used=call('/'+selected['references'][0]['id'],library=True)[1]['ideas']
+    assert [i['state'] for i in used if i['id']==selected['references'][0]['idea']['id']]==['used'],used
+    assert call('/ideas/'+selected['references'][0]['idea']['id'],{'idea':'x'},method='PATCH',library=True)[0]==409
     assert not sql("SELECT name FROM sqlite_schema WHERE name='slop_reference_uses'")
     saved=json.dumps(call('batches/'+bid)[1])
     assert all(r['id'] not in saved and r['title'] not in saved for r in selected['references'])

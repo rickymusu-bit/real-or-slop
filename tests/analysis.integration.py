@@ -62,11 +62,11 @@ assert call(f'{API}?' + urllib.parse.urlencode({'gallery': gallery_id, 'q': 'mag
 for item in (real, slop):
     call(f'{API}/{item["id"]}/trash', {}); assert call(f'{API}/{item["id"]}', method='DELETE')[1]['deleted'] == 1
 
-# Model context: four parts with the approved first versions; each save is a version; restore. The base and the gallery prompt
+# Model context: five parts with the approved first versions; each save is a version; restore. The base and the gallery prompt
 # start from the proposals saved by migration 0066; the retired «Descrizione delle REAL» is not offered any more.
 status, contexts = call(f'{API}/contexts'); assert status == 200 and contexts['max'] == 4000, contexts
 parts = {p['part']: p for p in contexts['parts']}
-assert set(parts) == {'base', 'real_measure', 'slop_gallery_prompt', 'slop_evaluation'} and all(len(p['history']) == 1 for p in parts.values()), contexts
+assert set(parts) == {'base', 'real_measure', 'real_ideas', 'slop_gallery_prompt', 'slop_evaluation'} and all(len(p['history']) == 1 for p in parts.values()), contexts
 assert 'Dettaglio' in parts['real_measure']['current']['body'] and 'persone e anatomia' in parts['real_measure']['current']['body'], parts
 assert all(p['proposed'] is None for p in parts.values()), 'the current texts are the proposals of the code'
 base_text = parts['base']['current']['body']
@@ -179,4 +179,60 @@ assert measure(real)[0] == 409
 assert call(f'{API}/{real["id"]}', method='DELETE')[1]['deleted'] == 1
 assert sql(f"SELECT count(*) AS n FROM real_measures WHERE image_id='{real['id']}'")[0]['n'] == 0
 call(f'{API}/{slop["id"]}/trash', {}); call(f'{API}/{slop["id"]}', method='DELETE')
-print('Analysis integration passed: no paid analysis or description of the REAL, no description of the SLOP, four model contexts with versions, model selectors, measures of the REAL with thresholds.')
+
+# Ideas of falsification (owner decisions of 2026-11-21): one confirmed call, at most three per REAL, approved by the owner.
+def ideas(item, **extra):
+    return call(f'{API}/{item["id"]}/ideas', {'confirm': True, 'request': str(uuid.uuid4()), **extra})
+def edit_idea(idea_id, change, method='PATCH'):
+    return call(f'{API}/ideas/{idea_id}', change, method=method)
+real = upload('REAL', 'Game Boy per le idee di falsificazione')
+slop = upload('SLOP', prompt='A console on a desk.', model='gpt-image-2')
+assert real['ideas'] == [] and real['ideas_reason'] == '' and 'ideas' not in slop
+openai([])
+gallery = call(f'{API}/galleries/{gallery_id}')[1]
+edit = {'title': gallery['title'], 'description': gallery['description'], 'revision': gallery['revision']}
+assert ideas(real)[0] == 409 and openai() == []  # the gallery has no SLOP instructions yet
+gallery = call(f'{API}/galleries/{gallery_id}', {**edit, 'slop_instructions': 'Inventa una console portatile plausibile.'}, method='PATCH')[1]
+for wrong in ({}, {'confirm': True}, {'confirm': False, 'request': str(uuid.uuid4())}, {'confirm': True, 'request': str(uuid.uuid4()), 'n': 2}):
+    assert call(f'{API}/{real["id"]}/ideas', wrong)[0] == 400, wrong
+assert ideas(slop)[0] == 409 and openai() == []
+calls_before = sql("SELECT count(*) AS n FROM paid_calls WHERE kind='prompts'")[0]['n']
+status, item = ideas(real)
+assert status == 201 and [i['state'] for i in item['ideas']] == ['proposed', 'proposed'] and not any(i['busy'] for i in item['ideas']), item
+sent = openai(); body = sent[0]['body']
+assert len(sent) == 1 and body['text']['format']['name'] == 'real_ideas' and body['input'][0]['content'][1]['detail'] == 'high'
+given = json.loads(body['input'][0]['content'][0]['text'])
+assert given['ideas_wanted'] == 3 and given['existing_ideas'] == [] and given['levels'] is None, given
+assert given['reference'] == {'title': 'Game Boy per le idee di falsificazione', 'description': ''} and given['gallery']['slop_instructions'].startswith('Inventa'), given
+assert 'non viene copiata' in body['instructions'] and 'Persone inventate' in body['instructions']
+assert sql("SELECT count(*) AS n FROM paid_calls WHERE kind='prompts'")[0]['n'] == calls_before + 1
+first, second = item['ideas']
+for wrong in ({}, {'idea': ''}, {'approve': False}, {'other': 1}, {'idea': 'x' * 601}, {'genre': 'x' * 161}):
+    assert edit_idea(first['id'], wrong)[0] == 400, wrong
+status, item = edit_idea(first['id'], {'approve': True}); assert status == 200 and item['ideas'][0]['state'] == 'approved', item
+status, item = edit_idea(second['id'], {'idea': 'Una console in uso su un treno.', 'genre': 'Foto amatoriale'})
+assert status == 200 and (item['ideas'][1]['idea'], item['ideas'][1]['genre'], item['ideas'][1]['state']) == ('Una console in uso su un treno.', 'Foto amatoriale', 'proposed'), item
+# A new proposal replaces the proposed ideas, keeps the approved one and asks only for the missing two.
+openai([])
+status, item = ideas(real); assert status == 201 and [i['state'] for i in item['ideas']] == ['approved', 'proposed', 'proposed'], item
+given = json.loads(openai()[0]['body']['input'][0]['content'][0]['text'])
+assert given['ideas_wanted'] == 2 and [e['idea'] for e in given['existing_ideas']] == [first['idea']], given
+for idea in item['ideas'][1:]: edit_idea(idea['id'], {'approve': True})
+status, refused = ideas(real); assert status == 409 and 'già 3 idee' in refused['error'], refused
+# Instructions changed: the ideas not used are to review, and approving one again makes it available.
+gallery = call(f'{API}/galleries/{gallery_id}', {**edit, 'revision': gallery['revision'], 'slop_instructions': 'Inventa una console portatile plausibile, anni Novanta.'}, method='PATCH')[1]
+item = call(f'{API}/{real["id"]}')[1]
+assert [i['state'] for i in item['ideas']] == ['review'] * 3, item
+status, item = edit_idea(item['ideas'][0]['id'], {'approve': True}); assert [i['state'] for i in item['ideas']] == ['approved', 'review', 'review'], item
+status, item = edit_idea(item['ideas'][2]['id'], {}, method='DELETE'); assert status == 200 and len(item['ideas']) == 2, item
+# No idea: the reason stays with the REAL; a malformed answer saves nothing.
+openai([{'json': {'ideas': [], 'reason': 'Edizione unica in un contesto irripetibile.'}}, {'json': {'ideas': [{'idea': ''}], 'reason': ''}}])
+status, item = ideas(real); assert status == 201 and item['ideas_reason'] == 'Edizione unica in un contesto irripetibile.' and len(item['ideas']) == 2, item
+assert ideas(real)[0] == 502 and len(call(f'{API}/{real["id"]}')[1]['ideas']) == 2
+# A REAL in the trash gets no ideas; deleting it deletes them.
+call(f'{API}/{real["id"]}/trash', {})
+assert ideas(real)[0] == 409
+assert call(f'{API}/{real["id"]}', method='DELETE')[1]['deleted'] == 1
+assert sql(f"SELECT count(*) AS n FROM real_ideas WHERE image_id='{real['id']}'")[0]['n'] == 0
+call(f'{API}/{slop["id"]}/trash', {}); call(f'{API}/{slop["id"]}', method='DELETE')
+print('Analysis integration passed: no paid analysis or description of the REAL, no description of the SLOP, four model contexts with versions, model selectors, measures of the REAL with thresholds, ideas of falsification.')

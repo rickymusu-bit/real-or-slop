@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.3.0
+# Libreria delle immagini — specifica 10.4.0
 
-Stato: implementata nel ramo 1.54.0, da rilasciare. Aggiornata: 2026-11-21T20:30:00Z.
+Stato: implementata nel ramo 1.55.0, da rilasciare. Aggiornata: 2026-11-21T23:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -20,13 +20,15 @@ Stato: implementata nel ramo 1.54.0, da rilasciare. Aggiornata: 2026-11-21T20:30
   descrizione editoriale, la sua provenienza, il testo Commons originale e i campi dell'analisi, e svuota la descrizione delle SLOP.
   Superano le decisioni del 2026-11-09 (analisi una volta per immagine), del 2026-11-19 (ripetizione dell'analisi, descrizione nei
   risultati) e quella di poche ore prima sulle incertezze.
+- **Idee di falsificazione delle REAL** (decisioni del 2026-11-21): un modello propone fino a tre idee per REAL, con una chiamata
+  confermata; l'owner le approva; ogni idea dà al massimo una SLOP. Regole nella specifica `generazione-slop`, sezione 1.
 - **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, numero modificabile dalle Impostazioni, ciascuna solo tre mesi dopo l'ultimo controllo; un
   file sparito da Commons viene **solo segnalato**, mai ritirato o cancellato in automatico (sezione 9).
 - **Affollamento e dettaglio delle REAL** (decisioni del 2026-11-21). Su richiesta, un modello misura quanto è affollata e quanto è
   dettagliata una REAL, per capire quanto il generatore di immagini farebbe fatica a riprodurne una simile. Il modello osserva soltanto
   oggetti, riquadri e categorie di dettaglio; i due punteggi da 0 a 100 li calcola il codice. Soglie per galleria con valore
-  predefinito nelle Impostazioni; una REAL oltre una soglia è **solo segnalata**. Le misure servono per ora a vedere come si comporta
-  il modello: le idee di falsificazione delle SLOP restano sospese e la generazione non cambia (sezione 10). Modifica la decisione del
+  predefinito nelle Impostazioni; una REAL oltre una soglia è **solo segnalata**. Le misure guidano anche l'estrazione corretta delle
+  REAL per i batch automatici (specifica `generazione-slop`, sezione 2). Modifica la decisione del
   2026-11-20 sulle REAL non analizzate, che resta valida per descrizioni e analisi di ogni altro tipo. Dopo le prime misure reali,
   lo stesso giorno: gradi 0, 1 e 2 per ogni categoria e una categoria per persone e anatomia, perché con la prima formula ogni console
   spuntava tutte le categorie e valeva 100, e le persone, che i generatori sbagliano spesso, abbassavano il dettaglio.
@@ -111,20 +113,20 @@ proposte e le valutazioni delle SLOP (il 2026-11-15 cinque analisi su originali 
 ## 6. Chiamate a pagamento e modelli
 
 - Quattro tipi: misure di affollamento e dettaglio delle REAL (`analysis`, sezione 10), proposte editoriali e prompt SLOP (anche le
-  indicazioni proposte per una galleria), immagini SLOP, valutazione SLOP intera. Le SLOP accettate non richiedono altre chiamate. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
+  indicazioni proposte per una galleria e le idee di falsificazione delle REAL), immagini SLOP, valutazione SLOP intera. Le SLOP accettate non richiedono altre chiamate. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
 - **Esiti:** risposta valida → `completed`; errore 4xx → `failed`, senza addebito; errore 5xx, timeout o rete → `uncertain`, mai
   ripetuta in automatico. Chiave rifiutata, limite di spesa o credito OpenAI esaurito fermano le serie con un messaggio che rimanda a
   platform.openai.com.
 - **Registro** `paid_calls`: tipo, modello, esito, token, date; nessun importo e collegamenti a immagine, processo e tentativo, azzerati alla cancellazione; nessun archivio delle immagini eliminate.
-- **Modelli:** modello di testo (misure delle REAL, proposte editoriali e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
+- **Modelli:** modello di testo (misure e idee delle REAL, proposte editoriali e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
   elencati nel codice e presenti nel progetto OpenAI (`GET /v1/models`, in cache per un'ora; se l'elenco non si legge si offrono tutti).
   Ogni chiamata registra il modello usato.
 - Senza il segreto `OPENAI_API_KEY` le chiamate a pagamento sono spente. Nei test solo il modello finto `tests/fake_openai.py`.
 
 ## 7. Contesto dei modelli
 
-- Quattro testi modificabili dalle Impostazioni, fino a 4000 caratteri: **Base comune** (ogni chiamata), **Misura delle REAL**
-  (`real_measure`, sezione 10), **Premessa e prompt di galleria** (proposte da originale, titolo e descrizione della fonte) e
+- Cinque testi modificabili dalle Impostazioni, fino a 4000 caratteri: **Base comune** (ogni chiamata), **Misura delle REAL**
+  (`real_measure`, sezione 10), **Idee SLOP delle REAL** (`real_ideas`, specifica `generazione-slop`), **Premessa e prompt di galleria** (proposte da originale, titolo e descrizione della fonte) e
   **Valutazione delle SLOP** (candidata intera). Le versioni
   della parte ritirata «Descrizione delle REAL» (`analysis`) restano nella tabella, non sono offerte e non si ripristinano.
 - Ogni salvataggio di un testo diverso crea una versione datata; ripristinarne una vecchia crea una nuova versione con lo stesso testo.
@@ -249,5 +251,6 @@ essere molto dettagliata. Il medium fotografico, terzo asse possibile, riguarda 
   misure precedenti. Dalla selezione della galleria, «Misura» misura le REAL selezionate ancora senza misura, una chiamata ciascuna
   dopo una sola conferma del massimo, una dopo l'altra con la pagina aperta; un problema dell'account OpenAI ferma le restanti. Le REAL
   già misurate si misurano di nuovo dal dettaglio. Il wizard REAL non misura: le REAL appena acquisite si misurano dalla galleria.
-- **Fuori da questa fase.** Le idee di falsificazione generate per ogni REAL, l'estrazione corretta sui due assi e la valutazione per
-  asse delle SLOP sono state discusse con l'owner il 2026-11-21 e sono sospese finché non si vede come il modello misura.
+- **Uso nella generazione.** Le idee di falsificazione ricevono l'ultima misura e l'estrazione automatica è corretta sui due assi
+  (specifica `generazione-slop`, sezioni 1 e 2). La valutazione per asse delle SLOP, discussa con l'owner il 2026-11-21, non è ancora
+  implementata.
