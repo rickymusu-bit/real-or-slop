@@ -85,7 +85,7 @@ with sync_playwright() as p:
         expect(page.locator('#library-analysis')).to_have_count(0)
 
         # Crowding and detail of the REAL (owner decisions of 2026-11-21): the two new REAL are measured together, one call each, by
-        # the fake model (crowding 29, detail 51).
+        # the fake model (crowding 29, detail 38).
         page.get_by_role('checkbox', name=f'Seleziona {name}-rivoli').check()
         page.get_by_role('checkbox', name=f'Seleziona {name}-spare').check()
         page.locator('#library-selection [data-bulk=measure]').click()
@@ -98,19 +98,19 @@ with sync_playwright() as p:
         editor = page.locator('#gallery-editor')
         expect(editor.locator('[name=max_crowdedness]')).to_have_attribute('placeholder', '67')
         expect(editor.locator('[name=max_detail]')).to_have_attribute('placeholder', '100')
-        editor.locator('[name=max_crowdedness]').fill('20'); editor.locator('[name=max_detail]').fill('50')
+        editor.locator('[name=max_crowdedness]').fill('20'); editor.locator('[name=max_detail]').fill('30')
         editor.get_by_role('button', name='Salva modifiche').click()
         expect(editor).to_be_hidden()
         rivoli_symbol = page.locator(f'.library-card:has([aria-label="Apri {name}-rivoli"]) [data-over-threshold]')
-        expect(rivoli_symbol).to_have_attribute('title', 'Oltre la soglia della galleria: affollamento 29 oltre la soglia di 20, dettaglio 51 oltre la soglia di 50')
+        expect(rivoli_symbol).to_have_attribute('title', 'Oltre la soglia della galleria: affollamento 29 oltre la soglia di 20, dettaglio 38 oltre la soglia di 30')
         page.get_by_role('button', name=f'Apri {name}-rivoli').click()
         detail = page.locator('#library-detail')
-        expect(detail.locator('p[data-over-threshold]')).to_contain_text('affollamento 29 oltre la soglia di 20, dettaglio 51 oltre la soglia di 50')
-        expect(detail.locator('[data-measure-values]')).to_contain_text('Affollamento 29/100 (2 oggetti oltre il soggetto), dettaglio 51/100; soglie della galleria 20 e 50.')
+        expect(detail.locator('p[data-over-threshold]')).to_contain_text('affollamento 29 oltre la soglia di 20, dettaglio 38 oltre la soglia di 30')
+        expect(detail.locator('[data-measure-values]')).to_contain_text('Affollamento 29/100 (2 oggetti oltre il soggetto), dettaglio 38/100; soglie della galleria 20 e 30.')
         detail.locator('[data-measure-history] summary').click()
         expect(detail.locator('.measure-box')).to_have_count(3)
         expect(detail.locator('.measure-box.is-subject')).to_have_count(1)
-        expect(detail.locator('.measure-objects li').first).to_have_text('Soggetto: Game Boy: scritte e loghi leggibili, motivi ripetuti, parti contabili, texture dei materiali')
+        expect(detail.locator('.measure-objects li').first).to_have_text('Soggetto: Game Boy: scritte e loghi leggibili (fitto), motivi ripetuti, parti contabili (fitto), texture dei materiali, giunzioni e meccanismi')
         expect(detail.locator('.measure-history li')).to_have_count(1)
         detail.locator('.measure-figure').scroll_into_view_if_needed()
         detail.screenshot(path=str(folder / f'{name}-measure.png'))

@@ -1,7 +1,15 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-21T18:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-21T20:30:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.54.0 — 2026-11-21T20:30:00Z
+
+- Dettaglio delle REAL, formula 2: sette categorie (nuova «persone e anatomia») con grado 0, 1 o 2 (fitto o minuto), in quota sul
+  massimo di 14. Con la prima formula ogni console valeva 100. Istruzioni più severe su sfondi, mobili e oggetti sfocati, riquadri più
+  stretti.
+- Le misure precedenti restano con la loro formula; il dettaglio lo segnala e «Misura» in gruppo le rimisura. Migrazione 0068, che
+  aggiorna «Misura delle REAL» se è ancora il primo testo proposto.
 
 ## 1.53.0 — 2026-11-21T18:00:00Z
 

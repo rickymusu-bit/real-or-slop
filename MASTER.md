@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 35.2.0, aggiornata il 2026-11-21T18:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 35.3.0, aggiornata il 2026-11-21T20:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,9 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.53.0:** affollamento e dettaglio delle REAL misurati su richiesta da un modello (una chiamata confermata per foto),
+- **Ramo 1.54.0:** dettaglio con sette categorie graduate 0, 1 o 2 (formula 2), dopo le prime misure reali; le misure precedenti
+  restano come formula 1. Migrazione 0068. Seguirà la PR delle idee di falsificazione per REAL.
+- **In produzione la 1.53.0 (PR #169):** affollamento e dettaglio delle REAL misurati su richiesta da un modello (una chiamata confermata per foto),
   punteggi calcolati dal Worker, soglie per galleria con valori predefiniti nelle Impostazioni, sola segnalazione delle REAL oltre
   soglia. Le idee di falsificazione delle SLOP sono sospese finché non si vede come il modello misura. Migrazione 0067.
 - **Integrata in main la 1.52.0 (PR #168):** controllo notturno delle fonti Commons delle REAL, 50 a notte (modificabile da Impostazioni → Fonti Commons, da 0
@@ -90,7 +92,7 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.2.0 |
+| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.3.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.0.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.1.0 |
@@ -203,6 +205,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0065 | data dell'ultimo controllo della fonte Commons e della mancanza del file; la data di acquisizione vale come primo controllo; chiave delle Impostazioni per il numero di controlli a notte |
 | 0066 | elimina descrizione editoriale, provenienza, testo Commons originale e campi dell'analisi; svuota la descrizione delle SLOP; versioni correnti di «Base comune» e «Premessa e prompt di galleria» uguali alle proposte |
 | 0067 | misure di affollamento e dettaglio delle REAL (`real_measures`), soglie delle gallerie, parte `real_measure` del contesto e chiavi delle soglie predefinite nelle Impostazioni |
+| 0068 | formula delle misure (1 per le esistenti) e nuova proposta di «Misura delle REAL» se quella in vigore è la prima |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

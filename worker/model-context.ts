@@ -18,11 +18,11 @@ Fatti: non inventare nomi di persone; usa solo quelli presenti nel contesto che 
 
 Soggetto: l'oggetto principale della foto, di solito quello del tema della galleria.
 
-Altri oggetti: elenca ogni altro oggetto che chi guarda saprebbe nominare (una cartuccia, una tazza, un cavo, una mano, una persona), compresi altri oggetti del tema della galleria. Non elencare superfici e fondi (muro, pavimento, tavolo, tessuto, cielo) né ciò che è così sfocato da non distinguersi. Oggetti uguali ripetuti contano uno per uno.
+Altri oggetti: elenca ogni altro oggetto nitido che chi guarda saprebbe nominare (una cartuccia, una tazza, un cavo, una mano, una persona), compresi altri oggetti del tema della galleria. Oggetti uguali ripetuti contano uno per uno. Non elencare superfici e fondi (muro, pavimento, tavolo, tessuto, cielo), mobili che fanno da sfondo (divano, poltrona, sedile, scaffale) né oggetti sfocati di cui non si distingue alcun dettaglio. Le parti di un oggetto non sono oggetti a sé; una persona è un solo oggetto.
 
-Riquadro: per ogni oggetto un rettangolo approssimativo che lo contiene, in coordinate normalizzate sull'immagine intera.
+Riquadro: per ogni oggetto il rettangolo più stretto che lo contiene, in coordinate normalizzate sull'immagine intera.
 
-Dettaglio: per ogni oggetto segna soltanto le categorie leggibili nell'immagine: scritte e loghi leggibili; motivi ripetuti (feritoie, griglie, tasti in fila); parti contabili (tasti, viti, porte); texture dei materiali (plastica goffrata, metallo spazzolato, usura); superfici riflettenti o schermi; giunzioni e meccanismi (cerniere, sportelli, fessure tra le parti).
+Dettaglio: per ogni oggetto dai a ogni categoria un grado. 0: assente o non leggibile. 1: presente e leggibile. 2: fitto o minuto, cioè molti elementi piccoli o precisi da riprodurre esattamente. Categorie: scritte e loghi leggibili (2 se piccoli o numerosi); motivi ripetuti come feritoie, griglie, tasti in fila (2 se fitti); parti contabili come tasti, viti, porte (2 se molte o piccole); texture dei materiali (2 se la grana è nitida da vicino); superfici riflettenti o schermi (2 se riflessi o immagini sono complessi); giunzioni e meccanismi come cerniere, sportelli, fessure (2 se molti o in primo piano); persone e anatomia: mani, dita, volti, corpi (2 se mani o volti sono nitidi e in primo piano).
 
 Nomi degli oggetti in italiano, brevi e generici.`,
   slop_gallery_prompt: `Per una galleria tematica proponi un falso fotografico concreto e scrivi il prompt inglese. Usa la foto intera, il suo titolo e la descrizione della fonte per scegliere una possibilità compatibile con le indicazioni della galleria. Rendi specifici l’invenzione e gli elementi reali da conservare, come la geografia, un edificio riconoscibile o gli elementi visibili di una mobilitazione. Varia le premesse quando le foto lo consentono. Privilegia credibilità fotografica, luce e tecnica plausibili.`,

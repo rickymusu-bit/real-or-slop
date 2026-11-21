@@ -67,7 +67,7 @@ for item in (real, slop):
 status, contexts = call(f'{API}/contexts'); assert status == 200 and contexts['max'] == 4000, contexts
 parts = {p['part']: p for p in contexts['parts']}
 assert set(parts) == {'base', 'real_measure', 'slop_gallery_prompt', 'slop_evaluation'} and all(len(p['history']) == 1 for p in parts.values()), contexts
-assert 'Dettaglio' in parts['real_measure']['current']['body'] and 'Altri oggetti' in parts['real_measure']['current']['body'], parts
+assert 'Dettaglio' in parts['real_measure']['current']['body'] and 'persone e anatomia' in parts['real_measure']['current']['body'], parts
 assert all(p['proposed'] is None for p in parts.values()), 'the current texts are the proposals of the code'
 base_text = parts['base']['current']['body']
 assert base_text.startswith('Lavori per un archivio fotografico italiano.') and 'Tag' not in base_text and 'descri' not in base_text, base_text
@@ -122,7 +122,7 @@ assert measure(slop)[0] == 409 and openai() == [] and calls() == 0
 status, measured = measure(real)
 assert status == 201, measured
 m = measured['measure']
-assert (m['crowdedness'], m['detail'], m['objects'], m['model']) == (29, 51, 2, 'gpt-6.1-sol'), m
+assert (m['crowdedness'], m['detail'], m['objects'], m['model'], m['formula']) == (29, 38, 2, 'gpt-6.1-sol', 2), m
 assert m['limits'] == {'crowdedness': 67, 'detail': 100} and m['over'] == [], m
 sent = openai()
 assert len(sent) == 1 and sent[0]['body']['text']['format']['name'] == 'real_measure', sent
@@ -148,10 +148,10 @@ assert listing['thresholds'] == {'crowdedness': 67, 'detail': 100}, listing['thr
 edit = {'title': gallery['title'], 'description': gallery['description'], 'slop_instructions': gallery['slop_instructions'], 'revision': gallery['revision']}
 for wrong in (101, -1, 2.5, '50'):
     assert call(f'{API}/galleries/{gallery_id}', {**edit, 'max_crowdedness': wrong}, method='PATCH')[0] == 400, wrong
-status, changed = call(f'{API}/galleries/{gallery_id}', {**edit, 'max_crowdedness': 20, 'max_detail': 50}, method='PATCH')
-assert status == 200 and (changed['max_crowdedness'], changed['max_detail'], changed['revision']) == (20, 50, gallery['revision']), changed
+status, changed = call(f'{API}/galleries/{gallery_id}', {**edit, 'max_crowdedness': 20, 'max_detail': 30}, method='PATCH')
+assert status == 200 and (changed['max_crowdedness'], changed['max_detail'], changed['revision']) == (20, 30, gallery['revision']), changed
 m = call(f'{API}/{real["id"]}')[1]['measure']
-assert m['over'] == ['crowdedness', 'detail'] and m['limits'] == {'crowdedness': 20, 'detail': 50}, m
+assert m['over'] == ['crowdedness', 'detail'] and m['limits'] == {'crowdedness': 20, 'detail': 30}, m
 assert next(i for i in call(f'{API}?' + urllib.parse.urlencode({'gallery': gallery_id}))[1]['items'] if i['id'] == real['id'])['measure']['over'] == ['crowdedness', 'detail']
 status, changed = call(f'{API}/galleries/{gallery_id}', {**edit, 'max_crowdedness': None, 'max_detail': None}, method='PATCH')
 assert status == 200 and changed['max_crowdedness'] is None and changed['revision'] == gallery['revision'], changed
@@ -161,6 +161,11 @@ for wrong in ({'crowdedness_threshold': 101}, {'detail_threshold': -1}):
 m = call(f'{API}/{real["id"]}')[1]['measure']
 assert m['over'] == ['crowdedness'] and m['limits'] == {'crowdedness': 28, 'detail': 100}, m
 assert call(f'{API}/settings', {'crowdedness_threshold': 67}, method='PUT')[0] == 200
+# A measure of the first formula (six kinds, present or not) still reads, and says which formula it used.
+sql(f"""INSERT INTO real_measures(id,image_id,model,base_context,measure_context,observation,crowdedness,detail,created_at,formula)
+  VALUES('formula-1','{real['id']}','gpt-6.1-sol','b','m','{{"subject":{{"name":"console","box":{{"x":0,"y":0,"width":1,"height":1}},"detail":{{"text":true}}}},"others":[],"unlisted":0}}',0,100,'2000-01-01T00:00:00.000Z',1)""")
+history = call(f'{API}/{real["id"]}/measures')[1]['measures']
+assert history[-1]['id'] == 'formula-1' and history[-1]['formula'] == 1 and history[0]['formula'] == 2, history
 # Failures: an unreadable or malformed answer stores nothing; a server error is uncertain and never repeated.
 before = len(call(f'{API}/{real["id"]}/measures')[1]['measures'])
 openai([{'garbage': True}, {'json': {'subject': {'name': 'x'}, 'others': [], 'unlisted': 0}}, {'status': 500}])

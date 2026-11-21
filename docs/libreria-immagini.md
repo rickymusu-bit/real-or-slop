@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.2.0
+# Libreria delle immagini — specifica 10.3.0
 
-Stato: implementata nel ramo 1.53.0, da rilasciare. Aggiornata: 2026-11-21T18:00:00Z.
+Stato: implementata nel ramo 1.54.0, da rilasciare. Aggiornata: 2026-11-21T20:30:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -27,7 +27,9 @@ Stato: implementata nel ramo 1.53.0, da rilasciare. Aggiornata: 2026-11-21T18:00
   oggetti, riquadri e categorie di dettaglio; i due punteggi da 0 a 100 li calcola il codice. Soglie per galleria con valore
   predefinito nelle Impostazioni; una REAL oltre una soglia è **solo segnalata**. Le misure servono per ora a vedere come si comporta
   il modello: le idee di falsificazione delle SLOP restano sospese e la generazione non cambia (sezione 10). Modifica la decisione del
-  2026-11-20 sulle REAL non analizzate, che resta valida per descrizioni e analisi di ogni altro tipo.
+  2026-11-20 sulle REAL non analizzate, che resta valida per descrizioni e analisi di ogni altro tipo. Dopo le prime misure reali,
+  lo stesso giorno: gradi 0, 1 e 2 per ogni categoria e una categoria per persone e anatomia, perché con la prima formula ogni console
+  spuntava tutte le categorie e valeva 100, e le persone, che i generatori sbagliano spesso, abbassavano il dettaglio.
 - Niente prezzi né budget: ogni chiamata a pagamento si conferma e si registra senza importi; il limite di spesa è quello del progetto
   OpenAI (2026-11-10).
 - Niente didascalie, né nel gioco né nella dashboard; quelle scritte sono state cancellate (2026-11-13).
@@ -168,6 +170,9 @@ tutte le righe per ammettere la chiave `commons_checks_per_night`.
 Migrazione 0066: elimina `real_description`, `real_description_provenance`, `commons_description`, `analysis_status`,
 `analysis_error`, `analyzed_at`, `analysis_base_context` e `analysis_task_context`; svuota la descrizione delle SLOP; salva le proposte
 di «Base comune» e «Premessa e prompt di galleria» (sezione 7). Foto, descrizioni della fonte, chiamate e partite restano.
+Migrazione 0068: `real_measures.formula` (1 per le misure esistenti); se il testo «Misura delle REAL» in vigore è ancora la prima
+proposta del codice, la nuova proposta con i gradi diventa la versione corrente (la precedente resta ripristinabile); un testo scritto
+dall'owner resta e la proposta compare accanto.
 Migrazione 0067: tabella `real_measures` (sezione 10), cancellata con la foto; `galleries.max_crowdedness` e `galleries.max_detail`
 (NULL = valore predefinito); `model_contexts` e `app_settings` ricostruite con tutte le righe per ammettere la parte `real_measure` e
 le chiavi `crowdedness_threshold` e `detail_threshold`. Nessuna chiamata a pagamento.
@@ -208,16 +213,23 @@ essere molto dettagliata. Il medium fotografico, terzo asse possibile, riguarda 
 
 - **Cosa osserva il modello.** L'originale intero, mai il ritaglio 4:5, con titolo e descrizione della galleria; non riceve titolo né
   descrizione della fonte della REAL. Restituisce il soggetto, al massimo 30 altri oggetti e il numero di quelli non elencati. Per ogni
-  oggetto: un nome breve, un riquadro approssimativo in coordinate normalizzate (x, y, larghezza, altezza da 0 a 1) e quali delle sei
-  categorie di dettaglio sono leggibili: scritte e loghi, motivi ripetuti, parti contabili, texture dei materiali, superfici
-  riflettenti o schermi, giunzioni e meccanismi. Sono le categorie in cui i generatori sbagliano più spesso. Non contano superfici e
-  fondi né ciò che è troppo sfocato per distinguersi; oggetti uguali ripetuti contano uno per uno; contano anche gli altri oggetti del
-  tema della galleria. Il modello non descrive e non giudica l'autenticità.
+  oggetto: un nome breve, il rettangolo più stretto che lo contiene in coordinate normalizzate (x, y, larghezza, altezza da 0 a 1) e un
+  grado per ciascuna delle sette categorie di dettaglio: scritte e loghi, motivi ripetuti, parti contabili, texture dei materiali,
+  superfici riflettenti o schermi, giunzioni e meccanismi, persone e anatomia (mani, dita, volti, corpi). Sono le cose che i generatori
+  sbagliano più spesso. Grado 0: assente o non leggibile; 1: presente e leggibile; 2: fitto o minuto (scritte piccole o numerose,
+  griglie fitte, molte viti, mani o volti nitidi in primo piano). Non contano superfici e fondi, mobili che fanno da sfondo e oggetti
+  sfocati di cui non si distingue alcun dettaglio; le parti di un oggetto non sono oggetti a sé e una persona è un solo oggetto;
+  oggetti uguali ripetuti contano uno per uno; contano anche gli altri oggetti del tema della galleria. Il modello non descrive e non
+  giudica l'autenticità.
 - **Calcolo** (`shared/real-measure.ts`). Affollamento = 100·n/(n+5), con n gli oggetti oltre al soggetto, elencati o no: 0 oggetti
   valgono 0, 5 valgono 50, 10 valgono 67, 20 valgono 80. La curva si appiattisce perché oltre una decina di oggetti il conteggio di un
-  modello è poco affidabile. Dettaglio = media della quota di categorie leggibili di ogni oggetto elencato, soggetto compreso, pesata
+  modello è poco affidabile. Dettaglio = media della quota di dettaglio di ogni oggetto elencato (somma dei gradi diviso 14), soggetto compreso, pesata
   sull'area del suo riquadro (ritagliato all'immagine) divisa per l'area di tutti i riquadri, non dell'immagine, perché lo sfondo
   vuoto non diluisca il dettaglio del soggetto. Senza aree misurabili vale la quota del soggetto. Entrambi arrotondati all'intero.
+  Una console con sei categorie leggibili e nessuna fitta vale 43; arriva a 100 solo con ogni categoria fitta.
+- **Formule.** Ogni misura registra la formula: 1 per le prime misure (sei categorie, presenti o no, quota sulle sei), 2 da questa
+  versione. Le misure di formula 1 restano nello storico con i loro punteggi, ma il dettaglio non è confrontabile: il dettaglio della
+  foto lo dice e «Misura» in gruppo le include fra quelle da misurare.
 - **Chiamata.** `POST /:id/measure {confirm: true, request}`, solo per le REAL fuori dal cestino, con il modello di testo delle
   Impostazioni e schema JSON rigido; `request` è un UUID del browser che rende impossibile inviare due volte la stessa conferma. Una
   chiamata per misura, di tipo `analysis` in `paid_calls`, collegata alla foto; esito incerto o risposta non valida non salvano nulla e
