@@ -781,9 +781,9 @@ if (button.dataset.ideaApprove) {
   // Model context: three texts, each saved as a new version; an old version can become the current one again.
   const CONTEXT_LABELS: Record<string, [string, string]> = {
     base: ["Base comune", "Inviata in ogni chiamata: misure delle REAL, proposte di galleria, indicazioni SLOP proposte e valutazioni."],
-    real_ideas: ["Idee SLOP delle REAL", "Inviato insieme alla base, all’originale intero, a titolo e descrizione della fonte, alle indicazioni della galleria e all’ultima misura. Numero di idee, campi e regole sul riferimento restano fissati nel codice."],
+    real_ideas: ["Idee SLOP delle REAL", "Inviato insieme alla base, all’originale intero, a titolo e descrizione della fonte, a titolo e descrizione della galleria e all’ultima misura. Numero di idee, campi e regole sul riferimento restano fissati nel codice."],
     real_measure: ["Misura delle REAL", "Inviato insieme alla base, all’originale intero e a titolo e descrizione della galleria. Elenco degli oggetti, riquadri e categorie di dettaglio restano fissati nel codice, come il calcolo di affollamento e dettaglio."],
-    slop_gallery_prompt: ["Premessa e prompt di galleria", "Inviato insieme alla base, all’originale intero e alle indicazioni della galleria."],
+    slop_gallery_prompt: ["Premessa e prompt di galleria", "Inviato insieme alla base, all’originale intero, all’idea approvata della REAL e a titolo e descrizione della galleria."],
     slop_evaluation: ["Valutazione delle SLOP", "Inviato insieme alla base a ogni valutazione di una candidata intera. Decisioni, tolleranza e formato della risposta restano fissati nel codice."],
   };
   const when = (iso: string) => new Date(iso).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" });

@@ -25,9 +25,9 @@ def wait_for_batch():
         time.sleep(.25)
     raise AssertionError('server never finished')
 
-def update_gallery(gallery, instructions):
+def update_gallery(gallery, description):
     code,saved=call('/galleries/'+gallery['id'],{
-        'title':gallery['title'],'description':gallery['description'],'revision':gallery['revision'],'slop_instructions':instructions,
+        'title':gallery['title'],'description':description,'revision':gallery['revision'],
     },method='PATCH',library=True)
     assert code==200,saved
     return saved
@@ -37,21 +37,20 @@ def image_count():
 
 try:
     control([])
-    gallery=make_gallery('Piazza di Parigi','   ')
-    other=make_gallery('Console vintage','Inventa una console plausibile.')
+    gallery=make_gallery('Piazza di Parigi')
+    other=make_gallery('Console vintage')
     one=real(gallery=gallery['id']); photos.append(one['id'])
-    assert one['gallery_id']==gallery['id'] and extract(gallery,1)[0]==409
+    # Without an approved idea a REAL is never drawn; the gallery is not ready (no SLOP instructions since 2026-11-22).
+    code,short=call('auto/preview',{'gallery_id':gallery['id'],'size':1}); assert one['gallery_id']==gallery['id'] and code==409 and 'disponibili: 0' in short['error'],short
+    assert not next(g for g in call('auto')[1]['galleries'] if g['id']==gallery['id'])['ready']
     assert call('auto/prepare',{'preview':'invalid','confirm':True,'count':1})[0]==400
     assert call('auto/preview',{'gallery_id':gallery['id'],'size':1},auth=False)[0]==401
+    assert call('/galleries/'+gallery['id']+'/suggest',{'request':str(uuid4()),'revision':gallery['revision'],'confirm':True},library=True)[0]==404
     assert control()==[]
-    suggestions='/galleries/'+gallery['id']+'/suggest'
-    request={'request':str(uuid4()),'revision':gallery['revision']}
-    assert call(suggestions,request,library=True)[0]==400
-    code,draft=call(suggestions,{**request,'confirm':True},library=True);assert code==200,draft
-    assert call(suggestions,{**request,'confirm':True},library=True)[0]==409 and len(control())==1
-    assert extract(gallery,1)[0]==409  # suggestions become active only after a save
-    instructions=draft['slop_instructions']+' Preserva l’architettura della piazza.'
-    gallery=update_gallery(gallery,instructions)
+    free_ideas()
+    assert next(g for g in call('auto')[1]['galleries'] if g['id']==gallery['id'])['ready']
+    description='Fotografie documentarie della piazza. Preserva l’architettura della piazza.'
+    gallery=update_gallery(gallery,description)
 
     two=real(gallery=other['id']); unavailable=real(gallery=gallery['id']); outside=real(gallery=other['id'])
     photos.extend([two['id'],unavailable['id'],outside['id']])
@@ -76,8 +75,8 @@ try:
     assert {r['id'] for r in selected['references']}=={one['id'],two['id']}
     assert all(r['description']==DESCRIPTION for r in selected['references'])
     assert all(r['idea']['idea']=='Idea di prova per '+call('/'+r['id'],library=True)[1]['title'] for r in selected['references'])
-    # A REAL without a free approved idea is never drawn: its only idea busy elsewhere or written for other instructions.
-    sql(f"UPDATE real_ideas SET gallery_revision=gallery_revision-1 WHERE image_id='{two['id']}'")
+    # A REAL without a free approved idea is never drawn: its only idea approved while the REAL was in another gallery.
+    sql(f"UPDATE real_ideas SET gallery_id='{other['id']}' WHERE image_id='{two['id']}'")
     code,short=call('auto/preview',{'gallery_id':gallery['id'],'size':2});assert code==409 and 'disponibili: 1' in short['error'],short
     assert sql("SELECT count(*) AS n FROM slop_batches")[0]['n']==0 and control()==[]
     assert prepare(selected,False)[0]==400
@@ -105,7 +104,7 @@ try:
         assert payload['text']['format']['name']=='slop_gallery_proposal'
         supplied,picture=payload['input'][0]['content']
         given=json.loads(supplied['text'])
-        assert given['gallery']=={'title':gallery['title'],'description':gallery['description'],'slop_instructions':instructions}
+        assert given['gallery']=={'title':gallery['title'],'description':description}
         assert given['reference']=={'title':ref['title'],'description':DESCRIPTION}
         assert given['idea']=={'idea':ref['idea']['idea'],'genre':'Foto di collezione','changes':'Ambiente e punto di vista'} and given['levels'] is None
         assert 'Develop the idea' in payload['instructions']
@@ -130,7 +129,8 @@ try:
     assert second['body']['prompt'].startswith(original_process['prompt']+'\n\n')
     supplied,picture=judge['body']['input'][0]['content']
     given=json.loads(supplied['text'])
-    assert 'brief' not in given and given['premise']==original_process['premise'] and given['gallery']['slop_instructions']==instructions
+    assert 'brief' not in given and given['premise']==original_process['premise'] and given['gallery']=={'title':gallery['title'],'description':description}
+    assert given['idea']['idea']==selected['references'][0]['idea']['idea'], given
     assert 'recognizable' in judge['body']['instructions'] and 'ENTIRE' in judge['body']['instructions']
     assert Image.open(io.BytesIO(base64.b64decode(picture['image_url'].split(',')[1]))).size==(96,64)
     [child]=auto['images']; photos.append(child['id'])
@@ -170,11 +170,11 @@ try:
     remove([child['id']])
     assert {r['id'] for r in extract(gallery,2)[1]['references']}=={one['id'],two['id']}
 
-    # Changing instructions after proposals prevents confirmation. Cancel drops references and cannot be replayed.
+    # Changing the gallery after proposals prevents confirmation. Cancel drops references and cannot be replayed.
     control([])
     selected=extract(gallery,1)[1]; assert prepare(selected)[0]==200
     review=wait_for_batch()
-    gallery=update_gallery(gallery,instructions+' Preferisci luce naturale.')
+    gallery=update_gallery(gallery,description+' Preferisci luce naturale.')
     assert call('auto')[1]['batch']['proposal_review']['invalid']
     assert call('auto/start',{'batch':review['id'],'count':1,'confirm':True})[0]==409
     assert call('auto/cancel',{'batch':review['id']})[0]==200

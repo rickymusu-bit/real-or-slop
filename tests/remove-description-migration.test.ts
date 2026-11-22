@@ -56,7 +56,9 @@ test("the proposed texts become current once; the history and the other parts st
       ('evaluation','slop_evaluation','Valutazione','2026-11-19T10:00:00.000Z')`);
     db.exec(readFileSync(MIGRATION, "utf8"));
     assert.equal(current(db, "base"), DEFAULTS.base);
-    assert.equal(current(db, "slop_gallery_prompt"), DEFAULTS.slop_gallery_prompt);
+    // The text saved by 0066, quoted by migration 0070, which replaces it with the proposal that develops the idea of a REAL.
+    const later = readFileSync("migrations/0070_remove_gallery_instructions.sql", "utf8");
+    assert.equal(current(db, "slop_gallery_prompt"), later.slice(later.indexOf("LIMIT 1)='") + 10, later.lastIndexOf("';")).replaceAll("''", "'"));
     assert.equal(current(db, "slop_evaluation"), "Valutazione");
     assert.equal(current(db, "analysis"), "Descrizione delle REAL");
     assert.equal(db.prepare("SELECT count(*) AS n FROM model_contexts").get()?.n, 6);

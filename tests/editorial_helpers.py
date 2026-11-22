@@ -33,14 +33,13 @@ def control(queue=None):
     with urllib.request.urlopen(req) as r: return json.loads(r.read()).get('log')
 
 def free_ideas():
-    """Fixture: every REAL outside the trash gets a free approved idea for the current instructions of its gallery, as if the owner had
-    approved one (proposing ideas is a paid call, exercised in analysis.integration.py and the browser suites)."""
-    sql("""UPDATE real_ideas SET gallery_id=(SELECT gallery_id FROM images WHERE id=real_ideas.image_id),
-      gallery_revision=(SELECT g.revision FROM images i JOIN galleries g ON g.id=i.gallery_id WHERE i.id=real_ideas.image_id) WHERE status='approved';
-    INSERT INTO real_ideas(id,image_id,gallery_id,gallery_revision,idea,genre,changes,status,model,base_context,ideas_context,created_at,approved_at)
-      SELECT lower(hex(randomblob(16))),i.id,i.gallery_id,g.revision,'Idea di prova per '||i.title,'Foto di collezione','Ambiente e punto di vista',
+    """Fixture: every REAL outside the trash gets a free approved idea for its current gallery, as if the owner had approved one
+    (proposing ideas is a paid call, exercised in analysis.integration.py and the browser suites)."""
+    sql("""UPDATE real_ideas SET gallery_id=(SELECT gallery_id FROM images WHERE id=real_ideas.image_id) WHERE status='approved';
+    INSERT INTO real_ideas(id,image_id,gallery_id,idea,genre,changes,status,model,base_context,ideas_context,created_at,approved_at)
+      SELECT lower(hex(randomblob(16))),i.id,i.gallery_id,'Idea di prova per '||i.title,'Foto di collezione','Ambiente e punto di vista',
         'approved','fake','base','ideas',strftime('%Y-%m-%dT%H:%M:%fZ','now'),strftime('%Y-%m-%dT%H:%M:%fZ','now')
-      FROM images i JOIN galleries g ON g.id=i.gallery_id WHERE i.origin='REAL' AND i.status<>'trash'
+      FROM images i WHERE i.origin='REAL' AND i.status<>'trash'
       AND NOT EXISTS(SELECT 1 FROM real_ideas x WHERE x.image_id=i.id AND x.status='approved'
         AND NOT EXISTS(SELECT 1 FROM slop_gallery_sources s WHERE s.idea_id=x.id))""")
 
@@ -64,8 +63,8 @@ def real(prefix='editorial', gallery=None):
     code,item=call('/'+item['id']+'/approve',{'rights_confirmed':True},library=True);assert code==200,item
     return item
 
-def make_gallery(title, instructions='', description='Fotografie documentarie della piazza.'):
-    code,result=call('/galleries',{'title':title,'description':description,'slop_instructions':instructions},library=True)
+def make_gallery(title, description='Fotografie documentarie della piazza.'):
+    code,result=call('/galleries',{'title':title,'description':description},library=True)
     assert code==200,result
     return result
 

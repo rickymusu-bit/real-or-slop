@@ -14,8 +14,8 @@ def _call(api, token, path, data=None, raw=None, mime='application/json', method
                                  headers={'Content-Type': mime, 'Authorization': 'Bearer ' + token})
     with urllib.request.urlopen(req) as r: return json.loads(r.read())
 
-def make_gallery(api, token, title, instructions=''):
-    return _call(api,token,'/galleries',{'title':title,'slop_instructions':instructions})['id']
+def make_gallery(api, token, title):
+    return _call(api,token,'/galleries',{'title':title})['id']
 
 def open_gallery(page, gallery_id):
     page.locator(f'[data-gallery-open="{gallery_id}"]').click()

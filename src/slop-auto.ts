@@ -119,7 +119,7 @@ export function mountSlopAuto(root: HTMLElement | null, controls: HTMLElement | 
     } else if (state) {
       const selected = gallery(), max = state.max_batch, c = preview?.config || state.config;
       html = `<h3>Generazione automatica</h3>
-        ${selected ? `<p role="status">${selected.ready ? `REAL con un’idea approvata disponibile: ${selected.available}.` : "Salva le Indicazioni SLOP con «Modifica galleria» per abilitare la generazione automatica."}</p>` : ""}
+        ${selected ? `<p role="status">${selected.ready ? `REAL con un’idea approvata disponibile: ${selected.available}.` : "Nessuna REAL con un’idea approvata disponibile: proponi e approva le idee dal dettaglio delle REAL approvate o pubblicate."}</p>` : ""}
         <label>Numero di SLOP<input id="slop-auto-size" type="number" required min="1" max="${max}" value="${quantity}" ${selected?.ready ? "" : "disabled"}></label>
         ${state.paid_calls ? "" : '<p class="hint">Manca la chiave OpenAI.</p>'}
         <button type="button" data-auto="preview" ${selected?.ready ? "" : "disabled"}>${preview ? "Estrai di nuovo le REAL" : "Estrai le REAL"}</button>

@@ -59,23 +59,22 @@ try:
                 page.get_by_role('link',name='Genera SLOP').click()
                 page.locator('[data-generation-mode=automatic]').click()
                 expect(page.locator('[data-auto=preview]')).to_be_disabled()
-                expect(page.locator('#slop-auto-controls')).to_contain_text('Salva le Indicazioni SLOP')
+                expect(page.locator('#slop-auto-controls')).to_contain_text('Nessuna REAL con un’idea approvata')
 
+                # No SLOP instructions in a gallery any more (owner decision of 2026-11-22): the editor has title, description, thresholds.
                 page.locator('[data-gallery-return]').click()
                 page.locator('[data-gallery-edit]').click()
-                form.get_by_role('button',name='Proponi indicazioni con IA').click()
-                expect(form.get_by_label('Indicazioni SLOP')).to_have_value(re.compile('conserva la piazza'))
-                expect(page.locator('#gallery-readiness')).to_contain_text('Salva le Indicazioni SLOP')
-                form.get_by_label('Indicazioni SLOP').fill('Conserva la piazza riconoscibile e inventa un bus plausibile.')
-                form.get_by_role('button',name='Salva modifiche').click()
+                expect(form.get_by_label('Indicazioni SLOP')).to_have_count(0)
+                expect(form.get_by_role('button',name='Proponi indicazioni con IA')).to_have_count(0)
+                expect(page.locator('#gallery-readiness')).to_contain_text('idea approvata')
+                page.locator('[data-gallery-editor-close]').click()
                 expect(page.locator('#gallery-editor')).to_be_hidden()
-                assert 'Massimo una chiamata' in confirmations[0]
                 # Ideas of falsification (owner decisions of 2026-11-21): proposed from the detail with one call, one approved.
                 page.locator('[data-open="'+source['id']+'"]').click()
                 detail=page.locator('#library-detail')
                 detail.locator('#library-ideas').click()
                 expect(detail.locator('[data-idea]')).to_have_count(2)
-                assert confirmations[1].startswith('Chiedere idee di falsificazione per «'+source['title']+'»'),confirmations[1]
+                assert confirmations[0].startswith('Chiedere idee di falsificazione per «'+source['title']+'»'),confirmations[0]
                 expect(detail.locator('[data-idea] .badge').first).to_have_text('proposta')
                 detail.locator('[data-idea-approve]').first.click()
                 expect(detail.locator('#library-detail-message')).to_have_text('Idea approvata.')
@@ -110,7 +109,7 @@ try:
                 expect(page.locator('[data-premise]')).to_contain_text('bus',timeout=20000)
                 control_log=control()
                 assert len(control_log)==1 and control_log[0]['body']['text']['format']['name']=='slop_gallery_proposal'
-                assert 'Massimo 1 chiamata' in confirmations[3]
+                assert 'Massimo 1 chiamata' in confirmations[2]
                 expect(page.locator('[data-auto=start]')).to_be_visible(timeout=20000)
                 page.locator('summary').filter(has_text='Prompt inglese').click()
                 expect(page.get_by_text('A plausible invented vintage bus',exact=False)).to_be_visible()
@@ -138,7 +137,7 @@ try:
                     page.locator('#gallery-active-batch').click()
                 expect(page.locator('[data-auto=review]')).to_be_visible(timeout=30000)
                 assert len(control())==2,control()  # generation and evaluation, no analysis after acceptance
-                assert 'Massimo 4 chiamate' in confirmations[4] and 'analisi' not in confirmations[4],confirmations
+                assert 'Massimo 4 chiamate' in confirmations[3] and 'analisi' not in confirmations[3],confirmations
                 auto=call('auto')[1];assert auto['batch']['status']=='review'
                 generated=[i['id'] for i in auto['batch']['images']];assert len(generated)==1
                 assert call('/'+generated[0],library=True)[1]['gallery_id']==gallery_id

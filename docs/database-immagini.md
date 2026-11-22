@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 10.3.0
+# Foto e gallerie — specifica 10.4.0
 
-Stato: implementata nel ramo 1.55.0, da rilasciare. Aggiornata: 2026-11-21T23:00:00Z.
+Stato: implementata nel ramo 1.56.0, da rilasciare. Aggiornata: 2026-11-22T10:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -45,7 +45,7 @@ La griglia 4:5 ha due colonne su mobile. «Carica altre foto» aggiunge le pagin
 Dalla finestra delle foto si aprono le pagine dedicate «Carica REAL» e «Genera SLOP». «Foto della galleria» riapre la finestra.
 
 La sezione «Gallerie» mostra fino a tre foto recenti e il conteggio fuori dal cestino per galleria. «Nuova galleria» apre il modulo
-per titolo, descrizione, Indicazioni SLOP e soglie di affollamento e dettaglio delle REAL (da 0 a 100; vuote, valgono quelle
+per titolo, descrizione e soglie di affollamento e dettaglio delle REAL (da 0 a 100; vuote, valgono quelle
 predefinite delle Impostazioni, mostrate come segnaposto). Cambiare le soglie non cambia la revisione della galleria. Dalla finestra della galleria, «Modifica galleria» permette anche di chiedere una proposta
 al modello dopo aver confermato una chiamata. L’owner può rivedere e salvare il testo proposto. Si possono spostare sia le REAL sia le SLOP
 dal dettaglio o dalla selezione multipla, conservando lo stato e i dati delle foto. Una SLOP spostata resta documentata come generata dal

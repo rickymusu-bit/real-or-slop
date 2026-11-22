@@ -90,3 +90,22 @@ test("a process closed without a SLOP, or a cancelled batch, frees the idea", ()
     assert.deepEqual(cancelled.prepare("PRAGMA foreign_key_check").all(), []);
   } finally { cancelled.close(); }
 });
+
+test("migration 0070 removes the gallery instructions and the revision on ideas, keeping galleries and ideas", () => {
+  const db = migrated();
+  try {
+    // Migration 0066 has already saved the text that 0070 replaces.
+    const sql = readFileSync("migrations/0070_remove_gallery_instructions.sql", "utf8");
+    const saved = sql.slice(sql.indexOf("LIMIT 1)='") + 10, sql.lastIndexOf("';")).replaceAll("''", "'");
+    assert.equal(db.prepare("SELECT body FROM model_contexts WHERE part='slop_gallery_prompt' ORDER BY created_at DESC,rowid DESC").get()?.body, saved);
+    db.exec(sql);
+    assert.ok(!db.prepare("PRAGMA table_info(galleries)").all().some(c => c.name === "slop_instructions"));
+    assert.ok(!db.prepare("PRAGMA table_info(real_ideas)").all().some(c => c.name === "gallery_revision"));
+    assert.deepEqual({ ...db.prepare("SELECT id,title FROM galleries").get() }, { id: "g", title: "Console" });
+    assert.equal(db.prepare("SELECT count(*) AS n FROM real_ideas").get()?.n, 2);
+    const prompts = db.prepare("SELECT body FROM model_contexts WHERE part='slop_gallery_prompt' ORDER BY created_at,rowid").all().map(r => r.body);
+    assert.equal(prompts.length, 2);
+    assert.match(String(prompts[1]), /idea approvata/);
+    assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+  } finally { db.close(); }
+});
