@@ -1,6 +1,7 @@
-# Copie di gioco — specifica 13.0.0
+# Copie di gioco — specifica 13.0.1
 
-Stato: implementata nel ramo 1.50.0, da rilasciare. Aggiornata: 2026-11-20T16:30:00Z.
+Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z. Dal 2026-11-22 la «revisione dello studio SLOP»
+è il passo 7 del wizard «Genera SLOP» (specifica `generazione-slop`).
 
 ## 1. Decisioni dell'owner
 

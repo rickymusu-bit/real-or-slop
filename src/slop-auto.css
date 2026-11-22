@@ -22,3 +22,23 @@
 }
 .slop-auto-proposals .slop-auto-photo img { aspect-ratio:1; object-fit:cover; }
 .slop-auto-proposals [data-premise] { color:var(--text); font-weight:600; }
+
+/* Steps of the SLOP wizard (owner decision of 2026-11-22). */
+.slop-wizard-steps { margin: 0 0 12px; }
+.slop-wizard-candidates li.is-selected { border-color: var(--real); box-shadow: 0 0 0 1px var(--real); }
+.slop-wizard-candidates label { display: flex; gap: 6px; align-items: baseline; margin-top: 8px; overflow-wrap: anywhere; }
+.slop-wizard-candidates label strong { margin: 0; }
+.slop-wizard-reals { list-style: none; padding: 0; display: grid; gap: 16px; max-inline-size: 52rem; }
+.slop-wizard-reals > li { padding: 12px; border: 1px solid var(--control-border); border-radius: 12px; display: grid; gap: 10px; }
+.slop-wizard-real-head { display: grid; grid-template-columns: minmax(4rem, 7rem) minmax(0, 1fr); gap: 12px; align-items: start; overflow-wrap: anywhere; }
+.slop-wizard-real-head .slop-auto-photo img, .slop-wizard-chosen .slop-auto-photo img { aspect-ratio: 1; object-fit: cover; }
+.slop-wizard-ideas { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.slop-wizard-ideas li { display: grid; gap: 6px; padding: 8px; border-left: 3px solid var(--control-border); }
+.slop-wizard-ideas li:has([data-choose]:checked) { border-left-color: var(--real); }
+.slop-wizard-ideas .badge { justify-self: start; }
+.slop-wizard-ideas textarea, .slop-wizard-own textarea, .slop-auto-proposals textarea { width: 100%; box-sizing: border-box; }
+.slop-wizard-choose { display: flex; gap: 6px; align-items: center; font-weight: 600; }
+.slop-wizard-own label { display: grid; gap: 4px; }
+.slop-wizard-chosen { list-style: none; padding: 0; display: grid; gap: 12px; max-inline-size: 48rem; }
+.slop-wizard-chosen li { display: grid; grid-template-columns: minmax(4rem, 6rem) minmax(0, 1fr); gap: 12px; align-items: start; overflow-wrap: anywhere; }
+.slop-auto-proposals label { display: grid; gap: 4px; margin-bottom: 8px; }

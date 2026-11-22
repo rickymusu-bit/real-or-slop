@@ -1,7 +1,19 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-22T10:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-22T18:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.57.0 — 2026-11-22T18:00:00Z
+
+- Un solo wizard «Genera SLOP» (decisione dell'owner): galleria; REAL da un'estrazione gratuita corretta su affollamento e dettaglio,
+  già selezionate e modificabili fra tutte quelle disponibili; per ogni REAL una proposta scritta dall'owner o chiesta al modello
+  (una chiamata per REAL); scelta delle proposte, anche più di una per REAL; premessa e prompt scritti dal modello e corretti
+  dall'owner; generazione; revisione con inquadratura, trattamento, approvazione e processi senza SLOP.
+- Tolta la generazione manuale (prompt e brief scritti a mano, SLOP senza REAL) con le sue rotte. Le proposte delle REAL si
+  scrivono, si chiedono e si scelgono solo nel wizard: il dettaglio della REAL le mostra in sola lettura e la selezione della
+  galleria non le propone più.
+- Nuove rotte `GET auto/candidates` e `POST auto/proposal`; `POST auto/prepare` riceve le proposte scelte e un ID di richiesta al
+  posto dell'estrazione firmata. Nessuna migrazione.
 
 ## 1.56.0 — 2026-11-22T10:00:00Z
 

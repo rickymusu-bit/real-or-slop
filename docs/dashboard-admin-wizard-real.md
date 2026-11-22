@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 6.2.0
+# Dashboard e wizard REAL — specifica 6.3.0
 
-Stato: implementata nel ramo 1.56.0, da rilasciare. Aggiornata: 2026-11-22T10:00:00Z.
+Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -13,7 +13,7 @@ Stato: implementata nel ramo 1.56.0, da rilasciare. Aggiornata: 2026-11-22T10:00
 - Nella ricerca su Commons il tasto che svuota il campo sta in una casella separata alla fine del campo, perché non copra il testo; un
   tocco breve su una foto la seleziona e la mette subito tra le selezionate; la selezione resta con una nuova ricerca (2026-11-14).
 - Una pressione prolungata su una miniatura la ingrandisce con titolo, descrizione e link a Commons; la finestra resta aperta e si
-  chiude con una × nell'angolo. Vale anche nella galleria e nello studio SLOP (2026-11-14).
+  chiude con una × nell'angolo. Vale anche nella galleria e nel wizard SLOP (2026-11-14).
 - **Niente descrizione editoriale né analisi a pagamento delle REAL** (2026-11-20): i risultati del gioco mostrano i crediti della
   REAL; il wizard conserva solo la descrizione della fonte, che resta nel catalogo e accompagna la REAL nelle proposte SLOP.
 
@@ -50,7 +50,7 @@ Nelle eccezioni SLOP, «Accetta comunque il tentativo N» è disponibile per ogn
   tocca la × nell'angolo in alto a destra (o Esc); il tocco sullo sfondo non la chiude.
 - **Contenuti:** risultato di Commons: anteprima da 1280 px, titolo del file, descrizione di Commons (300 caratteri), «Apri la pagina su
   Commons». REAL della galleria: copia di gioco, titolo, descrizione, link alla fonte e, se misurata oltre le soglie della galleria, l'avviso con
-  gli assi oltre soglia. SLOP della galleria: copia, ID abbreviato e prompt. Immagine della revisione nello studio: prompt.
+  gli assi oltre soglia. SLOP della galleria: copia, ID abbreviato e prompt. Immagine della revisione nel wizard SLOP: prompt.
 
 ## 4. Wizard REAL
 

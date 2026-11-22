@@ -46,7 +46,7 @@ def free_ideas():
 counter = 100
 fixture_gallery = None
 DESCRIPTION = 'Original Commons text'
-BRIEF = {'required':['street-scene'], 'preferred':['daylight'], 'flexible':['people and viewpoint'], 'exclusions':['identifiable real people']}
+BRIEF = {'required':['street-scene'], 'preferred':['daylight'], 'flexible':['people and viewpoint'], 'exclusions':['identifiable real people']}  # retired manual briefs
 
 def real(prefix='editorial', gallery=None):
     global counter, fixture_gallery
@@ -73,16 +73,46 @@ def assign_gallery(image, gallery):
     assert code==200,result
     return result
 
-def batch(gallery_id, **fields):
-    data={'mode':'manual','gallery_id':gallery_id,'prompt':'An ordinary documentary street photograph.',
-          'brief':BRIEF,**fields}
-    code,b=call('batches',data);assert code==200,b
-    return b
-
-def generate(b):return call('batches/'+b['id']+'/images',{'confirm':True,'index':0,'quality':b['config']['quality']})
 def load(b):
     code,b=call('batches/'+b['id']);assert code==200,b
     return b
+
+def wizard_wait():
+    """The open batch of the SLOP wizard once its server run has stopped."""
+    import time
+    for _ in range(360):
+        batch=call('auto')[1]['batch']
+        if batch and not (batch['runner'] or {}).get('alive'):return batch
+        time.sleep(.25)
+    raise AssertionError('the batch is still running on the server')
+
+def wizard_prepare(gallery, created, prefix='ciclo', queue=None):
+    """A batch of one SLOP from the wizard: an approved REAL with a proposal approved as a fixture, premise and prompt by the fake
+    model. The REAL id goes into `created` for the cleanup."""
+    r=real(prefix,gallery=gallery);created.append(r['id'])
+    free_ideas()
+    idea=sql(f"SELECT id FROM real_ideas WHERE image_id='{r['id']}' AND status='approved'")[0]['id']
+    control(queue or [])
+    code,state=call('auto/prepare',{'gallery_id':gallery,'ideas':[idea],'count':1,'request':str(uuid4()),'confirm':True});assert code==200,state
+    b=wizard_wait();assert b['proposal_review'] and b['processes'][0]['state']=='ready',b
+    return b,idea
+
+def wizard_start(b, queue):
+    control(queue)
+    code,state=call('auto/start',{'batch':b['id'],'count':1,'confirm':True});assert code==200,state
+    return wizard_wait()
+
+def wizard_release(b):
+    """Decides the batch: its new images go to the trash and its processes without a SLOP are closed, so that the next can open."""
+    full=load(b)
+    for image in full['images']:
+        if image['status']=='new':call('/'+image['id']+'/trash',{},library=True)
+    for p in full['processes']:
+        if p['state'] in ('exhausted','review_needed','failed','uncertain'):call('processes/'+p['id']+'/close',{})
+    state=call('auto')[1]
+    if state['batch'] and state['batch']['id']==b['id'] and state['batch']['gallery_review']=='pending':call('auto/cancel',{'batch':b['id']})
+    elif state['batch'] and state['batch']['id']==b['id']:assert call('auto/close',{'batch':b['id']})[0]==200
+    assert call('auto')[1]['batch'] is None
 
 def remove(ids):
     if not ids:return

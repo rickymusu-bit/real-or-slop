@@ -1,7 +1,6 @@
-/** Ideas of falsification of a REAL (owner decisions of 2026-11-21, specification `generazione-slop`, section 2): a model proposes up to
- * three ways of making a SLOP from the REAL, in one confirmed paid call, never repeated automatically; the owner approves, edits or
- * discards them. An approved idea that is free (not used, not in an open process, approved while the REAL was in its current
- * gallery) lets the automatic extraction draw its REAL. Each idea yields at most one SLOP. */
+/** Proposals (ideas of falsification) of a REAL, written and chosen in the SLOP wizard (owner decisions of 2026-11-21 and 2026-11-22,
+ * specification `generazione-slop`, section 2): the owner writes one, or a model proposes up to three in one confirmed paid call,
+ * never repeated automatically. They stay with the REAL; choosing one in the wizard approves it, and each yields at most one SLOP. */
 import { HttpError, id, type Env } from "./core";
 import { IMAGE_MARK, jsonWithImage } from "./image-body";
 import { currentContext } from "./model-context";
@@ -33,10 +32,6 @@ interface IdeaRow { id: string; image_id: string; gallery_id: string; idea: stri
 /** «review»: an idea not used, written while the REAL was in another gallery. «busy»: in an open process. */
 export type IdeaState = "proposed" | "approved" | "used" | "review";
 
-/** SQL condition of an idea `i` that the extraction may use, for a REAL `images` row aliased as given. */
-export const freeIdea = (image: string) => `i.image_id=${image}.id AND i.status='approved' AND i.gallery_id=${image}.gallery_id
-  AND NOT EXISTS(SELECT 1 FROM slop_gallery_sources s WHERE s.idea_id=i.id)`;
-
 /** Ideas of each REAL, with their effective state. */
 export async function ideasOf(env: Env, ids: readonly string[]) {
   const out = new Map<string, ReturnType<typeof ideaView>[]>();
@@ -58,6 +53,23 @@ function ideaView(row: IdeaRow, stale: boolean, busy: boolean) {
 }
 
 interface Target { id: string; origin: string; status: string; original_key: string; gallery_id: string; title: string | null; description: string }
+/** POST /:id/ideas {idea, genre?, changes?}: a proposal written by the owner, free, approved at once. At most three per REAL in all. */
+export async function ownIdea(env: Env, row: Target, data: Record<string, unknown>) {
+  if (Object.keys(data).some(k => !["idea", "genre", "changes"].includes(k))) throw new HttpError(400, "Campi non previsti");
+  if (row.origin !== "REAL" || row.status === "trash") throw new HttpError(409, "Le proposte si scrivono per le REAL fuori dal cestino");
+  const text = (key: keyof typeof LIMITS, required = false) => {
+    const value = data[key] ?? "";
+    if (typeof value !== "string" || value.trim().length > LIMITS[key] || (required && !value.trim()))
+      throw new HttpError(400, `Campo non valido: ${key} (fino a ${LIMITS[key]} caratteri)`);
+    return value.trim();
+  };
+  const [idea, genre, changes] = [text("idea", true), text("genre"), text("changes")];
+  const stamp = new Date().toISOString();
+  const added = await env.DB.prepare(`INSERT INTO real_ideas(id,image_id,gallery_id,idea,genre,changes,status,model,base_context,ideas_context,created_at,approved_at)
+    SELECT ?,id,gallery_id,?,?,?,'approved','owner','','',?,? FROM images WHERE id=? AND (SELECT count(*) FROM real_ideas WHERE image_id=?)<?`)
+    .bind(id(), idea, genre, changes, stamp, stamp, row.id, row.id, MAX_IDEAS).run();
+  if (!added.meta.changes) throw new HttpError(409, `La REAL ha già ${MAX_IDEAS} proposte: scartane una per scriverne un'altra`);
+}
 /** POST /:id/ideas {confirm: true, request}: one paid call. The proposed ideas not yet approved are replaced; approved and used ones
  * stay and count towards the three. */
 export async function proposeIdeas(env: Env, row: Target, data: Record<string, unknown>) {

@@ -32,8 +32,8 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
     const gallery = list?.galleries.find(g => g.id === selected);
     dialog.querySelector("#gallery-editor-title")!.textContent = gallery ? "Modifica galleria" : "Nuova galleria";
     root.innerHTML = `
-      <p class="hint" id="gallery-readiness">${gallery?.ready ? `Generazione automatica: REAL con un’idea approvata disponibili: ${gallery.available}.`
-        : "La generazione automatica usa le REAL approvate o pubblicate con un’idea approvata: le idee si propongono e si approvano dal dettaglio delle REAL."}
+      <p class="hint" id="gallery-readiness">${gallery?.ready ? `Generazione SLOP: REAL approvate o pubblicate disponibili: ${gallery.available}.`
+        : "Il wizard «Genera SLOP» usa le REAL approvate o pubblicate della galleria: approvane almeno una."}
         Titolo e descrizione accompagnano le richieste al modello.</p>
       <form class="gallery-form">
         <label>Titolo<input name="title" autofocus required maxlength="200" value="${escape(gallery?.title || "")}"></label>

@@ -1,90 +1,109 @@
-# Generazione SLOP — specifica 14.0.0
+# Generazione SLOP — specifica 15.0.0
 
-Stato: implementata nel ramo 1.56.0, da rilasciare. Aggiornata: 2026-11-22T10:00:00Z.
+Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
 
-## 1. Modalità e bilanciamento
+## 1. Un solo wizard
 
-L’avviso in Statistiche confronta i conteggi di REAL e SLOP approvate o pubblicate e mostra a parte le SLOP nuove. L’owner decide la
-quantità da generare, da 1 a 10 per batch automatico. Le foto non hanno tag (decisione del 2026-11-20): la galleria le raggruppa.
+Decisione dell'owner del 2026-11-22: **niente generazione manuale**. Ogni SLOP nasce dal wizard «Genera SLOP» della galleria, che
+segue una sola pipeline:
 
-«Genera SLOP» apre la pagina dedicata della galleria e la usa per entrambe le modalità. Le generazioni recenti e le eccezioni mostrate nello studio sono della
-galleria. La revisione del batch mostra le SLOP che si trovano ancora nella galleria di origine. Una SLOP spostata può essere
-revisionata dalla galleria di destinazione. Se esiste già un batch automatico, Gallerie e la modalità automatica delle altre gallerie offrono un accesso al batch aperto.
+1. **Galleria**: il wizard si apre dalla galleria, nella stessa scheda;
+2. **REAL**: estrazione corretta su affollamento e dettaglio, che l'owner modifica togliendo o aggiungendo REAL;
+3. **Proposte**: per ogni REAL l'owner scrive una proposta o la chiede al modello;
+4. **Scelta** delle proposte da generare;
+5. **Prompt**: il modello scrive premessa e prompt (prima conferma), l'owner li corregge;
+6. **Generazione** sul server (seconda conferma);
+7. **Revisione**: inquadratura, trattamento, approvazione e pubblicazione delle SLOP accettate, e i processi senza SLOP.
 
-**Manuale.** L’owner scrive prompt inglese e brief con ancoraggi, preferenze, elementi liberi ed esclusioni. Preparare
-o modificare il processo prima del primo tentativo è gratuito. Il processo non richiede una REAL né una chiamata che scriva o
-riscriva il prompt. I tag di partenza non esistono più: la richiesta che li contiene è rifiutata. I batch manuali creati prima li
-conservano nello snapshot privato, senza effetti.
+Spariscono la scrittura diretta di prompt e brief, le SLOP senza REAL di partenza e le rotte dei batch manuali (`POST batches`,
+`PUT batches/:id`, `POST batches/:id/{images,run,stop}`). I processi manuali già registrati restano consultabili; quelli senza SLOP
+compaiono fra le eccezioni e si accettano o si chiudono come gli altri.
 
-**Automatica.** Dalla decisione dell’owner del 2026-11-18 (#157) ogni REAL appartiene a una galleria. Le gallerie si creano da «Nuova
-galleria» e si aggiornano con «Modifica galleria»; hanno titolo, descrizione e soglie di affollamento e dettaglio. Titolo e descrizione
-accompagnano le richieste al modello come contesto. **Niente Indicazioni SLOP di galleria** (decisione dell'owner del 2026-11-22):
-quelle proposte dal modello partivano dal solo titolo, non dalle foto, ed erano specifiche senza riferirsi alle immagini presenti. Quali
-falsi hanno senso lo dicono le idee approvate di ogni REAL. La generazione automatica è disponibile quando la galleria ha almeno una REAL
-con un'idea approvata libera. La migrazione 0070 elimina le indicazioni salvate e la loro proposta automatica.
+L’avviso in Statistiche confronta i conteggi di REAL e SLOP approvate o pubblicate e mostra a parte le SLOP nuove. Un batch genera da
+1 a 10 SLOP. Le foto non hanno tag (decisione del 2026-11-20): la galleria le raggruppa. Un batch alla volta: se ne esiste già uno,
+Gallerie e il wizard delle altre gallerie offrono un accesso al batch aperto. La revisione del batch mostra le SLOP che si trovano
+ancora nella galleria di origine; una SLOP spostata si revisiona dalla galleria di destinazione.
+
+Dalla decisione dell’owner del 2026-11-18 (#157) ogni REAL appartiene a una galleria. Le gallerie hanno titolo, descrizione e soglie di
+affollamento e dettaglio; titolo e descrizione accompagnano le richieste al modello come contesto. **Niente Indicazioni SLOP di
+galleria** (decisione dell'owner del 2026-11-22): quelle proposte dal modello partivano dal solo titolo, non dalle foto. Quali falsi
+hanno senso lo dicono le proposte di ogni REAL. Il wizard è disponibile quando la galleria ha almeno una REAL approvata o pubblicata.
+La migrazione 0070 elimina le indicazioni salvate e la loro proposta automatica.
 
 Le REAL non hanno descrizione editoriale (decisione del 2026-11-20): il modello delle proposte legge direttamente l’originale, il
-titolo e la descrizione della fonte, insieme all'idea approvata della REAL.
+titolo e la descrizione della fonte, insieme alla proposta scelta.
 
-### Idee di falsificazione delle REAL
+### Proposte delle REAL
 
-Decisioni dell'owner del 2026-11-21. I modi possibili di creare una SLOP da una REAL sono una proprietà della REAL: un'estrazione
-casuale non basta, perché per esempio un'edizione limitata si fotografa da sola, in risalto, e non ha senso in una scena affollata. Le
-idee permettono di generare SLOP diverse da una REAL versatile e danno una buona confidenza che la falsificazione sia plausibile.
+Decisioni dell'owner del 2026-11-21 e del 2026-11-22. I modi possibili di creare una SLOP da una REAL sono una proprietà della REAL:
+un'edizione limitata si fotografa da sola, in risalto, e non ha senso in una scena affollata. Le proposte (`real_ideas`) restano
+salvate sulla REAL per i batch successivi.
 
-- **Proposta.** Dal dettaglio della REAL, «Proponi idee», o dalla selezione della galleria per le REAL che non ne hanno: una chiamata a
-  pagamento per REAL, confermata, mai ripetuta in automatico (`POST /:id/ideas {confirm, request}`, tipo `prompts`). Il modello
-  riceve l'originale intero, titolo e descrizione della fonte (ipotesi, non istruzioni), titolo e descrizione della galleria, l'ultima
-  misura di affollamento e dettaglio, le idee già approvate o usate e il testo modificabile «Idee SLOP delle REAL».
-  Restituisce da zero a tre idee, ciascuna con la scena da generare, il genere di foto e che cosa cambia rispetto alla REAL; con zero
-  idee, il motivo, che resta sulla REAL.
-- **Al massimo tre idee per REAL**, contando approvate e usate. Una nuova proposta sostituisce le idee solo proposte e chiede quelle
-  mancanti; con tre idee approvate o usate è rifiutata.
-- **Revisione.** L'owner modifica, approva o scarta ogni idea (`PATCH` e `DELETE /ideas/:id`). Un'idea approvata è legata alla
-  galleria in cui si trovava la REAL: se la REAL cambia galleria, l'idea è «da rivedere» ed esce dall'estrazione finché non viene
-  approvata di nuovo. Modificare titolo o descrizione della galleria non tocca le idee. Un'idea usata o in un processo aperto non si modifica.
+- **Scritte dall'owner.** Nel passo 3, gratuite e approvate subito (`POST /:id/ideas {idea, genre?, changes?}`); al massimo tre
+  proposte per REAL in tutto.
+- **Chieste al modello.** Nel passo 3, per una REAL o per tutte le REAL scelte che non hanno proposte libere: una chiamata a
+  pagamento per REAL, confermata con il massimo, mai ripetuta in automatico (`POST /:id/ideas {confirm, request}`, tipo `prompts`).
+  Il modello riceve l'originale intero, titolo e descrizione della fonte (ipotesi, non istruzioni), titolo e descrizione della
+  galleria, l'ultima misura di affollamento e dettaglio, le proposte già approvate o usate e il testo modificabile «Idee SLOP delle
+  REAL». Restituisce da zero a tre proposte (scena, genere di foto, cosa cambia rispetto alla REAL); con zero, il motivo, che resta
+  sulla REAL. Una nuova richiesta sostituisce le proposte del modello non scelte e chiede quelle mancanti fino a tre, contando
+  approvate e usate.
+- **Revisione.** Nel passo 3 l'owner corregge il testo di una proposta libera (`PATCH /ideas/:id`) o la scarta (`DELETE /ideas/:id`).
+  Scegliere una proposta nel passo 4 la approva per la galleria della REAL. Una proposta approvata quando la REAL era in un'altra
+  galleria è «da rivedere»: torna valida se viene scelta di nuovo. Una proposta usata o in un processo aperto non si modifica. Il
+  dettaglio della REAL nella galleria mostra le proposte in sola lettura.
 - **Riferimento tra REAL e SLOP.** La REAL ispira la SLOP, non viene copiata. La SLOP eredita galleria, famiglia ed epoca dell'oggetto,
   genere di foto (come si fotografa di solito quel tipo di oggetto), tecnica, luce e livelli di affollamento e dettaglio. Cambiano
   sempre ambiente e punto di vista; l'esemplare può restare lo stesso solo se la scena cambia molto. Composizione, segni
   dell'esemplare (graffi, adesivi, scritte a mano, numeri di serie), scritte e persone della REAL non si riprendono mai. Messe una
   accanto all'altra, REAL e SLOP non devono sembrare due scatti della stessa sessione.
-- **Una SLOP per idea.** L'idea diventa «usata» quando la sua SLOP viene accettata, automaticamente o dall'owner. Un processo chiuso
-  senza SLOP lascia l'idea disponibile.
+- **Una SLOP per proposta.** La proposta diventa «usata» quando la sua SLOP viene accettata, automaticamente o dall'owner. Un processo
+  chiuso senza SLOP la lascia disponibile. Nello stesso batch si possono scegliere più proposte della stessa REAL (decisione
+  dell'owner del 2026-11-22): due REAL dello stesso oggetto danno SLOP simili quanto due proposte della stessa REAL, quindi un limite
+  per REAL non serviva. La varietà dipende dalla scelta dell'owner e dalle premesse già scritte nel batch, che il modello riceve.
 
-## 2. Estrazione, proposte e conferma
+## 2. I passi del wizard
 
-1. **Estrai le REAL.** Campione senza ripetizioni tra le REAL approvate o pubblicate della galleria, con originale disponibile in
-   quarantena e almeno un'idea approvata libera (non usata, non in un processo aperto, approvata nella galleria attuale). Una
-   REAL per estrazione, con una delle sue idee libere scelta a caso. L'estrazione è **corretta su affollamento e dettaglio**
-   (`shared/idea-sampling.ts`): ogni asse è diviso in tre fasce (0–33, 34–66, 67–100); per ogni fascia si confronta la quota fra le
-   REAL misurate della galleria con quella fra le SLOP già nate da sue idee (le REAL delle idee usate); il peso di una REAL è, per
-   ogni asse, il rapporto fra le due quote, tra 0,25 e 4, e i due assi si moltiplicano. Gli assi si correggono separatamente perché
-   nove celle congiunte resterebbero quasi vuote. Contano solo le misure della formula in vigore; una REAL senza misura pesa 1.
-   Senza correzione le REAL più versatili, di solito le più semplici, uscirebbero più spesso e la semplicità diventerebbe un indizio
-   dell'origine. La dashboard mostra miniature, titoli e idea. Tocco o pressione prolungata apre l’originale intero con la
-   descrizione della fonte. Con un campione insufficiente il server indica quante REAL con un'idea approvata sono disponibili e
-   l’owner può diminuire la quantità. Estrazione, riestrazione e annullamento sono gratuiti. `POST auto/preview {gallery_id,size}`
-   firma per 15 minuti ID, revisioni e idee delle REAL, revisione della galleria e configurazione.
-2. **Prepara le proposte.** `POST auto/prepare {preview,count,confirm:true}` consuma una volta l’estrazione dopo conferma del massimo
-   di una chiamata per REAL. Il Worker ricontrolla galleria, foto e configurazione, congela modelli, qualità, tolleranza, tentativi
-   massimi e versioni dei contesti. Il Workflow prepara le proposte in ordine. Per ciascuna REAL il modello riceve l’originale intero
-   prima del ritaglio 4:5, titolo e descrizione della fonte della REAL (`reference: {title, description}`), l'idea approvata
-   (`idea: {idea, genre, changes}`), i livelli di affollamento e dettaglio della REAL (`levels`, nullo senza misura della formula in
-   vigore), titolo e descrizione della galleria e istruzioni generali. Sviluppa l'idea secondo il riferimento tra REAL
-   e SLOP; cita alla lettera le scritte leggibili e indica i conteggi esatti delle parti contabili. Restituisce una frase in italiano
-   sul falso e il prompt in inglese, oppure il motivo per cui non può proporre un falso compatibile. Le premesse precedenti aiutano a
-   variare il batch. Il testo «Premessa e prompt di galleria» resta modificabile; le regole sull'idea e sul riferimento sono nel codice.
-3. **Conferma le immagini.** Le proposte restano disponibili per un’ora dalla preparazione, anche dopo il ricaricamento. La dashboard
-   affianca la premessa e il prompt alla REAL e mostra il motivo per gli esiti senza proposta. `POST auto/start {batch,count,confirm:true}`
-   conferma il numero esatto di proposte valide e il massimo rimanente di `2N × count` chiamate, con `N` tentativi massimi: una
-   generazione e una valutazione per tentativo. Dal 2026-11-20 nessuna analisi segue l’accettazione. La preconferma mostra modelli, qualità, tentativi, tolleranza e
-   pianificazione predefinita. La configurazione di `complexity` è trattata nella issue #153. Il server ricontrolla appartenenza, disponibilità, revisioni e scadenza.
-   Un cambiamento di galleria o riferimenti invalida le proposte. `POST auto/cancel {batch}` ferma la preparazione prima del passo
-   successivo. L’annullamento o la scadenza rimuovono i riferimenti temporanei; la conferma rimuove quelli dei processi che non
-   generano. Gli altri restano, con l'idea, fino alla fine del processo: all'accettazione della SLOP l'idea diventa usata e il
-   riferimento sparisce; alla chiusura di un processo senza SLOP il riferimento sparisce e l'idea resta disponibile (trigger della
-   migrazione 0069, decisione dell'owner del 2026-11-21). Conferme concorrenti acquisiscono una sola
-   volta la transizione. Il Workflow delle immagini parte solo con la conferma acquisita.
+1. **Galleria.** Il wizard è quello della galleria aperta; un batch aperto altrove si raggiunge con il suo collegamento.
+2. **REAL.** `POST auto/preview {gallery_id, size}` estrae gratis fino a `size` REAL approvate o pubblicate della galleria con
+   originale in quarantena, **corretta su affollamento e dettaglio** (`shared/idea-sampling.ts`): ogni asse è diviso in tre fasce
+   (0–33, 34–66, 67–100); per ogni fascia si confronta la quota fra le REAL misurate della galleria con quella fra le SLOP già nate da
+   proposte della galleria (le REAL delle proposte usate); il peso di una REAL è, per ogni asse, il rapporto fra le due quote, tra
+   0,25 e 4, e i due assi si moltiplicano. Contano solo le misure della formula in vigore; una REAL senza misura pesa 1. Senza
+   correzione si sceglierebbero più spesso le REAL più semplici e la semplicità diventerebbe un indizio dell'origine. L'estrazione è
+   solo una proposta: le REAL estratte arrivano già selezionate e l'owner ne toglie o aggiunge fra tutte quelle disponibili
+   (`GET auto/candidates?gallery=`, con misura e proposte). Selezione e scelte restano nella scheda del browser fino alla prima
+   conferma. Tocco o pressione prolungata su una miniatura apre l’originale intero con la descrizione della fonte.
+3. **Proposte** (sezione 1). Per ogni REAL scelta: le sue proposte, il campo per scriverne una, «Chiedi al modello».
+4. **Scelta.** L'owner spunta le proposte da generare (una scritta da lui è scelta subito), da 1 a 10 per batch, anche più di una
+   della stessa REAL; il riepilogo le mostra con la configurazione.
+5. **Prompt.** `POST auto/prepare {gallery_id, ideas, count, request, confirm: true}` è la prima conferma, del massimo di una chiamata
+   per proposta. `request` è un UUID del browser e diventa l'ID del batch: la stessa conferma inviata due volte crea un solo batch.
+   Il Worker ricontrolla che ogni proposta sia libera e la sua REAL approvata o pubblicata nella galleria, con l'originale; approva
+   le proposte scelte; congela modelli, qualità, tolleranza, tentativi massimi e versioni dei contesti; crea un processo per proposta,
+   con il riferimento alla REAL e alla proposta. Il Workflow prepara i prompt in ordine. Per ciascuno il modello riceve l’originale
+   intero prima del ritaglio 4:5, titolo e descrizione della fonte (`reference: {title, description}`), la proposta (`idea: {idea,
+   genre, changes}`), i livelli di affollamento e dettaglio della REAL (`levels`, nullo senza misura della formula in vigore), titolo e
+   descrizione della galleria e istruzioni generali. Sviluppa la proposta secondo il riferimento tra REAL e SLOP; cita alla lettera le
+   scritte leggibili e indica i conteggi esatti delle parti contabili. Restituisce una frase in italiano sul falso e il prompt in
+   inglese, oppure il motivo per cui non può proporre un falso compatibile. Le premesse precedenti aiutano a variare il batch. Il
+   testo «Premessa e prompt di galleria» resta modificabile; le regole sulla proposta e sul riferimento sono nel codice.
+   L'owner **corregge premessa e prompt** prima della seconda conferma (`POST auto/proposal {batch, slot, premise?, prompt?}`,
+   gratuito, si salva da solo); la premessa resta l'ancoraggio che il valutatore controlla.
+6. **Generazione.** I prompt restano disponibili per un’ora dalla preparazione, anche dopo il ricaricamento. `POST auto/start {batch,
+   count, confirm: true}` conferma il numero esatto di proposte valide e il massimo rimanente di `2N × count` chiamate, con `N`
+   tentativi massimi: una generazione e una valutazione per tentativo. Nessuna analisi segue l’accettazione. La preconferma mostra
+   modelli, qualità, tentativi e tolleranza. Il server ricontrolla appartenenza, disponibilità, revisioni e scadenza: un cambiamento
+   della galleria o delle REAL invalida i prompt. `POST auto/cancel {batch}` ferma la preparazione prima del passo successivo e lascia
+   le proposte sulle REAL. L’annullamento o la scadenza rimuovono i riferimenti temporanei; la conferma rimuove quelli dei processi
+   che non generano. Gli altri restano, con la proposta, fino alla fine del processo: all'accettazione della SLOP la proposta diventa
+   usata e il riferimento sparisce; alla chiusura di un processo senza SLOP il riferimento sparisce e la proposta resta disponibile
+   (trigger della migrazione 0069). Conferme concorrenti acquisiscono una sola volta la transizione. La generazione continua sul
+   server anche se la pagina si chiude; «Interrompi» la ferma prima del passo successivo.
+7. **Revisione.** Le SLOP accettate compaiono nel wizard con l'originale intero valutato e la copia 4:5, preparata nel browser;
+   «Inquadratura», i comandi del trattamento, «Approva», «Pubblica» e «Cestino». Tutti i tentativi restano consultabili con la loro
+   valutazione. I processi senza SLOP stanno in cima al wizard finché l'owner non li accetta o li chiude (sezione 3). «Apri nella
+   galleria» apre la griglia filtrata sul batch. Il batch si chiude quando ogni SLOP è decisa e ogni eccezione chiusa.
 
 ### Premesse e vincoli
 
@@ -133,13 +152,11 @@ del 2026-11-18, la migrazione 0061 azzera il D1 attuale al rilascio. Vengono rim
 partite, classifica, chiamate registrate, impostazioni e loro contesti. La migrazione elimina il registro madre–figlia e richiede
 una galleria per ogni immagine e batch. Agisce esclusivamente sul D1.
 
-Il **flusso manuale** genera nella galleria scelta e conserva il proprio brief. La valutazione riceve l’intera candidata, l’ID
-del tentativo, il brief, il prompt corrente e la tolleranza, con Base e Valutazione attive. Il massimo è `2N` chiamate
-per N tentativi. Al generatore il prompt arriva con il brief come contesto editoriale, senza tag. Le REAL si aggiungono con «Carica REAL» e si
-estraggono solo in modo casuale dalla galleria selezionata.
+Il **flusso manuale**, con brief e prompt scritti dall'owner, è stato tolto il 2026-11-22: i suoi processi già registrati conservano il
+brief, che fa da vincolo se l'owner ne accetta una candidata fra le eccezioni. Nessuna migrazione: cambia solo il codice.
 
 La SLOP è identificata dal suo ID e non viene analizzata. Per la copia si conservano formato e misure anonime; i riferimenti alle
-REAL si eliminano alla fine di ogni processo (sezione 2). Nessun registro permanente: di una REAL resta solo quali sue idee sono
+REAL si eliminano alla fine di ogni processo (sezione 2). Nessun registro permanente: di una REAL resta solo quali sue proposte sono
 state usate, non quale SLOP ne è nata.
 
 La migrazione 0069 aggiunge `real_ideas` (idea, genere, cambiamenti, stato, galleria, modello e

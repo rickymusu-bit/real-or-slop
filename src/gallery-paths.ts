@@ -6,6 +6,6 @@ export function galleryPhotosPath(id: string, batch = "") {
   return "/admin?" + query;
 }
 
-export function galleryWizardPath(id: string, wizard: GalleryWizard, automatic = false) {
-  return `/admin/gallerie/${encodeURIComponent(id)}/${wizard}${automatic ? "?mode=automatic" : ""}`;
+export function galleryWizardPath(id: string, wizard: GalleryWizard) {
+  return `/admin/gallerie/${encodeURIComponent(id)}/${wizard}`;
 }

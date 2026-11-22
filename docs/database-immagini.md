@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 10.4.0
+# Foto e gallerie — specifica 10.5.0
 
-Stato: implementata nel ramo 1.56.0, da rilasciare. Aggiornata: 2026-11-22T10:00:00Z.
+Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -33,9 +33,8 @@ La griglia 4:5 ha due colonne su mobile. «Carica altre foto» aggiunge le pagin
   correnti; sparisce quando sono già tutte selezionate. «Deseleziona» nella barra le toglie.
 - **Selezione multipla** (decisione dell’owner del 2026-11-19). La barra sotto la griglia offre «Approva», «Pubblica», «Nel cestino»
   e «Cambia galleria», e «Misura» quando la selezione comprende REAL senza misura e le chiamate a pagamento sono attive: una
-  conferma del massimo, poi una chiamata per REAL, una dopo l'altra (specifica `libreria-immagini`, sezione 10). «Proponi idee»
-  compare quando la selezione comprende REAL senza idee: stessa conferma del massimo e una chiamata per REAL (specifica
-  `generazione-slop`, sezione 1). «Approva» agisce sulle nuove. «Togli dalla pubblicazione» compare quando la selezione include almeno una
+  conferma del massimo, poi una chiamata per REAL, una dopo l'altra (specifica `libreria-immagini`, sezione 10). Le proposte SLOP
+  si scrivono e si chiedono solo nel wizard «Genera SLOP» (decisione del 2026-11-22). «Approva» agisce sulle nuove. «Togli dalla pubblicazione» compare quando la selezione include almeno una
   pubblicata e riporta solo le pubblicate allo stato approvato, dopo conferma. Pubblicare una nuova la approva prima. Si applicano i
   controlli di copia di gioco e diritti. Le partite in corso terminano con la copia già assegnata. «Cambia galleria» apre la scelta della destinazione.
   Nel Cestino si possono ripristinare, eliminare definitivamente o spostare in un’altra galleria le foto selezionate.
@@ -78,11 +77,10 @@ suo batch originario, ma esce dalla sua revisione operativa.
   campi, punteggi, numero di oggetti, soglie, data e modello dell'ultima misura, «Misura» o «Misura di nuovo» (una chiamata, con
   conferma e avviso di elaborazione al centro) e, a richiesta, gli oggetti dell'ultima misura disegnati sull'originale intero con le
   categorie di dettaglio e l'elenco di tutte le misure (specifica `libreria-immagini`, sezione 10).
-- **Idee SLOP (REAL):** sotto la misura, le idee di falsificazione con lo stato (proposta, approvata, usata, da rivedere) e, per le
-  idee non usate né in un processo aperto, i campi modificabili (idea, genere di foto, cosa cambia), «Approva» e «Scarta» con
-  conferma; il motivo se il modello non ha proposto idee; «Proponi idee» o «Proponi di nuovo» (una chiamata, con conferma e avviso
-  di elaborazione al centro) finché la REAL ha meno di tre idee approvate o usate.
-- **Rigenerare una SLOP:** richiede un nuovo processo nello studio con conferma ed esame dell’immagine intera.
+- **Proposte SLOP (REAL):** sotto la misura, in sola lettura, le proposte della REAL con lo stato (proposta dal modello, approvata,
+  usata, da rivedere) e il motivo se il modello non ne ha proposte. Si scrivono, si chiedono al modello e si scelgono nel wizard
+  «Genera SLOP» (specifica `generazione-slop`, sezione 1).
+- **Rigenerare una SLOP:** richiede un nuovo batch del wizard «Genera SLOP», con conferma ed esame dell’immagine intera.
 - **Fonte su Commons (REAL):** sopra il corpo del dettaglio, l'ultima data in cui il controllo notturno ha trovato il file oppure,
   se manca, la data della prima mancanza con le azioni possibili (verificare, ritirare o cestinare, correggere la pagina della fonte).
 - **Copie e misure:** «Inquadratura» mostra il riquadro 4:5 sulla foto adattata. Il riquadro si centra sull’asse in cui supera la foto
