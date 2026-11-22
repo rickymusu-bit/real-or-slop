@@ -1,7 +1,7 @@
 /** The two confirmations and the REAL references of gallery batches: extraction of REAL with a free approved idea, corrected on
  * crowding and detail; references kept until each process ends (owner decisions of 2026-11-21). */
 import { HttpError, id, type Env } from "./core";
-import { DRAWABLE, findGallery, galleryReady, GALLERY_SOURCE, type Gallery } from "./galleries";
+import { DRAWABLE, findGallery, GALLERY_SOURCE, type Gallery } from "./galleries";
 import { freeIdea } from "./real-ideas";
 import { latestMeasures } from "./real-measure";
 import { MEASURE_FORMULA, type Scores } from "../shared/real-measure";
@@ -34,9 +34,6 @@ export interface GalleryBatch {
 interface TemporarySource { slot: number; process_id: string; source_id: string; revision: number; idea_id: string | null }
 interface Idea { id: string; idea: string; genre: string; changes: string }
 
-function requireInstructions(gallery: Gallery) {
-  if (!galleryReady(gallery)) throw new HttpError(409, "Salva le Indicazioni SLOP della galleria per abilitare la generazione automatica");
-}
 function reference(row: Row, idea: Idea | null) {
   return {id: row.id, title: row.title, description: row.description,
     file: `/api/admin/library/${row.id}/file`, original: `/api/admin/library/${row.id}/original`,
@@ -56,7 +53,6 @@ export async function previewGallery(env: Env, data: Record<string, unknown>) {
   const size = data.size;
   if (typeof size !== "number" || !Number.isInteger(size) || size < 1 || size > MAX_BATCH) throw new HttpError(400, `Scegli da 1 a ${MAX_BATCH} SLOP`);
   const gallery = await findGallery(env, data.gallery_id);
-  requireInstructions(gallery);
   // REAL with a free approved idea, one per REAL; weighted on crowding and detail against the SLOP already made from the gallery's ideas.
   const candidates = (await env.DB.prepare(`SELECT im.* FROM images im WHERE im.gallery_id=? AND ${DRAWABLE("im")}`)
     .bind(gallery.id).all<Row>()).results;
@@ -112,7 +108,6 @@ export async function prepareGallery(env: Env, data: Record<string, unknown>) {
   if (data.count !== selected.sources.length) throw new HttpError(409, "Conferma il numero di REAL estratte");
   if (!env.OPENAI_API_KEY || !env.SLOP_RUNNER || !env.QUARANTINE) throw new HttpError(503, "Generazione sul server non configurata");
   const gallery = await findGallery(env, selected.gallery.id);
-  requireInstructions(gallery);
   const config = await loopSnapshot(env);
   if (gallery.revision !== selected.gallery.revision || JSON.stringify(config) !== JSON.stringify(selected.config))
     throw new HttpError(409, "Galleria o configurazione cambiata: estrai di nuovo le REAL");
@@ -205,7 +200,6 @@ export async function writeGalleryProposal(env: Env, batchId: string, slot: numb
   if (!mark.meta.changes) return;
   try {
     const current = await findGallery(env, batch.gallery_id);
-    requireInstructions(current);
     if (current.revision !== approved.gallery.revision) throw new HttpError(409, "Indicazioni della galleria modificate");
     const row = await checkedSource(env, current.id, {id: source.source_id, revision: source.revision});
     const file = row && await env.QUARANTINE?.get(row.original_key);
@@ -228,7 +222,7 @@ export async function writeGalleryProposal(env: Env, batchId: string, slot: numb
         reference: {title: row.title, description: row.description},
         // The idea approved by the owner for this REAL, and the levels of crowding and detail the SLOP inherits.
         idea: {idea: idea.idea, genre: idea.genre, changes: idea.changes}, levels: levels && {crowdedness: levels.crowdedness, detail: levels.detail},
-        gallery: {title: current.title, description: current.description, slop_instructions: current.slop_instructions},
+        gallery: {title: current.title, description: current.description},
         previous_premises: previous, composition_preference: compositionAt(slot),
       })}, {type: "input_image", image_url: IMAGE_MARK, detail: "high"}]}],
       max_output_tokens: 5000, text: {format: {type: "json_schema", name: "slop_gallery_proposal", strict: true, schema: {type: "object",

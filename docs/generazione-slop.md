@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 13.0.0
+# Generazione SLOP — specifica 14.0.0
 
-Stato: implementata nel ramo 1.55.0, da rilasciare. Aggiornata: 2026-11-21T23:00:00Z.
+Stato: implementata nel ramo 1.56.0, da rilasciare. Aggiornata: 2026-11-22T10:00:00Z.
 
 ## 1. Modalità e bilanciamento
 
@@ -16,11 +16,12 @@ o modificare il processo prima del primo tentativo è gratuito. Il processo non 
 riscriva il prompt. I tag di partenza non esistono più: la richiesta che li contiene è rifiutata. I batch manuali creati prima li
 conservano nello snapshot privato, senza effetti.
 
-**Automatica.** Dalla decisione dell’owner del 2026-11-18 (#157), le gallerie definiscono quali falsi hanno senso, quali elementi reali
-rendono credibile la scena e che cosa deve essere visibile. Si creano da «Nuova galleria» e si aggiornano con «Modifica galleria». Hanno titolo,
-descrizione e **Indicazioni SLOP** in testo libero. Ogni REAL appartiene a una galleria, anche con indicazioni vuote. L’owner può chiedere una
-proposta di indicazioni al modello dopo aver confermato una chiamata. Il testo entra nel modulo, dove si può modificare, e diventa
-operativo con il salvataggio. Indicazioni vuote o composte di soli spazi bloccano la preparazione automatica in dashboard e API.
+**Automatica.** Dalla decisione dell’owner del 2026-11-18 (#157) ogni REAL appartiene a una galleria. Le gallerie si creano da «Nuova
+galleria» e si aggiornano con «Modifica galleria»; hanno titolo, descrizione e soglie di affollamento e dettaglio. Titolo e descrizione
+accompagnano le richieste al modello come contesto. **Niente Indicazioni SLOP di galleria** (decisione dell'owner del 2026-11-22):
+quelle proposte dal modello partivano dal solo titolo, non dalle foto, ed erano specifiche senza riferirsi alle immagini presenti. Quali
+falsi hanno senso lo dicono le idee approvate di ogni REAL. La generazione automatica è disponibile quando la galleria ha almeno una REAL
+con un'idea approvata libera. La migrazione 0070 elimina le indicazioni salvate e la loro proposta automatica.
 
 Le REAL non hanno descrizione editoriale (decisione del 2026-11-20): il modello delle proposte legge direttamente l’originale, il
 titolo e la descrizione della fonte, insieme all'idea approvata della REAL.
@@ -33,15 +34,15 @@ idee permettono di generare SLOP diverse da una REAL versatile e danno una buona
 
 - **Proposta.** Dal dettaglio della REAL, «Proponi idee», o dalla selezione della galleria per le REAL che non ne hanno: una chiamata a
   pagamento per REAL, confermata, mai ripetuta in automatico (`POST /:id/ideas {confirm, request}`, tipo `prompts`). Il modello
-  riceve l'originale intero, titolo e descrizione della fonte (ipotesi, non istruzioni), titolo, descrizione e Indicazioni SLOP della
-  galleria, l'ultima misura di affollamento e dettaglio, le idee già approvate o usate e il testo modificabile «Idee SLOP delle REAL».
+  riceve l'originale intero, titolo e descrizione della fonte (ipotesi, non istruzioni), titolo e descrizione della galleria, l'ultima
+  misura di affollamento e dettaglio, le idee già approvate o usate e il testo modificabile «Idee SLOP delle REAL».
   Restituisce da zero a tre idee, ciascuna con la scena da generare, il genere di foto e che cosa cambia rispetto alla REAL; con zero
-  idee, il motivo, che resta sulla REAL. Serve una galleria con Indicazioni SLOP salvate.
+  idee, il motivo, che resta sulla REAL.
 - **Al massimo tre idee per REAL**, contando approvate e usate. Una nuova proposta sostituisce le idee solo proposte e chiede quelle
   mancanti; con tre idee approvate o usate è rifiutata.
 - **Revisione.** L'owner modifica, approva o scarta ogni idea (`PATCH` e `DELETE /ideas/:id`). Un'idea approvata è legata alla
-  galleria e alla revisione delle sue indicazioni: se queste cambiano, o la REAL cambia galleria, l'idea è «da rivedere» ed esce
-  dall'estrazione finché non viene approvata di nuovo. Un'idea usata o in un processo aperto non si modifica.
+  galleria in cui si trovava la REAL: se la REAL cambia galleria, l'idea è «da rivedere» ed esce dall'estrazione finché non viene
+  approvata di nuovo. Modificare titolo o descrizione della galleria non tocca le idee. Un'idea usata o in un processo aperto non si modifica.
 - **Riferimento tra REAL e SLOP.** La REAL ispira la SLOP, non viene copiata. La SLOP eredita galleria, famiglia ed epoca dell'oggetto,
   genere di foto (come si fotografa di solito quel tipo di oggetto), tecnica, luce e livelli di affollamento e dettaglio. Cambiano
   sempre ambiente e punto di vista; l'esemplare può restare lo stesso solo se la scena cambia molto. Composizione, segni
@@ -53,7 +54,7 @@ idee permettono di generare SLOP diverse da una REAL versatile e danno una buona
 ## 2. Estrazione, proposte e conferma
 
 1. **Estrai le REAL.** Campione senza ripetizioni tra le REAL approvate o pubblicate della galleria, con originale disponibile in
-   quarantena e almeno un'idea approvata libera (non usata, non in un processo aperto, approvata per le indicazioni in vigore). Una
+   quarantena e almeno un'idea approvata libera (non usata, non in un processo aperto, approvata nella galleria attuale). Una
    REAL per estrazione, con una delle sue idee libere scelta a caso. L'estrazione è **corretta su affollamento e dettaglio**
    (`shared/idea-sampling.ts`): ogni asse è diviso in tre fasce (0–33, 34–66, 67–100); per ogni fascia si confronta la quota fra le
    REAL misurate della galleria con quella fra le SLOP già nate da sue idee (le REAL delle idee usate); il peso di una REAL è, per
@@ -69,7 +70,7 @@ idee permettono di generare SLOP diverse da una REAL versatile e danno una buona
    massimi e versioni dei contesti. Il Workflow prepara le proposte in ordine. Per ciascuna REAL il modello riceve l’originale intero
    prima del ritaglio 4:5, titolo e descrizione della fonte della REAL (`reference: {title, description}`), l'idea approvata
    (`idea: {idea, genre, changes}`), i livelli di affollamento e dettaglio della REAL (`levels`, nullo senza misura della formula in
-   vigore), titolo e descrizione della galleria, indicazioni SLOP e istruzioni generali. Sviluppa l'idea secondo il riferimento tra REAL
+   vigore), titolo e descrizione della galleria e istruzioni generali. Sviluppa l'idea secondo il riferimento tra REAL
    e SLOP; cita alla lettera le scritte leggibili e indica i conteggi esatti delle parti contabili. Restituisce una frase in italiano
    sul falso e il prompt in inglese, oppure il motivo per cui non può proporre un falso compatibile. Le premesse precedenti aiutano a
    variare il batch. Il testo «Premessa e prompt di galleria» resta modificabile; le regole sull'idea e sul riferimento sono nel codice.
@@ -93,8 +94,7 @@ esistito in una scena mai fotografata (decisione dell'owner del 2026-11-21); il 
 lo cerca. Per esempio, un ponte alpino può avere una campata con un danno inventato
 conservando il luogo e i tratti riconoscibili, una console vintage può rappresentare un modello mai commercializzato plausibile per
 epoca e mercato, un presidio immaginato a Parigi può conservare gli elementi della mobilitazione e la Cour Napoléon. La scena ipotetica
-non autorizza deduzioni su ciò che è realmente avvenuto. Quando le indicazioni richiedono il riconoscimento di un luogo o di un
-edificio, prompt e valutazione includono i tratti visibili necessari. Le preferenze di inquadratura e sguardo valgono solo quando naturali.
+non autorizza deduzioni su ciò che è realmente avvenuto. Quando l'idea richiede il riconoscimento di un luogo o di un edificio, prompt e valutazione includono i tratti visibili necessari. Le preferenze di inquadratura e sguardo valgono solo quando naturali.
 Si applicano le regole della specifica `contenuti-e-trasparenza`.
 
 ## 3. Generazione, valutazione e ripresa
@@ -104,7 +104,8 @@ e registra l’esito in `paid_calls`. Con un’interruzione, i passi mai acquisi
 già data. I passi con esito incerto non si ripetono automaticamente. Lo stop ferma la fase prima del passo successivo.
 
 Il generatore riceve il prompt inglese approvato. A ogni valutazione la Responses API riceve l’intera candidata corrente prima di
-cropping o trattamento, l’ID del tentativo, la premessa approvata, i vincoli della galleria, il prompt approvato e quello corrente,
+cropping o trattamento, l’ID del tentativo, la premessa approvata, titolo e descrizione della galleria, l'idea che la SLOP sviluppa
+(finché il processo è aperto), il prompt approvato e quello corrente,
 più la tolleranza congelata. Il modello usa versioni congelate della base e del contesto di valutazione, senza conversazioni precedenti.
 La credibilità fotografica ha priorità sui dettagli secondari. I difetti critici e gli ancoraggi obbligatori mancanti impediscono
 l’accettazione automatica. Luogo, data e identità non dimostrabili dai pixel sono annotazioni. Una correzione valida aggiunge
@@ -141,8 +142,10 @@ La SLOP è identificata dal suo ID e non viene analizzata. Per la copia si conse
 REAL si eliminano alla fine di ogni processo (sezione 2). Nessun registro permanente: di una REAL resta solo quali sue idee sono
 state usate, non quale SLOP ne è nata.
 
-La migrazione 0069 aggiunge `real_ideas` (idea, genere, cambiamenti, stato, galleria e revisione delle indicazioni, modello e
+La migrazione 0069 aggiunge `real_ideas` (idea, genere, cambiamenti, stato, galleria, modello e
 versioni del contesto, date), `images.ideas_reason`, `slop_gallery_sources.idea_id`, i trigger che conservano i riferimenti fino
-alla fine del processo e la parte `real_ideas` del contesto dei modelli. Le idee si cancellano con la REAL.
+alla fine del processo e la parte `real_ideas` del contesto dei modelli. Le idee si cancellano con la REAL. La migrazione 0070
+elimina `galleries.slop_instructions` e la revisione registrata sulle idee, e sostituisce «Premessa e prompt di galleria» con la
+nuova proposta, che sviluppa l'idea, se il testo in vigore era ancora quello salvato dalla 0066.
 
 Nei test si usano solo il Worker e lo storage locali con OpenAI simulato. Il rilascio segue le regole di `AGENTS.md`.

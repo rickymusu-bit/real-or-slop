@@ -31,7 +31,7 @@ const page = (name: string) => "https://commons.wikimedia.org/wiki/File:" + enco
 function setup() {
   const db = new DatabaseSync(":memory:");
   for (const file of readdirSync("migrations").sort()) db.exec(readFileSync("migrations/" + file, "utf8"));
-  db.exec("INSERT INTO galleries(id,title,slop_instructions) VALUES('g','Strade','')");
+  db.exec("INSERT INTO galleries(id,title) VALUES('g','Strade')");
   let n = 0;
   const add = (id: string, fields: { origin?: string; status?: string; source?: string; checked?: string | null; missing?: string | null }) =>
     db.prepare(`INSERT INTO images(id,gallery_id,origin,status,title,source_url,original_key,original_sha256,original_mime,width,height,
@@ -125,7 +125,7 @@ test("a failure of Commons changes nothing and the same photos come back the nex
 test("the migration counts the acquisition as the first check of every Commons REAL", () => {
   const db = new DatabaseSync(":memory:");
   for (const file of readdirSync("migrations").sort().filter(f => f < "0065")) db.exec(readFileSync("migrations/" + file, "utf8"));
-  db.exec(`INSERT INTO galleries(id,title,slop_instructions) VALUES('g','Strade','');
+  db.exec(`INSERT INTO galleries(id,title) VALUES('g','Strade');
     INSERT INTO images(id,gallery_id,origin,title,source_url,original_key,original_sha256,original_mime,width,height,created_at,updated_at)
     VALUES('commons','g','REAL','A','${page("A.jpg")}','a','${"a".repeat(64)}','image/png',4,5,'2026-02-02T00:00:00.000Z','x'),
           ('uploaded','g','REAL','B','','b','${"b".repeat(64)}','image/png',4,5,'2026-02-02T00:00:00.000Z','x'),

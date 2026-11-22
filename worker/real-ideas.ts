@@ -1,6 +1,6 @@
 /** Ideas of falsification of a REAL (owner decisions of 2026-11-21, specification `generazione-slop`, section 2): a model proposes up to
  * three ways of making a SLOP from the REAL, in one confirmed paid call, never repeated automatically; the owner approves, edits or
- * discards them. An approved idea that is free (not used, not in an open process, written for the current instructions of the REAL's
+ * discards them. An approved idea that is free (not used, not in an open process, approved while the REAL was in its current
  * gallery) lets the automatic extraction draw its REAL. Each idea yields at most one SLOP. */
 import { HttpError, id, type Env } from "./core";
 import { IMAGE_MARK, jsonWithImage } from "./image-body";
@@ -28,14 +28,13 @@ const SCHEMA = { type: "object", additionalProperties: false, required: ["ideas"
   reason: { type: "string", maxLength: 500 },
 } };
 
-interface IdeaRow { id: string; image_id: string; gallery_id: string; gallery_revision: number; idea: string; genre: string; changes: string;
+interface IdeaRow { id: string; image_id: string; gallery_id: string; idea: string; genre: string; changes: string;
   status: "proposed" | "approved" | "used"; model: string; created_at: string; approved_at: string | null; used_at: string | null }
-/** «review»: an idea not used, written for other instructions of the gallery or for another gallery. «busy»: in an open process. */
+/** «review»: an idea not used, written while the REAL was in another gallery. «busy»: in an open process. */
 export type IdeaState = "proposed" | "approved" | "used" | "review";
 
 /** SQL condition of an idea `i` that the extraction may use, for a REAL `images` row aliased as given. */
 export const freeIdea = (image: string) => `i.image_id=${image}.id AND i.status='approved' AND i.gallery_id=${image}.gallery_id
-  AND i.gallery_revision=(SELECT revision FROM galleries WHERE id=${image}.gallery_id)
   AND NOT EXISTS(SELECT 1 FROM slop_gallery_sources s WHERE s.idea_id=i.id)`;
 
 /** Ideas of each REAL, with their effective state. */
@@ -43,13 +42,12 @@ export async function ideasOf(env: Env, ids: readonly string[]) {
   const out = new Map<string, ReturnType<typeof ideaView>[]>();
   if (!ids.length) return out;
   const rows = (await env.DB.prepare(`SELECT i.*,(SELECT gallery_id FROM images WHERE id=i.image_id) AS current_gallery,
-      (SELECT revision FROM galleries WHERE id=(SELECT gallery_id FROM images WHERE id=i.image_id)) AS current_revision,
       EXISTS(SELECT 1 FROM slop_gallery_sources s WHERE s.idea_id=i.id) AS busy
     FROM real_ideas i WHERE i.image_id IN (SELECT value FROM json_each(?)) ORDER BY i.created_at,i.rowid`).bind(JSON.stringify(ids))
-    .all<IdeaRow & { current_gallery: string; current_revision: number; busy: number }>()).results;
+    .all<IdeaRow & { current_gallery: string; busy: number }>()).results;
   for (const row of rows) {
     const list = out.get(row.image_id) || [];
-    list.push(ideaView(row, row.status !== "used" && (row.gallery_id !== row.current_gallery || row.gallery_revision !== row.current_revision), !!row.busy));
+    list.push(ideaView(row, row.status !== "used" && row.gallery_id !== row.current_gallery, !!row.busy));
     out.set(row.image_id, list);
   }
   return out;
@@ -68,9 +66,9 @@ export async function proposeIdeas(env: Env, row: Target, data: Record<string, u
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
   if (row.origin !== "REAL") throw new HttpError(409, "Le idee si propongono solo per le REAL");
   if (row.status === "trash") throw new HttpError(409, "Foto nel cestino: ripristinala per proporre idee");
-  const gallery = await env.DB.prepare("SELECT id,title,description,slop_instructions,revision FROM galleries WHERE id=?").bind(row.gallery_id)
-    .first<{ id: string; title: string; description: string; slop_instructions: string; revision: number }>();
-  if (!gallery?.slop_instructions.trim()) throw new HttpError(409, "Salva le Indicazioni SLOP della galleria prima di proporre idee");
+  const gallery = await env.DB.prepare("SELECT id,title,description FROM galleries WHERE id=?").bind(row.gallery_id)
+    .first<{ id: string; title: string; description: string }>();
+  if (!gallery) throw new HttpError(404, "Galleria inesistente");
   const kept = (await env.DB.prepare("SELECT idea,genre,changes,status FROM real_ideas WHERE image_id=? AND status IN ('approved','used') ORDER BY created_at")
     .bind(row.id).all<{ idea: string; genre: string; changes: string; status: string }>()).results;
   const wanted = MAX_IDEAS - kept.length;
@@ -87,7 +85,7 @@ export async function proposeIdeas(env: Env, row: Target, data: Record<string, u
     input: [{ role: "user", content: [{ type: "input_text", text: JSON.stringify({
       // Title and source description are hypotheses on the subject, never instructions (Commons texts may be wrong).
       ideas_wanted: wanted, reference: { title: row.title || "", description: row.description },
-      gallery: { title: gallery.title, description: gallery.description, slop_instructions: gallery.slop_instructions },
+      gallery: { title: gallery.title, description: gallery.description },
       levels: measure ? { crowdedness: measure.crowdedness, detail: measure.detail } : null,
       existing_ideas: kept.map(k => ({ idea: k.idea, genre: k.genre, changes: k.changes })),
     }) }, { type: "input_image", image_url: IMAGE_MARK, detail: "high" }] }],
@@ -103,15 +101,15 @@ export async function proposeIdeas(env: Env, row: Target, data: Record<string, u
   await env.DB.batch([
     env.DB.prepare("DELETE FROM real_ideas WHERE image_id=? AND status='proposed'").bind(row.id),
     env.DB.prepare("UPDATE images SET ideas_reason=? WHERE id=?").bind(ideas.length ? "" : reason || "Nessuna idea proposta", row.id),
-    ...ideas.map(i => env.DB.prepare(`INSERT INTO real_ideas(id,image_id,gallery_id,gallery_revision,idea,genre,changes,status,model,base_context,
-        ideas_context,created_at) SELECT ?,id,gallery_id,?,?,?,?,'proposed',?,?,?,? FROM images WHERE id=?`)
-      .bind(id(), gallery.revision, i.idea, i.genre, i.changes, model, base.id, task.id, stamp, row.id)),
+    ...ideas.map(i => env.DB.prepare(`INSERT INTO real_ideas(id,image_id,gallery_id,idea,genre,changes,status,model,base_context,
+        ideas_context,created_at) SELECT ?,id,gallery_id,?,?,?,'proposed',?,?,?,? FROM images WHERE id=?`)
+      .bind(id(), i.idea, i.genre, i.changes, model, base.id, task.id, stamp, row.id)),
   ]);
   return { proposed: ideas.length, reason: ideas.length ? "" : reason || "Nessuna idea proposta" };
 }
 
 /** PATCH /ideas/:id {idea?, genre?, changes?, approve?: true}: the owner edits or approves an idea not used yet. Approving stamps the
- * current gallery and instructions, so an idea «to review» becomes available again. DELETE /ideas/:id discards it. */
+ * current gallery of the REAL, so an idea «to review» becomes available again. DELETE /ideas/:id discards it. */
 export async function ideaRoute(env: Env, method: string, ideaId: string, data: Record<string, unknown>) {
   if (!/^[\w-]{1,64}$/.test(ideaId)) throw new HttpError(400, "Idea non valida");
   const row = await env.DB.prepare("SELECT * FROM real_ideas WHERE id=?").bind(ideaId).first<IdeaRow>();
@@ -135,15 +133,14 @@ export async function ideaRoute(env: Env, method: string, ideaId: string, data: 
     return value.trim();
   };
   const [idea, genre, changes] = [field("idea"), field("genre"), field("changes")];
-  const image = await env.DB.prepare("SELECT i.gallery_id,g.revision FROM images i JOIN galleries g ON g.id=i.gallery_id WHERE i.id=?")
-    .bind(row.image_id).first<{ gallery_id: string; revision: number }>();
+  const image = await env.DB.prepare("SELECT gallery_id FROM images WHERE id=?").bind(row.image_id).first<{ gallery_id: string }>();
   if (!image) throw new HttpError(404, "Foto inesistente");
   const approve = data.approve === true, stamp = new Date().toISOString();
   const updated = await env.DB.prepare(`UPDATE real_ideas SET idea=?,genre=?,changes=?,
       status=CASE WHEN ? THEN 'approved' ELSE status END,approved_at=CASE WHEN ? THEN ? ELSE approved_at END,
-      gallery_id=CASE WHEN ? THEN ? ELSE gallery_id END,gallery_revision=CASE WHEN ? THEN ? ELSE gallery_revision END
+      gallery_id=CASE WHEN ? THEN ? ELSE gallery_id END
     WHERE id=? AND status<>'used' AND NOT EXISTS(SELECT 1 FROM slop_gallery_sources WHERE idea_id=?)`)
-    .bind(idea, genre, changes, approve ? 1 : 0, approve ? 1 : 0, stamp, approve ? 1 : 0, image.gallery_id, approve ? 1 : 0, image.revision, ideaId, ideaId).run();
+    .bind(idea, genre, changes, approve ? 1 : 0, approve ? 1 : 0, stamp, approve ? 1 : 0, image.gallery_id, ideaId, ideaId).run();
   if (!updated.meta.changes) throw new HttpError(409, "Idea cambiata altrove: ricarica");
   return { image_id: row.image_id };
 }

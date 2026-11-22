@@ -3,7 +3,7 @@ import "./galleries.css";
 
 /** max_crowdedness, max_detail: the gallery's own thresholds of crowding and detail, null for the defaults of the settings. */
 export interface Gallery {
-  id: string; title: string; description: string; slop_instructions: string; revision: number; available: number; ready: boolean;
+  id: string; title: string; description: string; revision: number; available: number; ready: boolean;
   max_crowdedness: number | null; max_detail: number | null;
 }
 /** `source_missing`: REAL whose file is gone from Commons (nightly check, spec `libreria-immagini`, section 9). */
@@ -32,19 +32,18 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
     const gallery = list?.galleries.find(g => g.id === selected);
     dialog.querySelector("#gallery-editor-title")!.textContent = gallery ? "Modifica galleria" : "Nuova galleria";
     root.innerHTML = `
-      <p class="hint" id="gallery-readiness">${gallery?.ready ? "Pronta per la generazione automatica."
-        : "Salva le Indicazioni SLOP per abilitare la generazione automatica. Puoi già assegnare le REAL a una galleria salvata."}</p>
+      <p class="hint" id="gallery-readiness">${gallery?.ready ? `Generazione automatica: REAL con un’idea approvata disponibili: ${gallery.available}.`
+        : "La generazione automatica usa le REAL approvate o pubblicate con un’idea approvata: le idee si propongono e si approvano dal dettaglio delle REAL."}
+        Titolo e descrizione accompagnano le richieste al modello.</p>
       <form class="gallery-form">
         <label>Titolo<input name="title" autofocus required maxlength="200" value="${escape(gallery?.title || "")}"></label>
         <label>Descrizione<textarea name="description" rows="3" maxlength="3000">${escape(gallery?.description || "")}</textarea></label>
-        <label>Indicazioni SLOP<textarea name="slop_instructions" rows="7" maxlength="4000">${escape(gallery?.slop_instructions || "")}</textarea></label>
         <fieldset class="gallery-thresholds"><legend>Soglie delle REAL</legend>
           <label>Affollamento<input type="number" name="max_crowdedness" min="0" max="100" step="1" inputmode="numeric" placeholder="${list?.thresholds.crowdedness ?? ""}" value="${gallery?.max_crowdedness ?? ""}"></label>
           <label>Dettaglio<input type="number" name="max_detail" min="0" max="100" step="1" inputmode="numeric" placeholder="${list?.thresholds.detail ?? ""}" value="${gallery?.max_detail ?? ""}"></label>
           <p class="hint">Da 0 a 100. Una REAL misurata oltre una soglia è segnalata. Vuoto: vale la soglia predefinita delle Impostazioni (${list?.thresholds.crowdedness ?? "?"} e ${list?.thresholds.detail ?? "?"}).</p>
         </fieldset>
-        <div class="library-inline"><button class="primary" type="submit">${gallery ? "Salva modifiche" : "Crea galleria"}</button>
-        ${gallery && list?.paid_calls ? '<button type="button" data-gallery-suggest>Proponi indicazioni con IA</button>' : ""}</div>
+        <div class="library-inline"><button class="primary" type="submit">${gallery ? "Salva modifiche" : "Crea galleria"}</button></div>
       </form>
       ${gallery ? '<div class="gallery-remove"><button type="button" class="danger" data-gallery-remove>Elimina galleria</button></div>' : ""}
       <p class="hint" role="status" id="gallery-message"></p>`;
@@ -58,7 +57,6 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
   const fields = (form: HTMLFormElement) => ({
     title: (form.elements.namedItem("title") as HTMLInputElement).value,
     description: (form.elements.namedItem("description") as HTMLTextAreaElement).value,
-    slop_instructions: (form.elements.namedItem("slop_instructions") as HTMLTextAreaElement).value,
   });
   /** An empty threshold is the default of the settings. */
   const thresholds = (form: HTMLFormElement) => Object.fromEntries(["max_crowdedness", "max_detail"].map(name => {
@@ -85,7 +83,7 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
         // The write succeeded. A retry should update that gallery, even if refreshing the overview failed.
         selected = saved.id;
         list!.galleries = [...list!.galleries.filter(g => g.id !== saved.id),
-          { ...saved, available: gallery?.available ?? 0, photos: gallery?.photos ?? 0, source_missing: gallery?.source_missing ?? 0, preview: gallery?.preview ?? [], ready: !!saved.slop_instructions.trim() }];
+          { ...saved, available: gallery?.available ?? 0, photos: gallery?.photos ?? 0, source_missing: gallery?.source_missing ?? 0, preview: gallery?.preview ?? [], ready: gallery?.ready ?? false }];
         render();
         message("Galleria salvata. " + (error instanceof Error ? error.message : String(error)));
         return;
@@ -95,36 +93,19 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
     finally { setBusy(false); }
   });
   root.addEventListener("click", async event => {
-    const button = (event.target as HTMLElement).closest("[data-gallery-remove], [data-gallery-suggest]");
+    const button = (event.target as HTMLElement).closest("[data-gallery-remove]");
     if (!button || busy || !list) return;
     const gallery = list.galleries.find(g => g.id === selected);
     if (!gallery) return;
-    if (button.hasAttribute("data-gallery-remove")) {
-      if (!window.confirm(`Eliminare definitivamente «${gallery.title}»? Verranno eliminate tutte le sue foto REAL e SLOP, anche quelle nel cestino, e le sue generazioni.`)) return;
-      setBusy(true);
-      message("Eliminazione in corso…");
-      try {
-        await request(`/galleries/${encodeURIComponent(gallery.id)}`, {
-          method: "DELETE", body: JSON.stringify({confirm: true, revision: gallery.revision}),
-        });
-        dialog.close();
-        removed(gallery.id);
-      } catch (error) { report(error); }
-      finally { setBusy(false); }
-      return;
-    }
-    const form = root.querySelector("form")!;
-    if (!form.reportValidity()) return;
-    if (!window.confirm(`Chiedere una proposta a ${list.text_model}? Massimo una chiamata. Potrai rivedere le indicazioni prima di salvarle.`)) return;
-    const {title, description} = fields(form);
+    if (!window.confirm(`Eliminare definitivamente «${gallery.title}»? Verranno eliminate tutte le sue foto REAL e SLOP, anche quelle nel cestino, e le sue generazioni.`)) return;
     setBusy(true);
-    message("Proposta in preparazione…");
+    message("Eliminazione in corso…");
     try {
-      const draft = await request<{slop_instructions: string}>(`/galleries/${encodeURIComponent(gallery.id)}/suggest`, {
-        method: "POST", body: JSON.stringify({title, description, revision: gallery.revision, request: crypto.randomUUID(), confirm: true}),
+      await request(`/galleries/${encodeURIComponent(gallery.id)}`, {
+        method: "DELETE", body: JSON.stringify({confirm: true, revision: gallery.revision}),
       });
-      (form.elements.namedItem("slop_instructions") as HTMLTextAreaElement).value = draft.slop_instructions;
-      message("Proposta caricata nel campo. Rivedila e salva le modifiche per usarla.");
+      dialog.close();
+      removed(gallery.id);
     } catch (error) { report(error); }
     finally { setBusy(false); }
   });

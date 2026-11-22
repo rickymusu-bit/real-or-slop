@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 6.1.0
+# Dashboard e wizard REAL — specifica 6.2.0
 
-Stato: implementata nel ramo 1.53.0, da rilasciare. Aggiornata: 2026-11-21T18:00:00Z.
+Stato: implementata nel ramo 1.56.0, da rilasciare. Aggiornata: 2026-11-22T10:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -25,7 +25,7 @@ tre miniature delle foto più recenti fuori dal cestino. I moduli indicano il ca
 
 Selezionando una scheda si apre una finestra con le foto della galleria. La griglia scorre, «Carica altre foto» prosegue l’elenco e ogni
 foto mantiene il dettaglio e l’anteprima. Conteggi, ricerca, filtri e cestino si riferiscono alla galleria aperta (specifica `database-immagini`).
-La finestra si chiude con × o Esc. Da «Modifica galleria» l’owner può cambiare titolo, descrizione, indicazioni e soglie di
+La finestra si chiude con × o Esc. Da «Modifica galleria» l’owner può cambiare titolo, descrizione e soglie di
 affollamento e dettaglio delle REAL (specifica `libreria-immagini`, sezione 10) oppure scegliere
 «Elimina galleria». La conferma riguarda la galleria, tutte le sue foto compreso il cestino e le sue generazioni. Dopo l’eliminazione
 si torna all’elenco delle gallerie.
@@ -67,7 +67,7 @@ acquisite sono comunque nella libreria privata.
   scelta, la toglie. La selezione resta cambiando pagina e con nuove ricerche; si svuota con l'acquisizione o con «Inizia un nuovo
   caricamento». Al massimo 100 immagini.
 - Le selezionate sono miniature senza titolo che aprono la loro pagina di Commons in una nuova scheda.
-- Le foto provengono dai risultati della ricerca e vengono acquisite nella galleria aperta, anche con indicazioni SLOP vuote.
+- Le foto provengono dai risultati della ricerca e vengono acquisite nella galleria aperta.
 - «Avanti: descrizione» acquisisce ogni immagine nella quarantena privata. Il browser ne prepara subito la copia di gioco (specifica
   `copie-di-gioco`, sezione 3). La finestra «Acquisizione privata» blocca i comandi e lo scorrimento della pagina per tutta
   l’operazione, compresa la preparazione delle copie. Mostra «Foto acquisite: X di Y» e la barra di progresso. Y è il totale

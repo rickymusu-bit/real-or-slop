@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.4.0
+# Libreria delle immagini — specifica 10.4.1
 
-Stato: implementata nel ramo 1.55.0, da rilasciare. Aggiornata: 2026-11-21T23:00:00Z.
+Stato: implementata nel ramo 1.56.0, da rilasciare. Aggiornata: 2026-11-22T10:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -113,7 +113,7 @@ proposte e le valutazioni delle SLOP (il 2026-11-15 cinque analisi su originali 
 ## 6. Chiamate a pagamento e modelli
 
 - Quattro tipi: misure di affollamento e dettaglio delle REAL (`analysis`, sezione 10), proposte editoriali e prompt SLOP (anche le
-  indicazioni proposte per una galleria e le idee di falsificazione delle REAL), immagini SLOP, valutazione SLOP intera. Le SLOP accettate non richiedono altre chiamate. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
+  idee di falsificazione delle REAL; le indicazioni proposte per una galleria sono state tolte il 2026-11-22), immagini SLOP, valutazione SLOP intera. Le SLOP accettate non richiedono altre chiamate. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
 - **Esiti:** risposta valida → `completed`; errore 4xx → `failed`, senza addebito; errore 5xx, timeout o rete → `uncertain`, mai
   ripetuta in automatico. Chiave rifiutata, limite di spesa o credito OpenAI esaurito fermano le serie con un messaggio che rimanda a
   platform.openai.com.

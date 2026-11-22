@@ -1,4 +1,4 @@
-"""Fake OpenAI for the integration tests: Responses API (measures and ideas of the REAL, SLOP proposals and evaluations, gallery instructions), image
+"""Fake OpenAI for the integration tests: Responses API (measures and ideas of the REAL, SLOP proposals and evaluations), image
 generation and the list of models, with a control endpoint to queue errors (4xx, 5xx, 429, unreadable answers) and read the log."""
 import base64
 import io
@@ -54,8 +54,6 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, {'data': [{'b64_json': picture(data.get('size', '1024x1024'))}], 'usage': {'input_tokens': 50, 'output_tokens': 1056}})
         schema_name = data.get('text', {}).get('format', {}).get('name')
         request = json.loads(data['input'][0]['content'][0]['text']) if schema_name in ('slop_evaluation', 'slop_gallery_proposal') else None
-        if schema_name == 'gallery_instructions' and (behaviour is None or 'delay' in behaviour):
-            behaviour = {'json': {'instructions': 'Inventa un fatto visibile e conserva la piazza riconoscibile.'}}
         if schema_name == 'real_ideas' and (behaviour is None or 'delay' in behaviour):
             behaviour = {'json': {'ideas': [
                 {'idea': 'Lo stesso modello di console su una scrivania di legno, ripreso dall’alto con la luce di una finestra.',

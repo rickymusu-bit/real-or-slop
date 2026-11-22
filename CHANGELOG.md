@@ -1,7 +1,17 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-21T23:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-22T10:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.56.0 — 2026-11-22T10:00:00Z
+
+- Niente Indicazioni SLOP di galleria né loro proposta con il modello (decisione dell'owner): erano scritte dal solo titolo e non
+  si riferivano alle foto. Restano titolo, descrizione e soglie; idee, proposte e valutazioni ricevono titolo e descrizione come
+  contesto, e il valutatore riceve l'idea che la SLOP sviluppa.
+- La generazione automatica è disponibile quando la galleria ha una REAL con un'idea approvata libera. Un'idea diventa «da
+  rivedere» solo se la sua REAL cambia galleria.
+- Migrazione 0070: elimina le indicazioni salvate e la revisione registrata sulle idee; nuova proposta di «Premessa e prompt di
+  galleria», salvata se il testo in vigore era quello della 0066.
 
 ## 1.55.0 — 2026-11-21T23:00:00Z
 
