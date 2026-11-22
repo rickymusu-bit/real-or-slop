@@ -4,6 +4,7 @@ import { HttpError, id, type Env } from "./core";
 import { chosenModel } from "./models";
 import { currentContext } from "./model-context";
 import { paid, responseJson } from "./paid";
+import { freeIdea } from "./real-ideas";
 
 /** max_crowdedness, max_detail: the gallery's thresholds from 0 to 100, NULL for the default of the settings (spec `libreria-immagini`,
  * section 10). They never change the revision, which guards the SLOP instructions of pending proposals. */
@@ -12,8 +13,11 @@ export interface Gallery { id: string; title: string; description: string; slop_
 export const GALLERY_DESCRIPTION_MAX = 3000;
 export const GALLERY_INSTRUCTIONS_MAX = 4000;
 export const galleryReady = (gallery: Gallery) => !!gallery.slop_instructions.trim();
-/** REAL a gallery can draw on for automatic SLOP: approved or published, with its original (no editorial description since 2026-11-20). */
+/** REAL a gallery can draw on for automatic SLOP: approved or published, with its original (no editorial description since 2026-11-20)
+ * and, since 2026-11-21, with an approved idea that is free (worker/real-ideas.ts). */
 export const GALLERY_SOURCE = "origin='REAL' AND status IN ('approved','published') AND original_key<>''";
+export const DRAWABLE = (alias: string) => `${alias}.origin='REAL' AND ${alias}.status IN ('approved','published') AND ${alias}.original_key<>''
+  AND EXISTS(SELECT 1 FROM real_ideas i WHERE ${freeIdea(alias)})`;
 
 export async function findGallery(env: Env, value: unknown): Promise<Gallery> {
   if (typeof value !== "string" || !/^[\w-]{1,64}$/.test(value)) throw new HttpError(400, "Scegli una galleria");
@@ -25,13 +29,13 @@ export async function galleryId(env: Env, value: unknown) {
   return (await findGallery(env, value)).id;
 }
 export async function galleries(env: Env) {
-  const rows = (await env.DB.prepare(`SELECT g.*, (SELECT count(*) FROM images WHERE gallery_id=g.id AND ${GALLERY_SOURCE}) AS available
+  const rows = (await env.DB.prepare(`SELECT g.*, (SELECT count(*) FROM images im WHERE im.gallery_id=g.id AND ${DRAWABLE("im")}) AS available
     FROM galleries g ORDER BY g.title COLLATE NOCASE,g.id`).all<Gallery & {available: number}>()).results;
   return rows.map(g => ({...g, ready: galleryReady(g)}));
 }
 async function galleryPreviews(env: Env) {
   const rows = (await env.DB.prepare(`SELECT g.*,
-    (SELECT count(*) FROM images WHERE gallery_id=g.id AND ${GALLERY_SOURCE}) AS available,
+    (SELECT count(*) FROM images im WHERE im.gallery_id=g.id AND ${DRAWABLE("im")}) AS available,
     (SELECT count(*) FROM images WHERE gallery_id=g.id AND status<>'trash') AS photos,
     (SELECT count(*) FROM images WHERE gallery_id=g.id AND origin='REAL' AND status<>'trash' AND source_missing_at IS NOT NULL) AS source_missing,
     (SELECT json_group_array(file) FROM (

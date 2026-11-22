@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 35.3.0, aggiornata il 2026-11-21T20:30:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 35.4.0, aggiornata il 2026-11-21T23:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,8 +9,11 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.54.0:** dettaglio con sette categorie graduate 0, 1 o 2 (formula 2), dopo le prime misure reali; le misure precedenti
-  restano come formula 1. Migrazione 0068. Seguirà la PR delle idee di falsificazione per REAL.
+- **Ramo 1.55.0:** idee di falsificazione delle REAL (fino a tre, proposte con una chiamata confermata, approvate dall'owner),
+  estrazione automatica delle sole REAL con un'idea libera, corretta su affollamento e dettaglio, riferimenti REAL-processo fino alla
+  fine del processo con l'idea usata all'accettazione. Migrazione 0069. Da fare: valutazione per asse delle SLOP.
+- **In produzione la 1.54.0 (PR #170):** dettaglio con sette categorie graduate 0, 1 o 2 (formula 2), dopo le prime misure reali; le
+  misure precedenti restano come formula 1. Migrazione 0068.
 - **In produzione la 1.53.0 (PR #169):** affollamento e dettaglio delle REAL misurati su richiesta da un modello (una chiamata confermata per foto),
   punteggi calcolati dal Worker, soglie per galleria con valori predefiniti nelle Impostazioni, sola segnalazione delle REAL oltre
   soglia. Le idee di falsificazione delle SLOP sono sospese finché non si vede come il modello misura. Migrazione 0067.
@@ -92,14 +95,14 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.3.0 |
+| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.4.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.0 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.0.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.1.0 |
-| SLOP manuali, automatiche e disponibilità delle REAL | `docs/generazione-slop.md` | 12.0.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 10.2.0 |
+| SLOP manuali, automatiche, idee delle REAL ed estrazione | `docs/generazione-slop.md` | 13.0.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 10.3.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.7.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.8.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.4.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -147,7 +150,8 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 **Worker** Cloudflare (`worker/`, ingresso `index.ts`):
 - `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera),
   `commons-check.ts` (controllo notturno delle fonti Commons delle REAL), `real-measure.ts` (misura a pagamento di affollamento e
-  dettaglio delle REAL, storico, soglie).
+  dettaglio delle REAL, storico, soglie), `real-ideas.ts` (idee di falsificazione delle REAL: proposta a pagamento, revisione,
+  disponibilità per l'estrazione).
 - Libreria `library.ts` (stati, modifiche, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   gallerie `galleries.ts`, cancellazione di gallerie e file `gallery-removal.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
@@ -159,7 +163,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 
 **Codice condiviso** (`shared/`): modelli OpenAI
 `models.ts`, tipi dei batch `slop-proposals.ts`, preferenze di composizione `slop-composition.ts`, formati e ricetta della copia
-`game-copy.ts`, misure e trattamento `copy-treatment.ts`, affollamento e dettaglio delle REAL `real-measure.ts`, licenze ND
+`game-copy.ts`, misure e trattamento `copy-treatment.ts`, affollamento e dettaglio delle REAL `real-measure.ts`, estrazione corretta sui due assi `idea-sampling.ts`, licenze ND
 `licenses.ts`, pulizia dei metadati `media-clean.ts`, livelli e punteggio `levels.ts`, costanti legali `legal.ts`, controllo delle
 immagini `editorial.ts` (brief e valutazioni), `image-label.ts` (titolo REAL o ID SLOP), `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
 
@@ -206,6 +210,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0066 | elimina descrizione editoriale, provenienza, testo Commons originale e campi dell'analisi; svuota la descrizione delle SLOP; versioni correnti di «Base comune» e «Premessa e prompt di galleria» uguali alle proposte |
 | 0067 | misure di affollamento e dettaglio delle REAL (`real_measures`), soglie delle gallerie, parte `real_measure` del contesto e chiavi delle soglie predefinite nelle Impostazioni |
 | 0068 | formula delle misure (1 per le esistenti) e nuova proposta di «Misura delle REAL» se quella in vigore è la prima |
+| 0069 | idee di falsificazione delle REAL (`real_ideas`), motivo senza idee, idea nel riferimento REAL-processo, trigger che tengono i riferimenti fino alla fine del processo e segnano l'idea usata, parte `real_ideas` del contesto |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

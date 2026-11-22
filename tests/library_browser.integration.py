@@ -133,7 +133,7 @@ with sync_playwright() as p:
         expect(spare).to_be_focused()
         bar = page.locator('#library-selection')
         expect(bar.locator('.library-selection-actions').get_by_role('button')).to_have_text(
-            ['Approva', 'Pubblica', 'Nel cestino', 'Cambia galleria'])
+            ['Approva', 'Pubblica', 'Nel cestino', 'Cambia galleria', 'Proponi idee'])
         expect(bar.get_by_role('button', name='Deseleziona')).to_be_visible()
         assert page.evaluate("""() => {
             const scroll = document.querySelector('.gallery-workspace-scroll');
@@ -228,7 +228,7 @@ with sync_playwright() as p:
         page.locator('#library-contexts summary').first.click()
         base_field = page.locator('[data-context=base]')
         expect(base_field).to_have_value(re.compile('^Lavori per un archivio fotografico italiano'))
-        expect(page.locator('[data-context]')).to_have_count(4)
+        expect(page.locator('[data-context]')).to_have_count(5)
         expect(page.locator('[data-context=real_measure]')).to_have_value(re.compile('^Misuri una fotografia'))
         expect(page.locator('[data-context=slop_gallery_prompt]')).to_have_value(re.compile('galleria tematica'))
         approved = base_field.input_value()
@@ -267,7 +267,7 @@ with sync_playwright() as p:
         assert page.request.get(base + '/api/admin/library/settings').json()['values']['commons_checks_per_night'] == 120
         page.locator('[name=commons_checks_per_night]').fill('50'); page.locator('#library-sources-form button').click()
         expect(page.locator('#library-settings-message')).to_have_text('Numero di REAL controllate ogni notte salvato.')
-        expect(page.locator('[data-context-part]')).to_have_count(4)
+        expect(page.locator('[data-context-part]')).to_have_count(5)
         expect(page.locator('[data-context-part=analysis]')).to_have_count(0)
         page.locator('[data-admin-tab=galleries]').click()
         open_gallery(page, gallery_id)

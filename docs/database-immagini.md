@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 10.2.0
+# Foto e gallerie — specifica 10.3.0
 
-Stato: implementata nel ramo 1.53.0, da rilasciare. Aggiornata: 2026-11-21T18:00:00Z.
+Stato: implementata nel ramo 1.55.0, da rilasciare. Aggiornata: 2026-11-21T23:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -33,7 +33,9 @@ La griglia 4:5 ha due colonne su mobile. «Carica altre foto» aggiunge le pagin
   correnti; sparisce quando sono già tutte selezionate. «Deseleziona» nella barra le toglie.
 - **Selezione multipla** (decisione dell’owner del 2026-11-19). La barra sotto la griglia offre «Approva», «Pubblica», «Nel cestino»
   e «Cambia galleria», e «Misura» quando la selezione comprende REAL senza misura e le chiamate a pagamento sono attive: una
-  conferma del massimo, poi una chiamata per REAL, una dopo l'altra (specifica `libreria-immagini`, sezione 10). «Approva» agisce sulle nuove. «Togli dalla pubblicazione» compare quando la selezione include almeno una
+  conferma del massimo, poi una chiamata per REAL, una dopo l'altra (specifica `libreria-immagini`, sezione 10). «Proponi idee»
+  compare quando la selezione comprende REAL senza idee: stessa conferma del massimo e una chiamata per REAL (specifica
+  `generazione-slop`, sezione 1). «Approva» agisce sulle nuove. «Togli dalla pubblicazione» compare quando la selezione include almeno una
   pubblicata e riporta solo le pubblicate allo stato approvato, dopo conferma. Pubblicare una nuova la approva prima. Si applicano i
   controlli di copia di gioco e diritti. Le partite in corso terminano con la copia già assegnata. «Cambia galleria» apre la scelta della destinazione.
   Nel Cestino si possono ripristinare, eliminare definitivamente o spostare in un’altra galleria le foto selezionate.
@@ -76,6 +78,10 @@ suo batch originario, ma esce dalla sua revisione operativa.
   campi, punteggi, numero di oggetti, soglie, data e modello dell'ultima misura, «Misura» o «Misura di nuovo» (una chiamata, con
   conferma e avviso di elaborazione al centro) e, a richiesta, gli oggetti dell'ultima misura disegnati sull'originale intero con le
   categorie di dettaglio e l'elenco di tutte le misure (specifica `libreria-immagini`, sezione 10).
+- **Idee SLOP (REAL):** sotto la misura, le idee di falsificazione con lo stato (proposta, approvata, usata, da rivedere) e, per le
+  idee non usate né in un processo aperto, i campi modificabili (idea, genere di foto, cosa cambia), «Approva» e «Scarta» con
+  conferma; il motivo se il modello non ha proposto idee; «Proponi idee» o «Proponi di nuovo» (una chiamata, con conferma e avviso
+  di elaborazione al centro) finché la REAL ha meno di tre idee approvate o usate.
 - **Rigenerare una SLOP:** richiede un nuovo processo nello studio con conferma ed esame dell’immagine intera.
 - **Fonte su Commons (REAL):** sopra il corpo del dettaglio, l'ultima data in cui il controllo notturno ha trovato il file oppure,
   se manca, la data della prima mancanza con le azioni possibili (verificare, ritirare o cestinare, correggere la pagina della fonte).
@@ -105,7 +111,8 @@ le statistiche coprono al massimo un anno.
 
 `GET /api/admin/library?status=&origin=&q=&batch=&gallery=` (ogni immagine con `stats`, `in_play`, `generation`),
 `GET /api/admin/library/distribution`, `GET /:id` e `GET /:id/{file,original}`, `PATCH /:id` con `revision`,
-`POST /:id/{approve,publish,withdraw,trash,restore,regenerate,copy,measure}` («Modifica» usa `withdraw`), `GET /:id/measures`, `POST /bulk` (incluse `set-approved`, `set-published` e `gallery`),
+`POST /:id/{approve,publish,withdraw,trash,restore,regenerate,copy,measure,ideas}` («Modifica» usa `withdraw`), `GET /:id/measures`,
+`PATCH /ideas/:id` (`idea`, `genre`, `changes`, `approve: true`), `DELETE /ideas/:id`, `POST /bulk` (incluse `set-approved`, `set-published` e `gallery`),
 `GET /galleries` (con `thresholds`, i valori predefiniti), `GET /galleries/:id`, `PATCH /galleries/:id` con `max_crowdedness` e
 `max_detail` (interi da 0 a 100 o null), `POST /trash/empty?gallery=<id>`, `DELETE /:id`, `DELETE /galleries/:id` con `confirm: true` e `revision`. Con `gallery`, `offset`, `sort` e `order` la lista restituisce una pagina
 di 72 foto e il prossimo offset (`next`, nullo all’ultima pagina). I conteggi sono per galleria quando richiesta. Le eliminazioni rispondono anche con `postponed`.

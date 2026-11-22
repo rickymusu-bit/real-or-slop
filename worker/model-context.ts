@@ -1,10 +1,10 @@
 /** Editable model instructions and their versions: the base shared by every call, the measure of crowding and detail of a REAL, the
- * SLOP proposals of a gallery and the evaluation of the SLOP. The description of the REAL, and its «analysis» part, were retired on
+ * ideas of falsification of a REAL, the SLOP proposals of a gallery and the evaluation of the SLOP. The description of the REAL, and its «analysis» part, were retired on
  * 2026-11-20 (owner decision); its old versions stay in the table, unused. */
 import { HttpError, id, type Env } from "./core";
 
-export type Part = "base" | "real_measure" | "slop_evaluation" | "slop_gallery_prompt";
-export const PARTS: Part[] = ["base", "real_measure", "slop_gallery_prompt", "slop_evaluation"];
+export type Part = "base" | "real_measure" | "real_ideas" | "slop_evaluation" | "slop_gallery_prompt";
+export const PARTS: Part[] = ["base", "real_measure", "real_ideas", "slop_gallery_prompt", "slop_evaluation"];
 export const CONTEXT_MAX = 4000;
 const HISTORY = 50;
 
@@ -25,6 +25,13 @@ Riquadro: per ogni oggetto il rettangolo più stretto che lo contiene, in coordi
 Dettaglio: per ogni oggetto dai a ogni categoria un grado. 0: assente o non leggibile. 1: presente e leggibile. 2: fitto o minuto, cioè molti elementi piccoli o precisi da riprodurre esattamente. Categorie: scritte e loghi leggibili (2 se piccoli o numerosi); motivi ripetuti come feritoie, griglie, tasti in fila (2 se fitti); parti contabili come tasti, viti, porte (2 se molte o piccole); texture dei materiali (2 se la grana è nitida da vicino); superfici riflettenti o schermi (2 se riflessi o immagini sono complessi); giunzioni e meccanismi come cerniere, sportelli, fessure (2 se molti o in primo piano); persone e anatomia: mani, dita, volti, corpi (2 se mani o volti sono nitidi e in primo piano).
 
 Nomi degli oggetti in italiano, brevi e generici.`,
+  real_ideas: `Proponi modi diversi di creare, a partire da questa fotografia autentica, una fotografia generata che sembri vera. La REAL ispira la SLOP, non viene copiata.
+
+Dalla REAL la SLOP eredita: il tema della galleria e la famiglia dell'oggetto; l'epoca dell'oggetto; il genere di foto, cioè come di solito si fotografa quel tipo di oggetto (un'edizione da collezione da sola e in risalto, un modello comune anche in uso, un pezzo da museo in vetrina, un annuncio di vendita); la tecnica, la luce e il tipo di apparecchio; affollamento e dettaglio allo stesso livello.
+
+Cambiano sempre l'ambiente (superficie, sfondo, oggetti intorno, con lo stesso numero di oggetti) e il punto di vista. L'esemplare (edizione, colore, variante) può cambiare, oppure restare lo stesso se la scena cambia molto. Non si riprendono mai la composizione, i segni dell'esemplare (graffi, adesivi, scritte a mano, numeri di serie) né le persone della REAL.
+
+Messe una accanto all'altra, REAL e SLOP non devono sembrare due scatti della stessa sessione. Le idee devono essere plausibili per l'oggetto e per il genere di foto.`,
   slop_gallery_prompt: `Per una galleria tematica proponi un falso fotografico concreto e scrivi il prompt inglese. Usa la foto intera, il suo titolo e la descrizione della fonte per scegliere una possibilità compatibile con le indicazioni della galleria. Rendi specifici l’invenzione e gli elementi reali da conservare, come la geografia, un edificio riconoscibile o gli elementi visibili di una mobilitazione. Varia le premesse quando le foto lo consentono. Privilegia credibilità fotografica, luce e tecnica plausibili.`,
   slop_evaluation: `Valuti una fotografia generata, intera e non trattata, prima che entri nella libreria come candidata. Giudica prima la credibilità fotografica: deve poter essere scambiata per una fotografia autentica della tecnica, dell'epoca e della situazione rappresentata. Poi la plausibilità fisica e contestuale e il rispetto degli ancoraggi obbligatori e delle esclusioni del contesto editoriale. L'aderenza letterale ai dettagli secondari del prompt non è richiesta.
 

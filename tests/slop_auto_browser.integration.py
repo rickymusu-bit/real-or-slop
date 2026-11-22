@@ -70,16 +70,32 @@ try:
                 form.get_by_role('button',name='Salva modifiche').click()
                 expect(page.locator('#gallery-editor')).to_be_hidden()
                 assert 'Massimo una chiamata' in confirmations[0]
+                # Ideas of falsification (owner decisions of 2026-11-21): proposed from the detail with one call, one approved.
+                page.locator('[data-open="'+source['id']+'"]').click()
+                detail=page.locator('#library-detail')
+                detail.locator('#library-ideas').click()
+                expect(detail.locator('[data-idea]')).to_have_count(2)
+                assert confirmations[1].startswith('Chiedere idee di falsificazione per «'+source['title']+'»'),confirmations[1]
+                expect(detail.locator('[data-idea] .badge').first).to_have_text('proposta')
+                detail.locator('[data-idea-approve]').first.click()
+                expect(detail.locator('#library-detail-message')).to_have_text('Idea approvata.')
+                expect(detail.locator('[data-idea] .badge')).to_have_text(['approvata','proposta'])
+                detail.locator('[data-idea-discard]').last.click()
+                expect(detail.locator('[data-idea]')).to_have_count(1)
+                detail.locator('[data-ideas]').scroll_into_view_if_needed()
+                detail.screenshot(path=str(folder/(name+'-ideas.png')))
+                detail.get_by_role('button',name='Chiudi',exact=True).click()
                 control([])
 
                 page.get_by_role('link',name='Genera SLOP').click()
                 expect(page.locator('[data-auto=preview]')).to_be_enabled()
                 page.locator('#slop-auto-size').fill('2')
                 page.locator('[data-auto=preview]').click()
-                expect(page.locator('.slop-auto-notice')).to_contain_text('eleggibili disponibili: 1')
+                expect(page.locator('.slop-auto-notice')).to_contain_text('approvata disponibili: 1')
                 page.locator('#slop-auto-size').fill('1')
                 page.locator('[data-auto=preview]').click()
                 expect(page.locator('[data-reference] strong')).to_have_text(source['title'])
+                expect(page.locator('[data-reference] [data-idea]')).to_contain_text('scrivania di legno')
                 assert control()==[] and call('auto')[1]['batch'] is None
                 reference=page.locator('[data-auto-reference]')
                 reference.click();expect(page.locator('.image-preview[open]')).to_be_visible()
@@ -94,7 +110,7 @@ try:
                 expect(page.locator('[data-premise]')).to_contain_text('bus',timeout=20000)
                 control_log=control()
                 assert len(control_log)==1 and control_log[0]['body']['text']['format']['name']=='slop_gallery_proposal'
-                assert 'Massimo 1 chiamata' in confirmations[1]
+                assert 'Massimo 1 chiamata' in confirmations[3]
                 expect(page.locator('[data-auto=start]')).to_be_visible(timeout=20000)
                 page.locator('summary').filter(has_text='Prompt inglese').click()
                 expect(page.get_by_text('A plausible invented vintage bus',exact=False)).to_be_visible()
@@ -122,7 +138,7 @@ try:
                     page.locator('#gallery-active-batch').click()
                 expect(page.locator('[data-auto=review]')).to_be_visible(timeout=30000)
                 assert len(control())==2,control()  # generation and evaluation, no analysis after acceptance
-                assert 'Massimo 4 chiamate' in confirmations[2] and 'analisi' not in confirmations[2],confirmations
+                assert 'Massimo 4 chiamate' in confirmations[4] and 'analisi' not in confirmations[4],confirmations
                 auto=call('auto')[1];assert auto['batch']['status']=='review'
                 generated=[i['id'] for i in auto['batch']['images']];assert len(generated)==1
                 assert call('/'+generated[0],library=True)[1]['gallery_id']==gallery_id

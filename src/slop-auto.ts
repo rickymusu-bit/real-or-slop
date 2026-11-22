@@ -7,8 +7,8 @@ import { onLongPress, openPreview } from "./image-preview";
 import { type Gallery } from "./galleries";
 interface AutoImage { id: string; status: string; index: number | null; copy: boolean; analysis: string }
 interface Config { max_generation_attempts: number; editorial_tolerance: number; text_model: string; image_model: string; quality: string }
-/** A REAL drawn for the gallery: its title and source description (Commons, corrected by the owner). */
-interface Reference {id: string; title: string; description: string; file: string; original: string}
+/** A REAL drawn for the gallery: its title and source description (Commons, corrected by the owner) and the approved idea drawn with it. */
+interface Reference {id: string; title: string; description: string; file: string; original: string; idea: {id: string; idea: string; genre: string; changes: string} | null}
 interface AutoPreview {
   token: string; expires: number; config: Config;
   references: Reference[];
@@ -66,7 +66,7 @@ export function mountSlopAuto(root: HTMLElement | null, controls: HTMLElement | 
   const settings = (c: Config) => `Immagini: ${c.image_model}, qualità ${c.quality}, pianificazione predefinita dal modello. Valutazione: ${c.text_model}. Tentativi massimi: ${c.max_generation_attempts} per SLOP. Tolleranza: ${c.editorial_tolerance}.`;
   const imageCalls = (batch: AutoBatch, size: number) => size * 2 * batch.config.max_generation_attempts;
   const card = (r: Reference) => `<button type="button" class="slop-auto-photo" data-auto-reference="${escape(r.id)}" aria-label="Ingrandisci ${escape(r.title)}" data-long-press><img src="${escape(r.file)}" alt="" draggable="false"></button>
-    <strong>${escape(r.title)}</strong>`;
+    <strong>${escape(r.title)}</strong>${r.idea ? `<p class="hint" data-idea>Idea: ${escape(r.idea.idea)}</p>` : ""}`;
   const render = () => {
     const activeBatch = state?.batch, balance = state?.balance;
     const batch = activeBatch?.gallery_id === galleryId ? activeBatch : null;
@@ -119,13 +119,13 @@ export function mountSlopAuto(root: HTMLElement | null, controls: HTMLElement | 
     } else if (state) {
       const selected = gallery(), max = state.max_batch, c = preview?.config || state.config;
       html = `<h3>Generazione automatica</h3>
-        ${selected ? `<p role="status">${selected.ready ? `REAL disponibili: ${selected.available}.` : "Salva le Indicazioni SLOP con «Modifica galleria» per abilitare la generazione automatica."}</p>` : ""}
+        ${selected ? `<p role="status">${selected.ready ? `REAL con un’idea approvata disponibile: ${selected.available}.` : "Salva le Indicazioni SLOP con «Modifica galleria» per abilitare la generazione automatica."}</p>` : ""}
         <label>Numero di SLOP<input id="slop-auto-size" type="number" required min="1" max="${max}" value="${quantity}" ${selected?.ready ? "" : "disabled"}></label>
         ${state.paid_calls ? "" : '<p class="hint">Manca la chiave OpenAI.</p>'}
         <button type="button" data-auto="preview" ${selected?.ready ? "" : "disabled"}>${preview ? "Estrai di nuovo le REAL" : "Estrai le REAL"}</button>
-        <p class="hint">L’estrazione è gratuita. Dopo aver visto le REAL potrai confermare la preparazione delle proposte.</p>`;
+        <p class="hint">L’estrazione è gratuita: una REAL per volta con una sua idea approvata, favorendo affollamento e dettaglio meno rappresentati fra le SLOP già nate dalle idee. Le idee si propongono e si approvano dal dettaglio delle REAL. Dopo aver visto le REAL potrai confermare la preparazione delle proposte.</p>`;
       if (preview) html += `<section data-auto-preview aria-labelledby="slop-preview-title"><h4 id="slop-preview-title">REAL estratte: ${preview.references.length}</h4>
-        <p>Tocca una foto o tieni premuto per vedere l’originale intero e la descrizione editoriale.</p>
+        <p>Tocca una foto o tieni premuto per vedere l’originale intero e la descrizione della fonte.</p>
         <ul class="slop-auto-references">${preview.references.map(r=>`<li data-reference="${escape(r.id)}">${card(r)}</li>`).join("")}</ul>
         <p class="hint">${escape(settings(c))}</p>
         <p class="hint">Massimo ${preview.references.length} ${preview.references.length === 1 ? "chiamata" : "chiamate"} con ${escape(c.text_model)} per preparare premessa e prompt. L’estrazione vale 15 minuti.</p>

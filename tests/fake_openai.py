@@ -1,4 +1,4 @@
-"""Fake OpenAI for the integration tests: Responses API (measures of the REAL, SLOP proposals and evaluations, gallery instructions), image
+"""Fake OpenAI for the integration tests: Responses API (measures and ideas of the REAL, SLOP proposals and evaluations, gallery instructions), image
 generation and the list of models, with a control endpoint to queue errors (4xx, 5xx, 429, unreadable answers) and read the log."""
 import base64
 import io
@@ -56,6 +56,12 @@ class Handler(BaseHTTPRequestHandler):
         request = json.loads(data['input'][0]['content'][0]['text']) if schema_name in ('slop_evaluation', 'slop_gallery_proposal') else None
         if schema_name == 'gallery_instructions' and (behaviour is None or 'delay' in behaviour):
             behaviour = {'json': {'instructions': 'Inventa un fatto visibile e conserva la piazza riconoscibile.'}}
+        if schema_name == 'real_ideas' and (behaviour is None or 'delay' in behaviour):
+            behaviour = {'json': {'ideas': [
+                {'idea': 'Lo stesso modello di console su una scrivania di legno, ripreso dall’alto con la luce di una finestra.',
+                 'genre': 'Foto di collezione', 'changes': 'Ambiente e punto di vista'},
+                {'idea': 'Una variante di colore della console in una vetrina, ripresa di tre quarti.',
+                 'genre': 'Foto di collezione', 'changes': 'Esemplare, ambiente e punto di vista'}], 'reason': ''}}
         if schema_name == 'real_measure' and (behaviour is None or 'delay' in behaviour):
             # A subject with 7 of 14 levels of detail and two plain objects beside it: crowding 29, detail 38.
             plain = {k: 0 for k in ('text', 'repeated', 'countable', 'texture', 'reflective', 'joints', 'people')}
