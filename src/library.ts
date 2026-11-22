@@ -41,12 +41,9 @@ interface Item extends TreatableItem {
 /** `status`: as stored; `state`: «review» for an idea not used written for other instructions or another gallery. */
 interface Idea { id: string; idea: string; genre: string; changes: string; status: "proposed" | "approved" | "used"; state: "proposed" | "approved" | "used" | "review"; busy: boolean; used_at: string | null }
 const IDEA_STATE: Record<Idea["state"], string> = { proposed: "proposta", approved: "approvata", used: "usata", review: "da rivedere" };
-const MAX_IDEAS = 3;
-/** Ideas that count towards the three: approved and used (proposed ones are replaced by a new proposal). */
-const keptIdeas = (item: Item) => (item.ideas || []).filter(i => i.status !== "proposed").length;
+
 interface Measure extends Scores { id: string; model: string; created_at: string; objects: number; formula: number; over: (keyof Scores)[]; limits: Scores | null }
 /** A REAL with no measure, or measured with an earlier formula: the group «Misura» includes it. */
-const needsIdeas = (item: Item) => item.origin === "REAL" && !(item.ideas || []).length;
 const toMeasure = (item: Item) => item.origin === "REAL" && (!item.measure || item.measure.formula < MEASURE_FORMULA);
 interface StoredMeasure extends Omit<Measure, "over" | "limits"> { observation: Observation }
 const SCORE_LABEL: Record<keyof Scores, string> = { crowdedness: "affollamento", detail: "dettaglio" };
@@ -155,7 +152,6 @@ export async function showLibrary() {
           <button type="button" data-bulk="delete" class="danger" hidden>Elimina definitivamente</button>
           <button type="button" data-bulk="gallery">Cambia galleria</button>
           <button type="button" data-bulk="measure" hidden>Misura</button>
-          <button type="button" data-bulk="ideas" hidden>Proponi idee</button>
         </div>
         <button type="button" data-bulk="none">Deseleziona</button>
       </div>
@@ -191,12 +187,12 @@ export async function showLibrary() {
       <p class="hint">Modelli OpenAI usati dalle chiamate a pagamento. Il modello di testo scrive i prompt delle SLOP e le valuta, e deve leggere immagini; quello di immagini genera le SLOP. Ogni chiamata chiede conferma; il limite di spesa che conta è quello impostato sul progetto OpenAI (platform.openai.com).</p>
       <form id="library-models-form" class="library-inline"><label>Modello di testo<select name="text_model"></select></label><label>Modello di immagini<select name="image_model"></select></label><label>Qualità delle immagini<select name="image_quality"></select></label></form>
       <p id="library-models-note" class="hint"></p>
-      <p class="hint">La qualità vale per lo studio SLOP e per la rigenerazione dalla galleria.</p></details>
-    <details id="library-thresholds" class="library-vocabulary"><summary>Studio SLOP</summary>
+      <p class="hint">La qualità vale per le SLOP generate dal wizard «Genera SLOP».</p></details>
+    <details id="library-thresholds" class="library-vocabulary"><summary>Generazione SLOP</summary>
       <form id="library-thresholds-form" class="library-inline">
         <label>Tentativi massimi per SLOP<input type="number" name="max_generation_attempts" required></label><label>Tolleranza (0 rigorosa, 1 normale, 2 permissiva)<input type="number" name="editorial_tolerance" required></label>
         <button>Salva</button></form>
-      <p class="hint">Apri una galleria e scegli «Genera SLOP» per accedere alle modalità manuale e automatica. La modalità automatica estrae le REAL di riferimento dalla galleria.</p></details>
+      <p class="hint">Apri una galleria e scegli «Genera SLOP»: il wizard estrae le REAL di riferimento dalla galleria.</p></details>
     <details id="library-games" class="library-vocabulary"><summary>Partite</summary>
       <form id="library-games-form" class="library-inline"><label>Durata massima di una partita aperta (ore)<input type="number" name="open_game_hours" required></label><button>Salva</button></form>
       <p class="hint">Oltre questo tempo una partita non conclusa non trattiene più le copie delle foto ritirate o modificate, e la sua foto può non essere più disponibile. I livelli del gioco sono fissi nel codice.</p></details>
@@ -306,7 +302,6 @@ export async function showLibrary() {
       if (action === "withdraw") button.hidden = trash || !chosen.some(item => item.status === "published");
       else if (action === "set-approved") button.hidden = trash || !chosen.some(item => item.status === "new");
       else if (action === "measure") button.hidden = trash || !galleryList?.paid_calls || !chosen.some(toMeasure);
-      else if (action === "ideas") button.hidden = trash || !galleryList?.paid_calls || !chosen.some(needsIdeas);
       else if (action !== "none" && action !== "gallery") button.hidden = trash !== (action === "restore" || action === "delete");
       button.disabled = busy || (action === "gallery" && !galleries().some(g => g.id !== filter.gallery));
     }
@@ -382,22 +377,15 @@ export async function showLibrary() {
       ${m ? '<details data-measure-history><summary>Oggetti riconosciuti e misure precedenti</summary><div data-measure-history-body></div></details>' : ""}
     </section>`;
   };
-  /** Ideas of falsification of a REAL: proposed by a model (one paid call), edited, approved or discarded by the owner. Only an approved,
-   * free idea lets the automatic extraction draw the REAL; each idea yields at most one SLOP. */
+  /** Proposals of a REAL, read only: they are written, asked to the model and chosen in the SLOP wizard (owner decision of 2026-11-22). */
   const ideasBlock = (item: Item) => {
     if (item.origin !== "REAL") return "";
-    const ideas = item.ideas || [], paid = !!galleryList?.paid_calls && item.status !== "trash";
-    const editable = (i: Idea) => i.state !== "used" && !i.busy && item.status !== "trash";
-    return `<section class="library-ideas" data-ideas><h3>Idee SLOP</h3>
-      <p class="hint">Ogni idea dà al massimo una SLOP. Solo le idee approvate di una REAL approvata o pubblicata entrano nell’estrazione automatica.</p>
-      ${!ideas.length && item.ideas_reason ? `<p class="hint" data-ideas-reason>Nessuna idea proposta: ${escape(item.ideas_reason)}</p>` : ""}
+    const ideas = item.ideas || [];
+    return `<section class="library-ideas" data-ideas><h3>Proposte SLOP</h3>
+      <p class="hint">Si scrivono, si chiedono al modello e si scelgono nel wizard «Genera SLOP». Ogni proposta dà al massimo una SLOP.</p>
+      ${!ideas.length ? `<p class="hint" data-ideas-reason>${item.ideas_reason ? "Il modello non ha proposto idee: " + escape(item.ideas_reason) : "Nessuna proposta."}</p>` : ""}
       ${ideas.length ? `<ol class="library-idea-list">${ideas.map(i => `<li data-idea="${escape(i.id)}"><span class="badge badge-idea-${i.state}">${IDEA_STATE[i.state]}</span>${i.busy ? ' <span class="hint">in un batch in corso</span>' : ""}
-        ${editable(i) ? `<label>Idea<textarea data-idea-field="idea" maxlength="600" rows="3">${escape(i.idea)}</textarea></label>
-          <label>Genere di foto<input data-idea-field="genre" maxlength="160" value="${escape(i.genre)}"></label>
-          <label>Cosa cambia rispetto alla REAL<textarea data-idea-field="changes" maxlength="400" rows="2">${escape(i.changes)}</textarea></label>
-          <div class="library-inline">${i.state !== "approved" ? `<button type="button" data-idea-approve="${escape(i.id)}">Approva</button>` : ""}<button type="button" data-idea-discard="${escape(i.id)}">Scarta</button></div>`
-          : `<p>${escape(i.idea)}</p><p class="hint">${escape(i.genre)}${i.changes ? ". " + escape(i.changes) : ""}${i.used_at ? `. Usata il ${escape(when(i.used_at))}.` : ""}</p>`}</li>`).join("")}</ol>` : ""}
-      ${paid && keptIdeas(item) < MAX_IDEAS ? `<p><button type="button" id="library-ideas">${ideas.some(i => i.state === "proposed") ? "Proponi di nuovo" : "Proponi idee"} (1 chiamata)</button></p>` : ""}
+        <p>${escape(i.idea)}</p>${i.genre || i.changes || i.used_at ? `<p class="hint">${escape([i.genre, i.changes].filter(Boolean).join(". "))}${i.used_at ? `${i.genre || i.changes ? ". " : ""}Usata il ${escape(when(i.used_at))}.` : ""}</p>` : ""}</li>`).join("")}</ol>` : ""}
     </section>`;
   };
   /** The objects of the latest measure drawn on the whole original, with their kinds of detail, and every measure of the photo. */
@@ -471,16 +459,6 @@ export async function showLibrary() {
       }
       return;
     }
-    const ideaField = (event.target as HTMLElement).closest<HTMLInputElement | HTMLTextAreaElement>("[data-idea-field]");
-    if (ideaField && open) {
-      const ideaId = ideaField.closest<HTMLElement>("[data-idea]")!.dataset.idea!, item = open;
-      try {
-        open = await call<Item>(`/ideas/${encodeURIComponent(ideaId)}`, { method: "PATCH", body: JSON.stringify({ [ideaField.dataset.ideaField!]: ideaField.value }) });
-        items = items.map(i => i.id === open!.id ? open! : i);
-        showDetail(open); detailMessage("Idea salvata.");
-      } catch (error) { if (open?.id === item.id) detailMessage(String(error instanceof Error ? error.message : error)); }
-      return;
-    }
     const field = (event.target as HTMLElement).closest<HTMLInputElement | HTMLTextAreaElement>("[data-field]");
     if (!field || !open || field.readOnly) return;
     try { open = await save(open, { [field.dataset.field!]: field.value }); showDetail(open); detailMessage("Salvato."); render(); }
@@ -492,28 +470,12 @@ export async function showLibrary() {
       try { showDetail(await call<Item>("/" + encodeURIComponent(button.dataset.openSource))); } catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
       return;
     }
-    if (!button || !open || busy || !(button.dataset.action || button.dataset.ideaApprove || button.dataset.ideaDiscard || ["library-copy", "library-regenerate", "library-measure", "library-ideas",
+    if (!button || !open || busy || !(button.dataset.action || ["library-copy", "library-regenerate", "library-measure",
       "library-crop", "library-treatment-off", "library-treatment-on", "library-treatment-edit"].includes(button.id))) return;
     const id = open.id;
     busy = true;
     try {
-if (button.dataset.ideaApprove) {
-        open = await call<Item>(`/ideas/${encodeURIComponent(button.dataset.ideaApprove)}`, { method: "PATCH", body: JSON.stringify({ approve: true }) });
-        detailMessage("Idea approvata.");
-      }
-      else if (button.dataset.ideaDiscard) {
-        if (!window.confirm("Scartare questa idea? Non si può recuperare.")) return;
-        open = await call<Item>(`/ideas/${encodeURIComponent(button.dataset.ideaDiscard)}`, { method: "DELETE", body: "{}" });
-        detailMessage("Idea scartata.");
-      }
-      else if (button.id === "library-ideas") {
-        if (!window.confirm(`Chiedere idee di falsificazione per «${imageLabel(open)}» a ${galleryList?.text_model || "il modello di testo"}? Una chiamata a pagamento, mai ripetuta in automatico. Le idee solo proposte vengono sostituite; quelle approvate o usate restano.`)) return;
-        const item = open;
-        open = await withPhotoProcessing("Preparo le idee…", () => call<Item>(`/${encodeURIComponent(item.id)}/ideas`,
-          { method: "POST", body: JSON.stringify({ confirm: true, request: crypto.randomUUID() }) }));
-        detailMessage(open.ideas?.length ? "Idee proposte: rivedile e approva quelle da usare." : "Nessuna idea proposta.");
-      }
-      else if (button.id === "library-measure") {
+if (button.id === "library-measure") {
         if (!window.confirm(`Misurare affollamento e dettaglio di «${imageLabel(open)}» con ${galleryList?.text_model || "il modello di testo"}? Una chiamata a pagamento, mai ripetuta in automatico.`)) return;
         const item = open;
         open = await withPhotoProcessing("Misuro affollamento e dettaglio…", () => call<Item>(`/${encodeURIComponent(item.id)}/measure`,
@@ -640,41 +602,6 @@ if (button.dataset.ideaApprove) {
       syncSelection();
     }
   };
-  /** Proposes ideas, one paid call each, for the selected REAL that have none (proposed, approved or used); the others are handled
-   * from their detail. One at a time with the page open; an account problem («OpenAI: …») stops the rest. */
-  const ideasSelection = async () => {
-    const chosen = items.filter(item => selected.has(item.id) && item.status !== "trash" && needsIdeas(item));
-    if (!chosen.length || busy) return;
-    const skipped = items.filter(item => selected.has(item.id) && item.origin === "REAL" && !needsIdeas(item)).length;
-    if (!window.confirm(`Chiedere idee di falsificazione per ${chosen.length} REAL a ${galleryList?.text_model || "il modello di testo"}? ` +
-      `Massimo ${chosen.length} ${chosen.length === 1 ? "chiamata" : "chiamate"} a pagamento, una per foto, mai ripetute in automatico.` +
-      (skipped ? ` Le ${skipped} REAL che hanno già idee restano escluse: si gestiscono dal dettaglio.` : ""))) return;
-    const scope = filter.gallery;
-    busy = true; selectionBar();
-    let done = 0, none = 0;
-    const failed: string[] = [];
-    try {
-      for (const [index, item] of chosen.entries()) {
-        if (filter.gallery !== scope) break;
-        message(`Idee per ${index + 1} di ${chosen.length}…`);
-        try {
-          const updated = await call<Item>(`/${encodeURIComponent(item.id)}/ideas`, { method: "POST", body: JSON.stringify({ confirm: true, request: crypto.randomUUID() }) });
-          done++; if (!updated.ideas?.length) none++; selected.delete(item.id);
-        } catch (error) {
-          const text = error instanceof Error ? error.message : String(error);
-          failed.push(`${imageLabel(item)}: ${text}`);
-          if (text.startsWith("OpenAI:")) break;
-        }
-      }
-    } finally {
-      busy = false;
-      if (filter.gallery === scope) {
-        await load().catch(report);
-        message(`Idee proposte per ${done - none} REAL${none ? `, nessuna idea per ${none}` : ""}. Rivedile e approvale dal dettaglio.` + (failed.length ? ` Non riuscite: ${failed.join(" / ")}` : ""));
-      }
-      syncSelection();
-    }
-  };
   $("#library-cancel-move").addEventListener("click", () => moveGallery.close());
   moveGallery.addEventListener("submit", event => {
     event.preventDefault();
@@ -728,7 +655,6 @@ if (button.dataset.ideaApprove) {
     const action = button.dataset.bulk;
     if (action === "none") { selected.clear(); syncSelection(); return; }
     if (action === "measure") { await measureSelection(); return; }
-    if (action === "ideas") { await ideasSelection(); return; }
     if (action === "gallery") {
       const options = galleryOptions(galleries().filter(g => g.id !== filter.gallery), "");
       $<HTMLSelectElement>("#library-bulk-gallery").innerHTML = '<option value="">Scegli una galleria</option>' + options;
@@ -781,7 +707,7 @@ if (button.dataset.ideaApprove) {
   // Model context: three texts, each saved as a new version; an old version can become the current one again.
   const CONTEXT_LABELS: Record<string, [string, string]> = {
     base: ["Base comune", "Inviata in ogni chiamata: misure delle REAL, proposte di galleria, indicazioni SLOP proposte e valutazioni."],
-    real_ideas: ["Idee SLOP delle REAL", "Inviato insieme alla base, all’originale intero, a titolo e descrizione della fonte, a titolo e descrizione della galleria e all’ultima misura. Numero di idee, campi e regole sul riferimento restano fissati nel codice."],
+    real_ideas: ["Idee SLOP delle REAL", "Usato nel wizard «Genera SLOP» quando chiedi proposte al modello. Inviato insieme alla base, all’originale intero, a titolo e descrizione della fonte, a titolo e descrizione della galleria e all’ultima misura. Numero di idee, campi e regole sul riferimento restano fissati nel codice."],
     real_measure: ["Misura delle REAL", "Inviato insieme alla base, all’originale intero e a titolo e descrizione della galleria. Elenco degli oggetti, riquadri e categorie di dettaglio restano fissati nel codice, come il calcolo di affollamento e dettaglio."],
     slop_gallery_prompt: ["Premessa e prompt di galleria", "Inviato insieme alla base, all’originale intero, all’idea approvata della REAL e a titolo e descrizione della galleria."],
     slop_evaluation: ["Valutazione delle SLOP", "Inviato insieme alla base a ogni valutazione di una candidata intera. Decisioni, tolleranza e formato della risposta restano fissati nel codice."],
@@ -850,7 +776,7 @@ if (button.dataset.ideaApprove) {
       settingsMessage(done); await Promise.all([autoBox.refresh(), after()]);
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
-  numbersForm("#library-thresholds-form", ["max_generation_attempts", "editorial_tolerance"], "Soglie dello studio SLOP salvate.");
+  numbersForm("#library-thresholds-form", ["max_generation_attempts", "editorial_tolerance"], "Soglie della generazione SLOP salvate.");
   numbersForm("#library-games-form", ["open_game_hours"], "Durata massima di una partita aperta salvata.");
   numbersForm("#library-sources-form", ["commons_checks_per_night"], "Numero di REAL controllate ogni notte salvato.");
   numbersForm("#library-measures-form", ["crowdedness_threshold", "detail_threshold"], "Soglie predefinite di affollamento e dettaglio salvate.", refreshGalleries);
@@ -953,8 +879,8 @@ if (button.dataset.ideaApprove) {
     indicator: gallery => {
       activeBatch.hidden = !gallery;
       if (gallery) {
-        activeBatch.href = galleryWizardPath(gallery.id, "slop", true);
-        activeBatch.textContent = `Batch automatico · ${gallery.title}`;
+        activeBatch.href = galleryWizardPath(gallery.id, "slop");
+        activeBatch.textContent = `Batch SLOP in corso: ${gallery.title}`;
       }
     },
   });

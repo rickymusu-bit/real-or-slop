@@ -4,7 +4,7 @@ import { MAX_BATCH } from "../shared/slop-proposals";
 import { loopSnapshot, processViews } from "./slop-generation";
 import { catalogCounts } from "./slop-references";
 import { galleries } from "./galleries";
-import { previewGallery, prepareGallery, galleryReview, confirmGallery, cancelGallery, expireGalleryBatches, type GalleryBatch } from "./slop-gallery";
+import { previewGallery, prepareGallery, galleryReview, confirmGallery, cancelGallery, editProposal, expireGalleryBatches, wizardCandidates, type GalleryBatch } from "./slop-gallery";
 import { runnerView, startRun } from "./slop-runner";
 
 interface AutoRow extends GalleryBatch {
@@ -79,8 +79,9 @@ async function settle(env: Env, batch: unknown) {
   return autoState(env);
 }
 
-export async function autoRoute(env: Env, method: string, rest: string, data: Record<string, unknown>) {
+export async function autoRoute(env: Env, method: string, rest: string, data: Record<string, unknown>, gallery = "") {
   if (rest === "" && method === "GET") return autoState(env);
+  if (rest === "candidates" && method === "GET") return wizardCandidates(env, gallery);
   if (method !== "POST") throw new HttpError(405, "Metodo non consentito");
   if (rest === "preview" || rest === "prepare") {
     if (await openBatch(env)) throw new HttpError(409, "C’è già un batch automatico aperto");
@@ -89,10 +90,11 @@ export async function autoRoute(env: Env, method: string, rest: string, data: Re
     await startRun(env, batchId, "proposals");
     return autoState(env);
   }
-  if (rest === "start" || rest === "cancel") {
+  if (rest === "start" || rest === "cancel" || rest === "proposal") {
     const batch = await openBatch(env);
     if (!batch || data.batch !== batch.id || batch.gallery_review !== "pending") throw new HttpError(409, "Proposte già decise o scadute");
-    if (rest === "cancel") {
+    if (rest === "proposal") await editProposal(env, batch, data);
+    else if (rest === "cancel") {
       if (Object.keys(data).some(key => key !== "batch")) throw new HttpError(400, "Campi non previsti");
       await cancelGallery(env, batch.id);
     } else {
@@ -118,17 +120,4 @@ export async function autoRoute(env: Env, method: string, rest: string, data: Re
     return settle(env, data.batch);
   }
   throw new HttpError(404, "API dei batch automatici inesistente");
-}
-
-/** Ids of the automatic batches, kept out of the studio's list of recent batches. */
-export async function autoBatchIds(env: Env): Promise<Set<string>> {
-  return new Set((await env.DB.prepare("SELECT id FROM slop_batches WHERE origin='auto'").all<{ id: string }>()).results.map(r => r.id));
-}
-
-/** Automatic batches are inspectable from the studio, with their controls in the automatic section. */
-export async function guardBatch(env: Env, method: string, rest: string) {
-  const [batchId] = rest.split("/");
-  if (method === "GET" || !batchId || !/^[\w-]{1,64}$/.test(batchId)) return;
-  const row = await env.DB.prepare("SELECT origin FROM slop_batches WHERE id=?").bind(batchId).first<{origin: string}>();
-  if (row?.origin === "auto") throw new HttpError(409, "Il batch si gestisce dalla modalità automatica");
 }

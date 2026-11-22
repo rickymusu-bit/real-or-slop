@@ -1,6 +1,6 @@
-# Statistiche e Impostazioni — specifica 4.8.0
+# Statistiche e Impostazioni — specifica 4.9.0
 
-Stato: implementata nel ramo 1.55.0, da rilasciare. Aggiornata: 2026-11-21T23:00:00Z.
+Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
 
 ## 1. Decisioni dell'owner (2026-11-12)
 
@@ -15,13 +15,13 @@ partite) riscrive solo i campi di quel modulo con i valori salvati: un valore sc
 si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ricaricare la pagina né inserire il codice nell’URL.
 
 - **Modelli:** modello di testo, modello di immagini (con la data di dismissione dove nota) e qualità delle immagini tra quelle ammesse;
-  se il modello scelto non ammette la qualità salvata, si torna a `high`. Lo studio SLOP la conserva nello snapshot.
+  se il modello scelto non ammette la qualità salvata, si torna a `high`. Il wizard SLOP la conserva nello snapshot del batch.
 - **Contesto dei modelli:** i cinque testi (Base, Misura delle REAL, Idee SLOP delle REAL, Premessa e prompt di galleria, Valutazione delle SLOP) con le versioni, il
   ripristino e la proposta del codice; un avviso quando il testo in vigore dei prompt è stato scritto per le gemelle e blocca lo
   studio (specifica `libreria-immagini`, sezione 7).
 - **Classifica:** verifica di un codice partita (soprannome, livello, punteggio, data), Nascondi, Mostra, Cancella (per sempre, per le
   richieste di cancellazione).
-- **Studio SLOP:** tentativi massimi (1–5, default 3), tolleranza (0–2, default 1). Quantità e modalità si scelgono con «Genera SLOP» nella galleria. Nessuna proposta da attivare o spegnere; lo sbilanciamento è solo una notifica. La 0055 rimuove `slop_auto_enabled`, rifiutato dall’API. La 0056 elimina anche i vincoli e le chiavi legacy dei gruppi, conservando le impostazioni attive.
+- **Generazione SLOP:** tentativi massimi (1–5, default 3), tolleranza (0–2, default 1). Il resto si sceglie nel wizard «Genera SLOP» della galleria (specifica `generazione-slop`). Nessuna proposta da attivare o spegnere; lo sbilanciamento è solo una notifica. La 0055 rimuove `slop_auto_enabled`, rifiutato dall’API. La 0056 elimina anche i vincoli e le chiavi legacy dei gruppi, conservando le impostazioni attive.
 - **Partite:** durata massima di una partita aperta in ore (24, da 1 a 168): oltre, una partita non conclusa non trattiene più le copie
   ritirate e non conta tra le aperte.
 - **Fonti Commons:** REAL controllate ogni notte su Wikimedia Commons (50, da 0 a 500; 0 sospende il controllo), richiesta

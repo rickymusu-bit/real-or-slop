@@ -13,8 +13,7 @@ import { paid, PaidError, responseJson } from "./paid";
 import { IMAGE_MARK, jsonWithImage } from "./image-body";
 import { imageMime } from "../shared/image-format";
 import { imageGeometry } from "../shared/image-geometry";
-import { runnerView, startRun } from "./slop-runner";
-import { galleryId } from "./galleries";
+import { runnerView } from "./slop-runner";
 import { GALLERY_PIPELINE, type GalleryBatch, type GallerySnapshot } from "./slop-gallery";
 
 const now = () => new Date().toISOString();
@@ -76,47 +75,6 @@ async function show(env: Env, batchId: string) {
     max_calls: maxCalls,
     prompts_status: row.prompts_status, prompts_error: row.prompts_error, created_at: row.created_at, updated_at: row.updated_at, runner: runnerView(row),
     images: await Promise.all(ids.map(i => viewOf(env, i.id))) };
-}
-/** A manual draft is free: the owner supplies the whole prompt and the immutable anchors. */
-async function createManualBatch(env: Env, data: Record<string, unknown>) {
-  if (Object.keys(data).some(k => !["mode", "prompt", "brief", "gallery_id"].includes(k))) throw new HttpError(400, "Campi non previsti");
-  const gallery = await galleryId(env, data.gallery_id);
-  const brief = validBrief(data.brief);
-  if (!brief || typeof data.prompt !== "string" || !data.prompt.trim() || data.prompt.length > 4000)
-    throw new HttpError(400, "Inserisci un prompt e almeno un ancoraggio obbligatorio");
-  const item: InspirationItem = {title: "SLOP manuale"};
-  const snapshot = {...await loopSnapshot(env), mode: "manual" as const};
-  const batchId = id(), stamp = now();
-  await env.DB.batch([
-    env.DB.prepare(`INSERT INTO slop_batches(id,theme,slots,pipeline_version,loop_settings,prompts_status,created_at,updated_at,gallery_id)
-      VALUES(?,'[]',?,?,?,'done',?,?,?)`).bind(batchId, JSON.stringify([item]), GALLERY_PIPELINE, JSON.stringify(snapshot), stamp, stamp, gallery),
-    env.DB.prepare(`INSERT INTO slop_processes(id,batch_id,slot,state,brief,prompt,snapshot,created_at,updated_at)
-      VALUES(?,?,0,'ready',?,?,?,?,?)`).bind(id(), batchId, JSON.stringify(brief), data.prompt.trim(), JSON.stringify(snapshot), stamp, stamp),
-  ]);
-  return show(env, batchId);
-}
-async function createBatch(env: Env, data: Record<string, unknown>) {
-  if (data.mode === "manual") return createManualBatch(env, data);
-  throw new HttpError(409, "Per preparare nuove SLOP automatiche scegli una galleria e usa Generazione automatica");
-}
-async function editBatch(env: Env, batchId: string, data: Record<string, unknown>) {
-  const batch = await load(env, batchId); compatible(batch);
-  if (!Object.keys(data).length || Object.keys(data).some(k => !["prompts", "briefs"].includes(k))) throw new HttpError(400, "Campi non previsti");
-  const process = await env.DB.prepare("SELECT * FROM slop_processes WHERE batch_id=? AND slot=0")
-    .bind(batchId).first<Process>();
-  if (!process || process.attempts || !["ready","failed"].includes(process.state))
-    throw new HttpError(409, "Prompt e brief si modificano prima del primo tentativo");
-  const prompts = data.prompts ?? [process.prompt], briefs = data.briefs ?? [parse(process.brief, null)];
-  if (!Array.isArray(prompts) || prompts.length !== 1 || typeof prompts[0] !== "string" || !prompts[0].trim() || prompts[0].length > 4000 ||
-    !Array.isArray(briefs) || briefs.length !== 1) throw new HttpError(400, "Inserisci un prompt e un brief validi");
-  const brief = validBrief(briefs[0]);
-  if (!brief) throw new HttpError(400, "Inserisci almeno un ancoraggio obbligatorio");
-  const edit = await env.DB.prepare(`UPDATE slop_processes SET prompt=?,brief=?,state='ready',error='',updated_at=?
-    WHERE id=? AND attempts=0 AND state IN ('ready','failed')
-      AND EXISTS(SELECT 1 FROM slop_batches WHERE id=? AND (runner_status IS NULL OR runner_status NOT IN ('running','stopping')))`)
-    .bind(prompts[0].trim(), JSON.stringify(brief), now(), process.id, batchId).run();
-  if (!edit.meta.changes) throw new HttpError(409, "Batch occupato o tentativo già avviato");
-  return show(env, batchId);
 }
 const strings = {type: "array", maxItems: 30, items: {type: "string", maxLength: 3000}};
 const evaluationSchema = { type: "object", additionalProperties: false,
@@ -279,11 +237,6 @@ export async function acceptProcess(env: Env, processId: string, data: Record<st
   }
   return {image: {id: image.id}, attention: await attention(env)};
 }
-async function recent(env: Env, gallery: string) {
-  const rows = (await env.DB.prepare(`SELECT b.id,b.slots,b.prompts_status,b.updated_at,(SELECT count(*) FROM images i WHERE i.generation_batch=b.id AND i.gallery_id=b.gallery_id) AS images
-    FROM slop_batches b WHERE (?1='' OR b.gallery_id=?1) ORDER BY b.updated_at DESC LIMIT 10`).bind(gallery).all<Batch & {images: number}>()).results;
-  return {batches: rows.map(r => ({id: r.id, count: itemsOf(r).length, prompts_status: r.prompts_status, images: r.images, updated_at: r.updated_at}))};
-}
 /** Authenticated private temporary preview. The main router handles this before JSON serialization. */
 export async function candidateFile(env: Env, batchId: string, attemptId: string): Promise<Response> {
   const row = await env.DB.prepare("SELECT a.candidate_key FROM slop_attempts a JOIN slop_processes p ON p.id=a.process_id WHERE p.batch_id=? AND a.id=?").bind(batchId, attemptId).first<{candidate_key: string | null}>();
@@ -291,33 +244,10 @@ export async function candidateFile(env: Env, batchId: string, attemptId: string
   if (!file) throw new HttpError(404, "Candidata non disponibile");
   return new Response(file.body, {headers: {"Content-Type": file.httpMetadata?.contentType || "image/png", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"}});
 }
-/** Start or resume the owner's manual generation within its confirmed call limit. */
-async function runBatch(env: Env, batchId: string, data: Record<string, unknown>) {
-  confirmOnly(data, ["phase"]);
-  if (data.phase !== "images") throw new HttpError(400, "Fase sconosciuta");
-  if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
-  const batch = await load(env, batchId); compatible(batch);
-  const ready = await env.DB.prepare("SELECT 1 FROM slop_processes WHERE batch_id=? AND state IN ('ready','retry')").bind(batchId).first();
-  if (!ready) throw new HttpError(409, "Nessun tentativo da avviare o riprendere");
-  await startRun(env, batchId, "images");
-  return show(env, batchId);
-}
-async function stopBatch(env: Env, batchId: string, data: Record<string, unknown>) {
-  if (Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
-  await env.DB.prepare("UPDATE slop_batches SET runner_status='stopping' WHERE id=? AND runner_status='running'").bind(batchId).run();
-  return show(env, batchId);
-}
-export async function batchRoute(env: Env, method: string, rest: string, data: Record<string, unknown>, gallery = "") {
-  if (!rest && method === "GET") return recent(env, gallery);
-  if (!rest && method === "POST") return createBatch(env, data);
-  const match = /^([\w-]{1,64})(?:\/(images|run|stop))?$/.exec(rest);
-  if (!match) throw new HttpError(404, "Batch inesistente");
-  const [,batchId,action] = match;
-  if (!action && method === "GET") return show(env, batchId);
-  if (!action && method === "PUT") return editBatch(env, batchId, data);
-  if (action === "images" && method === "POST") return generateImage(env, batchId, data);
-  if (action === "run" && method === "POST") return runBatch(env, batchId, data);
-  if (action === "stop" && method === "POST") return stopBatch(env, batchId, data);
-  throw new HttpError(405, "Metodo non consentito");
+/** GET batches/:id: a batch with its processes, attempts and images, for the review in the SLOP wizard. The manual generation was
+ * retired on 2026-11-22 (owner decision): batches are created and driven only by the wizard (auto/...). */
+export async function batchRoute(env: Env, method: string, rest: string) {
+  if (method !== "GET" || !/^[\w-]{1,64}$/.test(rest)) throw new HttpError(404, "Batch inesistente");
+  return show(env, rest);
 }
 

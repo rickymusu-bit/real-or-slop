@@ -36,34 +36,20 @@ export async function showGalleryWizard(content: HTMLElement, id: string, wizard
     return;
   }
 
-  body.innerHTML = `<nav class="db-tabs" aria-label="Modalità di generazione">
-    <button type="button" data-generation-mode="manual">Generazione manuale</button>
-    <button type="button" data-generation-mode="automatic">Generazione automatica</button>
-  </nav>
-  <section id="slop-manual"><div id="slop-studio">${loading}</div></section>
-  <section id="slop-automatic"><div id="slop-auto-controls">${loading}</div></section>`;
-  const manual = body.querySelector<HTMLElement>("#slop-manual")!, automatic = body.querySelector<HTMLElement>("#slop-automatic")!;
-  const modes = body.querySelectorAll<HTMLButtonElement>("[data-generation-mode]");
-  const query = new URLSearchParams(location.search);
-  function setMode(mode: string) {
-    manual.hidden = mode !== "manual";
-    automatic.hidden = mode !== "automatic";
-    modes.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.generationMode === mode)));
-    sessionStorage.setItem("ros-generation-mode", mode);
-    if (query.has("mode") && mode === "manual") {
-      query.delete("mode");
-      history.replaceState(history.state, "", location.pathname);
-    }
-  }
-  for (const button of modes) button.addEventListener("click", () => setMode(button.dataset.generationMode!));
-  setMode(query.get("mode") === "automatic" || sessionStorage.getItem("ros-generation-mode") === "automatic" ? "automatic" : "manual");
-  const studio = mountSlopStudio(manual.querySelector<HTMLElement>("#slop-studio")!, id);
-  const auto = mountSlopAuto(null, automatic.querySelector<HTMLElement>("#slop-auto-controls")!, id, {
-    loop: async batch => { setMode("manual"); await studio.refresh(batch); },
+  // One wizard for every SLOP (owner decision of 2026-11-22): steps 2-6 in the controls, review and exceptions in the studio below.
+  body.innerHTML = `<section id="slop-automatic"><div id="slop-auto-controls">${loading}</div></section>
+  <section id="slop-review"><div id="slop-studio"></div></section>`;
+  const studio = mountSlopStudio(body.querySelector<HTMLElement>("#slop-studio")!, id);
+  let shown: string | null | undefined;
+  const auto = mountSlopAuto(null, body.querySelector<HTMLElement>("#slop-auto-controls")!, id, {
+    // The studio reloads only when the batch to review changes; the exceptions come with it.
+    batch: async batchId => { if (batchId !== shown) { shown = batchId; await studio.refresh(batchId); } },
     review: batch => { location.assign(galleryPhotosPath(id, batch)); },
-    openGallery: galleryId => { location.assign(galleryWizardPath(galleryId, "slop", true)); },
+    openGallery: galleryId => { location.assign(galleryWizardPath(galleryId, "slop")); },
+    changed: async () => { await studio.refresh(shown ?? null); },
   });
-  const refresh = () => Promise.all([studio.refresh(), auto.refresh()]);
+  const refresh = () => Promise.all([studio.refresh(shown ?? null), auto.refresh()]);
+  if (new URLSearchParams(location.search).has("mode")) history.replaceState(history.state, "", location.pathname);
   await refresh();
   window.addEventListener("pageshow", event => { if (event.persisted) void refresh(); });
 }

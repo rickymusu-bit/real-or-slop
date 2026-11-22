@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 33.1.0, aggiornata il 2026-11-22T10:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 34.0.0, aggiornata il 2026-11-22T18:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -20,7 +20,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
   al browser prima della risposta. Le REAL non vengono descritte da un modello (decisione del 2026-11-20); su richiesta confermata
   un modello ne misura soltanto affollamento e dettaglio, con soglie per galleria e sola segnalazione, e ne propone fino a tre idee
-  di falsificazione che l'owner approva (decisioni del 2026-11-21, specifiche `libreria-immagini`, sezione 10, e `generazione-slop`). Il
+  di falsificazione, nel wizard SLOP, che l'owner sceglie (decisioni del 2026-11-21, specifiche `libreria-immagini`, sezione 10, e `generazione-slop`). Il
   modello delle proposte prepara premessa e prompt SLOP dalla REAL **intera** (l'originale, mai il ritaglio 4:5: decisione del
   2026-11-15), dal suo titolo e dalla descrizione della fonte, sviluppa l'idea approvata e riceve titolo e descrizione della galleria. La REAL
   ispira la SLOP senza essere copiata: genere di foto, tecnica e livelli sì; scena, composizione, segni dell'esemplare e persone no.
@@ -30,10 +30,12 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 - **Dashboard** (decisione del 2026-11-19). Gallerie è la sezione iniziale. Ogni galleria apre la propria griglia e i wizard
   «Carica REAL» e «Genera SLOP» su indirizzi dedicati nella stessa scheda. Il wizard REAL acquisisce dalle ricerche su Commons.
   Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino,
-  cambio galleria e, per le REAL, misura e proposta di idee a pagamento. La barra lascia visibile la griglia.
-- **Generazione SLOP manuale o automatica** (decisione del 2026-11-18, #157, specifica `generazione-slop` 13.0.0).
-  Manuale: galleria, prompt e ancoraggi scritti dall’owner. Automatica: nessuna indicazione di galleria (decisione del 2026-11-22), estrazione gratuita
-  delle REAL con un'idea approvata libera, una per REAL, corretta su affollamento e dettaglio (decisioni del 2026-11-21), e anteprima. Prima conferma per preparare premessa e prompt, seconda per generare dai prompt presentati. Le
+  cambio galleria e, per le REAL, la misura a pagamento; le proposte SLOP stanno solo nel wizard. La barra lascia visibile la griglia.
+- **Un solo wizard SLOP** (decisioni del 2026-11-18, #157, e del 2026-11-22, specifica `generazione-slop` 15.0.0). Niente generazione
+  manuale né indicazioni di galleria. Passi: galleria; REAL da un'estrazione gratuita corretta su affollamento e dettaglio, che l'owner
+  modifica; proposte scritte dall'owner o chieste al modello per ogni REAL (salvate sulla REAL); scelta delle proposte, anche più di
+  una per REAL; prima conferma per premessa e prompt, che l'owner corregge; seconda conferma per generare; revisione con inquadratura,
+  trattamento e approvazione. Le
   proposte cambiate, annullate o scadute non autorizzano chiamate immagine. Le SLOP ereditano la galleria e le REAL restano
   utilizzabili nel gioco e nelle estrazioni. Conservare i riferimenti soltanto fino alla fine di ogni processo (accettazione o
   chiusura), all’annullamento o alla scadenza; ogni idea dà al massimo una SLOP e diventa usata all'accettazione (decisione del

@@ -1,4 +1,5 @@
-"""Gallery editing, membership and the two automatic confirmations on desktop and mobile."""
+"""Gallery editing, membership, the SLOP wizard with its two confirmations, the link to the open batch and the removal of a gallery,
+on desktop and mobile."""
 import re
 import shutil
 import time
@@ -57,77 +58,59 @@ try:
                 open_gallery(page,gallery_id)
                 expect(page.locator('[data-open="'+source['id']+'"]')).to_be_visible()
                 page.get_by_role('link',name='Genera SLOP').click()
-                page.locator('[data-generation-mode=automatic]').click()
-                expect(page.locator('[data-auto=preview]')).to_be_disabled()
-                expect(page.locator('#slop-auto-controls')).to_contain_text('Nessuna REAL con un’idea approvata')
+                expect(page.locator('[data-generation-mode]')).to_have_count(0)  # one wizard (owner decision of 2026-11-22)
+                controls=page.locator('#slop-auto-controls')
+                expect(controls.locator('.slop-wizard-steps [aria-current=step]')).to_have_text('2. REAL')
 
-                # No SLOP instructions in a gallery any more (owner decision of 2026-11-22): the editor has title, description, thresholds.
+                # No SLOP instructions in a gallery any more: the editor has title, description and thresholds.
                 page.locator('[data-gallery-return]').click()
                 page.locator('[data-gallery-edit]').click()
                 expect(form.get_by_label('Indicazioni SLOP')).to_have_count(0)
                 expect(form.get_by_role('button',name='Proponi indicazioni con IA')).to_have_count(0)
-                expect(page.locator('#gallery-readiness')).to_contain_text('idea approvata')
                 page.locator('[data-gallery-editor-close]').click()
                 expect(page.locator('#gallery-editor')).to_be_hidden()
-                # Ideas of falsification (owner decisions of 2026-11-21): proposed from the detail with one call, one approved.
-                page.locator('[data-open="'+source['id']+'"]').click()
-                detail=page.locator('#library-detail')
-                detail.locator('#library-ideas').click()
-                expect(detail.locator('[data-idea]')).to_have_count(2)
-                assert confirmations[0].startswith('Chiedere idee di falsificazione per «'+source['title']+'»'),confirmations[0]
-                expect(detail.locator('[data-idea] .badge').first).to_have_text('proposta')
-                detail.locator('[data-idea-approve]').first.click()
-                expect(detail.locator('#library-detail-message')).to_have_text('Idea approvata.')
-                expect(detail.locator('[data-idea] .badge')).to_have_text(['approvata','proposta'])
-                detail.locator('[data-idea-discard]').last.click()
-                expect(detail.locator('[data-idea]')).to_have_count(1)
-                detail.locator('[data-ideas]').scroll_into_view_if_needed()
-                detail.screenshot(path=str(folder/(name+'-ideas.png')))
-                detail.get_by_role('button',name='Chiudi',exact=True).click()
                 control([])
 
                 page.get_by_role('link',name='Genera SLOP').click()
-                expect(page.locator('[data-auto=preview]')).to_be_enabled()
-                page.locator('#slop-auto-size').fill('2')
-                page.locator('[data-auto=preview]').click()
-                expect(page.locator('.slop-auto-notice')).to_contain_text('approvata disponibili: 1')
-                page.locator('#slop-auto-size').fill('1')
-                page.locator('[data-auto=preview]').click()
-                expect(page.locator('[data-reference] strong')).to_have_text(source['title'])
-                expect(page.locator('[data-reference] [data-idea]')).to_contain_text('scrivania di legno')
+                controls.locator('#slop-auto-size').fill('2')
+                controls.locator('[data-auto=preview]').click()
+                expect(controls.locator('[data-select-real]:checked')).to_have_count(1)  # one REAL available
                 assert control()==[] and call('auto')[1]['batch'] is None
-                reference=page.locator('[data-auto-reference]')
+                reference=controls.locator('[data-auto-reference]').first
                 reference.click();expect(page.locator('.image-preview[open]')).to_be_visible()
                 expect(page.locator('.image-preview img')).to_have_attribute('src',re.compile('/'+source['id']+'/original$'))
                 page.locator('[data-preview-close]').click()
                 long_press(page,reference);expect(page.locator('.image-preview[open]')).to_be_visible()
                 page.locator('[data-preview-close]').click()
-                page.locator('[data-auto=discard]').click();expect(page.locator('[data-reference]')).to_have_count(0)
-                assert control()==[]
-                page.locator('[data-auto=preview]').click();expect(page.locator('[data-reference]')).to_have_count(1)
-                page.locator('[data-auto=prepare]').click()
-                expect(page.locator('[data-premise]')).to_contain_text('bus',timeout=20000)
+                controls.locator('[data-auto=to-ideas]').click()
+                controls.locator(f'[data-own="{source["id"]}"]').fill('Lo stesso bus d’epoca in una piazza diversa, ripreso di lato.')
+                controls.locator(f'[data-add-own="{source["id"]}"]').click()
+                expect(controls.locator('[data-choose]:checked')).to_have_count(1)
+                controls.locator('[data-auto=to-choice]').click()
+                controls.locator('[data-auto=prepare]').click()
+                assert 'Massimo 1 chiamata' in confirmations[-1],confirmations
+                expect(controls.locator('[data-premise="0"]')).to_have_value(re.compile('bus'),timeout=20000)
                 control_log=control()
                 assert len(control_log)==1 and control_log[0]['body']['text']['format']['name']=='slop_gallery_proposal'
-                assert 'Massimo 1 chiamata' in confirmations[2]
+                expect(controls.locator('[data-prompt="0"]')).to_have_value(re.compile('A plausible invented vintage bus'))
+                expect(controls.locator('[data-reference] [data-idea]')).to_contain_text('bus d’epoca')
                 expect(page.locator('[data-auto=start]')).to_be_visible(timeout=20000)
-                page.locator('summary').filter(has_text='Prompt inglese').click()
-                expect(page.get_by_text('A plausible invented vintage bus',exact=False)).to_be_visible()
                 page.screenshot(path=str(folder/(name+'-setup.png')),full_page=True)
-                page.reload()  # the dedicated URL reopens the pending review
-                expect(page.locator('[data-premise]')).to_contain_text('bus')
+                page.reload()  # the dedicated URL reopens the pending prompts
+                expect(controls.locator('[data-premise="0"]')).to_have_value(re.compile('bus'))
                 page.goto(BASE+'/admin')
                 open_gallery(page,old_gallery['id'])
                 page.get_by_role('link',name='Genera SLOP').click()
-                expect(page.locator('[data-premise]')).to_have_count(0)
-                expect(page.locator('#slop-auto-controls')).to_contain_text(title)
-                page.locator('[data-auto=open-gallery]').click()
-                expect(page).to_have_url(f'{BASE}/admin/gallerie/{gallery_id}/slop?mode=automatic')
+                expect(controls.locator('[data-premise="0"]')).to_have_count(0)
+                expect(controls).to_contain_text(title)
+                controls.locator('[data-auto=open-gallery]').click()
+                expect(page).to_have_url(f'{BASE}/admin/gallerie/{gallery_id}/slop')
                 expect(page.locator('#wizard-gallery-name')).to_have_text(title)
-                expect(page.locator('[data-premise]')).to_contain_text('bus')
+                expect(controls.locator('[data-premise="0"]')).to_have_value(re.compile('bus'))
                 assert len(control())==1
                 control([{'delay':1.5}] if name=='desktop' else [])
                 page.locator('[data-auto=start]').click()
+                assert 'Massimo 4 chiamate' in confirmations[-1] and 'analisi' not in confirmations[-1],confirmations
                 if name=='desktop':
                     for _ in range(100):
                         if any(r['path']=='/v1/images/generations' for r in control()):break
@@ -137,10 +120,10 @@ try:
                     page.locator('#gallery-active-batch').click()
                 expect(page.locator('[data-auto=review]')).to_be_visible(timeout=30000)
                 assert len(control())==2,control()  # generation and evaluation, no analysis after acceptance
-                assert 'Massimo 4 chiamate' in confirmations[3] and 'analisi' not in confirmations[3],confirmations
                 auto=call('auto')[1];assert auto['batch']['status']=='review'
                 generated=[i['id'] for i in auto['batch']['images']];assert len(generated)==1
                 assert call('/'+generated[0],library=True)[1]['gallery_id']==gallery_id
+                expect(page.locator('#slop-studio [data-image]')).to_have_count(1)
                 page.locator('[data-auto=review]').click()
                 expect(page).to_have_url(f'{BASE}/admin?gallery={gallery_id}&batch={auto["batch"]["id"]}')
                 expect(page.locator('[data-open="'+generated[0]+'"]')).to_be_visible()

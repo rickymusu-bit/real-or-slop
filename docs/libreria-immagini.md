@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.4.1
+# Libreria delle immagini — specifica 10.5.0
 
-Stato: implementata nel ramo 1.56.0, da rilasciare. Aggiornata: 2026-11-22T10:00:00Z.
+Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -20,8 +20,9 @@ Stato: implementata nel ramo 1.56.0, da rilasciare. Aggiornata: 2026-11-22T10:00
   descrizione editoriale, la sua provenienza, il testo Commons originale e i campi dell'analisi, e svuota la descrizione delle SLOP.
   Superano le decisioni del 2026-11-09 (analisi una volta per immagine), del 2026-11-19 (ripetizione dell'analisi, descrizione nei
   risultati) e quella di poche ore prima sulle incertezze.
-- **Idee di falsificazione delle REAL** (decisioni del 2026-11-21): un modello propone fino a tre idee per REAL, con una chiamata
-  confermata; l'owner le approva; ogni idea dà al massimo una SLOP. Regole nella specifica `generazione-slop`, sezione 1.
+- **Proposte delle REAL** (decisioni del 2026-11-21 e del 2026-11-22): nel wizard SLOP l'owner ne scrive o ne chiede al modello fino
+  a tre per REAL e sceglie quelle da generare; ogni proposta dà al massimo una SLOP; il dettaglio della REAL le mostra in sola lettura.
+  Regole nella specifica `generazione-slop`, sezione 1.
 - **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, numero modificabile dalle Impostazioni, ciascuna solo tre mesi dopo l'ultimo controllo; un
   file sparito da Commons viene **solo segnalato**, mai ritirato o cancellato in automatico (sezione 9).
 - **Affollamento e dettaglio delle REAL** (decisioni del 2026-11-21). Su richiesta, un modello misura quanto è affollata e quanto è
@@ -43,7 +44,7 @@ Stato: implementata nel ramo 1.56.0, da rilasciare. Aggiornata: 2026-11-22T10:00
 Una sola raccolta di immagini REAL e SLOP.
 
 - **Ingresso.** Nella galleria aperta, «Carica REAL» cerca e acquisisce foto da Wikimedia Commons (specifica `dashboard-admin-wizard-real`).
-  «Genera SLOP» apre la generazione manuale e automatica per la stessa galleria (specifica `generazione-slop`). Esiste ancora
+  «Genera SLOP» apre il wizard delle SLOP della stessa galleria, l'unico modo di generarle (specifica `generazione-slop`). Esiste ancora
   la rotta `POST /upload`, usata dai test.
 - **Campi.** Origine, titolo e descrizione della fonte solo REAL (≤200 e ≤1000 caratteri), fonte, autore e
   licenza (REAL), prompt e modello (SLOP), stato, originale e copia di gioco, revisione per le modifiche

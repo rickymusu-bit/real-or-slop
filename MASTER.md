@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 35.5.0, aggiornata il 2026-11-22T10:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 36.0.0, aggiornata il 2026-11-22T18:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,10 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.56.0:** niente Indicazioni SLOP di galleria né loro proposta automatica; contano le idee approvate delle REAL, con
+- **Ramo 1.57.0:** un solo wizard SLOP (galleria, REAL da un'estrazione corretta e modificabile, proposte dell'owner o del modello,
+  scelta, prompt modificabili, generazione, revisione); tolta la generazione manuale; le proposte delle REAL si gestiscono solo nel
+  wizard. Nessuna migrazione.
+- **Integrata in main la 1.56.0 (PR #172):** niente Indicazioni SLOP di galleria né loro proposta automatica; contano le idee approvate delle REAL, con
   titolo e descrizione della galleria come contesto. Migrazione 0070.
 - **Integrata in main la 1.55.0 (PR #171):** idee di falsificazione delle REAL (fino a tre, proposte con una chiamata confermata, approvate dall'owner),
   estrazione automatica delle sole REAL con un'idea libera, corretta su affollamento e dettaglio, riferimenti REAL-processo fino alla
@@ -97,14 +100,14 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.4.1 |
-| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.1 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.0.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.2.0 |
-| SLOP manuali, automatiche, idee delle REAL ed estrazione | `docs/generazione-slop.md` | 14.0.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 10.4.0 |
+| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.5.0 |
+| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.0.1 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.3.0 |
+| Wizard SLOP, proposte delle REAL, estrazione, generazione e revisione | `docs/generazione-slop.md` | 15.0.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 10.5.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.8.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.9.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.4.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -142,8 +145,8 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - Gioco: `play.ts` e `play.css`, foto esplorabile `photo-viewer.ts`, precaricamento `preload.ts`, marchio «RS» `media-mark.ts`,
   protezioni `media-privacy.ts`.
 - Dashboard: `library.ts` (finestra della galleria, Statistiche e Impostazioni; CSS `library.css`, `database.css`, `admin-navigation.css`,
-  `admin-loading.css`, `model-context.css`, `caption-count.css`), gallerie `galleries.ts` e `galleries.css`, pagine dei wizard `gallery-wizard.ts` e `gallery-paths.ts`, wizard REAL `real-wizard.ts` e `real-wizard.css`, studio SLOP
-  `slop-studio.ts` e `slop-studio.css`, riquadro dei batch automatici `slop-auto.ts` e `slop-auto.css`, statistiche `stats.ts` e
+  `admin-loading.css`, `model-context.css`, `caption-count.css`), gallerie `galleries.ts` e `galleries.css`, pagine dei wizard `gallery-wizard.ts` e `gallery-paths.ts`, wizard REAL `real-wizard.ts` e `real-wizard.css`, wizard SLOP
+  `slop-auto.ts` e `slop-auto.css` (passi da 1 a 6, avviso di sbilanciamento) con la revisione e le eccezioni `slop-studio.ts` e `slop-studio.css`, statistiche `stats.ts` e
   `stats.css`, grafico della distribuzione `database-chart.ts`, anteprima a pressione prolungata `image-preview.ts` e
   `image-preview.css`, editor di formato e ritaglio `crop-editor.ts` e
   `crop-editor.css`, avviso di elaborazione `photo-processing.ts` e `admin-loading.css`, cursori del trattamento delle SLOP con anteprima
@@ -157,8 +160,9 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - Libreria `library.ts` (stati, modifiche, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   gallerie `galleries.ts`, cancellazione di gallerie e file `gallery-removal.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
-- SLOP: studio `slop.ts`, conteggi del catalogo `slop-references.ts`, generazione `slop-generation.ts`, ciclo su Cloudflare (Workflow `SlopBatchWorkflow`)
-  `slop-runner.ts`, batch automatici `slop-auto.ts`, preparazione e conferma delle proposte `slop-gallery.ts`, selezioni firmate `slop-preview.ts`.
+- SLOP: rotte `slop.ts`, conteggi del catalogo `slop-references.ts`, generazione e valutazione `slop-generation.ts`, ciclo su Cloudflare
+  (Workflow `SlopBatchWorkflow`) `slop-runner.ts`, batch del wizard `slop-auto.ts`, estrazione, REAL disponibili, preparazione,
+  correzione e conferma dei prompt `slop-gallery.ts`.
 - Corpo delle richieste con un'immagine (analisi e valutazione, base64 scritto nei byte) `image-body.ts`.
 - Copie di gioco: controllo e conservazione della copia caricata dal browser in `library.ts` (`POST /:id/copy`).
 - Gioco `game.ts` con `sampling.ts` e `random.ts`, classifica `leaderboard.ts`.

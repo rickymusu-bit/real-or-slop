@@ -21,7 +21,7 @@ import { slopRoute } from "./slop";
 import { candidateFile } from "./slop-generation";
 import { currentCopyCorrect, currentCopyViews, gamesInPlay, retireCopy, reviveCopy, statsOf, sweepRetired } from "./in-play";
 import { galleryThresholds, latestMeasures, measureReal, measuresOf, measureView } from "./real-measure";
-import { ideaRoute, ideasOf, proposeIdeas } from "./real-ideas";
+import { ideaRoute, ideasOf, ownIdea, proposeIdeas } from "./real-ideas";
 
 const base = "/api/admin/library";
 const MAX_PIXELS = 32_000_000;
@@ -483,9 +483,11 @@ export async function library(request: Request, env: Env, path: string): Promise
     return json(await measuresOf(env, row.id));
   }
   if (match[2] === "ideas") {
-    // Ideas of falsification: one confirmed paid call (specification `generazione-slop`, section 2).
+    // Proposals of the SLOP wizard: written by the owner (free) or asked to the model, one confirmed paid call (specification
+    // `generazione-slop`, section 2).
     if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
-    await proposeIdeas(env, row, await body(request, 1000));
+    const data = await body(request, 4000);
+    if ("idea" in data) await ownIdea(env, row, data); else await proposeIdeas(env, row, data);
     return json(await viewOf(env, row.id), 201);
   }
   if (match[2] === "measure") {

@@ -133,7 +133,7 @@ with sync_playwright() as p:
         expect(spare).to_be_focused()
         bar = page.locator('#library-selection')
         expect(bar.locator('.library-selection-actions').get_by_role('button')).to_have_text(
-            ['Approva', 'Pubblica', 'Nel cestino', 'Cambia galleria', 'Proponi idee'])
+            ['Approva', 'Pubblica', 'Nel cestino', 'Cambia galleria'])
         expect(bar.get_by_role('button', name='Deseleziona')).to_be_visible()
         assert page.evaluate("""() => {
             const scroll = document.querySelector('.gallery-workspace-scroll');
@@ -200,14 +200,14 @@ with sync_playwright() as p:
         page.locator('#library-thresholds summary').click()
         expect(page.locator('[name=max_generation_attempts]')).to_have_value('3')
         page.locator('[name=max_generation_attempts]').fill('4'); page.locator('#library-thresholds-form button').click()
-        expect(page.locator('#library-settings-message')).to_have_text('Soglie dello studio SLOP salvate.')
+        expect(page.locator('#library-settings-message')).to_have_text('Soglie della generazione SLOP salvate.')
         # Saving one form never overwrites what is typed, and not yet saved, in another one.
         page.locator('#library-games summary').click()
         expect(page.locator('[name=open_game_hours]')).to_have_value('24')
         page.locator('[name=open_game_hours]').fill('30')
         page.locator('#library-settings-message').evaluate('m => m.textContent = ""')
         page.locator('[name=max_generation_attempts]').fill('3'); page.locator('#library-thresholds-form button').click()
-        expect(page.locator('#library-settings-message')).to_have_text('Soglie dello studio SLOP salvate.')
+        expect(page.locator('#library-settings-message')).to_have_text('Soglie della generazione SLOP salvate.')
         expect(page.locator('[name=open_game_hours]')).to_have_value('30')
         page.locator('[name=open_game_hours]').fill('0'); page.locator('#library-games-form button').click()
         expect(page.locator('[name=open_game_hours]')).to_have_value('0')  # the browser stops it: minimum 1
@@ -378,14 +378,11 @@ with sync_playwright() as p:
         expect(page).to_have_url(f'{base}/admin/gallerie/{gallery_id}/slop')
         expect(page.locator('#gallery-workspace')).to_have_count(0)
         expect(page.locator('#wizard-gallery-name')).to_have_text('Test library_browser')
+        # One wizard for every SLOP (owner decision of 2026-11-22): steps from the gallery to the review, no manual mode.
+        expect(page.locator('[data-generation-mode], [data-manual=prompt]')).to_have_count(0)
+        expect(page.locator('.slop-wizard-steps li')).to_have_text(['1. Galleria', '2. REAL', '3. Proposte', '4. Scelta', '5. Prompt', '6. Generazione', '7. Revisione'])
         assert page.evaluate("""() => document.querySelector('#wizard-gallery-name').getBoundingClientRect().bottom
-            < document.querySelector('[aria-label="Modalità di generazione"]').getBoundingClientRect().top""")
-        page.locator('[data-generation-mode=manual]').click()
-        expect(page.locator('[data-manual=prompt]')).to_be_visible()
-        expect(page.locator('[data-manual=tags]')).to_have_count(0)
-        page.locator('[data-generation-mode=automatic]').click()
-        expect(page.locator('#slop-auto-controls')).to_be_visible()
-        expect(page.locator('#slop-manual')).to_be_hidden()
+            < document.querySelector('.slop-wizard-steps').getBoundingClientRect().top""")
         expect(page.locator('[data-auto=start]')).to_have_count(0)
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
         page.screenshot(path=str(folder / f'{name}-workspace-slop.png'))
