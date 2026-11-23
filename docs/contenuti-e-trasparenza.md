@@ -1,6 +1,7 @@
-# Contenuti delle SLOP e trasparenza — specifica 1.4.2
+# Contenuti delle SLOP e trasparenza — specifica 1.5.0
 
-Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
+Stato: implementata nella 1.57.0; le parti decise il 2026-11-23 sono da implementare (specifica `generazione-slop` 16.0.0).
+Aggiornata: 2026-11-23T05:00:00Z.
 Valgono per ogni modello che produce contenuti del sito e per la revisione dell'owner.
 
 ## 1. Che cosa può comparire in una SLOP
@@ -25,12 +26,12 @@ Valgono per ogni modello che produce contenuti del sito e per la revisione dell'
 ## 2. Come si applicano
 
 - Le regole arrivano al **modello di testo** attraverso le istruzioni dei prompt e della valutazione (specifica `generazione-slop`).
-  Il generatore di immagini riceve solo il testo del prompt e applica anche le proprie regole d'uso, che possono rifiutare richieste
-  ammesse qui.
-- Nel wizard SLOP l’owner legge e corregge premesse e prompt prima di confermare la generazione. Le idee approvate delle
-  REAL possono richiedere luoghi o edifici riconoscibili e un fatto inventato significativo per un evento, trattato come ipotesi editoriale.
-  L’owner rivede anche le immagini generate, compresi elementi aggiunti dal generatore come volti e scritte.
-- Dal 2026-11-20 nessun modello descrive le REAL; i modelli che restano (proposte e valutazione delle SLOP) lavorano sulle SLOP.
+  Dal 2026-11-23 il generatore di immagini riceve la REAL da modificare con la descrizione di arrivo e i cambiamenti, e applica
+  anche le proprie regole d'uso, che possono rifiutare richieste ammesse qui. Le persone della REAL si sostituiscono sempre con
+  persone inventate o si tolgono, perché la modifica ne conserverebbe i tratti.
+- Nel wizard SLOP l’owner legge e corregge descrizioni delle REAL, descrizioni di arrivo e cambiamenti prima di confermare la
+  generazione, e rivede le immagini generate, compresi elementi aggiunti dal generatore come volti e scritte.
+- Dal 2026-11-23 un modello descrive le REAL per assi, ai soli fini della generazione SLOP: la descrizione non compare nel gioco.
 - Le REAL di Commons possono ritrarre persone vive: sono foto autentiche. Le valuta l'owner al caricamento.
 
 ## 3. Trasparenza e protezioni
@@ -50,6 +51,6 @@ Valgono per ogni modello che produce contenuti del sito e per la revisione dell'
   possono essere anche ridotte, sgranate o sbiadite, come le immagini false che circolano davvero», al posto di «REAL e SLOP passano per
   la stessa preparazione», che non sarebbe più vera), «Fonti e crediti» e i Termini d'uso (specifica `privacy-note-legali`, sezione 3,
   su richiesta dell'owner del 2026-11-14; la frase dei Termini è stata verificata da un legale lo stesso giorno).
-- **Durante la partita** nessun testo accompagna la foto; crediti delle REAL, prompt e modello delle SLOP arrivano solo alla fine.
+- **Durante la partita** nessun testo accompagna la foto; crediti delle REAL e modello delle SLOP arrivano solo alla fine.
 - **Licenze:** le SLOP non hanno licenza restrittiva; valgono i termini d'uso del sito, che vietano di diffonderle come vere o di
   togliere il marchio (specifica `privacy-note-legali`).

@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 36.0.0, aggiornata il 2026-11-22T18:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 37.0.0, aggiornata il 2026-11-23T05:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,6 +9,12 @@ in `CHANGELOG.md`.
 
 ## Stato
 
+- **Decisa il 2026-11-23, da implementare:** la SLOP si ottiene modificando la REAL (`images/edits`) secondo una descrizione di
+  arrivo che cambia alcuni assi; la descrizione per assi delle REAL, salvata sulla REAL e corretta dall'owner, sostituisce le
+  proposte; il codice estrae gli assi (ambiente sempre, uno fra aspetto del soggetto e punto di vista; per foto da museo o da
+  catalogo ed esemplari unici soggetto e punto di vista); nei risultati le SLOP mostrano solo «Generata con» e il modello.
+  Specifica `generazione-slop` 16.0.0 e `AGENTS.md` 35.0.0; servirà una nuova migrazione. Nasce da cinque giri di prova sulla
+  galleria delle console Nintendo, fatti fuori dal Worker con l'autorizzazione dell'owner (`CHANGELOG.md`).
 - **Ramo 1.57.0:** un solo wizard SLOP (galleria, REAL da un'estrazione corretta e modificabile, proposte dell'owner o del modello,
   scelta, prompt modificabili, generazione, revisione); tolta la generazione manuale; le proposte delle REAL si gestiscono solo nel
   wizard. Nessuna migrazione.
@@ -100,15 +106,15 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.5.0 |
-| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.0.1 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.3.0 |
-| Wizard SLOP, proposte delle REAL, estrazione, generazione e revisione | `docs/generazione-slop.md` | 15.0.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 10.5.0 |
-| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.9.0 |
-| Privacy e note legali | `docs/privacy-note-legali.md` | 1.4.0 |
+| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.6.0 |
+| Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.5.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.1.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.3.1 |
+| Wizard SLOP, descrizioni per assi delle REAL, estrazione, trasformazioni, generazione e revisione | `docs/generazione-slop.md` | 16.0.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 10.6.0 |
+| Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.1.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.10.0 |
+| Privacy e note legali | `docs/privacy-note-legali.md` | 1.5.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
 delle vecchie pipeline e le snapshot di `AGENTS.md` e `MASTER.md`. Restano nella cronologia git: `git log -- docs/<nome>` trova il

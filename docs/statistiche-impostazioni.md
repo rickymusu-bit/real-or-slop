@@ -1,6 +1,7 @@
-# Statistiche e Impostazioni — specifica 4.9.0
+# Statistiche e Impostazioni — specifica 4.10.0
 
-Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
+Stato: implementata nella 1.57.0; le parti decise il 2026-11-23 sono da implementare (specifica `generazione-slop` 16.0.0).
+Aggiornata: 2026-11-23T05:00:00Z.
 
 ## 1. Decisioni dell'owner (2026-11-12)
 
@@ -16,7 +17,8 @@ si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ri
 
 - **Modelli:** modello di testo, modello di immagini (con la data di dismissione dove nota) e qualità delle immagini tra quelle ammesse;
   se il modello scelto non ammette la qualità salvata, si torna a `high`. Il wizard SLOP la conserva nello snapshot del batch.
-- **Contesto dei modelli:** i cinque testi (Base, Misura delle REAL, Idee SLOP delle REAL, Premessa e prompt di galleria, Valutazione delle SLOP) con le versioni, il
+- **Contesto dei modelli:** i cinque testi (Base, Misura delle REAL, Descrizione delle REAL per le SLOP, Trasformazioni SLOP, Valutazione delle SLOP;
+  i due centrali sostituiscono dal 2026-11-23 Idee SLOP delle REAL e Premessa e prompt di galleria) con le versioni, il
   ripristino e la proposta del codice; un avviso quando il testo in vigore dei prompt è stato scritto per le gemelle e blocca lo
   studio (specifica `libreria-immagini`, sezione 7).
 - **Classifica:** verifica di un codice partita (soprannome, livello, punteggio, data), Nascondi, Mostra, Cancella (per sempre, per le
@@ -44,12 +46,13 @@ Periodo: ultimi 7 giorni, ultimi 30 (predefinito) o da sempre; «Aggiorna». API
 - **Risposte delle partite concluse:** foto giocate, REAL e SLOP riconosciute, accuratezza bilanciata, foto scadute; voci in classifica
   e nascoste.
 - **Chiamate a pagamento:** per tipo («Analisi e misure delle REAL»: le analisi storiche fino al 2026-11-20 e le misure di
-  affollamento e dettaglio dal 2026-11-21; proposte editoriali e prompt SLOP; immagini; valutazioni) numero, token in ingresso e in uscita, esiti incerti evidenziati;
+  affollamento e dettaglio dal 2026-11-21; testi per le SLOP, cioè proposte e prompt fino al 2026-11-22 e descrizioni per assi e
+  trasformazioni dal 2026-11-23; immagini; valutazioni) numero, token in ingresso e in uscita, esiti incerti evidenziati;
   le ultime 200 chiamate del periodo con filtri per tipo ed esito. Nessun importo.
 - **Equilibrio del catalogo:** REAL e SLOP pubblicate e approvate, quota di REAL tra le pubblicate con la fascia 40–60% e un avviso non
   bloccante fuori fascia, livelli giocabili e foto mancanti agli altri. Le copie nuove sono tutte 4:5.
 - **Equilibrio:** conteggi indipendenti di REAL e SLOP approvate/pubblicate, SLOP nuove da decidere e REAL madri disponibili.
-  Il campionamento automatico usa le REAL eleggibili della galleria. Ogni batch congela modelli, qualità, tentativi e tolleranza alla preparazione delle proposte.
+  Il campionamento automatico usa le REAL eleggibili della galleria. Ogni batch congela modelli, qualità, tentativi e tolleranza alla preparazione delle trasformazioni.
   Nessuna statistica o misura aggregata per gruppi di genere/decennio, nessuna soglia di gruppo (decisione del 2026-11-17).
 
 ## 4. Limiti

@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 34.0.0, aggiornata il 2026-11-22T18:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 35.0.0, aggiornata il 2026-11-23T05:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -18,28 +18,34 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 
 - **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta finale
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
-  al browser prima della risposta. Le REAL non vengono descritte da un modello (decisione del 2026-11-20); su richiesta confermata
-  un modello ne misura soltanto affollamento e dettaglio, con soglie per galleria e sola segnalazione, e ne propone fino a tre idee
-  di falsificazione, nel wizard SLOP, che l'owner sceglie (decisioni del 2026-11-21, specifiche `libreria-immagini`, sezione 10, e `generazione-slop`). Il
-  modello delle proposte prepara premessa e prompt SLOP dalla REAL **intera** (l'originale, mai il ritaglio 4:5: decisione del
-  2026-11-15), dal suo titolo e dalla descrizione della fonte, sviluppa l'idea approvata e riceve titolo e descrizione della galleria. La REAL
-  ispira la SLOP senza essere copiata: genere di foto, tecnica e livelli sì; scena, composizione, segni dell'esemplare e persone no.
+  al browser prima della risposta. Le REAL non hanno descrizione editoriale (decisione del 2026-11-20). Su richiesta confermata un
+  modello ne misura affollamento e dettaglio, con soglie per galleria e sola segnalazione (decisioni del 2026-11-21, specifica
+  `libreria-immagini`, sezione 10), e ne scrive una descrizione per assi, interna alla generazione delle SLOP e mai mostrata nel
+  gioco (decisione del 2026-11-23, che supera quella del 2026-11-20 per cui nessun modello descrive le REAL).
+- **La SLOP si ottiene modificando la REAL** (decisione del 2026-11-23, specifica `generazione-slop` 16.0.0, che sostituisce le
+  proposte delle REAL e il principio per cui la REAL ispira la SLOP senza esserne la base). Il generatore di immagini riceve la REAL
+  **intera** (l'originale, mai il ritaglio 4:5: decisione del 2026-11-15) con una descrizione di arrivo che cambia alcuni assi e
+  conserva gli altri. In una foto ordinaria l'ambiente cambia sempre e fra aspetto del soggetto e punto di vista ne resta uno, a
+  caso; nelle foto da museo o da catalogo e per gli esemplari unici cambiano soggetto e punto di vista e resta il luogo, senza gli
+  altri oggetti; un esemplare unico diventa un altro modello con la stessa condizione distintiva. Si sposta la camera, non
+  l'oggetto. Solo edizioni realmente esistite; le scritte della REAL non si riproducono, tranne quelle del design del prodotto; le
+  persone si sostituiscono con persone inventate. Messe accanto, REAL e SLOP non sembrano della stessa sessione.
 - **Risultati** (decisioni del 2026-11-20, che sostituiscono quella del 2026-11-19). A fine partita, per ogni REAL titolo, autore,
   licenza con link, link alla foto originale e indicazione delle modifiche della copia, senza descrizione editoriale né data di
-  consultazione; per ogni SLOP il prompt e il modello. Le SLOP non hanno descrizione.
+  consultazione; per ogni SLOP soltanto «Generata con» e il modello (decisione del 2026-11-23, che toglie il prompt). Le SLOP
+  non hanno descrizione.
 - **Dashboard** (decisione del 2026-11-19). Gallerie è la sezione iniziale. Ogni galleria apre la propria griglia e i wizard
   «Carica REAL» e «Genera SLOP» su indirizzi dedicati nella stessa scheda. Il wizard REAL acquisisce dalle ricerche su Commons.
   Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino,
-  cambio galleria e, per le REAL, la misura a pagamento; le proposte SLOP stanno solo nel wizard. La barra lascia visibile la griglia.
-- **Un solo wizard SLOP** (decisioni del 2026-11-18, #157, e del 2026-11-22, specifica `generazione-slop` 15.0.0). Niente generazione
-  manuale né indicazioni di galleria. Passi: galleria; REAL da un'estrazione gratuita corretta su affollamento e dettaglio, che l'owner
-  modifica; proposte scritte dall'owner o chieste al modello per ogni REAL (salvate sulla REAL); scelta delle proposte, anche più di
-  una per REAL; prima conferma per premessa e prompt, che l'owner corregge; seconda conferma per generare; revisione con inquadratura,
-  trattamento e approvazione. Le
-  proposte cambiate, annullate o scadute non autorizzano chiamate immagine. Le SLOP ereditano la galleria e le REAL restano
-  utilizzabili nel gioco e nelle estrazioni. Conservare i riferimenti soltanto fino alla fine di ogni processo (accettazione o
-  chiusura), all’annullamento o alla scadenza; ogni idea dà al massimo una SLOP e diventa usata all'accettazione (decisione del
-  2026-11-21, che sostituisce la cancellazione alla conferma).
+  cambio galleria e, per le REAL, la misura a pagamento; le descrizioni per assi stanno solo nel wizard. La barra lascia visibile la griglia.
+- **Un solo wizard SLOP** (decisioni del 2026-11-18, #157, del 2026-11-22 e del 2026-11-23, specifica `generazione-slop` 16.0.0).
+  Niente generazione manuale né indicazioni di galleria. Passi: galleria; REAL da un'estrazione gratuita corretta su affollamento e
+  dettaglio, che l'owner modifica; descrizione per assi di ogni REAL, chiesta al modello e corretta dall'owner (salvata sulla REAL);
+  trasformazioni, con gli assi estratti dal codice e descrizione di arrivo e cambiamenti scritti dal modello (prima conferma), che
+  l'owner corregge; seconda conferma per generare; revisione con inquadratura, trattamento e approvazione. Le trasformazioni
+  cambiate, annullate o scadute non autorizzano chiamate immagine. Le SLOP ereditano la galleria e le REAL restano utilizzabili nel
+  gioco e nelle estrazioni. Conservare i riferimenti soltanto fino alla fine di ogni processo (accettazione o chiusura),
+  all'annullamento o alla scadenza; di una REAL resta solo quante SLOP accettate ne sono nate.
   Ogni foto appartiene a una galleria. La decisione di ripartire da zero azzera D1 con la migrazione 0061 e rimuove il registro
   dei legami. L’azzeramento riguarda il database, con impostazioni e dati di gioco. La migrazione agisce esclusivamente sul D1.
   Le persone raffigurate nelle generazioni sono inventate.
@@ -68,7 +74,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   Allontanare due dita allarga il rettangolo, avvicinarle lo restringe. Le elaborazioni avviate nella finestra della foto mostrano
   al centro uno stato di lavorazione e bloccano i comandi fino all’esito.
 - **Il Worker gestisce ciò che riguarda l'API di OpenAI, il browser tutto il resto** (decisione del 2026-11-16, che sostituisce
-  quella del 2026-11-15 sul browser come sola interfaccia). Sul Worker: proposte editoriali, generazione e valutazione (il ciclo SLOP gira
+  quella del 2026-11-15 sul browser come sola interfaccia). Sul Worker: descrizioni delle REAL, trasformazioni, generazione e valutazione (il ciclo SLOP gira
   in un Workflow che continua anche se la dashboard si chiude), oltre a dati e archivio. Nel browser: inquadratura, trattamento delle
   SLOP con i cursori, conversione in copia di gioco (WebP) e misure, anche in gruppo con la pagina aperta; il Worker controlla e
   conserva la copia caricata. Un solo codificatore per REAL e SLOP: la compressione non deve distinguerle.

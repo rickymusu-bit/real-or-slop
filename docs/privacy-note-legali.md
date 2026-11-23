@@ -1,6 +1,6 @@
-# Privacy e note legali — specifica 1.4.0
+# Privacy e note legali — specifica 1.5.0
 
-Stato: vigente; ramo 1.51.0 da rilasciare. Aggiornata: 2026-11-21T09:00:00Z.
+Stato: vigente; le parti decise il 2026-11-23 sono da implementare. Aggiornata: 2026-11-23T05:00:00Z.
 1.2.0: su richiesta dell'owner del 2026-11-14 i Termini d'uso (aggiornati il 14 novembre 2026) dicono che le SLOP sono generate «senza
 parti di fotografie vere, e spesso ridotte, sfocate, sgranate o sbiadite come lo sono le immagini che circolano», al posto di «generate
 integralmente», per il trattamento delle SLOP (specifica `copie-di-gioco`, sezione 4); «Fonti e crediti» lo dice allo stesso modo.
@@ -68,3 +68,12 @@ gioco è adattata al formato 4:5 e ricompressa. I crediti di fine partita indica
 licenze ND sono escluse. Dal 2026-11-20 i risultati non mostrano una descrizione editoriale delle REAL: restano titolo, autore,
 licenza con link, link alla fonte e indicazione delle modifiche. «Fonti e crediti» non parla più della descrizione e dice che per le
 SLOP sono indicati prompt e modello. Privacy e Termini non cambiano; la frase verificata sul trattamento delle SLOP resta invariata.
+
+**SLOP ottenute modificando una REAL** (decisione dell'owner del 2026-11-23, specifica `generazione-slop`, sezione 2). Il generatore
+riceve la REAL e la trasforma: in una foto ordinaria cambiano sempre l'ambiente e uno fra aspetto del soggetto e punto di vista; nelle
+foto da museo o da catalogo cambiano soggetto e punto di vista; le scritte della REAL non si riproducono. Per l'owner la SLOP non è
+un'opera derivata della foto: le trasformazioni sostituiscono le scelte del fotografo e ciò che resta, l'oggetto ritratto, non è opera
+sua. Per questo la SLOP non porta crediti né licenza della REAL. È una valutazione dell'owner, non verificata da un legale. Il caso più
+debole è quello in cui resta il punto di vista, perché resta anche l'inquadratura del fotografo; per le foto di oggetti è di solito
+frontale e centrata. Le licenze ND restano escluse. Nei risultati le SLOP mostrano solo «Generata con» e il modello, e «Fonti e
+crediti» dirà che per le SLOP è indicato il modello. Privacy e Termini non cambiano.

@@ -1,6 +1,7 @@
-# Libreria delle immagini — specifica 10.5.0
+# Libreria delle immagini — specifica 10.6.0
 
-Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
+Stato: implementata nella 1.57.0; le parti decise il 2026-11-23 sono da implementare (specifica `generazione-slop` 16.0.0).
+Aggiornata: 2026-11-23T05:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -15,22 +16,24 @@ Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00
   Approvare una foto non richiede più tag. Le decisioni precedenti sui tag (2026-11-09, 2026-11-10, 2026-11-14 e 2026-11-17) sono
   superate e restano nella cronologia git.
 - **Niente descrizione editoriale né analisi delle REAL; niente descrizione delle SLOP** (decisioni del 2026-11-20). Nei risultati
-  le REAL mostrano solo i crediti (titolo, autore, licenza, link alla foto originale, modifiche della copia) e le SLOP prompt e modello.
-  Il modello delle proposte SLOP riceve l'originale intero, il titolo e la descrizione della fonte. La migrazione 0066 elimina la
+  le REAL mostrano solo i crediti (titolo, autore, licenza, link alla foto originale, modifiche della copia) e le SLOP «Generata con»
+  e il modello (dal 2026-11-23; prima anche il prompt). La migrazione 0066 elimina la
   descrizione editoriale, la sua provenienza, il testo Commons originale e i campi dell'analisi, e svuota la descrizione delle SLOP.
   Superano le decisioni del 2026-11-09 (analisi una volta per immagine), del 2026-11-19 (ripetizione dell'analisi, descrizione nei
   risultati) e quella di poche ore prima sulle incertezze.
-- **Proposte delle REAL** (decisioni del 2026-11-21 e del 2026-11-22): nel wizard SLOP l'owner ne scrive o ne chiede al modello fino
-  a tre per REAL e sceglie quelle da generare; ogni proposta dà al massimo una SLOP; il dettaglio della REAL le mostra in sola lettura.
-  Regole nella specifica `generazione-slop`, sezione 1.
+- **Descrizione per assi delle REAL** (decisione del 2026-11-23, da implementare): nel wizard SLOP un modello descrive la REAL asse
+  per asse, con le indicazioni «foto da museo o da catalogo» ed «esemplare unico», e l'owner la corregge. È interna alla generazione
+  delle SLOP, che si ottengono modificando la REAL, e non compare nel gioco; il dettaglio della REAL la mostra in sola lettura.
+  Sostituisce le proposte delle REAL (decisioni del 2026-11-21 e del 2026-11-22). Regole nella specifica `generazione-slop`, sezione 2.
 - **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, numero modificabile dalle Impostazioni, ciascuna solo tre mesi dopo l'ultimo controllo; un
   file sparito da Commons viene **solo segnalato**, mai ritirato o cancellato in automatico (sezione 9).
 - **Affollamento e dettaglio delle REAL** (decisioni del 2026-11-21). Su richiesta, un modello misura quanto è affollata e quanto è
   dettagliata una REAL, per capire quanto il generatore di immagini farebbe fatica a riprodurne una simile. Il modello osserva soltanto
   oggetti, riquadri e categorie di dettaglio; i due punteggi da 0 a 100 li calcola il codice. Soglie per galleria con valore
   predefinito nelle Impostazioni; una REAL oltre una soglia è **solo segnalata**. Le misure guidano anche l'estrazione corretta delle
-  REAL per i batch automatici (specifica `generazione-slop`, sezione 2). Modifica la decisione del
-  2026-11-20 sulle REAL non analizzate, che resta valida per descrizioni e analisi di ogni altro tipo. Dopo le prime misure reali,
+  REAL per i batch automatici (specifica `generazione-slop`, sezione 3). Modifica la decisione del
+  2026-11-20 sulle REAL non analizzate, che resta valida per le analisi di ogni altro tipo; la descrizione per assi del 2026-11-23 è
+  l'altra eccezione. Dopo le prime misure reali,
   lo stesso giorno: gradi 0, 1 e 2 per ogni categoria e una categoria per persone e anatomia, perché con la prima formula ogni console
   spuntava tutte le categorie e valeva 100, e le persone, che i generatori sbagliano spesso, abbassavano il dettaglio.
 - Niente prezzi né budget: ogni chiamata a pagamento si conferma e si registra senza importi; il limite di spesa è quello del progetto
@@ -50,18 +53,18 @@ Una sola raccolta di immagini REAL e SLOP.
   licenza (REAL), prompt e modello (SLOP), stato, originale e copia di gioco, revisione per le modifiche
   concorrenti. Per una SLOP generata anche batch, processo, impostazioni del trattamento e qualità della generazione.
 - **Descrizione della fonte.** Per le REAL arriva da Commons (testo ripulito, al massimo 500 caratteri) e l'owner la corregge nel
-  passo 2 del wizard o nella galleria. Resta nel catalogo (ricerca, anteprima a pressione prolungata) e accompagna la REAL quando
-  ispira una SLOP automatica; il giocatore non la vede. Le SLOP non hanno descrizione: il campo è vuoto e la modifica è rifiutata.
+  passo 2 del wizard o nella galleria. Resta nel catalogo (ricerca, anteprima a pressione prolungata) e accompagna la REAL nella
+  sua descrizione per assi; il giocatore non la vede. Le SLOP non hanno descrizione: il campo è vuoto e la modifica è rifiutata.
 - **Limiti dei file.** JPEG, PNG o WebP fino a 12 MB e 32 megapixel; copia di gioco WebP fino a 4 MB.
 
 ### Campi utili per origine (decisione del 2026-11-17)
 
 | Campi | REAL | SLOP | Funzione attuale |
 |---|---|---|---|
-| Titolo | sì | no | Titolo REAL nei crediti e nelle proposte SLOP; SLOP identificate dall’ID |
-| Descrizione della fonte | sì | no | Catalogo, ricerca e proposte SLOP automatiche |
+| Titolo | sì | no | Titolo REAL nei crediti e nella descrizione per assi; SLOP identificate dall’ID |
+| Descrizione della fonte | sì | no | Catalogo, ricerca e descrizione per assi |
 | Fonte, autore, nome e URL licenza | sì | no | Provenienza, diritti, controllo ND e attribuzione della REAL |
-| Prompt e modello | no | sì | Ricostruzione della generazione, ricerca, prompt e modello nei crediti finali |
+| Prompt e modello | no | sì | Ricostruzione della generazione e ricerca; nei crediti finali solo il modello |
 | Originale/copia, hash, dimensioni, MIME, crop e misure | sì | sì | Archivio, verifica file, copie identiche nel gioco e rifacimento nel browser |
 | Batch, slot, qualità e trattamento | no | sì | Revisione, idempotenza e rifacimento delle copie SLOP |
 | Stato, date e revisione | sì | sì | Transizioni e concorrenza |
@@ -105,21 +108,23 @@ dell'aspetto (risoluzione, rumore, nitidezza, contrasto, saturazione, tinta e cr
 
 ## 5. Analisi (ritirata)
 
-Dal 2026-11-20 nessuna foto viene analizzata o descritta; dal 2026-11-21 le REAL si possono solo misurare (sezione 10). La rotta `POST /:id/analyze` e `GET /analysis` non esistono più; la
+Dal 2026-11-20 nessuna foto viene analizzata; dal 2026-11-21 le REAL si possono misurare (sezione 10) e dal 2026-11-23 descrivere
+per assi ai soli fini della generazione SLOP (specifica `generazione-slop`, sezione 2). La rotta `POST /:id/analyze` e `GET /analysis` non esistono più; la
 manutenzione non segue più analisi in corso. Le chiamate di tipo `analysis` già registrate restano in `paid_calls`; dal 2026-11-21
 lo stesso tipo registra le misure di affollamento e dettaglio (sezione 10) e le statistiche lo chiamano «Analisi e misure delle
 REAL». L'invio dell'immagine al modello come data URL base64 scritta direttamente nei byte della richiesta resta per le
-proposte e le valutazioni delle SLOP (il 2026-11-15 cinque analisi su originali da 2 a 6 MB avevano superato i 128 MB del Worker).
+descrizioni delle REAL e le valutazioni delle SLOP (il 2026-11-15 cinque analisi su originali da 2 a 6 MB avevano superato i 128 MB del Worker).
 
 ## 6. Chiamate a pagamento e modelli
 
-- Quattro tipi: misure di affollamento e dettaglio delle REAL (`analysis`, sezione 10), proposte editoriali e prompt SLOP (anche le
-  idee di falsificazione delle REAL; le indicazioni proposte per una galleria sono state tolte il 2026-11-22), immagini SLOP, valutazione SLOP intera. Le SLOP accettate non richiedono altre chiamate. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
+- Quattro tipi: misure di affollamento e dettaglio delle REAL (`analysis`, sezione 10), testi per le SLOP (`prompts`: descrizioni
+  per assi delle REAL e trasformazioni dal 2026-11-23; prima proposte editoriali, prompt e idee delle REAL), immagini SLOP (modifiche
+  della REAL dal 2026-11-23), valutazione SLOP intera. Le SLOP accettate non richiedono altre chiamate. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
 - **Esiti:** risposta valida → `completed`; errore 4xx → `failed`, senza addebito; errore 5xx, timeout o rete → `uncertain`, mai
   ripetuta in automatico. Chiave rifiutata, limite di spesa o credito OpenAI esaurito fermano le serie con un messaggio che rimanda a
   platform.openai.com.
 - **Registro** `paid_calls`: tipo, modello, esito, token, date; nessun importo e collegamenti a immagine, processo e tentativo, azzerati alla cancellazione; nessun archivio delle immagini eliminate.
-- **Modelli:** modello di testo (misure e idee delle REAL, proposte editoriali e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
+- **Modelli:** modello di testo (misure e descrizioni delle REAL, trasformazioni e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
   elencati nel codice e presenti nel progetto OpenAI (`GET /v1/models`, in cache per un'ora; se l'elenco non si legge si offrono tutti).
   Ogni chiamata registra il modello usato.
 - Senza il segreto `OPENAI_API_KEY` le chiamate a pagamento sono spente. Nei test solo il modello finto `tests/fake_openai.py`.
@@ -127,7 +132,9 @@ proposte e le valutazioni delle SLOP (il 2026-11-15 cinque analisi su originali 
 ## 7. Contesto dei modelli
 
 - Cinque testi modificabili dalle Impostazioni, fino a 4000 caratteri: **Base comune** (ogni chiamata), **Misura delle REAL**
-  (`real_measure`, sezione 10), **Idee SLOP delle REAL** (`real_ideas`, specifica `generazione-slop`), **Premessa e prompt di galleria** (proposte da originale, titolo e descrizione della fonte) e
+  (`real_measure`, sezione 10), **Descrizione delle REAL per le SLOP** (`real_description`) e **Trasformazioni SLOP**
+  (`slop_transform`), che dal 2026-11-23 sostituiscono «Idee SLOP delle REAL» e «Premessa e prompt di galleria» (specifica
+  `generazione-slop`, sezione 5), e
   **Valutazione delle SLOP** (candidata intera). Le versioni
   della parte ritirata «Descrizione delle REAL» (`analysis`) restano nella tabella, non sono offerte e non si ripristinano.
 - Ogni salvataggio di un testo diverso crea una versione datata; ripristinarne una vecchia crea una nuova versione con lo stesso testo.
@@ -244,7 +251,7 @@ essere molto dettagliata. Il medium fotografico, terzo asse possibile, riguarda 
 - **Soglie.** Ogni galleria ha due soglie da 0 a 100 in «Modifica galleria»; vuote, valgono quelle predefinite di Impostazioni →
   Misure delle REAL: affollamento **67** (dieci oggetti) e dettaglio **100** (nessun limite). Il problema vero è la combinazione dei
   due assi, quindi si parte larghi e si stringe sui dati. Un valore uguale alla soglia è dentro. Cambiare le soglie non cambia la
-  revisione della galleria e non invalida le proposte SLOP in attesa.
+  revisione della galleria e non invalida le trasformazioni SLOP in attesa.
 - **Segnalazione, e basta.** Una REAL misurata oltre una soglia ha un simbolo sulla miniatura, un avviso nell'anteprima a pressione
   prolungata e nel dettaglio. Resta nel suo stato e nelle estrazioni.
 - **Dashboard.** Il dettaglio di una REAL mostra punteggi, numero di oggetti, soglie, data e modello, il comando «Misura» (una
@@ -252,6 +259,5 @@ essere molto dettagliata. Il medium fotografico, terzo asse possibile, riguarda 
   misure precedenti. Dalla selezione della galleria, «Misura» misura le REAL selezionate ancora senza misura, una chiamata ciascuna
   dopo una sola conferma del massimo, una dopo l'altra con la pagina aperta; un problema dell'account OpenAI ferma le restanti. Le REAL
   già misurate si misurano di nuovo dal dettaglio. Il wizard REAL non misura: le REAL appena acquisite si misurano dalla galleria.
-- **Uso nella generazione.** Le idee di falsificazione ricevono l'ultima misura e l'estrazione automatica è corretta sui due assi
-  (specifica `generazione-slop`, sezioni 1 e 2). La valutazione per asse delle SLOP, discussa con l'owner il 2026-11-21, non è ancora
+- **Uso nella generazione.** L'estrazione automatica delle REAL è corretta sui due assi (specifica `generazione-slop`, sezione 3). La valutazione per asse delle SLOP, discussa con l'owner il 2026-11-21, non è ancora
   implementata.

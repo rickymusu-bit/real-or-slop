@@ -1,7 +1,24 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-22T18:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-23T05:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## Dopo la 1.57.0 — 2026-11-23T05:00:00Z (decisioni, nessun cambiamento di codice)
+
+- **Prove del 2026-11-22 e del 2026-11-23** sulla galleria delle console Nintendo, fuori dal Worker e con l'autorizzazione
+  dell'owner per ogni giro (56 chiamate in tutto, non registrate in `paid_calls`): 24 SLOP ottenute modificando REAL con
+  `images/edits` e `gpt-image-2.6-sunburst`, descrizioni scritte da `gpt-6.2-sol`. Il solo prompt perdeva dettagli strutturali
+  degli oggetti noti; la modifica li conserva ma tiene tutto ciò che il testo non cambia, e il punto di vista ruotava poco quando lo
+  sfondo conservato aveva oggetti a cui ancorarsi.
+- **Decisioni dell'owner del 2026-11-23**, da implementare: la SLOP si ottiene modificando la REAL secondo una descrizione di arrivo
+  per assi; la descrizione per assi delle REAL (con le indicazioni «foto da museo o da catalogo» ed «esemplare unico») sostituisce le
+  proposte; il codice estrae gli assi da cambiare (ambiente sempre e uno fra aspetto del soggetto e punto di vista, oppure soggetto e
+  punto di vista per musei, cataloghi ed esemplari unici, che cambiano anche modello); si sposta la camera, non l'oggetto; solo
+  edizioni realmente esistite; niente scritte della REAL oltre a quelle del prodotto; nei risultati delle SLOP solo «Generata con» e
+  il modello. Nessun blocco degli assi per galleria per ora.
+- **Specifiche:** `generazione-slop` 16.0.0, `libreria-immagini` 10.6.0, `database-immagini` 10.6.0, `contenuti-e-trasparenza`
+  1.5.0, `copie-di-gioco` 13.1.0, `dashboard-admin-wizard-real` 6.3.1, `gioco-a-livelli` 4.1.0, `statistiche-impostazioni` 4.10.0,
+  `privacy-note-legali` 1.5.0, `AGENTS.md` 35.0.0 e `MASTER.md` 37.0.0. Codice e produzione 1.57.0 invariati.
 
 ## 1.57.0 — 2026-11-22T18:00:00Z
 

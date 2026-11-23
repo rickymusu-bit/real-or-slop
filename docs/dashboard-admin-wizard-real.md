@@ -1,6 +1,7 @@
-# Dashboard e wizard REAL — specifica 6.3.0
+# Dashboard e wizard REAL — specifica 6.3.1
 
-Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
+Stato: implementata nella 1.57.0; le parti decise il 2026-11-23 sono da implementare (specifica `generazione-slop` 16.0.0).
+Aggiornata: 2026-11-23T05:00:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -15,7 +16,8 @@ Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00
 - Una pressione prolungata su una miniatura la ingrandisce con titolo, descrizione e link a Commons; la finestra resta aperta e si
   chiude con una × nell'angolo. Vale anche nella galleria e nel wizard SLOP (2026-11-14).
 - **Niente descrizione editoriale né analisi a pagamento delle REAL** (2026-11-20): i risultati del gioco mostrano i crediti della
-  REAL; il wizard conserva solo la descrizione della fonte, che resta nel catalogo e accompagna la REAL nelle proposte SLOP.
+  REAL; il wizard conserva solo la descrizione della fonte, che resta nel catalogo e accompagna la REAL nella sua descrizione per assi
+  (specifica `generazione-slop`, sezione 2).
 
 ## 2. Dashboard `/admin`
 
