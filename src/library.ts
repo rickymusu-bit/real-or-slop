@@ -22,6 +22,8 @@ import { withPhotoProcessing } from "./photo-processing";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
 import { detailText, MEASURE_FORMULA, type Observation, type Scores } from "../shared/real-measure";
+import type { VisualDescription } from "../shared/real-description";
+import { describePhotos, visualDescription } from "./real-description";
 
 type Status = "new" | "approved" | "published" | "trash";
 interface Item extends TreatableItem {
@@ -37,6 +39,7 @@ interface Item extends TreatableItem {
   measure?: Measure | null;
   /** REAL only: ideas of falsification and why the model proposed none (specification `generazione-slop`, section 2). */
   ideas?: Idea[]; ideas_reason?: string;
+  has_visual_description?: boolean; visual_description?: VisualDescription | null;
 }
 /** `status`: as stored; `state`: «review» for an idea not used written for other instructions or another gallery. */
 interface Idea { id: string; idea: string; genre: string; changes: string; status: "proposed" | "approved" | "used"; state: "proposed" | "approved" | "used" | "review"; busy: boolean; used_at: string | null }
@@ -92,7 +95,7 @@ async function bulkUpdate(action: string, ids: string[], fields: Record<string, 
 export async function showLibrary() {
   let galleryList: GalleryList | null = null;
   const galleries = () => galleryList?.galleries || [];
-  let items: Item[] = [], selected = new Set<string>(), open: Item | null = null, busy = false;
+  let items: Item[] = [], selected = new Set<string>(), open: Item | null = null, busy = false, undescribed = 0;
   const SORT_KEY = "ros-library-sort";
   let sort = { by: "added", order: "desc" };
   try { const saved = JSON.parse(localStorage.getItem(SORT_KEY) || "null") as typeof sort | null;
@@ -121,6 +124,7 @@ export async function showLibrary() {
         <div class="gallery-actions">
           <a class="button primary" id="gallery-upload-link">Carica REAL</a>
           <a class="button" id="gallery-generation-link">Genera SLOP</a>
+          <button type="button" id="library-describe-gallery" hidden>Descrivi le REAL</button>
           <button type="button" data-gallery-edit>Modifica galleria</button>
         </div>
       </div>
@@ -184,7 +188,7 @@ export async function showLibrary() {
       <p id="library-code-result" role="status" aria-live="polite"></p>
       <ol id="library-entries" class="library-entries"></ol></details>
     <details id="library-models" class="library-vocabulary"><summary>Modelli</summary>
-      <p class="hint">Modelli OpenAI usati dalle chiamate a pagamento. Il modello di testo scrive i prompt delle SLOP e le valuta, e deve leggere immagini; quello di immagini genera le SLOP. Ogni chiamata chiede conferma; il limite di spesa che conta è quello impostato sul progetto OpenAI (platform.openai.com).</p>
+      <p class="hint">Il modello di testo deve leggere immagini. Descrive e misura le REAL, scrive i prompt delle SLOP e valuta le SLOP. Il modello di immagini genera le SLOP. Le chiamate a pagamento richiedono conferma e seguono il limite di spesa del progetto OpenAI.</p>
       <form id="library-models-form" class="library-inline"><label>Modello di testo<select name="text_model"></select></label><label>Modello di immagini<select name="image_model"></select></label><label>Qualità delle immagini<select name="image_quality"></select></label></form>
       <p id="library-models-note" class="hint"></p>
       <p class="hint">La qualità vale per le SLOP generate dal wizard «Genera SLOP».</p></details>
@@ -256,8 +260,9 @@ export async function showLibrary() {
     });
     $("#library-batch-filter").hidden = !filter.batch;
     try {
-      const data = await call<{ items: Item[]; next: number | null; counts: { status: string; origin: string; n: number }[] }>("?" + params);
+      const data = await call<{ items: Item[]; next: number | null; counts: { status: string; origin: string; n: number }[]; undescribed: number }>("?" + params);
       if (seq !== loadSeq) return;
+      undescribed = data.undescribed;
       const added = append ? data.items.filter(item => !items.some(i => i.id === item.id)) : data.items;
       items = append ? [...items, ...added] : added;
       nextPage = data.next;
@@ -285,8 +290,10 @@ export async function showLibrary() {
       extra: (item.prompt ? `<p><span class="image-preview-label">Prompt</span><br><q lang="en">${escape(item.prompt)}</q></p>` : "") });
   const card = (item: Item) => `<li class="library-card${selected.has(item.id) ? " is-selected" : ""}" data-id="${escape(item.id)}">
     <label class="library-check"><input type="checkbox" data-select="${escape(item.id)}" ${selected.has(item.id) ? "checked" : ""} aria-label="Seleziona ${escape(imageLabel(item))}"></label>
-    <button type="button" class="library-open" data-open="${escape(item.id)}" data-long-press aria-label="Apri ${escape(imageLabel(item))}">
-      <img src="${escape(item.file)}" alt="" loading="lazy" draggable="false"><span class="library-badges"><span class="badge badge-${item.origin.toLowerCase()}">${item.origin}</span>
+    <button type="button" class="library-open" data-open="${escape(item.id)}" data-long-press aria-label="Apri ${escape(imageLabel(item))}"${item.origin === "REAL" && !item.has_visual_description ? ' aria-description="Descrizione visiva mancante"' : ""}>
+      <img src="${escape(item.file)}" alt="" loading="lazy" draggable="false">${item.origin === "REAL" && !item.has_visual_description
+        ? '<span class="library-description-icon" data-description-missing title="Descrizione visiva mancante" aria-hidden="true">▤</span>' : ""}
+      <span class="library-badges"><span class="badge badge-${item.origin.toLowerCase()}">${item.origin}</span>
       <span class="badge badge-status">${STATE_LABEL[item.status]}</span>${item.source_missing_at
         ? '<span class="badge badge-warn" data-source-missing title="Il file non risulta più su Wikimedia Commons">Fonte rimossa</span>' : ""}${item.measure?.over.length
         ? `<span class="badge badge-warn badge-symbol" data-over-threshold role="img" title="${escape("Oltre la soglia della galleria: " + overText(item.measure))}" aria-label="${escape("Oltre la soglia: " + overText(item.measure))}">\u26a0\ufe0e</span>` : ""}</span>
@@ -296,6 +303,10 @@ export async function showLibrary() {
     bar.hidden = !selected.size;
     $("#library-selection-count").textContent = `${selected.size} ${selected.size === 1 ? "selezionata" : "selezionate"}`;
     const trash = filter.status === "trash";
+    const describe = $<HTMLButtonElement>("#library-describe-gallery");
+    describe.hidden = trash || !galleryList?.paid_calls || !undescribed;
+    describe.disabled = busy;
+    describe.textContent = `Descrivi le REAL (${undescribed})`;
     const chosen = items.filter(item => selected.has(item.id));
     for (const button of bar.querySelectorAll<HTMLButtonElement>("[data-bulk]")) {
       const action = button.dataset.bulk;
@@ -422,6 +433,10 @@ export async function showLibrary() {
       ${measuresBlock(item, editable)}
       ${measureBlock(item)}
       ${ideasBlock(item)}
+      ${item.origin === "REAL" ? item.visual_description ? visualDescription(item.visual_description)
+        : item.has_visual_description ? loading("Caricamento della descrizione visiva…")
+          : `<section class="editorial-description"><h3>Descrizione visiva</h3><p class="hint">Da generare.</p>${galleryList?.paid_calls && item.status !== "trash"
+            ? '<button type="button" id="library-describe-photo">Genera descrizione (1 chiamata)</button>' : ""}</section>` : ""}
       ${fields.map(([key, label, max, area]) => `<label>${label}${area
         ? `<textarea data-field="${key}" maxlength="${max}" rows="3" ${editable ? "" : "readonly"}>${escape(item[key])}</textarea>`
         : `<input data-field="${key}" maxlength="${max}" value="${escape(item[key])}" ${editable ? "" : "readonly"}>`}</label>`).join("")}
@@ -470,12 +485,18 @@ export async function showLibrary() {
       try { showDetail(await call<Item>("/" + encodeURIComponent(button.dataset.openSource))); } catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
       return;
     }
-    if (!button || !open || busy || !(button.dataset.action || ["library-copy", "library-regenerate", "library-measure",
+    if (!button || !open || busy || !(button.dataset.action || ["library-copy", "library-regenerate", "library-measure", "library-describe-photo",
       "library-crop", "library-treatment-off", "library-treatment-on", "library-treatment-edit"].includes(button.id))) return;
     const id = open.id;
     busy = true;
     try {
-if (button.id === "library-measure") {
+      if (button.id === "library-describe-photo") {
+        const item = open;
+        const result = await describePhotos([{ id, title: imageLabel(item) }], item.gallery_id, call<Item>, updated => { open = updated; });
+        if (result === null) return;
+        detailMessage(result);
+      }
+      else if (button.id === "library-measure") {
         if (!window.confirm(`Misurare affollamento e dettaglio di «${imageLabel(open)}» con ${galleryList?.text_model || "il modello di testo"}? Una chiamata a pagamento, mai ripetuta in automatico.`)) return;
         const item = open;
         open = await withPhotoProcessing("Misuro affollamento e dettaglio…", () => call<Item>(`/${encodeURIComponent(item.id)}/measure`,
@@ -523,7 +544,7 @@ if (button.id === "library-measure") {
       await load();
       // The detail is drawn again: the last message stays.
       const said = detail.querySelector("#library-detail-message")?.textContent || "";
-      if (detail.open && open) { showDetail(items.find(i => i.id === open!.id) || open); detailMessage(said); }
+      if (detail.open && open) { showDetail(open); detailMessage(said); }
     } catch (error) {
       if (detail.open && open?.id === id) detailMessage(String(error instanceof Error ? error.message : error));
     }
@@ -602,6 +623,17 @@ if (button.id === "library-measure") {
       syncSelection();
     }
   };
+  const describeGallery = async () => {
+    const scope = filter.gallery;
+    busy = true; selectionBar();
+    try {
+      const { images } = await call<{ images: { id: string; title: string }[] }>("/undescribed-reals?" + new URLSearchParams({ gallery: scope }));
+      if (scope !== filter.gallery) return;
+      const result = images.length ? await describePhotos(images, scope, call<Item>) : "Tutte le REAL hanno una descrizione visiva.";
+      if (scope === filter.gallery && result !== null) { await load().catch(report); message(result); }
+    } catch (error) { if (scope === filter.gallery) report(error); }
+    finally { busy = false; selectionBar(); }
+  };
   $("#library-cancel-move").addEventListener("click", () => moveGallery.close());
   moveGallery.addEventListener("submit", event => {
     event.preventDefault();
@@ -611,6 +643,7 @@ if (button.id === "library-measure") {
     void applySelection("gallery", destination);
   });
 
+  let detailOpenRequest = 0;
   page.addEventListener("click", async event => {
     const target = event.target as HTMLElement, button = target.closest<HTMLButtonElement>("button");
     if (target.closest("dialog") && !target.closest("#db-images, #library-selection, .gallery-actions, .gallery-title-row")) return;
@@ -638,7 +671,19 @@ if (button.id === "library-measure") {
       return;
     }
     const opener = target.closest<HTMLElement>("[data-open]");
-    if (opener) { const item = items.find(i => i.id === opener.dataset.open); if (item) showDetail(item); return; }
+    if (opener) {
+      const item = items.find(i => i.id === opener.dataset.open);
+      if (!item) return;
+      const request = ++detailOpenRequest;
+      if (item.has_visual_description && !item.visual_description) {
+        const current = () => request === detailOpenRequest && galleryDialog.open && filter.gallery === item.gallery_id;
+        try {
+          const described = await call<Item>("/" + encodeURIComponent(item.id));
+          if (current()) showDetail(described);
+        } catch (error) { if (current()) report(error); }
+      } else showDetail(item);
+      return;
+    }
     // Changing view is never blocked by an action still reloading the list (the click used to be dropped).
     if (button?.dataset.view) {
       filter.status = button.dataset.view; selected.clear(); syncSelection();
@@ -647,6 +692,7 @@ if (button.id === "library-measure") {
       return;
     }
     if (!button || busy) return;
+    if (button.id === "library-describe-gallery") { await describeGallery(); return; }
     if (button.id === "library-select-all") {
       for (const item of items) selected.add(item.id);
       syncSelection();
@@ -832,6 +878,7 @@ if (button.id === "library-measure") {
     Object.assign(filter, { gallery, batch, status: "library", origin: "all", q: "" });
     selected.clear();
     items = [];
+    undescribed = 0;
     nextPage = null;
     render();
     $("#library-grid").innerHTML = `<li class="library-grid-loading">${loading("Caricamento delle immagini…")}</li>`;

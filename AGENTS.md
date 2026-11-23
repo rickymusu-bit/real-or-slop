@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 34.0.0, aggiornata il 2026-11-22T18:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 35.0.0, aggiornata il 2026-11-23T20:46:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -18,8 +18,9 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 
 - **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta finale
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
-  al browser prima della risposta. Le REAL non vengono descritte da un modello (decisione del 2026-11-20); su richiesta confermata
-  un modello ne misura soltanto affollamento e dettaglio, con soglie per galleria e sola segnalazione, e ne propone fino a tre idee
+  al browser prima della risposta. Su richiesta confermata, un modello descrive la REAL intera per assi durante il caricamento o dalla
+  galleria (decisione del 2026-11-23, specifica `libreria-immagini`, sezione 11). La descrizione visiva è privata. Il modello misura
+  anche affollamento e dettaglio, con soglie per galleria e sola segnalazione, e propone fino a tre idee
   di falsificazione, nel wizard SLOP, che l'owner sceglie (decisioni del 2026-11-21, specifiche `libreria-immagini`, sezione 10, e `generazione-slop`). Il
   modello delle proposte prepara premessa e prompt SLOP dalla REAL **intera** (l'originale, mai il ritaglio 4:5: decisione del
   2026-11-15), dal suo titolo e dalla descrizione della fonte, sviluppa l'idea approvata e riceve titolo e descrizione della galleria. La REAL

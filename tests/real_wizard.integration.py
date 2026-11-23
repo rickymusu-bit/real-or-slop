@@ -206,7 +206,7 @@ with sync_playwright() as p:
         b = page.locator('[data-rw-image="%s"]' % second['id'])
         a.locator('.rw-metadata summary').click()
         expect(a.locator('.rw-metadata')).to_contain_text(title + '-a')
-        # Step 2 is «Descrizione»: the source description only; no tags, no paid analysis, no editorial description (2026-11-20).
+        # Step 2 shows the source description and the optional description generated from the original.
         expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Descrizione')
         expect(page.locator('[data-rw-new-tag], [data-rw-tag-category], .tag-legend, .rw-pill, [data-rw=choose-reset]')).to_have_count(0)
         expect(page.locator('[data-rw-caption], [data-editorial], [data-rw=choose-generation], #rw-generation-dialog')).to_have_count(0)
@@ -218,6 +218,12 @@ with sync_playwright() as p:
         expect(page.locator('.rw-message')).to_have_text('Descrizione salvata.')
         saved = page.request.get(base + '/api/admin/library/' + first['id']).json()
         assert saved['description'] == 'Un ponte di pietra sul fiume, anni Sessanta', saved['description']
+        a.locator('[data-rw=describe]').click()
+        expect(a.locator('[data-visual-description]')).to_have_count(1)
+        expect(b.locator('[data-visual-description]')).to_have_count(0)
+        a.locator('[data-visual-description] summary').click()
+        expect(a.get_by_text('Ripresa frontale.', exact=True)).to_be_visible()
+        assert any('Massimo 1 chiamata a pagamento' in m for m in confirmations), confirmations
         expect(a.locator('[data-rw=crop]')).to_have_count(0)  # the crop is a step of its own
         expect(page.locator('[data-rw="choose-tags"], [data-rw="choose-caption"]')).to_have_count(0)
         assert page.request.post(base + '/api/admin/library/%s/analyze' % first['id'], data={'confirm': True}, headers={'Origin': base}).status == 404
@@ -225,7 +231,7 @@ with sync_playwright() as p:
 
         # Step 3, «Inquadratura»: each copy with its format; the owner reviews the fixed 4:5 frame.
         page.get_by_role('button', name='Avanti: inquadratura').click()
-        # Not blocking: the photo without a description is named in a notice.
+        # The wizard can proceed with a REAL that still has no visual description.
         expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Inquadratura')
         crop_a = page.locator('[data-rw-crop-image="%s"]' % first['id'])
         expect(page.locator('.rw-crop')).to_have_count(2)
@@ -473,6 +479,15 @@ with sync_playwright() as p:
         page.get_by_role('button', name='Indietro: descrizione').click()
         page.get_by_role('button', name='Indietro', exact=True).click()
         expect(page.locator('.rw-picks img')).to_have_attribute('alt', 'Bridge2.jpg')
+        page.locator('[data-gallery-return]').click()
+        grid = page.locator('#library-grid')
+        expect(grid.locator(f'[data-id="{first["id"]}"]')).to_be_visible()
+        expect(grid.locator(f'[data-id="{first["id"]}"] [data-description-missing]')).to_have_count(0)
+        expect(grid.locator(f'[data-id="{last_acquired}"] [data-description-missing]')).to_be_visible()
+        page.locator('#library-describe-gallery').click()
+        expect(grid.locator('[data-description-missing]')).to_have_count(0)
+        grid.locator(f'[data-open="{last_acquired}"]').click()
+        expect(page.locator('#library-detail [data-visual-description]')).to_be_visible()
         assert not errors, errors
         context.close()
         print('REAL wizard browser E2E 1.15.0 passed (search clear box, tap adds at once, selection kept across searches, press-and-hold preview, description edited and summarised, four steps, crop step, search clear button, no captions, photos trashed elsewhere leave the wizard):', name)

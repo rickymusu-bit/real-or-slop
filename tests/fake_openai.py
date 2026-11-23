@@ -54,6 +54,15 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, {'data': [{'b64_json': picture(data.get('size', '1024x1024'))}], 'usage': {'input_tokens': 50, 'output_tokens': 1056}})
         schema_name = data.get('text', {}).get('format', {}).get('name')
         request = json.loads(data['input'][0]['content'][0]['text']) if schema_name in ('slop_evaluation', 'slop_gallery_proposal') else None
+        if schema_name == 'real_visual_description' and (behaviour is None or 'delay' in behaviour):
+            behaviour = {'json': {'sections': {'summary': 'Soggetto grigio con bordi consumati.',
+                                              'subject_type': 'Oggetto in primo piano.', 'subject_appearance': 'Bordi consumati.',
+                                              'people': 'Nessuna persona visibile.', 'environment': 'Sfondo uniforme.',
+                                              'viewpoint': 'Ripresa frontale.', 'light': 'Luce morbida da sinistra.',
+                                              'technique': 'Ripresa ravvicinata.', 'rendering': 'Fotografia a colori.', 'uncertainties': ''},
+                                  'indications': {'museum_or_catalog': {'applies': True, 'reason': 'Fondo neutro.'},
+                                                  'unique_or_famous': {'applies': False, 'reason': 'Nessun indizio di unicità.'},
+                                                  'recognizable_background': {'applies': False, 'reason': 'Fondo uniforme.'}}}}
         if schema_name == 'real_ideas' and (behaviour is None or 'delay' in behaviour):
             behaviour = {'json': {'ideas': [
                 {'idea': 'Lo stesso modello di console su una scrivania di legno, ripreso dall’alto con la luce di una finestra.',

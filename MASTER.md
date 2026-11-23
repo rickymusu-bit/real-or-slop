@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 36.0.0, aggiornata il 2026-11-22T18:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 37.0.0, aggiornata il 2026-11-23T20:46:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,9 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.57.0:** un solo wizard SLOP (galleria, REAL da un'estrazione corretta e modificabile, proposte dell'owner o del modello,
+- **Ramo 1.58.0:** descrizioni visive private delle REAL per otto assi, durante il caricamento o in gruppo dalla galleria. La griglia
+  segnala le REAL senza descrizione. Migrazione 0071. Il wizard SLOP usa ancora il flusso 1.57.0.
+- **In produzione la 1.57.0 (PR #173):** un solo wizard SLOP (galleria, REAL da un'estrazione corretta e modificabile, proposte dell'owner o del modello,
   scelta, prompt modificabili, generazione, revisione); tolta la generazione manuale; le proposte delle REAL si gestiscono solo nel
   wizard. Nessuna migrazione.
 - **Integrata in main la 1.56.0 (PR #172):** niente Indicazioni SLOP di galleria né loro proposta automatica; contano le idee approvate delle REAL, con
@@ -150,13 +152,14 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
   `stats.css`, grafico della distribuzione `database-chart.ts`, anteprima a pressione prolungata `image-preview.ts` e
   `image-preview.css`, editor di formato e ritaglio `crop-editor.ts` e
   `crop-editor.css`, avviso di elaborazione `photo-processing.ts` e `admin-loading.css`, cursori del trattamento delle SLOP con anteprima
-  `treatment-editor.ts` e `treatment-editor.css`, copie di gioco preparate nel browser `game-copy.ts`.
+  `treatment-editor.ts` e `treatment-editor.css`, copie di gioco preparate nel browser `game-copy.ts`, lettura e generazione delle
+  descrizioni visive `real-description.ts`.
 
 **Worker** Cloudflare (`worker/`, ingresso `index.ts`):
 - `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera),
   `commons-check.ts` (controllo notturno delle fonti Commons delle REAL), `real-measure.ts` (misura a pagamento di affollamento e
   dettaglio delle REAL, storico, soglie), `real-ideas.ts` (idee di falsificazione delle REAL: proposta a pagamento, revisione,
-  disponibilità per l'estrazione).
+  disponibilità per l'estrazione), `real-description.ts` (descrizione visiva privata delle REAL dall'originale intero).
 - Libreria `library.ts` (stati, modifiche, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   gallerie `galleries.ts`, cancellazione di gallerie e file `gallery-removal.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
@@ -169,7 +172,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 
 **Codice condiviso** (`shared/`): modelli OpenAI
 `models.ts`, tipi dei batch `slop-proposals.ts`, preferenze di composizione `slop-composition.ts`, formati e ricetta della copia
-`game-copy.ts`, misure e trattamento `copy-treatment.ts`, affollamento e dettaglio delle REAL `real-measure.ts`, estrazione corretta sui due assi `idea-sampling.ts`, licenze ND
+`game-copy.ts`, misure e trattamento `copy-treatment.ts`, affollamento e dettaglio delle REAL `real-measure.ts`, descrizione visiva `real-description.ts`, estrazione corretta sui due assi `idea-sampling.ts`, licenze ND
 `licenses.ts`, pulizia dei metadati `media-clean.ts`, livelli e punteggio `levels.ts`, costanti legali `legal.ts`, controllo delle
 immagini `editorial.ts` (brief e valutazioni), `image-label.ts` (titolo REAL o ID SLOP), `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
 
@@ -218,6 +221,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0068 | formula delle misure (1 per le esistenti) e nuova proposta di «Misura delle REAL» se quella in vigore è la prima |
 | 0069 | idee di falsificazione delle REAL (`real_ideas`), motivo senza idee, idea nel riferimento REAL-processo, trigger che tengono i riferimenti fino alla fine del processo e segnano l'idea usata, parte `real_ideas` del contesto |
 | 0070 | elimina le Indicazioni SLOP delle gallerie e la revisione registrata sulle idee; nuova proposta di «Premessa e prompt di galleria» se quella in vigore è la 0066 |
+| 0071 | descrizioni visive delle REAL e controllo delle richieste concorrenti |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

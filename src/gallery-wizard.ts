@@ -16,10 +16,11 @@ export async function showGalleryWizard(content: HTMLElement, id: string, wizard
     <div id="gallery-wizard-body">${loading}</div>
   </section>`;
   const body = content.querySelector<HTMLElement>("#gallery-wizard-body")!;
+  let gallery: { title: string; paid_calls: boolean };
   try {
     const response = await fetch("/api/admin/library/galleries/" + encodeURIComponent(id));
     if (!response.ok) throw Error(response.status === 404 ? "Galleria non disponibile." : "Impossibile caricare la galleria.");
-    const gallery = await response.json() as {title: string};
+    gallery = await response.json();
     content.querySelector("#wizard-gallery-name")!.textContent = gallery.title;
   } catch (error) {
     body.querySelector("p")!.classList.remove("admin-loading");
@@ -31,7 +32,7 @@ export async function showGalleryWizard(content: HTMLElement, id: string, wizard
 
   if (!slop) {
     body.id = "real-wizard";
-    const real = await mountRealWizard(body, id);
+    const real = await mountRealWizard(body, id, gallery.paid_calls);
     window.addEventListener("pageshow", event => { if (event.persisted) void real.sync(); });
     return;
   }

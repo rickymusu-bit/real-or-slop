@@ -58,7 +58,7 @@ export async function galleryRoute(env: Env, method: string, target: string, dat
     return {galleries: await galleryPreviews(env), paid_calls: !!env.OPENAI_API_KEY, text_model: await chosenModel(env, "text_model"),
       thresholds: {crowdedness: defaults.crowdedness_threshold, detail: defaults.detail_threshold}};
   }
-  if (method === "GET" && /^[\w-]{1,64}$/.test(target)) return findGallery(env, target);
+  if (method === "GET" && /^[\w-]{1,64}$/.test(target)) return { ...await findGallery(env, target), paid_calls: !!env.OPENAI_API_KEY };
   if (method !== "POST" && method !== "PATCH") throw new HttpError(405, "Metodo non consentito");
   const [key, action] = target.split("/");
   const editing = method === "PATCH" && key && !action;

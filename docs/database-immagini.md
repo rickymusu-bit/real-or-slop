@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 10.5.0
+# Foto e gallerie — specifica 10.6.0
 
-Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
+Stato: implementata nel ramo 1.58.0, da rilasciare. Aggiornata: 2026-11-23T20:46:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -29,6 +29,9 @@ La griglia 4:5 ha due colonne su mobile. «Carica altre foto» aggiunge le pagin
   foto mai viste vanno in fondo.
 - **Schede:** miniatura (copia di gioco), origine e stato, casella di selezione. Tocco breve: dettaglio. Pressione prolungata: anteprima
   grande (specifica `dashboard-admin-wizard-real`, sezione 3).
+- **Descrizione visiva.** Una REAL senza descrizione ha un'icona sulla miniatura. «Descrivi le REAL» include tutte quelle fuori dal
+  cestino ancora da descrivere nella galleria aperta, anche se un filtro o la paginazione le nascondono. Si legge la descrizione
+  dal dettaglio della foto, dove si può generare se manca (specifica `libreria-immagini`, sezione 11).
 - **Seleziona tutte (N)** (decisione dell'owner del 2026-11-15): seleziona tutte le immagini già caricate nella vista con i filtri
   correnti; sparisce quando sono già tutte selezionate. «Deseleziona» nella barra le toglie.
 - **Selezione multipla** (decisione dell’owner del 2026-11-19). La barra sotto la griglia offre «Approva», «Pubblica», «Nel cestino»
@@ -69,7 +72,7 @@ suo batch originario, ma esce dalla sua revisione operativa.
   percentuale; partite in corso che la includono; avvisi (licenza ND, copia mancante con «Prepara la copia di gioco»); misure della copia e, per una SLOP trattata, colore del trattamento (a colori, bianco e nero o seppia), misure anonime di riferimento e scarto dall'obiettivo.
 - **Campi:** titolo, descrizione della fonte, fonte, autore e licenza solo per le REAL; prompt e modello solo per le SLOP, che non hanno descrizione (2026-11-20); nessun tag. Le SLOP sono identificate dall’ID abbreviato. Ogni modifica si salva subito. La migrazione 0058 rimuove i titoli SLOP e la copia dei tag di partenza dai metadati delle figlie, conservando i titoli REAL e i parametri tecnici del trattamento. Rimossa «Spiegazione dopo la risposta», inutilizzata dal gioco; l’API rifiuta il campo e i metadati dell’origine sbagliata. La migrazione 0057 elimina anche le colonne obsolete di didascalie e vista iniziale.
 - **Azioni:** per nuove e approvate il dettaglio offre «Inquadratura» e i comandi del trattamento per le
-  SLOP (specifica `copie-di-gioco`, sezione 4.3). Nessuna descrizione editoriale (2026-11-20); per le REAL l'unica chiamata a pagamento è la misura di affollamento e dettaglio (2026-11-21).
+  SLOP (specifica `copie-di-gioco`, sezione 4.3). Per le REAL il dettaglio mostra anche la descrizione visiva privata e le misure di affollamento e dettaglio.
   Per le pubblicate, «Modifica foto» rende disponibili questi comandi nella stessa finestra dopo il ritiro confermato. Sono disponibili
   anche «Approva», «Pubblica nel gioco», «Togli dalla pubblicazione»,
   «Elimina (nel cestino)», «Ripristina» ed «Elimina definitivamente» secondo lo stato della foto.

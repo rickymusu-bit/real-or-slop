@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 6.3.0
+# Dashboard e wizard REAL — specifica 6.4.0
 
-Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
+Stato: implementata nel ramo 1.58.0, da rilasciare. Aggiornata: 2026-11-23T20:46:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -14,8 +14,8 @@ Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00
   tocco breve su una foto la seleziona e la mette subito tra le selezionate; la selezione resta con una nuova ricerca (2026-11-14).
 - Una pressione prolungata su una miniatura la ingrandisce con titolo, descrizione e link a Commons; la finestra resta aperta e si
   chiude con una × nell'angolo. Vale anche nella galleria e nel wizard SLOP (2026-11-14).
-- **Niente descrizione editoriale né analisi a pagamento delle REAL** (2026-11-20): i risultati del gioco mostrano i crediti della
-  REAL; il wizard conserva solo la descrizione della fonte, che resta nel catalogo e accompagna la REAL nelle proposte SLOP.
+- **Descrizione visiva delle REAL** (2026-11-23). Si genera dall'originale durante il caricamento o dalla galleria. Resta privata,
+  insieme alla descrizione della fonte. I risultati del gioco mostrano i crediti della REAL.
 
 ## 2. Dashboard `/admin`
 
@@ -79,7 +79,9 @@ acquisite sono comunque nella libreria privata.
 - Per ogni foto: anteprima, titolo, **descrizione della fonte** modificabile (fino a 1000 caratteri, precompilata da Commons, salvata
   uscendo dal campo), «Titolo e metadati» (autore, licenza,
   dimensioni, link alla fonte e alla licenza), «Togli dal caricamento» (sposta nel cestino, ripristinabile dal cestino della galleria).
-  Niente tag, analisi o descrizione editoriale.
+  «Genera descrizione» descrive il suo originale con il modello. «Genera le descrizioni visive mancanti» lo fa per tutte le REAL
+  in caricamento ancora da descrivere. Entrambi chiedono conferma del massimo di chiamate. Le descrizioni salvate si leggono
+  sotto il testo della fonte (specifica `libreria-immagini`, sezione 11).
 - Le modifiche di una foto partono una dopo l'altra, ciascuna con la revisione più recente.
 - Si passa al 3 senza altri requisiti.
 

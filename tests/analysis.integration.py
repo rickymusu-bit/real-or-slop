@@ -1,12 +1,12 @@
-"""Models, model contexts and the measure of crowding and detail of the REAL against a local Worker and the fake OpenAI (never the
-real one). The paid analysis of 2026-11-20 stays retired (no tags, no editorial description, no description of the SLOP): its routes
-answer 404, the photo fields are gone, the source description of a REAL stays editable. The four contexts keep their versions and the
-model selectors their checks. The measure (owner decisions of 2026-11-21) is one confirmed call per REAL, kept with model and context
-versions, with thresholds per gallery and defaults in the settings."""
+"""Model settings, REAL measures, ideas and visual descriptions against a local Worker and fake OpenAI.
+The legacy analysis routes remain retired. The source description is editable independently of the visual description."""
 from local_db import sql
+from concurrent.futures import ThreadPoolExecutor
+import base64
 import io
 import json
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -237,4 +237,46 @@ assert ideas(real)[0] == 409
 assert call(f'{API}/{real["id"]}', method='DELETE')[1]['deleted'] == 1
 assert sql(f"SELECT count(*) AS n FROM real_ideas WHERE image_id='{real['id']}'")[0]['n'] == 0
 call(f'{API}/{slop["id"]}/trash', {}); call(f'{API}/{slop["id"]}', method='DELETE')
-print('Analysis integration passed: no paid analysis or description of the REAL, no description of the SLOP, four model contexts with versions, model selectors, measures of the REAL with thresholds, ideas of falsification.')
+
+# Visual descriptions: original image, separate source field, one call even under concurrent requests.
+real = upload('REAL', 'Game Boy DMG-01 da descrivere', description='Titolo riportato dalla fonte.')
+trash = upload('REAL', 'Foto da lasciare nel cestino')
+slop = upload('SLOP', prompt='Plausible console.', model='gpt-image-2')
+call(f'{API}/{trash["id"]}/trash', {})
+missing = f'{API}/undescribed-reals?gallery={gallery_id}'
+describe = f'{API}/{real["id"]}/description'
+confirm = {'confirm': True, 'request': str(uuid.uuid4()), 'gallery_id': gallery_id}
+assert real['visual_description'] is None and not real['has_visual_description'] and 'visual_description' not in slop
+assert call(missing)[1]['images'] == [{'id': real['id'], 'title': real['title']}]
+openai([])
+assert call(describe, {**confirm, 'confirm': False})[0] == 400
+assert call(describe, {**confirm, 'gallery_id': 'wrong-gallery'})[0] == 409
+for item in (slop, trash): assert call(f'{API}/{item["id"]}/description', confirm)[0] == 409
+assert openai() == []
+openai([{'json': {'subject': ''}}])
+assert call(describe, confirm)[0] == 502 and call(missing)[1]['images']
+assert call(describe, confirm)[0] == 409 and len(openai()) == 1
+openai([{'delay': 1}])
+with ThreadPoolExecutor(1) as pool:
+    pending = pool.submit(call, describe, {**confirm, 'request': str(uuid.uuid4())})
+    for _ in range(50):
+        if openai(): break
+        time.sleep(0.02)
+    assert call(describe, {**confirm, 'request': str(uuid.uuid4())})[0] == 409
+    status, described = pending.result()
+assert status == 200 and len(openai()) == 1 and call(missing)[1]['images'] == [], described
+assert described['has_visual_description'] and described['description'] == real['description'] and described['revision'] == real['revision']
+assert described['visual_description']['sections']['viewpoint'] == 'Ripresa frontale.'
+assert described['visual_description']['indications']['museum_or_catalog'] == {'applies': True, 'reason': 'Fondo neutro.'}
+assert described['visual_description']['model'] == openai()[0]['body']['model'] and described['visual_description']['base_context']
+body = openai()[0]['body']; sent = body['input'][0]['content']
+assert body['text']['format']['name'] == 'real_visual_description' and sent[1]['detail'] == 'high'
+assert json.loads(sent[0]['text'])['source']['description'] == real['description']
+request = urllib.request.Request(base + real['original'], headers={'Authorization': 'Bearer ' + token})
+with urllib.request.urlopen(request) as f: assert base64.b64decode(sent[1]['image_url'].split(',', 1)[1]) == f.read()
+listed = call(f'{API}?gallery={gallery_id}&origin=REAL')[1]
+assert listed['undescribed'] == 0 and listed['items'][0]['has_visual_description'] and 'visual_description' not in listed['items'][0]
+assert call(describe, confirm)[0] == 200 and len(openai()) == 1
+for item in (real, slop, trash):
+    call(f'{API}/{item["id"]}/trash', {}); call(f'{API}/{item["id"]}', method='DELETE')
+print('Analysis integration passed: model settings, measures, ideas and private visual descriptions of REAL originals.')

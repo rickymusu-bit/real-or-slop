@@ -10,11 +10,14 @@ import { editFrame } from "./crop-editor";
 import { withPhotoProcessing } from "./photo-processing";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
+import type { VisualDescription } from "../shared/real-description";
+import { describePhotos, visualDescription } from "./real-description";
 
 type Stage = 1 | 2 | 3 | 4;
 interface Image {
   id: string; gallery_id: string; origin: "REAL" | "SLOP"; status: "new" | "approved" | "published" | "trash";
   revision: number; title: string; description: string;
+  visual_description?: VisualDescription | null;
   source_url: string; author: string; license_name: string; license_url: string;
   width: number; height: number; file: string;
   copy: { width: number; height: number; bytes: number; crop: Crop | null } | null;
@@ -33,7 +36,7 @@ const errorText = (error: unknown) => error instanceof Error ? error.message : S
 const short = (value: string, count = 90) => value.length > count ? value.slice(0, count - 1) + "…" : value;
 
 export interface RealWizard { sync(): Promise<void> }
-export async function mountRealWizard(root: HTMLElement, galleryId: string): Promise<RealWizard> {
+export async function mountRealWizard(root: HTMLElement, galleryId: string, paidCalls: boolean): Promise<RealWizard> {
   const draftKey = "ros-real-wizard-v2:" + galleryId;
   let stage: Stage = 1, images: Image[] = [], notice = "", busy = false, query = "", sort = "relevance";
   /** Pages of Commons results already loaded: files and the offset of the following page. */
@@ -146,12 +149,17 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
       '">Apri il testo della licenza</a></dd>' : "") + "</dl></details>";
   const second = () => '<p class="hint">La descrizione della fonte arriva da Commons: correggila se serve. Resta nel catalogo e ' +
     'accompagna la foto quando ispira le SLOP automatiche.</p>' +
+    (paidCalls && staged().some(i => !i.visual_description)
+      ? '<p><button type="button" data-rw="describe">Genera le descrizioni visive mancanti</button></p>' : "") +
     '<div class="rw-editor-grid">' + staged().map(item => '<article class="rw-editor" data-rw-image="' + escape(item.id) + '">' +
       '<div class="rw-image"><img src="' + escape(item.file) + '" alt="' + escape(item.title) + '" loading="lazy"></div>' +
       '<div class="rw-editor-fields"><h3>' + escape(short(item.title, 90)) + '</h3>' +
       '<label class="rw-description">Descrizione della fonte <small>(contesto per il catalogo)</small><textarea data-rw-description="' +
         escape(item.id) + '" maxlength="1000" rows="3" placeholder="Che cosa mostra la foto, dove e quando">' + escape(item.description) + '</textarea></label>' +
+      (item.visual_description ? visualDescription(item.visual_description) : '<p class="hint">Descrizione visiva da generare.</p>') +
       '<div class="rw-actions">' +
+      (paidCalls && !item.visual_description ? '<button type="button" data-rw="describe" data-id="' + escape(item.id) +
+        '">Genera descrizione (1 chiamata)</button>' : "") +
       '<button type="button" data-rw="discard" data-id="' + escape(item.id) + '">Togli dal caricamento</button>' +
       '</div>' + metadata(item) + '</div></article>').join("") + '</div>' +
     '<div class="rw-actions rw-bottom"><button type="button" data-rw="back">Indietro</button>' +
@@ -382,6 +390,12 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string): Pro
       } else if (action === "next-results") await browse(true);
       else if (action === "prev-results" && page > 0) { page--; notice = ""; render(); }
       else if (action === "import") await acquire();
+      else if (action === "describe") {
+        await saving.catch(() => {});
+        const targets = staged().filter(item => !item.visual_description && (!id || item.id === id));
+        const result = await describePhotos(targets, galleryId, api<Image>, replace);
+        if (result !== null) notice = result;
+      }
       else if (action === "back") { stage = stage > 1 ? (stage - 1) as Stage : 1; notice = ""; persist(); render(); }
       else if (action === "to-crop") {
         const dropped = await syncStaged();

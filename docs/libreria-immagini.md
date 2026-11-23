@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.5.0
+# Libreria delle immagini — specifica 10.6.0
 
-Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
+Stato: implementata nel ramo 1.58.0, da rilasciare. Aggiornata: 2026-11-23T20:46:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -14,7 +14,7 @@ Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00
   completamento di Genere, Colore e Supporto.
   Approvare una foto non richiede più tag. Le decisioni precedenti sui tag (2026-11-09, 2026-11-10, 2026-11-14 e 2026-11-17) sono
   superate e restano nella cronologia git.
-- **Niente descrizione editoriale né analisi delle REAL; niente descrizione delle SLOP** (decisioni del 2026-11-20). Nei risultati
+- **Descrizione visiva privata per le REAL** (decisione del 2026-11-23, sezione 11). Nei risultati
   le REAL mostrano solo i crediti (titolo, autore, licenza, link alla foto originale, modifiche della copia) e le SLOP prompt e modello.
   Il modello delle proposte SLOP riceve l'originale intero, il titolo e la descrizione della fonte. La migrazione 0066 elimina la
   descrizione editoriale, la sua provenienza, il testo Commons originale e i campi dell'analisi, e svuota la descrizione delle SLOP.
@@ -30,7 +30,7 @@ Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00
   oggetti, riquadri e categorie di dettaglio; i due punteggi da 0 a 100 li calcola il codice. Soglie per galleria con valore
   predefinito nelle Impostazioni; una REAL oltre una soglia è **solo segnalata**. Le misure guidano anche l'estrazione corretta delle
   REAL per i batch automatici (specifica `generazione-slop`, sezione 2). Modifica la decisione del
-  2026-11-20 sulle REAL non analizzate, che resta valida per descrizioni e analisi di ogni altro tipo. Dopo le prime misure reali,
+  2026-11-20 sulle REAL non analizzate. Dopo le prime misure reali,
   lo stesso giorno: gradi 0, 1 e 2 per ogni categoria e una categoria per persone e anatomia, perché con la prima formula ogni console
   spuntava tutte le categorie e valeva 100, e le persone, che i generatori sbagliano spesso, abbassavano il dettaglio.
 - Niente prezzi né budget: ogni chiamata a pagamento si conferma e si registra senza importi; il limite di spesa è quello del progetto
@@ -60,6 +60,7 @@ Una sola raccolta di immagini REAL e SLOP.
 |---|---|---|---|
 | Titolo | sì | no | Titolo REAL nei crediti e nelle proposte SLOP; SLOP identificate dall’ID |
 | Descrizione della fonte | sì | no | Catalogo, ricerca e proposte SLOP automatiche |
+| Descrizione visiva | sì | no | Catalogo privato e base per le trasformazioni della nuova pipeline |
 | Fonte, autore, nome e URL licenza | sì | no | Provenienza, diritti, controllo ND e attribuzione della REAL |
 | Prompt e modello | no | sì | Ricostruzione della generazione, ricerca, prompt e modello nei crediti finali |
 | Originale/copia, hash, dimensioni, MIME, crop e misure | sì | sì | Archivio, verifica file, copie identiche nel gioco e rifacimento nel browser |
@@ -105,21 +106,19 @@ dell'aspetto (risoluzione, rumore, nitidezza, contrasto, saturazione, tinta e cr
 
 ## 5. Analisi (ritirata)
 
-Dal 2026-11-20 nessuna foto viene analizzata o descritta; dal 2026-11-21 le REAL si possono solo misurare (sezione 10). La rotta `POST /:id/analyze` e `GET /analysis` non esistono più; la
-manutenzione non segue più analisi in corso. Le chiamate di tipo `analysis` già registrate restano in `paid_calls`; dal 2026-11-21
-lo stesso tipo registra le misure di affollamento e dettaglio (sezione 10) e le statistiche lo chiamano «Analisi e misure delle
-REAL». L'invio dell'immagine al modello come data URL base64 scritta direttamente nei byte della richiesta resta per le
-proposte e le valutazioni delle SLOP (il 2026-11-15 cinque analisi su originali da 2 a 6 MB avevano superato i 128 MB del Worker).
+Le rotte `POST /:id/analyze` e `GET /analysis` sono ritirate dal 2026-11-20. In `paid_calls`, il tipo `analysis` registra le analisi
+storiche, le misure di affollamento e dettaglio (sezione 10) e le descrizioni visive private (sezione 11). Il Worker invia
+le immagini al modello con una data URL base64 scritta direttamente nei byte della richiesta.
 
 ## 6. Chiamate a pagamento e modelli
 
-- Quattro tipi: misure di affollamento e dettaglio delle REAL (`analysis`, sezione 10), proposte editoriali e prompt SLOP (anche le
+- Quattro tipi: misure e descrizioni visive delle REAL (`analysis`, sezioni 10 e 11), proposte editoriali e prompt SLOP (anche le
   idee di falsificazione delle REAL; le indicazioni proposte per una galleria sono state tolte il 2026-11-22), immagini SLOP, valutazione SLOP intera. Le SLOP accettate non richiedono altre chiamate. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
 - **Esiti:** risposta valida → `completed`; errore 4xx → `failed`, senza addebito; errore 5xx, timeout o rete → `uncertain`, mai
   ripetuta in automatico. Chiave rifiutata, limite di spesa o credito OpenAI esaurito fermano le serie con un messaggio che rimanda a
   platform.openai.com.
 - **Registro** `paid_calls`: tipo, modello, esito, token, date; nessun importo e collegamenti a immagine, processo e tentativo, azzerati alla cancellazione; nessun archivio delle immagini eliminate.
-- **Modelli:** modello di testo (misure e idee delle REAL, proposte editoriali e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
+- **Modelli:** modello di testo (descrizioni, misure e idee delle REAL, proposte editoriali e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
   elencati nel codice e presenti nel progetto OpenAI (`GET /v1/models`, in cache per un'ora; se l'elenco non si legge si offrono tutti).
   Ogni chiamata registra il modello usato.
 - Senza il segreto `OPENAI_API_KEY` le chiamate a pagamento sono spente. Nei test solo il modello finto `tests/fake_openai.py`.
@@ -255,3 +254,21 @@ essere molto dettagliata. Il medium fotografico, terzo asse possibile, riguarda 
 - **Uso nella generazione.** Le idee di falsificazione ricevono l'ultima misura e l'estrazione automatica è corretta sui due assi
   (specifica `generazione-slop`, sezioni 1 e 2). La valutazione per asse delle SLOP, discussa con l'owner il 2026-11-21, non è ancora
   implementata.
+
+## 11. Descrizione visiva delle REAL
+
+Il modello delle Impostazioni riceve l'originale intero, titolo e descrizione della fonte e della galleria. Restituisce in italiano
+una descrizione complessiva, otto assi (tipo del soggetto, aspetto del soggetto, persone, ambiente, punto di vista, luce, tecnica,
+resa) e le incertezze. Descrive marca, modello, colore, usura, parti, disposizione, conteggi e scritte quando distinguibili.
+Registra inoltre, con una motivazione, se la foto sembra da museo o da catalogo, l'esemplare è unico o famoso e lo sfondo è riconoscibile.
+Le informazioni riportate dalla fonte sono distinte dalle osservazioni. Tipo di apparecchio e altri dettagli inferiti sono qualificati.
+
+- «Carica REAL», passo 2, permette di descrivere una foto o tutte quelle in caricamento ancora da descrivere. Nella galleria,
+  «Descrivi le REAL» include nuove, approvate e pubblicate ancora prive di descrizione. L'elenco proviene da `GET /undescribed-reals?gallery=`.
+  Le miniature prive di descrizione hanno un'icona. Il dettaglio della foto mostra il testo salvato e permette di generarlo se manca.
+- Il browser conferma il massimo e invia `POST /:id/description {confirm, request, gallery_id}` per foto, in sequenza mentre la
+  pagina è aperta. La richiesta è registrata una sola volta. Le chiamate incerte si fermano per quella foto. Una descrizione già
+  salvata si riusa, anche se la foto cambia galleria.
+- La migrazione 0071 aggiunge la descrizione e il controllo delle richieste in corso. Il testo si salva con modello, data e versione
+  della base comune, separato dalla fonte Commons. La griglia riceve solo lo stato di presenza. Il testo si cancella con la REAL ed
+  è disponibile solo in amministrazione. L'approvazione e la pubblicazione funzionano anche in attesa della descrizione.
