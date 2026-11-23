@@ -1,7 +1,7 @@
-# Libreria delle immagini — specifica 10.6.0
+# Libreria delle immagini — specifica 10.6.1
 
 Stato: implementata nella 1.57.0; le parti decise il 2026-11-23 sono da implementare (specifica `generazione-slop` 16.0.0).
-Aggiornata: 2026-11-23T05:00:00Z.
+Aggiornata: 2026-11-23T06:30:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -22,7 +22,7 @@ Aggiornata: 2026-11-23T05:00:00Z.
   Superano le decisioni del 2026-11-09 (analisi una volta per immagine), del 2026-11-19 (ripetizione dell'analisi, descrizione nei
   risultati) e quella di poche ore prima sulle incertezze.
 - **Descrizione per assi delle REAL** (decisione del 2026-11-23, da implementare): nel wizard SLOP un modello descrive la REAL asse
-  per asse, con le indicazioni «foto da museo o da catalogo» ed «esemplare unico», e l'owner la corregge. È interna alla generazione
+  per asse, con le indicazioni «foto da museo o da catalogo», «esemplare unico» e «sfondo riconoscibile», e l'owner la corregge. È interna alla generazione
   delle SLOP, che si ottengono modificando la REAL, e non compare nel gioco; il dettaglio della REAL la mostra in sola lettura.
   Sostituisce le proposte delle REAL (decisioni del 2026-11-21 e del 2026-11-22). Regole nella specifica `generazione-slop`, sezione 2.
 - **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, numero modificabile dalle Impostazioni, ciascuna solo tre mesi dopo l'ultimo controllo; un

@@ -1,6 +1,6 @@
-# Privacy e note legali — specifica 1.6.0
+# Privacy e note legali — specifica 1.6.1
 
-Stato: vigente; le parti decise il 2026-11-23 sono da implementare. Aggiornata: 2026-11-23T06:00:00Z.
+Stato: vigente; le parti decise il 2026-11-23 sono da implementare. Aggiornata: 2026-11-23T06:30:00Z.
 1.2.0: su richiesta dell'owner del 2026-11-14 i Termini d'uso (aggiornati il 14 novembre 2026) dicono che le SLOP sono generate «senza
 parti di fotografie vere, e spesso ridotte, sfocate, sgranate o sbiadite come lo sono le immagini che circolano», al posto di «generate
 integralmente», per il trattamento delle SLOP (specifica `copie-di-gioco`, sezione 4); «Fonti e crediti» lo dice allo stesso modo.
@@ -70,8 +70,9 @@ licenza con link, link alla fonte e indicazione delle modifiche. «Fonti e credi
 SLOP sono indicati prompt e modello. Privacy e Termini non cambiano; la frase verificata sul trattamento delle SLOP resta invariata.
 
 **SLOP ottenute modificando una REAL** (decisione dell'owner del 2026-11-23, specifica `generazione-slop`, sezione 2). Il generatore
-riceve la REAL e la trasforma: il punto di vista cambia sempre (rotazione, altezza della camera o distanza); in una foto ordinaria
-cambia anche l'ambiente, nelle foto da museo o da catalogo il soggetto; le scritte della REAL non si riproducono. Per l'owner la SLOP non è
+riceve la REAL e la trasforma: il punto di vista cambia sempre (rotazione, altezza della camera o distanza) e cambia almeno
+un'altra trasformazione, il soggetto nelle foto da museo o da catalogo, lo sfondo quando è riconoscibile; le scritte della REAL non si
+riproducono. Il valutatore riceve anche la REAL per verificare il cambio del punto di vista. Per l'owner la SLOP non è
 un'opera derivata della foto: le trasformazioni sostituiscono le scelte del fotografo e ciò che resta, l'oggetto ritratto, non è opera
 sua. Per questo la SLOP non porta crediti né licenza della REAL. Il legale ha verificato questa valutazione il 2026-11-23 e ha chiesto
 che il punto di vista cambi sempre, perché altrimenti resterebbe l'inquadratura scelta dal fotografo: è una condizione, non una

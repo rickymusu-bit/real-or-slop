@@ -1,7 +1,7 @@
-# Generazione SLOP — specifica 16.1.0
+# Generazione SLOP — specifica 16.2.0
 
 Stato: decisa il 2026-11-23, da implementare; fino al rilascio il codice segue la specifica 15.0.0
-(`git show v1.57.0:docs/generazione-slop.md`). Aggiornata: 2026-11-23T06:00:00Z.
+(`git show v1.57.0:docs/generazione-slop.md`). Aggiornata: 2026-11-23T06:30:00Z.
 
 ## 1. Un solo wizard
 
@@ -61,9 +61,10 @@ superficie, sfondo e altri oggetti), **punto di vista** (altezza, angolo, distan
   modificabile «Descrizione delle REAL per le SLOP».
 - **Risposta** (schema rigido): per ogni asse una descrizione concreta e visiva, senza giudizi, con il modello o l'edizione quando sono
   riconoscibili e le parti strutturali visibili del soggetto (tasti, interruttori, slot, porte, scritte); una descrizione complessiva;
-  due indicazioni con il motivo: **foto da museo o da catalogo** (fondo neutro, vetrina o allestimento da studio) ed **esemplare unico o
+  tre indicazioni con il motivo: **foto da museo o da catalogo** (fondo neutro, vetrina o allestimento da studio), **esemplare unico o
   famoso** (un reperto esposto, un oggetto unico o noto per la sua storia, non un esemplare qualsiasi di un prodotto di serie; un numero
-  di inventario non basta).
+  di inventario non basta) e **sfondo riconoscibile** (oggetti, luoghi o scritte dello sfondo che permetterebbero di riconoscere la
+  foto; un fondo neutro, un muro o un tessuto qualsiasi non lo sono).
 - **Conservazione.** Una descrizione per REAL, salvata e riusata per tutte le sue SLOP. L'owner corregge gratis testo e indicazioni
   (`PATCH /:id/description`); una nuova richiesta la sostituisce. Si cancella con la REAL. Il dettaglio della REAL nella galleria la
   mostra in sola lettura.
@@ -79,12 +80,16 @@ tecnica e resa si valuteranno dopo. Regole diverse per ogni galleria sono una te
 sulle licenze, specifica `privacy-note-legali`, sezione 6). Cambiarlo non vuol dire solo ruotare a destra o a sinistra intorno al
 soggetto: si può cambiare l'altezza della camera rispetto al soggetto (dall'alto, alla sua altezza, dal basso) o la distanza
 (più vicino o più lontano, con l'inquadratura che ne segue). Il codice sceglie a caso quali di queste tre componenti cambiano,
-almeno una. Nelle prove sono state verificate soprattutto le rotazioni; altezza e distanza vanno verificate sui primi batch.
+almeno una. Il cambio deve essere visibile: nelle prove il generatore ha ridotto o ignorato più volte le rotazioni richieste. Sono
+state verificate soprattutto le rotazioni; altezza e distanza vanno verificate sui primi batch.
 
-- **Foto ordinaria:** cambiano **ambiente e punto di vista**; l'aspetto del soggetto resta (la scelta a caso fra soggetto e punto di
-  vista del 2026-11-23 è superata dalla stessa giornata).
-- **Foto da museo o da catalogo, ed esemplare unico:** cambiano **aspetto del soggetto e punto di vista**, l'ambiente resta. Resta il
-  luogo (fondo, ripiano, vetrina); gli altri oggetti esposti si tolgono o si sostituiscono.
+**Almeno due trasformazioni su tre** fra soggetto, punto di vista e sfondo (decisione dell'owner del 2026-11-23): il punto di vista
+e una seconda, scelta così:
+
+- **Foto da museo o da catalogo, ed esemplare unico:** cambia il **soggetto**. Resta il luogo (fondo, ripiano, vetrina), perché una
+  foto da catalogo resta tale; gli altri oggetti esposti si tolgono o si sostituiscono.
+- **Sfondo riconoscibile**, nelle altre foto: cambia lo **sfondo**, con il suo ambiente.
+- **Negli altri casi** la seconda trasformazione si sceglie a caso fra soggetto e sfondo.
 - **Esemplare unico:** cambia anche il **tipo del soggetto**, con un altro modello della galleria, e la **condizione distintiva resta**:
   dal Game Boy bruciato della galleria si passa a un Game Boy Advance bruciato.
 - Le persone della REAL non restano mai: si sostituiscono con persone inventate o si tolgono, e il numero può cambiare (specifica
@@ -99,8 +104,10 @@ e un breve elenco ordinato di **cambiamenti** concreti e visibili (soggetto, poi
 
 - gli assi da cambiare cambiano in modo netto: messe una accanto all'altra, REAL e SLOP non devono sembrare due scatti della stessa
   sessione;
-- **aspetto del soggetto:** solo edizioni e colori realmente esistiti; se non se ne conoscono altri cambiano stato d'uso o
-  configurazione. Niente modelli mai commercializzati;
+- **aspetto del soggetto:** edizioni, colori e decorazioni plausibili, anche mai esistiti, coerenti con le abitudini del produttore e
+  con l'epoca: per esempio un'edizione speciale del Game Boy Color a tema Charizard (decisione dell'owner del 2026-11-23). Un
+  colore estraneo al prodotto e alla sua epoca, come un Super Famicom blu nelle prove, non è plausibile. Il tipo del soggetto, quando
+  cambia, è un modello realmente esistito;
 - **punto di vista:** cambiano le componenti estratte (rotazione, altezza, distanza); si sposta la camera, non l'oggetto. Il soggetto mantiene posizione e allineamento rispetto al piano d'appoggio e
   ai bordi della scena, e tutte le linee della scena cambiano prospettiva insieme; la descrizione dice che cosa entra ed esce
   dall'inquadratura;
@@ -126,7 +133,7 @@ changes?}`, gratuito, si salva da solo). La descrizione di arrivo approvata è l
    proposta: le REAL estratte arrivano già selezionate e l'owner ne toglie o aggiunge fra tutte quelle disponibili (`GET
    auto/candidates?gallery=`, con misura e descrizione). Selezione e scelte restano nella scheda del browser fino alla prima conferma.
    Tocco o pressione prolungata su una miniatura apre l’originale intero con la descrizione della fonte.
-3. **Descrizioni** (sezione 2). Per ogni REAL scelta la sua descrizione per assi con le due indicazioni, modificabile, oppure
+3. **Descrizioni** (sezione 2). Per ogni REAL scelta la sua descrizione per assi con le tre indicazioni, modificabile, oppure
    «Chiedi al modello».
 4. **Trasformazioni.** L'owner indica quante SLOP generare da ogni REAL descritta, da 1 a 10 in tutto per batch. `POST auto/prepare
    {gallery_id, slots, count, request, confirm: true}` è la prima conferma, del massimo di una chiamata per SLOP. `request` è un UUID
@@ -163,8 +170,11 @@ REAL: 1536 pixel sul lato lungo, lati multipli di 16. Ogni tentativo riparte dal
 inviato al generatore si salva come prompt della SLOP (dashboard e ricerca; non compare nei risultati del gioco).
 
 **Valutazione.** La Responses API riceve l’intera candidata corrente prima di cropping o trattamento, l’ID del tentativo, la
-descrizione di arrivo approvata e i cambiamenti, titolo e descrizione della galleria, il testo corrente e la tolleranza congelata. Non
-riceve la REAL. Il modello usa versioni congelate della base e del contesto di valutazione, senza conversazioni precedenti. La
+descrizione di arrivo approvata e i cambiamenti, titolo e descrizione della galleria, il testo corrente e la tolleranza congelata, e
+anche la REAL, ridotta come per il generatore (decisione dell'owner del 2026-11-23): serve a verificare che il punto di vista sia
+cambiato in modo visibile, condizione posta dal legale, che le altre trasformazioni richieste ci siano, che le scritte della REAL non
+siano state riprodotte e che le due foto non sembrino della stessa sessione. Un punto di vista non cambiato è un difetto critico. Il
+modello usa versioni congelate della base e del contesto di valutazione, senza conversazioni precedenti. La
 credibilità fotografica ha priorità sui dettagli secondari. Oltre alla credibilità controlla le parti strutturali del soggetto, la
 coerenza prospettica fra soggetto e scena (un oggetto ruotato rispetto ai bordi del piano o della vetrina è un difetto), luce e riflessi
 coerenti con l'ambiente e le scritte. I difetti critici e gli assi richiesti non cambiati impediscono l’accettazione automatica. Una
@@ -207,7 +217,7 @@ nuova proposta, che sviluppa l'idea, se il testo in vigore era ancora quello sal
 
 **Da implementare (decisione del 2026-11-23).** Una nuova migrazione:
 
-- aggiunge le descrizioni delle REAL (una per REAL: descrizione per assi, descrizione complessiva, le due indicazioni con il motivo,
+- aggiunge le descrizioni delle REAL (una per REAL: descrizione per assi, descrizione complessiva, le tre indicazioni con il motivo,
   modello, versioni del contesto, data e se l'owner l'ha corretta), cancellate con la REAL, e il conteggio delle SLOP accettate nate da
   ogni REAL, che sostituisce le idee usate nell'estrazione corretta;
 - aggiunge ai processi gli assi estratti, la descrizione di arrivo e i cambiamenti, al posto di premessa e idea per i nuovi processi

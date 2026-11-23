@@ -1,7 +1,7 @@
-# Foto e gallerie — specifica 10.6.0
+# Foto e gallerie — specifica 10.6.1
 
 Stato: implementata nella 1.57.0; le parti decise il 2026-11-23 sono da implementare (specifica `generazione-slop` 16.0.0).
-Aggiornata: 2026-11-23T05:00:00Z.
+Aggiornata: 2026-11-23T06:30:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -79,7 +79,7 @@ suo batch originario, ma esce dalla sua revisione operativa.
   conferma e avviso di elaborazione al centro) e, a richiesta, gli oggetti dell'ultima misura disegnati sull'originale intero con le
   categorie di dettaglio e l'elenco di tutte le misure (specifica `libreria-immagini`, sezione 10).
 - **Descrizione per assi (REAL):** sotto la misura, in sola lettura, la descrizione per assi con le indicazioni «foto da museo o da
-  catalogo» ed «esemplare unico», data, modello e se l'owner l'ha corretta, e il numero di SLOP accettate nate dalla REAL. Si chiede
+  catalogo», «esemplare unico» e «sfondo riconoscibile», data, modello e se l'owner l'ha corretta, e il numero di SLOP accettate nate dalla REAL. Si chiede
   e si corregge nel wizard «Genera SLOP» (specifica `generazione-slop`, sezione 2; decisione del 2026-11-23, da implementare).
 - **Rigenerare una SLOP:** richiede un nuovo batch del wizard «Genera SLOP», con conferma ed esame dell’immagine intera.
 - **Fonte su Commons (REAL):** sopra il corpo del dettaglio, l'ultima data in cui il controllo notturno ha trovato il file oppure,
