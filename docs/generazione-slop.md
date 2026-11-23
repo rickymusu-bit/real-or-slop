@@ -1,7 +1,7 @@
-# Generazione SLOP — specifica 16.0.0
+# Generazione SLOP — specifica 16.1.0
 
 Stato: decisa il 2026-11-23, da implementare; fino al rilascio il codice segue la specifica 15.0.0
-(`git show v1.57.0:docs/generazione-slop.md`). Aggiornata: 2026-11-23T05:00:00Z.
+(`git show v1.57.0:docs/generazione-slop.md`). Aggiornata: 2026-11-23T06:00:00Z.
 
 ## 1. Un solo wizard
 
@@ -72,10 +72,17 @@ superficie, sfondo e altri oggetti), **punto di vista** (altezza, angolo, distan
 
 Il codice sceglie, per ogni SLOP, quali assi cambiano; luce, tecnica, resa e tipo del soggetto restano quelli della REAL salvo le
 eccezioni sotto. Niente blocco degli assi per galleria (decisione del 2026-11-23: per ora tutti gli assi sono sbloccati); luce,
-tecnica e resa si valuteranno dopo.
+tecnica e resa si valuteranno dopo. Regole diverse per ogni galleria sono una teoria dell'owner da provare (2026-11-23): finché non
+è provata, le regole sotto valgono per tutte le gallerie.
 
-- **Foto ordinaria:** l'**ambiente cambia sempre**; fra aspetto del soggetto e punto di vista uno resta, scelto a caso, l'altro
-  cambia.
+**Il punto di vista cambia sempre** (decisione dell'owner del 2026-11-23, su indicazione del legale che ha verificato la valutazione
+sulle licenze, specifica `privacy-note-legali`, sezione 6). Cambiarlo non vuol dire solo ruotare a destra o a sinistra intorno al
+soggetto: si può cambiare l'altezza della camera rispetto al soggetto (dall'alto, alla sua altezza, dal basso) o la distanza
+(più vicino o più lontano, con l'inquadratura che ne segue). Il codice sceglie a caso quali di queste tre componenti cambiano,
+almeno una. Nelle prove sono state verificate soprattutto le rotazioni; altezza e distanza vanno verificate sui primi batch.
+
+- **Foto ordinaria:** cambiano **ambiente e punto di vista**; l'aspetto del soggetto resta (la scelta a caso fra soggetto e punto di
+  vista del 2026-11-23 è superata dalla stessa giornata).
 - **Foto da museo o da catalogo, ed esemplare unico:** cambiano **aspetto del soggetto e punto di vista**, l'ambiente resta. Resta il
   luogo (fondo, ripiano, vetrina); gli altri oggetti esposti si tolgono o si sostituiscono.
 - **Esemplare unico:** cambia anche il **tipo del soggetto**, con un altro modello della galleria, e la **condizione distintiva resta**:
@@ -94,7 +101,7 @@ e un breve elenco ordinato di **cambiamenti** concreti e visibili (soggetto, poi
   sessione;
 - **aspetto del soggetto:** solo edizioni e colori realmente esistiti; se non se ne conoscono altri cambiano stato d'uso o
   configurazione. Niente modelli mai commercializzati;
-- **punto di vista:** si sposta la camera, non l'oggetto. Il soggetto mantiene posizione e allineamento rispetto al piano d'appoggio e
+- **punto di vista:** cambiano le componenti estratte (rotazione, altezza, distanza); si sposta la camera, non l'oggetto. Il soggetto mantiene posizione e allineamento rispetto al piano d'appoggio e
   ai bordi della scena, e tutte le linee della scena cambiano prospettiva insieme; la descrizione dice che cosa entra ed esce
   dall'inquadratura;
 - **ambiente:** quello nuovo non contiene oggetti riconoscibili della REAL; luce e riflessi sul soggetto si adattano alla scena;

@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 35.0.0, aggiornata il 2026-11-23T05:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 35.1.0, aggiornata il 2026-11-23T06:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -22,11 +22,11 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   modello ne misura affollamento e dettaglio, con soglie per galleria e sola segnalazione (decisioni del 2026-11-21, specifica
   `libreria-immagini`, sezione 10), e ne scrive una descrizione per assi, interna alla generazione delle SLOP e mai mostrata nel
   gioco (decisione del 2026-11-23, che supera quella del 2026-11-20 per cui nessun modello descrive le REAL).
-- **La SLOP si ottiene modificando la REAL** (decisione del 2026-11-23, specifica `generazione-slop` 16.0.0, che sostituisce le
+- **La SLOP si ottiene modificando la REAL** (decisione del 2026-11-23, specifica `generazione-slop` 16.1.0, che sostituisce le
   proposte delle REAL e il principio per cui la REAL ispira la SLOP senza esserne la base). Il generatore di immagini riceve la REAL
   **intera** (l'originale, mai il ritaglio 4:5: decisione del 2026-11-15) con una descrizione di arrivo che cambia alcuni assi e
-  conserva gli altri. In una foto ordinaria l'ambiente cambia sempre e fra aspetto del soggetto e punto di vista ne resta uno, a
-  caso; nelle foto da museo o da catalogo e per gli esemplari unici cambiano soggetto e punto di vista e resta il luogo, senza gli
+  conserva gli altri. Il punto di vista cambia sempre, su indicazione del legale: rotazione, altezza della camera o distanza dal
+  soggetto. In una foto ordinaria cambia anche l'ambiente; nelle foto da museo o da catalogo e per gli esemplari unici cambiano soggetto e punto di vista e resta il luogo, senza gli
   altri oggetti; un esemplare unico diventa un altro modello con la stessa condizione distintiva. Si sposta la camera, non
   l'oggetto. Solo edizioni realmente esistite; le scritte della REAL non si riproducono, tranne quelle del design del prodotto; le
   persone si sostituiscono con persone inventate. Messe accanto, REAL e SLOP non sembrano della stessa sessione.
@@ -38,7 +38,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   «Carica REAL» e «Genera SLOP» su indirizzi dedicati nella stessa scheda. Il wizard REAL acquisisce dalle ricerche su Commons.
   Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino,
   cambio galleria e, per le REAL, la misura a pagamento; le descrizioni per assi stanno solo nel wizard. La barra lascia visibile la griglia.
-- **Un solo wizard SLOP** (decisioni del 2026-11-18, #157, del 2026-11-22 e del 2026-11-23, specifica `generazione-slop` 16.0.0).
+- **Un solo wizard SLOP** (decisioni del 2026-11-18, #157, del 2026-11-22 e del 2026-11-23, specifica `generazione-slop` 16.1.0).
   Niente generazione manuale né indicazioni di galleria. Passi: galleria; REAL da un'estrazione gratuita corretta su affollamento e
   dettaglio, che l'owner modifica; descrizione per assi di ogni REAL, chiesta al modello e corretta dall'owner (salvata sulla REAL);
   trasformazioni, con gli assi estratti dal codice e descrizione di arrivo e cambiamenti scritti dal modello (prima conferma), che

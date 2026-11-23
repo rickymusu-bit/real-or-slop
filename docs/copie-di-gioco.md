@@ -1,7 +1,7 @@
-# Copie di gioco — specifica 13.1.0
+# Copie di gioco — specifica 13.1.1
 
 Stato: implementata nella 1.57.0; le parti decise il 2026-11-23 sono da implementare (specifica `generazione-slop` 16.0.0).
-Aggiornata: 2026-11-23T05:00:00Z. Dal 2026-11-22 la «revisione dello studio SLOP»
+Aggiornata: 2026-11-23T06:00:00Z. Dal 2026-11-22 la «revisione dello studio SLOP»
 è il passo di revisione del wizard «Genera SLOP» (specifica `generazione-slop`).
 
 ## 1. Decisioni dell'owner
@@ -10,7 +10,7 @@ Aggiornata: 2026-11-23T05:00:00Z. Dal 2026-11-22 la «revisione dello studio SLO
   un errore troppo evidente e le dà un'inquadratura diversa da quella della REAL di riferimento. Annulla la decisione del 2026-11-13
   (copia nel formato più vicino a quello della foto), presa perché con il 4:5 le REAL apparivano tagliate e le SLOP composte per quel
   riquadro. Quel difetto non torna: una SLOP viene generata nel formato derivato dalla REAL e poi ritagliata in 4:5. Dal 2026-11-23
-  la SLOP si ottiene modificando la REAL e può conservarne il punto di vista, ma non la scena (specifica `generazione-slop`, sezione 2).
+  la SLOP si ottiene modificando la REAL e ne cambia sempre il punto di vista (specifica `generazione-slop`, sezione 2).
 - La foto intera è l’inquadratura predefinita delle nuove copie. L’originale è centrato nel 4:5 con bande nere sopra e sotto o ai
   lati secondo le proporzioni. «Inquadratura» mostra subito il riquadro sulla stessa area, bande comprese. Allontanare due dita
   allarga il riquadro. Avvicinarle lo restringe (2026-11-20).
