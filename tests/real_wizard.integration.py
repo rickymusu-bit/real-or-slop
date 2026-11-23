@@ -222,7 +222,7 @@ with sync_playwright() as p:
         expect(a.locator('[data-visual-description]')).to_have_count(1)
         expect(b.locator('[data-visual-description]')).to_have_count(0)
         a.locator('[data-visual-description] summary').click()
-        expect(a.get_by_text('Ripresa frontale.', exact=True)).to_be_visible()
+        expect(a.locator('dd[lang=en]', has_text='Front view.')).to_have_text('Front view.')
         assert any('Massimo 1 chiamata a pagamento' in m for m in confirmations), confirmations
         expect(a.locator('[data-rw=crop]')).to_have_count(0)  # the crop is a step of its own
         expect(page.locator('[data-rw="choose-tags"], [data-rw="choose-caption"]')).to_have_count(0)

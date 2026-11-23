@@ -266,11 +266,12 @@ with ThreadPoolExecutor(1) as pool:
     status, described = pending.result()
 assert status == 200 and len(openai()) == 1 and call(missing)[1]['images'] == [], described
 assert described['has_visual_description'] and described['description'] == real['description'] and described['revision'] == real['revision']
-assert described['visual_description']['sections']['viewpoint'] == 'Ripresa frontale.'
-assert described['visual_description']['indications']['museum_or_catalog'] == {'applies': True, 'reason': 'Fondo neutro.'}
+assert described['visual_description']['sections']['viewpoint'] == 'Front view.'
+assert described['visual_description']['indications']['museum_or_catalog'] == {'applies': True, 'reason': 'Neutral background.'}
 assert described['visual_description']['model'] == openai()[0]['body']['model'] and described['visual_description']['base_context']
 body = openai()[0]['body']; sent = body['input'][0]['content']
 assert body['text']['format']['name'] == 'real_visual_description' and sent[1]['detail'] == 'high'
+assert 'Write all generated text in English' in body['instructions'] and 'in its original language' in body['instructions']
 assert json.loads(sent[0]['text'])['source']['description'] == real['description']
 request = urllib.request.Request(base + real['original'], headers={'Authorization': 'Bearer ' + token})
 with urllib.request.urlopen(request) as f: assert base64.b64decode(sent[1]['image_url'].split(',', 1)[1]) == f.read()

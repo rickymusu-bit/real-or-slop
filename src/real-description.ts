@@ -8,9 +8,9 @@ interface Target { id: string; title: string }
 export function visualDescription(description: VisualDescription): string {
   return `<details class="editorial-description" data-visual-description><summary>Descrizione visiva</summary>
     <dl>${VISUAL_KEYS.filter(key => description.sections[key]).map(key => `<dt>${VISUAL_SECTIONS[key]}</dt>
-      <dd>${escape(description.sections[key])}</dd>`).join("")}</dl>
+      <dd lang="en">${escape(description.sections[key])}</dd>`).join("")}</dl>
     <h4>Indicazioni sulla scena</h4><dl>${INDICATION_KEYS.map(key => `<dt>${VISUAL_INDICATIONS[key]}</dt>
-      <dd>${description.indications[key].applies ? "Sì" : "No"}. ${escape(description.indications[key].reason)}</dd>`).join("")}</dl>
+      <dd>${description.indications[key].applies ? "Sì" : "No"}. <span lang="en">${escape(description.indications[key].reason)}</span></dd>`).join("")}</dl>
     <p class="hint">Generata con ${escape(description.model)}</p></details>`;
 }
 

@@ -1,11 +1,11 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-23T20:46:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-23T21:12:27Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
 ## 1.58.0 — 2026-11-23T20:46:00Z
 
-- Primo passo della nuova pipeline. Il modello descrive l'originale della REAL per otto assi e salva una vista complessiva, le
+- Primo passo della nuova pipeline. Il modello descrive in inglese l'originale della REAL per otto assi e salva una vista complessiva, le
   incertezze e le indicazioni sulla scena. La descrizione visiva è privata e distinta da quella della fonte Commons.
 - Nel passo «Descrizione» di «Carica REAL» si descrive una foto o tutte quelle ancora prive di descrizione. Nella galleria lo stesso
   comando copre tutte le REAL mancanti e ogni miniatura incompleta ha un'icona. Il dettaglio permette anche di descrivere una foto.

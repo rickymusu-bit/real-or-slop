@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 37.0.0, aggiornata il 2026-11-23T20:46:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 37.0.1, aggiornata il 2026-11-23T21:12:27Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,7 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.58.0:** descrizioni visive private delle REAL per otto assi, durante il caricamento o in gruppo dalla galleria. La griglia
+- **Ramo 1.58.0:** descrizioni visive private in inglese delle REAL per otto assi, durante il caricamento o in gruppo dalla galleria. La griglia
   segnala le REAL senza descrizione. Migrazione 0071. Il wizard SLOP usa ancora il flusso 1.57.0.
 - **In produzione la 1.57.0 (PR #173):** un solo wizard SLOP (galleria, REAL da un'estrazione corretta e modificabile, proposte dell'owner o del modello,
   scelta, prompt modificabili, generazione, revisione); tolta la generazione manuale; le proposte delle REAL si gestiscono solo nel

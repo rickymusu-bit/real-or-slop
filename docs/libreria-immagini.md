@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.6.0
+# Libreria delle immagini — specifica 10.6.1
 
-Stato: implementata nel ramo 1.58.0, da rilasciare. Aggiornata: 2026-11-23T20:46:00Z.
+Stato: implementata nel ramo 1.58.0, da rilasciare. Aggiornata: 2026-11-23T21:12:27Z.
 
 ## 1. Decisioni dell'owner
 
@@ -257,10 +257,11 @@ essere molto dettagliata. Il medium fotografico, terzo asse possibile, riguarda 
 
 ## 11. Descrizione visiva delle REAL
 
-Il modello delle Impostazioni riceve l'originale intero, titolo e descrizione della fonte e della galleria. Restituisce in italiano
+Il modello delle Impostazioni riceve l'originale intero, titolo e descrizione della fonte e della galleria. Restituisce in inglese
 una descrizione complessiva, otto assi (tipo del soggetto, aspetto del soggetto, persone, ambiente, punto di vista, luce, tecnica,
 resa) e le incertezze. Descrive marca, modello, colore, usura, parti, disposizione, conteggi e scritte quando distinguibili.
-Registra inoltre, con una motivazione, se la foto sembra da museo o da catalogo, l'esemplare è unico o famoso e lo sfondo è riconoscibile.
+Registra inoltre, con motivazioni in inglese, se la foto sembra da museo o da catalogo, l'esemplare è unico o famoso e lo sfondo è
+riconoscibile. Le scritte visibili si trascrivono nella lingua originale.
 Le informazioni riportate dalla fonte sono distinte dalle osservazioni. Tipo di apparecchio e altri dettagli inferiti sono qualificati.
 
 - «Carica REAL», passo 2, permette di descrivere una foto o tutte quelle in caricamento ancora da descrivere. Nella galleria,
