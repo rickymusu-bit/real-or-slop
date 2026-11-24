@@ -278,6 +278,68 @@ with urllib.request.urlopen(request) as f: assert base64.b64decode(sent[1]['imag
 listed = call(f'{API}?gallery={gallery_id}&origin=REAL')[1]
 assert listed['undescribed'] == 0 and listed['items'][0]['has_visual_description'] and 'visual_description' not in listed['items'][0]
 assert call(describe, confirm)[0] == 200 and len(openai()) == 1
-for item in (real, slop, trash):
+
+# An exact model match is available as soon as the description supplies its subject. Semantic comparisons use saved vectors.
+def index(item, max_calls=1, **extra):
+    return call(f'{API}/{item["id"]}/index-description', {'confirm': True, 'request': str(uuid.uuid4()),
+                                                        'gallery_id': gallery_id, 'max_calls': max_calls, **extra})
+def search(**filters):
+    url = f'{API}/real-index?' + urllib.parse.urlencode({'gallery': gallery_id, **filters})
+    return call(url)
+def pending_index():
+    return {item['id']: item['max_calls'] for item in call(f'{API}/real-index/pending?gallery={gallery_id}')[1]['images']}
+
+assert described['visual_description']['subject'] == {'brand': 'Nintendo', 'family': 'Game Boy', 'model': 'DMG-01',
+                                                       'keys': {'brand': 'nintendo', 'family': 'gameboy', 'model': 'dmg01'}}
+assert [r['id'] for r in search(brand='NINTENDO', family='Game Boy', model='dmg 01', catalogue=1)[1]['images']] == [real['id']]
+assert search(model='DMG-02')[1]['images'] == [] and search(model='DMG-01', catalogue=0)[1]['images'] == []
+assert search(reference=real['id'])[0] == 409 and call(f'{API}?gallery={gallery_id}')[1]['unindexed'] == 1
+near = upload('REAL', 'Un DMG-01 dello stesso ambiente')
+far = upload('REAL', 'Un altro DMG-01 sul banco')
+for item in (near, far):
+    assert call(f'{API}/{item["id"]}/description', {**confirm, 'request': str(uuid.uuid4())})[0] == 200
+# The older description omitted the structured fields. Its text is sufficient for the backfill.
+sql(f"UPDATE images SET visual_description=json_remove(json_set(visual_description,'$.sections.environment','A repair bench.'),'$.subject') WHERE id='{far['id']}'")
+assert pending_index() == {real['id']: 1, near['id']: 1, far['id']: 2}
+openai([])
+assert index(far)[0] == 409 and index(real, confirm=False)[0] == 400
+assert index(slop)[0] == 409 and index(trash)[0] == 409 and not openai()
+assert index(real)[0] == 200
+assert openai()[0]['path'] == '/v1/embeddings'
+assert openai()[0]['body'] == {'model': 'text-embedding-3-small', 'input': 'Uniform background.', 'dimensions': 256, 'encoding_format': 'float'}
+assert sql("SELECT input_tokens FROM paid_calls WHERE model='text-embedding-3-small'")[0]['input_tokens'] == 18
+assert index(real)[0] == 200 and len(openai()) == 1
+openai([{'delay': 1, 'embedding': [9, 1] + [0] * 254}])
+with ThreadPoolExecutor(1) as pool:
+    building = pool.submit(index, near)
+    for _ in range(50):
+        if openai(): break
+        time.sleep(0.02)
+    assert index(near)[0] == 409
+    assert building.result()[0] == 200
+assert len(openai()) == 1
+openai([{'json': {'brand': 'Nintendo', 'family': 'Game Boy', 'model': 'DMG-01'}}, {'status': 500}])
+assert index(far, 2)[0] == 502 and pending_index() == {far['id']: 1}
+requests = openai()
+assert requests[0]['body']['input'] == [{'role': 'user', 'content': 'Nintendo Game Boy DMG-01.'}]
+assert requests[1]['body']['input'] == 'A repair bench.'
+openai([{'embedding': [0, 1] + [0] * 254}])
+assert index(far)[0] == 200 and pending_index() == {}
+status, similar = search(reference=real['id'], model='DMG-01', order='similar')
+assert status == 200 and [r['id'] for r in similar['images']] == [near['id'], far['id']], similar
+assert similar['images'][0]['score'] > 0.9 and similar['images'][1]['score'] == 0
+assert search(reference=real['id'], family='game boy', order='different', limit=1)[1]['images'][0]['environment'] == 'A repair bench.'
+assert len(openai()) == 1, 'indexed lookups are free'
+sql(f"UPDATE images SET visual_description=json_set(visual_description,'$.sections.environment','An outdoor table.') WHERE id='{far['id']}'")
+assert pending_index() == {far['id']: 1}
+assert [r['id'] for r in search(reference=real['id'])[1]['images']] == [near['id']]
+other_gallery = make_gallery(API, token, 'Galleria separata per indici')
+assert search(reference=real['id'], gallery=other_gallery)[0] == 409
+assert patch(near, {'gallery_id': other_gallery})[0] == 200
+assert search(reference=real['id'])[1]['images'] == []
+assert [item['id'] for item in search(model='DMG-01', gallery=other_gallery)[1]['images']] == [near['id']]
+assert call(f'{API}/real-index/pending?gallery={other_gallery}')[1]['images'] == []
+for item in (real, slop, trash, near, far):
     call(f'{API}/{item["id"]}/trash', {}); call(f'{API}/{item["id"]}', method='DELETE')
-print('Analysis integration passed: model settings, measures, ideas and private visual descriptions of REAL originals.')
+assert sql('SELECT count(*) AS n FROM real_environment_vectors')[0]['n'] == 0
+print('Analysis integration passed: model settings, measures, ideas, visual descriptions and gallery-scoped REAL indexes.')

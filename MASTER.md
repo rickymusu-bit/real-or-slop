@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 37.0.1, aggiornata il 2026-11-23T21:12:27Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 37.1.0, aggiornata il 2026-11-24T06:59:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,6 +9,8 @@ in `CHANGELOG.md`.
 
 ## Stato
 
+- **Ramo 1.59.0:** indice esatto dei soggetti e ricerca semantica degli ambienti delle REAL. Il comando «Indicizza le descrizioni»
+  completa le REAL già descritte, con chiamate confermate. Migrazione 0072.
 - **Ramo 1.58.0:** descrizioni visive private in inglese delle REAL per otto assi, durante il caricamento o in gruppo dalla galleria. La griglia
   segnala le REAL senza descrizione. Migrazione 0071. Il wizard SLOP usa ancora il flusso 1.57.0.
 - **In produzione la 1.57.0 (PR #173):** un solo wizard SLOP (galleria, REAL da un'estrazione corretta e modificabile, proposte dell'owner o del modello,
@@ -159,7 +161,8 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera),
   `commons-check.ts` (controllo notturno delle fonti Commons delle REAL), `real-measure.ts` (misura a pagamento di affollamento e
   dettaglio delle REAL, storico, soglie), `real-ideas.ts` (idee di falsificazione delle REAL: proposta a pagamento, revisione,
-  disponibilità per l'estrazione), `real-description.ts` (descrizione visiva privata delle REAL dall'originale intero).
+  disponibilità per l'estrazione), `real-description.ts` (descrizione visiva privata delle REAL dall'originale intero),
+  `real-index.ts` (identità normalizzata dei soggetti, vettori e ricerca degli ambienti).
 - Libreria `library.ts` (stati, modifiche, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   gallerie `galleries.ts`, cancellazione di gallerie e file `gallery-removal.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
@@ -222,6 +225,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0069 | idee di falsificazione delle REAL (`real_ideas`), motivo senza idee, idea nel riferimento REAL-processo, trigger che tengono i riferimenti fino alla fine del processo e segnano l'idea usata, parte `real_ideas` del contesto |
 | 0070 | elimina le Indicazioni SLOP delle gallerie e la revisione registrata sulle idee; nuova proposta di «Premessa e prompt di galleria» se quella in vigore è la 0066 |
 | 0071 | descrizioni visive delle REAL e controllo delle richieste concorrenti |
+| 0072 | indici D1 per marca, famiglia e modello delle REAL, con vettori degli ambienti che scadono alla modifica del testo |
 
 R2: quarantena privata (`library/<id>/`, originale e copia) e bucket del gioco (copie pubblicate).
 

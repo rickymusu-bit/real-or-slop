@@ -486,6 +486,11 @@ with sync_playwright() as p:
         expect(grid.locator(f'[data-id="{last_acquired}"] [data-description-missing]')).to_be_visible()
         page.locator('#library-describe-gallery').click()
         expect(grid.locator('[data-description-missing]')).to_have_count(0)
+        index = page.locator('#library-index-gallery')
+        expect(index).to_be_visible()
+        index.click()
+        expect(index).to_be_hidden()
+        assert any(m.startswith('Indicizzare le descrizioni') and 'a pagamento' in m for m in confirmations), confirmations
         grid.locator(f'[data-open="{last_acquired}"]').click()
         expect(page.locator('#library-detail [data-visual-description]')).to_be_visible()
         assert not errors, errors

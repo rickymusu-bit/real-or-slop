@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 10.6.0
+# Foto e gallerie — specifica 10.7.0
 
-Stato: implementata nel ramo 1.58.0, da rilasciare. Aggiornata: 2026-11-23T20:46:00Z.
+Stato: implementata nel ramo 1.59.0, da rilasciare. Aggiornata: 2026-11-24T06:59:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -32,6 +32,9 @@ La griglia 4:5 ha due colonne su mobile. «Carica altre foto» aggiunge le pagin
 - **Descrizione visiva.** Una REAL senza descrizione ha un'icona sulla miniatura. «Descrivi le REAL» include tutte quelle fuori dal
   cestino ancora da descrivere nella galleria aperta, anche se un filtro o la paginazione le nascondono. Si legge la descrizione
   dal dettaglio della foto, dove si può generare se manca (specifica `libreria-immagini`, sezione 11).
+- **Indicizza le descrizioni.** Il comando appare quando una REAL già descritta nella galleria ha ancora dati da indicizzare.
+  Il conteggio abbraccia l'intera galleria fuori dal cestino. La conferma indica il massimo di chiamate per completare gli indici
+  dei soggetti e degli ambienti (specifica `libreria-immagini`, sezione 12).
 - **Seleziona tutte (N)** (decisione dell'owner del 2026-11-15): seleziona tutte le immagini già caricate nella vista con i filtri
   correnti; sparisce quando sono già tutte selezionate. «Deseleziona» nella barra le toglie.
 - **Selezione multipla** (decisione dell’owner del 2026-11-19). La barra sotto la griglia offre «Approva», «Pubblica», «Nel cestino»

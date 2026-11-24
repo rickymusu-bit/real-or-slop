@@ -4,7 +4,7 @@ export class PaidError extends HttpError {
   constructor(message: string, public outcome: "failed" | "uncertain") { super(502, message); }
 }
 export async function paid(env: Env, kind: "analysis" | "prompts" | "images" | "evaluation", model: string, body: unknown,
-  links: { process?: string; attempt?: string; image?: string; request?: string } = {}): Promise<Record<string, unknown>> {
+  links: { process?: string; attempt?: string; image?: string; request?: string; endpoint?: "embeddings" } = {}): Promise<Record<string, unknown>> {
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
   const callId = links.request ?? id(), stamp = new Date().toISOString();
   const claim = await env.DB.prepare(`INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,process_id,attempt_id,image_id)
@@ -15,7 +15,8 @@ export async function paid(env: Env, kind: "analysis" | "prompts" | "images" | "
       .bind(status, usage.input_tokens ?? null, usage.output_tokens ?? null, new Date().toISOString(), callId).run();
   let response: Response;
   try {
-    response = await fetch((env.OPENAI_BASE_URL || "https://api.openai.com/v1/") + (kind === "images" ? "images/generations" : "responses"), {
+    const endpoint = links.endpoint ?? (kind === "images" ? "images/generations" : "responses");
+    response = await fetch((env.OPENAI_BASE_URL || "https://api.openai.com/v1/") + endpoint, {
       method: "POST", redirect: "manual", signal: AbortSignal.timeout(120_000),
       // A body already encoded (an image inside, see image-body.ts) goes as it is.
       headers: { Authorization: "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" }, body: body instanceof Uint8Array ? body : JSON.stringify(body),
@@ -37,7 +38,8 @@ export async function paid(env: Env, kind: "analysis" | "prompts" | "images" | "
   let payload: Record<string, unknown>;
   try { payload = await response.json() as Record<string, unknown>; }
   catch { await settle("uncertain"); throw new PaidError("Risposta interrotta: esito incerto, non ripetuto", "uncertain"); }
-  await settle("completed", (payload.usage || {}) as { input_tokens?: number; output_tokens?: number });
+  const usage = (payload.usage || {}) as { input_tokens?: number; output_tokens?: number; prompt_tokens?: number };
+  await settle("completed", { input_tokens: usage.input_tokens ?? usage.prompt_tokens, output_tokens: usage.output_tokens });
   return payload;
 }
 export function responseJson(payload: Record<string, unknown>): unknown {

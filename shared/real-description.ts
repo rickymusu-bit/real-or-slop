@@ -20,9 +20,13 @@ export const VISUAL_INDICATIONS = {
 } as const;
 export type VisualIndication = keyof typeof VISUAL_INDICATIONS;
 export const INDICATION_KEYS = Object.keys(VISUAL_INDICATIONS) as VisualIndication[];
+export const SUBJECT_FIELDS = ["brand", "family", "model"] as const;
+export type SubjectField = typeof SUBJECT_FIELDS[number];
+export type SubjectIdentity = Record<SubjectField, string | null> & { keys: Record<SubjectField, string | null> };
 export interface VisualDescription {
   sections: Record<VisualSection, string>;
   indications: Record<VisualIndication, { applies: boolean; reason: string }>;
+  subject?: SubjectIdentity;
   model: string;
   created_at: string;
   base_context: string;

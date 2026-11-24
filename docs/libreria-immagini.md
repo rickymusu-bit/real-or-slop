@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.6.1
+# Libreria delle immagini — specifica 10.7.0
 
-Stato: implementata nel ramo 1.58.0, da rilasciare. Aggiornata: 2026-11-23T21:12:27Z.
+Stato: implementata nel ramo 1.59.0, da rilasciare. Aggiornata: 2026-11-24T06:59:00Z.
 
 ## 1. Decisioni dell'owner
 
@@ -112,7 +112,7 @@ le immagini al modello con una data URL base64 scritta direttamente nei byte del
 
 ## 6. Chiamate a pagamento e modelli
 
-- Quattro tipi: misure e descrizioni visive delle REAL (`analysis`, sezioni 10 e 11), proposte editoriali e prompt SLOP (anche le
+- Quattro tipi: misure, descrizioni visive e loro indicizzazione (`analysis`, sezioni da 10 a 12), proposte editoriali e prompt SLOP (anche le
   idee di falsificazione delle REAL; le indicazioni proposte per una galleria sono state tolte il 2026-11-22), immagini SLOP, valutazione SLOP intera. Le SLOP accettate non richiedono altre chiamate. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
 - **Esiti:** risposta valida → `completed`; errore 4xx → `failed`, senza addebito; errore 5xx, timeout o rete → `uncertain`, mai
   ripetuta in automatico. Chiave rifiutata, limite di spesa o credito OpenAI esaurito fermano le serie con un messaggio che rimanda a
@@ -273,3 +273,22 @@ Le informazioni riportate dalla fonte sono distinte dalle osservazioni. Tipo di 
 - La migrazione 0071 aggiunge la descrizione e il controllo delle richieste in corso. Il testo si salva con modello, data e versione
   della base comune, separato dalla fonte Commons. La griglia riceve solo lo stato di presenza. Il testo si cancella con la REAL ed
   è disponibile solo in amministrazione. L'approvazione e la pubblicazione funzionano anche in attesa della descrizione.
+
+## 12. Indici dei soggetti e degli ambienti delle REAL
+
+La nuova descrizione visiva include marca, famiglia e modello del soggetto principale. Un dato sconosciuto o inapplicabile è nullo.
+La migrazione 0072 indicizza in D1 i valori normalizzati per galleria, ignorando differenze di maiuscole, spazi e punteggiatura.
+Il Worker chiede al modello di identificare il soggetto quando ci sono elementi sufficienti. Il testo inglese della descrizione
+serve come riscontro.
+
+- **Indicizza le descrizioni.** Nella galleria, il comando completa le REAL già descritte fuori dal cestino. La conferma indica il
+  massimo di chiamate. Una chiamata invia il solo asse ambiente a `text-embedding-3-small`, a 256 dimensioni. Per una descrizione
+  precedente con i campi del soggetto ancora assenti, una chiamata al modello testuale li ricava dal campo «Tipo del soggetto» e li
+  salva prima dell'embedding. Un'interruzione lascia disponibili i dati già salvati. Ogni chiamata è registrata come `analysis`.
+- **Ricerca privata.** `GET /api/admin/library/real-index?gallery=…` accetta `brand`, `family`, `model` e `catalogue=0|1`. Con
+  `reference` si confrontano i vettori già salvati con l'ambiente della REAL indicata nella stessa galleria. `order=similar|different`
+  ordina per similarità del coseno. `limit` limita i risultati (8 in automatico, da 1 a 30). Il risultato include i campi del
+  soggetto, il testo dell'ambiente e, se richiesto, il punteggio. La ricerca non effettua chiamate al modello.
+- La lista delle descrizioni da completare è `GET /api/admin/library/real-index/pending?gallery=…`. `POST /:id/index-description`
+  riceve `confirm`, `request`, `gallery_id` e `max_calls`. Soggetto e vettore seguono la REAL tra gallerie. Una modifica al testo
+  dell'ambiente invalida il vettore e l'eliminazione definitiva della REAL lo cancella.

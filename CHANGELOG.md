@@ -1,7 +1,14 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-23T21:12:27Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-24T06:59:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.59.0 — 2026-11-24T06:59:00Z
+
+- Indici dei soggetti delle REAL per marca, famiglia e modello, con ricerca esatta normalizzata. Ricerca degli ambienti per
+  somiglianza o differenza a partire da una REAL della galleria. I risultati includono il testo dell'asse ambiente.
+- «Indicizza le descrizioni» calcola i vettori degli ambienti e completa i campi del soggetto per le descrizioni precedenti.
+  Conferma del massimo di chiamate e riuso dei dati già disponibili. Migrazione 0072.
 
 ## 1.58.0 — 2026-11-23T20:46:00Z
 
