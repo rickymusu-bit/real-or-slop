@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 37.1.0, aggiornata il 2026-11-24T06:59:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 37.2.0, aggiornata il 2026-11-24T09:46:10Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,6 +9,8 @@ in `CHANGELOG.md`.
 
 ## Stato
 
+- **Progettazione SLOP (2026-11-24):** Sol prepara una scena fotografica su otto assi basandosi su un documento di regole per galleria.
+  Il primo documento è `docs/regole-galleria-console-nintendo.md`, con criteri ed esempi per il prossimo test.
 - **Ramo 1.59.0:** indice esatto dei soggetti e ricerca semantica degli ambienti delle REAL. Il comando «Indicizza le descrizioni»
   completa le REAL già descritte, con chiamate confermate. Migrazione 0072.
 - **Ramo 1.58.0:** descrizioni visive private in inglese delle REAL per otto assi, durante il caricamento o in gruppo dalla galleria. La griglia
