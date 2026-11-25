@@ -29,13 +29,18 @@ with sync_playwright() as p:
             card=root.locator('[data-job-card]').first;card.locator('details > summary').first.click()
             card.locator('[data-axis=environment]').fill('An ordinary muted gray tabletop with stable support.')
             card.locator('[data-action=scene]').click()
+            expect(root.locator('[data-action=generate-all]')).to_be_enabled()
             expect(root.locator('[data-action=generate]')).to_have_count(2)
             assert len(control())==4
+            # Generating also saves edits still visible in a scene before asking for the paid call.
+            second_card=root.locator('[data-job-card]').nth(1);second_card.locator('details > summary').first.click()
+            second_card.locator('[data-axis=environment]').fill('Unsaved reviewed scene: stable support on a blue desk.')
             root.locator('[data-action=generate-all]').click()
             expect(root.locator('[data-action=evaluate]')).to_have_count(2,timeout=30000)
             assert len(control())==6
             image_calls=[x for x in control() if x['path']=='/v1/images/generations'];assert len(image_calls)==2
             assert all('image' not in x['body'] and 'mask' not in x['body'] for x in image_calls)
+            assert any('Unsaved reviewed scene' in x['body']['prompt'] for x in image_calls)
             root.locator('[data-action=evaluate-all]').click()
             expect(root.locator('[data-action=edit]')).to_have_count(2,timeout=30000)
             assert len(control())==8

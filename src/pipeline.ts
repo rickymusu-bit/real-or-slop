@@ -53,6 +53,11 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
     value.peculiarities.forEach((x,i)=>{x.policy=form.querySelector<HTMLSelectElement>(`[data-policy="${i}"]`)!.value as typeof x.policy;});return value;
   };
   const description = (job: Job) => `<details><summary>Scena inglese e parametri</summary><p>Estratti: ${escape(job.snapshot.variation?.selected.map(k => PARAMETERS[k as keyof typeof PARAMETERS] || k).join(", ") || "nessuno")}</p>${job.proposal ? `<p>${escape(job.proposal.changes)}</p><p>${escape(job.proposal.dependencies)}</p><fieldset data-scene="${job.id}"><label>Genere di destinazione<input data-scene-genre value="${escape(job.proposal.genre)}"></label><label>Rapporto larghezza:altezza<input data-scene-ratio value="${escape(job.proposal.aspect_ratio)}"></label>${AXES.map(axis=>`<label>${VISUAL_SECTIONS[axis]}<textarea data-axis="${axis}" rows="3" lang="en">${escape(job.proposal!.scene[axis])}</textarea></label>`).join("")}<details><summary>Parametri previsti dopo le variazioni</summary>${profileFields(job.proposal.profile,job.id)}</details></fieldset>${job.state === "proposal" ? `<button data-action="scene" data-job="${job.id}">Salva la scena</button>` : ""}` : ""}</details>`;
+  const readScene=(job:Job):Proposal=>{
+    const form=root.querySelector<HTMLElement>(`[data-scene="${job.id}"]`)!,proposal=structuredClone(job.proposal!);
+    for(const axis of AXES)proposal.scene[axis]=form.querySelector<HTMLTextAreaElement>(`[data-axis="${axis}"]`)!.value;
+    proposal.genre=form.querySelector<HTMLInputElement>("[data-scene-genre]")!.value;proposal.aspect_ratio=form.querySelector<HTMLInputElement>("[data-scene-ratio]")!.value;proposal.profile=readProfile(proposal.profile,job.id);return proposal;
+  };
   const render = () => {
     if (!state) { root.innerHTML = `<p role="status">${escape(notice || "Caricamento…")}</p>`; return; }
     const activeSources = new Set(state.jobs.map(j => j.source_id));
@@ -80,7 +85,7 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
     root.querySelectorAll<HTMLButtonElement>("button").forEach(b => { if(busy) b.disabled=true; });
   };
   const refresh = async () => { state = await call<State>(); if(!initialized && await measureMissing(state.sources)) state=await call<State>(); if(!initialized) {selected=new Set(state.sources.map(s=>s.id));initialized=true;} render(); };
-  const act = async (work:()=>Promise<void>) => { if(busy)return;busy=true;try {await work();notice="Stato aggiornato.";}catch(e){notice=e instanceof Error?e.message:String(e);}finally{busy=false;await refresh().catch(e=>{notice=String(e);render();});} };
+  const act = async (work:()=>Promise<void>) => { if(busy)return;busy=true;root.querySelectorAll<HTMLInputElement|HTMLTextAreaElement|HTMLButtonElement|HTMLSelectElement>("input,textarea,button,select").forEach(control=>{control.disabled=true;});try {await work();notice="Stato aggiornato.";}catch(e){notice=e instanceof Error?e.message:String(e);}finally{busy=false;await refresh().catch(e=>{notice=String(e);render();});} };
   root.addEventListener("change",event=>{ const input=event.target as HTMLInputElement;if(input.dataset.source){if(input.checked)selected.add(input.dataset.source);else selected.delete(input.dataset.source);}if(input.hasAttribute("data-all")){selected=input.checked?new Set(state!.sources.map(s=>s.id)):new Set();render();} });
   root.addEventListener("click",event=>{const button=(event.target as HTMLElement).closest<HTMLButtonElement>("button[data-action]");if(!button||busy||!state)return;
     const action=button.dataset.action!,job=state.jobs.find(j=>j.id===button.dataset.job), image=state.images.find(i=>i.id===button.dataset.image);
@@ -100,17 +105,13 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
       }
       if(action==="generate-all"||action==="evaluate-all"){
         const op=action==="generate-all"?"generate":"evaluate",jobs=state!.jobs.filter(j=>j.state===(op==="generate"?"proposal":"candidate"));
+        if(op==="generate")for(const j of jobs){const proposal=readScene(j);await call(`/${j.id}/scene`,payload({proposal}));j.proposal=proposal;}
         if(!confirmation(op==="generate"?"Generare tutte le scene salvate":"Valutare tutte le candidate",jobs.length))return;
-        for(const j of jobs)await call(`/${j.id}/${op}`,payload({max_calls:1}));return;
+        for(const j of jobs)await call(`/${j.id}/${op}`,payload({max_calls:1,...(op==="generate"?{proposal:j.proposal}:{})}));return;
       }
       if(job){
-        if(action==="scene"){
-          const form=root.querySelector<HTMLElement>(`[data-scene="${job.id}"]`)!,proposal=structuredClone(job.proposal!);
-          for(const axis of AXES)proposal.scene[axis]=form.querySelector<HTMLTextAreaElement>(`[data-axis="${axis}"]`)!.value;
-          proposal.genre=form.querySelector<HTMLInputElement>("[data-scene-genre]")!.value;proposal.aspect_ratio=form.querySelector<HTMLInputElement>("[data-scene-ratio]")!.value;proposal.profile=readProfile(proposal.profile,job.id);
-          await call(`/${job.id}/scene`,payload({proposal}));return;
-        }
-        if(action==="generate"||action==="evaluate"){if(!confirmation(action==="generate"?"Generare la scena salvata":"Valutare l’immagine intera",1))return;await call(`/${job.id}/${action}`,payload({max_calls:1}));return;}
+        if(action==="scene"){await call(`/${job.id}/scene`,payload({proposal:readScene(job)}));return;}
+        if(action==="generate"||action==="evaluate"){if(action==="generate"){job.proposal=readScene(job);await call(`/${job.id}/scene`,payload({proposal:job.proposal}));}if(!confirmation(action==="generate"?"Generare la scena salvata":"Valutare l’immagine intera",1))return;await call(`/${job.id}/${action}`,payload({max_calls:1,...(action==="generate"?{proposal:job.proposal}:{})}));return;}
         if(action==="edit"){
           const index=Number(button.dataset.correction),mask=await confirmMask(job,index);if(!mask)return;
           await call(`/${job.id}/edit`,payload({max_calls:1,instruction:root.querySelector<HTMLTextAreaElement>(`[data-instruction="${job.id}-${index}"]`)!.value,mask}));return;

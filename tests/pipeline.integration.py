@@ -30,7 +30,9 @@ state=wait(lambda s:bool(s['jobs']) and s['jobs'][0]['state']=='proposal');job=s
 assert call('plan',planned)[0]==200 and len(control())==2
 assert 'input_image' not in json.dumps(control()[1]['body']['input'])
 assert call(job['id']+'/generate',{})[0]==400 and len(control())==2
-generation=paid_request(max_calls=1)
+stale=json.loads(json.dumps(job['proposal']));stale['scene']['environment']='A different unconfirmed scene.'
+assert call(job['id']+'/generate',paid_request(max_calls=1,proposal=stale))[0]==409 and len(control())==2
+generation=paid_request(max_calls=1,proposal=job['proposal'])
 assert call(job['id']+'/generate',generation)[0]==200
 state=wait(lambda s:s['jobs'][0]['state']=='candidate');job=state['jobs'][0]
 assert len(control())==3

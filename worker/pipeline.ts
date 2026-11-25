@@ -274,6 +274,7 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
   }
   const allowed = action === "generate" ? ["proposal"] : action === "evaluate" ? ["candidate", "review"] : action === "edit" ? ["candidate", "review"] : [];
   if (!allowed.includes(job.state) || data.max_calls !== 1) throw new HttpError(409, "Conferma una chiamata per questa operazione");
+  if(action === "generate" && data.proposal !== undefined && JSON.stringify(data.proposal)!==job.proposal) throw new HttpError(409,"Scena modificata: rivedi e riconferma la generazione");
   if (action === "edit") {
     if (typeof data.instruction !== "string" || !data.instruction.trim() || data.instruction.length > 12000 || typeof data.mask !== "string" || data.mask.length > 1_500_000) throw new HttpError(400, "Istruzione e maschera richieste");
     const bytes = Uint8Array.from(atob(data.mask), c => c.charCodeAt(0));
@@ -285,8 +286,8 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
     snap.correction = { instruction: data.instruction, maskKey };
   }
   snap.operation = action as Snapshot["operation"];
-  const claim = await env.DB.prepare("UPDATE pipeline_jobs SET snapshot=?,state='queued',request=?,error='',updated_at=? WHERE id=? AND state=? AND request=?")
-    .bind(JSON.stringify(snap), data.request, now(), job.id, job.state, job.request).run();
+  const claim = await env.DB.prepare("UPDATE pipeline_jobs SET snapshot=?,state='queued',request=?,error='',updated_at=? WHERE id=? AND state=? AND request=? AND proposal IS ?")
+    .bind(JSON.stringify(snap), data.request, now(), job.id, job.state, job.request, job.proposal).run();
   if (!claim.meta.changes) {if(action === "edit" && snap.correction) await env.QUARANTINE.delete(snap.correction.maskKey);throw new HttpError(409, "Operazione già acquisita");}
   await start(env, job.id); return json({ queued: true });
 }
