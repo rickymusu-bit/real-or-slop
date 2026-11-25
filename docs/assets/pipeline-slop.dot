@@ -1,0 +1,24 @@
+digraph pipeline {
+ graph [rankdir=TB,bgcolor="#f7f8fc",pad="0.4",nodesep="0.35",ranksep="0.45",fontname="DejaVu Sans",label="REAL or SLOP · Pipeline completa",labelloc=t,fontsize=24];
+ node [shape=box,style="rounded,filled",fillcolor=white,color="#cad2e0",fontname="DejaVu Sans",fontsize=12,margin="0.18,0.12"];
+ edge [color="#63738c",fontname="DejaVu Sans",fontsize=10];
+ real [label="1 · REAL della galleria\nOriginali interi, crediti e descrizioni mancanti segnalate"];
+ describe [label="2 · Descrizione in inglese\nOtto assi · parametri osservati · genere fotografico\nParticolarità: identità, esemplare, stato temporaneo\nMisure tecniche e rapporto d'aspetto",fillcolor="#eaf1ff"];
+ index [label="3 · Indici e composizione della galleria\nSoggetti · ambienti · distribuzioni e combinazioni\nRegole specifiche della galleria"];
+ draw [label="4 · Scelta della REAL ed estrazione di zero o più variazioni\nModello, colore, finitura, edizione, usura, danno, invecchiamento, pulizia\nStato, contenuto schermo, posa, fotocamera, composizione, formato\nAmbiente/genere: riscrittura coordinata delle dipendenze"];
+ scene [label="5 · Sol prepara una scena completa sugli otto assi\nNovità plausibili e valori ordinari · vincoli fisici\nParticolarità da preservare o variare · modifiche esplicite",fillcolor="#eaf1ff"];
+ confirm [label="Revisione della scena e conferma del massimo di chiamate",fillcolor="#fff1d6"];
+ generate [label="6 · Sunburst /images/generations\nSolo testo finale · dimensioni coerenti con il formato",fillcolor="#eaf1ff"];
+ evaluate [label="7 · Valutatore: immagine intera e vincoli\nHardware, plausibilità, particolarità e deriva dei parametri\nDifetti e proposte di correzione con benefici e rischi",fillcolor="#eaf1ff"];
+ decision [shape=diamond,label="Decisione dell'owner",fillcolor="#fff1d6"];
+ edit [label="Correzione scelta e confermata\n/images/edits · immagine intera + maschera locale\nConfronto prima/dopo · nessun loop automatico",fillcolor="#eaf1ff"];
+ discard [label="Scarta o chiudi",fillcolor="#ffe8e8"];
+ accept [label="8 · Accettazione dell'immagine intera"];
+ treatment [label="9 · Trattamento fotografico, quando serve\nNitidezza, rumore, contrasto e colore\nRiferimenti delle REAL pertinenti al genere di destinazione\nRegolabile · niente filtro uniforme su tutte le SLOP"];
+ copy [label="10 · Preparazione comune a REAL e SLOP\nInquadratura 4:5 · dimensioni · stessa compressione WebP\nMetadati rimossi · marchio comune"];
+ publish [label="11 · Controllo visivo finale → Approva → Pubblica",fillcolor="#e5f5eb"];
+ real -> describe [label="conferma chiamate mancanti"]; describe -> index -> draw -> scene -> confirm -> generate -> evaluate -> decision;
+ decision -> edit [label="correggi: conferma separata"];edit -> decision [style=dashed,label="revisione umana"];
+ decision -> discard [label="scarta"];decision -> accept [label="accetta"];accept -> treatment -> copy -> publish;
+ real -> copy [style=dashed,label="stessa ricetta tecnica",constraint=false];
+}

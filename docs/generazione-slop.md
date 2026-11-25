@@ -1,168 +1,254 @@
-# Generazione SLOP — specifica 15.0.0
+# Generazione SLOP — specifica 17.0.0
 
-Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
+Aggiornata: 2026-11-25T20:45:04Z. Stato: implementata nel ramo 1.60.0, da rilasciare.
 
-## 1. Un solo wizard
+![Schema completo della pipeline](assets/pipeline-slop.svg)
 
-Decisione dell'owner del 2026-11-22: **niente generazione manuale**. Ogni SLOP nasce dal wizard «Genera SLOP» della galleria, che
-segue una sola pipeline:
+Schema vettoriale in `docs/assets/pipeline-slop.svg`, sorgente Graphviz in `docs/assets/pipeline-slop.dot`; copia pubblica
+identica in `public/docs/pipeline-slop.svg`, collegata dal wizard.
 
-1. **Galleria**: il wizard si apre dalla galleria, nella stessa scheda;
-2. **REAL**: estrazione corretta su affollamento e dettaglio, che l'owner modifica togliendo o aggiungendo REAL;
-3. **Proposte**: per ogni REAL l'owner scrive una proposta o la chiede al modello;
-4. **Scelta** delle proposte da generare;
-5. **Prompt**: il modello scrive premessa e prompt (prima conferma), l'owner li corregge;
-6. **Generazione** sul server (seconda conferma);
-7. **Revisione**: inquadratura, trattamento, approvazione e pubblicazione delle SLOP accettate, e i processi senza SLOP.
+## 1. Obiettivo e stato dell'implementazione
 
-Spariscono la scrittura diretta di prompt e brief, le SLOP senza REAL di partenza e le rotte dei batch manuali (`POST batches`,
-`PUT batches/:id`, `POST batches/:id/{images,run,stop}`). I processi manuali già registrati restano consultabili; quelli senza SLOP
-compaiono fra le eccezioni e si accettano o si chiudono come gli altri.
+Decisioni dell'owner del 2026-11-24 e 2026-11-25: generare fotografie che sembrino appartenere alla galleria delle REAL,
+partendo dalle loro descrizioni testuali in inglese. La varietà comprende elementi nuovi ma plausibili e combinazioni ordinarie.
+Evitare copie riconoscibili delle REAL e tratti ricorrenti che distinguano il dataset SLOP, per esempio usura sempre accentuata,
+edizioni speciali troppo frequenti o composizioni commerciali sistematiche.
 
-L’avviso in Statistiche confronta i conteggi di REAL e SLOP approvate o pubblicate e mostra a parte le SLOP nuove. Un batch genera da
-1 a 10 SLOP. Le foto non hanno tag (decisione del 2026-11-20): la galleria le raggruppa. Un batch alla volta: se ne esiste già uno,
-Gallerie e il wizard delle altre gallerie offrono un accesso al batch aperto. La revisione del batch mostra le SLOP che si trovano
-ancora nella galleria di origine; una SLOP spostata si revisiona dalla galleria di destinazione.
+La 1.60.0 sostituisce i controlli del wizard della galleria con il protocollo qui descritto. Una selezione iniziale comprende
+tutte le REAL della galleria fuori dal cestino. Le vecchie API e i processi editoriali restano compatibili per i dati precedenti;
+un riquadro di recupero mostra i processi precedenti ancora da decidere. Il nuovo wizard non usa il vecchio ciclo automatico.
 
-Dalla decisione dell’owner del 2026-11-18 (#157) ogni REAL appartiene a una galleria. Le gallerie hanno titolo, descrizione e soglie di
-affollamento e dettaglio; titolo e descrizione accompagnano le richieste al modello come contesto. **Niente Indicazioni SLOP di
-galleria** (decisione dell'owner del 2026-11-22): quelle proposte dal modello partivano dal solo titolo, non dalle foto. Quali falsi
-hanno senso lo dicono le proposte di ogni REAL. Il wizard è disponibile quando la galleria ha almeno una REAL approvata o pubblicata.
-La migrazione 0070 elimina le indicazioni salvate e la loro proposta automatica.
+Le migrazioni 0073 e 0074 aggiungono profili e scene privati su `images`, impostazioni su `galleries` e `pipeline_jobs` temporanei.
+Ogni lavorazione ha un Workflow e uno stato persistente. Una conferma acquisisce una sola operazione; il Workflow non ritenta
+passi a pagamento. La coda acquisisce al massimo tre operazioni contemporanee. Le richieste ancora in attesa si possono annullare gratuitamente;
+quelle già inviate terminano senza avviare altre fasi. Dopo quindici minuti una richiesta acquisita senza esito passa all'attenzione dell'owner, senza reinvio automatico.
 
-Le REAL non hanno descrizione editoriale (decisione del 2026-11-20): il modello delle proposte legge direttamente l’originale, il
-titolo e la descrizione della fonte, insieme alla proposta scelta.
+### Comandi e conferme
 
-### Proposte delle REAL
+- **Prepara la galleria:** una chiamata per REAL ancora priva di profilo, su originale intero. Salva descrizione inglese,
+  identità, genere, parametri osservati e particolarità. Riusa i profili già presenti. I dati sono rivedibili senza chiamate.
+- **Indicizza gli ambienti:** riusa il comando degli indici 1.59.0, con massimo dinamico, mantenendo gli esiti riusciti.
+- **Regole e probabilità:** modificabili per galleria. Ogni probabilità vuota usa la stima automatica; zero disabilita un controllo.
+  L'ambiente può restare invariato, variare entro lo stesso genere o cambiare insieme al genere.
+- **Prepara scene:** una chiamata per REAL selezionata e preparata. Le estrazioni e i riferimenti vengono congelati. Sono
+  mostrate le modifiche e le dipendenze. L'owner modifica i campi della scena, il formato e i parametri previsti senza pagare.
+- **Genera:** una chiamata per scena salvata, anche collettivamente dopo conferma del massimo. Una candidata non è accettata
+  dal modello: resta da vedere. **Valuta** è una fase confermata separata, una chiamata per candidata, disponibile anche in gruppo.
+- **Correggi:** ogni proposta apre un'anteprima della maschera sull'immagine intera, con benefici e rischi e zona rettangolare
+  modificabile. Solo la conferma finale autorizza una chiamata a `images/edits`. La valutazione precedente resta visibile;
+  nessuna valutazione aggiuntiva viene avviata. Il prima/dopo viene conservato fino alla decisione.
+- **Accetta:** trasferisce l'immagine intera nella libreria come nuova. Elimina il riferimento alla REAL e i file temporanei
+  mediante coda durevole. L'accettazione non prepara, approva o pubblica la copia automaticamente.
+- **Copia, trattamento, approvazione e pubblicazione:** comandi distinti, gratuiti. La misura tecnica delle copie REAL mancanti
+  è calcolata dal browser. Il riferimento del trattamento è campionato fra REAL misurate dello stesso genere di destinazione;
+  senza riferimento disponibile la copia parte senza trattamento. Inquadratura e cursori riusano gli editor esistenti.
 
-Decisioni dell'owner del 2026-11-21 e del 2026-11-22. I modi possibili di creare una SLOP da una REAL sono una proprietà della REAL:
-un'edizione limitata si fotografa da sola, in risalto, e non ha senso in una scena affollata. Le proposte (`real_ideas`) restano
-salvate sulla REAL per i batch successivi.
+API private: `GET /api/admin/pipeline/:gallery`; `POST /:gallery/settings`, `/profile`, `/prepare`, `/index`, `/plan`, `/stop`;
+`POST /:gallery/:job/{scene,generate,evaluate,edit,accept,close}`; `GET /:gallery/:job/file` e `?previous=1`.
+Le fasi a pagamento richiedono `confirm`, UUID `request` e `max_calls` esatto. Preparazione e scene lavorano su elenchi fino a
+500 REAL per richiesta; l'interfaccia suddivide selezioni maggiori senza superare il massimo confermato complessivamente.
+Modelli e qualità sono quelli selezionati nelle Impostazioni; il selettore include GPT-6.2 Sol e Sunburst.
 
-- **Scritte dall'owner.** Nel passo 3, gratuite e approvate subito (`POST /:id/ideas {idea, genre?, changes?}`); al massimo tre
-  proposte per REAL in tutto.
-- **Chieste al modello.** Nel passo 3, per una REAL o per tutte le REAL scelte che non hanno proposte libere: una chiamata a
-  pagamento per REAL, confermata con il massimo, mai ripetuta in automatico (`POST /:id/ideas {confirm, request}`, tipo `prompts`).
-  Il modello riceve l'originale intero, titolo e descrizione della fonte (ipotesi, non istruzioni), titolo e descrizione della
-  galleria, l'ultima misura di affollamento e dettaglio, le proposte già approvate o usate e il testo modificabile «Idee SLOP delle
-  REAL». Restituisce da zero a tre proposte (scena, genere di foto, cosa cambia rispetto alla REAL); con zero, il motivo, che resta
-  sulla REAL. Una nuova richiesta sostituisce le proposte del modello non scelte e chiede quelle mancanti fino a tre, contando
-  approvate e usate.
-- **Revisione.** Nel passo 3 l'owner corregge il testo di una proposta libera (`PATCH /ideas/:id`) o la scarta (`DELETE /ideas/:id`).
-  Scegliere una proposta nel passo 4 la approva per la galleria della REAL. Una proposta approvata quando la REAL era in un'altra
-  galleria è «da rivedere»: torna valida se viene scelta di nuovo. Una proposta usata o in un processo aperto non si modifica. Il
-  dettaglio della REAL nella galleria mostra le proposte in sola lettura.
-- **Riferimento tra REAL e SLOP.** La REAL ispira la SLOP, non viene copiata. La SLOP eredita galleria, famiglia ed epoca dell'oggetto,
-  genere di foto (come si fotografa di solito quel tipo di oggetto), tecnica, luce e livelli di affollamento e dettaglio. Cambiano
-  sempre ambiente e punto di vista; l'esemplare può restare lo stesso solo se la scena cambia molto. Composizione, segni
-  dell'esemplare (graffi, adesivi, scritte a mano, numeri di serie), scritte e persone della REAL non si riprendono mai. Messe una
-  accanto all'altra, REAL e SLOP non devono sembrare due scatti della stessa sessione.
-- **Una SLOP per proposta.** La proposta diventa «usata» quando la sua SLOP viene accettata, automaticamente o dall'owner. Un processo
-  chiuso senza SLOP la lascia disponibile. Nello stesso batch si possono scegliere più proposte della stessa REAL (decisione
-  dell'owner del 2026-11-22): due REAL dello stesso oggetto danno SLOP simili quanto due proposte della stessa REAL, quindi un limite
-  per REAL non serviva. La varietà dipende dalla scelta dell'owner e dalle premesse già scritte nel batch, che il modello riceve.
+## 2. Descrizioni, assi e regole della galleria
 
-## 2. I passi del wizard
+Il modello descrive l'originale REAL **intero**, prima di ritaglio e trattamento, su otto assi:
+`subject_type`, `subject_appearance`, `people`, `environment`, `viewpoint`, `light`, `technique`, `rendering`.
+La descrizione è privata, in inglese, distinta da quella Commons. Si prepara al caricamento o successivamente in gruppo;
+una REAL senza descrizione è segnalata sulla miniatura (specifica `libreria-immagini`).
 
-1. **Galleria.** Il wizard è quello della galleria aperta; un batch aperto altrove si raggiunge con il suo collegamento.
-2. **REAL.** `POST auto/preview {gallery_id, size}` estrae gratis fino a `size` REAL approvate o pubblicate della galleria con
-   originale in quarantena, **corretta su affollamento e dettaglio** (`shared/idea-sampling.ts`): ogni asse è diviso in tre fasce
-   (0–33, 34–66, 67–100); per ogni fascia si confronta la quota fra le REAL misurate della galleria con quella fra le SLOP già nate da
-   proposte della galleria (le REAL delle proposte usate); il peso di una REAL è, per ogni asse, il rapporto fra le due quote, tra
-   0,25 e 4, e i due assi si moltiplicano. Contano solo le misure della formula in vigore; una REAL senza misura pesa 1. Senza
-   correzione si sceglierebbero più spesso le REAL più semplici e la semplicità diventerebbe un indizio dell'origine. L'estrazione è
-   solo una proposta: le REAL estratte arrivano già selezionate e l'owner ne toglie o aggiunge fra tutte quelle disponibili
-   (`GET auto/candidates?gallery=`, con misura e proposte). Selezione e scelte restano nella scheda del browser fino alla prima
-   conferma. Tocco o pressione prolungata su una miniatura apre l’originale intero con la descrizione della fonte.
-3. **Proposte** (sezione 1). Per ogni REAL scelta: le sue proposte, il campo per scriverne una, «Chiedi al modello».
-4. **Scelta.** L'owner spunta le proposte da generare (una scritta da lui è scelta subito), da 1 a 10 per batch, anche più di una
-   della stessa REAL; il riepilogo le mostra con la configurazione.
-5. **Prompt.** `POST auto/prepare {gallery_id, ideas, count, request, confirm: true}` è la prima conferma, del massimo di una chiamata
-   per proposta. `request` è un UUID del browser e diventa l'ID del batch: la stessa conferma inviata due volte crea un solo batch.
-   Il Worker ricontrolla che ogni proposta sia libera e la sua REAL approvata o pubblicata nella galleria, con l'originale; approva
-   le proposte scelte; congela modelli, qualità, tolleranza, tentativi massimi e versioni dei contesti; crea un processo per proposta,
-   con il riferimento alla REAL e alla proposta. Il Workflow prepara i prompt in ordine. Per ciascuno il modello riceve l’originale
-   intero prima del ritaglio 4:5, titolo e descrizione della fonte (`reference: {title, description}`), la proposta (`idea: {idea,
-   genre, changes}`), i livelli di affollamento e dettaglio della REAL (`levels`, nullo senza misura della formula in vigore), titolo e
-   descrizione della galleria e istruzioni generali. Sviluppa la proposta secondo il riferimento tra REAL e SLOP; cita alla lettera le
-   scritte leggibili e indica i conteggi esatti delle parti contabili. Restituisce una frase in italiano sul falso e il prompt in
-   inglese, oppure il motivo per cui non può proporre un falso compatibile. Le premesse precedenti aiutano a variare il batch. Il
-   testo «Premessa e prompt di galleria» resta modificabile; le regole sulla proposta e sul riferimento sono nel codice.
-   L'owner **corregge premessa e prompt** prima della seconda conferma (`POST auto/proposal {batch, slot, premise?, prompt?}`,
-   gratuito, si salva da solo); la premessa resta l'ancoraggio che il valutatore controlla.
-6. **Generazione.** I prompt restano disponibili per un’ora dalla preparazione, anche dopo il ricaricamento. `POST auto/start {batch,
-   count, confirm: true}` conferma il numero esatto di proposte valide e il massimo rimanente di `2N × count` chiamate, con `N`
-   tentativi massimi: una generazione e una valutazione per tentativo. Nessuna analisi segue l’accettazione. La preconferma mostra
-   modelli, qualità, tentativi e tolleranza. Il server ricontrolla appartenenza, disponibilità, revisioni e scadenza: un cambiamento
-   della galleria o delle REAL invalida i prompt. `POST auto/cancel {batch}` ferma la preparazione prima del passo successivo e lascia
-   le proposte sulle REAL. L’annullamento o la scadenza rimuovono i riferimenti temporanei; la conferma rimuove quelli dei processi
-   che non generano. Gli altri restano, con la proposta, fino alla fine del processo: all'accettazione della SLOP la proposta diventa
-   usata e il riferimento sparisce; alla chiusura di un processo senza SLOP il riferimento sparisce e la proposta resta disponibile
-   (trigger della migrazione 0069). Conferme concorrenti acquisiscono una sola volta la transizione. La generazione continua sul
-   server anche se la pagina si chiude; «Interrompi» la ferma prima del passo successivo.
-7. **Revisione.** Le SLOP accettate compaiono nel wizard con l'originale intero valutato e la copia 4:5, preparata nel browser;
-   «Inquadratura», i comandi del trattamento, «Approva», «Pubblica» e «Cestino». Tutti i tentativi restano consultabili con la loro
-   valutazione. I processi senza SLOP stanno in cima al wizard finché l'owner non li accetta o li chiude (sezione 3). «Apri nella
-   galleria» apre la griglia filtrata sul batch. Il batch si chiude quando ogni SLOP è decisa e ogni eccezione chiusa.
+Descrivere una singola scena fotografica: soggetti, superfici visibili, posa e sostegni, fotocamera, ambiente, luci, ombre,
+fuoco, medium e resa. Le parti nascoste del prodotto non diventano oggetti da mostrare. Distinguere osservazioni, inferenze
+e dettagli non determinabili. Trascrivere le scritte leggibili nella lingua originale: conservarle nell'analisi non significa
+che debbano essere riprodotte nella SLOP.
 
-### Premesse e vincoli
+Le regole della galleria accompagnano il generatore di testo: modelli compatibili, vincoli fisici e generi fotografici presenti.
+Per Nintendo: `docs/regole-galleria-console-nintendo.md`. Sono costruite sulle REAL, rivedibili dall'owner, non dedotte dal solo
+titolo. Non impongono marcatori visivi comuni a ogni SLOP. Gli indici di soggetto (marca, famiglia, modello) e ambiente recuperano
+le descrizioni pertinenti senza inviare tutta la galleria a ogni generazione. Le statistiche usano le annotazioni disponibili.
 
-La premessa dice che cosa la foto farebbe credere, che cosa è inventato e quali elementi reali riconoscibili restano in scena.
-Per un evento aggiunge un fatto significativo e visibile. Per un oggetto il falso può essere la fotografia stessa: un oggetto realmente
-esistito in una scena mai fotografata (decisione dell'owner del 2026-11-21); il fatto inventato non è richiesto e il valutatore non
-lo cerca. Per esempio, un ponte alpino può avere una campata con un danno inventato
-conservando il luogo e i tratti riconoscibili, una console vintage può rappresentare un modello mai commercializzato plausibile per
-epoca e mercato, un presidio immaginato a Parigi può conservare gli elementi della mobilitazione e la Cour Napoléon. La scena ipotetica
-non autorizza deduzioni su ciò che è realmente avvenuto. Quando l'idea richiede il riconoscimento di un luogo o di un edificio, prompt e valutazione includono i tratti visibili necessari. Le preferenze di inquadratura e sguardo valgono solo quando naturali.
-Si applicano le regole della specifica `contenuti-e-trasparenza`.
+## 3. Parametri controllabili
 
-## 3. Generazione, valutazione e ripresa
+Gli assi restano la struttura della descrizione finale. I parametri definiscono cosa variare separatamente, rispettando le
+dipendenze fisiche e storiche. La tabella specializza il protocollo per Nintendo; altre gallerie richiedono parametri pertinenti.
 
-Il Workflow prosegue anche se si chiude la dashboard. Ogni passo a pagamento acquisisce una richiesta persistente prima dell’invio
-e registra l’esito in `paid_calls`. Con un’interruzione, i passi mai acquisiti possono essere ripresi dall’owner entro la conferma
-già data. I passi con esito incerto non si ripetono automaticamente. Lo stop ferma la fase prima del passo successivo.
+| Parametro | Significato | Asse principale |
+|---|---|---|
+| `model` | Famiglia e modello della console | `subject_type` |
+| `colour` | Colore della scocca e dei componenti | `subject_appearance` |
+| `material_finish` | Materiale, opacità, trasparenza e finitura | `subject_appearance` |
+| `edition_decoration` | Edizione, personalizzazione, grafiche e adesivi | `subject_appearance` |
+| `wear` | Abrasione, graffi da uso, superfici lucidate dal contatto | `subject_appearance` |
+| `damage` | Fratture, scheggiature, deformazioni e parti mancanti | `subject_appearance` |
+| `ageing` | Ingiallimento, scolorimento, ossidazione e deterioramento nel tempo | `subject_appearance` |
+| `cleanliness` | Polvere, impronte, sporco e residui rimovibili | `subject_appearance` |
+| `operating_state` | Accesa/spenta; configurazione aperta/chiusa quando applicabile | `subject_appearance` |
+| `screen_content` | Gioco/applicazione, schermata, testi, valori e disposizione visibili | `subject_appearance` |
+| `pose` | Posizione e orientamento del soggetto rispetto al piano e al sostegno | `viewpoint`, con vincoli di `environment` |
+| `viewpoint` | Posizione e angolo della fotocamera rispetto al soggetto | `viewpoint` |
+| `composition` | Distanza, dimensione nel fotogramma, decentramento e taglio | `viewpoint` |
+| `aspect_ratio` | Rapporto larghezza/altezza del fotogramma intero, con orientamento verticale/orizzontale/quadrato | `viewpoint`, coordinato con `technique` |
 
-Il generatore riceve il prompt inglese approvato. A ogni valutazione la Responses API riceve l’intera candidata corrente prima di
-cropping o trattamento, l’ID del tentativo, la premessa approvata, titolo e descrizione della galleria, l'idea che la SLOP sviluppa
-(finché il processo è aperto), il prompt approvato e quello corrente,
-più la tolleranza congelata. Il modello usa versioni congelate della base e del contesto di valutazione, senza conversazioni precedenti.
-La credibilità fotografica ha priorità sui dettagli secondari. I difetti critici e gli ancoraggi obbligatori mancanti impediscono
-l’accettazione automatica. Luogo, data e identità non dimostrabili dai pixel sono annotazioni. Una correzione valida aggiunge
-un’indicazione fotografica al prompt approvato e conserva l’invenzione e gli elementi reali richiesti. Una riprogettazione richiede
-revisione umana. Sono configurabili da 1 a 5 tentativi e tolleranza da 0 a 2. A tolleranza zero, i difetti minori richiedono un altro
-tentativo entro il limite.
+Il contenuto dello schermo è distinto da acceso/spento. Un menu può cambiare mantenendo la console accesa. Gioco, schermata e
+dati di salvataggio devono essere plausibili per modello ed epoca. A schermo spento o nascosto, `screen_content` è non applicabile:
+estrarlo non accende la console e non cambia implicitamente l'inquadratura. Se non estratto, il contenuto può restare quello
+descritto; dati identificativi copiati sono comunque un rischio di eccessiva somiglianza da segnalare alla revisione.
+Non imporre che ogni schermo cambi sempre, creando un'altra regolarità sistematica.
 
-Un solo batch automatico aperto. Quando termina la generazione si passa alla revisione. Le candidate accettate entrano in libreria
-come nuove, senza altre chiamate. Il browser prepara poi la copia di gioco 4:5 con la ricetta WebP comune.
-La SLOP eredita la galleria. Per il trattamento si copiano solo formato e misure anonime della REAL: bianco e nero, seppia o colore
-derivano da queste (specifica `copie-di-gioco`).
-Le REAL restano utilizzabili nelle estrazioni successive e nelle partite.
+Il rapporto d'aspetto è un parametro distinto dalla composizione. Annotarlo dalle dimensioni dell'originale intero dopo
+l'orientamento EXIF, prima del ritaglio 4:5. Se non estratto, conservarlo; se estratto, scegliere un valore compatibile con
+soggetto, posa e genere fotografico. Bilanciare le frequenze tenendo conto di queste relazioni: console e generi diversi
+possono avere formati diversi. Evitare un formato SLOP uniforme imposto per comodità tecnica.
 
-I processi esauriti, in revisione, falliti o incerti dopo l’avvio della generazione restano in evidenza con immagini, prompt e
-valutazioni fino alla decisione dell’owner. «Accetta comunque il tentativo N» permette di accettare qualsiasi candidata intera
-salvata e valutata di un processo concluso o sospeso anche in presenza di segnalazioni, elencate nella conferma. Una sola richiesta
-acquisisce la decisione, senza chiamate a pagamento. Se il file manca si ripristina lo stato precedente.
-La scelta dell’owner si registra separatamente dalla valutazione. Chiusura e manutenzione permettono poi di eliminare le candidate
-temporanee dopo sette giorni. Copia, approvazione e pubblicazione restano passaggi distinti.
+Il rapporto scelto deve essere coerente sia nel prompt sia nelle dimensioni richieste all'API. Se l'API non lo supporta,
+segnalare l'approssimazione e registrare rapporto richiesto ed effettivo; non sostituire silenziosamente un verticale con
+un orizzontale né tagliare parti fondamentali per adattarlo. La copia di gioco resta 4:5 per REAL e SLOP: `aspect_ratio`
+controlla la fotografia intera e non cambia il formato comune servito durante la partita.
 
-## 4. Rilascio e dati
+Quando si conserva il punto di vista, mantenere anche distanza e resa prospettica compatibili. Una prospettiva meno accentuata
+può suggerire una fotocamera più lontana, con focale maggiore per un'inquadratura simile, ma non dimostra una focale precisa.
+La prospettiva dipende dalla posizione della fotocamera; cambiare solo focale dalla stessa posizione cambia l'inquadratura.
+Descrivere l'effetto visibile e le dipendenze senza inventare dati ottici o EXIF della REAL.
 
-La migrazione 0060 aggiunge gallerie, premesse, riferimenti temporanei e contesto per la proposta. Su decisione dell’owner
-del 2026-11-18, la migrazione 0061 azzera il D1 attuale al rilascio. Vengono rimossi catalogo, gallerie, tag, batch, tentativi,
-partite, classifica, chiamate registrate, impostazioni e loro contesti. La migrazione elimina il registro madre–figlia e richiede
-una galleria per ogni immagine e batch. Agisce esclusivamente sul D1.
+Le annotazioni devono essere atomiche: il colore non include accessori, la composizione non sostituisce lo sfondo, la posa non
+importa il piano d'appoggio del donatore. Usura, danno, invecchiamento e pulizia hanno valori separati, compresa assenza e non
+determinabile. Un valore ignoto non prova l'assenza di un fenomeno. Persone, accessori e numero dei soggetti non diventano nuove
+variazioni attive in questo test. I profili sono JSON privati validati, salvati in `images.pipeline_profile`; i controlli sono definiti in `shared/pipeline.ts`.
 
-Il **flusso manuale**, con brief e prompt scritti dall'owner, è stato tolto il 2026-11-22: i suoi processi già registrati conservano il
-brief, che fa da vincolo se l'owner ne accetta una candidata fra le eccezioni. Nessuna migrazione: cambia solo il codice.
+## 4. Estrazione e bilanciamento
 
-La SLOP è identificata dal suo ID e non viene analizzata. Per la copia si conservano formato e misure anonime; i riferimenti alle
-REAL si eliminano alla fine di ogni processo (sezione 2). Nessun registro permanente: di una REAL resta solo quali sue proposte sono
-state usate, non quale SLOP ne è nata.
+Estrarre **zero o più parametri**, ciascuno con probabilità configurabile per galleria. Distinguere la probabilità di modificarlo
+dalla distribuzione del nuovo valore: include valori ordinari, assenza del tratto e valori uguali al punto di partenza.
+Modificare non significa intensificare: una console danneggiata può diventare integra, una personalizzata può diventare standard.
+Non forzare almeno una modifica vistosa.
 
-La migrazione 0069 aggiunge `real_ideas` (idea, genere, cambiamenti, stato, galleria, modello e
-versioni del contesto, date), `images.ideas_reason`, `slop_gallery_sources.idea_id`, i trigger che conservano i riferimenti fino
-alla fine del processo e la parte `real_ideas` del contesto dei modelli. Le idee si cancellano con la REAL. La migrazione 0070
-elimina `galleries.slop_instructions` e la revisione registrata sulle idee, e sostituisce «Premessa e prompt di galleria» con la
-nuova proposta, che sviluppa l'idea, se il testo in vigore era ancora quello salvato dalla 0066.
+Probabilità e valori devono riflettere la composizione delle REAL della galleria, considerando visibilità, dati ignoti e
+compatibilità con il soggetto. Il generatore di testo può proporre valori plausibili non presenti nelle REAL (un altro colore,
+tema o danno), senza sovrarappresentare le novità. Il protocollo non si limita a permutare elementi esistenti.
 
-Nei test si usano solo il Worker e lo storage locali con OpenAI simulato. Il rilascio segue le regole di `AGENTS.md`.
+Controllare distribuzioni individuali, combinazioni rilevanti e ricorrenze nelle SLOP: campionare i valori indipendentemente non
+conserva tutte le correlazioni delle REAL. Evitare duplicati riconoscibili lasciando che gli elementi comuni nelle REAL siano
+comuni anche nelle SLOP; non imporre unicità a ogni immagine. Scartare o adattare un valore incompatibile dichiarandone il motivo,
+senza introdurre modifiche nascoste degli altri parametri. La stima automatica di selezione per parametro è `clamp(1 − quota_della_categoria_più_frequente, 0.05, 0.4)`.
+I valori vengono campionati dalle REAL compatibili (modello o genere quando necessario), con pesi da 0.25 a 4 per compensare
+sotto/sovrarappresentazione nei parametri previsti delle SLOP accettate e prior proporzionale alle REAL. Non si presume una
+misura osservata delle SLOP: le distribuzioni mostrate sono quelle richieste. Il controllo delle combinazioni è affidato ai
+vincoli del planner, a pochi profili recenti e alla revisione umana; non è una garanzia statistica o un rilevatore di duplicati. Questi controlli non autorizzano cicli automatici di correzione delle immagini.
+
+## 5. Scena finale e generazione
+
+1. Scegliere le REAL descritte e recuperare annotazioni, statistiche e regole pertinenti della galleria.
+2. Registrare per il batch probabilità, estrazioni, valori e revisioni delle descrizioni e delle regole usate.
+3. Il generatore di testo riceve descrizione di partenza, parametri selezionati, valori e vincoli. Produce una scena completa
+   in inglese su tutti gli assi e, separatamente, i cambiamenti effettivi e gli adattamenti di compatibilità.
+4. In modalità `keep`, conservare **ambiente e configurazione fisica della luce**, medium e resa fotografica. Ombre, riflessi e superfici visibili
+   si adattano a nuova geometria, materiali e fotocamera. Un cambio di composizione non autorizza uno sfondo nuovo. I parametri
+   non estratti conservano il valore iniziale salvo le dipendenze necessarie dichiarate. `same_genre` può cambiare ambiente e
+   luce conservando il genere; `change_genre` coordina anche tecnica, resa, composizione, posa, formato e persone necessarie.
+   Le dipendenze devono essere esplicite e rispettare il soggetto e le regole sui contenuti.
+5. L'owner può rivedere scena e prompt prima della conferma a pagamento. Generare con `POST /v1/images/generations` passando
+   **solo la descrizione testuale finale**, senza la REAL, maschere o collage. Descrivere positivamente la scena di arrivo,
+   senza rimandi alla foto originale.
+   Impostare le dimensioni API in base a `aspect_ratio` per ogni candidata; controllare il rapporto restituito prima della revisione.
+6. Conservare la candidata intera per valutazione e decisione dell'owner. Preparare la copia di gioco dopo l'accettazione.
+
+Modelli usati negli esperimenti: GPT-6.2 Sol (`gpt-6.2-sol`) e GPT Image 2.6 Sunburst (`gpt-image-2.6-sunburst`). I modelli restano
+configurabili. Questa decisione non sceglie un modello valutatore specifico; deve poter esaminare immagini intere e vincoli.
+
+## 6. Valutazione e correzioni con conferma
+
+Il modello valutatore riceve la **SLOP intera**, scena/prompt di arrivo, parametri e regole pertinenti. Esamina credibilità
+fotografica, geometria e dettagli, coerenza della scena e aderenza ai parametri. Può segnalare ricorrenze nel contesto fornito,
+ma non dedurre la distribuzione dell'intero dataset da una sola immagine. Verificare il rapporto del fotogramma e gli
+scostamenti di distanza/resa prospettica quando questi parametri devono restare vincolati.
+
+Per gli oggetti riconoscibili dare priorità ai dettagli hardware visibili: geometria, posizione e dimensione di slot/cartucce,
+porte, cerniere e comandi rispetto al modello previsto. Distinguere un errore strutturale dalle piccole variazioni di una
+grafica decorativa: nel test SP Tribal l'owner considera queste ultime meno gravi. Un giudizio positivo del valutatore
+non dimostra l'assenza di errori hardware; l'owner può segnalare difetti mancati senza alterare la valutazione originale.
+
+Restituisce difetti e incertezze, con eventuali proposte di correzione: problema visibile, zona, istruzione locale, beneficio
+atteso e rischio di alterare dettagli corretti. Spiega perché l'intervento potrebbe valere una chiamata. La proposta non avvia
+correzione, rigenerazione o nuova valutazione.
+
+**Ogni intervento richiede conferma dell'owner prima della chiamata a pagamento**, anche se restano chiamate nel massimo del batch.
+L'owner può scegliere, modificare o ignorare le proposte, accettare la candidata o scartarla. La conferma mostra immagine, difetto,
+intervento e massimo di chiamate. La conferma della generazione non autorizza le correzioni. Le valutazioni a pagamento devono
+essere comprese nel massimo esplicitamente autorizzato per la fase.
+
+La correzione approvata usa `POST /v1/images/edits` con **l'intera SLOP**, prompt locale e maschera della zona. Non passare solo
+il ritaglio: il contesto completo serve per proporzioni, prospettiva e luce. La maschera è una guida e non garantisce pixel
+esterni identici. Conservare e confrontare prima/dopo, mostrando anche le modifiche fuori zona. Un eventuale compositing locale
+è una scelta separata e dichiarata, non una proprietà dell'API.
+
+**Nessun ciclo automatico di valutazione/correzione e nessuna rigenerazione automatica.** Dopo l'intervento l'owner confronta
+il risultato; altre correzioni o valutazioni richiedono una nuova decisione e, se a pagamento, conferma esplicita.
+Una proposta del valutatore può essere inutile o peggiorare la candidata: la sua raccomandazione non autorizza la spesa.
+
+## 7. Chiamate, dati e revisione finale
+
+Prima di ogni fase a pagamento, confermare il massimo di chiamate includendo le valutazioni previste. Registrare modello,
+richiesta, stato ed esito in `paid_calls`, senza importi. Acquisire la richiesta una volta sola; esiti incerti mai ripetuti
+in automatico. La proposta del valutatore e la decisione dell'owner restano distinte.
+
+Le descrizioni e i parametri sono privati; la scena intermedia SLOP serve al prompt e non diventa didascalia pubblica. Nei risultati
+restano prompt e modello SLOP, crediti e fonte REAL. Restano validi regole sui contenuti, appartenenza alla galleria, ricetta comune
+WebP 4:5 e passaggi separati di approvazione/pubblicazione. Le REAL restano giocabili. I riferimenti per la lavorazione non
+introducono un registro permanente REAL–SLOP; si eliminano al termine del processo secondo le regole della libreria.
+
+## 8. Evidenze e limiti dei test
+
+Il 2026-11-25: quattro originali della galleria Nintendo (GBA bianco, GBC verde, SP Tribal, Game Boy bruciato). Una chiamata Sol
+ha descritto le quattro REAL e annotato le 23 foto della galleria; una seconda ha preparato le scene; quattro generazioni
+Sunburst hanno usato solo il testo; una correzione ha usato immagine intera e maschera. Totale 7 chiamate su 8 autorizzate.
+Nessuna chiamata a un valutatore: la revisione è stata visiva. Le proposte di un modello valutatore sono una decisione successiva
+dell'owner, non una funzione dimostrata da quel test.
+
+- Contesto fotografico riconoscibile; riuscite la rimozione della decorazione Tribal e la trasformazione del Game Boy bruciato
+  in GBC integro. Sol ha scartato alcune incompatibilità di posa e sfondo.
+- Graffi accentuati anche con descrizioni di usura lieve: controllare questa possibile ricorrenza del generatore.
+- Menu GBC riprodotto perché Sol ne aveva trascritto testo e valori: da qui `screen_content`, aggiunto dopo il test e non ancora
+  sperimentato come parametro estratto.
+- La correzione ha eliminato il riflesso sfaccettato della croce ma l'ha arrotondata troppo, perdendo il dettaglio centrale.
+  Esito parziale, non accettato come riparazione fedele. L'immagine intera non garantisce una correzione corretta.
+- Probabilità provvisoria di selezione del 30% per parametro, valori campionati dalle REAL compatibili con condizioni ordinarie
+  e assenze. Non è la calibrazione finale né una dimostrazione del bilanciamento del dataset.
+
+Artefatti locali: `artifacts/test-galleria-parametri-2026-11-25/`, ignorati da Git: catalogo/crediti, descrizioni, estrazioni,
+prompt, immagini, confronti, registro locale `paid_calls` e riepilogo. Il registro non è quello di produzione. Le evidenze
+essenziali sono salvate qui perché gli artefatti non sono inclusi nella PR.
+
+### Test di cambio ambiente e revisione dell'owner
+
+Secondo test del 2026-11-25: GBA bianco su scrivania, GBC verde sul divano, SP Tribal in una scatola di cartone. Gli ambienti
+erano scelti dall'operatore; Sol ha sviluppato le scene dai testi esistenti. Una pianificazione, tre generazioni e una
+valutazione Sol sulle immagini intere: 5 chiamate su 5 autorizzate, nessuna correzione. Il valutatore riceveva immagini SLOP
+e descrizioni di partenza, non le foto REAL. Test del cambio ambiente entro un genere simile, non del passaggio tra generi.
+
+Il contesto e l'appoggio sono plausibili, ma l'owner segnala un errore importante nell'alloggiamento/cartuccia del gioco
+sul bordo anteriore inferiore dello SP, non rilevato dal valutatore. Il primo riepilogo dell'assistente sottostimava questo
+problema. Il valutatore aveva proposto solo di attenuare un riflesso del display: non è una dimostrazione di verifica hardware
+affidabile. I motivi tribali leggermente diversi sono invece giudicati meno gravi dall'owner.
+
+L'owner osserva una resa prospettica meno accentuata della console. È compatibile con una ripresa più distante e una focale
+maggiore a parità di dimensione apparente; non permette di misurare la focale dai pixel. I due originali verticali erano stati
+resi orizzontali perché il client imponeva 1536×1264 a tutte le generazioni. Questo limite del test motiva il nuovo parametro
+`aspect_ratio`, da applicare anche alla richiesta API. Non è una scelta autonoma del generatore di cambiare formato.
+
+Artefatti locali in `artifacts/cambio-ambiente-stesso-genere-2026-11-25/`, ignorati da Git. La segnalazione dell'owner è
+registrata separatamente da `evaluation.json`; nessuna rivalutazione o correzione a pagamento è stata avviata.
+
+## 9. Particolarità e trattamento finale approvati
+
+Le particolarità sono dettagli collegati ai parametri, non un nono asse o un'unica variazione generica. Ciascuna ha descrizione,
+zona, parametro, ruolo (`identity`, `specimen`, `temporary`), policy (`preserve`, `vary`, `draw`) e certezza. Un nome di edizione
+preciso, come GBA SP Tribal Edition, viene preferito a descrizioni generiche sostitutive delle serigrafie. La conservazione
+esatta dei disegni dal solo testo non è garantita. I dati identificativi temporanei, come nome e combinazione dei progressi
+in un salvataggio, vengono variati coerentemente; non si impone di eliminare sempre lo spagnolo né di spegnere tutti gli schermi.
+
+Dopo accettazione, trattamento regolabile quando serve e preparazione comune WebP 4:5; controllo visivo finale prima di approvare
+e pubblicare. Nessun rumore o sfocatura uniforme viene imposto a tutte le SLOP. Il genere di destinazione guida il campione
+tecnico e non la sola REAL di partenza. Senza misure pertinenti non si inventa un trattamento.
+
+La calibrazione è una stima iniziale esplicita, rivedibile dall'owner, da validare sulla galleria completa. Non viene promessa
+l'indistinguibilità dei dataset né la rilevazione di ogni errore hardware. Le combinazioni e le ricorrenze visive richiedono
+revisione. I test software usano modelli simulati; l'esecuzione sull'intera galleria reale richiede le conferme nella dashboard.

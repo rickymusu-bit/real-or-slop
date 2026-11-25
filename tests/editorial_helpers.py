@@ -1,6 +1,7 @@
 """Local-only API helpers for editorial-loop integration and browser tests."""
 from local_db import sql
 import io
+import hashlib
 import json
 import os
 import urllib.error
@@ -54,7 +55,7 @@ def real(prefix='editorial', gallery=None):
         fixture_gallery = fixture_gallery or make_gallery('Galleria dei test editoriali')['id']
         gallery=fixture_gallery
     counter += 1
-    img=Image.new('RGB',(180,120),(counter%256,80,110));img.putpixel((0,0),(counter%256,20,210))
+    img=Image.new('RGB',(180,120),(counter%256,80,110));img.putpixel((0,0),tuple(hashlib.sha256(prefix.encode()).digest()[:3]))
     out=io.BytesIO();img.save(out,'PNG')
     code,item=call('/upload?'+urllib.parse.urlencode({'origin':'REAL','title':f'{prefix}-{counter}','description':'Original Commons text', 'gallery_id':gallery}), raw=out.getvalue(),library=True); assert code==201,item
     # Match the production browser's WebP upload.

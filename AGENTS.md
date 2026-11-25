@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 34.0.0, aggiornata il 2026-11-22T18:00:00Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 37.0.0, aggiornata il 2026-11-25T20:45:04Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -18,12 +18,14 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 
 - **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta finale
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
-  al browser prima della risposta. Le REAL non vengono descritte da un modello (decisione del 2026-11-20); su richiesta confermata
-  un modello ne misura soltanto affollamento e dettaglio, con soglie per galleria e sola segnalazione, e ne propone fino a tre idee
-  di falsificazione, nel wizard SLOP, che l'owner sceglie (decisioni del 2026-11-21, specifiche `libreria-immagini`, sezione 10, e `generazione-slop`). Il
-  modello delle proposte prepara premessa e prompt SLOP dalla REAL **intera** (l'originale, mai il ritaglio 4:5: decisione del
-  2026-11-15), dal suo titolo e dalla descrizione della fonte, sviluppa l'idea approvata e riceve titolo e descrizione della galleria. La REAL
-  ispira la SLOP senza essere copiata: genere di foto, tecnica e livelli sì; scena, composizione, segni dell'esemplare e persone no.
+  al browser prima della risposta. Su richiesta confermata, un modello descrive la REAL intera per assi durante il caricamento o dalla
+  galleria (decisione del 2026-11-23, specifica `libreria-immagini`, sezione 11). La descrizione visiva è privata. Il modello misura
+  anche affollamento e dettaglio. Il protocollo adottato il 2026-11-25 (`generazione-slop` 17.0.0, implementata nel ramo 1.60.0) prepara una scena inglese dalle descrizioni, variando zero o più parametri con probabilità da calibrare sulle REAL.
+  Ambiente e configurazione della luce restano vincolati di default; i cambi di ambiente/genere coordinano gli assi dipendenti; gli assi descrivono la scena, i parametri controllano le variazioni.
+  Usura, danno, invecchiamento e pulizia sono separati; il contenuto dello schermo è distinto da acceso/spento. La prima
+  generazione riceve solo testo. Il rapporto d'aspetto della foto intera è un parametro, da coordinare con soggetto e genere
+  fotografico e applicare alle dimensioni API; se non estratto si conserva. Le copie di gioco restano 4:5.
+  Evitare copie riconoscibili e ricorrenze statistiche che rivelino l'origine.
 - **Risultati** (decisioni del 2026-11-20, che sostituiscono quella del 2026-11-19). A fine partita, per ogni REAL titolo, autore,
   licenza con link, link alla foto originale e indicazione delle modifiche della copia, senza descrizione editoriale né data di
   consultazione; per ogni SLOP il prompt e il modello. Le SLOP non hanno descrizione.
@@ -31,35 +33,30 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   «Carica REAL» e «Genera SLOP» su indirizzi dedicati nella stessa scheda. Il wizard REAL acquisisce dalle ricerche su Commons.
   Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino,
   cambio galleria e, per le REAL, la misura a pagamento; le proposte SLOP stanno solo nel wizard. La barra lascia visibile la griglia.
-- **Un solo wizard SLOP** (decisioni del 2026-11-18, #157, e del 2026-11-22, specifica `generazione-slop` 15.0.0). Niente generazione
-  manuale né indicazioni di galleria. Passi: galleria; REAL da un'estrazione gratuita corretta su affollamento e dettaglio, che l'owner
-  modifica; proposte scritte dall'owner o chieste al modello per ogni REAL (salvate sulla REAL); scelta delle proposte, anche più di
-  una per REAL; prima conferma per premessa e prompt, che l'owner corregge; seconda conferma per generare; revisione con inquadratura,
-  trattamento e approvazione. Le
-  proposte cambiate, annullate o scadute non autorizzano chiamate immagine. Le SLOP ereditano la galleria e le REAL restano
-  utilizzabili nel gioco e nelle estrazioni. Conservare i riferimenti soltanto fino alla fine di ogni processo (accettazione o
-  chiusura), all’annullamento o alla scadenza; ogni idea dà al massimo una SLOP e diventa usata all'accettazione (decisione del
-  2026-11-21, che sostituisce la cancellazione alla conferma).
-  Ogni foto appartiene a una galleria. La decisione di ripartire da zero azzera D1 con la migrazione 0061 e rimuove il registro
-  dei legami. L’azzeramento riguarda il database, con impostazioni e dati di gioco. La migrazione agisce esclusivamente sul D1.
-  Le persone raffigurate nelle generazioni sono inventate.
-- **Bilanciamento del dataset per numero di foto** (decisioni del 2026-11-17 e 2026-11-18). L’estrazione automatica usa
-  l’appartenenza alla galleria.
+- **Un solo wizard SLOP** (2026-11-25). La 1.60.0 usa la pipeline della specifica `generazione-slop` 17.0.0: preparazione
+  collettiva delle REAL, regole e probabilità per galleria, scene inglesi modificabili, generazione testuale e valutazione
+  confermate, correzioni scelte dall'owner, accettazione, trattamento e copie di gioco. Le vecchie lavorazioni hanno un riquadro
+  di recupero; il nuovo flusso non usa il vecchio ciclo automatico. Ogni foto appartiene a una galleria; le REAL restano giocabili.
+  Nessun registro permanente REAL–SLOP. I profili e le particolarità sono privati e non sono tag di navigazione.
+- **Bilanciamento del dataset.** Il nuovo protocollo (2026-11-25) considera conteggi, distribuzioni dei parametri e combinazioni
+  rilevanti della galleria. Le modifiche possono rendere una console più ordinaria. Non forzare novità vistose o unicità a ogni
+  SLOP. Le probabilità automatiche sono stime empiriche rivedibili; i pesi considerano i parametri previsti delle SLOP, non una
+  misura garantita del loro contenuto. Il controllo delle combinazioni e delle ricorrenze richiede revisione; il 30% del test
+  non è un valore definitivo.
 - **Niente tag** (decisione del 2026-11-20). Le foto di una galleria condividono quasi gli stessi tag: la galleria basta a
-  raggrupparle. Nessun vocabolario, filtro o distribuzione per tag; approvare non richiede tag; le SLOP non si analizzano. Il
-  trattamento delle SLOP ricava bianco e nero, seppia o colore dalle misure della REAL.
+  raggrupparle. Nessun vocabolario, filtro o distribuzione per tag; approvare non richiede tag. I parametri privati del nuovo
+  protocollo non introducono tag di navigazione o didascalie. Il trattamento delle SLOP ricava bianco e nero, seppia o colore
+  dalle misure della REAL.
 - **Fonti REAL controllate su Commons** (decisione del 2026-11-20). Ogni notte 50 REAL (numero modificabile dalle Impostazioni,
   0 sospende), ciascuna tre mesi dopo l'ultimo controllo,
   per sapere se il file esiste ancora. Un file sparito è solo segnalato all'owner, mai ritirato o cancellato in automatico.
-- **Credibilità prima dell'aderenza letterale al prompt.** Il valutatore esamina **l'immagine generata intera**, senza crop
-  né trattamento 4:5; decide accettazione, nuovo tentativo, revisione del prompt o revisione umana. Il ritaglio 4:5 è preparato
-  **soltanto dopo l'accettazione** e non dà feedback al generatore. Nell’accettazione automatica i difetti critici non sono compensabili con altri punti forti; tentativi
-  e tolleranza sono configurabili. Nessuna candidata rifiutata entra nella libreria giocabile o viene pubblicata automaticamente.
-  Un processo che finisce senza SLOP (tentativi esauriti, revisione chiesta, errore, esito incerto) è un'eccezione che richiede
-  l'attenzione dell'owner (decisione del 2026-11-15): resta in evidenza con immagini, prompt e valutazioni di ogni tentativo
-  finché l'owner non lo chiude. L’owner può accettare esplicitamente qualsiasi candidata salvata e valutata di un processo
-  concluso o sospeso, anche con difetti critici, minori o incertezze (decisione del 2026-11-17). La conferma elenca le segnalazioni;
-  valutazione originale e decisione dell’owner restano distinte. La foto entra come nuova, poi richiede copia, approvazione e pubblicazione.
+- **Credibilità e correzioni confermate** (decisione del 2026-11-25). Il valutatore esamina la SLOP **intera**, prima di crop e
+  trattamento, e propone eventuali correzioni con zona, beneficio atteso e rischio. Ogni intervento richiede conferma esplicita
+  dell'owner prima della chiamata a pagamento, anche se resta disponibilità nel massimo del batch. Le correzioni usano
+  `images/edits` con immagine intera e maschera locale. Nessun ciclo automatico di valutazione/correzione o rigenerazione.
+  Un ulteriore intervento o una rivalutazione richiede una nuova decisione. Valutazione e decisione dell'owner restano distinte.
+  Una candidata scartata non viene pubblicata; copie 4:5, approvazione e pubblicazione restano passaggi successivi.
+  Il nuovo wizard applica questi vincoli; le vecchie API restano compatibili per le lavorazioni precedenti.
 - **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP. Il ritaglio non deve eliminare elementi **fondamentali** per il significato della fotografia; in caso contrario
   l'owner corregge l'inquadratura. Le SLOP si valutano **intere** prima di creare la copia 4:5.
 - **Inquadratura ed elaborazione** (decisioni del 2026-11-19 e 2026-11-20). Le nuove copie mostrano la foto intera nel 4:5 con bande
@@ -68,13 +65,15 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   Allontanare due dita allarga il rettangolo, avvicinarle lo restringe. Le elaborazioni avviate nella finestra della foto mostrano
   al centro uno stato di lavorazione e bloccano i comandi fino all’esito.
 - **Il Worker gestisce ciò che riguarda l'API di OpenAI, il browser tutto il resto** (decisione del 2026-11-16, che sostituisce
-  quella del 2026-11-15 sul browser come sola interfaccia). Sul Worker: proposte editoriali, generazione e valutazione (il ciclo SLOP gira
-  in un Workflow che continua anche se la dashboard si chiude), oltre a dati e archivio. Nel browser: inquadratura, trattamento delle
+  quella del 2026-11-15 sul browser come sola interfaccia). Sul Worker: proposte editoriali, generazione e valutazione (il codice
+  attuale usa un Workflow; il nuovo protocollo deve attendere le conferme di correzione dell'owner), oltre a dati e archivio.
+  Nel browser: inquadratura, trattamento delle
   SLOP con i cursori, conversione in copia di gioco (WebP) e misure, anche in gruppo con la pagina aperta; il Worker controlla e
   conserva la copia caricata. Un solo codificatore per REAL e SLOP: la compressione non deve distinguerle.
-- **Chiamate a pagamento:** solo con conferma esplicita dell'owner del **numero massimo** previsto per un loop, registrate in
+- **Chiamate a pagamento:** solo con conferma esplicita dell'owner del **numero massimo** previsto per la fase, registrate in
   `paid_calls` senza importi, esiti incerti mai ripetuti in automatico; niente prezzi né budget, il limite è quello del progetto
-  OpenAI. Il massimo di tentativi di generazione è configurabile, ogni tentativo include la sua valutazione. Nei test solo modelli finti.
+  OpenAI. Le valutazioni previste sono comprese nel massimo; una proposta del valutatore non autorizza la spesa per correggere.
+  Nei test software solo modelli finti; gli esperimenti reali richiedono conferma esplicita.
 - **Libreria come un file system:** nessun lotto, archivio o registro delle eliminazioni; svuotare il cestino cancella ogni riga e ogni
   file dell'immagine.
 - **Contenuti delle SLOP:** regole nella specifica `contenuti-e-trasparenza` (persone vive o morte da meno di 50 anni mai nominate né

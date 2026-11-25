@@ -22,6 +22,9 @@ import { candidateFile } from "./slop-generation";
 import { currentCopyCorrect, currentCopyViews, gamesInPlay, retireCopy, reviveCopy, statsOf, sweepRetired } from "./in-play";
 import { galleryThresholds, latestMeasures, measureReal, measuresOf, measureView } from "./real-measure";
 import { ideaRoute, ideasOf, ownIdea, proposeIdeas } from "./real-ideas";
+import { describeReal, undescribedReals } from "./real-description";
+import { indexReal, pendingRealIndex, PENDING_REAL_INDEX, searchRealIndex } from "./real-index";
+import type { VisualDescription } from "../shared/real-description";
 
 const base = "/api/admin/library";
 const MAX_PIXELS = 32_000_000;
@@ -38,12 +41,13 @@ export interface Row {
   copy_crop: string | null;
   copy_metrics: string | null; copy_treatment: string | null; source_checked_at: string | null; source_missing_at: string | null;
   ideas_reason: string;
+  visual_description: string | null;
 }
 const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
   [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map(x => x.toString(16).padStart(2, "0")).join("");
 const TEXT_FIELDS: Record<string, number> = { title: 200, description: 1000, source_url: 1000,
-  author: 300, license_name: 200, license_url: 1000, prompt: 4000, model: 100 };
+  author: 300, license_name: 200, license_url: 1000, prompt: 24000, model: 100 };
 
 function text(value: unknown, field: string, required = false): string {
   if (value === undefined || value === null) { if (required) throw new HttpError(400, "Campo obbligatorio: " + field); return ""; }
@@ -78,12 +82,14 @@ function parseSlot(value: string | null): unknown {
 const parseJson = (value: string | null): unknown => { try { return value ? JSON.parse(value) : null; } catch { return null; } };
 interface Extra { stats?: { views: number; correct: number }; in_play?: number; measure?: ReturnType<typeof measureView>;
   ideas?: Awaited<ReturnType<typeof ideasOf>> extends Map<string, infer T> ? T : never }
-function view(row: Row, extra: Extra = {}) {
+function view(row: Row, extra: Extra = {}, detail = false) {
   const v = row.copy_sha256 ? row.copy_sha256.slice(0, 12) : row.original_sha256.slice(0, 12);
   return {
     id: row.id, gallery_id: row.gallery_id, origin: row.origin, status: row.status, trashed_from: row.trashed_from,
     // REAL: source description (Commons, corrected by the owner); a SLOP has its prompt and model and no description (2026-11-20).
     ...(row.origin === "REAL" ? { title: row.title, description: row.description, source_url: row.source_url,
+      has_visual_description: !!row.visual_description,
+      ...(detail ? { visual_description: parseJson(row.visual_description) as VisualDescription | null } : {}),
       source_checked_at: row.source_checked_at, source_missing_at: row.source_missing_at,
       author: row.author, license_name: row.license_name, license_url: row.license_url,
       // Latest crowding and detail and the scores above the gallery's thresholds (spec `libreria-immagini`, section 10).
@@ -97,7 +103,7 @@ function view(row: Row, extra: Extra = {}) {
     rights_confirmed: row.rights_confirmed === 1, revision: row.revision,
     created_at: row.created_at, updated_at: row.updated_at, approved_at: row.approved_at, published_at: row.published_at,
     trashed_at: row.trashed_at,
-    generation: row.generation_batch ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality } : null,
+    generation: row.generation_batch || row.generation_slot ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality } : null,
     metrics: validMetrics(parseJson(row.copy_metrics)), treatment: validTreatment(parseJson(row.copy_treatment)),
     file: `${base}/${row.id}/file?v=${v}`, original: `${base}/${row.id}/original`,
     stats: extra.stats || { views: 0, correct: 0 }, in_play: extra.in_play || 0,
@@ -112,7 +118,7 @@ async function extras(env: Env, rows: readonly Pick<Row, "id" | "origin" | "gall
 }
 export async function viewOf(env: Env, imageIdValue: string) {
   const row = await find(env, imageIdValue);
-  return view(row, (await extras(env, [row])).get(row.id));
+  return view(row, (await extras(env, [row])).get(row.id), true);
 }
 /** Adds a new image to the library. The original goes to quarantine; the browser then uploads its game copy. */
 export async function create(env: Env, input: { origin: Origin; title?: string; description?: string; bytes: ArrayBuffer;
@@ -337,6 +343,7 @@ async function destroy(env: Env, ids: readonly string[]): Promise<{ deleted: num
   const copies = rows.flatMap(r => r.copy_key ? [r.copy_key] : []);
   for (let i = 0; i < copies.length; i += 1000) await env.IMAGES?.delete(copies.slice(i, i + 1000));
   await sweepRetired(env);
+  await sweepGalleryFiles(env).catch(error => console.error("pipeline cleanup",error));
   return { deleted: rows.length, postponed };
 }
 
@@ -368,11 +375,15 @@ async function list(env: Env, url: URL) {
   const next = paged && rows.length > limit ? offset + limit : null;
   if (next !== null) rows.pop();
   const more = await extras(env, rows);
-  const countQuery = "SELECT status,origin,count(*) AS n FROM images";
+  const countQuery = `SELECT status,origin,count(*) AS n,sum(origin='REAL' AND status<>'trash' AND visual_description IS NULL) AS undescribed,
+    sum(${PENDING_REAL_INDEX}) AS unindexed FROM images i`;
   const counts = (await (gallery
     ? env.DB.prepare(countQuery + " WHERE gallery_id=? GROUP BY status,origin").bind(gallery)
-    : env.DB.prepare(countQuery + " GROUP BY status,origin")).all<{ status: string; origin: string; n: number }>()).results;
-  return json({ items: rows.map(r => view(r, more.get(r.id))), counts, ...(paged ? {next} : {}) });
+    : env.DB.prepare(countQuery + " GROUP BY status,origin")).all<{ status: string; origin: string; n: number; undescribed: number; unindexed: number }>()).results;
+  const undescribed = counts.reduce((total, count) => total + count.undescribed, 0);
+  const unindexed = counts.reduce((total, count) => total + count.unindexed, 0);
+  return json({ items: rows.map(r => view(r, more.get(r.id))), counts: counts.map(({ status, origin, n }) => ({ status, origin, n })),
+    undescribed, unindexed, ...(paged ? {next} : {}) });
 }
 
 /** Distribution of the approved and published images: REAL and SLOP, approved and published. Free. */
@@ -402,6 +413,9 @@ export async function library(request: Request, env: Env, path: string): Promise
   const candidate = /^\/api\/admin\/library\/slop\/batches\/([\w-]{1,64})\/candidate\/([\w-]{1,64})$/.exec(path);
   if (candidate && request.method === "GET") return candidateFile(env, candidate[1], candidate[2]);
   if (path === base + "/distribution" && request.method === "GET") return json(await distribution(env));
+  if (path === base + "/undescribed-reals" && request.method === "GET") return json(await undescribedReals(env, url.searchParams.get("gallery")));
+  if (path === base + "/real-index" && request.method === "GET") return json(await searchRealIndex(env, url.searchParams));
+  if (path === base + "/real-index/pending" && request.method === "GET") return json(await pendingRealIndex(env, url.searchParams.get("gallery")));
   if (path === base + "/contexts" || path === base + "/contexts/restore")
     return json(await contextRoute(env, request.method, path.endsWith("/restore"), request.method === "POST" ? await body(request, 20_000) : {}));
   if (path === base + "/models") return json(await modelsRoute(env, request.method, request.method === "PUT" ? await body(request, 500) : {}));
@@ -459,7 +473,7 @@ export async function library(request: Request, env: Env, path: string): Promise
     }
     return json({ done: done.length, failed });
   }
-  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|regenerate|metrics|measure|measures|ideas))?$/);
+  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|regenerate|metrics|measure|measures|ideas|description|index-description))?$/);
   if (!match) throw new HttpError(404, "API della libreria inesistente");
   const row = await find(env, match[1]);
   if (match[2] === "file" || match[2] === "original") {
@@ -495,6 +509,15 @@ export async function library(request: Request, env: Env, path: string): Promise
     if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
     await measureReal(env, row, await body(request, 1000));
     return json(await viewOf(env, row.id), 201);
+  }
+  if (match[2] === "description") {
+    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    await describeReal(env, row, await body(request, 1000));
+    return json(await viewOf(env, row.id));
+  }
+  if (match[2] === "index-description") {
+    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    return json(await indexReal(env, row, await body(request, 1000)));
   }
   if (match[2] === "regenerate") {
     if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");

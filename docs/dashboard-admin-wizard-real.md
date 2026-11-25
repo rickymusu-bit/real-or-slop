@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 6.3.0
+# Dashboard e wizard REAL — specifica 6.5.0
 
-Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
+Stato: implementata nel ramo 1.60.0, da rilasciare. Aggiornata: 2026-11-25T20:45:04Z.
 
 ## 1. Decisioni dell'owner
 
@@ -14,8 +14,8 @@ Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00
   tocco breve su una foto la seleziona e la mette subito tra le selezionate; la selezione resta con una nuova ricerca (2026-11-14).
 - Una pressione prolungata su una miniatura la ingrandisce con titolo, descrizione e link a Commons; la finestra resta aperta e si
   chiude con una × nell'angolo. Vale anche nella galleria e nel wizard SLOP (2026-11-14).
-- **Niente descrizione editoriale né analisi a pagamento delle REAL** (2026-11-20): i risultati del gioco mostrano i crediti della
-  REAL; il wizard conserva solo la descrizione della fonte, che resta nel catalogo e accompagna la REAL nelle proposte SLOP.
+- **Descrizione visiva delle REAL** (2026-11-23). Si genera dall'originale durante il caricamento o dalla galleria. Resta privata,
+  insieme alla descrizione della fonte. I risultati del gioco mostrano i crediti della REAL.
 
 ## 2. Dashboard `/admin`
 
@@ -31,9 +31,9 @@ affollamento e dettaglio delle REAL (specifica `libreria-immagini`, sezione 10) 
 si torna all’elenco delle gallerie.
 
 «Carica REAL» apre `/admin/gallerie/<id>/real` e «Genera SLOP» apre `/admin/gallerie/<id>/slop` nella stessa scheda del browser.
-La pagina mostra il titolo della galleria e usa lo spazio disponibile per i quattro passi REAL o per le modalità SLOP. Si torna alla griglia
+La pagina mostra il titolo della galleria e usa lo spazio disponibile per i quattro passi REAL o per la pipeline SLOP. Si torna alla griglia
 con «Foto della galleria» o con Indietro del browser. L’indirizzo `/admin?gallery=<id>` riapre la finestra delle foto. Le selezioni
-REAL e le bozze dei due wizard si conservano per galleria nella sessione del browser.
+del wizard REAL si conservano per galleria nella sessione del browser. Le scene e le lavorazioni SLOP sono persistenti sul server.
 
 I batch automatici in corso hanno un collegamento alla pagina SLOP della galleria che li ha avviati. La revisione del batch apre la
 finestra delle foto con il filtro del batch già applicato. Statistiche include l’avviso sullo sbilanciamento e la distribuzione tra REAL e SLOP.
@@ -79,7 +79,9 @@ acquisite sono comunque nella libreria privata.
 - Per ogni foto: anteprima, titolo, **descrizione della fonte** modificabile (fino a 1000 caratteri, precompilata da Commons, salvata
   uscendo dal campo), «Titolo e metadati» (autore, licenza,
   dimensioni, link alla fonte e alla licenza), «Togli dal caricamento» (sposta nel cestino, ripristinabile dal cestino della galleria).
-  Niente tag, analisi o descrizione editoriale.
+  «Genera descrizione» descrive il suo originale con il modello. «Genera le descrizioni visive mancanti» lo fa per tutte le REAL
+  in caricamento ancora da descrivere. Entrambi chiedono conferma del massimo di chiamate. Le descrizioni salvate si leggono
+  sotto il testo della fonte (specifica `libreria-immagini`, sezione 11).
 - Le modifiche di una foto partono una dopo l'altra, ciascuna con la revisione più recente.
 - Si passa al 3 senza altri requisiti.
 
@@ -101,3 +103,11 @@ alla volta. Dopo un errore quelle già pubblicate non si ripetono; gli errori re
 - Commons non certifica l'autenticità: una pagina e una licenza compatibile non dimostrano che una foto sia REAL. La verifica è
   dell'owner.
 - La pubblicazione di un gruppo non è transazionale: dopo un errore di rete alcune foto possono restare approvate.
+
+## 6. Wizard SLOP della galleria
+
+La pagina SLOP dedicata monta `src/pipeline.ts`: preparazione collettiva, regole e probabilità, scene e immagini da revisionare,
+trattamento e copie. Ogni fase mostra e conferma il massimo di chiamate; la correzione ha un'anteprima della maschera e una
+conferma separata. I profili e gli otto assi sono campi leggibili e modificabili, senza richiedere JSON. Gli stati del server
+si aggiornano senza interrompere la scrittura nei campi. Un riquadro mostra eventuali processi precedenti da chiudere.
+Lo schema della pipeline è collegato dalla pagina. Dettagli in `generazione-slop` 17.0.0.

@@ -1,12 +1,12 @@
-"""Models, model contexts and the measure of crowding and detail of the REAL against a local Worker and the fake OpenAI (never the
-real one). The paid analysis of 2026-11-20 stays retired (no tags, no editorial description, no description of the SLOP): its routes
-answer 404, the photo fields are gone, the source description of a REAL stays editable. The four contexts keep their versions and the
-model selectors their checks. The measure (owner decisions of 2026-11-21) is one confirmed call per REAL, kept with model and context
-versions, with thresholds per gallery and defaults in the settings."""
+"""Model settings, REAL measures, ideas and visual descriptions against a local Worker and fake OpenAI.
+The legacy analysis routes remain retired. The source description is editable independently of the visual description."""
 from local_db import sql
+from concurrent.futures import ThreadPoolExecutor
+import base64
 import io
 import json
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -96,7 +96,7 @@ assert part['current']['body'] == first['body'] and len(part['history']) == 3, p
 code, models = call(f'{API}/models'); assert code == 200 and models['text_model'] == 'gpt-6.1-sol' and models['image_model'] == 'gpt-image-2.5-flare', models
 available = {m['id']: m['available'] for m in models['image_models']}
 assert available['gpt-image-2'] is True and available['gpt-image-2.5-flare'] is True and available['gpt-image-2.6-flare'] is False, available
-assert len(models['text_models']) == 27 and all(m['available'] for m in models['text_models'])
+assert {'gpt-6.2-sol', 'gpt-6.1-sol'} <= {m['id'] for m in models['text_models']} and all(m['available'] for m in models['text_models'])
 assert dict((m['id'], m['qualities']) for m in models['image_models'])['gpt-image-2.5-flare'][-1] == 'max'
 assert {m['id']: m['shutdown'] for m in models['image_models']}['gpt-image-2'] == '2027-02-10'
 for change, code_wanted in (({'image_model': 'gpt-image-2.6-flare'}, 409), ({'text_model': 'gpt-9'}, 400), ({'image_model': 'dall-e-3'}, 400), ({}, 400), ({'other': 'x'}, 400)):
@@ -237,4 +237,109 @@ assert ideas(real)[0] == 409
 assert call(f'{API}/{real["id"]}', method='DELETE')[1]['deleted'] == 1
 assert sql(f"SELECT count(*) AS n FROM real_ideas WHERE image_id='{real['id']}'")[0]['n'] == 0
 call(f'{API}/{slop["id"]}/trash', {}); call(f'{API}/{slop["id"]}', method='DELETE')
-print('Analysis integration passed: no paid analysis or description of the REAL, no description of the SLOP, four model contexts with versions, model selectors, measures of the REAL with thresholds, ideas of falsification.')
+
+# Visual descriptions: original image, separate source field, one call even under concurrent requests.
+real = upload('REAL', 'Game Boy DMG-01 da descrivere', description='Titolo riportato dalla fonte.')
+trash = upload('REAL', 'Foto da lasciare nel cestino')
+slop = upload('SLOP', prompt='Plausible console.', model='gpt-image-2')
+call(f'{API}/{trash["id"]}/trash', {})
+missing = f'{API}/undescribed-reals?gallery={gallery_id}'
+describe = f'{API}/{real["id"]}/description'
+confirm = {'confirm': True, 'request': str(uuid.uuid4()), 'gallery_id': gallery_id}
+assert real['visual_description'] is None and not real['has_visual_description'] and 'visual_description' not in slop
+assert call(missing)[1]['images'] == [{'id': real['id'], 'title': real['title']}]
+openai([])
+assert call(describe, {**confirm, 'confirm': False})[0] == 400
+assert call(describe, {**confirm, 'gallery_id': 'wrong-gallery'})[0] == 409
+for item in (slop, trash): assert call(f'{API}/{item["id"]}/description', confirm)[0] == 409
+assert openai() == []
+openai([{'json': {'subject': ''}}])
+assert call(describe, confirm)[0] == 502 and call(missing)[1]['images']
+assert call(describe, confirm)[0] == 409 and len(openai()) == 1
+openai([{'delay': 1}])
+with ThreadPoolExecutor(1) as pool:
+    pending = pool.submit(call, describe, {**confirm, 'request': str(uuid.uuid4())})
+    for _ in range(50):
+        if openai(): break
+        time.sleep(0.02)
+    assert call(describe, {**confirm, 'request': str(uuid.uuid4())})[0] == 409
+    status, described = pending.result()
+assert status == 200 and len(openai()) == 1 and call(missing)[1]['images'] == [], described
+assert described['has_visual_description'] and described['description'] == real['description'] and described['revision'] == real['revision']
+assert described['visual_description']['sections']['viewpoint'] == 'Front view.'
+assert described['visual_description']['indications']['museum_or_catalog'] == {'applies': True, 'reason': 'Neutral background.'}
+assert described['visual_description']['model'] == openai()[0]['body']['model'] and described['visual_description']['base_context']
+body = openai()[0]['body']; sent = body['input'][0]['content']
+assert body['text']['format']['name'] == 'real_visual_description' and sent[1]['detail'] == 'high'
+assert 'Write all generated text in English' in body['instructions'] and 'in its original language' in body['instructions']
+assert json.loads(sent[0]['text'])['source']['description'] == real['description']
+request = urllib.request.Request(base + real['original'], headers={'Authorization': 'Bearer ' + token})
+with urllib.request.urlopen(request) as f: assert base64.b64decode(sent[1]['image_url'].split(',', 1)[1]) == f.read()
+listed = call(f'{API}?gallery={gallery_id}&origin=REAL')[1]
+assert listed['undescribed'] == 0 and listed['items'][0]['has_visual_description'] and 'visual_description' not in listed['items'][0]
+assert call(describe, confirm)[0] == 200 and len(openai()) == 1
+
+# An exact model match is available as soon as the description supplies its subject. Semantic comparisons use saved vectors.
+def index(item, max_calls=1, **extra):
+    return call(f'{API}/{item["id"]}/index-description', {'confirm': True, 'request': str(uuid.uuid4()),
+                                                        'gallery_id': gallery_id, 'max_calls': max_calls, **extra})
+def search(**filters):
+    url = f'{API}/real-index?' + urllib.parse.urlencode({'gallery': gallery_id, **filters})
+    return call(url)
+def pending_index():
+    return {item['id']: item['max_calls'] for item in call(f'{API}/real-index/pending?gallery={gallery_id}')[1]['images']}
+
+assert described['visual_description']['subject'] == {'brand': 'Nintendo', 'family': 'Game Boy', 'model': 'DMG-01',
+                                                       'keys': {'brand': 'nintendo', 'family': 'gameboy', 'model': 'dmg01'}}
+assert [r['id'] for r in search(brand='NINTENDO', family='Game Boy', model='dmg 01', catalogue=1)[1]['images']] == [real['id']]
+assert search(model='DMG-02')[1]['images'] == [] and search(model='DMG-01', catalogue=0)[1]['images'] == []
+assert search(reference=real['id'])[0] == 409 and call(f'{API}?gallery={gallery_id}')[1]['unindexed'] == 1
+near = upload('REAL', 'Un DMG-01 dello stesso ambiente')
+far = upload('REAL', 'Un altro DMG-01 sul banco')
+for item in (near, far):
+    assert call(f'{API}/{item["id"]}/description', {**confirm, 'request': str(uuid.uuid4())})[0] == 200
+# The older description omitted the structured fields. Its text is sufficient for the backfill.
+sql(f"UPDATE images SET visual_description=json_remove(json_set(visual_description,'$.sections.environment','A repair bench.'),'$.subject') WHERE id='{far['id']}'")
+assert pending_index() == {real['id']: 1, near['id']: 1, far['id']: 2}
+openai([])
+assert index(far)[0] == 409 and index(real, confirm=False)[0] == 400
+assert index(slop)[0] == 409 and index(trash)[0] == 409 and not openai()
+assert index(real)[0] == 200
+assert openai()[0]['path'] == '/v1/embeddings'
+assert openai()[0]['body'] == {'model': 'text-embedding-3-small', 'input': 'Uniform background.', 'dimensions': 256, 'encoding_format': 'float'}
+assert sql("SELECT input_tokens FROM paid_calls WHERE model='text-embedding-3-small'")[0]['input_tokens'] == 18
+assert index(real)[0] == 200 and len(openai()) == 1
+openai([{'delay': 1, 'embedding': [9, 1] + [0] * 254}])
+with ThreadPoolExecutor(1) as pool:
+    building = pool.submit(index, near)
+    for _ in range(50):
+        if openai(): break
+        time.sleep(0.02)
+    assert index(near)[0] == 409
+    assert building.result()[0] == 200
+assert len(openai()) == 1
+openai([{'json': {'brand': 'Nintendo', 'family': 'Game Boy', 'model': 'DMG-01'}}, {'status': 500}])
+assert index(far, 2)[0] == 502 and pending_index() == {far['id']: 1}
+requests = openai()
+assert requests[0]['body']['input'] == [{'role': 'user', 'content': 'Nintendo Game Boy DMG-01.'}]
+assert requests[1]['body']['input'] == 'A repair bench.'
+openai([{'embedding': [0, 1] + [0] * 254}])
+assert index(far)[0] == 200 and pending_index() == {}
+status, similar = search(reference=real['id'], model='DMG-01', order='similar')
+assert status == 200 and [r['id'] for r in similar['images']] == [near['id'], far['id']], similar
+assert similar['images'][0]['score'] > 0.9 and similar['images'][1]['score'] == 0
+assert search(reference=real['id'], family='game boy', order='different', limit=1)[1]['images'][0]['environment'] == 'A repair bench.'
+assert len(openai()) == 1, 'indexed lookups are free'
+sql(f"UPDATE images SET visual_description=json_set(visual_description,'$.sections.environment','An outdoor table.') WHERE id='{far['id']}'")
+assert pending_index() == {far['id']: 1}
+assert [r['id'] for r in search(reference=real['id'])[1]['images']] == [near['id']]
+other_gallery = make_gallery(API, token, 'Galleria separata per indici')
+assert search(reference=real['id'], gallery=other_gallery)[0] == 409
+assert patch(near, {'gallery_id': other_gallery})[0] == 200
+assert search(reference=real['id'])[1]['images'] == []
+assert [item['id'] for item in search(model='DMG-01', gallery=other_gallery)[1]['images']] == [near['id']]
+assert call(f'{API}/real-index/pending?gallery={other_gallery}')[1]['images'] == []
+for item in (real, slop, trash, near, far):
+    call(f'{API}/{item["id"]}/trash', {}); call(f'{API}/{item["id"]}', method='DELETE')
+assert sql('SELECT count(*) AS n FROM real_environment_vectors')[0]['n'] == 0
+print('Analysis integration passed: model settings, measures, ideas, visual descriptions and gallery-scoped REAL indexes.')

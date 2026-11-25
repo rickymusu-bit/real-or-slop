@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 10.5.0
+# Foto e gallerie — specifica 10.8.0
 
-Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
+Stato: implementata nel ramo 1.60.0, da rilasciare. Aggiornata: 2026-11-25T20:45:04Z.
 
 ## 1. Decisioni dell'owner
 
@@ -29,6 +29,12 @@ La griglia 4:5 ha due colonne su mobile. «Carica altre foto» aggiunge le pagin
   foto mai viste vanno in fondo.
 - **Schede:** miniatura (copia di gioco), origine e stato, casella di selezione. Tocco breve: dettaglio. Pressione prolungata: anteprima
   grande (specifica `dashboard-admin-wizard-real`, sezione 3).
+- **Descrizione visiva.** Una REAL senza descrizione ha un'icona sulla miniatura. «Descrivi le REAL» include tutte quelle fuori dal
+  cestino ancora da descrivere nella galleria aperta, anche se un filtro o la paginazione le nascondono. Si legge la descrizione
+  dal dettaglio della foto, dove si può generare se manca (specifica `libreria-immagini`, sezione 11).
+- **Indicizza le descrizioni.** Il comando appare quando una REAL già descritta nella galleria ha ancora dati da indicizzare.
+  Il conteggio abbraccia l'intera galleria fuori dal cestino. La conferma indica il massimo di chiamate per completare gli indici
+  dei soggetti e degli ambienti (specifica `libreria-immagini`, sezione 12).
 - **Seleziona tutte (N)** (decisione dell'owner del 2026-11-15): seleziona tutte le immagini già caricate nella vista con i filtri
   correnti; sparisce quando sono già tutte selezionate. «Deseleziona» nella barra le toglie.
 - **Selezione multipla** (decisione dell’owner del 2026-11-19). La barra sotto la griglia offre «Approva», «Pubblica», «Nel cestino»
@@ -69,7 +75,7 @@ suo batch originario, ma esce dalla sua revisione operativa.
   percentuale; partite in corso che la includono; avvisi (licenza ND, copia mancante con «Prepara la copia di gioco»); misure della copia e, per una SLOP trattata, colore del trattamento (a colori, bianco e nero o seppia), misure anonime di riferimento e scarto dall'obiettivo.
 - **Campi:** titolo, descrizione della fonte, fonte, autore e licenza solo per le REAL; prompt e modello solo per le SLOP, che non hanno descrizione (2026-11-20); nessun tag. Le SLOP sono identificate dall’ID abbreviato. Ogni modifica si salva subito. La migrazione 0058 rimuove i titoli SLOP e la copia dei tag di partenza dai metadati delle figlie, conservando i titoli REAL e i parametri tecnici del trattamento. Rimossa «Spiegazione dopo la risposta», inutilizzata dal gioco; l’API rifiuta il campo e i metadati dell’origine sbagliata. La migrazione 0057 elimina anche le colonne obsolete di didascalie e vista iniziale.
 - **Azioni:** per nuove e approvate il dettaglio offre «Inquadratura» e i comandi del trattamento per le
-  SLOP (specifica `copie-di-gioco`, sezione 4.3). Nessuna descrizione editoriale (2026-11-20); per le REAL l'unica chiamata a pagamento è la misura di affollamento e dettaglio (2026-11-21).
+  SLOP (specifica `copie-di-gioco`, sezione 4.3). Per le REAL il dettaglio mostra anche la descrizione visiva privata e le misure di affollamento e dettaglio.
   Per le pubblicate, «Modifica foto» rende disponibili questi comandi nella stessa finestra dopo il ritiro confermato. Sono disponibili
   anche «Approva», «Pubblica nel gioco», «Togli dalla pubblicazione»,
   «Elimina (nel cestino)», «Ripristina» ed «Elimina definitivamente» secondo lo stato della foto.
@@ -78,8 +84,8 @@ suo batch originario, ma esce dalla sua revisione operativa.
   conferma e avviso di elaborazione al centro) e, a richiesta, gli oggetti dell'ultima misura disegnati sull'originale intero con le
   categorie di dettaglio e l'elenco di tutte le misure (specifica `libreria-immagini`, sezione 10).
 - **Proposte SLOP (REAL):** sotto la misura, in sola lettura, le proposte della REAL con lo stato (proposta dal modello, approvata,
-  usata, da rivedere) e il motivo se il modello non ne ha proposte. Si scrivono, si chiedono al modello e si scelgono nel wizard
-  «Genera SLOP» (specifica `generazione-slop`, sezione 1).
+  usata, da rivedere) e il motivo se il modello non ne ha proposte. Sono dati del flusso precedente. Il nuovo wizard prepara
+  scene da descrizioni, parametri e particolarità (specifica `generazione-slop`).
 - **Rigenerare una SLOP:** richiede un nuovo batch del wizard «Genera SLOP», con conferma ed esame dell’immagine intera.
 - **Fonte su Commons (REAL):** sopra il corpo del dettaglio, l'ultima data in cui il controllo notturno ha trovato il file oppure,
   se manca, la data della prima mancanza con le azioni possibili (verificare, ritirare o cestinare, correggere la pagina della fonte).
@@ -115,3 +121,11 @@ le statistiche coprono al massimo un anno.
 `max_detail` (interi da 0 a 100 o null), `POST /trash/empty?gallery=<id>`, `DELETE /:id`, `DELETE /galleries/:id` con `confirm: true` e `revision`. Con `gallery`, `offset`, `sort` e `order` la lista restituisce una pagina
 di 72 foto e il prossimo offset (`next`, nullo all’ultima pagina). I conteggi sono per galleria quando richiesta. Le eliminazioni rispondono anche con `postponed`.
 
+
+## 7. Lavorazioni della nuova pipeline
+
+Migrazioni 0073 e 0074: `galleries.pipeline_settings`, `images.pipeline_profile`, `images.pipeline_scene`, `pipeline_jobs`.
+Le lavorazioni temporanee collegano una REAL alla candidata solo durante la revisione. Ogni operazione è acquisita una volta;
+la candidata entra in libreria solo all'accettazione dell'owner. I riferimenti di lavorazione vengono eliminati al termine;
+profili e scene previsti non contengono un ID permanente della REAL di partenza. Trigger registrano i file da rimuovere nella
+coda durevole. Le gallerie con operazioni accodate/in corso non possono essere eliminate.

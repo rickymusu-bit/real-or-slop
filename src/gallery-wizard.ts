@@ -1,7 +1,7 @@
-import { galleryPhotosPath, galleryWizardPath, type GalleryWizard } from "./gallery-paths";
+import { galleryPhotosPath, type GalleryWizard } from "./gallery-paths";
 import { mountRealWizard } from "./real-wizard";
-import { mountSlopAuto } from "./slop-auto";
 import { mountSlopStudio } from "./slop-studio";
+import { mountPipeline } from "./pipeline";
 import "./gallery-wizard.css";
 
 const loading = '<p class="admin-loading" role="status">Caricamento del wizard…</p>';
@@ -16,10 +16,11 @@ export async function showGalleryWizard(content: HTMLElement, id: string, wizard
     <div id="gallery-wizard-body">${loading}</div>
   </section>`;
   const body = content.querySelector<HTMLElement>("#gallery-wizard-body")!;
+  let gallery: { title: string; paid_calls: boolean };
   try {
     const response = await fetch("/api/admin/library/galleries/" + encodeURIComponent(id));
     if (!response.ok) throw Error(response.status === 404 ? "Galleria non disponibile." : "Impossibile caricare la galleria.");
-    const gallery = await response.json() as {title: string};
+    gallery = await response.json();
     content.querySelector("#wizard-gallery-name")!.textContent = gallery.title;
   } catch (error) {
     body.querySelector("p")!.classList.remove("admin-loading");
@@ -31,25 +32,14 @@ export async function showGalleryWizard(content: HTMLElement, id: string, wizard
 
   if (!slop) {
     body.id = "real-wizard";
-    const real = await mountRealWizard(body, id);
+    const real = await mountRealWizard(body, id, gallery.paid_calls);
     window.addEventListener("pageshow", event => { if (event.persisted) void real.sync(); });
     return;
   }
 
-  // One wizard for every SLOP (owner decision of 2026-11-22): steps 2-6 in the controls, review and exceptions in the studio below.
-  body.innerHTML = `<section id="slop-automatic"><div id="slop-auto-controls">${loading}</div></section>
-  <section id="slop-review"><div id="slop-studio"></div></section>`;
-  const studio = mountSlopStudio(body.querySelector<HTMLElement>("#slop-studio")!, id);
-  let shown: string | null | undefined;
-  const auto = mountSlopAuto(null, body.querySelector<HTMLElement>("#slop-auto-controls")!, id, {
-    // The studio reloads only when the batch to review changes; the exceptions come with it.
-    batch: async batchId => { if (batchId !== shown) { shown = batchId; await studio.refresh(batchId); } },
-    review: batch => { location.assign(galleryPhotosPath(id, batch)); },
-    openGallery: galleryId => { location.assign(galleryWizardPath(galleryId, "slop")); },
-    changed: async () => { await studio.refresh(shown ?? null); },
-  });
-  const refresh = () => Promise.all([studio.refresh(shown ?? null), auto.refresh()]);
-  if (new URLSearchParams(location.search).has("mode")) history.replaceState(history.state, "", location.pathname);
-  await refresh();
-  window.addEventListener("pageshow", event => { if (event.persisted) void refresh(); });
+  body.innerHTML='<div data-gallery-pipeline></div><details data-legacy-recovery hidden><summary>Lavorazioni precedenti da decidere</summary><div data-legacy-studio></div></details>';
+  const pipeline = await mountPipeline(body.querySelector<HTMLElement>("[data-gallery-pipeline]")!, id);
+  const old = await fetch("/api/admin/library/slop/state?gallery="+encodeURIComponent(id)).then(r=>r.ok?r.json():null).catch(()=>null);
+  if(old?.attention?.length){body.querySelector<HTMLElement>("[data-legacy-recovery]")!.hidden=false;await mountSlopStudio(body.querySelector<HTMLElement>("[data-legacy-studio]")!,id).refresh(null);}
+  window.addEventListener("pageshow", event => { if (event.persisted) void pipeline.refresh(); });
 }

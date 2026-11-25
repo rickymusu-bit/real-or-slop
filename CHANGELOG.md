@@ -1,7 +1,42 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-22T18:00:00Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-25T20:45:04Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.60.0 — 2026-11-25T20:45:04Z
+
+- Pipeline completa nel wizard della galleria: preparazione collettiva delle REAL, profili osservati e particolarità rivedibili,
+  indici, estrazioni con probabilità automatiche o scelte dall'owner, scene inglesi su otto assi e rapporto d'aspetto per candidata.
+- Ambiente invariato, cambio ambiente entro lo stesso genere o cambio coordinato del genere; modello ed edizione identificati
+  precisamente, dati temporanei identificativi variati. Parametri previsti delle SLOP confrontabili con quelli osservati delle REAL.
+- Generazione dal solo testo e valutazione in fasi confermate. Correzioni proposte con beneficio/rischio, anteprima modificabile
+  della maschera e conferma separata; API edits con immagine intera. Workflow persistenti, nessun reinvio automatico incerto.
+- Accettazione umana prima della copia; trattamento regolabile da REAL misurate del genere di destinazione, WebP comune,
+  inquadratura, controllo finale, approvazione e pubblicazione. Riquadro di recupero per i processi precedenti.
+- Schema completo salvato e accessibile dal wizard. Migrazioni 0073 e 0074, coda con tre richieste contemporanee e annullamento delle richieste non inviate; test API, statistici e browser desktop/mobile simulati.
+  Nessuna chiamata reale, migrazione remota, merge o rilascio eseguiti per preparare la PR.
+
+## 1.59.0 — 2026-11-24T06:59:00Z
+
+- Indici dei soggetti delle REAL per marca, famiglia e modello, con ricerca esatta normalizzata. Ricerca degli ambienti per
+  somiglianza o differenza a partire da una REAL della galleria. I risultati includono il testo dell'asse ambiente.
+- «Indicizza le descrizioni» calcola i vettori degli ambienti e completa i campi del soggetto per le descrizioni precedenti.
+  Conferma del massimo di chiamate e riuso dei dati già disponibili. Migrazione 0072.
+- Protocollo adottato il 2026-11-25, ancora da integrare: descrizioni inglesi e parametri distinti, inclusi usura, danno,
+  invecchiamento, contenuto dello schermo e rapporto d’aspetto. Valori ordinari e novità plausibili, con probabilità da calibrare sulle REAL.
+  Generazione dal solo testo conservando ambiente/luce; correzioni proposte dal valutatore e attuate solo dopo conferma
+  dell'owner, con immagine intera e maschera; nessun loop automatico. Evidenze e limiti del test salvati nella specifica 16.1.0.
+  Regole Nintendo aggiornate. Rapporto del fotogramma legato a soggetto/genere e alle dimensioni API, distinto dal 4:5 di gioco.
+  Documentato anche il test di cambio ambiente e l'errore hardware SP segnalato dall'owner e mancato dal valutatore.
+  Solo documentazione, nessuna modifica al wizard o allo schema dati.
+
+## 1.58.0 — 2026-11-23T20:46:00Z
+
+- Primo passo della nuova pipeline. Il modello descrive in inglese l'originale della REAL per otto assi e salva una vista complessiva, le
+  incertezze e le indicazioni sulla scena. La descrizione visiva è privata e distinta da quella della fonte Commons.
+- Nel passo «Descrizione» di «Carica REAL» si descrive una foto o tutte quelle ancora prive di descrizione. Nella galleria lo stesso
+  comando copre tutte le REAL mancanti e ogni miniatura incompleta ha un'icona. Il dettaglio permette anche di descrivere una foto.
+  Una conferma indica il massimo di una chiamata per foto. Migrazione 0071.
 
 ## 1.57.0 — 2026-11-22T18:00:00Z
 

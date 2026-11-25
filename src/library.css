@@ -47,6 +47,7 @@
 .library-check { position: absolute; top: 6px; left: 6px; z-index: 1; background: rgb(0 0 0 / 55%); padding: 4px; line-height: 0; }
 .library-open { display: grid; gap: 6px; width: 100%; padding: 0 0 10px; text-align: left; background: none; border: 0; color: inherit; cursor: pointer; }
 .library-open img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #111; }
+.library-description-icon { position: absolute; top: 6px; right: 6px; padding: 1px 5px; border-radius: 3px; color: #f0b04a; background: #151515; line-height: 1.4; }
 .library-card-title { padding: 0 10px; font-weight: 700; overflow-wrap: anywhere; }
 .library-card-tags { padding: 0 10px; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
 .library-badges { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 10px; }
@@ -68,6 +69,8 @@ button.danger { color: #ff8a80; border-color: #ff8a80; }
 .editorial-description { min-width: 0; margin: 12px 0; padding: 10px; border: 1px solid var(--hairline); }
 .editorial-description label { display: grid; gap: 4px; margin-top: 10px; }
 .editorial-description textarea { box-sizing: border-box; width: 100%; }
+.editorial-description dt { font-weight: 700; }
+.editorial-description dd { margin: 0 0 0.85em; white-space: pre-wrap; overflow-wrap: anywhere; }
 /* Crowding and detail of a REAL (spec `libreria-immagini`, section 10). */
 .badge-symbol { line-height: 1.2; }
 .library-measure { display: grid; gap: 6px; padding-top: 6px; border-top: 1px solid var(--hairline, #444); }

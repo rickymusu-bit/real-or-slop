@@ -1,6 +1,6 @@
-# Statistiche e Impostazioni — specifica 4.9.0
+# Statistiche e Impostazioni — specifica 4.9.1
 
-Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z.
+Stato: implementata nel ramo 1.58.0, da rilasciare. Aggiornata: 2026-11-23T20:46:00Z.
 
 ## 1. Decisioni dell'owner (2026-11-12)
 
@@ -44,7 +44,7 @@ Periodo: ultimi 7 giorni, ultimi 30 (predefinito) o da sempre; «Aggiorna». API
 - **Risposte delle partite concluse:** foto giocate, REAL e SLOP riconosciute, accuratezza bilanciata, foto scadute; voci in classifica
   e nascoste.
 - **Chiamate a pagamento:** per tipo («Analisi e misure delle REAL»: le analisi storiche fino al 2026-11-20 e le misure di
-  affollamento e dettaglio dal 2026-11-21; proposte editoriali e prompt SLOP; immagini; valutazioni) numero, token in ingresso e in uscita, esiti incerti evidenziati;
+  affollamento e dettaglio dal 2026-11-21 e le descrizioni visive dal 2026-11-23; proposte editoriali e prompt SLOP; immagini; valutazioni) numero, token in ingresso e in uscita, esiti incerti evidenziati;
   le ultime 200 chiamate del periodo con filtri per tipo ed esito. Nessun importo.
 - **Equilibrio del catalogo:** REAL e SLOP pubblicate e approvate, quota di REAL tra le pubblicate con la fascia 40–60% e un avviso non
   bloccante fuori fascia, livelli giocabili e foto mancanti agli altri. Le copie nuove sono tutte 4:5.
