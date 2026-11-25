@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.7.0
+# Libreria delle immagini — specifica 10.8.0
 
-Stato: implementata nel ramo 1.59.0, da rilasciare. Aggiornata: 2026-11-24T06:59:00Z.
+Stato: implementata nel ramo 1.60.0, da rilasciare. Aggiornata: 2026-11-25T20:45:04Z.
 
 ## 1. Decisioni dell'owner
 
@@ -292,3 +292,11 @@ serve come riscontro.
 - La lista delle descrizioni da completare è `GET /api/admin/library/real-index/pending?gallery=…`. `POST /:id/index-description`
   riceve `confirm`, `request`, `gallery_id` e `max_calls`. Soggetto e vettore seguono la REAL tra gallerie. Una modifica al testo
   dell'ambiente invalida il vettore e l'eliminazione definitiva della REAL lo cancella.
+
+## 12. Profili privati e pipeline della galleria
+
+La 1.60.0 aggiunge `images.pipeline_profile` per genere, quattordici parametri e particolarità, e `pipeline_scene` per la scena
+prevista di una SLOP. Il wizard prepara insieme descrizione e profilo con una chiamata per REAL mancante; riusa quelli presenti.
+I profili sono correggibili gratuitamente; le particolarità hanno policy di conservazione, variazione o estrazione. I dati
+restano privati, esclusi dalle risposte del gioco. Le scene SLOP non sono didascalie. Il nuovo protocollo completo e le sue
+conferme sono in `generazione-slop` 17.0.0. Le vecchie idee restano per compatibilità delle lavorazioni precedenti.

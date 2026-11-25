@@ -1,7 +1,11 @@
-# Generazione SLOP — specifica 16.1.0
+# Generazione SLOP — specifica 17.0.0
 
-Aggiornata: 2026-11-25T17:20:35Z. Stato: protocollo adottato dall'owner e sperimentato sulle REAL della galleria Nintendo;
-integrazione nel wizard da realizzare. Questa modifica salva il protocollo e non modifica il codice del generatore.
+Aggiornata: 2026-11-25T20:45:04Z. Stato: implementata nel ramo 1.60.0, da rilasciare.
+
+![Schema completo della pipeline](assets/pipeline-slop.svg)
+
+Schema vettoriale in `docs/assets/pipeline-slop.svg`, sorgente Graphviz in `docs/assets/pipeline-slop.dot`; copia pubblica
+identica in `public/docs/pipeline-slop.svg`, collegata dal wizard.
 
 ## 1. Obiettivo e stato dell'implementazione
 
@@ -10,11 +14,39 @@ partendo dalle loro descrizioni testuali in inglese. La varietà comprende eleme
 Evitare copie riconoscibili delle REAL e tratti ricorrenti che distinguano il dataset SLOP, per esempio usura sempre accentuata,
 edizioni speciali troppo frequenti o composizioni commerciali sistematiche.
 
-Il wizard in produzione resta quello della 1.57.0: selezione delle REAL e delle idee, preparazione dei prompt e ciclo automatico
-di generazione/valutazione in Workflow. Le rotte `auto/*` e `worker/slop-runner.ts` non implementano ancora questo protocollo.
-Descrizioni e indici sono nei rami 1.58.0 e 1.59.0. La precedente specifica 15.0.0 si consulta nella cronologia Git.
-Questo documento è la specifica di riferimento del nuovo protocollo. Non introduce API, migrazioni o comandi UI già disponibili;
-l'integrazione richiederà una successiva modifica del codice e delle specifiche delle aree coinvolte.
+La 1.60.0 sostituisce i controlli del wizard della galleria con il protocollo qui descritto. Una selezione iniziale comprende
+tutte le REAL della galleria fuori dal cestino. Le vecchie API e i processi editoriali restano compatibili per i dati precedenti;
+un riquadro di recupero mostra i processi precedenti ancora da decidere. Il nuovo wizard non usa il vecchio ciclo automatico.
+
+La migrazione 0073 aggiunge profili e scene privati su `images`, impostazioni su `galleries` e `pipeline_jobs` temporanei.
+Ogni lavorazione ha un Workflow e uno stato persistente. Una conferma acquisisce una sola operazione; il Workflow non ritenta
+passi a pagamento. Dopo quindici minuti una richiesta senza esito passa all'attenzione dell'owner, senza reinvio automatico.
+
+### Comandi e conferme
+
+- **Prepara la galleria:** una chiamata per REAL ancora priva di profilo, su originale intero. Salva descrizione inglese,
+  identità, genere, parametri osservati e particolarità. Riusa i profili già presenti. I dati sono rivedibili senza chiamate.
+- **Indicizza gli ambienti:** riusa il comando degli indici 1.59.0, con massimo dinamico, mantenendo gli esiti riusciti.
+- **Regole e probabilità:** modificabili per galleria. Ogni probabilità vuota usa la stima automatica; zero disabilita un controllo.
+  L'ambiente può restare invariato, variare entro lo stesso genere o cambiare insieme al genere.
+- **Prepara scene:** una chiamata per REAL selezionata e preparata. Le estrazioni e i riferimenti vengono congelati. Sono
+  mostrate le modifiche e le dipendenze. L'owner modifica i campi della scena, il formato e i parametri previsti senza pagare.
+- **Genera:** una chiamata per scena salvata, anche collettivamente dopo conferma del massimo. Una candidata non è accettata
+  dal modello: resta da vedere. **Valuta** è una fase confermata separata, una chiamata per candidata, disponibile anche in gruppo.
+- **Correggi:** ogni proposta apre un'anteprima della maschera sull'immagine intera, con benefici e rischi e zona rettangolare
+  modificabile. Solo la conferma finale autorizza una chiamata a `images/edits`. La valutazione precedente resta visibile;
+  nessuna valutazione aggiuntiva viene avviata. Il prima/dopo viene conservato fino alla decisione.
+- **Accetta:** trasferisce l'immagine intera nella libreria come nuova. Elimina il riferimento alla REAL e i file temporanei
+  mediante coda durevole. L'accettazione non prepara, approva o pubblica la copia automaticamente.
+- **Copia, trattamento, approvazione e pubblicazione:** comandi distinti, gratuiti. La misura tecnica delle copie REAL mancanti
+  è calcolata dal browser. Il riferimento del trattamento è campionato fra REAL misurate dello stesso genere di destinazione;
+  senza riferimento disponibile la copia parte senza trattamento. Inquadratura e cursori riusano gli editor esistenti.
+
+API private: `GET /api/admin/pipeline/:gallery`; `POST /:gallery/settings`, `/profile`, `/prepare`, `/index`, `/plan`;
+`POST /:gallery/:job/{scene,generate,evaluate,edit,accept,close}`; `GET /:gallery/:job/file` e `?previous=1`.
+Le fasi a pagamento richiedono `confirm`, UUID `request` e `max_calls` esatto. Preparazione e scene lavorano su elenchi fino a
+500 REAL per richiesta; l'interfaccia suddivide selezioni maggiori senza superare il massimo confermato complessivamente.
+Modelli e qualità sono quelli selezionati nelle Impostazioni; il selettore include GPT-6.2 Sol e Sunburst.
 
 ## 2. Descrizioni, assi e regole della galleria
 
@@ -79,7 +111,7 @@ Descrivere l'effetto visibile e le dipendenze senza inventare dati ottici o EXIF
 Le annotazioni devono essere atomiche: il colore non include accessori, la composizione non sostituisce lo sfondo, la posa non
 importa il piano d'appoggio del donatore. Usura, danno, invecchiamento e pulizia hanno valori separati, compresa assenza e non
 determinabile. Un valore ignoto non prova l'assenza di un fenomeno. Persone, accessori e numero dei soggetti non diventano nuove
-variazioni attive in questo test. I nomi dei nuovi campi sono un contratto di progettazione, non uno schema DB implementato.
+variazioni attive in questo test. I profili sono JSON privati validati, salvati in `images.pipeline_profile`; i controlli sono definiti in `shared/pipeline.ts`.
 
 ## 4. Estrazione e bilanciamento
 
@@ -95,8 +127,11 @@ tema o danno), senza sovrarappresentare le novità. Il protocollo non si limita 
 Controllare distribuzioni individuali, combinazioni rilevanti e ricorrenze nelle SLOP: campionare i valori indipendentemente non
 conserva tutte le correlazioni delle REAL. Evitare duplicati riconoscibili lasciando che gli elementi comuni nelle REAL siano
 comuni anche nelle SLOP; non imporre unicità a ogni immagine. Scartare o adattare un valore incompatibile dichiarandone il motivo,
-senza introdurre modifiche nascoste degli altri parametri. Calibrazione, soglie di somiglianza e misura delle distribuzioni
-SLOP restano da implementare e validare. Questi controlli non autorizzano cicli automatici di correzione delle immagini.
+senza introdurre modifiche nascoste degli altri parametri. La stima automatica di selezione per parametro è `clamp(1 − quota_della_categoria_più_frequente, 0.05, 0.4)`.
+I valori vengono campionati dalle REAL compatibili (modello o genere quando necessario), con pesi da 0.25 a 4 per compensare
+sotto/sovrarappresentazione nei parametri previsti delle SLOP accettate e prior proporzionale alle REAL. Non si presume una
+misura osservata delle SLOP: le distribuzioni mostrate sono quelle richieste. Il controllo delle combinazioni è affidato ai
+vincoli del planner, a pochi profili recenti e alla revisione umana; non è una garanzia statistica o un rilevatore di duplicati. Questi controlli non autorizzano cicli automatici di correzione delle immagini.
 
 ## 5. Scena finale e generazione
 
@@ -104,9 +139,11 @@ SLOP restano da implementare e validare. Questi controlli non autorizzano cicli 
 2. Registrare per il batch probabilità, estrazioni, valori e revisioni delle descrizioni e delle regole usate.
 3. Il generatore di testo riceve descrizione di partenza, parametri selezionati, valori e vincoli. Produce una scena completa
    in inglese su tutti gli assi e, separatamente, i cambiamenti effettivi e gli adattamenti di compatibilità.
-4. Conservare **ambiente e configurazione fisica della luce**, medium e resa fotografica. Ombre, riflessi e superfici visibili
+4. In modalità `keep`, conservare **ambiente e configurazione fisica della luce**, medium e resa fotografica. Ombre, riflessi e superfici visibili
    si adattano a nuova geometria, materiali e fotocamera. Un cambio di composizione non autorizza uno sfondo nuovo. I parametri
-   non estratti conservano il valore iniziale salvo le dipendenze necessarie dichiarate.
+   non estratti conservano il valore iniziale salvo le dipendenze necessarie dichiarate. `same_genre` può cambiare ambiente e
+   luce conservando il genere; `change_genre` coordina anche tecnica, resa, composizione, posa, formato e persone necessarie.
+   Le dipendenze devono essere esplicite e rispettare il soggetto e le regole sui contenuti.
 5. L'owner può rivedere scena e prompt prima della conferma a pagamento. Generare con `POST /v1/images/generations` passando
    **solo la descrizione testuale finale**, senza la REAL, maschere o collage. Descrivere positivamente la scena di arrivo,
    senza rimandi alla foto originale.
@@ -199,6 +236,18 @@ resi orizzontali perché il client imponeva 1536×1264 a tutte le generazioni. Q
 Artefatti locali in `artifacts/cambio-ambiente-stesso-genere-2026-11-25/`, ignorati da Git. La segnalazione dell'owner è
 registrata separatamente da `evaluation.json`; nessuna rivalutazione o correzione a pagamento è stata avviata.
 
-Restano da implementare calibrazione delle probabilità, annotazioni atomiche, controlli delle combinazioni e della somiglianza,
-contratto strutturato del valutatore e UI delle conferme. I test software usano modelli simulati; nuovi esperimenti a pagamento
-richiedono la conferma esplicita dell'owner.
+## 9. Particolarità e trattamento finale approvati
+
+Le particolarità sono dettagli collegati ai parametri, non un nono asse o un'unica variazione generica. Ciascuna ha descrizione,
+zona, parametro, ruolo (`identity`, `specimen`, `temporary`), policy (`preserve`, `vary`, `draw`) e certezza. Un nome di edizione
+preciso, come GBA SP Tribal Edition, viene preferito a descrizioni generiche sostitutive delle serigrafie. La conservazione
+esatta dei disegni dal solo testo non è garantita. I dati identificativi temporanei, come nome e combinazione dei progressi
+in un salvataggio, vengono variati coerentemente; non si impone di eliminare sempre lo spagnolo né di spegnere tutti gli schermi.
+
+Dopo accettazione, trattamento regolabile quando serve e preparazione comune WebP 4:5; controllo visivo finale prima di approvare
+e pubblicare. Nessun rumore o sfocatura uniforme viene imposto a tutte le SLOP. Il genere di destinazione guida il campione
+tecnico e non la sola REAL di partenza. Senza misure pertinenti non si inventa un trattamento.
+
+La calibrazione è una stima iniziale esplicita, rivedibile dall'owner, da validare sulla galleria completa. Non viene promessa
+l'indistinguibilità dei dataset né la rilevazione di ogni errore hardware. Le combinazioni e le ricorrenze visive richiedono
+revisione. I test software usano modelli simulati; l'esecuzione sull'intera galleria reale richiede le conferme nella dashboard.

@@ -47,7 +47,7 @@ const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
   [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map(x => x.toString(16).padStart(2, "0")).join("");
 const TEXT_FIELDS: Record<string, number> = { title: 200, description: 1000, source_url: 1000,
-  author: 300, license_name: 200, license_url: 1000, prompt: 4000, model: 100 };
+  author: 300, license_name: 200, license_url: 1000, prompt: 24000, model: 100 };
 
 function text(value: unknown, field: string, required = false): string {
   if (value === undefined || value === null) { if (required) throw new HttpError(400, "Campo obbligatorio: " + field); return ""; }
@@ -103,7 +103,7 @@ function view(row: Row, extra: Extra = {}, detail = false) {
     rights_confirmed: row.rights_confirmed === 1, revision: row.revision,
     created_at: row.created_at, updated_at: row.updated_at, approved_at: row.approved_at, published_at: row.published_at,
     trashed_at: row.trashed_at,
-    generation: row.generation_batch ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality } : null,
+    generation: row.generation_batch || row.generation_slot ? { batch: row.generation_batch, slot: parseSlot(row.generation_slot), quality: row.generation_quality } : null,
     metrics: validMetrics(parseJson(row.copy_metrics)), treatment: validTreatment(parseJson(row.copy_treatment)),
     file: `${base}/${row.id}/file?v=${v}`, original: `${base}/${row.id}/original`,
     stats: extra.stats || { views: 0, correct: 0 }, in_play: extra.in_play || 0,
@@ -343,6 +343,7 @@ async function destroy(env: Env, ids: readonly string[]): Promise<{ deleted: num
   const copies = rows.flatMap(r => r.copy_key ? [r.copy_key] : []);
   for (let i = 0; i < copies.length; i += 1000) await env.IMAGES?.delete(copies.slice(i, i + 1000));
   await sweepRetired(env);
+  await sweepGalleryFiles(env).catch(error => console.error("pipeline cleanup",error));
   return { deleted: rows.length, postponed };
 }
 

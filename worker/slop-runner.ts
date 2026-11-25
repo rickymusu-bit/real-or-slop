@@ -1,10 +1,11 @@
 /** Workflow for editorial proposals and the generation and evaluation of SLOP. */
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 import { HttpError, type Env } from "./core";
+import { processPipelineJob } from "./pipeline";
 import { generateImage } from "./slop-generation";
 import { writeGalleryProposal } from "./slop-gallery";
 
-export type Phase = "images" | "proposals";
+export type Phase = "images" | "proposals" | "pipeline";
 export interface RunParams { batchId: string; phase: Phase }
 /** A runner silent for longer than this is considered dead: the batch can be resumed (one step lasts at most a few minutes). */
 export const RUNNER_STALE_MS = 15 * 60_000;
@@ -45,6 +46,7 @@ export function runnerView(row: { runner?: string | null; runner_status?: string
 export class SlopBatchWorkflow extends WorkflowEntrypoint<Env, RunParams> {
   async run(event: Readonly<WorkflowEvent<RunParams>>, step: WorkflowStep) {
     const env = this.env, { batchId, phase } = event.payload, runner = event.instanceId;
+    if (phase === "pipeline") return step.do("pipeline-once", ONCE, () => processPipelineJob(env, batchId));
     /** Before every paid step: still this batch's runner, still wanted (an automatic batch stopped by the owner ends here). */
     const live = (name: string) => step.do(name, async () => {
       const row = await env.DB.prepare("SELECT runner,runner_status,origin,auto_status,gallery_review,gallery_expires FROM slop_batches WHERE id=?").bind(batchId)

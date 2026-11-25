@@ -26,7 +26,7 @@ export async function removeGallery(env: Env, id: string, data: Record<string, u
     EXISTS(SELECT 1 FROM (${IN_PLAY}) r JOIN images i ON i.id=r.image_id WHERE i.gallery_id=?2) AS playing,
     (EXISTS(SELECT 1 FROM slop_batches WHERE gallery_id=?2 AND runner_status IN ('running','stopping') AND runner_updated>?3)
      OR EXISTS(SELECT 1 FROM slop_processes p JOIN slop_batches b ON b.id=p.batch_id
-       WHERE b.gallery_id=?2 AND p.state IN ('running','prompting') AND p.updated_at>?3)) AS generating`;
+       WHERE b.gallery_id=?2 AND p.state IN ('running','prompting') AND p.updated_at>?3) OR EXISTS(SELECT 1 FROM pipeline_jobs WHERE gallery_id=?2 AND state IN ('queued','working','accepting'))) AS generating`;
   const args = [await since(env), id, new Date(Date.now() - RUNNER_STALE_MS).toISOString()] as const;
   // Check for active games and generation in the same statement as the deletion and its trigger.
   const result = await env.DB.prepare(`DELETE FROM galleries WHERE id=?2 AND revision=?4

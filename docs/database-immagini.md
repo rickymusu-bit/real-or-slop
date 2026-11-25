@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 10.7.0
+# Foto e gallerie — specifica 10.8.0
 
-Stato: implementata nel ramo 1.59.0, da rilasciare. Aggiornata: 2026-11-24T06:59:00Z.
+Stato: implementata nel ramo 1.60.0, da rilasciare. Aggiornata: 2026-11-25T20:45:04Z.
 
 ## 1. Decisioni dell'owner
 
@@ -121,3 +121,11 @@ le statistiche coprono al massimo un anno.
 `max_detail` (interi da 0 a 100 o null), `POST /trash/empty?gallery=<id>`, `DELETE /:id`, `DELETE /galleries/:id` con `confirm: true` e `revision`. Con `gallery`, `offset`, `sort` e `order` la lista restituisce una pagina
 di 72 foto e il prossimo offset (`next`, nullo all’ultima pagina). I conteggi sono per galleria quando richiesta. Le eliminazioni rispondono anche con `postponed`.
 
+
+## 12. Lavorazioni della nuova pipeline
+
+Migrazione 0073: `galleries.pipeline_settings`, `images.pipeline_profile`, `images.pipeline_scene`, `pipeline_jobs`.
+Le lavorazioni temporanee collegano una REAL alla candidata solo durante la revisione. Ogni operazione è acquisita una volta;
+la candidata entra in libreria solo all'accettazione dell'owner. I riferimenti di lavorazione vengono eliminati al termine;
+profili e scene previsti non contengono un ID permanente della REAL di partenza. Trigger registrano i file da rimuovere nella
+coda durevole. Le gallerie con operazioni accodate/in corso non possono essere eliminate.

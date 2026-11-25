@@ -1,0 +1,20 @@
+.pipeline { max-width: 1100px; margin: auto; }
+.pipeline h2 { margin-top: 2rem; }
+.pipeline textarea { display:block; width:100%; box-sizing:border-box; margin:.6rem 0; padding:.6rem; font:inherit; }
+.pipeline input[type=number], .pipeline select { display:block; max-width:100%; padding:.5rem; }
+.pipeline details { margin:.7rem 0; padding:.6rem; border:1px solid #ccd3df; border-radius:6px; }
+.pipeline-job { margin:1rem 0; padding:1rem; border:1px solid #ccd3df; border-radius:8px; }
+.pipeline-actions { display:flex; flex-wrap:wrap; gap:.5rem; margin:.7rem 0; }
+.pipeline-probabilities { display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.7rem; }
+.pipeline-views { display:flex; flex-wrap:wrap;gap:1rem; }
+.pipeline-views figure { margin:0;flex:1;min-width:200px; }
+.pipeline-views img { display:block;max-width:100%;max-height:400px;object-fit:contain; }
+.pipeline-views>img { width:calc(50% - .5rem); }
+.pipeline-source { margin:.7rem 0; }
+@media(max-width:600px) { .pipeline-job {padding:.6rem;} .pipeline-views>img {width:100%;} }
+
+.pipeline-table {overflow-x:auto;} .pipeline td,.pipeline th {text-align:left;padding:.5rem;border-bottom:1px solid #ccd3df;}
+.pipeline fieldset {border:1px solid #ccd3df;min-width:0;}
+.pipeline-mask {max-width:800px;width:90vw;max-height:90vh;overflow:auto;box-sizing:border-box;}
+.pipeline-mask canvas {display:block;max-width:100%;max-height:55vh;object-fit:contain;margin:auto;}
+.pipeline-mask::backdrop {background:#0009;}

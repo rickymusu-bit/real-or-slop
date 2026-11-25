@@ -1,6 +1,6 @@
-# Copie di gioco — specifica 13.0.1
+# Copie di gioco — specifica 13.1.0
 
-Stato: implementata nel ramo 1.57.0, da rilasciare. Aggiornata: 2026-11-22T18:00:00Z. Dal 2026-11-22 la «revisione dello studio SLOP»
+Stato: implementata nel ramo 1.60.0, da rilasciare. Aggiornata: 2026-11-25T20:45:04Z.
 è il passo 7 del wizard «Genera SLOP» (specifica `generazione-slop`).
 
 ## 1. Decisioni dell'owner
@@ -211,3 +211,11 @@ anche `copy_style` con Colore e Supporto, che la 0058 aveva ricavato dai tag: se
   i round giocati con la copia attuale.
 - Le partite in corso finiscono con le copie con cui sono iniziate.
 
+
+## 8. Trattamento nella pipeline della galleria
+
+Dal ramo 1.60.0 l'accettazione umana dell'immagine intera precede la copia. Il riferimento tecnico è scelto fra le REAL misurate
+del genere di destinazione; un cambio di genere non eredita automaticamente le misure della fonte. Le misure mancanti delle
+copie REAL vengono calcolate dal browser, gratuitamente. Senza riferimento pertinente la copia parte senza trattamento.
+Inquadratura e cursori restano rivedibili, senza applicare lo stesso filtro a tutte le SLOP. Rapporto d'aspetto dell'originale
+e copia di gioco sono distinti: la copia comune resta WebP 4:5. Controllo visivo finale, approvazione e pubblicazione sono separati.

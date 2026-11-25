@@ -1,7 +1,20 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-25T17:20:35Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-25T20:45:04Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.60.0 — 2026-11-25T20:45:04Z
+
+- Pipeline completa nel wizard della galleria: preparazione collettiva delle REAL, profili osservati e particolarità rivedibili,
+  indici, estrazioni con probabilità automatiche o scelte dall'owner, scene inglesi su otto assi e rapporto d'aspetto per candidata.
+- Ambiente invariato, cambio ambiente entro lo stesso genere o cambio coordinato del genere; modello ed edizione identificati
+  precisamente, dati temporanei identificativi variati. Parametri previsti delle SLOP confrontabili con quelli osservati delle REAL.
+- Generazione dal solo testo e valutazione in fasi confermate. Correzioni proposte con beneficio/rischio, anteprima modificabile
+  della maschera e conferma separata; API edits con immagine intera. Workflow persistenti, nessun reinvio automatico incerto.
+- Accettazione umana prima della copia; trattamento regolabile da REAL misurate del genere di destinazione, WebP comune,
+  inquadratura, controllo finale, approvazione e pubblicazione. Riquadro di recupero per i processi precedenti.
+- Schema completo salvato e accessibile dal wizard. Migrazione 0073; test API, statistici e browser desktop/mobile simulati.
+  Nessuna chiamata reale, migrazione remota, merge o rilascio eseguiti per preparare la PR.
 
 ## 1.59.0 — 2026-11-24T06:59:00Z
 

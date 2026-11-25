@@ -1,6 +1,6 @@
 # Regole della galleria Console portatili Nintendo
 
-Versione 1.2.0, aggiornata il 2026-11-25T17:20:35Z. Regole specifiche del protocollo `generazione-slop` 16.1.0, da integrare.
+Versione 2.0.0, aggiornata il 2026-11-25T20:45:04Z. Regole della pipeline 1.60.0, specifica `generazione-slop` 17.0.0.
 
 Sol sviluppa i parametri estratti e scrive **una scena fotografica completa in inglese**. Può proporre valori nuovi plausibili,
 ma anche mantenere o ripristinare condizioni ordinarie. La scena rappresenta un singolo scatto, con una sola console,
@@ -21,7 +21,8 @@ usata e dà a Sol il documento insieme alla descrizione della REAL di partenza e
 Sol restituisce i cambiamenti effettivi, la scena sui suoi otto assi e il prompt inglese che li rende coerenti in un solo scatto.
 L'owner può rivedere la scena prima di confermare la generazione. Il prompt consegnato a Sunburst contiene i dettagli
 visibili della scena di arrivo. La prima generazione riceve solo testo; valutazione e correzioni confermate seguono
-la specifica `generazione-slop`. L'uso del documento nel Worker rimane da implementare.
+la specifica `generazione-slop`. Il campo «Regole per questa galleria» è modificabile nel wizard; viene congelato nelle lavorazioni. Le indicazioni di questa
+specifica guidano la configurazione Nintendo; il Worker usa il testo salvato dalla dashboard, non legge automaticamente Markdown.
 
 ## Regole per Sol
 
@@ -34,7 +35,9 @@ la specifica `generazione-slop`. L'uso del documento nel Worker rimane da implem
    implicitamente la console per esibire una decorazione: adatta o scarta la proposta incompatibile con lo stato previsto.
 3. **Persone.** Per questi scatti di oggetti, prevedi di norma zero persone visibili. Se la scena mostra la console in uso, specifica
    il gesto e le mani o le altre parti della persona che entrano nell'inquadratura. La presa deve sostenere il peso della console.
-4. **Ambiente.** Mantieni luogo, piano d'appoggio, oggetti secondari e sfondo della descrizione di partenza. Una foto da catalogo
+4. **Ambiente.** In modalità ambiente invariato, mantieni luogo, piano d'appoggio, oggetti secondari e sfondo della descrizione
+   di partenza. Se richiesto, cambia ambiente coordinando luce e appoggio; nel cambio di genere coordina anche tecnica, resa,
+   presentazione, fotocamera, formato ed eventuali persone, dichiarando le dipendenze. Una foto da catalogo
    può restare da catalogo; una foto amatoriale non deve diventare uno scatto commerciale. La posa varia solo se estratta.
    Il Game Boy Color riposa con il dorso sul piano e lo schermo verso l'alto, oppure sta inclinato grazie a un appoggio visibile
    o sostenuto da una mano. Per una posa verticale descrivi il sostegno.
@@ -43,7 +46,7 @@ la specifica `generazione-slop`. L'uso del documento nel Worker rimane da implem
    l'inquadratura e la disposizione soltanto quando i parametri relativi sono estratti; segnala una somiglianza eccessiva.
    Specifica `aspect_ratio` per la foto intera, in relazione alla forma della console e al genere; se non estratto conserva
    quello della REAL. Distanza e resa prospettica non devono cambiare implicitamente per adattarsi a un formato API comune.
-6. **Luce.** Mantieni la configurazione fisica delle sorgenti nella descrizione della REAL; adatta ombre e riflessi alla nuova
+6. **Luce.** Con ambiente invariato mantieni la configurazione delle sorgenti; con ambiente nuovo riscrivila coerentemente; adatta ombre e riflessi alla nuova
    geometria, alla fotocamera e ai materiali. Una finestra laterale può produrre un riflesso sul guscio o sullo schermo.
    Il materiale e l'angolo devono spiegare dove appare.
 7. **Tecnica fotografica.** Mantieni tipo di scatto, fuoco e limitazioni del medium di partenza. Non aggiungere sfocato o
@@ -69,6 +72,10 @@ anteriore inferiore dello SP, mancato dal valutatore. Verificare esplicitamente 
 visibili prima di proporre ritocchi di luce. Le leggere differenze nei motivi tribali sono considerate meno gravi dall'owner.
 La prospettiva meno accentuata suggerisce una variazione della ripresa, non prova una focale esatta. Conservare il rapporto
 d'aspetto per candidata quando non è estratto: il formato orizzontale comune del client aveva alterato due originali verticali.
+
+Le particolarità ufficiali, come GBA SP Tribal Edition, richiedono prima il nome preciso dell'edizione: non sostituire le
+serigrafie con una decorazione genericamente tribale. I dettagli temporanei del display (nome, tempo e progressi di un
+salvataggio) vanno variati coerentemente; non imporre una lingua diversa a ogni foto come regola sistematica.
 
 ## Esempi illustrativi di scene
 

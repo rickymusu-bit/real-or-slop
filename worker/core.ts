@@ -12,7 +12,7 @@ export interface Env {
   /** API of Wikimedia Commons for the nightly check of the REAL sources; only the tests set it (fake Commons). */
   COMMONS_API_URL?: string;
   /** The SLOP loop on Cloudflare (worker/slop-runner.ts, wrangler.jsonc «workflows»). */
-  SLOP_RUNNER?: Workflow<{ batchId: string; phase: "images" | "proposals" }>;
+  SLOP_RUNNER?: Workflow<{ batchId: string; phase: "images" | "proposals" | "pipeline" }>;
 }
 export class HttpError extends Error {
   constructor(

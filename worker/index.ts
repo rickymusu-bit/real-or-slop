@@ -1,4 +1,5 @@
 /** Router of the Worker: game, leaderboard, admin library and the daily maintenance. */
+import { pipelineRoute } from "./pipeline";
 import { game } from "./game";
 import { adminLeaderboard, publicLeaderboard } from "./leaderboard";
 import { library } from "./library";
@@ -17,6 +18,7 @@ export default {
       if (url.pathname === "/api/health") return json({ name: "Real or Slop" });
       if (url.pathname.startsWith("/api/admin") || url.pathname.startsWith("/admin")) {
         await admin(request, env);
+        if (url.pathname.startsWith("/api/admin/pipeline/")) return await pipelineRoute(request, env);
         if (url.pathname === "/api/admin/library" || url.pathname.startsWith("/api/admin/library/"))
           return await library(request, env, url.pathname);
         if (url.pathname === "/api/admin/leaderboard" || url.pathname.startsWith("/api/admin/leaderboard/"))

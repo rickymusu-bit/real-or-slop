@@ -4,7 +4,7 @@ export class PaidError extends HttpError {
   constructor(message: string, public outcome: "failed" | "uncertain") { super(502, message); }
 }
 export async function paid(env: Env, kind: "analysis" | "prompts" | "images" | "evaluation", model: string, body: unknown,
-  links: { process?: string; attempt?: string; image?: string; request?: string; endpoint?: "embeddings" } = {}): Promise<Record<string, unknown>> {
+  links: { process?: string; attempt?: string; image?: string; request?: string; endpoint?: "embeddings" | "images/edits" } = {}): Promise<Record<string, unknown>> {
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
   const callId = links.request ?? id(), stamp = new Date().toISOString();
   const claim = await env.DB.prepare(`INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,process_id,attempt_id,image_id)
@@ -19,7 +19,7 @@ export async function paid(env: Env, kind: "analysis" | "prompts" | "images" | "
     response = await fetch((env.OPENAI_BASE_URL || "https://api.openai.com/v1/") + endpoint, {
       method: "POST", redirect: "manual", signal: AbortSignal.timeout(120_000),
       // A body already encoded (an image inside, see image-body.ts) goes as it is.
-      headers: { Authorization: "Bearer " + env.OPENAI_API_KEY, "Content-Type": "application/json" }, body: body instanceof Uint8Array ? body : JSON.stringify(body),
+      headers: { Authorization: "Bearer " + env.OPENAI_API_KEY, ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }) }, body: body instanceof FormData || body instanceof Uint8Array ? body : JSON.stringify(body),
     });
   } catch {
     await settle("uncertain");

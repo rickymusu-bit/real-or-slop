@@ -8,7 +8,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 queue, log = [], []
-MODELS = ['gpt-6-astra', 'gpt-6.1-sol', 'gpt-6.1-terra', 'gpt-6-luna', 'gpt-6-sol', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
+MODELS = ['gpt-6.2-sol', 'gpt-image-2.6-sunburst', 'gpt-6-astra', 'gpt-6.1-sol', 'gpt-6.1-terra', 'gpt-6-luna', 'gpt-6-sol', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
           'gpt-5.5', 'gpt-5.5-pro', 'gpt-5.4', 'gpt-5.4-pro', 'gpt-5.4-mini', 'gpt-5.4-nano', 'gpt-5.2', 'gpt-5.2-pro', 'gpt-5.1', 'gpt-5',
           'gpt-5-mini', 'gpt-5-nano', 'gpt-5-pro', 'gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4o-mini', 'o3-pro', 'o3',
           'gpt-image-2', 'gpt-image-2.5-flare']
@@ -40,18 +40,35 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, {'query': {'pages': [{'title': t, 'missing': True} if 'Gone' in t else {'title': t, 'pageid': 1} for t in titles]}})
         self.reply(404, {})
     def do_POST(self):
-        data = json.loads(self.rfile.read(int(self.headers.get('Content-Length') or 0)) or b'{}')
+        raw = self.rfile.read(int(self.headers.get('Content-Length') or 0))
+        if self.path == '/v1/images/edits':
+            from email.parser import BytesParser
+            from email import policy
+            message=BytesParser(policy=policy.default).parsebytes(('Content-Type: '+self.headers['Content-Type']+'\r\nMIME-Version: 1.0\r\n\r\n').encode()+raw)
+            data={}; files={}
+            for part in message.iter_parts():
+                name=part.get_param('name',header='content-disposition'); value=part.get_payload(decode=True)
+                if part.get_filename():
+                    from PIL import Image
+                    image=Image.open(io.BytesIO(value));files[name]={'size':list(image.size),'mode':image.mode}
+                else:data[name]=value.decode()
+            data['files']=files
+        else:
+            data = json.loads(raw or b'{}')
         if self.path == '/control':
             queue[:] = data.get('queue', []); log.clear(); return self.reply(200, {'ok': True})
-        if self.path not in ('/v1/responses', '/v1/images/generations', '/v1/embeddings'): return self.reply(404, {})
+        if self.path not in ('/v1/responses', '/v1/images/generations', '/v1/images/edits', '/v1/embeddings'): return self.reply(404, {})
         log.append({'authorization': self.headers.get('Authorization'), 'body': data, 'path': self.path})
         behaviour = queue.pop(0) if queue else None
         if behaviour and behaviour.get('delay'): time.sleep(behaviour['delay'])
         if behaviour and 'status' in behaviour:
             return self.reply(behaviour['status'], {'error': {'message': 'fake', 'type': 'fake', 'code': behaviour.get('code')}})
-        if self.path == '/v1/images/generations':
+        if self.path in ('/v1/images/generations','/v1/images/edits'):
             if behaviour and behaviour.get('garbage'): return self.reply(200, {'data': []})
-            return self.reply(200, {'data': [{'b64_json': picture(data.get('size', '1024x1024'))}], 'usage': {'input_tokens': 50, 'output_tokens': 1056}})
+            size=data.get('size','1024x1024')
+            if self.path.endswith('/edits'):
+                w,h=data['files']['image[]']['size'];size=f'{w*16}x{h*16}'
+            return self.reply(200, {'data': [{'b64_json': picture(size)}], 'usage': {'input_tokens': 50, 'output_tokens': 1056}})
         if self.path == '/v1/embeddings':
             vector = (behaviour or {}).get('embedding', [1] + [0] * (data['dimensions'] - 1))
             return self.reply(200, {'data': [{'index': 0, 'embedding': vector}], 'usage': {'prompt_tokens': 18, 'total_tokens': 18}})
@@ -59,7 +76,7 @@ class Handler(BaseHTTPRequestHandler):
         request = json.loads(data['input'][0]['content'][0]['text']) if schema_name in ('slop_evaluation', 'slop_gallery_proposal') else None
         if schema_name == 'real_subject_identity' and (behaviour is None or 'delay' in behaviour):
             behaviour = {'json': {'brand': 'Nintendo', 'family': 'Game Boy', 'model': 'DMG-01'}}
-        if schema_name == 'real_visual_description' and (behaviour is None or 'delay' in behaviour):
+        if schema_name in ('real_visual_description', 'pipeline_profile') and (behaviour is None or 'delay' in behaviour):
             behaviour = {'json': {'subject': {'brand': 'Nintendo', 'family': 'Game Boy', 'model': 'DMG-01'},
                                   'sections': {'summary': 'Grey subject with worn edges.',
                                               'subject_type': 'Nintendo Game Boy DMG-01.', 'subject_appearance': 'Worn edges.',
@@ -69,6 +86,17 @@ class Handler(BaseHTTPRequestHandler):
                                   'indications': {'museum_or_catalog': {'applies': True, 'reason': 'Neutral background.'},
                                                   'unique_or_famous': {'applies': False, 'reason': 'No signs of a unique specimen.'},
                                                   'recognizable_background': {'applies': False, 'reason': 'Uniform background.'}}}}
+        if schema_name == 'pipeline_profile' and behaviour and 'json' in behaviour:
+            keys=['model','colour','material_finish','edition_decoration','wear','damage','ageing','cleanliness','operating_state','screen_content','pose','viewpoint','composition','aspect_ratio']
+            profile={'genre':'amateur_snapshot','parameters':{k:{'value':'none' if k in ['damage','ageing','edition_decoration'] else 'ordinary '+k,'category':'none' if k in ['damage','ageing','edition_decoration'] else 'ordinary','certainty':'observed'} for k in keys},'peculiarities':[]}
+            profile['parameters']['aspect_ratio']={'value':'3:2','category':'landscape','certainty':'observed'}
+            behaviour['json']['profile']=profile
+        if schema_name == 'pipeline_proposal' and (behaviour is None or 'delay' in behaviour):
+            inp=json.loads(data['input'][0]['content'][0]['text'])
+            sections=inp['description']['sections']
+            behaviour={'json':{'profile':inp['profile'],'scene':{k:sections[k] for k in ['subject_type','subject_appearance','people','environment','viewpoint','light','technique','rendering']},'changes':'Ordinary coherent changes.','dependencies':'No hidden dependency.','genre':inp['profile']['genre'],'aspect_ratio':inp['profile']['parameters']['aspect_ratio']['value']}}
+        if schema_name == 'pipeline_review' and (behaviour is None or 'delay' in behaviour):
+            behaviour={'json':{'findings':[],'uncertainties':['Mock cannot inspect hardware.'],'assessment':'Owner review required.','corrections':[{'defect':'Small local detail.','region':{'x':.2,'y':.2,'width':.2,'height':.2},'instruction':'Repair only the masked area using the whole image for context.','benefit':'More plausible detail.','risk':'May alter nearby pixels.'}]}}
         if schema_name == 'real_ideas' and (behaviour is None or 'delay' in behaviour):
             behaviour = {'json': {'ideas': [
                 {'idea': 'Lo stesso modello di console su una scrivania di legno, ripreso dall’alto con la luce di una finestra.',

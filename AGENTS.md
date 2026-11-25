@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 36.1.0, aggiornata il 2026-11-25T17:20:35Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 37.0.0, aggiornata il 2026-11-25T20:45:04Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -20,9 +20,8 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
   al browser prima della risposta. Su richiesta confermata, un modello descrive la REAL intera per assi durante il caricamento o dalla
   galleria (decisione del 2026-11-23, specifica `libreria-immagini`, sezione 11). La descrizione visiva è privata. Il modello misura
-  anche affollamento e dettaglio. Il protocollo adottato il 2026-11-25 (`generazione-slop` 16.1.0, ancora da integrare nel
-  wizard) prepara una scena inglese dalle descrizioni, variando zero o più parametri con probabilità da calibrare sulle REAL.
-  Ambiente e configurazione della luce restano vincolati; gli assi descrivono la scena, i parametri controllano le variazioni.
+  anche affollamento e dettaglio. Il protocollo adottato il 2026-11-25 (`generazione-slop` 17.0.0, implementata nel ramo 1.60.0) prepara una scena inglese dalle descrizioni, variando zero o più parametri con probabilità da calibrare sulle REAL.
+  Ambiente e configurazione della luce restano vincolati di default; i cambi di ambiente/genere coordinano gli assi dipendenti; gli assi descrivono la scena, i parametri controllano le variazioni.
   Usura, danno, invecchiamento e pulizia sono separati; il contenuto dello schermo è distinto da acceso/spento. La prima
   generazione riceve solo testo. Il rapporto d'aspetto della foto intera è un parametro, da coordinare con soggetto e genere
   fotografico e applicare alle dimensioni API; se non estratto si conserva. Le copie di gioco restano 4:5.
@@ -34,14 +33,16 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   «Carica REAL» e «Genera SLOP» su indirizzi dedicati nella stessa scheda. Il wizard REAL acquisisce dalle ricerche su Commons.
   Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino,
   cambio galleria e, per le REAL, la misura a pagamento; le proposte SLOP stanno solo nel wizard. La barra lascia visibile la griglia.
-- **Un solo wizard SLOP.** Il flusso in produzione è ancora quello della 1.57.0: galleria, REAL, idee, prompt, generazione e
-  revisione. Il nuovo protocollo da integrare è la specifica `generazione-slop` 16.1.0, adottata il 2026-11-25. Le decisioni
-  precedenti su proposte e ripetizioni automatiche descrivono il codice esistente e non vincolano il nuovo protocollo.
-  Ogni foto appartiene a una galleria; le REAL restano giocabili. I riferimenti di lavorazione si eliminano al termine del
-  processo; nessun registro permanente REAL–SLOP. Le persone generate sono inventate.
+- **Un solo wizard SLOP** (2026-11-25). La 1.60.0 usa la pipeline della specifica `generazione-slop` 17.0.0: preparazione
+  collettiva delle REAL, regole e probabilità per galleria, scene inglesi modificabili, generazione testuale e valutazione
+  confermate, correzioni scelte dall'owner, accettazione, trattamento e copie di gioco. Le vecchie lavorazioni hanno un riquadro
+  di recupero; il nuovo flusso non usa il vecchio ciclo automatico. Ogni foto appartiene a una galleria; le REAL restano giocabili.
+  Nessun registro permanente REAL–SLOP. I profili e le particolarità sono privati e non sono tag di navigazione.
 - **Bilanciamento del dataset.** Il nuovo protocollo (2026-11-25) considera conteggi, distribuzioni dei parametri e combinazioni
   rilevanti della galleria. Le modifiche possono rendere una console più ordinaria. Non forzare novità vistose o unicità a ogni
-  SLOP. Probabilità calibrate e controllo delle ricorrenze restano da implementare; il 30% del test non è un valore definitivo.
+  SLOP. Le probabilità automatiche sono stime empiriche rivedibili; i pesi considerano i parametri previsti delle SLOP, non una
+  misura garantita del loro contenuto. Il controllo delle combinazioni e delle ricorrenze richiede revisione; il 30% del test
+  non è un valore definitivo.
 - **Niente tag** (decisione del 2026-11-20). Le foto di una galleria condividono quasi gli stessi tag: la galleria basta a
   raggrupparle. Nessun vocabolario, filtro o distribuzione per tag; approvare non richiede tag. I parametri privati del nuovo
   protocollo non introducono tag di navigazione o didascalie. Il trattamento delle SLOP ricava bianco e nero, seppia o colore
@@ -55,7 +56,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   `images/edits` con immagine intera e maschera locale. Nessun ciclo automatico di valutazione/correzione o rigenerazione.
   Un ulteriore intervento o una rivalutazione richiede una nuova decisione. Valutazione e decisione dell'owner restano distinte.
   Una candidata scartata non viene pubblicata; copie 4:5, approvazione e pubblicazione restano passaggi successivi.
-  Questo è il protocollo adottato; il vecchio ciclo automatico nel codice rimane da sostituire.
+  Il nuovo wizard applica questi vincoli; le vecchie API restano compatibili per le lavorazioni precedenti.
 - **Copie di gioco 4:5 verticali per tutte** (decisione del 2026-11-15), REAL e SLOP. Il ritaglio non deve eliminare elementi **fondamentali** per il significato della fotografia; in caso contrario
   l'owner corregge l'inquadratura. Le SLOP si valutano **intere** prima di creare la copia 4:5.
 - **Inquadratura ed elaborazione** (decisioni del 2026-11-19 e 2026-11-20). Le nuove copie mostrano la foto intera nel 4:5 con bande

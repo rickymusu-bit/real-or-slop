@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 6.4.0
+# Dashboard e wizard REAL — specifica 6.5.0
 
-Stato: implementata nel ramo 1.58.0, da rilasciare. Aggiornata: 2026-11-23T20:46:00Z.
+Stato: implementata nel ramo 1.60.0, da rilasciare. Aggiornata: 2026-11-25T20:45:04Z.
 
 ## 1. Decisioni dell'owner
 
@@ -103,3 +103,11 @@ alla volta. Dopo un errore quelle già pubblicate non si ripetono; gli errori re
 - Commons non certifica l'autenticità: una pagina e una licenza compatibile non dimostrano che una foto sia REAL. La verifica è
   dell'owner.
 - La pubblicazione di un gruppo non è transazionale: dopo un errore di rete alcune foto possono restare approvate.
+
+## 8. Wizard SLOP della galleria
+
+La pagina SLOP dedicata monta `src/pipeline.ts`: preparazione collettiva, regole e probabilità, scene e immagini da revisionare,
+trattamento e copie. Ogni fase mostra e conferma il massimo di chiamate; la correzione ha un'anteprima della maschera e una
+conferma separata. I profili e gli otto assi sono campi leggibili e modificabili, senza richiedere JSON. Gli stati del server
+si aggiornano senza interrompere la scrittura nei campi. Un riquadro mostra eventuali processi precedenti da chiudere.
+Lo schema della pipeline è collegato dalla pagina. Dettagli in `generazione-slop` 17.0.0.
