@@ -1,6 +1,6 @@
 # Regole della galleria Console portatili Nintendo
 
-Versione 1.1.0, aggiornata il 2026-11-25T15:24:14Z. Regole specifiche del protocollo `generazione-slop` 16.0.0, da integrare.
+Versione 1.2.0, aggiornata il 2026-11-25T17:20:35Z. Regole specifiche del protocollo `generazione-slop` 16.1.0, da integrare.
 
 Sol sviluppa i parametri estratti e scrive **una scena fotografica completa in inglese**. Può proporre valori nuovi plausibili,
 ma anche mantenere o ripristinare condizioni ordinarie. La scena rappresenta un singolo scatto, con una sola console,
@@ -41,6 +41,8 @@ la specifica `generazione-slop`. L'uso del documento nel Worker rimane da implem
 5. **Punto di vista.** Usa una posizione sola della fotocamera. Dai altezza, angolo e distanza abbastanza precisi da mostrare il
    soggetto e chiarire il contatto con il piano. Ogni lato e ogni dettaglio citato deve essere visibile da quell'angolo. Varia
    l'inquadratura e la disposizione soltanto quando i parametri relativi sono estratti; segnala una somiglianza eccessiva.
+   Specifica `aspect_ratio` per la foto intera, in relazione alla forma della console e al genere; se non estratto conserva
+   quello della REAL. Distanza e resa prospettica non devono cambiare implicitamente per adattarsi a un formato API comune.
 6. **Luce.** Mantieni la configurazione fisica delle sorgenti nella descrizione della REAL; adatta ombre e riflessi alla nuova
    geometria, alla fotocamera e ai materiali. Una finestra laterale può produrre un riflesso sul guscio o sullo schermo.
    Il materiale e l'angolo devono spiegare dove appare.
@@ -61,6 +63,12 @@ Il test sulle quattro REAL ha conservato il contesto, ma il generatore ha accent
 con immagine intera e maschera ha eliminato un riflesso sfaccettato, perdendo però dettagli corretti. Non è una riparazione
 accettata. Il contenuto esatto del display era nella descrizione: trattarlo come parametro distinto permette di variarlo.
 Le correzioni sono proposte dal valutatore e richiedono conferma dell'owner, senza loop automatici (specifica `generazione-slop`).
+
+Nel test di cambio ambiente, l'owner ha rilevato un errore importante nell'alloggiamento/cartuccia del gioco sul bordo
+anteriore inferiore dello SP, mancato dal valutatore. Verificare esplicitamente geometria e posizione dei dettagli hardware
+visibili prima di proporre ritocchi di luce. Le leggere differenze nei motivi tribali sono considerate meno gravi dall'owner.
+La prospettiva meno accentuata suggerisce una variazione della ripresa, non prova una focale esatta. Conservare il rapporto
+d'aspetto per candidata quando non è estratto: il formato orizzontale comune del client aveva alterato due originali verticali.
 
 ## Esempi illustrativi di scene
 

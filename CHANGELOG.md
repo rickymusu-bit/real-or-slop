@@ -1,6 +1,6 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-25T15:24:14Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-25T17:20:35Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
 ## 1.59.0 — 2026-11-24T06:59:00Z
@@ -10,10 +10,12 @@ I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella c
 - «Indicizza le descrizioni» calcola i vettori degli ambienti e completa i campi del soggetto per le descrizioni precedenti.
   Conferma del massimo di chiamate e riuso dei dati già disponibili. Migrazione 0072.
 - Protocollo adottato il 2026-11-25, ancora da integrare: descrizioni inglesi e parametri distinti, inclusi usura, danno,
-  invecchiamento e contenuto dello schermo. Valori ordinari e novità plausibili, con probabilità da calibrare sulle REAL.
+  invecchiamento, contenuto dello schermo e rapporto d’aspetto. Valori ordinari e novità plausibili, con probabilità da calibrare sulle REAL.
   Generazione dal solo testo conservando ambiente/luce; correzioni proposte dal valutatore e attuate solo dopo conferma
-  dell'owner, con immagine intera e maschera; nessun loop automatico. Evidenze e limiti del test salvati nella specifica 16.0.0.
-  Regole Nintendo aggiornate. Solo documentazione, nessuna modifica al wizard o allo schema dati.
+  dell'owner, con immagine intera e maschera; nessun loop automatico. Evidenze e limiti del test salvati nella specifica 16.1.0.
+  Regole Nintendo aggiornate. Rapporto del fotogramma legato a soggetto/genere e alle dimensioni API, distinto dal 4:5 di gioco.
+  Documentato anche il test di cambio ambiente e l'errore hardware SP segnalato dall'owner e mancato dal valutatore.
+  Solo documentazione, nessuna modifica al wizard o allo schema dati.
 
 ## 1.58.0 — 2026-11-23T20:46:00Z
 

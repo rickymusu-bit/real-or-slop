@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 38.0.0, aggiornata il 2026-11-25T15:24:14Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 38.1.0, aggiornata il 2026-11-25T17:20:35Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,10 +9,11 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Protocollo SLOP adottato (2026-11-25), da integrare:** `docs/generazione-slop.md` 16.0.0. Descrizioni inglesi, parametri
-  separati e variabili (incluso contenuto dello schermo), ambiente/luce vincolati, generazione dal solo testo. Il valutatore
+- **Protocollo SLOP adottato (2026-11-25), da integrare:** `docs/generazione-slop.md` 16.1.0. Descrizioni inglesi, parametri
+  separati e variabili (inclusi contenuto dello schermo e rapporto d’aspetto), ambiente/luce vincolati, generazione dal solo testo. Il valutatore
   propone correzioni; ogni intervento richiede conferma, con immagine intera e maschera, senza loop automatici. Regole Nintendo
-  in `docs/regole-galleria-console-nintendo.md` 1.1.0. Test sulle REAL documentato; probabilità ancora da calibrare.
+  in `docs/regole-galleria-console-nintendo.md` 1.2.0. Test sulle REAL e cambio ambiente documentati, incluso errore hardware
+  SP mancato dal valutatore; probabilità ancora da calibrare.
 - **Ramo 1.59.0:** indice esatto dei soggetti e ricerca semantica degli ambienti delle REAL. Il comando «Indicizza le descrizioni»
   completa le REAL già descritte, con chiamate confermate. Migrazione 0072.
 - **Ramo 1.58.0:** descrizioni visive private in inglese delle REAL per otto assi, durante il caricamento o in gruppo dalla galleria. La griglia
@@ -112,8 +113,8 @@ nome.
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.0.1 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.3.0 |
-| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 16.0.0 |
-| Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 1.1.0 |
+| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 16.1.0 |
+| Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 1.2.0 |
 | Foto e gallerie | `docs/database-immagini.md` | 10.5.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.9.0 |

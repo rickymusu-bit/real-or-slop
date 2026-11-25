@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 16.0.0
+# Generazione SLOP — specifica 16.1.0
 
-Aggiornata: 2026-11-25T15:24:14Z. Stato: protocollo adottato dall'owner e sperimentato sulle REAL della galleria Nintendo;
+Aggiornata: 2026-11-25T17:20:35Z. Stato: protocollo adottato dall'owner e sperimentato sulle REAL della galleria Nintendo;
 integrazione nel wizard da realizzare. Questa modifica salva il protocollo e non modifica il codice del generatore.
 
 ## 1. Obiettivo e stato dell'implementazione
@@ -53,12 +53,28 @@ dipendenze fisiche e storiche. La tabella specializza il protocollo per Nintendo
 | `pose` | Posizione e orientamento del soggetto rispetto al piano e al sostegno | `viewpoint`, con vincoli di `environment` |
 | `viewpoint` | Posizione e angolo della fotocamera rispetto al soggetto | `viewpoint` |
 | `composition` | Distanza, dimensione nel fotogramma, decentramento e taglio | `viewpoint` |
+| `aspect_ratio` | Rapporto larghezza/altezza del fotogramma intero, con orientamento verticale/orizzontale/quadrato | `viewpoint`, coordinato con `technique` |
 
 Il contenuto dello schermo è distinto da acceso/spento. Un menu può cambiare mantenendo la console accesa. Gioco, schermata e
 dati di salvataggio devono essere plausibili per modello ed epoca. A schermo spento o nascosto, `screen_content` è non applicabile:
 estrarlo non accende la console e non cambia implicitamente l'inquadratura. Se non estratto, il contenuto può restare quello
 descritto; dati identificativi copiati sono comunque un rischio di eccessiva somiglianza da segnalare alla revisione.
 Non imporre che ogni schermo cambi sempre, creando un'altra regolarità sistematica.
+
+Il rapporto d'aspetto è un parametro distinto dalla composizione. Annotarlo dalle dimensioni dell'originale intero dopo
+l'orientamento EXIF, prima del ritaglio 4:5. Se non estratto, conservarlo; se estratto, scegliere un valore compatibile con
+soggetto, posa e genere fotografico. Bilanciare le frequenze tenendo conto di queste relazioni: console e generi diversi
+possono avere formati diversi. Evitare un formato SLOP uniforme imposto per comodità tecnica.
+
+Il rapporto scelto deve essere coerente sia nel prompt sia nelle dimensioni richieste all'API. Se l'API non lo supporta,
+segnalare l'approssimazione e registrare rapporto richiesto ed effettivo; non sostituire silenziosamente un verticale con
+un orizzontale né tagliare parti fondamentali per adattarlo. La copia di gioco resta 4:5 per REAL e SLOP: `aspect_ratio`
+controlla la fotografia intera e non cambia il formato comune servito durante la partita.
+
+Quando si conserva il punto di vista, mantenere anche distanza e resa prospettica compatibili. Una prospettiva meno accentuata
+può suggerire una fotocamera più lontana, con focale maggiore per un'inquadratura simile, ma non dimostra una focale precisa.
+La prospettiva dipende dalla posizione della fotocamera; cambiare solo focale dalla stessa posizione cambia l'inquadratura.
+Descrivere l'effetto visibile e le dipendenze senza inventare dati ottici o EXIF della REAL.
 
 Le annotazioni devono essere atomiche: il colore non include accessori, la composizione non sostituisce lo sfondo, la posa non
 importa il piano d'appoggio del donatore. Usura, danno, invecchiamento e pulizia hanno valori separati, compresa assenza e non
@@ -94,6 +110,7 @@ SLOP restano da implementare e validare. Questi controlli non autorizzano cicli 
 5. L'owner può rivedere scena e prompt prima della conferma a pagamento. Generare con `POST /v1/images/generations` passando
    **solo la descrizione testuale finale**, senza la REAL, maschere o collage. Descrivere positivamente la scena di arrivo,
    senza rimandi alla foto originale.
+   Impostare le dimensioni API in base a `aspect_ratio` per ogni candidata; controllare il rapporto restituito prima della revisione.
 6. Conservare la candidata intera per valutazione e decisione dell'owner. Preparare la copia di gioco dopo l'accettazione.
 
 Modelli usati negli esperimenti: GPT-6.2 Sol (`gpt-6.2-sol`) e GPT Image 2.6 Sunburst (`gpt-image-2.6-sunburst`). I modelli restano
@@ -103,7 +120,13 @@ configurabili. Questa decisione non sceglie un modello valutatore specifico; dev
 
 Il modello valutatore riceve la **SLOP intera**, scena/prompt di arrivo, parametri e regole pertinenti. Esamina credibilità
 fotografica, geometria e dettagli, coerenza della scena e aderenza ai parametri. Può segnalare ricorrenze nel contesto fornito,
-ma non dedurre la distribuzione dell'intero dataset da una sola immagine.
+ma non dedurre la distribuzione dell'intero dataset da una sola immagine. Verificare il rapporto del fotogramma e gli
+scostamenti di distanza/resa prospettica quando questi parametri devono restare vincolati.
+
+Per gli oggetti riconoscibili dare priorità ai dettagli hardware visibili: geometria, posizione e dimensione di slot/cartucce,
+porte, cerniere e comandi rispetto al modello previsto. Distinguere un errore strutturale dalle piccole variazioni di una
+grafica decorativa: nel test SP Tribal l'owner considera queste ultime meno gravi. Un giudizio positivo del valutatore
+non dimostra l'assenza di errori hardware; l'owner può segnalare difetti mancati senza alterare la valutazione originale.
 
 Restituisce difetti e incertezze, con eventuali proposte di correzione: problema visibile, zona, istruzione locale, beneficio
 atteso e rischio di alterare dettagli corretti. Spiega perché l'intervento potrebbe valere una chiamata. La proposta non avvia
@@ -155,6 +178,26 @@ dell'owner, non una funzione dimostrata da quel test.
 Artefatti locali: `artifacts/test-galleria-parametri-2026-11-25/`, ignorati da Git: catalogo/crediti, descrizioni, estrazioni,
 prompt, immagini, confronti, registro locale `paid_calls` e riepilogo. Il registro non è quello di produzione. Le evidenze
 essenziali sono salvate qui perché gli artefatti non sono inclusi nella PR.
+
+### Test di cambio ambiente e revisione dell'owner
+
+Secondo test del 2026-11-25: GBA bianco su scrivania, GBC verde sul divano, SP Tribal in una scatola di cartone. Gli ambienti
+erano scelti dall'operatore; Sol ha sviluppato le scene dai testi esistenti. Una pianificazione, tre generazioni e una
+valutazione Sol sulle immagini intere: 5 chiamate su 5 autorizzate, nessuna correzione. Il valutatore riceveva immagini SLOP
+e descrizioni di partenza, non le foto REAL. Test del cambio ambiente entro un genere simile, non del passaggio tra generi.
+
+Il contesto e l'appoggio sono plausibili, ma l'owner segnala un errore importante nell'alloggiamento/cartuccia del gioco
+sul bordo anteriore inferiore dello SP, non rilevato dal valutatore. Il primo riepilogo dell'assistente sottostimava questo
+problema. Il valutatore aveva proposto solo di attenuare un riflesso del display: non è una dimostrazione di verifica hardware
+affidabile. I motivi tribali leggermente diversi sono invece giudicati meno gravi dall'owner.
+
+L'owner osserva una resa prospettica meno accentuata della console. È compatibile con una ripresa più distante e una focale
+maggiore a parità di dimensione apparente; non permette di misurare la focale dai pixel. I due originali verticali erano stati
+resi orizzontali perché il client imponeva 1536×1264 a tutte le generazioni. Questo limite del test motiva il nuovo parametro
+`aspect_ratio`, da applicare anche alla richiesta API. Non è una scelta autonoma del generatore di cambiare formato.
+
+Artefatti locali in `artifacts/cambio-ambiente-stesso-genere-2026-11-25/`, ignorati da Git. La segnalazione dell'owner è
+registrata separatamente da `evaluation.json`; nessuna rivalutazione o correzione a pagamento è stata avviata.
 
 Restano da implementare calibrazione delle probabilità, annotazioni atomiche, controlli delle combinazioni e della somiglianza,
 contratto strutturato del valutatore e UI delle conferme. I test software usano modelli simulati; nuovi esperimenti a pagamento
