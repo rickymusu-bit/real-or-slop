@@ -13,7 +13,7 @@ I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella c
   della maschera e conferma separata; API edits con immagine intera. Workflow persistenti, nessun reinvio automatico incerto.
 - Accettazione umana prima della copia; trattamento regolabile da REAL misurate del genere di destinazione, WebP comune,
   inquadratura, controllo finale, approvazione e pubblicazione. Riquadro di recupero per i processi precedenti.
-- Schema completo salvato e accessibile dal wizard. Migrazione 0073; test API, statistici e browser desktop/mobile simulati.
+- Schema completo salvato e accessibile dal wizard. Migrazioni 0073 e 0074, coda con tre richieste contemporanee e annullamento delle richieste non inviate; test API, statistici e browser desktop/mobile simulati.
   Nessuna chiamata reale, migrazione remota, merge o rilascio eseguiti per preparare la PR.
 
 ## 1.59.0 — 2026-11-24T06:59:00Z

@@ -16,13 +16,13 @@ Stato: implementata nel ramo 1.60.0, da rilasciare. Aggiornata: 2026-11-25T20:45
   superate e restano nella cronologia git.
 - **Descrizione visiva privata per le REAL** (decisione del 2026-11-23, sezione 11). Nei risultati
   le REAL mostrano solo i crediti (titolo, autore, licenza, link alla foto originale, modifiche della copia) e le SLOP prompt e modello.
-  Il modello delle proposte SLOP riceve l'originale intero, il titolo e la descrizione della fonte. La migrazione 0066 elimina la
+  Nella nuova pipeline l'originale intero serve alla descrizione, mentre il planner riceve descrizioni e parametri privati;
+  il generatore di immagini riceve solo la scena testuale. Le API precedenti conservano il vecchio contratto per compatibilità. La migrazione 0066 elimina la
   descrizione editoriale, la sua provenienza, il testo Commons originale e i campi dell'analisi, e svuota la descrizione delle SLOP.
   Superano le decisioni del 2026-11-09 (analisi una volta per immagine), del 2026-11-19 (ripetizione dell'analisi, descrizione nei
   risultati) e quella di poche ore prima sulle incertezze.
-- **Proposte delle REAL** (decisioni del 2026-11-21 e del 2026-11-22): nel wizard SLOP l'owner ne scrive o ne chiede al modello fino
-  a tre per REAL e sceglie quelle da generare; ogni proposta dà al massimo una SLOP; il dettaglio della REAL le mostra in sola lettura.
-  Regole nella specifica `generazione-slop`, sezione 1.
+- **Proposte delle REAL precedenti:** conservate per compatibilità delle lavorazioni anteriori alla 1.60.0; il nuovo wizard
+  usa parametri, particolarità e scene della galleria, come descritto in `generazione-slop` 17.0.0.
 - **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, numero modificabile dalle Impostazioni, ciascuna solo tre mesi dopo l'ultimo controllo; un
   file sparito da Commons viene **solo segnalato**, mai ritirato o cancellato in automatico (sezione 9).
 - **Affollamento e dettaglio delle REAL** (decisioni del 2026-11-21). Su richiesta, un modello misura quanto è affollata e quanto è
@@ -293,7 +293,7 @@ serve come riscontro.
   riceve `confirm`, `request`, `gallery_id` e `max_calls`. Soggetto e vettore seguono la REAL tra gallerie. Una modifica al testo
   dell'ambiente invalida il vettore e l'eliminazione definitiva della REAL lo cancella.
 
-## 12. Profili privati e pipeline della galleria
+## 13. Profili privati e pipeline della galleria
 
 La 1.60.0 aggiunge `images.pipeline_profile` per genere, quattordici parametri e particolarità, e `pipeline_scene` per la scena
 prevista di una SLOP. Il wizard prepara insieme descrizione e profilo con una chiamata per REAL mancante; riusa quelli presenti.

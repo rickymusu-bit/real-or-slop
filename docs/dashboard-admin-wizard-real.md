@@ -31,9 +31,9 @@ affollamento e dettaglio delle REAL (specifica `libreria-immagini`, sezione 10) 
 si torna all’elenco delle gallerie.
 
 «Carica REAL» apre `/admin/gallerie/<id>/real` e «Genera SLOP» apre `/admin/gallerie/<id>/slop` nella stessa scheda del browser.
-La pagina mostra il titolo della galleria e usa lo spazio disponibile per i quattro passi REAL o per le modalità SLOP. Si torna alla griglia
+La pagina mostra il titolo della galleria e usa lo spazio disponibile per i quattro passi REAL o per la pipeline SLOP. Si torna alla griglia
 con «Foto della galleria» o con Indietro del browser. L’indirizzo `/admin?gallery=<id>` riapre la finestra delle foto. Le selezioni
-REAL e le bozze dei due wizard si conservano per galleria nella sessione del browser.
+del wizard REAL si conservano per galleria nella sessione del browser. Le scene e le lavorazioni SLOP sono persistenti sul server.
 
 I batch automatici in corso hanno un collegamento alla pagina SLOP della galleria che li ha avviati. La revisione del batch apre la
 finestra delle foto con il filtro del batch già applicato. Statistiche include l’avviso sullo sbilanciamento e la distribuzione tra REAL e SLOP.
@@ -104,7 +104,7 @@ alla volta. Dopo un errore quelle già pubblicate non si ripetono; gli errori re
   dell'owner.
 - La pubblicazione di un gruppo non è transazionale: dopo un errore di rete alcune foto possono restare approvate.
 
-## 8. Wizard SLOP della galleria
+## 6. Wizard SLOP della galleria
 
 La pagina SLOP dedicata monta `src/pipeline.ts`: preparazione collettiva, regole e probabilità, scene e immagini da revisionare,
 trattamento e copie. Ogni fase mostra e conferma il massimo di chiamate; la correzione ha un'anteprima della maschera e una

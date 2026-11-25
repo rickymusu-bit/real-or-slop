@@ -84,8 +84,8 @@ suo batch originario, ma esce dalla sua revisione operativa.
   conferma e avviso di elaborazione al centro) e, a richiesta, gli oggetti dell'ultima misura disegnati sull'originale intero con le
   categorie di dettaglio e l'elenco di tutte le misure (specifica `libreria-immagini`, sezione 10).
 - **Proposte SLOP (REAL):** sotto la misura, in sola lettura, le proposte della REAL con lo stato (proposta dal modello, approvata,
-  usata, da rivedere) e il motivo se il modello non ne ha proposte. Si scrivono, si chiedono al modello e si scelgono nel wizard
-  «Genera SLOP» (specifica `generazione-slop`, sezione 1).
+  usata, da rivedere) e il motivo se il modello non ne ha proposte. Sono dati del flusso precedente. Il nuovo wizard prepara
+  scene da descrizioni, parametri e particolarità (specifica `generazione-slop`).
 - **Rigenerare una SLOP:** richiede un nuovo batch del wizard «Genera SLOP», con conferma ed esame dell’immagine intera.
 - **Fonte su Commons (REAL):** sopra il corpo del dettaglio, l'ultima data in cui il controllo notturno ha trovato il file oppure,
   se manca, la data della prima mancanza con le azioni possibili (verificare, ritirare o cestinare, correggere la pagina della fonte).
@@ -122,9 +122,9 @@ le statistiche coprono al massimo un anno.
 di 72 foto e il prossimo offset (`next`, nullo all’ultima pagina). I conteggi sono per galleria quando richiesta. Le eliminazioni rispondono anche con `postponed`.
 
 
-## 12. Lavorazioni della nuova pipeline
+## 7. Lavorazioni della nuova pipeline
 
-Migrazione 0073: `galleries.pipeline_settings`, `images.pipeline_profile`, `images.pipeline_scene`, `pipeline_jobs`.
+Migrazioni 0073 e 0074: `galleries.pipeline_settings`, `images.pipeline_profile`, `images.pipeline_scene`, `pipeline_jobs`.
 Le lavorazioni temporanee collegano una REAL alla candidata solo durante la revisione. Ogni operazione è acquisita una volta;
 la candidata entra in libreria solo all'accettazione dell'owner. I riferimenti di lavorazione vengono eliminati al termine;
 profili e scene previsti non contengono un ID permanente della REAL di partenza. Trigger registrano i file da rimuovere nella

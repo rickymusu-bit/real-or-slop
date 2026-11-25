@@ -93,8 +93,9 @@ Con l'app 1.26.0 le misure venivano da un'altra REAL con lo stesso colore, suppo
 rovinato le copie: saturazione, contrasto e dominante dipendono dalla scena, non dal supporto. Una scena di saccheggio a colori ha
 preso la saturazione di una foto quasi grigia (ridotta a un terzo), un incendio ha perso l'arancione, una scena di strada è stata
 ridotta a 357 px e virata come la foto segnaletica presa a campione. Le REAL di origine avevano invece misure vicine agli originali del
-generatore, o più sature. Le misure vengono quindi dalla **REAL di riferimento**, che fornisce un contesto fotografico ma può ritrarre una scena
-completamente diversa. La REAL campione separata non serve più. L'algoritmo può proporre una resa analoga, senza forzare
+generatore, o più sature. Per il flusso precedente le misure venivano dalla **REAL di riferimento**. Dal ramo 1.60.0 il riferimento è invece una REAL
+misurata del genere fotografico di destinazione, scelto nella galleria; senza corrispondenze la copia parte senza trattamento.
+Il campione può ritrarre una scena diversa ma deve avere contesto fotografico pertinente. L'algoritmo può proporre una resa analoga, senza forzare
 corrispondenza di luminosità, colore o saturazione quando renderebbe la SLOP meno credibile.
 
 ### 4.2 Misure

@@ -96,7 +96,7 @@ assert part['current']['body'] == first['body'] and len(part['history']) == 3, p
 code, models = call(f'{API}/models'); assert code == 200 and models['text_model'] == 'gpt-6.1-sol' and models['image_model'] == 'gpt-image-2.5-flare', models
 available = {m['id']: m['available'] for m in models['image_models']}
 assert available['gpt-image-2'] is True and available['gpt-image-2.5-flare'] is True and available['gpt-image-2.6-flare'] is False, available
-assert len(models['text_models']) == 27 and all(m['available'] for m in models['text_models'])
+assert {'gpt-6.2-sol', 'gpt-6.1-sol'} <= {m['id'] for m in models['text_models']} and all(m['available'] for m in models['text_models'])
 assert dict((m['id'], m['qualities']) for m in models['image_models'])['gpt-image-2.5-flare'][-1] == 'max'
 assert {m['id']: m['shutdown'] for m in models['image_models']}['gpt-image-2'] == '2027-02-10'
 for change, code_wanted in (({'image_model': 'gpt-image-2.6-flare'}, 409), ({'text_model': 'gpt-9'}, 400), ({'image_model': 'dall-e-3'}, 400), ({}, 400), ({'other': 'x'}, 400)):

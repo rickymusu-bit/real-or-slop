@@ -62,10 +62,12 @@ export function variation(source: Profile, population: Profile[], settings: Pipe
     if (random() >= (settings.probabilities[key] ?? automatic)) continue;
     selected.push(key);
     // Correct under/over-representation of intended accepted SLOP attributes with smoothed, bounded weights.
+    const slopCounts = new Map<string,number>();
+    for(const p of generated){const category=p.parameters?.[key]?.category;if(category)slopCounts.set(category,(slopCounts.get(category)||0)+1);}
     const weights = donors.map(p => {
       const category = p.parameters[key].category;
       const realShare = (frequencies.get(category) || 0) / donors.length;
-      const slopShare = (generated.filter(g => g.parameters?.[key]?.category === category).length + 5 * realShare) / (generated.length + 5);
+      const slopShare = ((slopCounts.get(category) || 0) + 5 * realShare) / (generated.length + 5);
       return Math.min(4, Math.max(.25, realShare / slopShare));
     });
     let at = random() * weights.reduce((n, w) => n + w, 0), index = 0;

@@ -18,9 +18,10 @@ La 1.60.0 sostituisce i controlli del wizard della galleria con il protocollo qu
 tutte le REAL della galleria fuori dal cestino. Le vecchie API e i processi editoriali restano compatibili per i dati precedenti;
 un riquadro di recupero mostra i processi precedenti ancora da decidere. Il nuovo wizard non usa il vecchio ciclo automatico.
 
-La migrazione 0073 aggiunge profili e scene privati su `images`, impostazioni su `galleries` e `pipeline_jobs` temporanei.
+Le migrazioni 0073 e 0074 aggiungono profili e scene privati su `images`, impostazioni su `galleries` e `pipeline_jobs` temporanei.
 Ogni lavorazione ha un Workflow e uno stato persistente. Una conferma acquisisce una sola operazione; il Workflow non ritenta
-passi a pagamento. Dopo quindici minuti una richiesta senza esito passa all'attenzione dell'owner, senza reinvio automatico.
+passi a pagamento. La coda acquisisce al massimo tre operazioni contemporanee. Le richieste ancora in attesa si possono annullare gratuitamente;
+quelle già inviate terminano senza avviare altre fasi. Dopo quindici minuti una richiesta acquisita senza esito passa all'attenzione dell'owner, senza reinvio automatico.
 
 ### Comandi e conferme
 
@@ -42,7 +43,7 @@ passi a pagamento. Dopo quindici minuti una richiesta senza esito passa all'atte
   è calcolata dal browser. Il riferimento del trattamento è campionato fra REAL misurate dello stesso genere di destinazione;
   senza riferimento disponibile la copia parte senza trattamento. Inquadratura e cursori riusano gli editor esistenti.
 
-API private: `GET /api/admin/pipeline/:gallery`; `POST /:gallery/settings`, `/profile`, `/prepare`, `/index`, `/plan`;
+API private: `GET /api/admin/pipeline/:gallery`; `POST /:gallery/settings`, `/profile`, `/prepare`, `/index`, `/plan`, `/stop`;
 `POST /:gallery/:job/{scene,generate,evaluate,edit,accept,close}`; `GET /:gallery/:job/file` e `?previous=1`.
 Le fasi a pagamento richiedono `confirm`, UUID `request` e `max_calls` esatto. Preparazione e scene lavorano su elenchi fino a
 500 REAL per richiesta; l'interfaccia suddivide selezioni maggiori senza superare il massimo confermato complessivamente.

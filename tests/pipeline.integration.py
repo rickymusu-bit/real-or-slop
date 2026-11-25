@@ -59,3 +59,34 @@ assert state['images'][0]['status']=='new' and state['images'][0]['copy'] is Non
 assert len(control())==5
 assert sql("SELECT count(*) AS n FROM pipeline_jobs WHERE gallery_id='"+gallery['id']+"'")[0]['n']==0
 print('Pipeline passed: cached gallery profiles, controlled variations, text-only images, owner-gated evaluation/edits, full-image mask, acceptance without source genealogy.')
+
+# A source cannot be substituted from another gallery; no model request is spent.
+other=make_gallery('Other pipeline gallery');foreign=real('foreign-pipeline',gallery=other['id'])
+control([])
+assert call('plan',paid_request(ids=[foreign['id']],max_calls=1))[0]==409
+assert control()==[]
+# Gallery deletion and closing cannot race a paid step already acquired on the server.
+second=real('pipeline-running',gallery=gallery['id']);control([{'delay':.7}])
+assert call('prepare',paid_request(ids=[second['id']],max_calls=1))[0]==200
+revision=call('/galleries/'+gallery['id'],library=True)[1]['revision']
+assert call('/galleries/'+gallery['id'],{'confirm':True,'revision':revision},method='DELETE',library=True)[0]==409
+wait(lambda s:all(s0['profile'] for s0 in s['sources']) and not s['jobs'])
+# An uncertain result stays visible and neither the Workflow nor a repeated request resends it.
+control([{'status':503}]);uncertain=paid_request(ids=[source['id']],max_calls=1)
+assert call('plan',uncertain)[0]==200
+state=wait(lambda s:bool(s['jobs']) and s['jobs'][0]['state']=='attention')
+assert len(control())==1 and 'incerto' in state['jobs'][0]['error']
+assert call('plan',uncertain)[0]==200;time.sleep(.2);assert len(control())==1
+assert call(state['jobs'][0]['id']+'/close',paid_request())[0]==200
+print('Pipeline resilience passed: cross-gallery scope, deletion blocked while paid work runs, uncertainty persisted and never resent.')
+
+# A whole-gallery batch is bounded; cancelling the queue spends no requests for the remainder.
+queued_sources=[real('pipeline-queue-'+str(n),gallery=gallery['id']) for n in range(4)]
+control([{'delay':2} for _ in range(4)])
+assert call('prepare',paid_request(ids=[s['id'] for s in queued_sources],max_calls=4))[0]==200
+state=call('')[1]
+assert sum(j['state'] in ('working','dispatching') for j in state['jobs'])<=3
+code,result=call('stop',{'confirm':True});assert code==200 and result['cancelled']>=1,result
+wait(lambda s:all(j['state'] not in ('working','dispatching','queued') for j in s['jobs']))
+assert len(control())<=3,control()
+print('Pipeline queue passed: at most three acquired operations and cancellation before the remaining paid requests.')

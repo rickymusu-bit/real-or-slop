@@ -12,7 +12,7 @@ in `CHANGELOG.md`.
 - **Ramo 1.60.0:** pipeline completa della galleria, `docs/generazione-slop.md` 17.0.0. Preparazione collettiva delle REAL,
   parametri e particolarità, indici, regole/probabilità rivedibili, cambio ambiente/genere, scene inglesi, formato per candidata,
   generazione dal solo testo, valutazione e correzioni confermate. Workflow senza ripetizioni, maschera visibile e modificabile,
-  accettazione umana, trattamento per genere e preparazione comune WebP. Migrazione 0073. Nessuna elaborazione reale avviata.
+  accettazione umana, trattamento per genere e preparazione comune WebP. Migrazioni 0073 e 0074. Nessuna elaborazione reale avviata.
   Schema `docs/assets/pipeline-slop.svg`, disponibile anche dal wizard; test API e browser con OpenAI simulato.
 - **Ramo 1.59.0:** indice esatto dei soggetti e ricerca semantica degli ambienti delle REAL. Il comando «Indicizza le descrizioni»
   completa le REAL già descritte, con chiamate confermate. Migrazione 0072.
@@ -231,6 +231,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0067 | misure di affollamento e dettaglio delle REAL (`real_measures`), soglie delle gallerie, parte `real_measure` del contesto e chiavi delle soglie predefinite nelle Impostazioni |
 | 0068 | formula delle misure (1 per le esistenti) e nuova proposta di «Misura delle REAL» se quella in vigore è la prima |
 | 0069 | idee di falsificazione delle REAL (`real_ideas`), motivo senza idee, idea nel riferimento REAL-processo, trigger che tengono i riferimenti fino alla fine del processo e segnano l'idea usata, parte `real_ideas` del contesto |
+| 0074 | formato richiesto/restituito e vincolo dei lavori attivi, inclusa l’acquisizione in coda |
 | 0073 | profili e scene privati, regole/probabilità delle gallerie e lavorazioni temporanee con pulizia durevole |
 | 0070 | elimina le Indicazioni SLOP delle gallerie e la revisione registrata sulle idee; nuova proposta di «Premessa e prompt di galleria» se quella in vigore è la 0066 |
 | 0071 | descrizioni visive delle REAL e controllo delle richieste concorrenti |
