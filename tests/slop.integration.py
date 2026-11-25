@@ -12,7 +12,7 @@ import urllib.error
 import urllib.request
 
 code,settings=call('/settings',library=True);assert code==200
-gallery=make_gallery("Galleria del ciclo")['id'];images=[]
+gallery=make_gallery("Gallery del ciclo")['id'];images=[]
 
 def prepare(queue=None):return wizard_prepare(gallery,images,queue=queue)
 start,release,wait=wizard_start,wizard_release,wizard_wait
@@ -41,10 +41,10 @@ try:
         given=json.loads(request['input'][0]['content'][0]['text'])
         assert set(given)=={'attempt_id','premise','approved_prompt','prompt','gallery','idea','tolerance'},given
         assert given['attempt_id']==p['attempts'][n]['id'] and given['premise']==p['premise'] and given['approved_prompt']==approved
-        assert given['idea']['idea'].startswith('Idea di prova per') and given['gallery']['title']=='Galleria del ciclo',given
+        assert given['idea']['idea'].startswith('Idea di prova per') and given['gallery']['title']=='Gallery del ciclo',given
         assert 'previous_response_id' not in request and 'conversation' not in request
     instructions=logs[1]['body']['instructions']
-    assert instructions.startswith('Lavori per un archivio') and 'credibilità fotografica' in instructions and 'ENTIRE unprocessed' in instructions
+    assert instructions.startswith('You work on a photographic archive') and 'photographic credibility' in instructions and 'ENTIRE unprocessed' in instructions
     assert 'the idea it develops' in instructions
     assert set(p['attempts'][0]['evaluation']['contexts'])=={'base','evaluation'}
     path=p['attempts'][0]['file'].split('/slop/')[1]

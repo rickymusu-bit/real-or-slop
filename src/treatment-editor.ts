@@ -8,20 +8,20 @@ import { withPhotoProcessing } from "./photo-processing";
 
 type Scalar = "contrast" | "saturation" | "blur" | "grain" | "grainSize" | "jpeg" | "long";
 const SLIDERS: [Scalar | "cast0" | "cast1" | "cast2", string][] = [
-  ["contrast", "Contrasto"], ["saturation", "Saturazione"], ["cast0", "Rosso"], ["cast1", "Verde"], ["cast2", "Blu"],
-  ["blur", "Sfocatura (px)"], ["grain", "Grana"], ["grainSize", "Dimensione della grana"], ["jpeg", "Qualità JPEG intermedio"], ["long", "Lato lungo (px)"],
+  ["contrast", "Contrast"], ["saturation", "Saturation"], ["cast0", "Red"], ["cast1", "Green"], ["cast2", "Blue"],
+  ["blur", "Blur (px)"], ["grain", "Grain"], ["grainSize", "Grain size"], ["jpeg", "Intermediate JPEG quality"], ["long", "Long edge (px)"],
 ];
-const MONOCHROME: [Settings["monochrome"], string][] = [["", "A colori"], ["black-and-white", "Bianco e nero"], ["sepia", "Seppia"]];
-const metricText = (m: Metrics) => `lato ${m.long} px, rumore ${m.noise.toFixed(1)}, nitidezza ${m.sharpness.toFixed(1)}, contrasto ${m.contrast}, saturazione ${m.saturation.toFixed(2)}`;
+const MONOCHROME: [Settings["monochrome"], string][] = [["", "Color"], ["black-and-white", "Black and white"], ["sepia", "Sepia"]];
+const metricText = (m: Metrics) => `long edge ${m.long} px, noise ${m.noise.toFixed(1)}, sharpness ${m.sharpness.toFixed(1)}, contrast ${m.contrast}, saturation ${m.saturation.toFixed(2)}`;
 const same = (a: Settings, b: Settings) => JSON.stringify(a) === JSON.stringify(b);
 const decimals = (step: number) => step >= 1 ? 0 : String(step).split(".")[1]?.length || 0;
 const safe = (text: string) => text.replace(/[<>&"]/g, "");
 
 /** Opens the editor for a SLOP. Resolves with the settings to save (null: the proposal) or undefined if cancelled. */
 export async function chooseTreatment(item: TreatableItem, title = ""): Promise<{ settings: Settings | null } | undefined> {
-  const { plan, bitmap } = await withPhotoProcessing("Preparo l’anteprima del trattamento…", async () => {
+  const { plan, bitmap } = await withPhotoProcessing("Preparing treatment preview…", async () => {
     const plan = await treatmentPlan(item, { off: false });
-    if (!plan) throw Error("Il processo non ha misure fotografiche: copia senza trattamento");
+    if (!plan) throw Error("This process has no photographic measurements: copy without treatment");
     return { plan, bitmap: await createImageBitmap(await originalOf(item.id), { imageOrientation: "from-image" }) };
   });
   const frame = item.copy?.crop || wholePhotoFrame(bitmap.width, bitmap.height), cropLong = frameLongSide(frame);
@@ -33,19 +33,19 @@ export async function chooseTreatment(item: TreatableItem, title = ""): Promise<
   const limits = { ...SETTING_LIMITS, long: { min: Math.min(SETTING_LIMITS.long.min, cropLong), max: Math.min(SETTING_LIMITS.long.max, cropLong), step: 1 } };
   const dialog = document.createElement("dialog");
   dialog.className = "treatment-dialog";
-  dialog.setAttribute("aria-label", "Trattamento della copia di gioco");
+  dialog.setAttribute("aria-label", "Game copy treatment");
   const field = (key: string, label: string) => {
     const limit = key.startsWith("cast") ? limits.cast : limits[key as Scalar];
     return `<label class="treatment-slider" data-row="${key}"><span>${label}</span><input type="range" data-key="${key}" min="${limit.min}" max="${limit.max}" step="${limit.step}"><output data-out="${key}"></output></label>`;
   };
-  dialog.innerHTML = `<h2>Trattamento</h2><p class="hint">${title ? `«${safe(title)}». ` : ""}I cursori partono dal trattamento proposto in base alle misure fotografiche salvate (${MONOCHROME.find(([v]) => v === plan.monochrome)![1].toLowerCase()}). L'anteprima è calcolata in questa pagina e non viene salvata finché non scegli «Salva il trattamento».</p>
-    <div class="treatment-views"><figure><canvas data-view="preview" aria-label="Anteprima della copia trattata"></canvas><figcaption data-caption="preview">Anteprima</figcaption></figure>
-    <aside class="treatment-target"><h3>Obiettivo fotografico</h3><p>${metricText(plan.sample.metrics)}</p><p>Misure salvate nel processo, indipendenti dalla foto di ispirazione.</p></aside></div>
+  dialog.innerHTML = `<h2>Trattamento</h2><p class="hint">${title ? `«${safe(title)}». ` : ""}Sliders start at the treatment suggested by the saved photographic measurements (${MONOCHROME.find(([v]) => v === plan.monochrome)![1].toLowerCase()}). The preview is calculated on this page and is not saved until you choose “Save treatment”.</p>
+    <div class="treatment-views"><figure><canvas data-view="preview" aria-label="Treated copy preview"></canvas><figcaption data-caption="preview">Preview</figcaption></figure>
+    <aside class="treatment-target"><h3>Photographic target</h3><p>${metricText(plan.sample.metrics)}</p><p>Measurements saved in the process, independent of the reference photo.</p></aside></div>
     <p class="hint" role="status" data-status></p>
-    <div class="treatment-controls"><label class="treatment-slider"><span>Colore</span><select data-key="monochrome">${MONOCHROME.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select><output></output></label>
+    <div class="treatment-controls"><label class="treatment-slider"><span>Color</span><select data-key="monochrome">${MONOCHROME.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select><output></output></label>
     ${SLIDERS.map(([key, label]) => field(key, label)).join("")}</div>
-    <div class="treatment-actions"><button type="button" data-treatment="proposal">Torna alla proposta</button><button type="button" data-treatment="cancel">Annulla</button>
-    <button type="button" class="primary" data-treatment="ok">Salva il trattamento</button></div>`;
+    <div class="treatment-actions"><button type="button" data-treatment="proposal">Reset to suggestion</button><button type="button" data-treatment="cancel">Cancel</button>
+    <button type="button" class="primary" data-treatment="ok">Save treatment</button></div>`;
   document.body.append(dialog);
   const status = dialog.querySelector<HTMLElement>("[data-status]")!, preview = dialog.querySelector<HTMLCanvasElement>('[data-view="preview"]')!;
   const caption = dialog.querySelector<HTMLElement>('[data-caption="preview"]')!;
@@ -61,12 +61,12 @@ export async function chooseTreatment(item: TreatableItem, title = ""): Promise<
     }
     // In a monochrome copy the three colour sliders are its tint and saturation has no effect.
     dialog.querySelector<HTMLElement>('[data-row="saturation"]')!.hidden = mono;
-    for (const [k, name] of [["0", "rosso"], ["1", "verde"], ["2", "blu"]]) dialog.querySelector<HTMLElement>(`[data-row="cast${k}"] span`)!.textContent = (mono ? "Tinta: " : "Dominante: ") + name;
+    for (const [k, name] of [["0", "red"], ["1", "green"], ["2", "blue"]]) dialog.querySelector<HTMLElement>(`[data-row="cast${k}"] span`)!.textContent = (mono ? "Tint: " : "Color cast: ") + name;
   };
   let timer = 0, drawn = 0;
   const refresh = async () => {
     const turn = ++drawn;
-    status.textContent = "Preparo l'anteprima…";
+    status.textContent = "Preparing preview…";
     await new Promise(resolve => requestAnimationFrame(resolve));  // the status is shown before the computation
     const long = Math.min(settings.long, cropLong);
     if (!bases.has(long)) bases.set(long, drawBase(bitmap, frame, long));
@@ -77,8 +77,8 @@ export async function chooseTreatment(item: TreatableItem, title = ""): Promise<
     const context = preview.getContext("2d")!;
     context.drawImage(canvas, 0, 0);
     const metrics = measure(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
-    caption.textContent = `Anteprima: ${metricText(metrics)}; scarto dalla REAL ${Math.round(gap(metrics, plan.sample.metrics) * 100)}%`;
-    status.textContent = same(settings, proposed) ? "Trattamento proposto." : "Trattamento modificato, non ancora salvato.";
+    caption.textContent = `Preview: ${metricText(metrics)}; difference from REAL ${Math.round(gap(metrics, plan.sample.metrics) * 100)}%`;
+    status.textContent = same(settings, proposed) ? "Suggested treatment." : "Treatment changed, not saved yet.";
   };
   const later = () => { window.clearTimeout(timer); timer = window.setTimeout(() => void refresh().catch(error => { status.textContent = String(error instanceof Error ? error.message : error); }), 200); };
   dialog.addEventListener("input", event => {

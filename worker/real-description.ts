@@ -37,18 +37,18 @@ export const schema = {
 };
 
 export function readDescription(value: unknown): Pick<VisualDescription, "sections" | "indications" | "subject"> {
-  if (!value || typeof value !== "object") throw new HttpError(502, "Descrizione del modello non valida");
+  if (!value || typeof value !== "object") throw new HttpError(502, "Invalid model description");
   const answer = value as { sections?: Record<VisualSection, unknown>; indications?: Record<VisualIndication, { applies?: unknown; reason?: unknown }>; subject?: unknown };
   const sections = Object.fromEntries(VISUAL_KEYS.map(key => {
     const field = answer.sections?.[key];
     const text = typeof field === "string" ? field.trim() : null;
-    if (text === null || (!text && key !== "uncertainties")) throw new HttpError(502, "Descrizione del modello incompleta");
+    if (text === null || (!text && key !== "uncertainties")) throw new HttpError(502, "Incomplete model description");
     return [key, text];
   })) as VisualDescription["sections"];
   const indications = Object.fromEntries(INDICATION_KEYS.map(key => {
     const field = answer.indications?.[key];
     if (!field || typeof field.applies !== "boolean" || typeof field.reason !== "string" || !field.reason.trim())
-      throw new HttpError(502, "Indicazioni della descrizione incomplete");
+      throw new HttpError(502, "Incomplete description indicators");
     return [key, { applies: field.applies, reason: field.reason.trim() }];
   })) as VisualDescription["indications"];
   return { sections, indications, subject: readSubject(answer.subject) };
@@ -64,15 +64,15 @@ export async function undescribedReals(env: Env, galleryId: unknown) {
 export async function describeReal(env: Env, row: Row, data: Record<string, unknown>) {
   if (data.confirm !== true || typeof data.request !== "string" || !/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(data.request)
     || typeof data.gallery_id !== "string" || Object.keys(data).some(key => !["confirm", "request", "gallery_id"].includes(key)))
-    throw new HttpError(400, "Conferma una chiamata per la descrizione");
+    throw new HttpError(400, "Confirm one call for the description");
   if (row.origin !== "REAL" || row.status === "trash" || row.gallery_id !== data.gallery_id)
-    throw new HttpError(409, "La foto deve essere una REAL della galleria fuori dal cestino");
+    throw new HttpError(409, "Photo must be a REAL in the gallery, outside Trash");
   if (row.visual_description) return;
-  if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
+  if (!env.OPENAI_API_KEY) throw new HttpError(503, "Missing OpenAI key");
   const [file, model, base, gallery] = await Promise.all([
     env.QUARANTINE?.get(row.original_key), chosenModel(env, "text_model"), currentContext(env, "base"), findGallery(env, row.gallery_id),
   ]);
-  if (!file) throw new HttpError(404, "Originale non disponibile");
+  if (!file) throw new HttpError(404, "Original unavailable");
   const payload = jsonWithImage({ model, instructions: base.body + "\n\n" + instructions, max_output_tokens: 12000,
     input: [{ role: "user", content: [{ type: "input_text", text: JSON.stringify({
       source: { title: row.title, description: row.description }, gallery: { title: gallery.title, description: gallery.description },
@@ -91,13 +91,13 @@ export async function describeReal(env: Env, row: Row, data: Record<string, unkn
     env.DB.prepare(`UPDATE paid_calls SET status='uncertain',updated_at=? WHERE image_id=? AND id LIKE 'describe-%'
       AND status='pending' AND updated_at<?`).bind(stamp, row.id, stale),
   ]);
-  if (!claim.meta.changes) throw new HttpError(409, "Descrizione già presente o in corso, oppure foto spostata");
+  if (!claim.meta.changes) throw new HttpError(409, "Description already present or in progress, or photo moved");
   try {
     const fields = readDescription(responseJson(await paid(env, "analysis", model, payload, { image: row.id, request })));
     const description: VisualDescription = { ...fields, model, created_at: new Date().toISOString(), base_context: base.id };
     const saved = await env.DB.prepare(`UPDATE images SET visual_description=? WHERE id=? AND visual_description_request=?`)
       .bind(JSON.stringify(description), row.id, request).run();
-    if (!saved.meta.changes) throw new HttpError(409, "Foto rimossa durante la descrizione");
+    if (!saved.meta.changes) throw new HttpError(409, "Photo removed during description");
   } finally {
     await env.DB.prepare(`UPDATE images SET visual_description_request=NULL,visual_description_claimed_at=NULL
       WHERE id=? AND visual_description_request=?`).bind(row.id, request).run();

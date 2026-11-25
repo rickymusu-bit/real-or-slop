@@ -17,9 +17,9 @@ export const GALLERY_SOURCE = "origin='REAL' AND status IN ('approved','publishe
 
 
 export async function findGallery(env: Env, value: unknown): Promise<Gallery> {
-  if (typeof value !== "string" || !/^[\w-]{1,64}$/.test(value)) throw new HttpError(400, "Scegli una galleria");
+  if (typeof value !== "string" || !/^[\w-]{1,64}$/.test(value)) throw new HttpError(400, "Choose a gallery");
   const gallery = await env.DB.prepare("SELECT * FROM galleries WHERE id=?").bind(value).first<Gallery>();
-  if (!gallery) throw new HttpError(404, "Galleria inesistente");
+  if (!gallery) throw new HttpError(404, "Gallery not found");
   return gallery;
 }
 export async function galleryId(env: Env, value: unknown) {
@@ -43,13 +43,13 @@ async function galleryPreviews(env: Env) {
   return rows.map(g => ({...g, ready: ready(g), preview: JSON.parse(g.preview) as string[]}));
 }
 function field(value: unknown, max: number, name: string, required = false) {
-  if (typeof value !== "string" || value.length > max || (required && !value.trim())) throw new HttpError(400, `Campo non valido: ${name}`);
+  if (typeof value !== "string" || value.length > max || (required && !value.trim())) throw new HttpError(400, `Invalid field: ${name}`);
   return value.trim();
 }
 /** A threshold from 0 to 100, or null for the default of the settings. */
 function threshold(value: unknown, name: string): number | null {
   if (value === undefined || value === null) return null;
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 100) throw new HttpError(400, `Soglia di ${name} da 0 a 100`);
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 100) throw new HttpError(400, `Threshold for ${name} from 0 to 100`);
   return value;
 }
 export async function galleryRoute(env: Env, method: string, target: string, data: Record<string, unknown>) {
@@ -59,27 +59,27 @@ export async function galleryRoute(env: Env, method: string, target: string, dat
       thresholds: {crowdedness: defaults.crowdedness_threshold, detail: defaults.detail_threshold}};
   }
   if (method === "GET" && /^[\w-]{1,64}$/.test(target)) return { ...await findGallery(env, target), paid_calls: !!env.OPENAI_API_KEY };
-  if (method !== "POST" && method !== "PATCH") throw new HttpError(405, "Metodo non consentito");
+  if (method !== "POST" && method !== "PATCH") throw new HttpError(405, "Method not allowed");
   const [key, action] = target.split("/");
   const editing = method === "PATCH" && key && !action;
-  if (!editing && (method !== "POST" || target)) throw new HttpError(404, "API delle gallerie inesistente");
+  if (!editing && (method !== "POST" || target)) throw new HttpError(404, "Gallery API not found");
   if (Object.keys(data).some(k => !["title", "description", "max_crowdedness", "max_detail", ...(editing ? ["revision"] : [])].includes(k)))
-    throw new HttpError(400, "Campi non previsti");
+    throw new HttpError(400, "Unexpected fields");
   const title = field(data.title, 200, "titolo", true), description = field(data.description ?? "", GALLERY_DESCRIPTION_MAX, "descrizione");
   if (!editing) {
     const key = id();
     await env.DB.prepare("INSERT INTO galleries(id,title,description,max_crowdedness,max_detail) VALUES(?,?,?,?,?)")
-      .bind(key, title, description, threshold(data.max_crowdedness, "affollamento"), threshold(data.max_detail, "dettaglio")).run();
+      .bind(key, title, description, threshold(data.max_crowdedness, "crowding"), threshold(data.max_detail, "detail")).run();
     return findGallery(env, key);
   }
   const gallery = await findGallery(env, key);
-  if (data.revision !== gallery.revision) throw new HttpError(409, "Galleria modificata: ricarica il modulo");
-  const crowdedness = "max_crowdedness" in data ? threshold(data.max_crowdedness, "affollamento") : gallery.max_crowdedness;
-  const detail = "max_detail" in data ? threshold(data.max_detail, "dettaglio") : gallery.max_detail;
+  if (data.revision !== gallery.revision) throw new HttpError(409, "Gallery changed: reload the form");
+  const crowdedness = "max_crowdedness" in data ? threshold(data.max_crowdedness, "crowding") : gallery.max_crowdedness;
+  const detail = "max_detail" in data ? threshold(data.max_detail, "detail") : gallery.max_detail;
   const text = title !== gallery.title || description !== gallery.description;
   if (!text && crowdedness === gallery.max_crowdedness && detail === gallery.max_detail) return gallery;
   const updated = await env.DB.prepare(`UPDATE galleries SET title=?,description=?,max_crowdedness=?,max_detail=?,
     revision=revision+? WHERE id=? AND revision=?`).bind(title, description, crowdedness, detail, text ? 1 : 0, key, gallery.revision).run();
-  if (!updated.meta.changes) throw new HttpError(409, "Galleria modificata: ricarica il modulo");
+  if (!updated.meta.changes) throw new HttpError(409, "Gallery changed: reload the form");
   return findGallery(env, key);
 }

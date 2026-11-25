@@ -9,7 +9,7 @@ import { LEVEL_IDS, scoreOf, type Level, type Outcome } from "../shared/levels";
 const NOW_MS = 5 * 60_000, DAY_MS = 86_400_000;
 
 export async function stats(env: Env, period: string) {
-  if (!["7", "30", "all"].includes(period)) throw new HttpError(400, "Periodo non valido: 7, 30 o all");
+  if (!["7", "30", "all"].includes(period)) throw new HttpError(400, "Invalid period: 7, 30 or all");
   const now = Date.now(), fromMs = period === "all" ? 0 : now - Number(period) * DAY_MS, fromIso = new Date(fromMs).toISOString();
 
   const live = (await env.DB.prepare(`SELECT s.level,count(DISTINCT s.id) AS n FROM game_sessions s LEFT JOIN game_rounds r ON r.session_id=s.id
@@ -62,7 +62,7 @@ export async function stats(env: Env, period: string) {
     balance: { real: { approved: count("REAL", "approved"), published: count("REAL", "published") },
       slop: { approved: count("SLOP", "approved"), published: count("SLOP", "published") },
       real_share_published: share === null ? null : Math.round(share * 1000) / 1000,
-      warning: share !== null && (share < 0.4 || share > 0.6), levels: (await levels(env)).levels,
+      warning: share !== null && (share < 0.4 || share > 0.6), levels: (await levels(env)).levels.map(l => ({...l, label: ({facile:"Easy",medio:"Medium",difficile:"Hard",esperto:"Expert"})[l.id]})),
       balance: await catalogCounts(env) },
   };
 }

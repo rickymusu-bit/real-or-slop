@@ -24,7 +24,7 @@ function frameControl(stage: HTMLElement, frame: HTMLElement, width: number, hei
     frame.style.left = (box.x / width * 100) + "%"; frame.style.top = (box.y / height * 100) + "%";
     frame.style.width = (w(box.height) / width * 100) + "%"; frame.style.height = (box.height / height * 100) + "%";
     frame.setAttribute("aria-valuenow", String(box.height));
-    frame.setAttribute("aria-valuetext", `x ${box.x}, y ${box.y}, altezza ${box.height} px`);
+    frame.setAttribute("aria-valuetext", `x ${box.x}, y ${box.y}, height ${box.height} px`);
   };
   const scale = () => stage.getBoundingClientRect().width / width || 1;
   const pointers = new Map<number, Point>();
@@ -98,11 +98,11 @@ export async function editFrame<T extends TreatableItem & { width: number; heigh
   const { width, height } = item, format = "4:5", current = item.copy?.crop;
   const img = new Image();
   img.alt = ""; img.draggable = false;
-  const url = await withPhotoProcessing("Carico la foto originale…", async () => {
+  const url = await withPhotoProcessing("Loading the original photo…", async () => {
     const source = URL.createObjectURL(await originalOf(item.id));
     img.src = source;
     try { await img.decode(); return source; }
-    catch { URL.revokeObjectURL(source); throw Error("Originale non leggibile"); }
+    catch { URL.revokeObjectURL(source); throw Error("Cannot read the original image"); }
   });
   const saved = current?.format === format && !cropError(width, height, current) ? current : null;
   const canvas = paddedPhotoCanvas(width, height);
@@ -111,21 +111,21 @@ export async function editFrame<T extends TreatableItem & { width: number; heigh
     : { x: 0, y: 0, height: canvas.height };
   const dialog = document.createElement("dialog");
   dialog.className = "crop-dialog";
-  dialog.setAttribute("aria-label", "Inquadratura della copia di gioco");
+  dialog.setAttribute("aria-label", "Game copy framing");
   const safeTitle = title.replace(/[<>&"]/g, "");
-  dialog.innerHTML = `<div class="crop-layout"><div class="crop-scroll"><h2>Inquadratura 4:5</h2>
+  dialog.innerHTML = `<div class="crop-layout"><div class="crop-scroll"><h2>4:5 framing</h2>
     ${safeTitle ? `<p class="hint">«${safeTitle}»</p>` : ""}
-    <div class="crop-stage"><div class="crop-frame" tabindex="0" role="slider" aria-label="Dimensione del ritaglio">
+    <div class="crop-stage"><div class="crop-frame" tabindex="0" role="slider" aria-label="Frame size">
     ${Object.keys(CORNERS).map(corner => `<span data-crop-corner="${corner}" aria-hidden="true"></span>`).join("")}</div></div></div>
     <div class="crop-footer"><p class="crop-error" role="alert" hidden></p><div class="crop-actions">
-    <button type="button" data-crop="cancel">Annulla</button>
-    <button type="button" class="primary" data-crop="ok" autofocus>Salva</button></div></div></div>`;
+    <button type="button" data-crop="cancel">Cancel</button>
+    <button type="button" class="primary" data-crop="ok" autofocus>Save</button></div></div></div>`;
   document.body.append(dialog);
   const error = dialog.querySelector<HTMLElement>(".crop-error")!;
   const cropStage = dialog.querySelector<HTMLElement>(".crop-stage")!, cropFrame = cropStage.querySelector<HTMLElement>(".crop-frame")!;
   cropStage.prepend(img);
   cropStage.style.setProperty("--crop-ratio", String(canvas.width / canvas.height));
-  img.alt = "Foto originale adattata al 4:5";
+  img.alt = "Original photo fitted to 4:5";
   img.style.left = `${canvas.x / canvas.width * 100}%`;
   img.style.top = `${canvas.y / canvas.height * 100}%`;
   img.style.width = `${width / canvas.width * 100}%`;
@@ -149,7 +149,7 @@ export async function editFrame<T extends TreatableItem & { width: number; heigh
             const unchanged = saved && crop.x === initialCrop.x && crop.y === initialCrop.y && crop.height === initialCrop.height;
             const whole = crop.height === canvas.height;
             const choice = unchanged ? saved : whole ? wholePhotoFrame(width, height) : { ...crop, mode: "padded" as const };
-            resolve(await withPhotoProcessing("Salvo l’inquadratura ed elaboro la foto…", () => saveFrame(item, { crop: choice })));
+            resolve(await withPhotoProcessing("Saving the frame and processing the photo…", () => saveFrame(item, { crop: choice })));
           } catch (failure) {
             error.textContent = failure instanceof Error ? failure.message : String(failure);
             error.hidden = false;

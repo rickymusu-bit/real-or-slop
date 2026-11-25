@@ -64,27 +64,27 @@ with sync_playwright() as p:
             confirms.append(dialog.message); dialog.accept()
         page.on('dialog', answer)
         page.goto(base + '/admin')
-        expect(page.locator(f'[data-gallery-open="{gallery_id}"] [data-source-missing]')).to_have_text('1 REAL non risulta più su Commons')
+        expect(page.locator(f'[data-gallery-open="{gallery_id}"] [data-source-missing]')).to_have_text('1 REAL image is no longer on Commons')
         open_gallery(page, gallery_id)
         page.locator('.db-filter-panel summary').click()
         # Filters: text search and origin; the tag filter is gone (owner decision of 2026-11-20).
         expect(page.locator('#library-tag, #library-tag-match, #library-tag-pills')).to_have_count(0)
         search = page.locator('#library-search')
-        cards = page.locator(f'.library-card:has([aria-label^="Apri {prefix}"]),.library-card[data-id="{slop["id"]}"],.library-card[data-id="{beach["id"]}"]')
+        cards = page.locator(f'.library-card:has([aria-label^="Open {prefix}"]),.library-card[data-id="{slop["id"]}"],.library-card[data-id="{beach["id"]}"]')
         expect(cards).to_have_count(3)
         search.fill(f'{prefix}-barricate')
         expect(cards).to_have_count(1)
-        card = page.locator(f'.library-card:has([aria-label="Apri {prefix}-barricate"])')
+        card = page.locator(f'.library-card:has([aria-label="Open {prefix}-barricate"])')
         # The card: thumbnail, origin and state only; views in the detail.
-        expect(card.locator('.badge')).to_have_text(['REAL', 'pubblicata', 'Fonte rimossa'])
+        expect(card.locator('.badge')).to_have_text(['REAL', 'published', 'Source removed'])
         for hidden in ('.db-tag', '.library-card-title', '[data-stats]'): expect(card.locator(hidden)).to_have_count(0)
-        expect(card.locator('[data-source-missing]')).to_have_text('Fonte rimossa')
+        expect(card.locator('[data-source-missing]')).to_have_text('Source removed')
         card.locator('.library-open').click()
         expect(page.locator('#library-detail .library-tags')).to_have_count(0)
-        expect(page.locator('#library-detail [data-source-missing]')).to_contain_text('il file non risulta più su Wikimedia Commons')
-        expect(page.locator('#library-detail [data-source-missing]')).to_contain_text('1 novembre 2026')
+        expect(page.locator('#library-detail [data-source-missing]')).to_contain_text('The file has been missing from Wikimedia Commons')
+        expect(page.locator('#library-detail [data-source-missing]')).to_contain_text('1 November 2026')
         assert call(f'{API}/{real["id"]}')['status'] == 'published'  # nothing withdrawn
-        expect(page.locator('#library-detail [data-stats]')).to_have_text('Vista 1 volta / classificata correttamente 1 (100%)')
+        expect(page.locator('#library-detail [data-stats]')).to_have_text('Viewed 1 time / correctly identified 1 (100%)')
         page.locator('#library-detail .library-detail-close button').click()
         # Press and hold: the large preview, not the detail; it stays open until its ×.
         long_press(page, card.locator('.library-open'))
@@ -97,7 +97,7 @@ with sync_playwright() as p:
         page.wait_for_timeout(400)
         expect(preview).to_be_visible()
         page.screenshot(path=str(folder / f'{name}-preview.png'))
-        preview.get_by_role('button', name="Chiudi l'anteprima").click()
+        preview.get_by_role('button', name="Close preview").click()
         expect(preview).to_be_hidden()
         expect(page.locator('#library-detail')).to_be_hidden()
         search.fill('1960s')  # the prompts of both SLOP
@@ -106,10 +106,10 @@ with sync_playwright() as p:
         expect(cards).to_have_count(1)
         page.locator('#library-origin').select_option('SLOP')
         expect(cards).to_have_count(1)
-        expect(cards.locator('.library-open')).to_have_attribute('aria-label', 'Apri SLOP '+beach['id'][:8])
+        expect(cards.locator('.library-open')).to_have_attribute('aria-label', 'Open SLOP '+beach['id'][:8])
         long_press(page, cards.locator('.library-open'))
         expect(page.locator('dialog.image-preview')).to_contain_text('A beach, 1960s')
-        page.locator('dialog.image-preview').get_by_role('button', name="Chiudi l'anteprima").click()
+        page.locator('dialog.image-preview').get_by_role('button', name="Close preview").click()
         page.screenshot(path=str(folder / f'{name}-images.png'), full_page=True)
         page.locator('#library-origin').select_option('all')
         search.fill('')
@@ -117,16 +117,16 @@ with sync_playwright() as p:
         # Select REAL through the origin filter and clear the selection before opening the detail.
         page.locator('#library-origin').select_option('REAL')
         expect(cards).to_have_count(1)
-        # «Seleziona tutte» takes exactly the photos the filters show.
-        expect(page.locator('#library-select-all')).to_have_text(re.compile(r'^Seleziona tutte \(\d+\)$'))
+        # «Select tutte» takes exactly the photos the filters show.
+        expect(page.locator('#library-select-all')).to_have_text(re.compile(r'^Select all \(\d+\)$'))
         page.locator('#library-select-all').click()
         expect(page.locator('#library-select-all')).to_be_hidden()
-        expect(page.get_by_role('checkbox', name=f'Seleziona {prefix}-barricate')).to_be_checked()
+        expect(page.get_by_role('checkbox', name=f'Select {prefix}-barricate')).to_be_checked()
         shown = page.locator('#library-grid [data-select]').count()
-        expect(page.locator('#library-selection strong')).to_have_text(f"{shown} {'selezionata' if shown == 1 else 'selezionate'}")
+        expect(page.locator('#library-selection strong')).to_have_text(f"{shown} {'selected' if shown == 1 else 'selected'}")
         page.locator('[data-bulk=none]').click(); expect(page.locator('#library-select-all')).to_be_visible()
         # No analysis and no editorial description in the detail of a REAL (2026-11-20).
-        page.get_by_role('button', name=f'Apri {prefix}-barricate').click()
+        page.get_by_role('button', name=f'Open {prefix}-barricate').click()
         expect(page.locator('#library-detail [data-editorial], #library-description-analysis, #library-analyze')).to_have_count(0)
         page.locator('#library-detail .library-detail-close button').click()
         expect(cards).to_have_count(1)
@@ -139,50 +139,50 @@ with sync_playwright() as p:
         expect(dialog.locator('[data-field=caption]')).to_have_count(0)
         expect(dialog.locator('[data-field=description]')).to_have_count(0)  # a SLOP has no description
         expect(dialog.locator('[data-field=prompt]')).to_have_attribute('readonly', '')
-        expect(dialog.locator('[data-stats]')).to_have_text('Vista 1 volta / classificata correttamente 0 (0%)')
+        expect(dialog.locator('[data-stats]')).to_have_text('Viewed 1 time / correctly identified 0 (0%)')
         dialog.locator('[data-action=edit]').click()
-        expect(dialog.locator('#library-detail-message')).to_have_text('Modifica avviata: la foto non è più pubblicata.')
-        assert 'Esce subito dalla pubblicazione' in confirms[-1], confirms
-        expect(dialog).to_contain_text('SLOP / approvata')
+        expect(dialog.locator('#library-detail-message')).to_have_text('Editing started: the photo is no longer published.')
+        assert 'It will be unpublished immediately' in confirms[-1], confirms
+        expect(dialog).to_contain_text('SLOP / approved')
         prompt = dialog.locator('[data-field=prompt]')
         prompt.fill('A riot in a square at dusk, 1968'); prompt.blur()
-        expect(dialog.locator('#library-detail-message')).to_have_text('Salvato.')
+        expect(dialog.locator('#library-detail-message')).to_have_text('Saved.')
         expect(dialog.locator('#library-regenerate')).to_have_count(0)
-        expect(dialog).to_contain_text('nuovo processo nello studio')
+        expect(dialog).to_contain_text('new job in the gallery pipeline')
         dialog.screenshot(path=str(folder / f'{name}-edit.png'))
         dialog.locator('.library-detail-close button').click()
 
         # Delete a published photo: confirmation, out of publication, into the trash.
-        page.get_by_role('button', name=f'Apri {prefix}-barricate').click()
+        page.get_by_role('button', name=f'Open {prefix}-barricate').click()
         dialog.locator('[data-action=remove]').click()
-        expect(dialog).to_contain_text('REAL / nel cestino')
-        assert 'va nel cestino' in confirms[-1], confirms
+        expect(dialog).to_contain_text('REAL / in Trash')
+        assert 'moved to Trash' in confirms[-1], confirms
         dialog.locator('.library-detail-close button').click()
 
         # The old crop reopens at the same position on the 60×75 canvas with bands.
         page.locator(f'.library-card[data-id="{beach["id"]}"] .library-open').click()
-        expect(dialog).to_contain_text('copia di gioco WebP 32×40, 4:5 verticale')
+        expect(dialog).to_contain_text('WebP game copy 32×40, 4:5 portrait')
         dialog.locator('#library-crop').click()
         editor = page.locator('dialog.crop-dialog')
         crop_frame = editor.locator('.crop-frame')
         expect(crop_frame).to_have_count(1)
         expect(crop_frame).to_be_visible()
-        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 14, y 17, altezza 40 px')
-        expect(editor.get_by_role('heading', name='Inquadratura 4:5')).to_be_visible()
+        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 14, y 17, height 40 px')
+        expect(editor.get_by_role('heading', name='4:5 framing')).to_be_visible()
         for _ in range(3): crop_frame.press('ArrowLeft')
-        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 17, altezza 40 px')
+        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 17, height 40 px')
         editor.screenshot(path=str(folder / f'{name}-crop.png'))
         editor.locator('[data-crop=ok]').click()
         expect(page.locator('dialog.crop-dialog')).to_have_count(0)
-        expect(dialog.locator('#library-detail-message')).to_have_text('Inquadratura salvata.')
+        expect(dialog.locator('#library-detail-message')).to_have_text('Frame saved.')
         saved = call(f'{API}/{beach["id"]}')['copy']
         assert saved['crop'] == {'x': 11, 'y': 17, 'width': 32, 'height': 40, 'format': '4:5', 'mode': 'padded'} and 'view' not in saved, saved
         # The same crop: nothing sent, same copy file.
         kept = saved['sha256']
         dialog.locator('#library-crop').click()
-        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 17, altezza 40 px')
+        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 17, height 40 px')
         editor.locator('[data-crop=ok]').click()
-        expect(dialog.locator('#library-detail-message')).to_have_text('Inquadratura salvata.')
+        expect(dialog.locator('#library-detail-message')).to_have_text('Frame saved.')
         saved = call(f'{API}/{beach["id"]}')['copy']; assert saved['sha256'] == kept, saved
         dialog.locator('.library-detail-close button').click()
 
@@ -192,15 +192,15 @@ with sync_playwright() as p:
         sql(f"UPDATE images SET generation_batch='test-treatment',generation_slot=json_object('target_metrics',json('{metrics}')) WHERE id='{beach['id']}'")
         page.locator(f'.library-card[data-id="{beach["id"]}"] .library-open').click()
         dialog.locator('#library-treatment-on').click()
-        expect(dialog.locator('#library-detail-message')).to_have_text('Copia trattata.')
+        expect(dialog.locator('#library-detail-message')).to_have_text('Copy treated.')
         dialog.locator('#library-treatment-edit').click()
         sliders = page.locator('dialog.treatment-dialog')
-        expect(sliders.locator('[data-status]')).to_have_text('Trattamento proposto.')
+        expect(sliders.locator('[data-status]')).to_have_text('Suggested treatment.')
         expect(sliders.locator('input[type=range]')).to_have_count(10)
         sliders.locator('[data-key=grain]').fill('8')
         expect(sliders.locator('[data-out=grain]')).to_have_text('8.0')
-        expect(sliders.locator('[data-status]')).to_have_text('Trattamento modificato, non ancora salvato.')
-        expect(sliders.locator('[data-caption=preview]')).to_contain_text('scarto dalla REAL')
+        expect(sliders.locator('[data-status]')).to_have_text('Treatment changed, not saved yet.')
+        expect(sliders.locator('[data-caption=preview]')).to_contain_text('difference from REAL')
         # «Seppia» starts from a sepia tint, «Bianco e nero» from none: the two never look alike by accident.
         sliders.locator('[data-key=monochrome]').select_option('sepia')
         expect(sliders.locator('[data-out=cast0]')).to_have_text('15.0');expect(sliders.locator('[data-out=cast2]')).to_have_text('-24.0')
@@ -210,18 +210,18 @@ with sync_playwright() as p:
         sliders.screenshot(path=str(folder / f'{name}-treatment.png'))
         sliders.locator('[data-treatment=ok]').click()
         expect(page.locator('dialog.treatment-dialog')).to_have_count(0)
-        expect(dialog.locator('#library-detail-message')).to_have_text('Trattamento regolato salvato.')
+        expect(dialog.locator('#library-detail-message')).to_have_text('Adjusted treatment saved.')
         treatment = call(f'{API}/{beach["id"]}')['treatment']
         assert treatment['settings']['grain'] == 8 and treatment['applied']['grain'] == 8, treatment
         assert treatment['settings']['monochrome'] == 'sepia' and treatment['settings']['cast'] == [15, -1, -24] and treatment['version'] == 6, treatment
         assert 'medium' not in treatment and 'color' not in treatment, treatment  # no tags of the REAL in the record
-        expect(dialog).to_contain_text("Trattamento fotografico seppia, regolato dall'owner")
+        expect(dialog).to_contain_text("Photographic treatment sepia, adjusted by owner")
         # Changing the frame of a treated SLOP preserves the owner's settings and leaves the bands black.
         dialog.locator('#library-crop').click()
         for _ in range(8): crop_frame.press('+')
-        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 13, altezza 48 px')
+        expect(crop_frame).to_have_attribute('aria-valuetext', 'x 11, y 13, height 48 px')
         editor.locator('[data-crop=ok]').click()
-        expect(dialog.locator('#library-detail-message')).to_have_text('Inquadratura salvata.')
+        expect(dialog.locator('#library-detail-message')).to_have_text('Frame saved.')
         framed = call(f'{API}/{beach["id"]}')
         assert (framed['copy']['width'], framed['copy']['height']) == (38, 48), framed['copy']
         assert framed['copy']['crop']['mode'] == 'padded' and framed['treatment']['settings']['grain'] == 8
@@ -241,12 +241,12 @@ with sync_playwright() as p:
                     printf('%064x',n), 'image/png', 60, 40, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z' FROM photos""")
             page.reload()
             open_gallery(page, paged)
-            expect(page.locator('#library-counts')).to_contain_text('73 nuove')
+            expect(page.locator('#library-counts')).to_contain_text('73 new')
             expect(page.locator('#library-grid .library-card')).to_have_count(72)
-            page.get_by_role('button', name='Carica altre foto').click()
+            page.get_by_role('button', name='Load more photos').click()
             expect(page.locator('#library-grid .library-card')).to_have_count(73)
             expect(page.locator('[data-open="gallery-page-73"]')).to_be_visible()
-            expect(page.get_by_role('button', name='Carica altre foto')).to_be_hidden()
+            expect(page.get_by_role('button', name='Load more photos')).to_be_hidden()
             sql(f"DELETE FROM images WHERE gallery_id='{paged}'")
 
         # Distribution is available in Statistics.
@@ -255,14 +255,14 @@ with sync_playwright() as p:
         page.locator('#stats-distribution summary').click()
         chart = page.locator('#db-distribution')
         expect(chart.locator('.dist-overview')).to_be_visible()
-        expect(chart.locator('.dist-legend')).to_contain_text('REAL pubblicate')
+        expect(chart.locator('.dist-legend')).to_contain_text('Published REAL')
         # Only the overall REAL/SLOP bars: the distribution by tag went with the tags.
         total = chart.locator('.dist-total')
         expect(total).to_have_count(1)
         expect(total.locator('.dist-left .dist-slop.dist-approved')).to_have_count(1)
         expect(chart.locator('[data-dist-search], [data-dist-cat], [data-dist=table], .dist-chart, .dist-table')).to_have_count(0)
         total.hover()
-        expect(chart.locator('.dist-tip')).to_contain_text('Tutte le immagini: REAL')
+        expect(chart.locator('.dist-tip')).to_contain_text('All images: REAL')
         page.screenshot(path=str(folder / f'{name}-distribution.png'), full_page=True)
         assert not errors, errors
         context.close()

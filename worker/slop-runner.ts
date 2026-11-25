@@ -21,17 +21,17 @@ async function attempt(work: () => Promise<Partial<Outcome>>): Promise<Outcome> 
 
 /** Starts the runner of a batch, unless one is alive. The claim on the batch row comes first: two clicks start one runner. */
 export async function startRun(env: Env, batchId: string, phase: Phase) {
-  if (!env.SLOP_RUNNER) throw new HttpError(503, "Esecuzione sul server non configurata");
+  if (!env.SLOP_RUNNER) throw new HttpError(503, "Server execution not configured");
   const runner = `${batchId}-${phase}-${Date.now()}`, stamp = now(), stale = new Date(Date.now() - RUNNER_STALE_MS).toISOString();
   const claim = await env.DB.prepare(`UPDATE slop_batches SET runner=?,runner_status='running',runner_updated=? WHERE id=?
     AND ((origin='studio' AND ?='images') OR
       (gallery_review='pending' AND ?='proposals' AND gallery_expires>?) OR (gallery_review='confirmed' AND ?='images' AND auto_status='running'))
     AND (runner_status IS NULL OR runner_status NOT IN ('running','stopping') OR runner_updated<?)`).bind(runner, stamp, batchId, phase, phase, Date.now(), phase, stale).run();
-  if (!claim.meta.changes) throw new HttpError(409, "La generazione di questo batch è già in corso sul server");
+  if (!claim.meta.changes) throw new HttpError(409, "This batch is already generating on the server");
   try { await env.SLOP_RUNNER.create({ id: runner, params: { batchId, phase } }); }
   catch (error) {
     await env.DB.prepare("UPDATE slop_batches SET runner_status='failed',runner_updated=? WHERE id=? AND runner=?").bind(now(), batchId, runner).run();
-    throw new HttpError(503, "Avvio sul server non riuscito: " + (error instanceof Error ? error.message : String(error)).slice(0, 200));
+    throw new HttpError(503, "Failed to start on server: " + (error instanceof Error ? error.message : String(error)).slice(0, 200));
   }
   return runner;
 }

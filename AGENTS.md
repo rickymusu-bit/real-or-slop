@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 37.0.0, aggiornata il 2026-11-25T20:45:04Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 38.0.0, aggiornata il 2026-11-25T22:45:40Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -32,7 +32,8 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 - **Dashboard** (decisione del 2026-11-19). Gallerie è la sezione iniziale. Ogni galleria apre la propria griglia e i wizard
   «Carica REAL» e «Genera SLOP» su indirizzi dedicati nella stessa scheda. Il wizard REAL acquisisce dalle ricerche su Commons.
   Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino,
-  cambio galleria e, per le REAL, la misura a pagamento; le proposte SLOP stanno solo nel wizard. La barra lascia visibile la griglia.
+  cambio galleria e, per le REAL, la misura a pagamento; le vecchie proposte SLOP non compaiono più sulle REAL. La generazione passa dalla pipeline della galleria. La barra lascia visibile la griglia.
+- **Admin in inglese** (2026-11-25). Tutta l’interfaccia amministrativa, gallerie e pipeline incluse, usa l’inglese: etichette, assi, parametri, conferme, errori e nuovi testi dei modelli. Trascrizioni fotografiche nella lingua originale. Non tradurre automaticamente contenuti dell’owner o dati storici. Il sito pubblico resta in italiano. Le proposte obsolete sono rimosse dal dettaglio delle REAL e il vecchio wizard browser non è più presente; API e dati precedenti restano compatibili per il recupero.
 - **Un solo wizard SLOP** (2026-11-25). La 1.60.0 usa la pipeline della specifica `generazione-slop` 17.0.0: preparazione
   collettiva delle REAL, regole e probabilità per galleria, scene inglesi modificabili, generazione testuale e valutazione
   confermate, correzioni scelte dall'owner, accettazione, trattamento e copie di gioco. Le vecchie lavorazioni hanno un riquadro

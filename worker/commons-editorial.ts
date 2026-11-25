@@ -18,36 +18,36 @@ export const COMMONS_HEADERS = {
   "Api-User-Agent": "RealOrSlop/0.24 (https://real-or-slop.rickymusu.workers.dev; owner curation tool)",
 };
 function commonsUnavailable(what: string, status: number): HttpError {
-  return new HttpError(502, what + " (HTTP " + status + "): riprova più tardi");
+  return new HttpError(502, what + " (HTTP " + status + "): try again later");
 }
 const allowedHosts = new Set(["commons.wikimedia.org","upload.wikimedia.org","thumb.wikimedia.org"]);
 const imageExt = /\.(?:jpe?g|png|webp)$/i;
 function decodeName(value: string) {
   let name: string;
   try { name = decodeURIComponent(value).replace(/_/g, " "); }
-  catch { throw new HttpError(400, "Nome Commons non decodificabile"); }
+  catch { throw new HttpError(400, "Cannot decode Commons filename"); }
   if (!name || name.length > 255 || !imageExt.test(name) || /[/\\]/.test(name) ||
     [...name].some(ch => ch.charCodeAt(0)<32) || name === "." || name === "..")
-    throw new HttpError(400, "Usare una fotografia JPEG/PNG/WebP di Commons");
+    throw new HttpError(400, "Use a JPEG, PNG or WebP photo from Commons");
   return name;
 }
 export function commonsFileTitle(value: string): string {
   let url: URL;
-  try { url = new URL(value); } catch { throw new HttpError(400,"URL non valido"); }
+  try { url = new URL(value); } catch { throw new HttpError(400,"Invalid URL"); }
   if (url.protocol !== "https:" || !allowedHosts.has(url.hostname) || url.port || url.username || url.password)
-    throw new HttpError(400,"Acquisizione automatica limitata ai file Wikimedia Commons");
+    throw new HttpError(400,"Automatic import is limited to Wikimedia Commons files");
   if (url.hostname === "commons.wikimedia.org") {
     const path = decodeURIComponent(url.pathname);
     const wiki = path.match(/^\/wiki\/(?:File|Image):(.+)$/i);
     const special = path.match(/^\/wiki\/Special:FilePath\/(.+)$/i);
     const indexed = path === "/w/index.php" ? url.searchParams.get("title")?.match(/^(?:File|Image):(.+)$/i) : null;
     const name = wiki?.[1] || special?.[1] || indexed?.[1];
-    if (!name) throw new HttpError(400,"Pagina File: di Commons richiesta");
+    if (!name) throw new HttpError(400,"A Commons File: page is required");
     return "File:" + decodeName(name);
   }
   const parts = url.pathname.split("/").filter(Boolean);
   if (parts[0] !== "wikipedia" || parts[1] !== "commons" || parts.length < 5)
-    throw new HttpError(400,"URL Wikimedia non riconosciuto");
+    throw new HttpError(400,"Unrecognized Wikimedia URL");
   const thumbIndex = parts.indexOf("thumb");
   const filename = thumbIndex === 2 ? parts[5] : parts[4];
   return "File:" + decodeName(filename);
@@ -81,12 +81,12 @@ export function commonsMediaUrl(value: unknown): string | null {
 }
 async function bounded(url: string, max = MAX_IMAGE_BYTES): Promise<{bytes:ArrayBuffer;mime:string}> {
   const allowed = commonsMediaUrl(url);
-  if (!allowed) throw new HttpError(400,"Download non consentito dal provider");
+  if (!allowed) throw new HttpError(400,"Download blocked by provider");
   const u = new URL(allowed);
   const response = await fetch(u.href,{redirect:"manual",headers:{...COMMONS_HEADERS,"Accept":"image/jpeg,image/png,image/webp"}});
-  if (response.status !== 200 || !response.body) throw commonsUnavailable("Immagine Commons non raggiungibile", response.status);
+  if (response.status !== 200 || !response.body) throw commonsUnavailable("Cannot reach Commons image", response.status);
   const length = Number(response.headers.get("content-length") || 0);
-  if (length > max) throw new HttpError(413,"File Commons troppo grande");
+  if (length > max) throw new HttpError(413,"Commons file too large");
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = []; let size = 0;
   try {
@@ -94,40 +94,40 @@ async function bounded(url: string, max = MAX_IMAGE_BYTES): Promise<{bytes:Array
       const chunk = await reader.read();
       if (chunk.done) break;
       size += chunk.value.byteLength;
-      if (size > max) { await reader.cancel(); throw new HttpError(413,"File Commons troppo grande"); }
+      if (size > max) { await reader.cancel(); throw new HttpError(413,"Commons file too large"); }
       chunks.push(chunk.value);
     }
   } finally { reader.releaseLock(); }
   const all = new Uint8Array(size); let offset = 0;
   for (const chunk of chunks) { all.set(chunk,offset); offset += chunk.length; }
   const mime = imageMime(all);
-  if (!mime) throw new HttpError(415,"Il file Commons non è una fotografia JPEG/PNG/WebP");
+  if (!mime) throw new HttpError(415,"Commons file is not a JPEG, PNG or WebP photo");
   let pixels: { width: number; height: number };
-  try { pixels = imageDimensions(all); } catch { throw new HttpError(415,"Intestazione o dimensioni del file Commons non valide"); }
-  if (pixels.width * pixels.height > MAX_IMAGE_PIXELS) throw new HttpError(413,"File Commons oltre il limite di pixel");
+  try { pixels = imageDimensions(all); } catch { throw new HttpError(415,"Invalid Commons file header or dimensions"); }
+  if (pixels.width * pixels.height > MAX_IMAGE_PIXELS) throw new HttpError(413,"Commons file exceeds pixel limit");
   return {bytes:all.buffer,mime};
 }
 export async function commonsFile(value: string): Promise<CommonsFile> {
   const title = value.startsWith("File:") ? "File:" + decodeName(value.slice(5)) : commonsFileTitle(value);
   const response = await fetch(commonsApiUrl(title),{redirect:"manual",headers:{...COMMONS_HEADERS,"Accept":"application/json"}});
-  if (response.status !== 200) throw commonsUnavailable("API Commons non disponibile", response.status);
+  if (response.status !== 200) throw commonsUnavailable("Commons API unavailable", response.status);
   const info = await response.json() as { query?: { pages?: Array<{title?:string;imageinfo?:Array<{
     url?:string;thumburl?:string;width?:number;height?:number;size?:number;thumbwidth?:number;thumbheight?:number;
     extmetadata?:Record<string,{value?:string}>
   }>}>} };
   const page = info.query?.pages?.[0], image = page?.imageinfo?.[0];
-  if (!image || !image.url) throw new HttpError(404,"File Commons non trovato: «"+title.slice(5,165)+"» non esiste su Commons. "+
-    "Controlla il link: copiandolo, i trattini bassi attorno ai trattini («_-_») a volte spariscono.");
+  if (!image || !image.url) throw new HttpError(404,"Commons file not found: “"+title.slice(5,165)+"” does not exist on Commons. "+
+    "Check the link: underscores around hyphens (“_-_”) can be lost when copying it.");
   if (!Number.isSafeInteger(image.width) || !Number.isSafeInteger(image.height) || (image.width || 0)<1 || (image.height || 0)<1)
-    throw new HttpError(413,"Dimensioni dell'originale non valide");
+    throw new HttpError(413,"Invalid original dimensions");
   // v1.5.0 (2026-11-09T07:00:00Z): an original too heavy OR with too many pixels is fetched as Commons' proportional
   // thumbnail (no cropping); the limits apply to the copy actually downloaded, not to the original.
   const chooseThumb = (image.size || 0)>MAX_IMAGE_BYTES || (image.width || 0)*(image.height || 0)>MAX_IMAGE_PIXELS;
   // Declared thumbnail size is a cheap early check; the downloaded bytes are always measured again in bounded().
   if (chooseThumb && (image.thumbwidth || 0)*(image.thumbheight || 0)>MAX_IMAGE_PIXELS)
-    throw new HttpError(413,"Nessuna copia proporzionale entro i limiti");
+    throw new HttpError(413,"No proportional copy within limits");
   const download = commonsMediaUrl(chooseThumb ? image.thumburl : image.url);
-  if (!download) throw new HttpError(413,"Nessuna copia proporzionale disponibile");
+  if (!download) throw new HttpError(413,"No proportional copy available");
   const file = await bounded(download);
   const ext = image.extmetadata || {};
   const meta = (key:string) => simpleHtml(ext[key]?.value);
@@ -140,12 +140,12 @@ export async function commonsFile(value: string): Promise<CommonsFile> {
     categories,date:meta("DateTimeOriginal").slice(0,100) || meta("DateTime").slice(0,100)};
 }
 export async function searchCommons(query:string,limit=12): Promise<string[]> {
-  if (query.length<3 || query.length>250 || limit<1 || limit>25) throw new HttpError(400,"Ricerca Commons non valida");
+  if (query.length<3 || query.length>250 || limit<1 || limit>25) throw new HttpError(400,"Invalid Commons search");
   const url = new URL("https://commons.wikimedia.org/w/api.php");
   for (const [k,v] of Object.entries({action:"query",format:"json",formatversion:"2",list:"search",srnamespace:"6",
     srlimit:String(limit),srsearch:query})) url.searchParams.set(k,v);
   const response = await fetch(url.href,{redirect:"manual",headers:{...COMMONS_HEADERS,"Accept":"application/json"}});
-  if (response.status!==200) throw commonsUnavailable("Ricerca Commons non disponibile", response.status);
+  if (response.status!==200) throw commonsUnavailable("Commons search unavailable", response.status);
   const data = await response.json() as {query?:{search?:Array<{title?:string}>}};
   return (data.query?.search || []).map(x=>x.title || "").filter(x=>/^File:.+\.(jpe?g|png|webp)$/i.test(x)).slice(0,limit);
 }
@@ -167,7 +167,7 @@ async function commonsQuery(params: Record<string, string>): Promise<ApiReply> {
   const url = new URL("https://commons.wikimedia.org/w/api.php");
   for (const [k, v] of Object.entries({ action: "query", format: "json", formatversion: "2", ...params })) url.searchParams.set(k, v);
   const response = await fetch(url.href, { redirect: "manual", headers: { ...COMMONS_HEADERS, "Accept": "application/json" } });
-  if (response.status !== 200) throw commonsUnavailable("Commons non disponibile", response.status);
+  if (response.status !== 200) throw commonsUnavailable("Commons unavailable", response.status);
   return await response.json() as ApiReply;
 }
 const FILE_PROPS = { prop: "imageinfo|categories", clshow: "!hidden", cllimit: "max", iiprop: "url|size|extmetadata", iiurlwidth: "400",
@@ -198,9 +198,9 @@ function titles(list: Array<{ title?: string }> | undefined): string[] {
 export type CommonsSort = "relevance" | "recent";
 export async function browseCommonsSearch(query: string, offset = "", sort: string = "relevance"): Promise<CommonsBrowseResult> {
   const text = query.normalize("NFKC").trim();
-  if (text.length < 2 || text.length > 200) throw new HttpError(400, "Ricerca Commons da 2 a 200 caratteri");
-  if (offset && !/^\d{1,5}$/.test(offset)) throw new HttpError(400, "Pagina dei risultati non valida");
-  if (sort !== "relevance" && sort !== "recent") throw new HttpError(400, "Ordinamento non valido");
+  if (text.length < 2 || text.length > 200) throw new HttpError(400, "Commons search must contain 2 to 200 characters");
+  if (offset && !/^\d{1,5}$/.test(offset)) throw new HttpError(400, "Invalid results page");
+  if (sort !== "relevance" && sort !== "recent") throw new HttpError(400, "Invalid sort order");
   // filetype:bitmap keeps photographs and drops video, audio, PDF and SVG, as the site's Images tab does.
   const [filesReply, categoryReply] = await Promise.all([
     commonsQuery({ ...FILE_PROPS, generator: "search", gsrsearch: text + " filetype:bitmap", gsrnamespace: "6", gsrlimit: "30",
@@ -213,8 +213,8 @@ export async function browseCommonsSearch(query: string, offset = "", sort: stri
 }
 export async function browseCommonsCategory(name: string, cont = ""): Promise<CommonsBrowseResult> {
   const raw = name.normalize("NFKC").trim().replace(/^Category:/i, "").replace(/_/g, " ");
-  if (!raw || raw.length > 200 || /[#<>[\]{}|]/.test(raw)) throw new HttpError(400, "Categoria Commons non valida");
-  if (cont.length > 300 || /[\s<>]/.test(cont)) throw new HttpError(400, "Pagina della categoria non valida");
+  if (!raw || raw.length > 200 || /[#<>[\]{}|]/.test(raw)) throw new HttpError(400, "Invalid Commons category");
+  if (cont.length > 300 || /[\s<>]/.test(cont)) throw new HttpError(400, "Invalid category page");
   const title = "Category:" + raw;
   const [filesReply, categoryReply] = await Promise.all([
     commonsQuery({ ...FILE_PROPS, generator: "categorymembers", gcmtitle: title, gcmtype: "file", gcmlimit: "30", ...(cont ? { gcmcontinue: cont } : {}) }),

@@ -26,16 +26,16 @@ interface Attempt { id: string; process_id: string; number: number; prompt: stri
 export const itemsOf = (row: { slots: string }): InspirationItem[] => parse<unknown[]>(row.slots, []).filter((i): i is InspirationItem =>
   !!i && typeof (i as InspirationItem).title === "string");
 const confirmOnly = (data: Record<string, unknown>, allowed: string[]) => {
-  if (Object.keys(data).some(k => !["confirm", ...allowed].includes(k))) throw new HttpError(400, "Campi non previsti");
-  if (data.confirm !== true) throw new HttpError(400, "Conferma il massimo delle chiamate a pagamento");
+  if (Object.keys(data).some(k => !["confirm", ...allowed].includes(k))) throw new HttpError(400, "Unexpected fields");
+  if (data.confirm !== true) throw new HttpError(400, "Confirm maximum paid calls");
 };
 async function load(env: Env, batchId: string) {
   const row = await env.DB.prepare("SELECT * FROM slop_batches WHERE id=?").bind(batchId).first<Batch>();
-  if (!row) throw new HttpError(404, "Batch inesistente");
+  if (!row) throw new HttpError(404, "Batch not found");
   return row;
 }
 function compatible(row: Batch) {
-  if (row.pipeline_version !== GALLERY_PIPELINE) throw new HttpError(409, "Batch non compatibile");
+  if (row.pipeline_version !== GALLERY_PIPELINE) throw new HttpError(409, "Incompatible batch");
 }
 export async function loopSnapshot(env: Env): Promise<Snapshot> {
   const settings = await numberSettings(env), image_model = await chosenModel(env, "image_model");
@@ -46,7 +46,7 @@ export async function processViews(env: Env, batchId: string) {
   // The request may have outlived its browser. A stale claim is uncertain, never permission to resend it.
   const stale = new Date(Date.now()-10*60_000).toISOString();
   await env.DB.batch([
-    env.DB.prepare("UPDATE slop_processes SET state='uncertain',error='Operazione interrotta: nessuna chiamata ripetuta' WHERE batch_id=? AND state IN ('running','prompting') AND updated_at<?").bind(batchId,stale),
+    env.DB.prepare("UPDATE slop_processes SET state='uncertain',error='Operation interrupted: no calls repeated' WHERE batch_id=? AND state IN ('running','prompting') AND updated_at<?").bind(batchId,stale),
     env.DB.prepare("UPDATE paid_calls SET status='uncertain' WHERE status='pending' AND updated_at<? AND process_id IN (SELECT id FROM slop_processes WHERE batch_id=? AND state='uncertain')").bind(stale,batchId),
     env.DB.prepare("UPDATE slop_attempts SET status='uncertain' WHERE status IN ('pending','generated') AND updated_at<? AND process_id IN (SELECT id FROM slop_processes WHERE batch_id=? AND state='uncertain')").bind(stale,batchId),
   ]);
@@ -101,24 +101,24 @@ async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array
 /** One attempt of a REAL. The game copy of an accepted SLOP is made later in the owner's browser (spec `copie-di-gioco`). */
 export async function generateImage(env: Env, batchId: string, data: Record<string, unknown>, runner?: string) {
   confirmOnly(data, ["index", "quality"]);
-  if (!env.OPENAI_API_KEY || !env.QUARANTINE) throw new HttpError(503, "Chiave OpenAI o quarantena mancante");
+  if (!env.OPENAI_API_KEY || !env.QUARANTINE) throw new HttpError(503, "Missing OpenAI key or quarantine");
   const batch = await load(env, batchId); compatible(batch);
   const gallery = batch.origin === "auto" ? JSON.parse(batch.auto_snapshot) as GallerySnapshot : null;
-  if (gallery && (batch.gallery_review !== "confirmed" || !runner || batch.runner !== runner)) throw new HttpError(409, "Prima conferma le proposte della galleria");
-  if (batch.prompts_status !== "done") throw new HttpError(409, "Prima completa la preparazione del batch");
+  if (gallery && (batch.gallery_review !== "confirmed" || !runner || batch.runner !== runner)) throw new HttpError(409, "Confirm gallery proposals first");
+  if (batch.prompts_status !== "done") throw new HttpError(409, "Complete batch preparation first");
   const p = await env.DB.prepare("SELECT * FROM slop_processes WHERE batch_id=? AND slot=?").bind(batchId, typeof data.index === "number" ? data.index : -1).first<Process>();
-  if (!p) throw new HttpError(400, "Immagine inesistente");
+  if (!p) throw new HttpError(400, "Image not found");
   const config = parse<Snapshot>(p.snapshot, {} as Snapshot), constraints = constraintsOf(p);
-  if (data.quality !== config.quality) throw new HttpError(400, "La qualità è congelata nel preventivo del processo");
+  if (data.quality !== config.quality) throw new HttpError(400, "Quality is frozen in the job snapshot");
   if (p.image_id) return {...await viewOf(env, p.image_id), process: {id: p.id, state: p.state, attempts: p.attempts}};
-  if (!["ready", "retry"].includes(p.state) || !constraints) throw new HttpError(409, `Processo ${p.state}: nessuna chiamata ripetuta; serve revisione o un nuovo processo`);
-  if (p.attempts >= config.max_generation_attempts) throw new HttpError(409, "Tentativi esauriti");
+  if (!["ready", "retry"].includes(p.state) || !constraints) throw new HttpError(409, `Processo ${p.state}: no calls repeated; review or start a new process`);
+  if (p.attempts >= config.max_generation_attempts) throw new HttpError(409, "Attempts exhausted");
   const approvedPrompt = gallery && p.attempts
     ? (await env.DB.prepare("SELECT prompt FROM slop_attempts WHERE process_id=? AND number=1").bind(p.id).first<{prompt: string}>())?.prompt
     : p.prompt;
-  if (!approvedPrompt) throw new HttpError(409, "Prompt approvato non disponibile");
+  if (!approvedPrompt) throw new HttpError(409, "Approved prompt unavailable");
   const briefHash = await hash(gallery ? {premise: p.premise, gallery: gallery.gallery, prompt: approvedPrompt} : constraints);
-  if (p.brief_hash && p.brief_hash !== briefHash) throw new HttpError(409, "Brief modificato dopo l'avvio");
+  if (p.brief_hash && p.brief_hash !== briefHash) throw new HttpError(409, "Brief changed after starting");
   // Read before the attempt is claimed: a failure here costs nothing.
   const [base, context] = gallery ? [gallery.base, gallery.evaluation] : await Promise.all([currentContext(env, "base"), currentContext(env, "slop_evaluation")]);
   let marked;
@@ -126,8 +126,8 @@ export async function generateImage(env: Env, batchId: string, data: Record<stri
     WHERE id=? AND state=? AND attempts=? AND prompt=? AND brief IS ? AND EXISTS(SELECT 1 FROM slop_batches WHERE id=? AND prompts_status='done'
       AND (gallery_review IS NULL OR (gallery_review='confirmed' AND auto_status='running' AND runner=? AND runner_status='running')))`)
     .bind(briefHash, now(), p.id, p.state, p.attempts, p.prompt, p.brief, batchId, runner ?? null).run(); }
-  catch { throw new HttpError(409, "Impossibile acquisire il processo"); }
-  if (!marked.meta.changes) throw new HttpError(409, "Tentativo già inviato: nessuna chiamata ripetuta");
+  catch { throw new HttpError(409, "Cannot claim process"); }
+  if (!marked.meta.changes) throw new HttpError(409, "Attempt already sent: no calls repeated");
   p.attempts++; p.brief_hash = briefHash;
   const attemptId = id(), key = `slop-temporary/${p.id}/${attemptId}`, stamp = now();
   await env.DB.prepare("INSERT INTO slop_attempts(id,process_id,number,prompt,created_at,updated_at) VALUES(?,?,?,?,?,?)").bind(attemptId, p.id, p.attempts, p.prompt, stamp, stamp).run();
@@ -137,16 +137,16 @@ export async function generateImage(env: Env, batchId: string, data: Record<stri
       JSON.stringify({brief: constraints}) : p.prompt;
     const payload = await paid(env, "images", config.image_model, {model: config.image_model, prompt: sentPrompt, n: 1, size, quality: config.quality}, {process: p.id, attempt: attemptId});
     const encoded = (payload.data as {b64_json?: string}[] | undefined)?.[0]?.b64_json;
-    if (!encoded) throw new HttpError(502, "Risposta del generatore non leggibile");
+    if (!encoded) throw new HttpError(502, "Unreadable generator response");
     const bytes = Uint8Array.from(atob(encoded), c => c.charCodeAt(0)), mime = imageMime(bytes);
-    if (!mime || bytes.length > 12_000_000) throw new HttpError(502, "Immagine generata non valida");
+    if (!mime || bytes.length > 12_000_000) throw new HttpError(502, "Invalid generated image");
     const geometry = imageGeometry(bytes);
-    if ((geometry.width ?? geometry.encoded_width) * (geometry.height ?? geometry.encoded_height) > 32_000_000) throw new HttpError(502, "Immagine oltre 32 megapixel");
+    if ((geometry.width ?? geometry.encoded_width) * (geometry.height ?? geometry.encoded_height) > 32_000_000) throw new HttpError(502, "Image exceeds 32 megapixels");
     await env.QUARANTINE.put(key, bytes, {httpMetadata: {contentType: mime}});
     await env.DB.prepare("UPDATE slop_attempts SET candidate_key=?,status='generated',updated_at=? WHERE id=?").bind(key, now(), attemptId).run();
     const liveBatch = await env.DB.prepare("SELECT origin,auto_status FROM slop_batches WHERE id=?").bind(batchId).first<{origin:string;auto_status:string}>();
     if (liveBatch?.origin === "auto" && liveBatch.auto_status !== "running") {
-      await env.DB.prepare("UPDATE slop_processes SET state='review_needed',error='Interrotto prima della valutazione',updated_at=? WHERE id=?").bind(now(),p.id).run();
+      await env.DB.prepare("UPDATE slop_processes SET state='review_needed',error='Stopped before evaluation',updated_at=? WHERE id=?").bind(now(),p.id).run();
       return {process:{id:p.id,state:"review_needed",attempts:p.attempts}};
     }
     const inputs = gallery ? {attempt_id: attemptId, premise: p.premise, approved_prompt: approvedPrompt, prompt: p.prompt,
@@ -158,19 +158,19 @@ export async function generateImage(env: Env, batchId: string, data: Record<stri
       : {attempt_id: attemptId, brief: constraints, prompt: p.prompt, composition_preference: null, tolerance: config.editorial_tolerance};
     const revisedPrompt = (correction: string) => gallery ? approvedPrompt + "\n\n" + correction : correction;
     const evaluationPayload = await paid(env, "evaluation", config.text_model, jsonWithImage({model: config.text_model,
-      instructions: base.body + "\n\n" + context.body + "\n\n" + (gallery ? GALLERY_EVALUATE_RULE : EVALUATE_RULE), max_output_tokens: 8000,
+      instructions: base.body + "\n\n" + context.body + "\n\n" + (gallery ? GALLERY_EVALUATE_RULE : EVALUATE_RULE) + " Write all generated reasoning, findings and uncertainty notes in English, overriding conflicting saved context. Keep required source quotes verbatim.", max_output_tokens: 8000,
       text: {format: {type: "json_schema", name: "slop_evaluation", strict: true, schema: evaluationSchema}},
       input: [{role: "user", content: [{type: "input_text", text: JSON.stringify(inputs)},
         {type: "input_image", image_url: IMAGE_MARK}]}]}, bytes, mime), {process: p.id, attempt: attemptId});
     let evaluation = validEvaluation(responseJson(evaluationPayload), attemptId, constraints);
-    if (!evaluation) throw new HttpError(502, "Valutazione non valida: processo sospeso");
+    if (!evaluation) throw new HttpError(502, "Invalid evaluation: process paused");
     if (gallery && (evaluation.decision === "replan_scene" ||
         (evaluation.decision === "revise_prompt" && revisedPrompt(evaluation.revised_prompt.trim()).length > 4000)))
       evaluation = {...evaluation, decision: "review_needed"};
     // Tolerance 0 asks for fewer defects, so a candidate with minor ones consumes another attempt instead of stopping the loop;
     // when the attempts run out the process is exhausted and waits for the owner with every attempt.
     if (config.editorial_tolerance === 0 && evaluation.decision === "accept" && evaluation.minor_findings.length)
-      evaluation = {...evaluation, decision: "retry_same_prompt", action_reason: (evaluation.action_reason + " Tolleranza 0: difetti minori, nuovo tentativo.").slice(0, 3000)};
+      evaluation = {...evaluation, decision: "retry_same_prompt", action_reason: (evaluation.action_reason + " Tolerance 0: minor defects, new attempt.").slice(0, 3000)};
     // The stored evaluation records the context versions it was made with.
     await env.DB.prepare("UPDATE slop_attempts SET status='completed',evaluation=?,updated_at=? WHERE id=?")
       .bind(JSON.stringify({...evaluation, contexts: {base: base.id, evaluation: context.id}}), now(), attemptId).run();
@@ -203,32 +203,32 @@ export async function attention(env: Env, gallery = "") {
 }
 /** POST processes/:id/close {}: the owner has seen a process without a SLOP. Its candidates follow the usual seven days. */
 export async function closeProcess(env: Env, processId: string, data: Record<string, unknown>) {
-  if (Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
+  if (Object.keys(data).length) throw new HttpError(400, "Unexpected fields");
   const closed = await env.DB.prepare("UPDATE slop_processes SET state='closed',updated_at=? WHERE id=? AND state IN ('exhausted','review_needed','failed','uncertain') AND EXISTS(SELECT 1 FROM slop_batches b WHERE b.id=slop_processes.batch_id AND (b.gallery_review IS NULL OR b.gallery_review='confirmed'))")
     .bind(now(), processId).run();
-  if (!closed.meta.changes) throw new HttpError(409, "Processo inesistente o non da rivedere");
+  if (!closed.meta.changes) throw new HttpError(409, "Process not found or not awaiting review");
   return {attention: await attention(env)};
 }
 /** The owner may accept a completed, evaluated candidate of a stopped process despite any findings.
  * Original evaluation and owner acceptance stay separate; accepting is free (no tag analysis since 1.50.0). */
 export async function acceptProcess(env: Env, processId: string, data: Record<string, unknown>) {
   confirmOnly(data, ["attempt"]);
-  if (!env.QUARANTINE) throw new HttpError(503, "Quarantena mancante");
+  if (!env.QUARANTINE) throw new HttpError(503, "Missing quarantine");
   const p = await env.DB.prepare("SELECT * FROM slop_processes WHERE id=?").bind(processId).first<Process>();
-  if (!p || !(ATTENTION as readonly string[]).includes(p.state) || p.image_id) throw new HttpError(409, "Processo inesistente, già deciso o ancora in corso");
+  if (!p || !(ATTENTION as readonly string[]).includes(p.state) || p.image_id) throw new HttpError(409, "Process not found, already decided or still in progress");
   const a = await env.DB.prepare("SELECT * FROM slop_attempts WHERE id=? AND process_id=?").bind(typeof data.attempt === "string" ? data.attempt : "", p.id).first<Attempt>();
   const constraints = constraintsOf(p);
   const evaluation = parse<Evaluation | null>(a?.evaluation ?? null, null);
-  if (!a || a.status !== "completed" || !a.candidate_key || !constraints || !evaluation || !validEvaluation(evaluation, a.id, constraints)) throw new HttpError(409, "Tentativo senza candidata valutata");
+  if (!a || a.status !== "completed" || !a.candidate_key || !constraints || !evaluation || !validEvaluation(evaluation, a.id, constraints)) throw new HttpError(409, "Attempt has no evaluated candidate");
   const batch = await load(env, p.batch_id);
-  if (batch.origin === "auto" && batch.gallery_review !== "confirmed") throw new HttpError(409, "Proposte non confermate");
+  if (batch.origin === "auto" && batch.gallery_review !== "confirmed") throw new HttpError(409, "Unconfirmed proposals");
   const claimed = await env.DB.prepare("UPDATE slop_processes SET state='running',updated_at=? WHERE id=? AND state=? AND image_id IS NULL")
     .bind(now(), p.id, p.state).run().catch(() => ({meta: {changes: 0}}));
-  if (!claimed.meta.changes) throw new HttpError(409, "Il processo è già stato deciso");
+  if (!claimed.meta.changes) throw new HttpError(409, "Process already decided");
   let image;
   try {
     const file = await env.QUARANTINE.get(a.candidate_key);
-    if (!file) throw new HttpError(404, "Candidata non più disponibile");
+    if (!file) throw new HttpError(404, "Candidate no longer available");
     const bytes = new Uint8Array(await file.arrayBuffer());
     image = await materialize(env, {...p, prompt: a.prompt}, batch, bytes, evaluation, {by: "owner", attempt: a.id, at: now()});
   } catch (e) {
@@ -241,13 +241,13 @@ export async function acceptProcess(env: Env, processId: string, data: Record<st
 export async function candidateFile(env: Env, batchId: string, attemptId: string): Promise<Response> {
   const row = await env.DB.prepare("SELECT a.candidate_key FROM slop_attempts a JOIN slop_processes p ON p.id=a.process_id WHERE p.batch_id=? AND a.id=?").bind(batchId, attemptId).first<{candidate_key: string | null}>();
   const file = row?.candidate_key ? await env.QUARANTINE?.get(row.candidate_key) : null;
-  if (!file) throw new HttpError(404, "Candidata non disponibile");
+  if (!file) throw new HttpError(404, "Candidate unavailable");
   return new Response(file.body, {headers: {"Content-Type": file.httpMetadata?.contentType || "image/png", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"}});
 }
 /** GET batches/:id: a batch with its processes, attempts and images, for the review in the SLOP wizard. The manual generation was
  * retired on 2026-11-22 (owner decision): batches are created and driven only by the wizard (auto/...). */
 export async function batchRoute(env: Env, method: string, rest: string) {
-  if (method !== "GET" || !/^[\w-]{1,64}$/.test(rest)) throw new HttpError(404, "Batch inesistente");
+  if (method !== "GET" || !/^[\w-]{1,64}$/.test(rest)) throw new HttpError(404, "Batch not found");
   return show(env, rest);
 }
 

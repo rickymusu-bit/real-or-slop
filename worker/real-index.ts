@@ -23,7 +23,7 @@ export function readSubject(value: unknown): SubjectIdentity {
   for (const field of SUBJECT_FIELDS) {
     const input = raw?.[field];
     if (input !== null && (typeof input !== "string" || !input.trim() || input.length > SUBJECT_MAX))
-      throw new HttpError(502, "Identità del soggetto non valida");
+      throw new HttpError(502, "Invalid subject identity");
     fields[field] = input?.trim() ?? null;
     keys[field] = fields[field] ? subjectKey(fields[field]) || null : null;
   }
@@ -47,9 +47,9 @@ function normalizedVector(payload: Record<string, unknown>): number[] {
   const entries = payload.data as { embedding?: unknown }[] | undefined;
   const vector = Array.isArray(entries) && entries.length === 1 && entries[0]?.embedding;
   if (!Array.isArray(vector) || vector.length !== DIMENSIONS || vector.some(n => typeof n !== "number" || !Number.isFinite(n)))
-    throw new HttpError(502, "Vettore dell’ambiente non valido");
+    throw new HttpError(502, "Invalid environment vector");
   const norm = Math.hypot(...vector);
-  if (!Number.isFinite(norm) || norm === 0) throw new HttpError(502, "Vettore dell’ambiente non valido");
+  if (!Number.isFinite(norm) || norm === 0) throw new HttpError(502, "Invalid environment vector");
   return vector.map(n => n / norm);
 }
 
@@ -57,15 +57,15 @@ export async function indexReal(env: Env, row: Row, data: Record<string, unknown
   if (data.confirm !== true || typeof data.request !== "string" || !/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(data.request)
     || typeof data.gallery_id !== "string" || (data.max_calls !== 1 && data.max_calls !== 2)
     || Object.keys(data).some(key => !["confirm", "request", "gallery_id", "max_calls"].includes(key)))
-    throw new HttpError(400, "Conferma il massimo di chiamate per indicizzare la descrizione");
+    throw new HttpError(400, "Confirm maximum calls to index the description");
   if (row.origin !== "REAL" || row.status === "trash" || row.gallery_id !== data.gallery_id || !row.visual_description)
-    throw new HttpError(409, "Serve una REAL descritta della galleria fuori dal cestino");
+    throw new HttpError(409, "A described REAL in the gallery, outside Trash, is required");
   const description = JSON.parse(row.visual_description) as VisualDescription;
   const indexed = await env.DB.prepare("SELECT 1 FROM real_environment_vectors WHERE image_id=? AND model=?").bind(row.id, EMBEDDING_MODEL).first();
   const missing = Number(!description.subject) + Number(!indexed);
   if (missing === 0) return { id: row.id };
-  if (missing > data.max_calls) throw new HttpError(409, "Indicizzazione cambiata: riconferma il massimo di chiamate");
-  if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
+  if (missing > data.max_calls) throw new HttpError(409, "Indexing changed: reconfirm maximum calls");
+  if (!env.OPENAI_API_KEY) throw new HttpError(503, "Missing OpenAI key");
 
   // Share the description's exclusive lease. Paid calls expire after two minutes each.
   const request = `real-index-${data.request}`, stamp = new Date().toISOString();
@@ -80,7 +80,7 @@ export async function indexReal(env: Env, row: Row, data: Record<string, unknown
         AND (visual_description_request IS NULL OR visual_description_claimed_at<?)`)
       .bind(request, stamp, row.id, row.gallery_id, row.visual_description, stale),
   ]);
-  if (!claimed.meta.changes) throw new HttpError(409, "Indicizzazione già completata o in corso, oppure foto spostata");
+  if (!claimed.meta.changes) throw new HttpError(409, "Indexing already complete or in progress, or photo moved");
   try {
     if (!description.subject) {
       const model = await chosenModel(env, "text_model");
@@ -92,7 +92,7 @@ export async function indexReal(env: Env, row: Row, data: Record<string, unknown
       const result = await env.DB.prepare(`UPDATE images SET visual_description=json_set(visual_description, '$.subject', json(?))
         WHERE id=? AND visual_description_request=? AND status<>'trash'`)
         .bind(JSON.stringify(readSubject(responseJson(output))), row.id, request).run();
-      if (!result.meta.changes) throw new HttpError(409, "REAL rimossa durante l’indicizzazione");
+      if (!result.meta.changes) throw new HttpError(409, "REAL removed during indexing");
     }
     if (!indexed) {
       // Keep unusually long descriptions within the embedding model's input limit.
@@ -106,7 +106,7 @@ export async function indexReal(env: Env, row: Row, data: Record<string, unknown
           AND json_extract(visual_description, '$.sections.environment')=?
         ON CONFLICT(image_id) DO UPDATE SET model=excluded.model,embedding=excluded.embedding`)
         .bind(EMBEDDING_MODEL, JSON.stringify(vector), row.id, request, description.sections.environment).run();
-      if (!result.meta.changes) throw new HttpError(409, "Ambiente cambiato durante l’indicizzazione");
+      if (!result.meta.changes) throw new HttpError(409, "Environment changed during indexing");
     }
     return { id: row.id };
   } finally {
@@ -124,20 +124,20 @@ export async function searchRealIndex(env: Env, params: URLSearchParams) {
   const limit = Number(params.get("limit") ?? 8);
   if (!Number.isInteger(limit) || limit < 1 || limit > 30 || !["similar", "different"].includes(order)
     || (catalogue !== null && !["0", "1"].includes(catalogue))
-    || (reference !== null && !/^[\w-]{1,64}$/.test(reference))) throw new HttpError(400, "Ricerca non valida");
+    || (reference !== null && !/^[\w-]{1,64}$/.test(reference))) throw new HttpError(400, "Invalid search");
   const filters: string[] = [], keys: string[] = [];
   for (const field of SUBJECT_FIELDS) {
     const value = params.get(field);
     if (value === null) continue;
     const key = subjectKey(value);
-    if (!key || value.length > SUBJECT_MAX) throw new HttpError(400, "Soggetto di ricerca non valido");
+    if (!key || value.length > SUBJECT_MAX) throw new HttpError(400, "Invalid search subject");
     filters.push(`json_extract(i.visual_description, '$.subject.keys.${field}')=?`);
     keys.push(key);
   }
-  if (!reference && !keys.length) throw new HttpError(400, "Scegli un soggetto o una REAL di riferimento");
+  if (!reference && !keys.length) throw new HttpError(400, "Choose a subject or reference REAL");
   const anchor = reference ? await env.DB.prepare(`SELECT v.embedding FROM images i JOIN real_environment_vectors v ON v.image_id=i.id
     WHERE i.id=? AND i.gallery_id=? AND ${INDEXABLE} AND v.model=?`).bind(reference, gallery.id, EMBEDDING_MODEL).first<{embedding: string}>() : null;
-  if (reference && !anchor) throw new HttpError(409, "L’ambiente di riferimento deve essere indicizzato nella galleria");
+  if (reference && !anchor) throw new HttpError(409, "Reference environment must be indexed in this gallery");
 
   // Vectors are unit length, so the dot product is cosine similarity. D1 ranks the filtered rows and returns only the requested matches.
   const score = anchor ? "(SELECT SUM(value * json_extract(?, '$[' || key || ']')) FROM json_each(v.embedding))" : "NULL";

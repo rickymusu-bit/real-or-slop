@@ -152,7 +152,7 @@ test("the number per night comes from the Settings: 0 pauses, more than 50 makes
   setting(0);
   const none: URL[] = [];
   commons(none);
-  assert.equal((await checkCommonsSources(env, NOW)).skipped, "Controllo sospeso dalle Impostazioni");
+  assert.equal((await checkCommonsSources(env, NOW)).skipped, "Checks paused in Settings");
   assert.equal(none.length, 0);
   setting(120);
   const requests: URL[] = [];

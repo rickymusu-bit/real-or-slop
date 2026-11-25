@@ -9,16 +9,16 @@ let projectModels: { at: number; ids: Set<string> | null; error: string } | null
 /** Models of the OpenAI project, or null when the list cannot be read (then every model of the code is offered). */
 async function available(env: Env): Promise<{ ids: Set<string> | null; error: string }> {
   if (projectModels && Date.now() - projectModels.at < CACHE_MS) return projectModels;
-  if (!env.OPENAI_API_KEY) return { ids: null, error: "Chiave OpenAI mancante" };
+  if (!env.OPENAI_API_KEY) return { ids: null, error: "Missing OpenAI key" };
   try {
     const response = await fetch((env.OPENAI_BASE_URL || "https://api.openai.com/v1/") + "models", {
       headers: { Authorization: "Bearer " + env.OPENAI_API_KEY }, signal: AbortSignal.timeout(10_000), redirect: "manual" });
-    if (!response.ok) throw new Error("OpenAI ha risposto " + response.status);
+    if (!response.ok) throw new Error("OpenAI returned " + response.status);
     const data = await response.json() as { data?: { id?: string }[] };
     projectModels = { at: Date.now(), ids: new Set((data.data || []).map(m => String(m.id))), error: "" };
   } catch (error) {
     // Not kept: the next request tries again.
-    return { ids: null, error: "Elenco dei modelli OpenAI non disponibile: " + (error instanceof Error ? error.message : "errore") };
+    return { ids: null, error: "OpenAI model list unavailable: " + (error instanceof Error ? error.message : "errore") };
   }
   return projectModels;
 }
@@ -50,21 +50,21 @@ async function state(env: Env) {
  * must be one of the image model's (the one chosen in the same request, or the current one). */
 export async function modelsRoute(env: Env, method: string, data: Record<string, unknown>) {
   if (method === "GET") return state(env);
-  if (method !== "PUT") throw new HttpError(405, "Metodo non consentito");
-  if (Object.keys(data).some(key => !["text_model", "image_model", "image_quality"].includes(key)) || !Object.keys(data).length) throw new HttpError(400, "Campi non previsti");
+  if (method !== "PUT") throw new HttpError(405, "Method not allowed");
+  if (Object.keys(data).some(key => !["text_model", "image_model", "image_quality"].includes(key)) || !Object.keys(data).length) throw new HttpError(400, "Unexpected fields");
   if (data.image_quality !== undefined) {
     const model = isImageModel(data.image_model) ? data.image_model : await chosenModel(env, "image_model");
     if (typeof data.image_quality !== "string" || !(IMAGE_MODELS[model] || []).includes(data.image_quality))
-      throw new HttpError(400, `Qualità non ammessa da ${model}: ${(IMAGE_MODELS[model] || []).join(", ")}`);
+      throw new HttpError(400, `Quality not supported by ${model}: ${(IMAGE_MODELS[model] || []).join(", ")}`);
   }
-  if (data.text_model !== undefined && !isTextModel(data.text_model)) throw new HttpError(400, "Modello di testo non previsto");
-  if (data.image_model !== undefined && !isImageModel(data.image_model)) throw new HttpError(400, "Modello di immagini non previsto");
+  if (data.text_model !== undefined && !isTextModel(data.text_model)) throw new HttpError(400, "Unsupported text model");
+  if (data.image_model !== undefined && !isImageModel(data.image_model)) throw new HttpError(400, "Unsupported image model");
   const { ids } = await available(env);
   const stamp = new Date().toISOString(), writes = [];
   for (const kind of ["text_model", "image_model"] as const) {
     const value = data[kind];
     if (typeof value !== "string") continue;
-    if (ids && !ids.has(value)) throw new HttpError(409, `«${value}» non è disponibile nel progetto OpenAI`);
+    if (ids && !ids.has(value)) throw new HttpError(409, `«${value}” is unavailable in the OpenAI project`);
     writes.push(env.DB.prepare("INSERT INTO settings(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at")
       .bind(kind, value, stamp));
   }

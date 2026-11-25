@@ -6,7 +6,7 @@ import "./admin-navigation.css";
 import "./caption-count.css";
 import "./admin-loading.css";
 import "./model-context.css";
-import { mountSlopAuto } from "./slop-auto";
+import { mountDatasetBalance } from "./slop-auto";
 import { mountStats, type Stats } from "./stats";
 import { mountDistribution, type Distribution } from "./database-chart";
 import "./database.css";
@@ -37,44 +37,38 @@ interface Item extends TreatableItem {
   source_checked_at?: string | null; source_missing_at?: string | null;
   /** REAL only: latest crowding and detail and the scores above the gallery's thresholds (spec `libreria-immagini`, section 10). */
   measure?: Measure | null;
-  /** REAL only: ideas of falsification and why the model proposed none (specification `generazione-slop`, section 2). */
-  ideas?: Idea[]; ideas_reason?: string;
   has_visual_description?: boolean; visual_description?: VisualDescription | null;
 }
-/** `status`: as stored; `state`: «review» for an idea not used written for other instructions or another gallery. */
-interface Idea { id: string; idea: string; genre: string; changes: string; status: "proposed" | "approved" | "used"; state: "proposed" | "approved" | "used" | "review"; busy: boolean; used_at: string | null }
-const IDEA_STATE: Record<Idea["state"], string> = { proposed: "proposta", approved: "approvata", used: "usata", review: "da rivedere" };
-
 interface Measure extends Scores { id: string; model: string; created_at: string; objects: number; formula: number; over: (keyof Scores)[]; limits: Scores | null }
 /** A REAL with no measure, or measured with an earlier formula: the group «Misura» includes it. */
 const toMeasure = (item: Item) => item.origin === "REAL" && (!item.measure || item.measure.formula < MEASURE_FORMULA);
 interface StoredMeasure extends Omit<Measure, "over" | "limits"> { observation: Observation }
-const SCORE_LABEL: Record<keyof Scores, string> = { crowdedness: "affollamento", detail: "dettaglio" };
+const SCORE_LABEL: Record<keyof Scores, string> = { crowdedness: "crowding", detail: "detail" };
 /** Text of the scores above the thresholds, e.g. «affollamento 80 oltre la soglia di 67». */
-const overText = (m: Measure) => m.over.map(k => `${SCORE_LABEL[k]} ${m[k]} oltre la soglia di ${m.limits?.[k]}`).join(", ");
+const overText = (m: Measure) => m.over.map(k => `${SCORE_LABEL[k]} ${m[k]} above the threshold of ${m.limits?.[k]}`).join(", ");
 interface ModelOption { id: string; available: boolean | null; qualities?: string[]; shutdown?: string | null }
 interface Models { text_model: string; image_model: string; image_quality: string; text_models: ModelOption[]; image_models: ModelOption[]; note: string }
 interface ContextVersion { id: string; body: string; created_at: string; pipeline: number }
 interface ContextState { max: number; parts: { part: string; current: { id: string; body: string }; history: ContextVersion[]; proposed?: string | null }[] }
 const API = "/api/admin/library";
-const STATUS_LABEL: Record<string, string> = { library: "Tutte", new: "Nuove", approved: "Approvate", published: "Pubblicate", trash: "Cestino" };
-const STATE_LABEL: Record<Status, string> = { new: "nuova", approved: "approvata", published: "pubblicata", trash: "nel cestino" };
+const STATUS_LABEL: Record<string, string> = { library: "All", new: "New", approved: "Approved", published: "Published", trash: "Trash" };
+const STATE_LABEL: Record<Status, string> = { new: "new", approved: "approved", published: "published", trash: "in Trash" };
 /** A section still loading: a short line with a spinner (src/admin-loading.css). */
-const loading = (text = "Caricamento…") => `<p class="admin-loading" role="status">${text}</p>`;
+const loading = (text = "Loading…") => `<p class="admin-loading" role="status">${text}</p>`;
 const FIELDS: [keyof Item, string, number, boolean][] = [
-  ["title", "Titolo", 200, false], ["description", "Descrizione della fonte", 1000, true], ["source_url", "Pagina della fonte", 1000, false],
-  ["author", "Autore", 300, false], ["license_name", "Licenza", 200, false], ["license_url", "Indirizzo della licenza", 1000, false],
-  ["prompt", "Prompt (SLOP)", 4000, true], ["model", "Modello (SLOP)", 100, false],
+  ["title", "Title", 200, false], ["description", "Source description", 1000, true], ["source_url", "Source page", 1000, false],
+  ["author", "Author", 300, false], ["license_name", "License", 200, false], ["license_url", "License URL", 1000, false],
+  ["prompt", "Prompt (SLOP)", 4000, true], ["model", "Model (SLOP)", 100, false],
 ];
 
 async function call<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(API + path, { credentials: "same-origin", ...options,
     headers: options.body instanceof Blob || options.body instanceof ArrayBuffer ? options.headers : { "Content-Type": "application/json", ...options.headers } });
   const data = await response.json().catch(() => ({})) as T & { error?: string };
-  if (!response.ok) throw Error(data.error || "Connessione non disponibile");
+  if (!response.ok) throw Error(data.error || "Connection unavailable");
   return data;
 }
-const COLOUR_LABEL: Record<Monochrome, string> = { "": "a colori", "black-and-white": "in bianco e nero", sepia: "seppia" };
+const COLOUR_LABEL: Record<Monochrome, string> = { "": "color", "black-and-white": "black and white", sepia: "sepia" };
 const kb = (bytes: number) => bytes < 1024 ? bytes + " byte" : Math.round(bytes / 1024) + " kB";
 
 async function bulkUpdate(action: string, ids: string[], fields: Record<string, unknown>) {
@@ -106,107 +100,107 @@ export async function showLibrary() {
   let statsView: { refresh: () => Promise<void> } = { refresh: async () => {} };
   let distribution: { refresh: () => Promise<void> } = { refresh: async () => {} };
   content().innerHTML = `<section class="library page" aria-labelledby="library-title">
-    <header class="library-head"><h1 id="library-title">Dashboard</h1><span id="dashboard-loading">${loading("Caricamento della dashboard…")}</span></header>
-    <nav class="admin-tabs" aria-label="Sezioni amministrazione">
-      <button type="button" data-admin-tab="galleries" aria-pressed="true">Gallerie</button>
-      <button type="button" data-admin-tab="stats" aria-pressed="false">Statistiche</button>
-      <button type="button" data-admin-tab="settings" aria-pressed="false">Impostazioni</button>
+    <header class="library-head"><h1 id="library-title">Dashboard</h1><span id="dashboard-loading">${loading("Loading dashboard…")}</span></header>
+    <nav class="admin-tabs" aria-label="Admin sections">
+      <button type="button" data-admin-tab="galleries" aria-pressed="true">Galleries</button>
+      <button type="button" data-admin-tab="stats" aria-pressed="false">Statistics</button>
+      <button type="button" data-admin-tab="settings" aria-pressed="false">Settings</button>
     </nav>
     <section id="admin-galleries" class="admin-panel" aria-labelledby="galleries-title">
-      <div class="gallery-section-head"><h2 id="galleries-title">Gallerie</h2><button type="button" class="primary" data-gallery-create disabled>Nuova galleria</button></div>
+      <div class="gallery-section-head"><h2 id="galleries-title">Galleries</h2><button type="button" class="primary" data-gallery-create disabled>New gallery</button></div>
       <a class="button" id="gallery-active-batch" hidden></a>
       <p id="gallery-navigation-status" role="status" hidden></p>
-      <div id="gallery-cards">${loading("Caricamento delle gallerie…")}</div>
+      <div id="gallery-cards">${loading("Loading galleries…")}</div>
     </section>
     <dialog id="gallery-workspace" class="gallery-workspace" aria-labelledby="gallery-title">
       <div class="gallery-workspace-head">
-        <div class="gallery-title-row"><h2 id="gallery-title" tabindex="-1" autofocus></h2><button type="button" data-gallery-close aria-label="Chiudi galleria">×</button></div>
+        <div class="gallery-title-row"><h2 id="gallery-title" tabindex="-1" autofocus></h2><button type="button" data-gallery-close aria-label="Close gallery">×</button></div>
         <div class="gallery-actions">
-          <a class="button primary" id="gallery-upload-link">Carica REAL</a>
-          <a class="button" id="gallery-generation-link">Genera SLOP</a>
-          <button type="button" id="library-describe-gallery" hidden>Descrivi le REAL</button>
-          <button type="button" id="library-index-gallery" hidden>Indicizza le descrizioni</button>
-          <button type="button" data-gallery-edit>Modifica galleria</button>
+          <a class="button primary" id="gallery-upload-link">Import REAL</a>
+          <a class="button" id="gallery-generation-link">Generate SLOP</a>
+          <button type="button" id="library-describe-gallery" hidden>Describe REAL</button>
+          <button type="button" id="library-index-gallery" hidden>Index descriptions</button>
+          <button type="button" data-gallery-edit>Edit gallery</button>
         </div>
       </div>
       <div class="gallery-workspace-scroll">
     <div id="db-images">
     <p id="library-counts" aria-live="polite"></p>
-    <div class="db-search-row"><label>Cerca nella galleria<input id="library-search" type="search" placeholder="ID, titolo REAL, descrizione o prompt"></label></div><details class="db-filter-panel"><summary>Filtri e ordinamento</summary><div class="library-toolbar">
-      <nav class="library-views" aria-label="Viste">${Object.entries(STATUS_LABEL).map(([key, label]) =>
+    <div class="db-search-row"><label>Search gallery<input id="library-search" type="search" placeholder="ID, REAL title, description or prompt"></label></div><details class="db-filter-panel"><summary>Filters and sorting</summary><div class="library-toolbar">
+      <nav class="library-views" aria-label="Views">${Object.entries(STATUS_LABEL).map(([key, label]) =>
         `<button type="button" data-view="${key}" aria-pressed="${key === "library"}">${label}</button>`).join("")}</nav>
-      <label>Origine<select id="library-origin"><option value="all">REAL e SLOP</option><option value="REAL">REAL</option><option value="SLOP">SLOP</option></select></label>
-      <label>Ordina per<select id="library-sort"><option value="added">data di aggiunta</option><option value="views">visualizzazioni</option><option value="accuracy">accuratezza</option></select></label>
-      <label>Ordine<select id="library-order"><option value="desc">decrescente</option><option value="asc">crescente</option></select></label>
+      <label>Origin<select id="library-origin"><option value="all">REAL and SLOP</option><option value="REAL">REAL</option><option value="SLOP">SLOP</option></select></label>
+      <label>Sort by<select id="library-sort"><option value="added">date added</option><option value="views">views</option><option value="accuracy">accuracy</option></select></label>
+      <label>Order<select id="library-order"><option value="desc">descending</option><option value="asc">ascending</option></select></label>
     </div></details>
-    <div class="library-add"><button type="button" id="library-select-all" hidden>Seleziona tutte</button><button type="button" id="library-empty-trash" hidden>Svuota cestino</button></div>
-    <p id="library-batch-filter" class="library-batch-filter" hidden><span>Batch automatico in corso: solo le sue immagini.</span><button type="button" data-batch-clear>Mostra tutte</button></p>
-    <ul id="library-grid" class="library-grid" aria-label="Immagini"><li class="library-grid-loading">${loading("Caricamento delle immagini…")}</li></ul>
-    <button type="button" id="library-more" hidden>Carica altre foto</button>
+    <div class="library-add"><button type="button" id="library-select-all" hidden>Select all</button><button type="button" id="library-empty-trash" hidden>Empty Trash</button></div>
+    <p id="library-batch-filter" class="library-batch-filter" hidden><span>Active legacy batch: showing its images only.</span><button type="button" data-batch-clear>Show all</button></p>
+    <ul id="library-grid" class="library-grid" aria-label="Images"><li class="library-grid-loading">${loading("Loading images…")}</li></ul>
+    <button type="button" id="library-more" hidden>Load more photos</button>
     </div>
     </div>
     <div class="gallery-workspace-footer">
-      <div id="library-selection" class="library-selection" role="group" aria-label="Azioni per le foto selezionate" hidden>
+      <div id="library-selection" class="library-selection" role="group" aria-label="Actions for selected photos" hidden>
         <strong id="library-selection-count" aria-live="polite"></strong>
         <div class="library-selection-actions">
-          <button type="button" data-bulk="set-approved">Approva</button>
-          <button type="button" data-bulk="set-published">Pubblica</button>
-          <button type="button" data-bulk="withdraw" hidden>Togli dalla pubblicazione</button>
-          <button type="button" data-bulk="trash" aria-label="Sposta nel cestino">Nel cestino</button>
-          <button type="button" data-bulk="restore" hidden>Ripristina</button>
-          <button type="button" data-bulk="delete" class="danger" hidden>Elimina definitivamente</button>
-          <button type="button" data-bulk="gallery">Cambia galleria</button>
-          <button type="button" data-bulk="measure" hidden>Misura</button>
+          <button type="button" data-bulk="set-approved">Approve</button>
+          <button type="button" data-bulk="set-published">Publish</button>
+          <button type="button" data-bulk="withdraw" hidden>Unpublish</button>
+          <button type="button" data-bulk="trash" aria-label="Move to Trash">Move to Trash</button>
+          <button type="button" data-bulk="restore" hidden>Restore</button>
+          <button type="button" data-bulk="delete" class="danger" hidden>Delete permanently</button>
+          <button type="button" data-bulk="gallery">Move to gallery</button>
+          <button type="button" data-bulk="measure" hidden>Measure</button>
         </div>
-        <button type="button" data-bulk="none">Deseleziona</button>
+        <button type="button" data-bulk="none">Deselect</button>
       </div>
       <p id="library-message" role="status" aria-live="polite"></p>
     </div>
     </dialog>
     <dialog id="library-move-gallery" class="gallery-editor" aria-labelledby="library-move-title">
-      <div class="gallery-title-row"><h2 id="library-move-title">Cambia galleria</h2></div>
+      <div class="gallery-title-row"><h2 id="library-move-title">Move to gallery</h2></div>
       <form class="gallery-form">
-        <label>Galleria di destinazione<select id="library-bulk-gallery" required autofocus></select></label>
-        <div class="library-inline"><button type="button" id="library-cancel-move">Annulla</button><button type="submit" class="primary">Sposta</button></div>
+        <label>Destination gallery<select id="library-bulk-gallery" required autofocus></select></label>
+        <div class="library-inline"><button type="button" id="library-cancel-move">Cancel</button><button type="submit" class="primary">Move</button></div>
       </form>
     </dialog>
     <dialog id="gallery-editor" class="gallery-editor" aria-labelledby="gallery-editor-title">
-      <div class="gallery-title-row"><h2 id="gallery-editor-title"></h2><button type="button" data-gallery-editor-close aria-label="Chiudi il modulo">×</button></div>
+      <div class="gallery-title-row"><h2 id="gallery-editor-title"></h2><button type="button" data-gallery-editor-close aria-label="Close form">×</button></div>
       <div data-gallery-form></div>
     </dialog>
-    <section id="admin-stats" class="admin-panel" hidden><h2>Statistiche</h2><div id="slop-auto" class="slop-auto" role="region" aria-label="Equilibrio del dataset" hidden></div>
+    <section id="admin-stats" class="admin-panel" hidden><h2>Statistics</h2><div id="slop-auto" class="slop-auto" role="region" aria-label="Dataset balance" hidden></div>
       <div id="stats-body">${loading()}</div>
-      <details id="stats-distribution"><summary>Distribuzione delle immagini</summary><div id="db-distribution">${loading()}</div></details>
+      <details id="stats-distribution"><summary>Image distribution</summary><div id="db-distribution">${loading()}</div></details>
     </section>
-    <section id="admin-settings" class="admin-panel" hidden><h2>Impostazioni</h2>
+    <section id="admin-settings" class="admin-panel" hidden><h2>Settings</h2>
     <p id="library-settings-message" role="status" aria-live="polite"></p>
-    <details id="library-contexts" class="library-vocabulary"><summary>Contesto dei modelli</summary>
-      <p class="hint">Testi fissi inviati al modello linguistico. Ogni salvataggio crea una nuova versione; le precedenti restano e si possono ripristinare. Ogni generazione registra la versione usata. Formato della risposta e controlli restano nel codice.</p>
+    <details id="library-contexts" class="library-vocabulary"><summary>Model context</summary>
+      <p class="hint">Fixed instructions sent to the language model. Saving creates a new version; previous versions can be restored. Each generation records its context version. Response formats and validation are defined in code.</p>
       <div id="library-contexts-body">${loading()}</div></details>
-    <details id="library-leaderboard" class="library-vocabulary"><summary>Classifica</summary>
-      <p class="hint">Chi entra in classifica riceve un codice partita, mostrato una sola volta. Se qualcuno ti mostra un codice, controllalo qui: il sito ne conserva solo l'impronta. Una voce nascosta non compare nella classifica pubblica; «Cancella» la elimina per sempre, per esempio su richiesta del giocatore.</p>
-      <form id="library-code" class="library-inline"><label>Codice partita<input name="code" placeholder="ABCD-EFGH-JK" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label><button>Controlla</button></form>
+    <details id="library-leaderboard" class="library-vocabulary"><summary>Leaderboard</summary>
+      <p class="hint">Players entering the leaderboard receive a game code, shown once. Verify a code here: the site stores only its hash. Hidden entries do not appear publicly; “Delete” removes an entry permanently, for example at a player’s request.</p>
+      <form id="library-code" class="library-inline"><label>Game code<input name="code" placeholder="ABCD-EFGH-JK" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label><button>Check</button></form>
       <p id="library-code-result" role="status" aria-live="polite"></p>
       <ol id="library-entries" class="library-entries"></ol></details>
-    <details id="library-models" class="library-vocabulary"><summary>Modelli</summary>
-      <p class="hint">Il modello di testo deve leggere immagini. Descrive e misura le REAL, scrive i prompt delle SLOP e valuta le SLOP. Il modello di immagini genera le SLOP. Le chiamate a pagamento richiedono conferma e seguono il limite di spesa del progetto OpenAI.</p>
-      <form id="library-models-form" class="library-inline"><label>Modello di testo<select name="text_model"></select></label><label>Modello di immagini<select name="image_model"></select></label><label>Qualità delle immagini<select name="image_quality"></select></label></form>
+    <details id="library-models" class="library-vocabulary"><summary>Models</summary>
+      <p class="hint">The text model must support vision. It describes and measures REAL, writes SLOP prompts and evaluates SLOP. The image model generates SLOP. Paid calls require confirmation and follow the OpenAI project spending limit.</p>
+      <form id="library-models-form" class="library-inline"><label>Text model<select name="text_model"></select></label><label>Image model<select name="image_model"></select></label><label>Image quality<select name="image_quality"></select></label></form>
       <p id="library-models-note" class="hint"></p>
-      <p class="hint">La qualità vale per le SLOP generate dal wizard «Genera SLOP».</p></details>
-    <details id="library-thresholds" class="library-vocabulary"><summary>Generazione SLOP</summary>
+      <p class="hint">Quality applies to SLOP generated through the “Generate SLOP” wizard.</p></details>
+    <details id="library-thresholds" class="library-vocabulary"><summary>Legacy SLOP generation</summary>
       <form id="library-thresholds-form" class="library-inline">
-        <label>Tentativi massimi per SLOP<input type="number" name="max_generation_attempts" required></label><label>Tolleranza (0 rigorosa, 1 normale, 2 permissiva)<input type="number" name="editorial_tolerance" required></label>
-        <button>Salva</button></form>
-      <p class="hint">Apri una galleria e scegli «Genera SLOP»: il wizard estrae le REAL di riferimento dalla galleria.</p></details>
-    <details id="library-games" class="library-vocabulary"><summary>Partite</summary>
-      <form id="library-games-form" class="library-inline"><label>Durata massima di una partita aperta (ore)<input type="number" name="open_game_hours" required></label><button>Salva</button></form>
-      <p class="hint">Oltre questo tempo una partita non conclusa non trattiene più le copie delle foto ritirate o modificate, e la sua foto può non essere più disponibile. I livelli del gioco sono fissi nel codice.</p></details>
-    <details id="library-measures" class="library-vocabulary"><summary>Misure delle REAL</summary>
-      <form id="library-measures-form" class="library-inline"><label>Soglia predefinita di affollamento<input type="number" name="crowdedness_threshold" required></label><label>Soglia predefinita di dettaglio<input type="number" name="detail_threshold" required></label><button>Salva</button></form>
-      <p class="hint">Un modello misura su richiesta, con una chiamata a pagamento per foto, quanto è affollata e dettagliata una REAL. Affollamento: 100·n/(n+5), con n gli oggetti riconoscibili oltre al soggetto (5 oggetti valgono 50, 10 valgono 67). Dettaglio: per ogni oggetto sette categorie di dettaglio, ciascuna con grado 0 (assente), 1 (leggibile) o 2 (fitto o minuto), in quota sul massimo; media pesata sull’area degli oggetti. Una REAL con un valore oltre la soglia della sua galleria è segnalata nella griglia e nel dettaglio. Ogni galleria può avere soglie proprie in «Modifica galleria»; senza, valgono queste. 100 non pone limiti.</p></details>
-    <details id="library-sources" class="library-vocabulary"><summary>Fonti Commons</summary>
-      <form id="library-sources-form" class="library-inline"><label>REAL controllate ogni notte<input type="number" name="commons_checks_per_night" required></label><button>Salva</button></form>
-      <p class="hint">Ogni notte si chiede a Wikimedia Commons se il file di queste REAL esiste ancora, cominciando da quelle controllate da più tempo; ogni foto torna in coda tre mesi dopo l’ultimo controllo. Un file sparito è solo segnalato nella galleria. Le richieste a Commons sono da 50 foto; 0 sospende il controllo.</p></details></section>
+        <label>Maximum attempts per legacy SLOP<input type="number" name="max_generation_attempts" required></label><label>Tolerance (0 strict, 1 normal, 2 permissive)<input type="number" name="editorial_tolerance" required></label>
+        <button>Save</button></form>
+      <p class="hint">These settings apply only to legacy jobs. Open a gallery and choose “Generate SLOP” to configure the current pipeline.</p></details>
+    <details id="library-games" class="library-vocabulary"><summary>Games</summary>
+      <form id="library-games-form" class="library-inline"><label>Maximum open game duration (hours)<input type="number" name="open_game_hours" required></label><button>Save</button></form>
+      <p class="hint">After this time, an unfinished game no longer retains copies of withdrawn or modified photos, and its photo may become unavailable. Game levels are defined in code.</p></details>
+    <details id="library-measures" class="library-vocabulary"><summary>REAL measurements</summary>
+      <form id="library-measures-form" class="library-inline"><label>Default crowding threshold<input type="number" name="crowdedness_threshold" required></label><label>Default detail threshold<input type="number" name="detail_threshold" required></label><button>Save</button></form>
+      <p class="hint">On request, a model measures REAL crowding and detail with one paid call per photo. Crowding: 100·n/(n+5), where n is the number of recognizable objects besides the subject (5 objects score 50; 10 score 67). Detail: seven categories per object, graded 0 (absent), 1 (readable) or 2 (dense or tiny), normalized and weighted by object area. REAL above a gallery threshold are flagged in the grid and detail view. Galleries can override these defaults in “Edit gallery”. A threshold of 100 imposes no limit.</p></details>
+    <details id="library-sources" class="library-vocabulary"><summary>Commons sources</summary>
+      <form id="library-sources-form" class="library-inline"><label>REAL checked each night<input type="number" name="commons_checks_per_night" required></label><button>Save</button></form>
+      <p class="hint">Each night, Wikimedia Commons is checked for missing REAL files, starting with the oldest checks. Each photo becomes eligible again after three months. Missing files are only flagged in the gallery. Commons requests cover 50 photos at a time; 0 pauses checks.</p></details></section>
     <dialog id="library-detail" class="library-detail" aria-labelledby="library-detail-title"></dialog>
   </section>`;
   const page = content().querySelector<HTMLElement>(".library")!;
@@ -271,7 +265,7 @@ export async function showLibrary() {
       nextPage = data.next;
       selected = new Set([...selected].filter(id => items.some(item => item.id === id)));
       const count = (status: string) => data.counts.filter(c => c.status === status).reduce((n, c) => n + c.n, 0);
-      $("#library-counts").textContent = `${count("new")} nuove / ${count("approved")} approvate / ${count("published")} pubblicate / ${count("trash")} nel cestino`;
+      $("#library-counts").textContent = `${count("new")} new / ${count("approved")} approved / ${count("published")} published / ${count("trash")} in Trash`;
       $("#library-empty-trash").hidden = filter.status !== "trash" || !count("trash");
       render(append ? added : undefined);
       // Copies without current-version measurements are measured in the browser, one at a time.
@@ -284,36 +278,36 @@ export async function showLibrary() {
     }
   };
   const rate = (item: Item) => item.stats.views ? ` (${Math.round(item.stats.correct / item.stats.views * 100)}%)` : "";
-  const statsLine = (item: Item) => `<span class="db-stats" data-stats>Vista <strong>${item.stats.views}</strong> ${item.stats.views === 1 ? "volta" : "volte"} / classificata correttamente <strong>${item.stats.correct}</strong>${rate(item)}</span>`;
+  const statsLine = (item: Item) => `<span class="db-stats" data-stats>Viewed <strong>${item.stats.views}</strong> ${item.stats.views === 1 ? "time" : "times"} / correctly identified <strong>${item.stats.correct}</strong>${rate(item)}</span>`;
   const preview = (item: Item) => openPreview(item.origin === "REAL"
     ? { src: item.file, alt: imageLabel(item), title: imageLabel(item), description: item.description,
-      link: item.source_url ? { href: item.source_url, label: "Apri la pagina su Commons" } : undefined,
-      extra: item.measure?.over.length ? `<p class="db-edit-note" data-over-threshold>Oltre la soglia della galleria: ${escape(overText(item.measure))}.</p>` : "" }
+      link: item.source_url ? { href: item.source_url, label: "Open Commons page" } : undefined,
+      extra: item.measure?.over.length ? `<p class="db-edit-note" data-over-threshold>Above the gallery threshold: ${escape(overText(item.measure))}.</p>` : "" }
     : { src: item.file, alt: imageLabel(item), title: imageLabel(item),
       extra: (item.prompt ? `<p><span class="image-preview-label">Prompt</span><br><q lang="en">${escape(item.prompt)}</q></p>` : "") });
   const card = (item: Item) => `<li class="library-card${selected.has(item.id) ? " is-selected" : ""}" data-id="${escape(item.id)}">
-    <label class="library-check"><input type="checkbox" data-select="${escape(item.id)}" ${selected.has(item.id) ? "checked" : ""} aria-label="Seleziona ${escape(imageLabel(item))}"></label>
-    <button type="button" class="library-open" data-open="${escape(item.id)}" data-long-press aria-label="Apri ${escape(imageLabel(item))}"${item.origin === "REAL" && !item.has_visual_description ? ' aria-description="Descrizione visiva mancante"' : ""}>
+    <label class="library-check"><input type="checkbox" data-select="${escape(item.id)}" ${selected.has(item.id) ? "checked" : ""} aria-label="Select ${escape(imageLabel(item))}"></label>
+    <button type="button" class="library-open" data-open="${escape(item.id)}" data-long-press aria-label="Open ${escape(imageLabel(item))}"${item.origin === "REAL" && !item.has_visual_description ? ' aria-description="Missing visual description"' : ""}>
       <img src="${escape(item.file)}" alt="" loading="lazy" draggable="false">${item.origin === "REAL" && !item.has_visual_description
-        ? '<span class="library-description-icon" data-description-missing title="Descrizione visiva mancante" aria-hidden="true">▤</span>' : ""}
+        ? '<span class="library-description-icon" data-description-missing title="Missing visual description" aria-hidden="true">▤</span>' : ""}
       <span class="library-badges"><span class="badge badge-${item.origin.toLowerCase()}">${item.origin}</span>
       <span class="badge badge-status">${STATE_LABEL[item.status]}</span>${item.source_missing_at
-        ? '<span class="badge badge-warn" data-source-missing title="Il file non risulta più su Wikimedia Commons">Fonte rimossa</span>' : ""}${item.measure?.over.length
-        ? `<span class="badge badge-warn badge-symbol" data-over-threshold role="img" title="${escape("Oltre la soglia della galleria: " + overText(item.measure))}" aria-label="${escape("Oltre la soglia: " + overText(item.measure))}">\u26a0\ufe0e</span>` : ""}</span>
+        ? '<span class="badge badge-warn" data-source-missing title="The file is no longer on Wikimedia Commons">Source removed</span>' : ""}${item.measure?.over.length
+        ? `<span class="badge badge-warn badge-symbol" data-over-threshold role="img" title="${escape("Above the gallery threshold: " + overText(item.measure))}" aria-label="${escape("Above threshold: " + overText(item.measure))}">\u26a0\ufe0e</span>` : ""}</span>
     </button></li>`;
   const selectionBar = () => {
     const bar = $("#library-selection");
     bar.hidden = !selected.size;
-    $("#library-selection-count").textContent = `${selected.size} ${selected.size === 1 ? "selezionata" : "selezionate"}`;
+    $("#library-selection-count").textContent = `${selected.size} ${selected.size === 1 ? "selected" : "selected"}`;
     const trash = filter.status === "trash";
     const describe = $<HTMLButtonElement>("#library-describe-gallery");
     describe.hidden = trash || !galleryList?.paid_calls || !undescribed;
     describe.disabled = busy;
-    describe.textContent = `Descrivi le REAL (${undescribed})`;
+    describe.textContent = `Describe REAL (${undescribed})`;
     const index = $<HTMLButtonElement>("#library-index-gallery");
     index.hidden = trash || !galleryList?.paid_calls || !unindexed;
     index.disabled = busy;
-    index.textContent = `Indicizza le descrizioni (${unindexed})`;
+    index.textContent = `Index descriptions (${unindexed})`;
     const chosen = items.filter(item => selected.has(item.id));
     for (const button of bar.querySelectorAll<HTMLButtonElement>("[data-bulk]")) {
       const action = button.dataset.bulk;
@@ -325,7 +319,7 @@ export async function showLibrary() {
     }
     const all = $<HTMLButtonElement>("#library-select-all");
     all.hidden = !items.length || items.every(item => selected.has(item.id));
-    all.textContent = `Seleziona tutte (${items.length})`;
+    all.textContent = `Select all (${items.length})`;
   };
   const syncSelection = () => {
     for (const check of page.querySelectorAll<HTMLInputElement>("#library-grid [data-select]")) {
@@ -337,7 +331,7 @@ export async function showLibrary() {
   const render = (added?: Item[]) => {
     const grid = $("#library-grid");
     if (added) grid.insertAdjacentHTML("beforeend", added.map(card).join(""));
-    else grid.innerHTML = items.length ? items.map(card).join("") : `<li class="library-empty">${filter.status === "trash" ? "Il cestino è vuoto." : "Non ci sono foto in questa vista."}</li>`;
+    else grid.innerHTML = items.length ? items.map(card).join("") : `<li class="library-empty">${filter.status === "trash" ? "Trash is empty." : "No photos in this view."}</li>`;
     selectionBar();
   };
 
@@ -356,103 +350,86 @@ export async function showLibrary() {
     });
     saving = request; return request;
   };
-  const metricText = (m: Metrics) => `lato ${m.long} px / rumore ${m.noise.toFixed(1)} / nitidezza ${m.sharpness.toFixed(1)} / contrasto ${m.contrast} / saturazione ${m.saturation.toFixed(2)}`;
+  const metricText = (m: Metrics) => `long edge ${m.long} px / noise ${m.noise.toFixed(1)} / sharpness ${m.sharpness.toFixed(1)} / contrast ${m.contrast} / saturation ${m.saturation.toFixed(2)}`;
   /** Measures of the copy and, for a SLOP, its treatment with the commands (free; they make the copy again). */
   const measuresBlock = (item: Item, editable: boolean) => {
     const t = item.treatment;
-    const treatment = item.origin !== "SLOP" ? "" : !t ? '<p class="hint" data-treatment>Copia senza trattamento.</p>'
-      : `<p class="hint" data-treatment>${t.off ? "Trattamento spento" : `Trattamento fotografico${t.applied ? " " + COLOUR_LABEL[t.applied.monochrome] : ""}` +
-        (t.settings ? ", regolato dall'owner" : "") + (t.gap !== undefined ? `, scarto dall'obiettivo ${Math.round(t.gap * 100)}%` : "") + `: ${metricText(t.sample.metrics)}`}.</p>`;
+    const treatment = item.origin !== "SLOP" ? "" : !t ? '<p class="hint" data-treatment>Copy without treatment.</p>'
+      : `<p class="hint" data-treatment>${t.off ? "Treatment off" : `Photographic treatment${t.applied ? " " + COLOUR_LABEL[t.applied.monochrome] : ""}` +
+        (t.settings ? ", adjusted by owner" : "") + (t.gap !== undefined ? `, difference from target ${Math.round(t.gap * 100)}%` : "") + `: ${metricText(t.sample.metrics)}`}.</p>`;
     const commands = item.origin === "SLOP" && editable && item.copy ? `<div class="library-inline" data-treatment-commands>` +
-      (t && !t.off ? '<button type="button" id="library-treatment-off">Senza trattamento</button>'
-        : '<button type="button" id="library-treatment-on">Con trattamento</button>') +
-      (t ? '<button type="button" id="library-treatment-edit">Regola il trattamento</button>' : "") + "</div>" : "";
-    return (item.metrics ? `<p class="hint" data-metrics>Misure della copia: ${metricText(item.metrics)}.</p>` : "") + treatment + commands;
+      (t && !t.off ? '<button type="button" id="library-treatment-off">Without treatment</button>'
+        : '<button type="button" id="library-treatment-on">With treatment</button>') +
+      (t ? '<button type="button" id="library-treatment-edit">Adjust treatment</button>' : "") + "</div>" : "";
+    return (item.metrics ? `<p class="hint" data-metrics>Copy measurements: ${metricText(item.metrics)}.</p>` : "") + treatment + commands;
   };
-  const day = (iso: string) => new Date(iso).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" });
+  const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   /** Nightly check of the Commons source: a flag only, the owner decides (spec `libreria-immagini`, section 9). */
   const sourceCheck = (item: Item) => item.origin !== "REAL" ? "" : item.source_missing_at
-    ? `<p class="db-edit-note" data-source-missing>Dal ${day(item.source_missing_at)} il file non risulta più su Wikimedia Commons. Commons
-      cancella soprattutto per problemi di diritti: verifica la pagina della fonte. Se la licenza non è più sostenibile, togli la foto dalla
-      pubblicazione o spostala nel cestino; se il file è stato spostato, correggi la pagina della fonte, che sarà ricontrollata la notte
-      successiva.</p>`
-    : item.source_checked_at ? `<p class="hint" data-source-checked>Fonte presente su Commons al ${day(item.source_checked_at)}.</p>` : "";
+    ? `<p class="db-edit-note" data-source-missing>The file has been missing from Wikimedia Commons since ${day(item.source_missing_at)}. Commons often removes files over rights issues: check the source page. If the license no longer holds, unpublish the photo or move it to Trash. If the file moved, update its source page; it will be checked again next night.</p>`
+    : item.source_checked_at ? `<p class="hint" data-source-checked>Source last found on Commons on ${day(item.source_checked_at)}.</p>` : "";
   /** Warning of a REAL above the thresholds of its gallery: a flag only, the owner decides (owner decision of 2026-11-21). */
-  const overWarning = (item: Item) => item.measure?.over.length ? `<p class="db-edit-note" data-over-threshold>Oltre la soglia della
-    galleria: ${escape(overText(item.measure))}. Il generatore di immagini potrebbe faticare a riprodurre una foto simile. Le soglie si
-    cambiano da «Modifica galleria».</p>` : "";
+  const overWarning = (item: Item) => item.measure?.over.length ? `<p class="db-edit-note" data-over-threshold>Above the gallery threshold: ${escape(overText(item.measure))}. The image generator may struggle to reproduce a similar photo. Change thresholds in “Edit gallery”.</p>` : "";
   /** Crowding and detail of a REAL, with the command of the paid measure and, on request, the objects seen and the earlier measures. */
   const measureBlock = (item: Item) => {
     if (item.origin !== "REAL") return "";
     const m = item.measure, paid = !!galleryList?.paid_calls && item.status !== "trash";
-    return `<section class="library-measure" data-measure><h3>Affollamento e dettaglio</h3>
-      ${m ? `<p data-measure-values>Affollamento <strong>${m.crowdedness}</strong>/100 (${m.objects} ${m.objects === 1 ? "oggetto" : "oggetti"} oltre il soggetto),
-        dettaglio <strong>${m.detail}</strong>/100${m.limits ? `; soglie della galleria ${m.limits.crowdedness} e ${m.limits.detail}` : ""}.
-        Misura del ${escape(when(m.created_at))} con ${escape(m.model)}.</p>
-        ${m.formula < MEASURE_FORMULA ? '<p class="hint" data-measure-old>Misura con la formula precedente (sei categorie, senza gradi): il dettaglio non è confrontabile con le misure nuove. Misurala di nuovo.</p>' : ""}`
-        : '<p class="hint" data-measure-values>Non ancora misurata.</p>'}
-      ${paid ? `<p><button type="button" id="library-measure">${m ? "Misura di nuovo" : "Misura"} (1 chiamata)</button></p>` : ""}
-      ${m ? '<details data-measure-history><summary>Oggetti riconosciuti e misure precedenti</summary><div data-measure-history-body></div></details>' : ""}
-    </section>`;
-  };
-  /** Proposals of a REAL, read only: they are written, asked to the model and chosen in the SLOP wizard (owner decision of 2026-11-22). */
-  const ideasBlock = (item: Item) => {
-    if (item.origin !== "REAL") return "";
-    const ideas = item.ideas || [];
-    return `<section class="library-ideas" data-ideas><h3>Proposte SLOP</h3>
-      <p class="hint">Si scrivono, si chiedono al modello e si scelgono nel wizard «Genera SLOP». Ogni proposta dà al massimo una SLOP.</p>
-      ${!ideas.length ? `<p class="hint" data-ideas-reason>${item.ideas_reason ? "Il modello non ha proposto idee: " + escape(item.ideas_reason) : "Nessuna proposta."}</p>` : ""}
-      ${ideas.length ? `<ol class="library-idea-list">${ideas.map(i => `<li data-idea="${escape(i.id)}"><span class="badge badge-idea-${i.state}">${IDEA_STATE[i.state]}</span>${i.busy ? ' <span class="hint">in un batch in corso</span>' : ""}
-        <p>${escape(i.idea)}</p>${i.genre || i.changes || i.used_at ? `<p class="hint">${escape([i.genre, i.changes].filter(Boolean).join(". "))}${i.used_at ? `${i.genre || i.changes ? ". " : ""}Usata il ${escape(when(i.used_at))}.` : ""}</p>` : ""}</li>`).join("")}</ol>` : ""}
+    return `<section class="library-measure" data-measure><h3>Crowding and detail</h3>
+      ${m ? `<p data-measure-values>Crowding <strong>${m.crowdedness}</strong>/100 (${m.objects} ${m.objects === 1 ? "object" : "objects"} besides the subject),
+        detail <strong>${m.detail}</strong>/100${m.limits ? `; gallery thresholds ${m.limits.crowdedness} and ${m.limits.detail}` : ""}.
+        Measured on ${escape(when(m.created_at))} with ${escape(m.model)}.</p>
+        ${m.formula < MEASURE_FORMULA ? '<p class="hint" data-measure-old>Measured with the previous formula (six categories, no grades): detail is not comparable to new measurements. Measure again.</p>' : ""}`
+        : '<p class="hint" data-measure-values>Not measured yet.</p>'}
+      ${paid ? `<p><button type="button" id="library-measure">${m ? "Measure again" : "Measure"} (1 call)</button></p>` : ""}
+      ${m ? '<details data-measure-history><summary>Recognized objects and previous measurements</summary><div data-measure-history-body></div></details>' : ""}
     </section>`;
   };
   /** The objects of the latest measure drawn on the whole original, with their kinds of detail, and every measure of the photo. */
   const showMeasures = (item: Item, measures: StoredMeasure[], target: HTMLElement) => {
     const latest = measures[0];
-    if (!latest) { target.innerHTML = '<p class="hint">Nessuna misura.</p>'; return; }
+    if (!latest) { target.innerHTML = '<p class="hint">No measurements.</p>'; return; }
     const o = latest.observation, objects = [{ ...o.subject, subject: true }, ...o.others.map(x => ({ ...x, subject: false }))];
-    target.innerHTML = `<figure class="measure-figure"><div class="measure-frame" style="aspect-ratio:${item.width}/${item.height}"><img src="${escape(item.original)}" alt="Originale di ${escape(imageLabel(item))}" draggable="false">
+    target.innerHTML = `<figure class="measure-figure"><div class="measure-frame" style="aspect-ratio:${item.width}/${item.height}"><img src="${escape(item.original)}" alt="Original of ${escape(imageLabel(item))}" draggable="false">
       ${objects.map((x, i) => `<span class="measure-box${x.subject ? " is-subject" : ""}" style="left:${x.box.x * 100}%;top:${x.box.y * 100}%;width:${x.box.width * 100}%;height:${x.box.height * 100}%"><b>${i + 1}</b></span>`).join("")}</div>
-      <figcaption class="hint">Riquadri dell'ultima misura sull'originale intero. Il soggetto è in evidenza.</figcaption></figure>
-      <ol class="measure-objects">${objects.map(x => `<li>${x.subject ? "<strong>Soggetto:</strong> " : ""}${escape(x.name)}: ${escape(detailText(x.detail))}</li>`).join("")}</ol>
-      ${o.unlisted ? `<p class="hint">Altri ${o.unlisted} oggetti contati e non elencati.</p>` : ""}
-      <h4>Misure</h4><ol class="measure-history">${measures.map(m => `<li>${escape(when(m.created_at))}, ${escape(m.model)}: affollamento ${m.crowdedness}, dettaglio ${m.detail}, ${m.objects} oggetti oltre il soggetto${m.formula < MEASURE_FORMULA ? ", formula precedente" : ""}</li>`).join("")}</ol>`;
+      <figcaption class="hint">Boxes from the latest measurement on the full original. The subject is highlighted.</figcaption></figure>
+      <ol class="measure-objects">${objects.map(x => `<li>${x.subject ? "<strong>Subject:</strong> " : ""}${escape(x.name)}: ${escape(detailText(x.detail))}</li>`).join("")}</ol>
+      ${o.unlisted ? `<p class="hint">Other ${o.unlisted} objects counted but not listed.</p>` : ""}
+      <h4>Measurements</h4><ol class="measure-history">${measures.map(m => `<li>${escape(when(m.created_at))}, ${escape(m.model)}: crowding ${m.crowdedness}, detail ${m.detail}, ${m.objects} objects besides the subject${m.formula < MEASURE_FORMULA ? ", previous formula" : ""}</li>`).join("")}</ol>`;
   };
   const showDetail = (item: Item) => {
     open = item;
     const editable = item.status === "new" || item.status === "approved";
     const fields = FIELDS.filter(([key]) => item.origin === "REAL" ? key !== "prompt" && key !== "model"
       : !["title", "description", "source_url", "author", "license_name", "license_url"].includes(key));
-    detail.innerHTML = `<form method="dialog" class="library-detail-close"><button aria-label="Chiudi">×</button></form>
+    detail.innerHTML = `<form method="dialog" class="library-detail-close"><button aria-label="Close">×</button></form>
       <h2 id="library-detail-title">${escape(imageLabel(item))}</h2>
-      <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / originale ${item.width}×${item.height}${item.copy ? ` / copia di gioco WebP ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}: è ciò che vedranno i giocatori` : " / copia di gioco non pronta"}</p>
+      <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / original ${item.width}×${item.height}${item.copy ? ` / WebP game copy ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}: this is what players will see` : " / game copy not ready"}</p>
       ${sourceCheck(item)}
       ${overWarning(item)}
       <div class="library-detail-body"><div class="game-media-surface library-preview"><img data-game-media draggable="false" src="${escape(item.file)}" alt="${escape(imageLabel(item))}"></div>
       <div class="library-fields"><p>${statsLine(item)}</p>
-      <label>Galleria<select id="library-detail-gallery">${galleryOptions(galleries(), item.gallery_id)}</select></label>
-      ${item.in_play ? `<p class="hint">In ${item.in_play} ${item.in_play === 1 ? "partita" : "partite"} in corso: continuano con la versione con cui sono iniziate; le modifiche valgono dalle partite nuove.</p>` : ""}
-      ${item.status === "published" ? '<div class="db-edit-note"><p>«Modifica foto» apre i comandi di modifica e ritira la foto dalla pubblicazione. Le partite in corso mantengono la versione attuale.</p><button type="button" data-action="edit" class="primary">Modifica foto</button></div>' : ""}
-      ${item.status === "approved" ? '<p class="hint">Le modifiche si salvano subito e la foto resta approvata. Pubblicala quando hai finito.</p>' : ""}
-      ${item.no_derivatives ? '<p class="db-edit-note">Licenza senza opere derivate (ND): la copia di gioco è una versione modificata.</p>' : ""}
-      ${!item.copy && item.status === "new" ? '<p><button type="button" id="library-copy">Prepara la copia di gioco</button></p>' : ""}
-      ${editable ? '<p><button type="button" id="library-crop">Inquadratura</button></p>' : ""}
+      <label>Gallery<select id="library-detail-gallery">${galleryOptions(galleries(), item.gallery_id)}</select></label>
+      ${item.in_play ? `<p class="hint">In ${item.in_play} ${item.in_play === 1 ? "game" : "games"} in progress: they keep the version they started with; changes apply to new games.</p>` : ""}
+      ${item.status === "published" ? '<div class="db-edit-note"><p>“Edit photo” opens editing controls and unpublishes the photo. Games in progress keep the current version.</p><button type="button" data-action="edit" class="primary">Edit photo</button></div>' : ""}
+      ${item.status === "approved" ? '<p class="hint">Changes are saved immediately and the photo stays approved. Publish it when finished.</p>' : ""}
+      ${item.no_derivatives ? '<p class="db-edit-note">No derivatives (ND) license: the game copy is a modified version.</p>' : ""}
+      ${!item.copy && item.status === "new" ? '<p><button type="button" id="library-copy">Prepare game copy</button></p>' : ""}
+      ${editable ? '<p><button type="button" id="library-crop">Framing</button></p>' : ""}
       ${measuresBlock(item, editable)}
       ${measureBlock(item)}
-      ${ideasBlock(item)}
       ${item.origin === "REAL" ? item.visual_description ? visualDescription(item.visual_description)
-        : item.has_visual_description ? loading("Caricamento della descrizione visiva…")
-          : `<section class="editorial-description"><h3>Descrizione visiva</h3><p class="hint">Da generare.</p>${galleryList?.paid_calls && item.status !== "trash"
-            ? '<button type="button" id="library-describe-photo">Genera descrizione (1 chiamata)</button>' : ""}</section>` : ""}
+        : item.has_visual_description ? loading("Loading visual description…")
+          : `<section class="editorial-description"><h3>Visual description</h3><p class="hint">Not generated yet.</p>${galleryList?.paid_calls && item.status !== "trash"
+            ? '<button type="button" id="library-describe-photo">Generate description (1 call)</button>' : ""}</section>` : ""}
       ${fields.map(([key, label, max, area]) => `<label>${label}${area
         ? `<textarea data-field="${key}" maxlength="${max}" rows="3" ${editable ? "" : "readonly"}>${escape(item[key])}</textarea>`
         : `<input data-field="${key}" maxlength="${max}" value="${escape(item[key])}" ${editable ? "" : "readonly"}>`}</label>`).join("")}
-      ${editable && item.origin === "SLOP" ? '<p class="hint">Per rigenerare: cestina questa SLOP e avvia un nuovo processo nello studio, con conferma e valutazione.</p>' : ""}
-      <div class="library-actions">${item.status === "new" ? `${item.origin === "REAL" ? `<label><input type="checkbox" id="library-rights" ${item.rights_confirmed ? "checked" : ""}> Ho verificato diritti e licenza</label>` : ""}<button type="button" data-action="approve" class="primary">Approva</button>` : ""}
-        ${item.status === "approved" ? '<button type="button" data-action="publish" class="primary">Pubblica nel gioco</button>' : ""}
-        ${item.status === "published" ? '<button type="button" data-action="withdraw">Togli dalla pubblicazione</button><button type="button" data-action="remove">Elimina (nel cestino)</button>' : ""}
-        ${item.status === "trash" ? '<button type="button" data-action="restore">Ripristina</button><button type="button" data-action="delete" class="danger">Elimina definitivamente</button>'
-          : item.status !== "published" ? '<button type="button" data-action="trash">Elimina (nel cestino)</button>' : ""}</div>
+      ${editable && item.origin === "SLOP" ? '<p class="hint">To regenerate, move this SLOP to Trash and start a new job in the gallery pipeline.</p>' : ""}
+      <div class="library-actions">${item.status === "new" ? `${item.origin === "REAL" ? `<label><input type="checkbox" id="library-rights" ${item.rights_confirmed ? "checked" : ""}> I have checked rights and license</label>` : ""}<button type="button" data-action="approve" class="primary">Approve</button>` : ""}
+        ${item.status === "approved" ? '<button type="button" data-action="publish" class="primary">Publish to game</button>' : ""}
+        ${item.status === "published" ? '<button type="button" data-action="withdraw">Unpublish</button><button type="button" data-action="remove">Delete (move to Trash)</button>' : ""}
+        ${item.status === "trash" ? '<button type="button" data-action="restore">Restore</button><button type="button" data-action="delete" class="danger">Delete permanently</button>'
+          : item.status !== "published" ? '<button type="button" data-action="trash">Delete (move to Trash)</button>' : ""}</div>
       <p id="library-detail-message" role="status" aria-live="polite"></p></div></div>`;
     if (!detail.open) detail.showModal();
     markGameMedia(detail);
@@ -474,7 +451,7 @@ export async function showLibrary() {
       const item = open;
       try {
         const updated = await save(item, {gallery_id: gallery.value});
-        if (open?.id === updated.id) { showDetail(updated); detailMessage("Galleria aggiornata."); }
+        if (open?.id === updated.id) { showDetail(updated); detailMessage("Gallery updated."); }
         await load();
       } catch (error) {
         if (open?.id === item.id) { showDetail(open); detailMessage(String(error)); }
@@ -483,7 +460,7 @@ export async function showLibrary() {
     }
     const field = (event.target as HTMLElement).closest<HTMLInputElement | HTMLTextAreaElement>("[data-field]");
     if (!field || !open || field.readOnly) return;
-    try { open = await save(open, { [field.dataset.field!]: field.value }); showDetail(open); detailMessage("Salvato."); render(); }
+    try { open = await save(open, { [field.dataset.field!]: field.value }); showDetail(open); detailMessage("Saved."); render(); }
     catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
   });
   detail.addEventListener("click", async event => {
@@ -504,45 +481,45 @@ export async function showLibrary() {
         detailMessage(result);
       }
       else if (button.id === "library-measure") {
-        if (!window.confirm(`Misurare affollamento e dettaglio di «${imageLabel(open)}» con ${galleryList?.text_model || "il modello di testo"}? Una chiamata a pagamento, mai ripetuta in automatico.`)) return;
+        if (!window.confirm(`Measure crowding and detail for “${imageLabel(open)}” with ${galleryList?.text_model || "the text model"}? One paid call, never repeated automatically.`)) return;
         const item = open;
-        open = await withPhotoProcessing("Misuro affollamento e dettaglio…", () => call<Item>(`/${encodeURIComponent(item.id)}/measure`,
+        open = await withPhotoProcessing("Measuring crowding and detail…", () => call<Item>(`/${encodeURIComponent(item.id)}/measure`,
           { method: "POST", body: JSON.stringify({ confirm: true, request: crypto.randomUUID() }) }));
-        detailMessage("Misura salvata.");
+        detailMessage("Measurement saved.");
       }
       else if (button.id === "library-copy") {
         const item = open;
-        open = await withPhotoProcessing("Preparo la copia di gioco…", () => prepareItemCopy<Item>(item));
-        detailMessage("Copia di gioco pronta.");
+        open = await withPhotoProcessing("Preparing game copy…", () => prepareItemCopy<Item>(item));
+        detailMessage("Game copy ready.");
       }
       else if (button.id === "library-treatment-edit") {
         const choice = await chooseTreatment(open, imageLabel(open));
         if (!choice) return;
         const item = open;
-        open = await withPhotoProcessing("Applico il trattamento alla foto…", () => prepareItemCopy<Item>(item, undefined, choice));
-        detailMessage(choice.settings ? "Trattamento regolato salvato." : "Trattamento proposto salvato.");
+        open = await withPhotoProcessing("Applying treatment to photo…", () => prepareItemCopy<Item>(item, undefined, choice));
+        detailMessage(choice.settings ? "Adjusted treatment saved." : "Suggested treatment saved.");
       }
       else if (button.id.startsWith("library-treatment-")) {
         const off = button.id === "library-treatment-off";
         const item = open;
-        open = await withPhotoProcessing("Elaboro la copia di gioco…", () => prepareItemCopy<Item>(item, undefined, { off }));
-        detailMessage(open.treatment && !open.treatment.off ? "Copia trattata." : open.treatment ? "Copia senza trattamento." : "Misure della REAL di riferimento non disponibili: copia senza trattamento.");
+        open = await withPhotoProcessing("Processing game copy…", () => prepareItemCopy<Item>(item, undefined, { off }));
+        detailMessage(open.treatment && !open.treatment.off ? "Copy treated." : open.treatment ? "Copy without treatment." : "Reference REAL measurements unavailable: copy without treatment.");
       }
       else if (button.id === "library-crop") {
         const updated = await editFrame(open, imageLabel(open));
         if (!updated) return;
         open = updated;
-        detailMessage("Inquadratura salvata.");
+        detailMessage("Frame saved.");
       }
       else if (button.dataset.action === "delete") { await call("/" + encodeURIComponent(open.id), { method: "DELETE" }); detail.close(); open = null; }
       else if (button.dataset.action === "edit") {
         // Owner decision of 2026-11-11: the photo leaves publication as soon as the edit starts.
-        if (!window.confirm(`Modificare «${imageLabel(open)}»? Esce subito dalla pubblicazione e non entra in nuove partite; le partite in corso finiscono con la versione attuale. Finita la modifica resta approvata.`)) return;
+        if (!window.confirm(`Edit “${imageLabel(open)}”? It will be unpublished immediately; games in progress keep the current version. It stays approved after editing.`)) return;
         open = await call<Item>(`/${encodeURIComponent(open.id)}/withdraw`, { method: "POST", body: "{}" });
-        detailMessage("Modifica avviata: la foto non è più pubblicata.");
+        detailMessage("Editing started: the photo is no longer published.");
       }
       else if (button.dataset.action === "remove") {
-        if (!window.confirm(`Eliminare «${imageLabel(open)}»? Esce dalla pubblicazione e va nel cestino; le partite in corso finiscono con la versione attuale.`)) return;
+        if (!window.confirm(`Delete “${imageLabel(open)}”? It will be unpublished and moved to Trash; games in progress keep the current version.`)) return;
         open = await call<Item>(`/${encodeURIComponent(open.id)}/trash`, { method: "POST", body: "{}" });
       }
 
@@ -568,14 +545,14 @@ export async function showLibrary() {
       && chosen.some(item => item.status === "new" && item.origin === "REAL" && !item.rights_confirmed);
     const removing = chosen.filter(item => item.status === "published").length;
     const notes: string[] = [];
-    if (action === "trash" && removing) notes.push(`${removing} ${removing === 1 ? "immagine è pubblicata ed esce" : "immagini sono pubblicate ed escono"} subito dal gioco. Le partite in corso proseguono con la versione attuale.`);
-    if (action === "withdraw") notes.push(`${removing} ${removing === 1 ? "immagine pubblicata torna approvata ed esce" : "immagini pubblicate tornano approvate ed escono"} dal gioco. Le partite in corso proseguono con la versione attuale.`);
-    if (rights) notes.push("Confermi di aver verificato i diritti e la licenza delle REAL selezionate da approvare?");
-    if (notes.length && !window.confirm(notes.join("\n\n") + (rights ? "" : "\n\nContinuare?"))) return;
+    if (action === "trash" && removing) notes.push(`${removing} ${removing === 1 ? "image is published and will leave" : "images are published and will leave"} the game immediately. Games in progress keep the current version.`);
+    if (action === "withdraw") notes.push(`${removing} ${removing === 1 ? "published image will return to approved status and leave" : "published images will return to approved status and leave"} the game. Games in progress keep the current version.`);
+    if (rights) notes.push("Have you checked the rights and license of the selected REAL images to approve?");
+    if (notes.length && !window.confirm(notes.join("\n\n") + (rights ? "" : "\n\nContinue?"))) return;
 
     busy = true;
     selectionBar();
-    message("Aggiornamento…");
+    message("Updating…");
     try {
       const result = await bulkUpdate(action, ids, {
         ...(rights ? { rights_confirmed: true } : {}),
@@ -587,9 +564,9 @@ export async function showLibrary() {
       await Promise.allSettled([load(), refreshGalleries()]);
       if (filter.gallery !== scope) return;
       message(action === "delete"
-        ? `${result.deleted} eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} restano nel cestino perché in partite in corso.` : "")
-        : `${result.done} ${action === "gallery" ? "spostate" : "aggiornate"}.` +
-          (result.failed.length ? ` ${result.failed.length} operazioni non completate. ${[...new Set(result.failed.map(item => item.error))].join(" / ")}` : ""));
+        ? `${result.deleted} permanently deleted.` + (result.postponed ? ` ${result.postponed} remain in Trash because they are in games in progress.` : "")
+        : `${result.done} ${action === "gallery" ? "moved" : "updated"}.` +
+          (result.failed.length ? ` ${result.failed.length} operations failed. ${[...new Set(result.failed.map(item => item.error))].join(" / ")}` : ""));
     } catch (error) {
       if (filter.gallery === scope) { await load().catch(() => {}); report(error); }
     } finally { busy = false; syncSelection(); }
@@ -601,9 +578,9 @@ export async function showLibrary() {
     const chosen = items.filter(item => selected.has(item.id) && item.status !== "trash" && toMeasure(item));
     if (!chosen.length || busy) return;
     const already = items.filter(item => selected.has(item.id) && item.origin === "REAL" && !toMeasure(item)).length;
-    if (!window.confirm(`Misurare affollamento e dettaglio di ${chosen.length} REAL con ${galleryList?.text_model || "il modello di testo"}? ` +
-      `Massimo ${chosen.length} ${chosen.length === 1 ? "chiamata" : "chiamate"} a pagamento, una per foto, mai ripetute in automatico.` +
-      (already ? ` Le ${already} REAL già misurate restano escluse: si misurano di nuovo dal dettaglio.` : ""))) return;
+    if (!window.confirm(`Measure crowding and detail for ${chosen.length} REAL with ${galleryList?.text_model || "the text model"}? ` +
+      `Maximum ${chosen.length} paid ${chosen.length === 1 ? "call" : "calls"}, one per photo, never repeated automatically.` +
+      (already ? ` Le ${already} Previously measured REAL are excluded: measure them again from the detail view.` : ""))) return;
     const scope = filter.gallery;
     busy = true; selectionBar();
     let done = 0;
@@ -611,7 +588,7 @@ export async function showLibrary() {
     try {
       for (const [index, item] of chosen.entries()) {
         if (filter.gallery !== scope) break;
-        message(`Misuro ${index + 1} di ${chosen.length}…`);
+        message(`Measuring ${index + 1} of ${chosen.length}…`);
         try {
           await call(`/${encodeURIComponent(item.id)}/measure`, { method: "POST", body: JSON.stringify({ confirm: true, request: crypto.randomUUID() }) });
           done++; selected.delete(item.id);
@@ -625,7 +602,7 @@ export async function showLibrary() {
       busy = false;
       if (filter.gallery === scope) {
         await load().catch(report);
-        message(`${done} ${done === 1 ? "REAL misurata" : "REAL misurate"}.` + (failed.length ? ` Non misurate: ${failed.join(" / ")}` : ""));
+        message(`${done} ${done === 1 ? "REAL measured" : "REAL measured"}.` + (failed.length ? ` Not measured: ${failed.join(" / ")}` : ""));
       }
       syncSelection();
     }
@@ -636,7 +613,7 @@ export async function showLibrary() {
     try {
       const { images } = await call<{ images: { id: string; title: string }[] }>("/undescribed-reals?" + new URLSearchParams({ gallery: scope }));
       if (scope !== filter.gallery) return;
-      const result = images.length ? await describePhotos(images, scope, call<Item>) : "Tutte le REAL hanno una descrizione visiva.";
+      const result = images.length ? await describePhotos(images, scope, call<Item>) : "All REAL have a visual description.";
       if (scope === filter.gallery && result !== null) { await load().catch(report); message(result); }
     } catch (error) { if (scope === filter.gallery) report(error); }
     finally { busy = false; selectionBar(); }
@@ -647,7 +624,7 @@ export async function showLibrary() {
     try {
       const { images } = await call<{ images: IndexTarget[] }>("/real-index/pending?" + new URLSearchParams({ gallery: scope }));
       if (scope !== filter.gallery) return;
-      const result = images.length ? await indexRealPhotos(images, scope, call) : "Le descrizioni sono già indicizzate.";
+      const result = images.length ? await indexRealPhotos(images, scope, call) : "Descriptions are already indexed.";
       if (scope === filter.gallery && result !== null) { await load().catch(report); message(result); }
     } catch (error) { if (scope === filter.gallery) report(error); }
     finally { busy = false; selectionBar(); }
@@ -722,7 +699,7 @@ export async function showLibrary() {
     if (action === "measure") { await measureSelection(); return; }
     if (action === "gallery") {
       const options = galleryOptions(galleries().filter(g => g.id !== filter.gallery), "");
-      $<HTMLSelectElement>("#library-bulk-gallery").innerHTML = '<option value="">Scegli una galleria</option>' + options;
+      $<HTMLSelectElement>("#library-bulk-gallery").innerHTML = '<option value="">Choose a gallery</option>' + options;
       moveGallery.showModal();
       return;
     }
@@ -732,7 +709,7 @@ export async function showLibrary() {
     try {
       const result = await call<{ deleted: number; postponed: number }>("/trash/empty?" + new URLSearchParams({gallery: filter.gallery}), { method: "POST", body: "{}" });
       await load();
-      message(`${result.deleted} immagini eliminate definitivamente.` + (result.postponed ? ` ${result.postponed} restano nel cestino finché le partite o le generazioni in corso non finiscono.` : ""));
+      message(`${result.deleted} images permanently deleted.` + (result.postponed ? ` ${result.postponed} remain in Trash until active games or generations finish.` : ""));
     } catch (error) { report(error); }
     finally { busy = false; selectionBar(); }
   });
@@ -754,7 +731,7 @@ export async function showLibrary() {
   $<HTMLSelectElement>("#library-sort").value = sort.by; $<HTMLSelectElement>("#library-order").value = sort.order;
   // Model selectors: a model missing from the OpenAI project is shown but cannot be chosen.
   const renderModels = (m: Models) => {
-    const options = (list: ModelOption[], chosen: string) => list.map(o => `<option value="${escape(o.id)}"${o.id === chosen ? " selected" : ""}${o.available === false && o.id !== chosen ? " disabled" : ""}>${escape(o.id)}${o.shutdown ? ` (dismesso da OpenAI il ${new Date(o.shutdown).toLocaleDateString("it-IT")})` : ""}${o.available === false ? " (non disponibile nel progetto)" : ""}</option>`).join("");
+    const options = (list: ModelOption[], chosen: string) => list.map(o => `<option value="${escape(o.id)}"${o.id === chosen ? " selected" : ""}${o.available === false && o.id !== chosen ? " disabled" : ""}>${escape(o.id)}${o.shutdown ? ` (retired by OpenAI on ${new Date(o.shutdown).toLocaleDateString("en-GB")})` : ""}${o.available === false ? " (unavailable in this project)" : ""}</option>`).join("");
     $("#library-models-form [name=text_model]").innerHTML = options(m.text_models, m.text_model);
     $("#library-models-form [name=image_model]").innerHTML = options(m.image_models, m.image_model);
     $("#library-models-form [name=image_quality]").innerHTML = (m.image_models.find(o => o.id === m.image_model)?.qualities || [m.image_quality])
@@ -766,31 +743,31 @@ export async function showLibrary() {
     const field = event.target as HTMLSelectElement;
     try {
       models = await call<Models>("/models", { method: "PUT", body: JSON.stringify({ [field.name]: field.value }) }); renderModels(models);
-      settingsMessage(`${({ text_model: "Modello di testo", image_model: "Modello di immagini", image_quality: "Qualità delle immagini" } as Record<string, string>)[field.name]}: ${field.value}.`);
+      settingsMessage(`${({ text_model: "Text model", image_model: "Image model", image_quality: "Image quality" } as Record<string, string>)[field.name]}: ${field.value}.`);
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); await refreshModels(); }
   });
   // Model context: three texts, each saved as a new version; an old version can become the current one again.
   const CONTEXT_LABELS: Record<string, [string, string]> = {
-    base: ["Base comune", "Inviata in ogni chiamata: misure delle REAL, proposte di galleria, indicazioni SLOP proposte e valutazioni."],
-    real_ideas: ["Idee SLOP delle REAL", "Usato nel wizard «Genera SLOP» quando chiedi proposte al modello. Inviato insieme alla base, all’originale intero, a titolo e descrizione della fonte, a titolo e descrizione della galleria e all’ultima misura. Numero di idee, campi e regole sul riferimento restano fissati nel codice."],
-    real_measure: ["Misura delle REAL", "Inviato insieme alla base, all’originale intero e a titolo e descrizione della galleria. Elenco degli oggetti, riquadri e categorie di dettaglio restano fissati nel codice, come il calcolo di affollamento e dettaglio."],
-    slop_gallery_prompt: ["Premessa e prompt di galleria", "Inviato insieme alla base, all’originale intero, all’idea approvata della REAL e a titolo e descrizione della galleria."],
-    slop_evaluation: ["Valutazione delle SLOP", "Inviato insieme alla base a ogni valutazione di una candidata intera. Decisioni, tolleranza e formato della risposta restano fissati nel codice."],
+    base: ["Shared instructions", "Shared instructions for REAL descriptions, measurements and legacy model calls."],
+    real_ideas: ["Legacy REAL ideas", "Instructions retained for compatibility with the legacy proposal workflow."],
+    real_measure: ["REAL measurement", "Sent with shared instructions, the full original and the gallery title and description. Object lists, boxes, detail categories and score calculations are defined in code."],
+    slop_gallery_prompt: ["Legacy gallery premise and prompt", "Retained for legacy jobs. New scene planning uses gallery rules in the pipeline wizard."],
+    slop_evaluation: ["SLOP evaluation", "Used for legacy full-candidate evaluations. Current pipeline reviews use the gallery rules and fixed review instructions."],
   };
-  const when = (iso: string) => new Date(iso).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" });
+  const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" });
   let proposals = new Map<string, string>();
   const renderContexts = (state: ContextState) => {
     proposals = new Map(state.parts.filter(p => p.proposed).map(p => [p.part, p.proposed!]));
-    $("#library-contexts-body").innerHTML = state.parts.map(p => {
+    $("#library-contexts-body").innerHTML = state.parts.filter(p => p.part !== "real_ideas").map(p => {
       const [label, hint] = CONTEXT_LABELS[p.part] || [p.part, ""];
       return `<section class="library-context" data-context-part="${escape(p.part)}"><h3>${escape(label)}</h3><p class="hint">${escape(hint)}</p>
         <textarea data-context="${escape(p.part)}" rows="10" maxlength="${state.max}" spellcheck="true" aria-label="${escape(label)}">${escape(p.current.body)}</textarea>
         <small class="caption-count" data-context-count>${p.current.body.length}/${state.max}</small>
-        ${p.proposed ? `<p class="hint" data-context-proposal>È disponibile un testo proposto con l'aggiornamento dell'app. <button type="button" data-context-load="${escape(p.part)}">Carica nel campo</button> (diventa una versione solo se lo salvi).</p>` : ""}
-        <div class="library-inline"><button type="button" data-context-save="${escape(p.part)}">Salva nuova versione</button></div>
-        <details class="library-context-history"><summary>Versioni (${p.history.length})</summary><ol>${p.history.map((v, index) =>
-          `<li><span>${escape(when(v.created_at))}</span> / ${v.body.length} caratteri${index === 0 ? " / <strong>attuale</strong>" : ` <button type="button" data-context-restore="${escape(v.id)}">Ripristina</button>`}
-          <details><summary>Testo</summary><pre>${escape(v.body)}</pre></details></li>`).join("")}</ol></details></section>`;
+        ${p.proposed ? `<p class="hint" data-context-proposal>Updated default instructions are available. <button type="button" data-context-load="${escape(p.part)}">Load into field</button> (becomes a version only when saved).</p>` : ""}
+        <div class="library-inline"><button type="button" data-context-save="${escape(p.part)}">Save new version</button></div>
+        <details class="library-context-history"><summary>Versions (${p.history.length})</summary><ol>${p.history.map((v, index) =>
+          `<li><span>${escape(when(v.created_at))}</span> / ${v.body.length} characters${index === 0 ? " / <strong>current</strong>" : ` <button type="button" data-context-restore="${escape(v.id)}">Restore</button>`}
+          <details><summary>Text</summary><pre>${escape(v.body)}</pre></details></li>`).join("")}</ol></details></section>`;
     }).join("");
   };
   const refreshContexts = async () => renderContexts(await call<ContextState>("/contexts"));
@@ -805,7 +782,7 @@ export async function showLibrary() {
       const field = $<HTMLTextAreaElement>(`[data-context="${load.dataset.contextLoad}"]`);
       field.value = proposals.get(load.dataset.contextLoad!) || field.value;
       field.dispatchEvent(new Event("input", { bubbles: true }));
-      settingsMessage("Testo proposto caricato: controllalo e salvalo per renderlo attivo.");
+      settingsMessage("Suggested text loaded: review and save it to activate it.");
       return;
     }
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-context-save],[data-context-restore]");
@@ -815,10 +792,10 @@ export async function showLibrary() {
         const part = button.dataset.contextSave;
         const text = $<HTMLTextAreaElement>(`[data-context="${part}"]`).value;
         renderContexts(await call<ContextState>("/contexts", { method: "POST", body: JSON.stringify({ part, body: text }) }));
-        settingsMessage(`${CONTEXT_LABELS[part]?.[0] || part}: versione salvata.`);
-      } else if (window.confirm("Ripristinare questa versione? Diventa la versione attuale; quella di oggi resta tra le versioni.")) {
+        settingsMessage(`${CONTEXT_LABELS[part]?.[0] || part}: version saved.`);
+      } else if (window.confirm("Restore this version? It becomes current; today’s version remains in history.")) {
         renderContexts(await call<ContextState>("/contexts/restore", { method: "POST", body: JSON.stringify({ id: button.dataset.contextRestore }) }));
-        settingsMessage("Versione ripristinata.");
+        settingsMessage("Version restored.");
       }
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
@@ -841,40 +818,40 @@ export async function showLibrary() {
       settingsMessage(done); await Promise.all([autoBox.refresh(), after()]);
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
-  numbersForm("#library-thresholds-form", ["max_generation_attempts", "editorial_tolerance"], "Soglie della generazione SLOP salvate.");
-  numbersForm("#library-games-form", ["open_game_hours"], "Durata massima di una partita aperta salvata.");
-  numbersForm("#library-sources-form", ["commons_checks_per_night"], "Numero di REAL controllate ogni notte salvato.");
-  numbersForm("#library-measures-form", ["crowdedness_threshold", "detail_threshold"], "Soglie predefinite di affollamento e dettaglio salvate.", refreshGalleries);
+  numbersForm("#library-thresholds-form", ["max_generation_attempts", "editorial_tolerance"], "Legacy SLOP generation settings saved.");
+  numbersForm("#library-games-form", ["open_game_hours"], "Maximum open game duration saved.");
+  numbersForm("#library-sources-form", ["commons_checks_per_night"], "Nightly REAL check count saved.");
+  numbersForm("#library-measures-form", ["crowdedness_threshold", "detail_threshold"], "Default crowding and detail thresholds saved.", refreshGalleries);
   statsView = mountStats($<HTMLElement>("#stats-body"), period => call<Stats>("/stats?" + new URLSearchParams({ period })));
   // Leaderboard: check a code, hide or show an entry.
   interface Entry { id: string; nickname: string; level_label: string; score: number; photos: number; balanced_accuracy: number; hidden: boolean; created_at: string }
-  const entryLine = (e: Entry) => `${escape(e.nickname)} / ${escape(e.level_label)} / ${e.score.toLocaleString("it-IT", { minimumFractionDigits: 1 })} punti / ${Math.round(e.balanced_accuracy * 100)}% / ${escape(when(e.created_at))}${e.hidden ? " / <strong>nascosta</strong>" : ""}`;
+  const entryLine = (e: Entry) => `${escape(e.nickname)} / ${escape(e.level_label)} / ${e.score.toLocaleString("en-GB", { minimumFractionDigits: 1 })} points / ${Math.round(e.balanced_accuracy * 100)}% / ${escape(when(e.created_at))}${e.hidden ? " / <strong>hidden</strong>" : ""}`;
   const leaderboardCall = async <T>(path: string, init: RequestInit = {}) => {
     const response = await fetch("/api/admin/leaderboard" + path, { credentials: "same-origin", ...init, headers: { "Content-Type": "application/json" } });
     const data = await response.json().catch(() => ({})) as T & { error?: string };
-    if (!response.ok) throw Error(data.error || "Connessione non disponibile");
+    if (!response.ok) throw Error(data.error || "Connection unavailable");
     return data;
   };
   const refreshEntries = async () => {
     const { entries } = await leaderboardCall<{ entries: Entry[] }>("");
-    $("#library-entries").innerHTML = entries.map(e => `<li data-entry="${escape(e.id)}">${entryLine(e)} <button type="button" data-entry-hide="${escape(e.id)}" data-hidden="${!e.hidden}">${e.hidden ? "Mostra" : "Nascondi"}</button> <button type="button" class="danger" data-entry-delete="${escape(e.id)}">Cancella</button></li>`).join("") || "<li>Nessuna voce.</li>";
+    $("#library-entries").innerHTML = entries.map(e => `<li data-entry="${escape(e.id)}">${entryLine(e)} <button type="button" data-entry-hide="${escape(e.id)}" data-hidden="${!e.hidden}">${e.hidden ? "Show" : "Hide"}</button> <button type="button" class="danger" data-entry-delete="${escape(e.id)}">Delete</button></li>`).join("") || "<li>No entries.</li>";
   };
   $("#library-code").addEventListener("submit", async event => {
     event.preventDefault();
     const code = String(new FormData(event.target as HTMLFormElement).get("code") || "");
     try {
       const result = await leaderboardCall<{ found: boolean; entry: Entry | null }>("?" + new URLSearchParams({ code }));
-      $("#library-code-result").innerHTML = result.entry ? "Codice valido: " + entryLine(result.entry) + ` <button type="button" class="danger" data-entry-delete="${escape(result.entry.id)}">Cancella</button>` : "Nessuna partita con questo codice.";
+      $("#library-code-result").innerHTML = result.entry ? "Valid code: " + entryLine(result.entry) + ` <button type="button" class="danger" data-entry-delete="${escape(result.entry.id)}">Delete</button>` : "No game matches this code.";
     } catch (error) { $("#library-code-result").textContent = String(error instanceof Error ? error.message : error); }
   });
   // Deleting an entry for good, for example when a player shows the code and asks for it (privacy notice).
   $("#library-leaderboard").addEventListener("click", async event => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-entry-delete]");
     if (!button) return;
-    if (!window.confirm("Cancellare definitivamente questa voce della classifica? Non si può annullare.")) return;
+    if (!window.confirm("Permanently delete this leaderboard entry? This cannot be undone.")) return;
     try {
       await leaderboardCall("/" + encodeURIComponent(button.dataset.entryDelete!), { method: "DELETE" });
-      $("#library-code-result").textContent = "Voce cancellata.";
+      $("#library-code-result").textContent = "Entry deleted.";
       await refreshEntries();
     } catch (error) { settingsMessage(String(error instanceof Error ? error.message : error)); }
   });
@@ -901,7 +878,7 @@ export async function showLibrary() {
     unindexed = 0;
     nextPage = null;
     render();
-    $("#library-grid").innerHTML = `<li class="library-grid-loading">${loading("Caricamento delle immagini…")}</li>`;
+    $("#library-grid").innerHTML = `<li class="library-grid-loading">${loading("Loading images…")}</li>`;
     $("#library-counts").textContent = "";
     $("#library-empty-trash").hidden = true;
     message("");
@@ -911,7 +888,7 @@ export async function showLibrary() {
   };
   const openGallery = async (id: string, batch = "") => {
     const gallery = galleries().find(g => g.id === id);
-    if (!gallery) throw Error("Galleria non disponibile.");
+    if (!gallery) throw Error("Gallery unavailable.");
     if (filter.gallery !== id || filter.batch !== batch) resetGallery(id, batch);
     $("#gallery-title").textContent = gallery.title;
     $<HTMLAnchorElement>("#gallery-upload-link").href = galleryWizardPath(id, "real");
@@ -941,15 +918,12 @@ export async function showLibrary() {
     closeGallery();
   });
   const activeBatch = $<HTMLAnchorElement>("#gallery-active-batch");
-  const autoBox = mountSlopAuto($("#slop-auto"), null, "", {
-    changed: async () => { await Promise.allSettled([load(), refreshGalleries()]); },
-    indicator: gallery => {
-      activeBatch.hidden = !gallery;
-      if (gallery) {
-        activeBatch.href = galleryWizardPath(gallery.id, "slop");
-        activeBatch.textContent = `Batch SLOP in corso: ${gallery.title}`;
-      }
-    },
+  const autoBox = mountDatasetBalance($("#slop-auto"), gallery => {
+    activeBatch.hidden = !gallery;
+    if (gallery) {
+      activeBatch.href = galleryWizardPath(gallery.id, "slop");
+      activeBatch.textContent = `Legacy SLOP batch in progress: ${gallery.title}`;
+    }
   });
   const restoreGallery = async () => {
     await refreshGalleries();
@@ -962,7 +936,7 @@ export async function showLibrary() {
       closeGallery();
       const status = $("#gallery-navigation-status");
       status.hidden = false;
-      status.textContent = "Galleria non disponibile.";
+      status.textContent = "Gallery unavailable.";
       history.replaceState(history.state, "", "/admin");
     }
   };

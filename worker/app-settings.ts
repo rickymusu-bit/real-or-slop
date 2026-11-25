@@ -31,14 +31,14 @@ export async function numberSetting(env: Env, key: NumberSetting) { return (awai
 export async function settingsRoute(env: Env, method: string, data: Record<string, unknown>) {
   const view = async () => ({ values: await numberSettings(env), limits: LIMITS });
   if (method === "GET") return view();
-  if (method !== "PUT") throw new HttpError(405, "Metodo non consentito");
+  if (method !== "PUT") throw new HttpError(405, "Method not allowed");
   const keys = Object.keys(data);
-  if (!keys.length || keys.some(k => !(KEYS as string[]).includes(k))) throw new HttpError(400, "Campi non previsti");
+  if (!keys.length || keys.some(k => !(KEYS as string[]).includes(k))) throw new HttpError(400, "Unexpected fields");
   const stamp = new Date().toISOString(), writes = [];
   for (const key of keys as NumberSetting[]) {
     const value = data[key], limit = LIMITS[key];
     if (typeof value !== "number" || !Number.isInteger(value) || value < limit.min || value > limit.max)
-      throw new HttpError(400, `Valore da ${limit.min} a ${limit.max}`);
+      throw new HttpError(400, `Value from ${limit.min} to ${limit.max}`);
     writes.push(env.DB.prepare("INSERT INTO app_settings(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at")
       .bind(key, String(value), stamp));
   }

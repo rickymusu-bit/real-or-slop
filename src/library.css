@@ -86,10 +86,3 @@ button.danger { color: #ff8a80; border-color: #ff8a80; }
 .measure-figure figcaption { padding-top: 4px; }
 .measure-objects, .measure-history { margin: 4px 0 0; padding-left: 22px; font-size: 14px; display: grid; gap: 2px; }
 /* Ideas of falsification of a REAL (specification `generazione-slop`, section 2). */
-.library-ideas { display: grid; gap: 6px; padding-top: 6px; border-top: 1px solid var(--hairline, #444); }
-.library-ideas h3 { margin: 0; font-size: 16px; }
-.library-ideas p { margin: 0; }
-.library-idea-list { margin: 0; padding-left: 22px; display: grid; gap: 12px; }
-.library-idea-list li { display: grid; gap: 6px; }
-.library-idea-list li > .badge { justify-self: start; }
-.badge-idea-approved { color: var(--real); } .badge-idea-review { color: #f0b04a; } .badge-idea-used, .badge-idea-proposed { color: var(--muted); }

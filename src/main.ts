@@ -27,6 +27,21 @@ const links = [["/gioca", "Gioca"]];
 export const content = () => document.querySelector<HTMLElement>("#content")!;
 function shell() {
   root.innerHTML = `<a class="skip-link" href="#content">Salta al contenuto</a><header><a class="brand" href="/" aria-label="REAL or SLOP, inizio"><span class="brand-real">REAL</span><span class="brand-or">or</span><span class="brand-slop">SLOP</span></a><nav aria-label="Principale">${links.map(([url, label]) => `<a href="${url}" ${location.pathname === url ? 'aria-current="page"' : ""}>${label}</a>`).join("")}<a href="/informazioni" class="nav-info" aria-label="Informazioni">?</a></nav></header><main id="content" tabindex="-1"></main><footer><span>Guarda meglio. Metti tutto in dubbio.</span><div><a href="/informazioni">Come funziona</a><a href="/privacy">Privacy e cookie</a><a href="/termini">Termini d’uso</a><a href="/crediti">Fonti e crediti</a><span class="demo-dot">${publicDemo ? "Demo sintetica" : "Catalogo verificato"}</span></div></footer>`;
+  const isAdmin = location.pathname === "/admin" || location.pathname.startsWith("/admin/");
+  document.documentElement.lang = isAdmin ? "en" : "it";
+  if (isAdmin) {
+    document.title = "Admin · REAL or SLOP";
+    root.querySelector(".skip-link")!.textContent = "Skip to content";
+    root.querySelector(".brand")!.setAttribute("aria-label", "REAL or SLOP, home");
+    root.querySelector("header nav")!.setAttribute("aria-label", "Main navigation");
+    root.querySelector('header a[href="/gioca"]')!.textContent = "Play";
+    root.querySelector(".nav-info")!.setAttribute("aria-label", "Information");
+    root.querySelector("footer > span")!.textContent = "Look closer. Question everything.";
+    for (const [href, label] of [["/informazioni", "How it works"], ["/privacy", "Privacy and cookies"], ["/termini", "Terms of use"], ["/crediti", "Sources and credits"]])
+      root.querySelector(`footer a[href="${href}"]`)!.textContent = label;
+    root.querySelector(".demo-dot")!.textContent = "Verified catalog";
+  }
+
 }
 const arrow = '<svg class="arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 16 16 4M4 4h12v12"/></svg>';
 const mosaic = () => `<figure class="gallery-preview"><figcaption><span>STUDI SINTETICI</span><span>001 — 002</span></figcaption><div class="diptych" aria-hidden="true"><div class="art art-one"><span class="sun"></span><div class="ridge r1"></div><div class="ridge r2"></div><div class="ridge r3"></div></div><div class="art art-two"><div class="orb"></div></div></div><p>${publicDemo ? "Illustrazioni originali della demo. Nessuna fotografia verificata." : "Studi decorativi: non sono immagini del catalogo."}</p></figure>`;

@@ -1,11 +1,13 @@
-# Generazione SLOP — specifica 17.0.0
+# Generazione SLOP — specifica 17.1.0
 
-Aggiornata: 2026-11-25T20:45:04Z. Stato: implementata nel ramo 1.60.0, da rilasciare.
+Aggiornata: 2026-11-25T22:45:40Z. Stato: implementata nel ramo 1.61.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
 Schema vettoriale in `docs/assets/pipeline-slop.svg`, sorgente Graphviz in `docs/assets/pipeline-slop.dot`; copia pubblica
 identica in `public/docs/pipeline-slop.svg`, collegata dal wizard.
+
+Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
 ## 1. Obiettivo e stato dell'implementazione
 
@@ -252,3 +254,7 @@ tecnico e non la sola REAL di partenza. Senza misure pertinenti non si inventa u
 La calibrazione è una stima iniziale esplicita, rivedibile dall'owner, da validare sulla galleria completa. Non viene promessa
 l'indistinguibilità dei dataset né la rilevazione di ogni errore hardware. Le combinazioni e le ricorrenze visive richiedono
 revisione. I test software usano modelli simulati; l'esecuzione sull'intera galleria reale richiede le conferme nella dashboard.
+
+## Lingua del wizard (1.61.0)
+
+Wizard, schema, assi e parametri sono in inglese. Anche valutazione, difetti, incertezze, benefici, rischi e istruzioni di correzione vengono richiesti in inglese, con precedenza su eventuali indicazioni linguistiche del contesto salvato. Il generatore non traduce le scritte originali citate come osservazioni. Le vecchie proposte non compaiono più sulle REAL.

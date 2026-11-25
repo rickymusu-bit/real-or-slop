@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
-import { DEFAULTS } from "../worker/model-context";
+const DEFAULTS: Record<string, string> = JSON.parse(readFileSync("tests/fixtures/legacy-model-contexts.json", "utf8"));
 
 const MIGRATION = "migrations/0066_remove_editorial_description.sql";
 const RETIRED = ["real_description", "real_description_provenance", "commons_description", "analysis_status", "analysis_error",

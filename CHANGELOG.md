@@ -1,7 +1,14 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-25T20:45:04Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-25T22:45:40Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.61.0 — 2026-11-25T22:45:40Z
+
+- Admin in inglese: gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema.
+- Rimosse le proposte SLOP obsolete dal dettaglio delle REAL e il vecchio wizard browser delle proposte; recupero delle lavorazioni precedenti conservato.
+- Nuove descrizioni, misure e valutazioni in inglese. Migrazione 0075 per i contesti standard; testi personalizzati e cronologia conservati. Nessuna chiamata reale o rigenerazione per il cambio lingua.
+- Verifiche con OpenAI simulato, incluse navigazione inglese e assenza delle vecchie proposte su desktop e mobile.
 
 ## 1.60.0 — 2026-11-25T20:45:04Z
 

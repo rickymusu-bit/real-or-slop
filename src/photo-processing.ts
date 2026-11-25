@@ -4,7 +4,7 @@ import "./admin-loading.css";
 export async function withPhotoProcessing<T>(message: string, operation: (setMessage: (value: string) => void) => Promise<T>): Promise<T> {
   const dialog = document.createElement("dialog");
   dialog.className = "photo-processing";
-  dialog.setAttribute("aria-label", "Elaborazione foto");
+  dialog.setAttribute("aria-label", "Processing photo");
   const status = document.createElement("p");
   status.className = "admin-loading";
   status.setAttribute("role", "status");

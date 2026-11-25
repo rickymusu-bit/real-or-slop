@@ -1,4 +1,4 @@
-"""«Statistiche» and Settings through the API: quality beside the models, thresholds, hours of an open game, games now and
+"""«Statistics» and Settings through the API: quality beside the models, thresholds, hours of an open game, games now and
 open, games and answers of the period, paid calls, balance of the catalogue with formats. Seeds rows in the local D1."""
 from local_db import sql
 import json

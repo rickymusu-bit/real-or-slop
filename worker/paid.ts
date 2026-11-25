@@ -5,11 +5,11 @@ export class PaidError extends HttpError {
 }
 export async function paid(env: Env, kind: "analysis" | "prompts" | "images" | "evaluation", model: string, body: unknown,
   links: { process?: string; attempt?: string; image?: string; request?: string; endpoint?: "embeddings" | "images/edits" } = {}): Promise<Record<string, unknown>> {
-  if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
+  if (!env.OPENAI_API_KEY) throw new HttpError(503, "Missing OpenAI key");
   const callId = links.request ?? id(), stamp = new Date().toISOString();
   const claim = await env.DB.prepare(`INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,process_id,attempt_id,image_id)
     VALUES(?,?,?,'pending',?,?,?,?,?) ON CONFLICT(id) DO NOTHING`).bind(callId, kind, model, stamp, stamp, links.process ?? null, links.attempt ?? null, links.image ?? null).run();
-  if (!claim.meta.changes) throw new HttpError(409, "Richiesta già registrata: nessuna chiamata ripetuta");
+  if (!claim.meta.changes) throw new HttpError(409, "Request already recorded: no calls repeated");
   const settle = (status: string, usage: { input_tokens?: number; output_tokens?: number } = {}) =>
     env.DB.prepare("UPDATE paid_calls SET status=?,input_tokens=?,output_tokens=?,updated_at=? WHERE id=?")
       .bind(status, usage.input_tokens ?? null, usage.output_tokens ?? null, new Date().toISOString(), callId).run();
@@ -23,7 +23,7 @@ export async function paid(env: Env, kind: "analysis" | "prompts" | "images" | "
     });
   } catch {
     await settle("uncertain");
-    throw new PaidError("Esito incerto: la chiamata potrebbe essere stata addebitata. Non è stata ripetuta", "uncertain");
+    throw new PaidError("Uncertain outcome: the call may have been charged. It was not repeated", "uncertain");
   }
   if (!response.ok) {
     const detail = await response.json().catch(() => ({})) as { error?: { code?: string; type?: string } };
@@ -31,13 +31,13 @@ export async function paid(env: Env, kind: "analysis" | "prompts" | "images" | "
     const outcome = response.status >= 400 && response.status < 500 ? "failed" : "uncertain";
     await settle(outcome);
     throw new PaidError(response.status === 401 || response.status === 403 || response.status === 429
-      ? "OpenAI: chiave, credito o limite di richieste. Controlla platform.openai.com"
-      : /moderation|safety|content_policy/.test(code) ? "Il generatore ha rifiutato il prompt per le sue regole d'uso"
-        : outcome === "uncertain" ? "Esito incerto del modello: non ripetuto automaticamente" : `Il modello ha rifiutato la richiesta (${response.status})`, outcome);
+      ? "OpenAI: key, credit or request limit. Check platform.openai.com"
+      : /moderation|safety|content_policy/.test(code) ? "The generator rejected the prompt under its usage rules"
+        : outcome === "uncertain" ? "Uncertain model outcome: not retried automatically" : `The model rejected the request (${response.status})`, outcome);
   }
   let payload: Record<string, unknown>;
   try { payload = await response.json() as Record<string, unknown>; }
-  catch { await settle("uncertain"); throw new PaidError("Risposta interrotta: esito incerto, non ripetuto", "uncertain"); }
+  catch { await settle("uncertain"); throw new PaidError("Response interrupted: uncertain outcome, not repeated", "uncertain"); }
   const usage = (payload.usage || {}) as { input_tokens?: number; output_tokens?: number; prompt_tokens?: number };
   await settle("completed", { input_tokens: usage.input_tokens ?? usage.prompt_tokens, output_tokens: usage.output_tokens });
   return payload;
@@ -45,5 +45,5 @@ export async function paid(env: Env, kind: "analysis" | "prompts" | "images" | "
 export function responseJson(payload: Record<string, unknown>): unknown {
   const output = payload.output as { content?: { type?: string; text?: string }[] }[] | undefined;
   try { return JSON.parse((output || []).flatMap(o => o.content || []).filter(c => c.type === "output_text").map(c => c.text || "").join("")); }
-  catch { throw new HttpError(502, "Risposta del modello non leggibile"); }
+  catch { throw new HttpError(502, "Unreadable model response"); }
 }
