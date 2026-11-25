@@ -748,11 +748,11 @@ export async function showLibrary() {
   });
   // Model context: three texts, each saved as a new version; an old version can become the current one again.
   const CONTEXT_LABELS: Record<string, [string, string]> = {
-    base: ["Shared instructions", "Sent with REAL descriptions, measurements, scene planning and evaluations."],
+    base: ["Shared instructions", "Shared instructions for REAL descriptions, measurements and legacy model calls."],
     real_ideas: ["Legacy REAL ideas", "Instructions retained for compatibility with the legacy proposal workflow."],
     real_measure: ["REAL measurement", "Sent with shared instructions, the full original and the gallery title and description. Object lists, boxes, detail categories and score calculations are defined in code."],
     slop_gallery_prompt: ["Legacy gallery premise and prompt", "Retained for legacy jobs. New scene planning uses gallery rules in the pipeline wizard."],
-    slop_evaluation: ["SLOP evaluation", "Sent with shared instructions when evaluating a full candidate. Response formats and validation are defined in code."],
+    slop_evaluation: ["SLOP evaluation", "Used for legacy full-candidate evaluations. Current pipeline reviews use the gallery rules and fixed review instructions."],
   };
   const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" });
   let proposals = new Map<string, string>();

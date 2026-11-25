@@ -203,7 +203,7 @@ assert len(sent) == 1 and body['text']['format']['name'] == 'real_ideas' and bod
 given = json.loads(body['input'][0]['content'][0]['text'])
 assert given['ideas_wanted'] == 3 and given['existing_ideas'] == [] and given['levels'] is None, given
 assert given['reference'] == {'title': 'Game Boy per le idee di falsificazione', 'description': ''} and given['gallery'] == {'title': 'Test analysis', 'description': ''}, given
-assert 'non viene copiata' in body['instructions'] and 'People inventate' in body['instructions']
+assert 'never copied' in body['instructions'] and 'Invent any people' in body['instructions']
 assert sql("SELECT count(*) AS n FROM paid_calls WHERE kind='prompts'")[0]['n'] == calls_before + 1
 first, second = item['ideas']
 for wrong in ({}, {'idea': ''}, {'approve': False}, {'other': 1}, {'idea': 'x' * 601}, {'genre': 'x' * 161}):
