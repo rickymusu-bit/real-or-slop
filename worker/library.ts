@@ -50,27 +50,27 @@ const TEXT_FIELDS: Record<string, number> = { title: 200, description: 1000, sou
   author: 300, license_name: 200, license_url: 1000, prompt: 24000, model: 100 };
 
 function text(value: unknown, field: string, required = false): string {
-  if (value === undefined || value === null) { if (required) throw new HttpError(400, "Campo obbligatorio: " + field); return ""; }
-  if (typeof value !== "string") throw new HttpError(400, "Campo non valido: " + field);
+  if (value === undefined || value === null) { if (required) throw new HttpError(400, "Required field: " + field); return ""; }
+  if (typeof value !== "string") throw new HttpError(400, "Invalid field: " + field);
   // Control characters out, except tab and line breaks.
   const clean = [...value.normalize("NFC")].filter(ch => { const c = ch.charCodeAt(0); return c === 9 || c === 10 || c === 13 || (c >= 32 && c !== 127); }).join("").trim();
-  if (clean.length > TEXT_FIELDS[field]) throw new HttpError(400, `Campo «${field}» oltre ${TEXT_FIELDS[field]} caratteri`);
-  if (required && !clean) throw new HttpError(400, "Campo obbligatorio: " + field);
+  if (clean.length > TEXT_FIELDS[field]) throw new HttpError(400, `Field “${field}” exceeds ${TEXT_FIELDS[field]} characters`);
+  if (required && !clean) throw new HttpError(400, "Required field: " + field);
   if ((field === "source_url" || field === "license_url") && clean && !/^https:\/\/[^\s]+$/.test(clean))
-    throw new HttpError(400, "Indirizzo HTTPS richiesto: " + field);
+    throw new HttpError(400, "HTTPS URL required: " + field);
   return clean;
 }
 function origin(value: unknown): Origin {
-  if (value !== "REAL" && value !== "SLOP") throw new HttpError(400, "Origine REAL o SLOP richiesta");
+  if (value !== "REAL" && value !== "SLOP") throw new HttpError(400, "REAL or SLOP origin required");
   return value;
 }
 function imageId(value: string): string {
-  if (!/^[\w-]{1,64}$/.test(value)) throw new HttpError(400, "Immagine non valida");
+  if (!/^[\w-]{1,64}$/.test(value)) throw new HttpError(400, "Invalid image");
   return value;
 }
 export async function find(env: Env, imageIdValue: string): Promise<Row> {
   const row = await env.DB.prepare("SELECT * FROM images WHERE id=?").bind(imageIdValue).first<Row>();
-  if (!row) throw new HttpError(404, "Immagine non trovata");
+  if (!row) throw new HttpError(404, "Image not found");
   return row;
 }
 /** The crop of the copy, or null for a copy of an earlier recipe (4:5, or before migration 0042): to be made again. */
@@ -124,18 +124,18 @@ export async function viewOf(env: Env, imageIdValue: string) {
 export async function create(env: Env, input: { origin: Origin; title?: string; description?: string; bytes: ArrayBuffer;
   source_url?: string; author?: string; license_name?: string; license_url?: string; prompt?: string; model?: string;
   gallery_id: string; generation?: { batch: string; slot: unknown; quality: string } }) {
-  if (!env.QUARANTINE) throw new HttpError(503, "Quarantena privata non configurata");
+  if (!env.QUARANTINE) throw new HttpError(503, "Private quarantine not configured");
   const bytes = new Uint8Array(input.bytes);
-  if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new HttpError(413, "File vuoto o oltre 12 MB");
+  if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new HttpError(413, "File empty or larger than 12 MB");
   const mime = imageMime(bytes);
-  if (!mime) throw new HttpError(415, "Usare JPEG, PNG o WebP");
+  if (!mime) throw new HttpError(415, "Use JPEG, PNG or WebP");
   let geometry;
-  try { geometry = imageGeometry(bytes); } catch { throw new HttpError(415, "Immagine non leggibile"); }
+  try { geometry = imageGeometry(bytes); } catch { throw new HttpError(415, "Unreadable image"); }
   const width = geometry.width ?? geometry.encoded_width, height = geometry.height ?? geometry.encoded_height;
-  if (width * height > MAX_PIXELS) throw new HttpError(413, "Immagine oltre 32 megapixel");
+  if (width * height > MAX_PIXELS) throw new HttpError(413, "Image exceeds 32 megapixels");
   const hash = await sha256(bytes);
   const twin = await env.DB.prepare("SELECT id,origin,status,title FROM images WHERE original_sha256=?").bind(hash).first<{ id: string; origin: Origin; status: string; title: string | null }>();
-  if (twin) throw new HttpError(409, twin.status === "trash" ? `È già nel cestino come «${imageLabel(twin)}»: ripristinala` : `È già nella libreria come «${imageLabel(twin)}»`);
+  if (twin) throw new HttpError(409, twin.status === "trash" ? `Already in Trash as “${imageLabel(twin)}”: restore it` : `Already in the library as “${imageLabel(twin)}»`);
   const imageIdValue = id(), key = `library/${imageIdValue}/original`, stamp = now();
   await env.QUARANTINE.put(key, bytes, { httpMetadata: { contentType: mime }, customMetadata: { sha256: hash } });
   try {
@@ -154,7 +154,7 @@ export async function create(env: Env, input: { origin: Origin; title?: string; 
   } catch (error) {
     await env.QUARANTINE.delete(key);
     if (error instanceof HttpError) throw error;
-    throw new HttpError(409, "Immagine già presente o caricamento concorrente");
+    throw new HttpError(409, "Image already exists or a concurrent import is in progress");
   }
   return viewOf(env, imageIdValue);
 }
@@ -172,41 +172,41 @@ const treatmentKey = (t: ReturnType<typeof validTreatment>) =>
  * old one, which leaves the quarantine; the image keeps its state (owner decision of 2026-11-11 on edits). Its statistics restart.
  * The same crop and treatment are «already prepared», unless «force» asks to store the new bytes (a copy of an earlier recipe). */
 async function storeCopy(request: Request, env: Env, row: Row) {
-  if (!env.QUARANTINE) throw new HttpError(503, "Quarantena privata non configurata");
+  if (!env.QUARANTINE) throw new HttpError(503, "Private quarantine not configured");
   if (row.status !== "new" && row.status !== "approved") throw new HttpError(409, row.status === "published"
-    ? "Immagine pubblicata: avvia la modifica, che la ritira dal gioco" : "Immagine nel cestino: ripristinala per cambiarne la copia");
+    ? "Published image: start editing to withdraw it from the game" : "Image in Trash: restore it to change the copy");
   const query = new URL(request.url).searchParams, asked = query.get("crop"), force = query.get("force") === "1";
   let crop;
-  try { crop = asked === null ? centredCrop(row.width, row.height) : parseCrop(asked); } catch { throw new HttpError(400, "Immagine troppo piccola per una copia di gioco"); }
+  try { crop = asked === null ? centredCrop(row.width, row.height) : parseCrop(asked); } catch { throw new HttpError(400, "Image too small for a game copy"); }
   const invalid = cropError(row.width, row.height, crop);
-  if (!crop || crop.format !== "4:5" || invalid) throw new HttpError(400, invalid || "Copia di gioco richiesta in 4:5");
+  if (!crop || crop.format !== "4:5" || invalid) throw new HttpError(400, invalid || "Game copy must be 4:5");
   // Measures of the copy and, for a SLOP, its treatment (spec `copie-di-gioco`, section 4), sent by the browser in headers.
   const metricsHeader = request.headers.get("X-Copy-Metrics"), treatmentHeader = request.headers.get("X-Copy-Treatment");
   const readJson = (value: string | null) => { try { return value && value.length <= 4000 ? JSON.parse(value) : undefined; } catch { return undefined; } };
   const metrics = metricsHeader === null ? null : validMetrics(readJson(metricsHeader));
-  if (metricsHeader !== null && !metrics) throw new HttpError(400, "Misure della copia non valide");
+  if (metricsHeader !== null && !metrics) throw new HttpError(400, "Invalid copy measurements");
   const treatment = treatmentHeader === null ? null : validTreatment(readJson(treatmentHeader));
-  if (treatmentHeader !== null && !treatment) throw new HttpError(400, "Trattamento non valido");
-  if (treatment && row.origin !== "SLOP") throw new HttpError(400, "Il trattamento vale solo per le SLOP");
+  if (treatmentHeader !== null && !treatment) throw new HttpError(400, "Invalid treatment");
+  if (treatment && row.origin !== "SLOP") throw new HttpError(400, "Treatment applies only to SLOP");
   const cropLong = frameLongSide(crop);
-  if (treatment?.settings && !validSettings(treatment.settings, cropLong)) throw new HttpError(400, "Impostazioni del trattamento fuori dai limiti");
+  if (treatment?.settings && !validSettings(treatment.settings, cropLong)) throw new HttpError(400, "Treatment settings out of range");
   // The long side: the owner's (sliders), else the one proposed from the source REAL, else the recipe's.
   const maxSide = !treatment || treatment.off ? GAME_COPY.maxSide : treatment.settings ? Math.min(treatment.settings.long, cropLong, GAME_COPY.maxSide)
     : treatedLong(treatment.sample.metrics.long, cropLong, GAME_COPY.maxSide);
-  if (treatment && !treatment.off && treatment.long !== maxSide) throw new HttpError(400, `Lato lungo del trattamento ${treatment.long}, atteso ${maxSide}`);
+  if (treatment && !treatment.off && treatment.long !== maxSide) throw new HttpError(400, `Treatment long edge ${treatment.long}, expected ${maxSide}`);
   const expected = copyDimensions(crop, maxSide);
   const sameTreatment = treatmentKey(validTreatment(parseJson(row.copy_treatment))) === treatmentKey(treatment) || (!treatment && row.origin === "SLOP");
   if (!force && row.copy_key && row.copy_crop === JSON.stringify(crop) && sameTreatment)
     return json({ ...(await viewOf(env, row.id)), already_prepared: true });
-  if (Number(request.headers.get("content-length") || 0) > GAME_COPY.maxBytes) throw new HttpError(413, "Copia di gioco oltre 4 MB");
+  if (Number(request.headers.get("content-length") || 0) > GAME_COPY.maxBytes) throw new HttpError(413, "Game copy exceeds 4 MB");
   const upload = new Uint8Array(await request.arrayBuffer());
-  if (!upload.length || upload.length > GAME_COPY.maxBytes) throw new HttpError(413, "Copia di gioco vuota o oltre 4 MB");
+  if (!upload.length || upload.length > GAME_COPY.maxBytes) throw new HttpError(413, "Game copy empty or larger than 4 MB");
   let copy;
-  try { copy = cleanImage(upload); } catch { throw new HttpError(415, "Copia di gioco non leggibile"); }
-  if (copy.mime !== GAME_COPY.mime) throw new HttpError(415, "La copia di gioco deve essere WebP");
+  try { copy = cleanImage(upload); } catch { throw new HttpError(415, "Unreadable game copy"); }
+  if (copy.mime !== GAME_COPY.mime) throw new HttpError(415, "Game copy must be WebP");
   const actual = imageDimensions(copy.bytes);
   if (actual.width !== expected.width || actual.height !== expected.height)
-    throw new HttpError(409, `Dimensioni della copia ${actual.width}×${actual.height}, attese ${expected.width}×${expected.height}`);
+    throw new HttpError(409, `Copy dimensions ${actual.width}×${actual.height}, expected ${expected.width}×${expected.height}`);
   const hash = await sha256(copy.bytes), key = `library/${row.id}/copy-${hash.slice(0, 16)}.webp`;
   // The same bytes with another crop or treatment record (a treatment that changed nothing): only the record changes.
   const sameFile = key === row.copy_key;
@@ -217,7 +217,7 @@ async function storeCopy(request: Request, env: Env, row: Row) {
     copy_metrics=?,copy_treatment=?,revision=revision+1,updated_at=? WHERE id=? AND revision=? AND status IN ('new','approved')`)
     .bind(key, hash, actual.width, actual.height, copy.bytes.length, JSON.stringify(crop), metrics ? JSON.stringify(metrics) : null,
       treatment ? JSON.stringify(treatment) : null, now(), row.id, row.revision).run();
-  if (!result.meta.changes) { if (!sameFile) await env.QUARANTINE.delete(key); throw new HttpError(409, "Immagine modificata altrove: ricaricare"); }
+  if (!result.meta.changes) { if (!sameFile) await env.QUARANTINE.delete(key); throw new HttpError(409, "Image changed elsewhere: reload"); }
   if (row.copy_key && !sameFile) await env.QUARANTINE.delete(row.copy_key);
   return json({ ...(await viewOf(env, row.id)), already_prepared: false }, 201);
 }
@@ -227,22 +227,22 @@ async function assignGallery(env: Env, row: Row, gallery: string, revision = row
   if (row.gallery_id === gallery) return;
   const result = await env.DB.prepare("UPDATE images SET gallery_id=?,revision=revision+1,updated_at=? WHERE id=? AND revision=?")
     .bind(gallery, now(), row.id, revision).run();
-  if (!result.meta.changes) throw new HttpError(409, "Immagine modificata altrove: ricaricare");
+  if (!result.meta.changes) throw new HttpError(409, "Image changed elsewhere: reload");
 }
 
 async function edit(env: Env, row: Row, data: Record<string, unknown>) {
   if (Object.keys(data).every(key => ["revision", "gallery_id"].includes(key)) && "gallery_id" in data) {
-    if (data.revision !== row.revision) throw new HttpError(409, "Immagine modificata altrove: ricaricare");
+    if (data.revision !== row.revision) throw new HttpError(409, "Image changed elsewhere: reload");
     await assignGallery(env, row, await galleryId(env, data.gallery_id));
     return viewOf(env, row.id);
   }
   const applicable = Object.keys(TEXT_FIELDS).filter(key => row.origin === "REAL"
     ? !["prompt", "model"].includes(key) : !["title", "description", "source_url", "author", "license_name", "license_url"].includes(key));
   const allowed = ["revision", ...applicable];
-  if (Object.keys(data).some(key => !allowed.includes(key))) throw new HttpError(400, "Campi non previsti");
-  if (data.revision !== row.revision) throw new HttpError(409, "Immagine modificata altrove: ricaricare");
-  if (row.status === "published") throw new HttpError(409, "Immagine pubblicata: avvia la modifica, che la ritira dal gioco");
-  if (row.status === "trash") throw new HttpError(409, "Immagine nel cestino: ripristinala per modificarla");
+  if (Object.keys(data).some(key => !allowed.includes(key))) throw new HttpError(400, "Unexpected fields");
+  if (data.revision !== row.revision) throw new HttpError(409, "Image changed elsewhere: reload");
+  if (row.status === "published") throw new HttpError(409, "Published image: start editing to withdraw it from the game");
+  if (row.status === "trash") throw new HttpError(409, "Image in Trash: restore it to edit");
   const fields = Object.keys(TEXT_FIELDS).filter(key => key in data);
   const values: (string | null)[] = fields.map(key => text(data[key], key, key === "title"));
   // A corrected source address is checked on Commons the next night, and its flag goes until then.
@@ -254,7 +254,7 @@ async function edit(env: Env, row: Row, data: Record<string, unknown>) {
   const result = await env.DB.prepare(`UPDATE images SET ${fields.map(key => key + "=?").join(",")}${fields.length ? "," : ""}
       revision=revision+1,updated_at=? WHERE id=? AND revision=? AND status IN ('new','approved','published')`)
       .bind(...values, now(), row.id, row.revision).run();
-  if (!result.meta.changes) throw new HttpError(409, "Immagine modificata altrove: ricaricare");
+  if (!result.meta.changes) throw new HttpError(409, "Image changed elsewhere: reload");
   return viewOf(env, row.id);
 }
 
@@ -262,35 +262,35 @@ async function edit(env: Env, row: Row, data: Record<string, unknown>) {
 export async function transition(env: Env, row: Row, action: string, data: Record<string, unknown>) {
   const stamp = now();
   if (action === "approve") {
-    if (row.status !== "new") throw new HttpError(409, "Si approvano solo immagini nuove");
-    if (!row.copy_key) throw new HttpError(409, "Prepara prima la copia di gioco: si approva ciò che vedrà il giocatore");
-    if (!cropOf(row)) throw new HttpError(409, "Rifai la copia di gioco in 4:5: scegli l'inquadratura");
+    if (row.status !== "new") throw new HttpError(409, "Only new images can be approved");
+    if (!row.copy_key) throw new HttpError(409, "Prepare the game copy first: approve what players will see");
+    if (!cropOf(row)) throw new HttpError(409, "Recreate the game copy in 4:5: choose its frame");
     if (row.origin === "REAL" && isNoDerivatives(row.license_name, row.license_url))
-      throw new HttpError(409, "Licenza senza opere derivate (ND): la copia di gioco è una versione modificata");
+      throw new HttpError(409, "No derivatives (ND) license: the game copy is a modified version");
     if (row.origin === "REAL" && data.rights_confirmed !== true && row.rights_confirmed !== 1)
-      throw new HttpError(409, "Conferma di aver verificato diritti e licenza della foto");
+      throw new HttpError(409, "Confirm you have checked the photo’s rights and license");
     const result = await env.DB.prepare(`UPDATE images SET status='approved',approved_at=?,rights_confirmed=CASE WHEN origin='REAL' THEN 1 ELSE rights_confirmed END,
       revision=revision+1,updated_at=? WHERE id=? AND status='new' AND copy_key IS NOT NULL`).bind(stamp, stamp, row.id).run();
-    if (!result.meta.changes) throw new HttpError(409, "Immagine cambiata: ricaricare");
+    if (!result.meta.changes) throw new HttpError(409, "Image changed: reload");
   } else if (action === "publish") {
     if (row.status === "published") return;
-    if (row.status !== "approved" || !row.copy_key) throw new HttpError(409, "Si pubblicano solo immagini approvate");
-    if (!cropOf(row)) throw new HttpError(409, "Rifai la copia di gioco in 4:5 prima di pubblicare");
-    if (row.origin === "REAL" && isNoDerivatives(row.license_name, row.license_url)) throw new HttpError(409, "Licenza senza opere derivate (ND): esclusa dal gioco");
-    if (!env.QUARANTINE || !env.IMAGES) throw new HttpError(503, "Storage non configurato");
+    if (row.status !== "approved" || !row.copy_key) throw new HttpError(409, "Only approved images can be published");
+    if (!cropOf(row)) throw new HttpError(409, "Recreate the game copy in 4:5 before publishing");
+    if (row.origin === "REAL" && isNoDerivatives(row.license_name, row.license_url)) throw new HttpError(409, "No derivatives (ND) license: excluded from the game");
+    if (!env.QUARANTINE || !env.IMAGES) throw new HttpError(503, "Storage not configured");
     const file = await env.QUARANTINE.get(row.copy_key);
-    if (!file) throw new HttpError(409, "Copia di gioco mancante");
+    if (!file) throw new HttpError(409, "Missing game copy");
     await env.IMAGES.put(row.copy_key, await file.arrayBuffer(), { httpMetadata: { contentType: GAME_COPY.mime } });
     const published = await env.DB.prepare("UPDATE images SET status='published',published_at=?,revision=revision+1,updated_at=? WHERE id=? AND status='approved'")
       .bind(stamp, stamp, row.id).run();
     if (!published.meta.changes && !await env.DB.prepare("SELECT 1 FROM images WHERE id=?").bind(row.id).first()) {
       await env.DB.prepare("INSERT INTO gallery_files_to_delete(bucket,object_key) VALUES('game',?)").bind(row.copy_key).run();
       await sweepGalleryFiles(env).catch(error => console.error("gallery file cleanup", error));
-      throw new HttpError(404, "Immagine inesistente");
+      throw new HttpError(404, "Image not found");
     }
     await reviveCopy(env, row.copy_key);
   } else if (action === "withdraw") {
-    if (row.status !== "published") throw new HttpError(409, "L'immagine non è pubblicata");
+    if (row.status !== "published") throw new HttpError(409, "Image is not published");
     // No new game picks the image; games in progress keep its copy until they end.
     await env.DB.prepare("UPDATE images SET status='approved',published_at=NULL,revision=revision+1,updated_at=? WHERE id=? AND status='published'")
       .bind(stamp, row.id).run();
@@ -306,13 +306,13 @@ export async function transition(env: Env, row: Row, action: string, data: Recor
     if (row.status !== "trash") return;
     await env.DB.prepare(`UPDATE images SET status=trashed_from,trashed_from=NULL,trashed_at=NULL,revision=revision+1,updated_at=? WHERE id=? AND status='trash'`)
       .bind(stamp, row.id).run();
-  } else throw new HttpError(404, "Azione inesistente");
+  } else throw new HttpError(404, "Unknown action");
 }
 
 /** Group status choices reuse approval, publication and withdrawal, including their existing checks and game copies. */
 async function setPhotoStatus(env: Env, row: Row, status: "approved" | "published", data: Record<string, unknown>) {
   if (row.status === status) return;
-  if (row.status === "trash") throw new HttpError(409, "Ripristina prima la foto dal cestino");
+  if (row.status === "trash") throw new HttpError(409, "Restore the photo from Trash first");
   if (row.status === "new") {
     await transition(env, row, "approve", data);
     if (status === "approved") return;
@@ -320,7 +320,7 @@ async function setPhotoStatus(env: Env, row: Row, status: "approved" | "publishe
   }
   await transition(env, row, status === "approved" ? "withdraw" : "publish", data);
   const final = await env.DB.prepare("SELECT status FROM images WHERE id=?").bind(row.id).first<{ status: string }>();
-  if (final?.status !== status) throw new HttpError(409, "Foto modificata altrove. Riprova.");
+  if (final?.status !== status) throw new HttpError(409, "Photo changed elsewhere. Try again.");
 }
 
 /** Deletes trashed images for good: every row (cascade) and every file. An image still in a game in progress waits in the
@@ -356,12 +356,12 @@ async function list(env: Env, url: URL) {
   const offset = Number(url.searchParams.get("offset"));
   const sort = url.searchParams.get("sort") || "added", order = url.searchParams.get("order") || "desc";
   const batch = url.searchParams.get("batch") || "";
-  if (url.searchParams.has("group")) throw new HttpError(400, "Il filtro per gruppi non è più disponibile");
-  if (["tag", "tags", "match", "incomplete"].some(key => url.searchParams.has(key))) throw new HttpError(400, "I tag non esistono più: filtra per testo, stato o origine");
+  if (url.searchParams.has("group")) throw new HttpError(400, "Group filtering is no longer available");
+  if (["tag", "tags", "match", "incomplete"].some(key => url.searchParams.has(key))) throw new HttpError(400, "Tags are no longer available: filter by text, status or origin");
   if (!["library", "new", "approved", "published", "trash"].includes(status) || !["all", "REAL", "SLOP"].includes(originFilter)
-    || (batch && !/^[\w-]{1,64}$/.test(batch)) || (gallery && !/^[\w-]{1,64}$/.test(gallery))) throw new HttpError(400, "Filtro non valido");
+    || (batch && !/^[\w-]{1,64}$/.test(batch)) || (gallery && !/^[\w-]{1,64}$/.test(gallery))) throw new HttpError(400, "Invalid filter");
   if (paged && (!gallery || !Number.isSafeInteger(offset) || offset < 0 || !["added", "views", "accuracy"].includes(sort) || !["asc", "desc"].includes(order)))
-    throw new HttpError(400, "Pagina non valida");
+    throw new HttpError(400, "Invalid page");
   const where = [status === "library" ? "status<>'trash'" : "status=?1", "(?2='all' OR origin=?2)",
     "(?3='' OR id LIKE '%'||?3||'%' COLLATE NOCASE OR title LIKE '%'||?3||'%' COLLATE NOCASE OR description LIKE '%'||?3||'%' COLLATE NOCASE OR prompt LIKE '%'||?3||'%' COLLATE NOCASE)", "(?4='' OR generation_batch=?4)",
     `(?5=0 OR COALESCE(json_extract(copy_crop,'$.format'),'')<>'4:5')`, gallery ? "gallery_id=?6" : "?6=''"].join(" AND ");
@@ -400,7 +400,7 @@ async function distribution(env: Env) {
 /** Legacy direct regeneration is refused: all new SLOP must pass the editorial process. */
 async function regenerate(env: Env, row: Row, data: Record<string, unknown>) {
   void env; void row; void data;
-  throw new HttpError(409, "La rigenerazione richiede un nuovo processo nello studio SLOP, con brief, valutazione e conferma del tetto di chiamate");
+  throw new HttpError(409, "Regeneration requires a new gallery pipeline job with confirmation of the maximum paid calls");
 }
 
 export async function library(request: Request, env: Env, path: string): Promise<Response> {
@@ -435,11 +435,11 @@ export async function library(request: Request, env: Env, path: string): Promise
   }
   if (path === base + "/commons" && request.method === "POST") {
     const data = await body(request, 2000);
-    if (Object.keys(data).some(key => !["url", "gallery_id"].includes(key)) || typeof data.url !== "string") throw new HttpError(400, "Link Commons richiesto");
+    if (Object.keys(data).some(key => !["url", "gallery_id"].includes(key)) || typeof data.url !== "string") throw new HttpError(400, "Commons link required");
     const gallery = await galleryId(env, data.gallery_id);
     const file = await commonsFile(data.url);
     if (isNoDerivatives(file.license_name, file.license_url))
-      throw new HttpError(409, `Licenza ${file.license_name || "senza opere derivate"}: la copia di gioco è una versione modificata`);
+      throw new HttpError(409, `License ${file.license_name || "no derivatives"}: the game copy is a modified version`);
     return json(await create(env, { origin: "REAL", gallery_id: gallery, bytes: file.bytes, title: file.title.replace(/^File:/, "").replace(/\.[a-z]+$/i, "").slice(0, 200),
       description: file.description.slice(0, 1000), source_url: file.source_url, author: file.author.slice(0, 300),
       license_name: file.license_name, license_url: /^https:\/\//.test(file.license_url) ? file.license_url : "" }), 201);
@@ -456,7 +456,7 @@ export async function library(request: Request, env: Env, path: string): Promise
   if (path === base + "/bulk" && request.method === "POST") {
     const data = await body(request, 40_000);
     const ids = Array.isArray(data.ids) ? [...new Set(data.ids.map(String))].map(imageId) : [];
-    if (!ids.length || ids.length > 500) throw new HttpError(400, "Selezione vuota o oltre 500 immagini");
+    if (!ids.length || ids.length > 500) throw new HttpError(400, "Selection empty or larger than 500 images");
     const action = String(data.action);
     if (action === "delete") return json(await destroy(env, ids));
     const gallery = action === "gallery" ? await galleryId(env, data.gallery_id) : null;
@@ -474,71 +474,71 @@ export async function library(request: Request, env: Env, path: string): Promise
     return json({ done: done.length, failed });
   }
   const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|regenerate|metrics|measure|measures|ideas|description|index-description))?$/);
-  if (!match) throw new HttpError(404, "API della libreria inesistente");
+  if (!match) throw new HttpError(404, "Library API not found");
   const row = await find(env, match[1]);
   if (match[2] === "file" || match[2] === "original") {
-    if (request.method !== "GET") throw new HttpError(405, "Metodo non consentito");
+    if (request.method !== "GET") throw new HttpError(405, "Method not allowed");
     const key = match[2] === "file" && row.copy_key ? row.copy_key : row.original_key;
     const file = await env.QUARANTINE?.get(key);
-    if (!file) throw new HttpError(404, "File non disponibile");
+    if (!file) throw new HttpError(404, "File unavailable");
     return new Response(file.body, { headers: { "Content-Type": file.httpMetadata?.contentType || "image/webp", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
   }
   if (match[2] === "metrics") {
     // Measures of an existing copy, made by the browser from that copy: free, any state, the copy must still be the same.
-    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    if (request.method !== "POST") throw new HttpError(405, "Method not allowed");
     const data = await body(request, 2000), metrics = validMetrics(data.metrics);
-    if (Object.keys(data).some(key => key !== "metrics" && key !== "sha256") || !metrics || typeof data.sha256 !== "string") throw new HttpError(400, "Misure non valide");
+    if (Object.keys(data).some(key => key !== "metrics" && key !== "sha256") || !metrics || typeof data.sha256 !== "string") throw new HttpError(400, "Invalid measurements");
     const result = await env.DB.prepare("UPDATE images SET copy_metrics=? WHERE id=? AND copy_sha256=?").bind(JSON.stringify(metrics), row.id, data.sha256).run();
-    if (!result.meta.changes) throw new HttpError(409, "Copia cambiata: misure non salvate");
+    if (!result.meta.changes) throw new HttpError(409, "Copy changed: measurements not saved");
     return json({ id: row.id, metrics });
   }
   if (match[2] === "measures") {
-    if (request.method !== "GET") throw new HttpError(405, "Metodo non consentito");
+    if (request.method !== "GET") throw new HttpError(405, "Method not allowed");
     return json(await measuresOf(env, row.id));
   }
   if (match[2] === "ideas") {
     // Proposals of the SLOP wizard: written by the owner (free) or asked to the model, one confirmed paid call (specification
     // `generazione-slop`, section 2).
-    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    if (request.method !== "POST") throw new HttpError(405, "Method not allowed");
     const data = await body(request, 4000);
     if ("idea" in data) await ownIdea(env, row, data); else await proposeIdeas(env, row, data);
     return json(await viewOf(env, row.id), 201);
   }
   if (match[2] === "measure") {
     // Crowding and detail of a REAL: one confirmed paid call (spec `libreria-immagini`, section 10).
-    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    if (request.method !== "POST") throw new HttpError(405, "Method not allowed");
     await measureReal(env, row, await body(request, 1000));
     return json(await viewOf(env, row.id), 201);
   }
   if (match[2] === "description") {
-    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    if (request.method !== "POST") throw new HttpError(405, "Method not allowed");
     await describeReal(env, row, await body(request, 1000));
     return json(await viewOf(env, row.id));
   }
   if (match[2] === "index-description") {
-    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    if (request.method !== "POST") throw new HttpError(405, "Method not allowed");
     return json(await indexReal(env, row, await body(request, 1000)));
   }
   if (match[2] === "regenerate") {
-    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    if (request.method !== "POST") throw new HttpError(405, "Method not allowed");
     return json(await regenerate(env, row, await body(request, 20_000)));
   }
   if (match[2] === "copy") {
-    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    if (request.method !== "POST") throw new HttpError(405, "Method not allowed");
     return storeCopy(request, env, row);
   }
   if (match[2]) {
-    if (request.method !== "POST") throw new HttpError(405, "Metodo non consentito");
+    if (request.method !== "POST") throw new HttpError(405, "Method not allowed");
     await transition(env, row, match[2], await body(request, 1000));
     return json(await viewOf(env, row.id));
   }
   if (request.method === "GET") return json(await viewOf(env, row.id));
   if (request.method === "PATCH") return json(await edit(env, row, await body(request, 20_000)));
   if (request.method === "DELETE") {
-    if (row.status !== "trash") throw new HttpError(409, "Si elimina definitivamente solo dal cestino");
+    if (row.status !== "trash") throw new HttpError(409, "Permanent deletion is only available from Trash");
     const result = await destroy(env, [row.id]);
-    if (result.postponed) throw new HttpError(409, "L'immagine è usata da partite o generazioni in corso: si potrà eliminare quando saranno finite");
+    if (result.postponed) throw new HttpError(409, "Image is in active games or generations: delete it when they finish");
     return json(result);
   }
-  throw new HttpError(405, "Metodo non consentito");
+  throw new HttpError(405, "Method not allowed");
 }

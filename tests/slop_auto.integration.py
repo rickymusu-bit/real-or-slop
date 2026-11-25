@@ -33,7 +33,7 @@ try:
     gallery=make_gallery('Piazza di Parigi')
     other=make_gallery('Console vintage')
     # Without an approved or published REAL there is nothing to extract.
-    code,short=call('auto/preview',{'gallery_id':gallery['id'],'size':1});assert code==409 and 'disponibili: 0' in short['error'],short
+    code,short=call('auto/preview',{'gallery_id':gallery['id'],'size':1});assert code==409 and 'Available REAL: 0' in short['error'],short
     assert not next(g for g in call('auto')[1]['galleries'] if g['id']==gallery['id'])['ready']
     assert call('auto/preview',{'gallery_id':gallery['id'],'size':1},auth=False)[0]==401
     assert call('/galleries/'+gallery['id']+'/suggest',{'request':str(uuid4()),'revision':gallery['revision'],'confirm':True},library=True)[0]==404
@@ -179,7 +179,7 @@ try:
         time.sleep(.05)
     assert control()
     status, deletion = call('/galleries/'+gallery['id'],{'confirm':True,'revision':gallery['revision']},method='DELETE',library=True)
-    assert status==409 and 'generazione in corso' in deletion['error'],deletion
+    assert status==409 and 'active generation' in deletion['error'],deletion
     assert control() and call('auto/cancel',{'batch':pending})[0]==200
     time.sleep(1.3)
     assert len(control())==1 and image_count()==0

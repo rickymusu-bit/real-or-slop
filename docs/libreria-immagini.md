@@ -1,6 +1,8 @@
-# Libreria delle immagini — specifica 10.8.0
+# Libreria delle immagini — specifica 10.9.0
 
-Stato: implementata nel ramo 1.60.0, da rilasciare. Aggiornata: 2026-11-25T20:45:04Z.
+Stato: implementata nel ramo 1.61.0, da rilasciare. Aggiornata: 2026-11-25T22:45:40Z.
+
+Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
 ## 1. Decisioni dell'owner
 
@@ -21,7 +23,7 @@ Stato: implementata nel ramo 1.60.0, da rilasciare. Aggiornata: 2026-11-25T20:45
   descrizione editoriale, la sua provenienza, il testo Commons originale e i campi dell'analisi, e svuota la descrizione delle SLOP.
   Superano le decisioni del 2026-11-09 (analisi una volta per immagine), del 2026-11-19 (ripetizione dell'analisi, descrizione nei
   risultati) e quella di poche ore prima sulle incertezze.
-- **Proposte delle REAL precedenti:** conservate per compatibilità delle lavorazioni anteriori alla 1.60.0; il nuovo wizard
+- **Proposte delle REAL precedenti:** non più mostrate sulle immagini REAL; conservate per compatibilità delle lavorazioni anteriori alla 1.60.0; il nuovo wizard
   usa parametri, particolarità e scene della galleria, come descritto in `generazione-slop` 17.0.0.
 - **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, numero modificabile dalle Impostazioni, ciascuna solo tre mesi dopo l'ultimo controllo; un
   file sparito da Commons viene **solo segnalato**, mai ritirato o cancellato in automatico (sezione 9).
@@ -300,3 +302,7 @@ prevista di una SLOP. Il wizard prepara insieme descrizione e profilo con una ch
 I profili sono correggibili gratuitamente; le particolarità hanno policy di conservazione, variazione o estrazione. I dati
 restano privati, esclusi dalle risposte del gioco. Le scene SLOP non sono didascalie. Il nuovo protocollo completo e le sue
 conferme sono in `generazione-slop` 17.0.0. Le vecchie idee restano per compatibilità delle lavorazioni precedenti.
+
+## Lingua amministrativa e contesti (1.61.0)
+
+La migrazione 0075 aggiunge versioni inglesi dei soli contesti ancora uguali ai predefiniti della 1.60.0. Non riscrive la cronologia né i testi personalizzati. I nuovi predefiniti inglesi restano caricabili come proposta. Le istruzioni fisse delle descrizioni, delle misure e delle valutazioni impongono output inglese anche con contesti precedenti. Non si rigenerano descrizioni o immagini già salvate e non partono chiamate a pagamento per il cambio lingua.

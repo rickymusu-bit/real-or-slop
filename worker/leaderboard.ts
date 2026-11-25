@@ -47,12 +47,12 @@ export async function publicLeaderboard(env: Env) {
 /** /api/admin/leaderboard: GET ?code= to check a code, GET for the last 50 entries; POST /:id {hidden} hides or shows one. */
 export async function adminLeaderboard(request: Request, env: Env, path: string, data: Record<string, unknown>) {
   const url = new URL(request.url), base = "/api/admin/leaderboard";
-  const view = (e: Entry) => ({ id: e.id, nickname: e.nickname, level: e.level, level_label: LEVELS[e.level].label, score: e.score, photos: e.photos,
+  const view = (e: Entry) => ({ id: e.id, nickname: e.nickname, level: e.level, level_label: ({facile:"Easy",medio:"Medium",difficile:"Hard",esperto:"Expert"})[e.level], score: e.score, photos: e.photos,
     balanced_accuracy: e.balanced_accuracy, hidden: e.hidden === 1, created_at: e.created_at });
   if (path === base && request.method === "GET") {
     const code = url.searchParams.get("code");
     if (code !== null) {
-      if (!isCode(code)) throw new HttpError(400, "Codice non valido: 10 caratteri, come ABCD-EFGH-JK");
+      if (!isCode(code)) throw new HttpError(400, "Invalid code: 10 characters, for example ABCD-EFGH-JK");
       const entry = await env.DB.prepare("SELECT * FROM leaderboard WHERE code_hash=?").bind(await hash(normaliseCode(code))).first<Entry>();
       return json({ found: !!entry, entry: entry ? view(entry) : null });
     }
@@ -62,14 +62,14 @@ export async function adminLeaderboard(request: Request, env: Env, path: string,
   const match = path.match(/^\/api\/admin\/leaderboard\/([\w-]{1,64})$/);
   if (match && request.method === "DELETE") {
     const result = await env.DB.prepare("DELETE FROM leaderboard WHERE id=?").bind(match[1]).run();
-    if (!result.meta.changes) throw new HttpError(404, "Voce inesistente");
+    if (!result.meta.changes) throw new HttpError(404, "Entry not found");
     return json({ id: match[1], deleted: true });
   }
   if (match && request.method === "POST") {
-    if (typeof data.hidden !== "boolean" || Object.keys(data).length !== 1) throw new HttpError(400, "Indica hidden: true o false");
+    if (typeof data.hidden !== "boolean" || Object.keys(data).length !== 1) throw new HttpError(400, "Specify hidden: true or false");
     const result = await env.DB.prepare("UPDATE leaderboard SET hidden=? WHERE id=?").bind(data.hidden ? 1 : 0, match[1]).run();
-    if (!result.meta.changes) throw new HttpError(404, "Voce inesistente");
+    if (!result.meta.changes) throw new HttpError(404, "Entry not found");
     return json({ id: match[1], hidden: data.hidden });
   }
-  throw new HttpError(404, "API della classifica inesistente");
+  throw new HttpError(404, "Leaderboard API not found");
 }

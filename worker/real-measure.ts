@@ -13,9 +13,7 @@ import { paid, responseJson } from "./paid";
 
 /** The cap covers the model's reasoning too (see the old analysis: 2000 tokens cut one answer in ten). */
 const MAX_OUTPUT_TOKENS = 8000;
-const OUTPUT = `Rispondi solo con JSON conforme allo schema. subject è il soggetto; others gli altri oggetti, al massimo ${MAX_OBJECTS}; unlisted ` +
-  "il numero degli oggetti riconoscibili che non hai elencato. box: x e y dell'angolo in alto a sinistra, width e height, tutti fra 0 e 1 " +
-  "rispetto all'immagine intera. detail: per ogni categoria 0 (assente o non leggibile), 1 (presente e leggibile) o 2 (fitto o minuto).";
+const OUTPUT = `Return only JSON matching the schema. subject is the main subject; others are the other objects, at most ${MAX_OBJECTS}; unlisted is the number of recognizable objects not listed. box: x and y of the top-left corner, width and height, all in [0,1] relative to the entire image. detail: grade each category 0 (absent or unreadable), 1 (present and readable), or 2 (dense or tiny). Use short, generic English names for all objects. This language requirement overrides any conflicting saved context.`;
 
 interface MeasureRow { id: string; image_id: string; model: string; base_context: string; measure_context: string; observation: string;
   crowdedness: number; detail: number; created_at: string; formula: number }
@@ -60,15 +58,15 @@ interface Target { id: string; origin: string; status: string; original_key: str
  * confirmation sent twice is refused before reaching the model. */
 export async function measureReal(env: Env, row: Target, data: Record<string, unknown>) {
   if (Object.keys(data).some(k => k !== "confirm" && k !== "request") || data.confirm !== true || typeof data.request !== "string"
-    || !/^[a-f0-9-]{36}$/.test(data.request)) throw new HttpError(400, "Conferma la chiamata a pagamento");
-  if (!env.OPENAI_API_KEY) throw new HttpError(503, "Chiave OpenAI mancante");
-  if (row.origin !== "REAL") throw new HttpError(409, "Si misurano solo le REAL");
-  if (row.status === "trash") throw new HttpError(409, "Foto nel cestino: ripristinala per misurarla");
+    || !/^[a-f0-9-]{36}$/.test(data.request)) throw new HttpError(400, "Confirm the paid call");
+  if (!env.OPENAI_API_KEY) throw new HttpError(503, "Missing OpenAI key");
+  if (row.origin !== "REAL") throw new HttpError(409, "Only REAL can be measured");
+  if (row.status === "trash") throw new HttpError(409, "Photo in Trash: restore it to measure");
   // Everything is read before the call is recorded: a failure here costs nothing.
   const original = row.original_key ? await env.QUARANTINE?.get(row.original_key) : null;
-  if (!original) throw new HttpError(409, "Originale non disponibile");
+  if (!original) throw new HttpError(409, "Original unavailable");
   const bytes = new Uint8Array(await original.arrayBuffer()), mime = imageMime(bytes);
-  if (!mime) throw new HttpError(409, "Formato dell'originale non leggibile dal modello");
+  if (!mime) throw new HttpError(409, "Original format unreadable by the model");
   const gallery = await env.DB.prepare("SELECT title,description FROM galleries WHERE id=?").bind(row.gallery_id).first<{ title: string; description: string }>();
   const [model, base, task] = await Promise.all([chosenModel(env, "text_model"), currentContext(env, "base"), currentContext(env, "real_measure")]);
   const answer = responseJson(await paid(env, "analysis", model, jsonWithImage({ model,
@@ -79,12 +77,12 @@ export async function measureReal(env: Env, row: Target, data: Record<string, un
     text: { format: { type: "json_schema", name: "real_measure", strict: true, schema: OBSERVATION_SCHEMA } },
   }, bytes, mime), { image: row.id, request: `measure-${data.request}` }));
   const observation = validObservation(answer);
-  if (!observation) throw new HttpError(502, "Risposta del modello non valida: misura non salvata");
+  if (!observation) throw new HttpError(502, "Invalid model response: measurement not saved");
   const result = scores(observation), stamp = new Date().toISOString(), measureId = id();
   // The photo may have been deleted during the call: then nothing is stored (the call stays in the register).
   const stored = await env.DB.prepare(`INSERT INTO real_measures(id,image_id,model,base_context,measure_context,observation,crowdedness,detail,created_at,formula)
     SELECT ?,id,?,?,?,?,?,?,?,? FROM images WHERE id=?`).bind(measureId, model, base.id, task.id, JSON.stringify(observation),
     result.crowdedness, result.detail, stamp, MEASURE_FORMULA, row.id).run();
-  if (!stored.meta.changes) throw new HttpError(404, "Foto eliminata durante la misura");
+  if (!stored.meta.changes) throw new HttpError(404, "Photo deleted during measurement");
   return measureId;
 }

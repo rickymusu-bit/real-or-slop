@@ -132,7 +132,7 @@ assert not stored(held)
 openai([])
 old = sql(f"SELECT original_key,copy_key FROM images WHERE id='{slop['id']}'")[0]
 status, result = call(f'{API}/{slop["id"]}/regenerate', {'confirm': True, 'prompt': 'A new scene', 'quality': 'medium', 'revision': slop['revision']})
-assert status == 409 and 'nuovo processo' in result['error'], result
+assert status == 409 and 'new gallery pipeline job' in result['error'], result
 assert openai() == []
 assert sql(f"SELECT original_key,copy_key FROM images WHERE id='{slop['id']}'")[0] == old
 

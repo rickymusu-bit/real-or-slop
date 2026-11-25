@@ -77,7 +77,7 @@ wait(lambda s:all(s0['profile'] for s0 in s['sources']) and not s['jobs'])
 control([{'status':503}]);uncertain=paid_request(ids=[source['id']],max_calls=1)
 assert call('plan',uncertain)[0]==200
 state=wait(lambda s:bool(s['jobs']) and s['jobs'][0]['state']=='attention')
-assert len(control())==1 and 'incerto' in state['jobs'][0]['error']
+assert len(control())==1 and 'ncertain' in state['jobs'][0]['error']
 assert call('plan',uncertain)[0]==200;time.sleep(.2);assert len(control())==1
 assert call(state['jobs'][0]['id']+'/close',paid_request())[0]==200
 print('Pipeline resilience passed: cross-gallery scope, deletion blocked while paid work runs, uncertainty persisted and never resent.')

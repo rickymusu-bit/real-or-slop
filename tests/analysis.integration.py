@@ -57,7 +57,7 @@ assert sql(f"SELECT description FROM images WHERE id='{slop['id']}'")[0]['descri
 status, real = patch(real, {'description': 'Corteo in place de la République, maggio 1968.'})
 assert status == 200 and real['description'] == 'Corteo in place de la République, maggio 1968.', real
 for item, change in ((real, {'real_description': {'visible': 'x', 'documented_context': ''}}), (slop, {'description': 'Nota'})):
-    status, result = patch(item, change); assert status == 400 and 'Campi non previsti' in result['error'], result
+    status, result = patch(item, change); assert status == 400 and 'Unexpected fields' in result['error'], result
 assert call(f'{API}?' + urllib.parse.urlencode({'gallery': gallery_id, 'q': 'maggio 1968'}))[1]['items'][0]['id'] == real['id']
 for item in (real, slop):
     call(f'{API}/{item["id"]}/trash', {}); assert call(f'{API}/{item["id"]}', method='DELETE')[1]['deleted'] == 1
@@ -66,31 +66,32 @@ for item in (real, slop):
 # by migration 0066, the gallery prompt from the one saved by 0070 over it; the retired «Descrizione delle REAL» is not offered any more.
 status, contexts = call(f'{API}/contexts'); assert status == 200 and contexts['max'] == 4000, contexts
 parts = {p['part']: p for p in contexts['parts']}
-assert set(parts) == {'base', 'real_measure', 'real_ideas', 'slop_gallery_prompt', 'slop_evaluation'} and [len(parts[k]['history']) for k in sorted(parts)] == [1, 1, 1, 1, 2], contexts
-assert 'Dettaglio' in parts['real_measure']['current']['body'] and 'persone e anatomia' in parts['real_measure']['current']['body'], parts
-assert all(p['proposed'] is None for p in parts.values()), 'the current texts are the proposals of the code'
+assert set(parts) == {'base', 'real_measure', 'real_ideas', 'slop_gallery_prompt', 'slop_evaluation'} and all(p['history'] for p in parts.values()), contexts
+assert 'Detail' in parts['real_measure']['current']['body'] and 'people and anatomy' in parts['real_measure']['current']['body'], parts
+assert all(p['proposed'] is None for k,p in parts.items() if k != 'real_ideas'), 'the current texts are the proposals of the code'
 base_text = parts['base']['current']['body']
-assert base_text.startswith('Lavori per un archivio fotografico italiano.') and 'Tag' not in base_text and 'descri' not in base_text, base_text
-assert 'titolo e la descrizione della fonte' in parts['slop_gallery_prompt']['current']['body']
-assert 'profilo editoriale' not in parts['slop_gallery_prompt']['current']['body'] and 'idea approvata' in parts['slop_gallery_prompt']['current']['body']
-assert 'credibilità fotografica' in parts['slop_evaluation']['current']['body'], parts
+assert base_text.startswith('You work on a photographic archive.') and 'English' in base_text, base_text
+assert 'title and source description' in parts['slop_gallery_prompt']['current']['body']
+assert 'profilo editoriale' not in parts['slop_gallery_prompt']['current']['body'] and 'approved REAL idea' in parts['slop_gallery_prompt']['current']['body']
+assert 'photographic credibility' in parts['slop_evaluation']['current']['body'], parts
 assert 'used' not in parts['base']['history'][0]
 for wrong in ({'part': 'analysis', 'body': 'x'}, {'part': 'other', 'body': 'x'}, {'part': 'base', 'body': '   '}, {'part': 'base', 'body': 'x' * 4001},
               {'part': 'base'}, {'part': 'base', 'body': 'x', 'extra': 1}):
     assert call(f'{API}/contexts', wrong)[0] == 400, wrong
 assert call(f'{API}/contexts/restore', {'id': 'missing'})[0] == 404
 # An old version of the retired part cannot come back.
-sql("INSERT INTO model_contexts(id,part,body,created_at) VALUES('retired-analysis','analysis','Descrizione delle REAL','2026-11-19T10:00:00.000Z')")
+sql("INSERT INTO model_contexts(id,part,body,created_at) VALUES('retired-analysis','analysis','Description delle REAL','2026-11-19T10:00:00.000Z')")
 assert call(f'{API}/contexts/restore', {'id': 'retired-analysis'})[0] == 409
+initial_history = len(parts['base']['history'])
 first = parts['base']['current']
 custom = first['body'] + '\nContesto di prova 42.'
 status, contexts = call(f'{API}/contexts', {'part': 'base', 'body': custom + '\r\n'}); assert status == 200
 part = next(p for p in contexts['parts'] if p['part'] == 'base')
-assert part['current']['body'] == custom and len(part['history']) == 2 and part['proposed'] == first['body'], part
-assert len(next(p for p in call(f'{API}/contexts', {'part': 'base', 'body': custom})[1]['parts'] if p['part'] == 'base')['history']) == 2  # unchanged text: no new version
+assert part['current']['body'] == custom and len(part['history']) == initial_history + 1 and part['proposed'] == first['body'], part
+assert len(next(p for p in call(f'{API}/contexts', {'part': 'base', 'body': custom})[1]['parts'] if p['part'] == 'base')['history']) == initial_history + 1  # unchanged text: no new version
 status, contexts = call(f'{API}/contexts/restore', {'id': first['id']}); assert status == 200
 part = next(p for p in contexts['parts'] if p['part'] == 'base')
-assert part['current']['body'] == first['body'] and len(part['history']) == 3, part
+assert part['current']['body'] == first['body'] and len(part['history']) == initial_history + 2, part
 
 # Model selectors in Settings: lists from the code, availability from the OpenAI project.
 code, models = call(f'{API}/models'); assert code == 200 and models['text_model'] == 'gpt-6.1-sol' and models['image_model'] == 'gpt-image-2.5-flare', models
@@ -129,7 +130,7 @@ assert len(sent) == 1 and sent[0]['body']['text']['format']['name'] == 'real_mea
 body = sent[0]['body']
 assert body['input'][0]['content'][1]['image_url'].startswith('data:image/png;base64,') and body['input'][0]['content'][1]['detail'] == 'high'
 assert json.loads(body['input'][0]['content'][0]['text']) == {'gallery': {'title': 'Test analysis', 'description': ''}}, body['input'][0]['content'][0]
-assert 'Altri oggetti' in body['instructions'] and body['instructions'].startswith('Lavori per un archivio fotografico italiano.')
+assert 'Other objects' in body['instructions'] and body['instructions'].startswith('You work on a photographic archive.')
 assert calls() == 1 and sql("SELECT image_id FROM paid_calls WHERE kind='analysis'")[0]['image_id'] == real['id']
 # The same confirmation sent twice reaches the model once.
 request = str(uuid.uuid4())
@@ -172,7 +173,7 @@ assert history[-1]['id'] == 'formula-1' and history[-1]['formula'] == 1 and hist
 before = len(call(f'{API}/{real["id"]}/measures')[1]['measures'])
 openai([{'garbage': True}, {'json': {'subject': {'name': 'x'}, 'others': [], 'unlisted': 0}}, {'status': 500}])
 assert measure(real)[0] == 502 and measure(real)[0] == 502
-status, result = measure(real); assert status == 502 and 'incerto' in result['error'], result
+status, result = measure(real); assert status == 502 and 'ncertain' in result['error'], result
 assert len(openai()) == 3 and len(call(f'{API}/{real["id"]}/measures')[1]['measures']) == before
 assert sql("SELECT status FROM paid_calls WHERE kind='analysis' ORDER BY created_at DESC LIMIT 1")[0]['status'] == 'uncertain'
 # A photo in the trash is not measured; deleting it deletes its measures.
@@ -202,7 +203,7 @@ assert len(sent) == 1 and body['text']['format']['name'] == 'real_ideas' and bod
 given = json.loads(body['input'][0]['content'][0]['text'])
 assert given['ideas_wanted'] == 3 and given['existing_ideas'] == [] and given['levels'] is None, given
 assert given['reference'] == {'title': 'Game Boy per le idee di falsificazione', 'description': ''} and given['gallery'] == {'title': 'Test analysis', 'description': ''}, given
-assert 'non viene copiata' in body['instructions'] and 'Persone inventate' in body['instructions']
+assert 'non viene copiata' in body['instructions'] and 'People inventate' in body['instructions']
 assert sql("SELECT count(*) AS n FROM paid_calls WHERE kind='prompts'")[0]['n'] == calls_before + 1
 first, second = item['ideas']
 for wrong in ({}, {'idea': ''}, {'approve': False}, {'other': 1}, {'idea': 'x' * 601}, {'genre': 'x' * 161}):
@@ -216,7 +217,7 @@ status, item = ideas(real); assert status == 201 and [i['state'] for i in item['
 given = json.loads(openai()[0]['body']['input'][0]['content'][0]['text'])
 assert given['ideas_wanted'] == 2 and [e['idea'] for e in given['existing_ideas']] == [first['idea']], given
 for idea in item['ideas'][1:]: edit_idea(idea['id'], {'approve': True})
-status, refused = ideas(real); assert status == 409 and 'già 3 idee' in refused['error'], refused
+status, refused = ideas(real); assert status == 409 and 'already has 3' in refused['error'], refused
 # Editing the gallery leaves the ideas as they are; moving the REAL to another gallery makes them to review, and approving one again
 # makes it available there.
 gallery = call(f'{API}/galleries/{gallery_id}')[1]
@@ -239,8 +240,8 @@ assert sql(f"SELECT count(*) AS n FROM real_ideas WHERE image_id='{real['id']}'"
 call(f'{API}/{slop["id"]}/trash', {}); call(f'{API}/{slop["id"]}', method='DELETE')
 
 # Visual descriptions: original image, separate source field, one call even under concurrent requests.
-real = upload('REAL', 'Game Boy DMG-01 da descrivere', description='Titolo riportato dalla fonte.')
-trash = upload('REAL', 'Foto da lasciare nel cestino')
+real = upload('REAL', 'Game Boy DMG-01 da descrivere', description='Title riportato dalla fonte.')
+trash = upload('REAL', 'Foto da lasciare in Trash')
 slop = upload('SLOP', prompt='Plausible console.', model='gpt-image-2')
 call(f'{API}/{trash["id"]}/trash', {})
 missing = f'{API}/undescribed-reals?gallery={gallery_id}'
@@ -333,7 +334,7 @@ assert len(openai()) == 1, 'indexed lookups are free'
 sql(f"UPDATE images SET visual_description=json_set(visual_description,'$.sections.environment','An outdoor table.') WHERE id='{far['id']}'")
 assert pending_index() == {far['id']: 1}
 assert [r['id'] for r in search(reference=real['id'])[1]['images']] == [near['id']]
-other_gallery = make_gallery(API, token, 'Galleria separata per indici')
+other_gallery = make_gallery(API, token, 'Gallery separata per indici')
 assert search(reference=real['id'], gallery=other_gallery)[0] == 409
 assert patch(near, {'gallery_id': other_gallery})[0] == 200
 assert search(reference=real['id'])[1]['images'] == []

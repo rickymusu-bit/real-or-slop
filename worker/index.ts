@@ -24,7 +24,7 @@ export default {
         if (url.pathname === "/api/admin/leaderboard" || url.pathname.startsWith("/api/admin/leaderboard/"))
           return await adminLeaderboard(request, env, url.pathname, request.method === "POST" ? await body(request, 1000) : {});
         if (url.pathname === "/api/admin") return json({ configured: true });
-        if (url.pathname.startsWith("/api/admin/")) throw new HttpError(404, "API inesistente");
+        if (url.pathname.startsWith("/api/admin/")) throw new HttpError(404, "API not found");
       }
       if (url.pathname === "/api/leaderboard" && request.method === "GET") return json(await publicLeaderboard(env));
       if (url.pathname === "/api/levels" || url.pathname === "/api/sessions" || url.pathname.startsWith("/api/sessions/"))
@@ -35,10 +35,17 @@ export default {
     } catch (error) {
       // Unexpected errors reach the Workers Logs with their stack; the owner sees «Errore del server».
       if (!(error instanceof HttpError)) console.error("unexpected", request.method, new URL(request.url).pathname, error instanceof Error ? error.stack || error.message : String(error));
+      const isAdmin = /^\/(?:api\/)?admin(?:\/|$)/.test(new URL(request.url).pathname);
+      const adminErrors: Record<string, string> = {
+        "Richiesta troppo grande": "Request too large", "JSON non valido": "Invalid JSON",
+        "Origine non consentita": "Origin not allowed", "Amministrazione non configurata": "Admin not configured",
+        "Accesso amministratore richiesto": "Admin access required", "Troppe richieste. Riprova tra un minuto.": "Too many requests. Try again in a minute.",
+      };
+      const message = error instanceof HttpError ? error.message : isAdmin ? "Server error" : "Errore del server";
       const response = json(
         {
           error:
-            error instanceof HttpError ? error.message : "Errore del server",
+            isAdmin ? adminErrors[message] || message : message,
         },
         error instanceof HttpError ? error.status : 500,
       );

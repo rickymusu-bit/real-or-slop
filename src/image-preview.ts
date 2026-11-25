@@ -32,10 +32,10 @@ export function openPreview(content: PreviewContent): HTMLDialogElement {
     document.body.append(dialog);
   }
   const href = content.link ? safeHref(content.link.href) : null;
-  dialog.innerHTML = `<button type="button" class="image-preview-close" data-preview-close aria-label="Chiudi l'anteprima">×</button>
+  dialog.innerHTML = `<button type="button" class="image-preview-close" data-preview-close aria-label="Close preview">×</button>
     <div class="image-preview-media"><img src="${escape(content.src)}" alt="${escape(content.alt)}" draggable="false"></div>
-    <div class="image-preview-text"><h3 id="image-preview-title">${escape(content.title || "Senza titolo")}</h3>
-    ${content.description !== undefined ? `<p class="image-preview-description">${content.description ? escape(content.description) : '<span class="hint">Nessuna descrizione.</span>'}</p>` : ""}
+    <div class="image-preview-text"><h3 id="image-preview-title">${escape(content.title || "Untitled")}</h3>
+    ${content.description !== undefined ? `<p class="image-preview-description">${content.description ? escape(content.description) : '<span class="hint">No description.</span>'}</p>` : ""}
     ${href && content.link ? `<p><a href="${escape(href)}" target="_blank" rel="noopener noreferrer">${escape(content.link.label)}</a></p>` : ""}
     ${content.extra || ""}</div>`;
   if (!dialog.open) dialog.showModal();

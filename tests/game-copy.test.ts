@@ -32,12 +32,12 @@ test("the centred crop is the largest frame of the format, valid for any image",
 });
 
 test("a crop outside the image, of the wrong shape or format is refused", () => {
-  assert.equal(cropError(6000, 4000, { x: 1, y: 0, width: 6000, height: 4000, format: "3:2" }), "Inquadratura fuori dall'immagine");
-  assert.equal(cropError(6000, 4000, { x: 0, y: 0, width: 5000, height: 4000, format: "3:2" }), "Inquadratura non nel formato 3:2");
+  assert.equal(cropError(6000, 4000, { x: 1, y: 0, width: 6000, height: 4000, format: "3:2" }), "Frame outside the image");
+  assert.equal(cropError(6000, 4000, { x: 0, y: 0, width: 5000, height: 4000, format: "3:2" }), "Frame does not match the format 3:2");
   assert.equal(cropError(6000, 4000, { x: 0, y: 0, width: 3200, height: 4000, format: "4:5" }), "");
-  assert.equal(cropError(6000, 4000, { x: 0, y: 0, width: 30, height: 20, format: "3:2" }), "Inquadratura troppo piccola o fuori dall'immagine");
-  assert.equal(cropError(6000, 4000, { x: 0, y: 0, height: 4000 }), "Formato non previsto");   // a 4:5 crop of v2
-  assert.equal(cropError(6000, 4000, null), "Inquadratura mancante");
+  assert.equal(cropError(6000, 4000, { x: 0, y: 0, width: 30, height: 20, format: "3:2" }), "Frame too small or outside the image");
+  assert.equal(cropError(6000, 4000, { x: 0, y: 0, height: 4000 }), "Unsupported format");   // a 4:5 crop of v2
+  assert.equal(cropError(6000, 4000, null), "Missing frame");
 });
 
 test("copies keep the format and have a long side of at most 1536 px, never enlarged", () => {
@@ -65,10 +65,10 @@ test("a 4:5 copy fits wide and tall originals whole, including older full-width 
   assert.deepEqual(parseCrop(cropQuery(legacy)), legacy);
   assert.deepEqual(storedCrop(JSON.stringify(legacy)), legacy);
   assert.equal(cropError(840, 600, legacy), "");
-  assert.match(cropError(640, 1100, { ...tall, mode: "fit-width" }), /fuori/);
-  assert.match(cropError(6000, 4000, { ...frame, x: 1 }), /fuori/);
-  assert.match(cropError(6000, 4000, { ...frame, width: 5000 }), /fuori/);
-  assert.match(cropError(6000, 4000, { ...frame, format: "3:2" }), /non previsto/);
+  assert.match(cropError(640, 1100, { ...tall, mode: "fit-width" }), /outside|beyond/);
+  assert.match(cropError(6000, 4000, { ...frame, x: 1 }), /outside|beyond/);
+  assert.match(cropError(6000, 4000, { ...frame, width: 5000 }), /outside|beyond/);
+  assert.match(cropError(6000, 4000, { ...frame, format: "3:2" }), /Unsupported/);
 });
 
 test("a padded crop can include the top, bottom or side bands of the original-resolution canvas", () => {
@@ -79,8 +79,8 @@ test("a padded crop can include the top, bottom or side bands of the original-re
   assert.deepEqual(parseCrop(cropQuery(crop)), crop);
   assert.deepEqual(storedCrop(JSON.stringify(crop)), crop);
   assert.deepEqual(copyDimensions(crop), { width: 208, height: 260 });
-  assert.match(cropError(420, 280, { ...crop, y: 266 }), /fuori/);
-  assert.match(cropError(420, 280, { ...crop, format: "3:2" }), /non previsto/);
+  assert.match(cropError(420, 280, { ...crop, y: 266 }), /outside|beyond/);
+  assert.match(cropError(420, 280, { ...crop, format: "3:2" }), /Unsupported/);
   assert.equal(cropError(60, 40, { x: 11, y: 0, width: 32, height: 40, format: "4:5", mode: "padded" }), "");
 });
 
@@ -89,8 +89,8 @@ test("the initial view is the largest centred 4:5 frame, inside the copy", () =>
   assert.equal(viewWidth(1024), 819);
   assert.deepEqual(centredView(864, 1536), { x: 0, y: 228, height: 1080 });
   for (const [w, h] of [[1536, 1024], [864, 1536], [1536, 1536], [5, 5], [1, 1]]) assert.equal(viewError(w, h, centredView(w, h)), "", `${w}×${h}`);
-  assert.equal(viewError(1536, 1024, { x: 800, y: 0, height: 1024 }), "Vista iniziale fuori dalla copia");
-  assert.equal(viewError(1536, 1024, { x: 0, y: 0, height: 10 }), "Vista iniziale troppo piccola o fuori dalla copia");
+  assert.equal(viewError(1536, 1024, { x: 800, y: 0, height: 1024 }), "Initial view outside the copy");
+  assert.equal(viewError(1536, 1024, { x: 0, y: 0, height: 10 }), "Initial view too small or outside the copy");
   assert.deepEqual(viewFractions(null, 1536, 1024), { x: 0, y: 0, width: 1, height: 1 });
   assert.deepEqual(viewFractions({ x: 358, y: 0, height: 1024 }, 1536, 1024), { x: 0.2331, y: 0, width: 0.5332, height: 1 });
 });

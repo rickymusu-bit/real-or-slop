@@ -9,52 +9,26 @@ export const CONTEXT_MAX = 4000;
 const HISTORY = 50;
 
 export const DEFAULTS: Record<Part, string> = {
-  base: `Lavori per un archivio fotografico italiano.
-
-Lingua: sobria e precisa, senza enfasi, emoji o hashtag.
-
-Fatti: non inventare nomi di persone; usa solo quelli presenti nel contesto che ricevi. Indica luoghi ed epoche solo se sono plausibili dal contesto o da ciò che si vede; nel dubbio resta generico («una piazza», «anni Settanta»). Non citare mai fotografi, agenzie, archivi, fonti, licenze o indirizzi web.`,
-  real_measure: `Misuri una fotografia per capire quanto sarebbe difficile riprodurla con un generatore di immagini. Non descriverla, non interpretarla e non giudicarne l'autenticità: osserva soltanto.
-
-Soggetto: l'oggetto principale della foto, di solito quello del tema della galleria.
-
-Altri oggetti: elenca ogni altro oggetto nitido che chi guarda saprebbe nominare (una cartuccia, una tazza, un cavo, una mano, una persona), compresi altri oggetti del tema della galleria. Oggetti uguali ripetuti contano uno per uno. Non elencare superfici e fondi (muro, pavimento, tavolo, tessuto, cielo), mobili che fanno da sfondo (divano, poltrona, sedile, scaffale) né oggetti sfocati di cui non si distingue alcun dettaglio. Le parti di un oggetto non sono oggetti a sé; una persona è un solo oggetto.
-
-Riquadro: per ogni oggetto il rettangolo più stretto che lo contiene, in coordinate normalizzate sull'immagine intera.
-
-Dettaglio: per ogni oggetto dai a ogni categoria un grado. 0: assente o non leggibile. 1: presente e leggibile. 2: fitto o minuto, cioè molti elementi piccoli o precisi da riprodurre esattamente. Categorie: scritte e loghi leggibili (2 se piccoli o numerosi); motivi ripetuti come feritoie, griglie, tasti in fila (2 se fitti); parti contabili come tasti, viti, porte (2 se molte o piccole); texture dei materiali (2 se la grana è nitida da vicino); superfici riflettenti o schermi (2 se riflessi o immagini sono complessi); giunzioni e meccanismi come cerniere, sportelli, fessure (2 se molti o in primo piano); persone e anatomia: mani, dita, volti, corpi (2 se mani o volti sono nitidi e in primo piano).
-
-Nomi degli oggetti in italiano, brevi e generici.`,
-  real_ideas: `Proponi modi diversi di creare, a partire da questa fotografia autentica, una fotografia generata che sembri vera. La REAL ispira la SLOP, non viene copiata.
-
-Dalla REAL la SLOP eredita: il tema della galleria e la famiglia dell'oggetto; l'epoca dell'oggetto; il genere di foto, cioè come di solito si fotografa quel tipo di oggetto (un'edizione da collezione da sola e in risalto, un modello comune anche in uso, un pezzo da museo in vetrina, un annuncio di vendita); la tecnica, la luce e il tipo di apparecchio; affollamento e dettaglio allo stesso livello.
-
-Cambiano sempre l'ambiente (superficie, sfondo, oggetti intorno, con lo stesso numero di oggetti) e il punto di vista. L'esemplare (edizione, colore, variante) può cambiare, oppure restare lo stesso se la scena cambia molto. Non si riprendono mai la composizione, i segni dell'esemplare (graffi, adesivi, scritte a mano, numeri di serie) né le persone della REAL.
-
-Messe una accanto all'altra, REAL e SLOP non devono sembrare due scatti della stessa sessione. Le idee devono essere plausibili per l'oggetto e per il genere di foto.`,
-  slop_gallery_prompt: `Per una galleria tematica sviluppa in un falso fotografico concreto l’idea approvata per la REAL e scrivi il prompt inglese. Usa la foto intera, il suo titolo e la descrizione della fonte. Rendi specifici l’invenzione, quando c’è, e gli elementi reali da conservare, come la geografia, un edificio riconoscibile o gli elementi visibili di una mobilitazione. Varia le premesse quando le foto lo consentono. Privilegia credibilità fotografica, luce e tecnica plausibili.`,
-  slop_evaluation: `Valuti una fotografia generata, intera e non trattata, prima che entri nella libreria come candidata. Giudica prima la credibilità fotografica: deve poter essere scambiata per una fotografia autentica della tecnica, dell'epoca e della situazione rappresentata. Poi la plausibilità fisica e contestuale e il rispetto degli ancoraggi obbligatori e delle esclusioni del contesto editoriale. L'aderenza letterale ai dettagli secondari del prompt non è richiesta.
-
-Difetti critici, che nessun punto forte compensa: anatomia, fisica, geometria, scritte centrali senza senso, resa artificiale, contraddizioni di contesto, violazioni delle regole sui contenuti, ancoraggi obbligatori mancanti. Per ogni difetto indica la zona dell'immagine e la conseguenza. Segnala le incertezze; non dedurre identità, provenienza, licenza o verità storica dai pixel. La valutazione è una stima editoriale, non una certificazione.
-
-Contenuti: persone inventate; nessuna persona viva o morta da meno di 50 anni riconoscibile; nessun crimine attribuito a personaggi storici; regimi mai celebrati; niente nudità fuori dalle opere d'arte.
-
-Lingua: difetti, incertezze e motivazione in italiano; il prompt rivisto in inglese.`,
+  "base": "You work on a photographic archive.\n\nLanguage: write all generated text in English, concise and precise, without hype, emoji or hashtags. Transcribe legible text in its original language.\n\nFacts: never invent people’s names; use only names supported by the supplied context. Specify places and periods only when supported by the context or visible evidence; otherwise stay generic (for example a square, the 1970s). Never mention photographers, agencies, archives, sources, licenses or web addresses.",
+  "real_measure": "Measure a photograph to estimate how hard it would be for an image generator to reproduce a similar one. Observe only: do not describe or interpret it, and do not judge authenticity.\n\nSubject: the main object, usually the gallery’s theme.\n\nOther objects: list every other sharp, recognizable object a viewer could name (a cartridge, cup, cable, hand, person), including other objects of the gallery’s theme. Count repeated identical objects separately. Exclude surfaces and backgrounds (wall, floor, table, fabric, sky), background furniture (sofa, armchair, seat, shelf) and blurred objects with no discernible detail. Object parts are not separate objects; a person counts as one object.\n\nBox: the tightest rectangle around each object, normalized to the entire image.\n\nDetail: grade each category per object. 0: absent or unreadable. 1: present and readable. 2: dense or tiny, with many small or precise elements to reproduce exactly. Categories: readable text and logos (2 if small or numerous); repeated patterns such as vents, grids or rows of buttons (2 if dense); countable parts such as buttons, screws and ports (2 if numerous or small); material textures (2 if grain is sharp in close-up); reflective surfaces or screens (2 if reflections or images are complex); joints and mechanisms such as hinges, covers and gaps (2 if numerous or prominent); people and anatomy: hands, fingers, faces, bodies (2 if hands or faces are sharp and prominent).\n\nUse short, generic English object names.",
+  "real_ideas": "Propose distinct ways to create a plausible generated photograph inspired by this authentic photo. The REAL inspires the SLOP and is never copied.\n\nInherit the gallery theme, object family and era, photographic genre (isolated collector’s edition, ordinary model in use, museum display, sales listing), technique, light, camera type and levels of crowding and detail.\n\nAlways change environment (surface, background, nearby objects, keeping their number) and viewpoint. The specimen (edition, color, variant) may change, or stay the same if the scene changes substantially. Never copy composition, specimen marks (scratches, stickers, handwriting, serial numbers) or the REAL’s people.\n\nSide by side, REAL and SLOP must not look like two shots from the same session. Ideas must be plausible for the object and genre. Write all fields in English.",
+  "slop_gallery_prompt": "For a themed gallery, develop the approved REAL idea into a concrete fabricated photograph and write its English prompt. Use the full photo, title and source description. Specify any invention and the real anchors to retain, such as geography, a recognizable building or visible event cues. Vary premises when the photos allow. Prioritize photographic credibility, plausible light and technique. Write the premise and any incompatibility reason in English.",
+  "slop_evaluation": "Evaluate the entire generated, untreated photograph before it enters the library as a candidate. Judge photographic credibility first: it must be plausible as an authentic photograph of the depicted technique, period and situation. Then assess physical and contextual plausibility, required anchors and exclusions. Literal adherence to secondary prompt details is not required.\n\nCritical defects cannot be offset by strengths: anatomy, physics, geometry, meaningless central text, artificial rendering, contextual contradictions, content violations or missing required anchors. Identify each defect’s region and consequence. Flag uncertainties; do not infer identity, provenance, license or historical truth from pixels. Evaluation is an editorial estimate, not certification.\n\nContent: invented people; no identifiable real people alive or dead less than 50 years; no crimes attributed to historical figures; no celebration of regimes; no nudity outside artworks.\n\nLanguage: all defects, uncertainties, reasoning and revised prompts must be in English. Preserve quoted source lettering in its original language."
 };
 
 export interface ContextVersion { id: string; part: Part; body: string; created_at: string; pipeline: number }
 
 function part(value: unknown): Part {
-  if (typeof value !== "string" || !PARTS.includes(value as Part)) throw new HttpError(400, "Parte del contesto inesistente");
+  if (typeof value !== "string" || !PARTS.includes(value as Part)) throw new HttpError(400, "Context part not found");
   return value as Part;
 }
 /** Plain text: line breaks normalised, control characters out except tab and newline, at most CONTEXT_MAX characters. */
 function clean(value: unknown): string {
-  if (typeof value !== "string") throw new HttpError(400, "Testo del contesto mancante");
+  if (typeof value !== "string") throw new HttpError(400, "Missing context text");
   const text = [...value.normalize("NFC").replace(/\r\n?/g, "\n")]
     .filter(ch => { const c = ch.charCodeAt(0); return c === 9 || c === 10 || (c >= 32 && c !== 127); }).join("").trim();
-  if (!text) throw new HttpError(400, "Il contesto non può essere vuoto");
-  if (text.length > CONTEXT_MAX) throw new HttpError(400, `Contesto oltre ${CONTEXT_MAX} caratteri`);
+  if (!text) throw new HttpError(400, "Context cannot be empty");
+  if (text.length > CONTEXT_MAX) throw new HttpError(400, `Context exceeds ${CONTEXT_MAX} characters`);
   return text;
 }
 
@@ -94,14 +68,14 @@ async function save(env: Env, which: Part, body: string) {
 /** GET /contexts; POST /contexts {part, body}: new version; POST /contexts/restore {id}: an old version becomes the newest. */
 export async function contextRoute(env: Env, method: string, restore: boolean, data: Record<string, unknown>) {
   if (method === "GET" && !restore) return state(env);
-  if (method !== "POST") throw new HttpError(405, "Metodo non consentito");
+  if (method !== "POST") throw new HttpError(405, "Method not allowed");
   if (restore) {
-    if (Object.keys(data).some(key => key !== "id") || typeof data.id !== "string") throw new HttpError(400, "Versione richiesta");
+    if (Object.keys(data).some(key => key !== "id") || typeof data.id !== "string") throw new HttpError(400, "Version required");
     const old = await env.DB.prepare("SELECT part,body,pipeline FROM model_contexts WHERE id=?").bind(data.id).first<{ part: Part; body: string; pipeline: number }>();
-    if (!old) throw new HttpError(404, "Versione inesistente");
-    if (!PARTS.includes(old.part)) throw new HttpError(409, "Parte del contesto non più in uso");
+    if (!old) throw new HttpError(404, "Version not found");
+    if (!PARTS.includes(old.part)) throw new HttpError(409, "Context part no longer in use");
     return save(env, old.part, old.body);
   }
-  if (Object.keys(data).some(key => key !== "part" && key !== "body")) throw new HttpError(400, "Campi non previsti");
+  if (Object.keys(data).some(key => key !== "part" && key !== "body")) throw new HttpError(400, "Unexpected fields");
   return save(env, part(data.part), clean(data.body));
 }

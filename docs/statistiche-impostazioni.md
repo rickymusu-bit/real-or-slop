@@ -1,6 +1,8 @@
-# Statistiche e Impostazioni — specifica 4.9.1
+# Statistiche e Impostazioni — specifica 4.10.0
 
-Stato: implementata nel ramo 1.58.0, da rilasciare. Aggiornata: 2026-11-23T20:46:00Z.
+Stato: implementata nel ramo 1.61.0, da rilasciare. Aggiornata: 2026-11-25T22:45:40Z.
+
+Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
 ## 1. Decisioni dell'owner (2026-11-12)
 
@@ -16,12 +18,12 @@ si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ri
 
 - **Modelli:** modello di testo, modello di immagini (con la data di dismissione dove nota) e qualità delle immagini tra quelle ammesse;
   se il modello scelto non ammette la qualità salvata, si torna a `high`. Il wizard SLOP la conserva nello snapshot del batch.
-- **Contesto dei modelli:** i cinque testi (Base, Misura delle REAL, Idee SLOP delle REAL, Premessa e prompt di galleria, Valutazione delle SLOP) con le versioni, il
-  ripristino e la proposta del codice; un avviso quando il testo in vigore dei prompt è stato scritto per le gemelle e blocca lo
+- **Contesto dei modelli:** quattro testi visibili (Shared instructions, REAL measurement, Legacy gallery premise and prompt, SLOP evaluation); il contesto obsoleto delle idee delle REAL è nascosto nell’interfaccia. Ogni testo offre versioni,
+  ripristino e proposta del codice; un avviso quando il testo in vigore dei prompt è stato scritto per le gemelle e blocca lo
   studio (specifica `libreria-immagini`, sezione 7).
 - **Classifica:** verifica di un codice partita (soprannome, livello, punteggio, data), Nascondi, Mostra, Cancella (per sempre, per le
   richieste di cancellazione).
-- **Generazione SLOP:** tentativi massimi (1–5, default 3), tolleranza (0–2, default 1). Il resto si sceglie nel wizard «Genera SLOP» della galleria (specifica `generazione-slop`). Nessuna proposta da attivare o spegnere; lo sbilanciamento è solo una notifica. La 0055 rimuove `slop_auto_enabled`, rifiutato dall’API. La 0056 elimina anche i vincoli e le chiavi legacy dei gruppi, conservando le impostazioni attive.
+- **Generazione SLOP precedente:** tentativi massimi (1–5, default 3), tolleranza (0–2, default 1). Il resto si sceglie nel wizard «Genera SLOP» della galleria (specifica `generazione-slop`). Nessuna proposta da attivare o spegnere; lo sbilanciamento è solo una notifica. La 0055 rimuove `slop_auto_enabled`, rifiutato dall’API. La 0056 elimina anche i vincoli e le chiavi legacy dei gruppi, conservando le impostazioni attive.
 - **Partite:** durata massima di una partita aperta in ore (24, da 1 a 168): oltre, una partita non conclusa non trattiene più le copie
   ritirate e non conta tra le aperte.
 - **Fonti Commons:** REAL controllate ogni notte su Wikimedia Commons (50, da 0 a 500; 0 sospende il controllo), richiesta
@@ -61,3 +63,5 @@ Periodo: ultimi 7 giorni, ultimi 30 (predefinito) o da sempre; «Aggiorna». API
 
 Impostazioni `max_generation_attempts` (1–5, default 3) ed `editorial_tolerance` (0 rigorosa, 1 normale, 2 permissiva; default 1). Snapshot prima delle chiamate. Default testo `gpt-6.1-sol`, immagini `gpt-image-2.5-flare` qualità `high`, in partenza. Al rilascio la 0061 elimina le impostazioni salvate e le statistiche pregresse. Statistiche includono evaluation, processi accettati/esauriti/sospesi e tentativi; la tabella dei formati sparisce perché le copie nuove sono tutte 4:5. Nessun punteggio di difficoltà derivato dai tentativi.
 
+
+Il riquadro di sbilanciamento è in sola lettura: il modulo browser `src/slop-auto.ts` non contiene più il vecchio wizard delle proposte e non avvia o riprende generazioni. Il collegamento alle lavorazioni precedenti porta al recupero manuale nella pagina SLOP. La pipeline corrente usa le regole e probabilità della galleria.

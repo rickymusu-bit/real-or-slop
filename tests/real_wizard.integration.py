@@ -1,6 +1,6 @@
 """REAL wizard in the browser, desktop and mobile: Commons search (clear box, pages, columns, a tap adds at once, selection
 kept across searches, press-and-hold preview), blocking acquisition progress, source description without tags, analysis or editorial description,
-description, «Togli dal caricamento», crop step, summary and publication."""
+description, «Remove from import», crop step, summary and publication."""
 import io
 import os
 import re
@@ -46,14 +46,14 @@ with sync_playwright() as p:
         created_gallery = page.request.post(base + '/api/admin/library/galleries', data={'title':'Ponti '+name})
         assert created_gallery.ok, created_gallery.text()
         gallery_id = created_gallery.json()['id']
-        alternate = page.request.post(base + '/api/admin/library/galleries', data={'title':'Altri ponti '+name})
+        alternate = page.request.post(base + '/api/admin/library/galleries', data={'title':'Other ponti '+name})
         assert alternate.ok,alternate.text()
         alternate_id=alternate.json()['id']
         page.goto(base + '/admin')
         expect(page.locator('#admin-galleries')).to_be_visible()
         open_gallery(page, gallery_id)
-        page.get_by_role('link', name='Carica REAL').click()
-        expect(page.get_by_role('heading', name='Caricamento REAL')).to_be_visible()
+        page.get_by_role('link', name='Import REAL').click()
+        expect(page.get_by_role('heading', name='Import REAL')).to_be_visible()
 
         calls = []
 
@@ -89,20 +89,20 @@ with sync_playwright() as p:
         expect(clear).to_be_disabled()
         search.locator('[name=q]').fill('bridge')
         search.locator('[name=sort]').select_option('recent')
-        search.get_by_role('button', name='Cerca', exact=True).click()
+        search.get_by_role('button', name='Search', exact=True).click()
         expect(page.locator('.rw-hit')).to_have_count(1)
         expect(page.locator('.rw-hit span')).to_have_count(0)
         expect(page.locator('.rw-categories')).not_to_have_attribute('open', '')
-        expect(page.locator('.rw-categories summary')).to_have_text('Categorie correlate (2)')
-        expect(page.locator('.rw-pager')).to_contain_text('Pagina 1')
-        expect(page.get_by_role('button', name='Pagina precedente')).to_be_disabled()
+        expect(page.locator('.rw-categories summary')).to_have_text('Related categories (2)')
+        expect(page.locator('.rw-pager')).to_contain_text('Page 1')
+        expect(page.get_by_role('button', name='Previous page')).to_be_disabled()
         expect(page.locator('.rw-hit a')).to_have_count(0)  # no link in the results: a tap ticks the photo
-        expect(page.get_by_role('button', name=re.compile('Aggiungi le selezionate'))).to_have_count(0)
+        expect(page.get_by_role('button', name=re.compile('Add selected'))).to_have_count(0)
         # A tap ticks the photo and puts it among the chosen ones at once; a second tap takes it out.
         page.locator('.rw-hit img').click()
         expect(page.locator('[data-rw-hit]')).to_be_checked()
         expect(page.locator('.rw-pick')).to_have_count(1)
-        expect(page.locator('.rw-selected h3')).to_have_text('Immagini selezionate (1)')
+        expect(page.locator('.rw-selected h3')).to_have_text('Selected images (1)')
         page.locator('.rw-hit img').click()
         expect(page.locator('[data-rw-hit]')).not_to_be_checked()
         expect(page.locator('.rw-pick')).to_have_count(0)
@@ -112,16 +112,16 @@ with sync_playwright() as p:
         expect(preview).to_be_visible()
         expect(preview.locator('h3')).to_have_text('Bridge1.jpg')
         expect(preview).to_contain_text('A stone bridge number 1 over the river')
-        expect(preview.get_by_role('link', name='Apri la pagina su Commons')).to_have_attribute('href', 'https://commons.wikimedia.org/wiki/File:Bridge1.jpg')
+        expect(preview.get_by_role('link', name='Open Commons page')).to_have_attribute('href', 'https://commons.wikimedia.org/wiki/File:Bridge1.jpg')
         expect(preview.locator('img')).to_have_attribute('src', 'https://upload.wikimedia.org/wikipedia/commons/a/aa/Bridge1.jpg')
         page.wait_for_timeout(400)
         expect(preview).to_be_visible()
         expect(page.locator('[data-rw-hit]')).not_to_be_checked()
         expect(page.locator('.rw-pick')).to_have_count(0)
         page.screenshot(path=str(folder / (name + '-preview.png')))
-        preview.get_by_role('button', name="Chiudi l'anteprima").click()
+        preview.get_by_role('button', name="Close preview").click()
         expect(preview).to_be_hidden()
-        expect(page.get_by_text('Seleziona tutta la pagina')).to_have_count(0)
+        expect(page.get_by_text('Select tutta la pagina')).to_have_count(0)
         expect(page.locator('#rw-links-section, #rw-links')).to_have_count(0)
         expect(page.get_by_text('Aggiungi link di Wikimedia Commons')).to_have_count(0)
         tracks = "() => getComputedStyle(document.querySelector('.rw-results')).gridTemplateColumns.split(' ').length"
@@ -130,28 +130,28 @@ with sync_playwright() as p:
         page.locator('#rw-columns').select_option('1')
         assert page.evaluate(tracks) == 1, page.evaluate(tracks)
         page.locator('[data-rw-hit]').check()
-        page.get_by_role('button', name='Pagina successiva').click()
+        page.get_by_role('button', name='Next page').click()
         assert page.evaluate(tracks) == 1, page.evaluate(tracks)  # kept on the next page
         expect(page.locator('#rw-columns')).to_have_value('1')
-        expect(page.locator('.rw-pager')).to_contain_text('Pagina 2')
-        expect(page.get_by_role('button', name='Pagina successiva')).to_be_disabled()
+        expect(page.locator('.rw-pager')).to_contain_text('Page 2')
+        expect(page.get_by_role('button', name='Next page')).to_be_disabled()
         expect(page.locator('.rw-hit img')).to_have_attribute('alt', 'Bridge2.jpg')
         page.locator('[data-rw-hit]').check()
-        page.get_by_role('button', name='Pagina precedente').click()
-        expect(page.locator('.rw-pager')).to_contain_text('Pagina 1')
+        page.get_by_role('button', name='Previous page').click()
+        expect(page.locator('.rw-pager')).to_contain_text('Page 1')
         expect(page.locator('[data-rw-hit]')).to_be_checked()
         assert len(calls) == 2, calls
         page.locator('#rw-columns').select_option('0')
         expect(page.locator('.rw-pick')).to_have_count(2)
         # A new search keeps the chosen photos.
         search.locator('[name=q]').fill('tower')
-        search.get_by_role('button', name='Cerca', exact=True).click()
+        search.get_by_role('button', name='Search', exact=True).click()
         expect(page.locator('.rw-hit img')).to_have_attribute('alt', 'Bridge3.jpg')
         expect(page.locator('[data-rw-hit]')).not_to_be_checked()
         expect(page.locator('.rw-pick')).to_have_count(2)
         page.locator('.rw-hit img').click()
         expect(page.locator('.rw-pick')).to_have_count(3)
-        page.locator('.rw-pick button[aria-label^="Rimuovi Bridge3"]').click()
+        page.locator('.rw-pick button[aria-label^="Remove Bridge3"]').click()
         expect(page.locator('.rw-pick')).to_have_count(2)
         expect(page.locator('[data-rw-hit]')).not_to_be_checked()
         # Chosen photos: thumbnails without title, linked to their Commons page in a new tab.
@@ -162,9 +162,9 @@ with sync_playwright() as p:
         expect(page.locator('.rw-picks')).not_to_contain_text('Bridge')
         page.screenshot(path=str(folder / (name + '-step1.png')), full_page=True)
         page.locator('[data-gallery-return]').click()
-        page.get_by_role('link', name='Carica REAL').click()
+        page.get_by_role('link', name='Import REAL').click()
         expect(page.locator('.rw-pick')).to_have_count(2)
-        page.get_by_role('button', name='Inizia un nuovo caricamento').click()
+        page.get_by_role('button', name='Start a new import').click()
 
         # Two REAL photos added through the API with their WebP copies (no external Commons requests).
         title = 'wizard-' + name
@@ -188,26 +188,26 @@ with sync_playwright() as p:
         page.locator('[data-gallery-return]').click()
         page.locator('[data-gallery-close]').click()
         open_gallery(page, gallery_id)
-        page.get_by_role('link', name='Carica REAL').click()
+        page.get_by_role('link', name='Import REAL').click()
         expect(page.locator('.rw-editor')).to_have_count(4)
         # A photo trashed elsewhere (the Database section) leaves the wizard when the owner comes back to it.
         r = page.request.post(base + f"/api/admin/library/{third['id']}/trash", data='{}', headers={'Content-Type': 'application/json'}); assert r.ok, r.text()
         page.locator('[data-gallery-return]').click()
-        page.get_by_role('link', name='Carica REAL').click()
+        page.get_by_role('link', name='Import REAL').click()
         expect(page.locator('.rw-editor')).to_have_count(3)
-        expect(page.locator('.rw-message')).to_contain_text('Una foto è stata tolta dal caricamento')
+        expect(page.locator('.rw-message')).to_contain_text('One photo was removed from this import')
         # «Togli dal caricamento» moves a photo of step 2 to the trash.
         page.locator('[data-rw-image="%s"] [data-rw=discard]' % fourth['id']).click()
         expect(page.locator('.rw-editor')).to_have_count(2)
-        expect(page.locator('.rw-message')).to_have_text('Foto tolta dal caricamento e spostata nel cestino.')
-        assert any(m.startswith('Togliere «') for m in confirmations), confirmations
+        expect(page.locator('.rw-message')).to_have_text('Photo removed from import and moved to Trash.')
+        assert any(m.startswith('Remove “') for m in confirmations), confirmations
         r = page.request.get(base + f"/api/admin/library/{fourth['id']}"); assert r.ok and r.json()['status'] == 'trash', r.text()
         a = page.locator('[data-rw-image="%s"]' % first['id'])
         b = page.locator('[data-rw-image="%s"]' % second['id'])
         a.locator('.rw-metadata summary').click()
         expect(a.locator('.rw-metadata')).to_contain_text(title + '-a')
         # Step 2 shows the source description and the optional description generated from the original.
-        expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Descrizione')
+        expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Description')
         expect(page.locator('[data-rw-new-tag], [data-rw-tag-category], .tag-legend, .rw-pill, [data-rw=choose-reset]')).to_have_count(0)
         expect(page.locator('[data-rw-caption], [data-editorial], [data-rw=choose-generation], #rw-generation-dialog')).to_have_count(0)
         # The source description stays in the catalogue and is saved on leaving the field.
@@ -215,7 +215,7 @@ with sync_playwright() as p:
         expect(description).to_have_value('')
         description.fill('Un ponte di pietra sul fiume, anni Sessanta')
         description.press('Tab')
-        expect(page.locator('.rw-message')).to_have_text('Descrizione salvata.')
+        expect(page.locator('.rw-message')).to_have_text('Description saved.')
         saved = page.request.get(base + '/api/admin/library/' + first['id']).json()
         assert saved['description'] == 'Un ponte di pietra sul fiume, anni Sessanta', saved['description']
         a.locator('[data-rw=describe]').click()
@@ -223,29 +223,29 @@ with sync_playwright() as p:
         expect(b.locator('[data-visual-description]')).to_have_count(0)
         a.locator('[data-visual-description] summary').click()
         expect(a.locator('dd[lang=en]', has_text='Front view.')).to_have_text('Front view.')
-        assert any('Massimo 1 chiamata a pagamento' in m for m in confirmations), confirmations
+        assert any('Maximum 1 paid call' in m for m in confirmations), confirmations
         expect(a.locator('[data-rw=crop]')).to_have_count(0)  # the crop is a step of its own
         expect(page.locator('[data-rw="choose-tags"], [data-rw="choose-caption"]')).to_have_count(0)
         assert page.request.post(base + '/api/admin/library/%s/analyze' % first['id'], data={'confirm': True}, headers={'Origin': base}).status == 404
         page.screenshot(path=str(folder / (name + '-step2.png')), full_page=True)
 
         # Step 3, «Inquadratura»: each copy with its format; the owner reviews the fixed 4:5 frame.
-        page.get_by_role('button', name='Avanti: inquadratura').click()
+        page.get_by_role('button', name='Next: framing').click()
         # The wizard can proceed with a REAL that still has no visual description.
-        expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Inquadratura')
+        expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Framing')
         crop_a = page.locator('[data-rw-crop-image="%s"]' % first['id'])
         expect(page.locator('.rw-crop')).to_have_count(2)
-        expect(crop_a).to_contain_text('4:5 verticale')
-        crop_a.get_by_role('button', name='Cambia inquadratura').click()
+        expect(crop_a).to_contain_text('4:5 portrait')
+        crop_a.get_by_role('button', name='Change frame').click()
         editor = page.locator('dialog.crop-dialog')
         frame = editor.locator('.crop-frame')
         expect(frame).to_be_visible()  # The existing saved crop reopens directly.
-        expect(editor.get_by_role('heading', name='Inquadratura 4:5')).to_be_visible()
+        expect(editor.get_by_role('heading', name='4:5 framing')).to_be_visible()
         expect(editor.locator('select, input[type=range]')).to_have_count(0)
-        expect(editor.get_by_alt_text('Foto originale adattata al 4:5')).to_be_visible()
+        expect(editor.get_by_alt_text('Original photo fitted to 4:5')).to_be_visible()
         expect(editor.get_by_role('button', name='Foto intera')).to_have_count(0)
         expect(editor.get_by_role('button', name='Ritaglia')).to_have_count(0)
-        expect(frame).to_have_attribute('aria-valuetext', 'x 98, y 122, altezza 280 px')
+        expect(frame).to_have_attribute('aria-valuetext', 'x 98, y 122, height 280 px')
         if name == 'mobile':
             stage = editor.locator('.crop-stage')
             stage.scroll_into_view_if_needed()
@@ -305,15 +305,15 @@ with sync_playwright() as p:
         if name == 'mobile':
             viewport = page.viewport_size
             page.set_viewport_size({'width': 340, 'height': 400})
-            expect(editor.get_by_role('button', name='Salva')).to_be_in_viewport(ratio=1)
+            expect(editor.get_by_role('button', name='Save')).to_be_in_viewport(ratio=1)
             page.set_viewport_size(viewport)
         copy_route = '**/api/admin/library/' + first['id'] + '/copy?*'
         uploads = []
         page.route(copy_route, lambda route: uploads.append(route))
         with page.expect_request(copy_route):
             editor.locator('[data-crop=ok]').click()
-        processing = page.get_by_role('dialog', name='Elaborazione foto')
-        expect(processing).to_contain_text('Salvo l’inquadratura')
+        processing = page.get_by_role('dialog', name='Processing photo')
+        expect(processing).to_contain_text('Saving the frame')
         expect(editor).to_have_attribute('open', '')
         assert processing.evaluate('el => el.matches(":modal") && Math.abs(el.getBoundingClientRect().top + el.offsetHeight / 2 - innerHeight / 2) < 2')
         page.keyboard.press('Escape')
@@ -324,8 +324,8 @@ with sync_playwright() as p:
         expect(editor.locator('.crop-error')).to_have_text('Copia temporaneamente non disponibile')
         page.unroute(copy_route)
         editor.locator('[data-crop=ok]').click()
-        expect(page.locator('.rw-message')).to_have_text('Inquadratura salvata.')
-        expect(crop_a).to_contain_text('4:5 verticale')
+        expect(page.locator('.rw-message')).to_have_text('Frame saved.')
+        expect(crop_a).to_contain_text('4:5 portrait')
         saved = page.request.get(base + '/api/admin/library/' + first['id']).json()
         copy = saved['copy']
         assert (copy['width'], copy['height']) == (round(height * 0.8), height), copy
@@ -336,15 +336,15 @@ with sync_playwright() as p:
         middle = copy['width'] // 2
         assert max(picture.getpixel((middle, 2))) < 8 and max(picture.getpixel((middle, height - 3))) < 8
         assert picture.getpixel((middle, height // 2))[2] > 150
-        crop_a.get_by_role('button', name='Cambia inquadratura').click()
+        crop_a.get_by_role('button', name='Change frame').click()
         expect(frame).to_have_attribute('aria-valuetext', crop_position)
         editor.locator('[data-crop=cancel]').click()
         page.screenshot(path=str(folder / (name + '-step3-crop.png')), full_page=True)
-        page.get_by_role('button', name='Indietro: descrizione').click()
+        page.get_by_role('button', name='Back: description').click()
         expect(page.locator('.rw-editor')).to_have_count(2)
-        page.get_by_role('button', name='Avanti: inquadratura').click()
+        page.get_by_role('button', name='Next: framing').click()
         # Step 4: the summary.
-        page.get_by_role('button', name='Avanti: riepilogo').click()
+        page.get_by_role('button', name='Next: summary').click()
         expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Riepilogo')
         expect(page.locator('.rw-final img[data-game-media]')).to_have_count(2)
         expect(page.locator('.rw-final img[data-game-media]').first).to_be_visible()
@@ -355,11 +355,11 @@ with sync_playwright() as p:
         expect(page.locator('.rw-final-credits').first).to_contain_text(title + '-a')
         expect(page.locator('.rw-preview-grid')).not_to_contain_text('Un ponte di pietra sul fiume, anni Sessanta')
         page.screenshot(path=str(folder / (name + '-step4.png')), full_page=True)
-        page.get_by_role('button', name='Conferma e pubblica').click()
-        expect(page.locator('.rw-message')).to_contain_text('Devi confermare')
+        page.get_by_role('button', name='Confirm and publish').click()
+        expect(page.locator('.rw-message')).to_contain_text('Confirm that you have checked')
         page.locator('#rw-rights').check()
-        page.get_by_role('button', name='Conferma e pubblica').click()
-        expect(page.locator('.rw-message')).to_contain_text('2 immagini pubblicate', timeout=30000)
+        page.get_by_role('button', name='Confirm and publish').click()
+        expect(page.locator('.rw-message')).to_contain_text('2 published images', timeout=30000)
         published = page.request.get(base + '/api/admin/library?status=published&origin=REAL&q=' + title)
         assert published.ok and {first['id'], second['id']} <= {i['id'] for i in published.json()['items']}
         # Commons is simulated at the browser boundary. The wizard passes the selected gallery,
@@ -380,22 +380,22 @@ with sync_playwright() as p:
             route.fulfill(response=response)
             return response.json()['id']
 
-        page.get_by_role('button', name='Inizia un nuovo caricamento').click()
+        page.get_by_role('button', name='Start a new import').click()
         search.locator('[name=q]').fill('bridge')
-        search.get_by_role('button', name='Cerca', exact=True).click()
+        search.get_by_role('button', name='Search', exact=True).click()
         page.locator('.rw-hit img').click()
-        page.get_by_role('button', name='Pagina successiva').click()
+        page.get_by_role('button', name='Next page').click()
         page.locator('.rw-hit img').click()
         search.locator('[name=q]').fill('tower')
-        search.get_by_role('button', name='Cerca', exact=True).click()
+        search.get_by_role('button', name='Search', exact=True).click()
         page.locator('.rw-hit img').click()
         expect(page.locator('.rw-pick')).to_have_count(3)
         with page.expect_request(commons_api):
-            page.get_by_role('button', name='Avanti: descrizione').click()
-        acquisition = page.get_by_role('dialog', name='Acquisizione privata')
+            page.get_by_role('button', name='Next: description').click()
+        acquisition = page.get_by_role('dialog', name='Private import')
         count = acquisition.get_by_role('status')
-        progress = acquisition.get_by_role('progressbar', name='Progresso acquisizione foto REAL')
-        expect(count).to_have_text('Foto acquisite: 0 di 3')
+        progress = acquisition.get_by_role('progressbar', name='Progresso acquisizione photos REAL')
+        expect(count).to_have_text('Photos imported: 0 of 3')
         expect(progress).to_have_attribute('max', '3')
         expect(progress).to_have_attribute('value', '0')
         assert acquisition.evaluate('el => el.matches(":modal")')
@@ -412,26 +412,26 @@ with sync_playwright() as p:
 
         with page.expect_request(commons_api):
             first_acquired = finish_acquisition(1)
-        expect(count).to_have_text('Foto acquisite: 1 di 3')
+        expect(count).to_have_text('Photos imported: 1 of 3')
         expect(progress).to_have_attribute('value', '1')
         with page.expect_request(commons_api):
             failed = requests.pop(0)
             assert 'File:Bridge2.jpg' in failed.request.post_data_json['url']
-            failed.fulfill(status=409, json={'error': 'Foto già presente'})
-        expect(count).to_have_text('Foto acquisite: 1 di 3')
+            failed.fulfill(status=409, json={'error': 'Photo already exists'})
+        expect(count).to_have_text('Photos imported: 1 of 3')
 
         copy_api = '**/api/admin/library/*/copy?*'
         copy_requests = []
         page.route(copy_api, lambda route: copy_requests.append(route))
         with page.expect_request(copy_api):
             last_acquired = finish_acquisition(3)
-        expect(count).to_have_text('Foto acquisite: 2 di 3')
+        expect(count).to_have_text('Photos imported: 2 of 3')
         expect(progress).to_have_attribute('value', '2')
-        expect(acquisition.locator('.hint')).to_have_text('Preparazione della copia di gioco…')
+        expect(acquisition.locator('.hint')).to_have_text('Preparing game copy…')
         copy_requests.pop(0).continue_()
         expect(acquisition).to_be_hidden()
         assert page.evaluate(unload)
-        expect(page.locator('.rw-message')).to_contain_text('Foto acquisite: 2 di 3. Errori:')
+        expect(page.locator('.rw-message')).to_contain_text('Photos imported: 2 of 3. Errors:')
         expect(page.locator('.rw-editor')).to_have_count(2)
         for photo_id in (first_acquired, last_acquired):
             stored = page.request.get(base + '/api/admin/library/' + photo_id).json()
@@ -449,9 +449,9 @@ with sync_playwright() as p:
         assert discarded['gallery_id'] == gallery_id and discarded['status'] == 'trash', discarded
         # A portrait keeps balanced side bands only while the frame is wider than the photograph.
         page.unroute(copy_api)
-        page.get_by_role('button', name='Avanti: inquadratura').click()
+        page.get_by_role('button', name='Next: framing').click()
         page.locator(f'[data-rw-crop-image="{last_acquired}"] [data-rw=crop]').click()
-        expect(frame).to_have_attribute('aria-valuetext', 'x 0, y 0, altezza 420 px')
+        expect(frame).to_have_attribute('aria-valuetext', 'x 0, y 0, height 420 px')
         for _ in range(3): frame.press('-')
         x, y, height = box_position()
         width = round(height * 0.8)
@@ -461,8 +461,8 @@ with sync_playwright() as p:
         assert box_position() == (x, y, height)
         frame.press('ArrowUp')
         assert box_position() == (x, y - max(1, int(height / 50 + 0.5)), height)
-        editor.get_by_role('button', name='Salva').click()
-        expect(page.locator('.rw-message')).to_have_text('Inquadratura salvata.')
+        editor.get_by_role('button', name='Save').click()
+        expect(page.locator('.rw-message')).to_have_text('Frame saved.')
         portrait = page.request.get(base + '/api/admin/library/' + last_acquired).json()
         assert portrait['copy']['crop']['x'] == x and portrait['copy']['crop']['mode'] == 'padded', portrait['copy']
         assert abs((28 - x) - (x + width - 308)) <= 1
@@ -475,9 +475,9 @@ with sync_playwright() as p:
         assert box_position()[0] == 28
         frame.press('ArrowRight')
         assert box_position()[0] > 28
-        editor.get_by_role('button', name='Annulla').click()
-        page.get_by_role('button', name='Indietro: descrizione').click()
-        page.get_by_role('button', name='Indietro', exact=True).click()
+        editor.get_by_role('button', name='Cancel').click()
+        page.get_by_role('button', name='Back: description').click()
+        page.get_by_role('button', name='Back', exact=True).click()
         expect(page.locator('.rw-picks img')).to_have_attribute('alt', 'Bridge2.jpg')
         page.locator('[data-gallery-return]').click()
         grid = page.locator('#library-grid')
@@ -490,9 +490,12 @@ with sync_playwright() as p:
         expect(index).to_be_visible()
         index.click()
         expect(index).to_be_hidden()
-        assert any(m.startswith('Indicizzare le descrizioni') and 'a pagamento' in m for m in confirmations), confirmations
+        assert any(m.startswith('Index descriptions') and 'paid' in m for m in confirmations), confirmations
         grid.locator(f'[data-open="{last_acquired}"]').click()
         expect(page.locator('#library-detail [data-visual-description]')).to_be_visible()
+        labels = page.locator('#library-detail [data-visual-description] dt').all_text_contents()
+        assert {'Overall description', 'Subject identity', 'Subject appearance', 'Museum or catalog photo'} <= set(labels), labels
+        expect(page.locator('#library-detail [data-ideas]')).to_have_count(0)
         assert not errors, errors
         context.close()
         print('REAL wizard browser E2E 1.15.0 passed (search clear box, tap adds at once, selection kept across searches, press-and-hold preview, description edited and summarised, four steps, crop step, search clear button, no captions, photos trashed elsewhere leave the wizard):', name)

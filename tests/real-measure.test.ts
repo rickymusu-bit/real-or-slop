@@ -5,7 +5,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 import { DETAIL_KINDS, detailText, overThresholds, scores, validObservation, type DetailLevel, type MeasuredObject } from "../shared/real-measure";
-import { DEFAULTS } from "../worker/model-context";
+const DEFAULTS: Record<string, string> = JSON.parse(readFileSync("tests/fixtures/legacy-model-contexts.json", "utf8"));
 
 /** Levels adding up to `sum` (0 to 14), the 2s first. */
 const levels = (sum: number) => Object.fromEntries(DETAIL_KINDS.map((k, i) => [k, Math.max(0, Math.min(2, sum - 2 * i)) as DetailLevel])) as MeasuredObject["detail"];
@@ -48,9 +48,9 @@ test("the answer is checked: boxes are clipped to the image, levels are 0, 1 or 
 });
 
 test("the kinds read the same for both formulas", () => {
-  assert.equal(detailText({ text: true, repeated: false, texture: true }), "scritte e loghi leggibili, texture dei materiali");
-  assert.equal(detailText({ ...levels(0), text: 2, people: 1 }), "scritte e loghi leggibili (fitto), persone e anatomia");
-  assert.equal(detailText(levels(0)), "nessun dettaglio leggibile");
+  assert.equal(detailText({ text: true, repeated: false, texture: true }), "readable text and logos, material textures");
+  assert.equal(detailText({ ...levels(0), text: 2, people: 1 }), "readable text and logos (dense), people and anatomy");
+  assert.equal(detailText(levels(0)), "no readable detail");
 });
 
 test("a score equal to its threshold is within it", () => {
@@ -73,7 +73,7 @@ test("migration 0067 adds measures, thresholds, the context part and the setting
     db.exec(readFileSync("migrations/0067_real_measures.sql", "utf8"));
     assert.deepEqual(db.prepare("SELECT id,part,body,created_at,pipeline FROM model_contexts ORDER BY rowid").all().map(r => ({ ...r })), contexts);
     assert.deepEqual(db.prepare("SELECT * FROM app_settings ORDER BY key").all().map(r => ({ ...r })), settings);
-    db.exec(`INSERT INTO model_contexts(id,part,body,created_at) VALUES('m','real_measure','Misura','now');
+    db.exec(`INSERT INTO model_contexts(id,part,body,created_at) VALUES('m','real_measure','Measure','now');
       INSERT INTO app_settings(key,value,updated_at) VALUES('crowdedness_threshold','60','now'),('detail_threshold','100','now');
       UPDATE galleries SET max_crowdedness=50,max_detail=NULL;
       INSERT INTO real_measures(id,image_id,model,base_context,measure_context,observation,crowdedness,detail,created_at)

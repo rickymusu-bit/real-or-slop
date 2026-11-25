@@ -96,7 +96,7 @@ status, served, headers = call(base + real['file'])
 assert status == 200 and served[:4] == b'RIFF' and b'Canon' not in served
 # Edit in place: removed fields refused (captions, tags), optimistic revision.
 for change in ({'caption': 'Parigi, 1968.'}, {'tags': ['paris']}, {'tag_categories': {}}):
-    status, result, _ = patch(real, change); assert status == 400 and 'Campi non previsti' in result['error'], result
+    status, result, _ = patch(real, change); assert status == 400 and 'Unexpected fields' in result['error'], result
 status, real, _ = patch(real, {'title': 'Barricate in rue de Rivoli', 'description': 'Owner-written description.'})
 assert status == 200 and 'tags' not in real and 'caption' not in real, real
 assert patch({**real, 'revision': real['revision'] - 1}, {'title': 'Stale'})[0] == 409
@@ -110,7 +110,7 @@ status, view, _ = call(f'{API}/{real["id"]}'); assert view['no_derivatives'] is 
 sql(f"UPDATE images SET license_name='' WHERE id='{real['id']}'")
 status, real, _ = call(f'{API}/{real["id"]}')
 # Approve: a REAL needs the rights confirmation; a later edit keeps it approved (owner decision of 2026-11-11).
-status, result, _ = call(f'{API}/{real["id"]}/approve', {}); assert status == 409 and 'diritti' in result['error'], result
+status, result, _ = call(f'{API}/{real["id"]}/approve', {}); assert status == 409 and 'rights' in result['error'], result
 status, real, _ = call(f'{API}/{real["id"]}/approve', {'rights_confirmed': True}); assert real['status'] == 'approved', real
 status, real, _ = patch(real, {'description': 'Fotografia scattata durante il maggio francese.'}); assert real['status'] == 'approved', real
 # A SLOP image: no rights checkbox, but the copy is required; no tags (owner decision of 2026-11-20).
@@ -123,7 +123,7 @@ assert not {'title', 'source_url', 'author', 'license_name', 'license_url', 'com
 assert not {'prompt', 'model', 'explanation'} & real.keys(), real
 for item, change in [(real, {'explanation': 'Unused'}), (real, {'prompt': 'Not a REAL field'}), (slop, {'author': 'Not a SLOP field'}), (slop, {'title': 'Not a SLOP field'})]:
     status, result, _ = patch(item, change)
-    assert status == 400 and 'Campi non previsti' in result['error'], result
+    assert status == 400 and 'Unexpected fields' in result['error'], result
 assert call(f'{API}/{slop["id"]}/approve', {})[0] == 409  # no copy
 status, slop, _ = copy(slop['id'], game_copy(slop_source)); assert status == 201
 status, slop, _ = call(f'{API}/{slop["id"]}/approve', {}); assert slop['status'] == 'approved', slop
@@ -162,13 +162,13 @@ status, slop, _ = call(f'{API}/{slop["id"]}/restore', {}); assert slop['status']
 status, real, _ = call(f'{API}/{real["id"]}/withdraw', {}); assert real['status'] == 'approved'
 in_game = sql(f"SELECT count(*) AS n FROM game_rounds r JOIN game_sessions s ON s.id=r.session_id WHERE s.id='{session['id']}' AND r.image_id='{real['id']}' AND s.phase='active'")[0]['n']
 assert stored(IMAGES, real_keys['copy_key']) == bool(in_game)
-status, real, _ = patch(real, {'description': 'Descrizione nuova, dopo la partita.'}); assert real['status'] == 'approved', real
+status, real, _ = patch(real, {'description': 'Description new, dopo la game.'}); assert real['status'] == 'approved', real
 status, view, _ = call(base + '/api/sessions/' + session['id'], auth=False, opener=player)
 if view['question']: assert 'caption' not in view['question'], view
 if in_game:
     assert real['in_play'] == 1, real
     status, real, _ = call(f'{API}/{real["id"]}/trash', {})
-    status, result, _ = call(f'{API}/{real["id"]}', method='DELETE'); assert status == 409 and 'partite' in result['error'] and 'in corso' in result['error'], result
+    status, result, _ = call(f'{API}/{real["id"]}', method='DELETE'); assert status == 409 and 'active games' in result['error'], result
     status, real, _ = call(f'{API}/{real["id"]}/restore', {})
 # The game ends: nothing holds the copy any more.
 sql(f"UPDATE game_sessions SET phase='completed',completed=1 WHERE id='{session['id']}'")
@@ -195,7 +195,7 @@ assert call(f'{API}/tags/merge', {'from': 'a', 'into': 'b'})[0] == 404
 assert call(f'{API}/commons', {'url': 'https://example.com/not-commons.jpg'})[0] in (400, 404)
 
 # Gallery deletion is atomic, covers every image state and leaves other galleries' trash alone.
-target = make_gallery(API, token, 'Galleria da eliminare')
+target = make_gallery(API, token, 'Gallery da eliminare')
 route = f'{API}/galleries/{target}'
 confirmation = {'confirm': True, 'revision': 0}
 assert call(route, confirmation, method='DELETE', auth=False)[0] == 401
@@ -211,7 +211,7 @@ assert status == 201 and copy(live['id'], game_copy(real_source))[0] == 201
 live = call(f'{API}/{live["id"]}')[1]
 publish = {'action': 'set-published', 'ids': [live['id']]}
 denied = call(f'{API}/bulk', publish)[1]
-assert denied['done'] == 0 and 'diritti' in denied['failed'][0]['error'], denied
+assert denied['done'] == 0 and 'rights' in denied['failed'][0]['error'], denied
 assert call(f'{API}/{live["id"]}')[1]['status'] == 'new'
 assert call(f'{API}/bulk', {**publish, 'rights_confirmed': True})[1] == {'done': 1, 'failed': []}
 assert call(f'{API}/{live["id"]}')[1]['status'] == 'published'
@@ -223,7 +223,7 @@ sql(f"""INSERT INTO game_sessions(id,mode,created_at,owner_hash,phase) VALUES('g
     INSERT INTO game_rounds(id,session_id,image_id,position,copy_key)
     SELECT 'gallery-delete-round','gallery-delete-game',id,0,copy_key FROM images WHERE id='{live['id']}'""")
 status, blocked, _ = call(route, confirmation, method='DELETE')
-assert status == 409 and 'partite in corso' in blocked['error'], blocked
+assert status == 409 and 'active games' in blocked['error'], blocked
 assert call(f'{API}/{live["id"]}')[1]['status'] == 'published'
 assert call(f'{API}/{discarded["id"]}')[1]['status'] == 'trash'
 assert stored(IMAGES, keys['copy_key'])

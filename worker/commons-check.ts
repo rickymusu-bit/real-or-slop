@@ -43,9 +43,9 @@ async function ask(env: Env, group: Asked[], stamp: string): Promise<Outcome> {
     if (!response.ok) return { skipped: "Commons HTTP " + response.status };
     answer = await response.json() as Answer;
   } catch (error) {
-    return { skipped: "Commons non raggiungibile: " + (error instanceof Error ? error.message : String(error)) };
+    return { skipped: "Cannot reach Commons: " + (error instanceof Error ? error.message : String(error)) };
   }
-  if (answer.error || !Array.isArray(answer.query?.pages)) return { skipped: "Risposta di Commons non utilizzabile: " + (answer.error?.code || "senza pagine") };
+  if (answer.error || !Array.isArray(answer.query?.pages)) return { skipped: "Unusable Commons response: " + (answer.error?.code || "no pages") };
   const normalized = new Map((answer.query!.normalized || []).map(n => [n.from, n.to]));
   const redirects = new Map((answer.query!.redirects || []).map(r => [r.from, r.to]));
   const pages = new Map(answer.query!.pages!.map(p => [p.title, p]));
@@ -75,7 +75,7 @@ async function ask(env: Env, group: Asked[], stamp: string): Promise<Outcome> {
 export async function checkCommonsSources(env: Env, now = Date.now(), limit?: number): Promise<CheckResult> {
   const result: CheckResult = { checked: 0, found: 0, missing: 0, moved: 0 };
   const count = limit ?? await numberSetting(env, "commons_checks_per_night");
-  if (count <= 0) return { ...result, skipped: "Controllo sospeso dalle Impostazioni" };
+  if (count <= 0) return { ...result, skipped: "Checks paused in Settings" };
   // Never checked (an address the owner corrected) first, then the oldest checks.
   const rows = (await env.DB.prepare(`SELECT id,source_url FROM images WHERE origin='REAL' AND status<>'trash' AND source_url LIKE ?
     AND (source_checked_at IS NULL OR source_checked_at<=?) ORDER BY source_checked_at IS NOT NULL,source_checked_at,id LIMIT ?`)

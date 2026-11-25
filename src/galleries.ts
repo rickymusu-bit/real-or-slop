@@ -15,13 +15,13 @@ export function galleryOptions(galleries: Gallery[], value: string) {
 }
 
 export function galleryCards(galleries: GalleryList["galleries"]) {
-  if (!galleries.length) return '<p class="gallery-empty">Crea una galleria per iniziare a raccogliere REAL e SLOP.</p>';
+  if (!galleries.length) return '<p class="gallery-empty">Create a gallery to start collecting REAL and SLOP.</p>';
   return `<ul class="gallery-grid">${galleries.map(g => `<li><button type="button" class="gallery-card" data-gallery-open="${escape(g.id)}">
     <span class="gallery-contact-sheet" data-photos="${g.preview.length}">${g.preview.map(src =>
-      `<img src="${escape(src)}" alt="" loading="lazy" draggable="false">`).join("") || '<span>Nessuna foto</span>'}</span>
+      `<img src="${escape(src)}" alt="" loading="lazy" draggable="false">`).join("") || '<span>No photos</span>'}</span>
     <span class="gallery-card-copy"><strong>${escape(g.title)}</strong>${g.description ? `<span class="gallery-description">${escape(g.description)}</span>` : ""}
-    <small>${g.photos} foto</small>${g.source_missing ? `<small class="gallery-source-missing" data-source-missing>${g.source_missing} ${g.source_missing === 1
-      ? "REAL non risulta" : "REAL non risultano"} più su Commons</small>` : ""}</span></button></li>`).join("")}</ul>`;
+    <small>${g.photos} photos</small>${g.source_missing ? `<small class="gallery-source-missing" data-source-missing>${g.source_missing} ${g.source_missing === 1
+      ? "REAL image is no longer" : "REAL images are no longer"} on Commons</small>` : ""}</span></button></li>`).join("")}</ul>`;
 }
 
 export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path: string, init?: RequestInit) => Promise<T>,
@@ -30,22 +30,22 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
   let list: GalleryList | null = null, selected = "", busy = false;
   const render = () => {
     const gallery = list?.galleries.find(g => g.id === selected);
-    dialog.querySelector("#gallery-editor-title")!.textContent = gallery ? "Modifica galleria" : "Nuova galleria";
+    dialog.querySelector("#gallery-editor-title")!.textContent = gallery ? "Edit gallery" : "New gallery";
     root.innerHTML = `
-      <p class="hint" id="gallery-readiness">${gallery?.ready ? `Generazione SLOP: REAL approvate o pubblicate disponibili: ${gallery.available}.`
-        : "Il wizard «Genera SLOP» usa le REAL approvate o pubblicate della galleria: approvane almeno una."}
-        Titolo e descrizione accompagnano le richieste al modello.</p>
+      <p class="hint" id="gallery-readiness">${gallery?.ready ? `Legacy generation: approved or published REAL images available: ${gallery.available}.`
+        : "The “Generate SLOP” wizard uses the gallery’s REAL images. Prepare their descriptions and parameters in the wizard."}
+        The title and description accompany requests to the model.</p>
       <form class="gallery-form">
-        <label>Titolo<input name="title" autofocus required maxlength="200" value="${escape(gallery?.title || "")}"></label>
-        <label>Descrizione<textarea name="description" rows="3" maxlength="3000">${escape(gallery?.description || "")}</textarea></label>
-        <fieldset class="gallery-thresholds"><legend>Soglie delle REAL</legend>
-          <label>Affollamento<input type="number" name="max_crowdedness" min="0" max="100" step="1" inputmode="numeric" placeholder="${list?.thresholds.crowdedness ?? ""}" value="${gallery?.max_crowdedness ?? ""}"></label>
-          <label>Dettaglio<input type="number" name="max_detail" min="0" max="100" step="1" inputmode="numeric" placeholder="${list?.thresholds.detail ?? ""}" value="${gallery?.max_detail ?? ""}"></label>
-          <p class="hint">Da 0 a 100. Una REAL misurata oltre una soglia è segnalata. Vuoto: vale la soglia predefinita delle Impostazioni (${list?.thresholds.crowdedness ?? "?"} e ${list?.thresholds.detail ?? "?"}).</p>
+        <label>Title<input name="title" autofocus required maxlength="200" value="${escape(gallery?.title || "")}"></label>
+        <label>Description<textarea name="description" rows="3" maxlength="3000">${escape(gallery?.description || "")}</textarea></label>
+        <fieldset class="gallery-thresholds"><legend>REAL thresholds</legend>
+          <label>Crowding<input type="number" name="max_crowdedness" min="0" max="100" step="1" inputmode="numeric" placeholder="${list?.thresholds.crowdedness ?? ""}" value="${gallery?.max_crowdedness ?? ""}"></label>
+          <label>Detail<input type="number" name="max_detail" min="0" max="100" step="1" inputmode="numeric" placeholder="${list?.thresholds.detail ?? ""}" value="${gallery?.max_detail ?? ""}"></label>
+          <p class="hint">From 0 to 100. REAL images above a threshold are flagged. Leave blank to use the Settings defaults (${list?.thresholds.crowdedness ?? "?"} and ${list?.thresholds.detail ?? "?"}).</p>
         </fieldset>
-        <div class="library-inline"><button class="primary" type="submit">${gallery ? "Salva modifiche" : "Crea galleria"}</button></div>
+        <div class="library-inline"><button class="primary" type="submit">${gallery ? "Save changes" : "Create gallery"}</button></div>
       </form>
-      ${gallery ? '<div class="gallery-remove"><button type="button" class="danger" data-gallery-remove>Elimina galleria</button></div>' : ""}
+      ${gallery ? '<div class="gallery-remove"><button type="button" class="danger" data-gallery-remove>Delete gallery</button></div>' : ""}
       <p class="hint" role="status" id="gallery-message"></p>`;
   };
   const message = (text: string) => { root.querySelector("#gallery-message")!.textContent = text; };
@@ -85,7 +85,7 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
         list!.galleries = [...list!.galleries.filter(g => g.id !== saved.id),
           { ...saved, available: gallery?.available ?? 0, photos: gallery?.photos ?? 0, source_missing: gallery?.source_missing ?? 0, preview: gallery?.preview ?? [], ready: gallery?.ready ?? false }];
         render();
-        message("Galleria salvata. " + (error instanceof Error ? error.message : String(error)));
+        message("Gallery saved. " + (error instanceof Error ? error.message : String(error)));
         return;
       }
       dialog.close();
@@ -97,9 +97,9 @@ export function mountGalleryEditor(dialog: HTMLDialogElement, request: <T>(path:
     if (!button || busy || !list) return;
     const gallery = list.galleries.find(g => g.id === selected);
     if (!gallery) return;
-    if (!window.confirm(`Eliminare definitivamente «${gallery.title}»? Verranno eliminate tutte le sue foto REAL e SLOP, anche quelle nel cestino, e le sue generazioni.`)) return;
+    if (!window.confirm(`Permanently delete “${gallery.title}”? All its REAL and SLOP images, including trashed images, and generation jobs will be deleted.`)) return;
     setBusy(true);
-    message("Eliminazione in corso…");
+    message("Deleting…");
     try {
       await request(`/galleries/${encodeURIComponent(gallery.id)}`, {
         method: "DELETE", body: JSON.stringify({confirm: true, revision: gallery.revision}),

@@ -16,11 +16,11 @@ with sync_playwright() as p:
         page.on('dialog',answer)
         try:
             control([]);page.goto(BASE+'/admin/gallerie/'+gallery+'/slop');root=page.locator('.pipeline')
-            expect(root.get_by_role('heading',name='1. Prepara la galleria')).to_be_visible()
+            expect(root.get_by_role('heading',name='1. Prepare the gallery')).to_be_visible()
             assert page.request.get(BASE+'/docs/pipeline-slop.svg').status==200
             root.locator('[data-action=prepare]').click();assert control()==[]
             root.locator('[data-action=prepare]').click()
-            expect(root.locator('[data-action=plan]')).to_contain_text('Prepara 2 scene',timeout=30000)
+            expect(root.locator('[data-action=plan]')).to_contain_text('Prepare 2 scenes',timeout=30000)
             assert len(control())==2 and all(x['body']['text']['format']['name']=='pipeline_profile' for x in control())
             root.locator('[data-action=plan]').click()
             expect(root.locator('[data-action=generate]')).to_have_count(2,timeout=30000)
@@ -44,15 +44,17 @@ with sync_playwright() as p:
             root.locator('[data-action=evaluate-all]').click()
             expect(root.locator('[data-action=edit]')).to_have_count(2,timeout=30000)
             assert len(control())==8
+            reviews=[x for x in control() if x['body'].get('text',{}).get('format',{}).get('name')=='pipeline_review']
+            assert all('Write every generated field in English' in x['body']['instructions'] for x in reviews)
             page.wait_for_timeout(500);assert len(control())==8
             # A mask is concretely previewed before its separate one-call confirmation.
             card=root.locator('[data-job-card]').first
-            card.get_by_text('Proposta: Small local detail.',exact=True).click()
+            card.get_by_text('Suggestion: Small local detail.',exact=True).click()
             card.locator('[data-action=edit]').click();expect(page.locator('.pipeline-mask[open]')).to_be_visible()
             page.screenshot(path=str(folder/(name+'-mask.png')),full_page=True)
             page.locator('[data-mask-cancel]').click();assert len(control())==8
-            card=root.locator('[data-job-card]').first;card.get_by_text('Proposta: Small local detail.',exact=True).click();card.locator('[data-action=edit]').click();page.locator('[data-mask-confirm]').click()
-            expect(root.get_by_alt_text('Prima della correzione')).to_be_visible(timeout=30000)
+            card=root.locator('[data-job-card]').first;card.get_by_text('Suggestion: Small local detail.',exact=True).click();card.locator('[data-action=edit]').click();page.locator('[data-mask-confirm]').click()
+            expect(root.get_by_alt_text('Before correction')).to_be_visible(timeout=30000)
             assert len(control())==9 and control()[-1]['path']=='/v1/images/edits'
             assert control()[-1]['body']['files']['image[]']['size']==control()[-1]['body']['files']['mask']['size']
             root.locator('[data-job-card]').first.locator('[data-action=accept]').click()
@@ -63,7 +65,7 @@ with sync_playwright() as p:
             assert len(control())==9 and not errors,errors
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
             page.screenshot(path=str(folder/(name+'-pipeline.png')),full_page=True)
-            assert any('Massimo 2 chiamate' in d for d in dialogs),dialogs
+            assert any('Maximum 2 paid calls' in d for d in dialogs),dialogs
         finally:context.close()
     browser.close()
 print('Pipeline browser passed on desktop/mobile: gallery-wide profiles, free scene edits, text-only generation, gated evaluation, concrete mask confirmation, final copy, approval and publication.')

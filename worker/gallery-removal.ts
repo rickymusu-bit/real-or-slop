@@ -18,9 +18,9 @@ export async function sweepGalleryFiles(env: Env) {
 
 export async function removeGallery(env: Env, id: string, data: Record<string, unknown>) {
   if (data.confirm !== true || Object.keys(data).some(key => key !== "confirm" && key !== "revision"))
-    throw new HttpError(400, "Conferma l’eliminazione della galleria");
+    throw new HttpError(400, "Confirm gallery deletion");
   const revision = data.revision;
-  if (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0) throw new HttpError(400, "Revisione della galleria non valida");
+  if (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0) throw new HttpError(400, "Invalid gallery revision");
 
   const blockers = `SELECT
     EXISTS(SELECT 1 FROM (${IN_PLAY}) r JOIN images i ON i.id=r.image_id WHERE i.gallery_id=?2) AS playing,
@@ -35,9 +35,9 @@ export async function removeGallery(env: Env, id: string, data: Record<string, u
     const current = await env.DB.prepare(`SELECT g.revision, b.* FROM galleries g CROSS JOIN (${blockers}) b WHERE g.id=?2`)
       .bind(...args).first<{revision: number; playing: number; generating: number}>();
     if (current) {
-      if (current.revision === revision && current.playing) throw new HttpError(409, "Alcune foto sono in partite in corso. Riprova quando saranno finite.");
-      if (current.revision === revision && current.generating) throw new HttpError(409, "La galleria ha una generazione in corso. Riprova quando sarà conclusa.");
-      throw new HttpError(409, "Galleria modificata. Riapri il modulo.");
+      if (current.revision === revision && current.playing) throw new HttpError(409, "Some photos are in active games. Try again when they finish.");
+      if (current.revision === revision && current.generating) throw new HttpError(409, "The gallery has an active generation. Try again when it finishes.");
+      throw new HttpError(409, "Gallery changed. Reopen the form.");
     }
   }
   // Daily maintenance retries any keys left in the queue.

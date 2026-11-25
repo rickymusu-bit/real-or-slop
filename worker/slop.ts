@@ -12,6 +12,6 @@ export async function slopRoute(env: Env, method: string, path: string, data: Re
   if (accepting && method === "POST") return acceptProcess(env, accepting[1], data);
   if (path === "auto" || path.startsWith("auto/")) return autoRoute(env, method, path.slice("auto".length).replace(/^\//, ""), data, gallery);
   if (path.startsWith("batches/")) return batchRoute(env, method, path.slice("batches/".length));
-  throw new HttpError(404, "API dello studio SLOP inesistente");
+  throw new HttpError(404, "SLOP studio API not found");
 }
 

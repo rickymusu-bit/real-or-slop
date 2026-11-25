@@ -1,8 +1,8 @@
 /** Private observed attributes, variation controls and coherent scene contracts. */
 export const PARAMETERS = {
-  model: "Modello", colour: "Colore", material_finish: "Materiale e finitura", edition_decoration: "Edizione e decorazioni",
-  wear: "Usura", damage: "Danno", ageing: "Invecchiamento", cleanliness: "Pulizia", operating_state: "Stato visibile",
-  screen_content: "Contenuto dello schermo", pose: "Posa", viewpoint: "Fotocamera", composition: "Composizione", aspect_ratio: "Rapporto d’aspetto",
+  model: "Model", colour: "Color", material_finish: "Material and finish", edition_decoration: "Edition and decoration",
+  wear: "Wear", damage: "Damage", ageing: "Ageing", cleanliness: "Cleanliness", operating_state: "Operating state",
+  screen_content: "Screen content", pose: "Pose", viewpoint: "Camera viewpoint", composition: "Composition", aspect_ratio: "Aspect ratio",
 } as const;
 export type Parameter = keyof typeof PARAMETERS;
 export const PARAMETER_KEYS = Object.keys(PARAMETERS) as Parameter[];
@@ -79,8 +79,8 @@ export function variation(source: Profile, population: Profile[], settings: Pipe
 /** The API dimensions follow the target ratio; record approximation, never silently force landscape. */
 export function imageSize(ratio: string): string {
   const match = /^(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)$/.exec(ratio);
-  if (!match || +match[1] <= 0 || +match[2] <= 0) throw Error("Rapporto d’aspetto non valido");
+  if (!match || +match[1] <= 0 || +match[2] <= 0) throw Error("Invalid aspect ratio");
   const r = +match[1] / +match[2];
-  if (r < .25 || r > 4) throw Error("Rapporto d’aspetto fuori dai limiti");
+  if (r < .25 || r > 4) throw Error("Aspect ratio out of range");
   return r >= 1 ? `1536x${Math.max(384, Math.round(1536 / r / 16) * 16)}` : `${Math.max(384, Math.round(1536 * r / 16) * 16)}x1536`;
 }

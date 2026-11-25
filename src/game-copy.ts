@@ -14,7 +14,7 @@ export function canvasOf(width: number, height: number) {
   const canvas = document.createElement("canvas");
   canvas.width = width; canvas.height = height;
   const context = canvas.getContext("2d", { alpha: false, willReadFrequently: true });
-  if (!context) throw Error("Canvas non disponibile");
+  if (!context) throw Error("Canvas unavailable");
   context.fillStyle = "#fff"; context.fillRect(0, 0, width, height);
   context.imageSmoothingEnabled = true; context.imageSmoothingQuality = "high";
   return { canvas, context };
@@ -118,8 +118,8 @@ export async function encodeGameCopy(source: Blob, crop?: Crop, plan?: Treatment
     canvas.getContext("2d")!.putImageData(pixels, 0, 0);
   }
   const copy = await blobOf(frameCanvas(canvas, base), GAME_COPY.mime, GAME_COPY.quality);
-  if (!copy || copy.type !== GAME_COPY.mime) throw Error("Questo browser non esporta WebP: usare Chrome, Edge o Firefox");
-  if (copy.size > GAME_COPY.maxBytes) throw Error("Copia di gioco oltre 4 MB");
+  if (!copy || copy.type !== GAME_COPY.mime) throw Error("This browser cannot export WebP: use Chrome, Edge or Firefox");
+  if (copy.size > GAME_COPY.maxBytes) throw Error("Game copy exceeds 4 MB");
   const metrics = await measureBlob(copy);
   if (treatment && !treatment.off) treatment = { ...treatment, result: metrics, gap: gap(metrics, plan!.sample.metrics) };
   return { copy, metrics, treatment, frame };
@@ -127,9 +127,9 @@ export async function encodeGameCopy(source: Blob, crop?: Crop, plan?: Treatment
 
 /** The stored original of a library image. */
 export async function originalOf(imageId: string): Promise<Blob> {
-  if (!/^[\w-]{1,64}$/.test(imageId)) throw Error("Immagine non valida");
+  if (!/^[\w-]{1,64}$/.test(imageId)) throw Error("Invalid image");
   const response = await fetch(API + encodeURIComponent(imageId) + "/original", { credentials: "same-origin", cache: "no-store" });
-  if (!response.ok) throw Error("Originale non disponibile");
+  if (!response.ok) throw Error("Original unavailable");
   return response.blob();
 }
 
@@ -169,7 +169,7 @@ export function proposalOf(base: ImageData, plan: TreatmentPlan, long: number): 
 /** Encodes `source` (or the stored original) along `crop` (whole photo by default) with the treatment of `plan` for a SLOP, and stores
  * it as the game copy of library image `imageId`; `force` stores it even with the same crop and treatment. Returns the item. */
 export async function prepareLibraryCopy<T>(imageId: string, source?: Blob, crop?: Crop, plan?: TreatmentPlan | null, force = false): Promise<T> {
-  if (!/^[\w-]{1,64}$/.test(imageId)) throw Error("Immagine non valida");
+  if (!/^[\w-]{1,64}$/.test(imageId)) throw Error("Invalid image");
   const file = source || await originalOf(imageId);
   const { copy, metrics, treatment, frame } = await encodeGameCopy(file, crop, plan);
   const headers: Record<string, string> = { "Content-Type": GAME_COPY.mime, "X-Copy-Metrics": JSON.stringify(metrics) };
@@ -177,7 +177,7 @@ export async function prepareLibraryCopy<T>(imageId: string, source?: Blob, crop
   const upload = await fetch(API + encodeURIComponent(imageId) + "/copy?" + new URLSearchParams({ crop: cropQuery(frame), ...(force ? { force: "1" } : {}) }),
     { method: "POST", credentials: "same-origin", headers, body: copy });
   const result = await upload.json().catch(() => ({})) as T & { error?: string };
-  if (!upload.ok) throw Error(result.error || "Copia di gioco non registrata");
+  if (!upload.ok) throw Error(result.error || "Game copy was not saved");
   return result;
 }
 

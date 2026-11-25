@@ -8,9 +8,9 @@
 export const DETAIL_KINDS = ["text", "repeated", "countable", "texture", "reflective", "joints", "people"] as const;
 export type DetailKind = typeof DETAIL_KINDS[number];
 export const DETAIL_LABELS: Record<DetailKind, string> = {
-  text: "scritte e loghi leggibili", repeated: "motivi ripetuti", countable: "parti contabili",
-  texture: "texture dei materiali", reflective: "superfici riflettenti o schermi", joints: "giunzioni e meccanismi",
-  people: "persone e anatomia",
+  text: "readable text and logos", repeated: "repeated patterns", countable: "countable parts",
+  texture: "material textures", reflective: "reflective surfaces or screens", joints: "joints and mechanisms",
+  people: "people and anatomy",
 };
 /** 0 absent or not legible, 1 present and legible, 2 dense or minute. */
 export type DetailLevel = 0 | 1 | 2;
@@ -91,8 +91,8 @@ export function validObservation(value: unknown): Observation | null {
 /** Kinds of an object as the owner reads them, for both formulas (formula 1 stored true or false). */
 export function detailText(detail: Record<string, unknown>): string {
   const parts = DETAIL_KINDS.filter(k => detail[k] === true || detail[k] === 1 || detail[k] === 2)
-    .map(k => DETAIL_LABELS[k] + (detail[k] === 2 ? " (fitto)" : ""));
-  return parts.join(", ") || "nessun dettaglio leggibile";
+    .map(k => DETAIL_LABELS[k] + (detail[k] === 2 ? " (dense)" : ""));
+  return parts.join(", ") || "no readable detail";
 }
 
 /** Which scores are above the gallery's thresholds (a score equal to its threshold is within it). */

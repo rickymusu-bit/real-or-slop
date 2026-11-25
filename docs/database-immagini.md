@@ -1,6 +1,8 @@
-# Foto e gallerie — specifica 10.8.0
+# Foto e gallerie — specifica 10.9.0
 
-Stato: implementata nel ramo 1.60.0, da rilasciare. Aggiornata: 2026-11-25T20:45:04Z.
+Stato: implementata nel ramo 1.61.0, da rilasciare. Aggiornata: 2026-11-25T22:45:40Z.
+
+Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
 ## 1. Decisioni dell'owner
 
@@ -83,9 +85,7 @@ suo batch originario, ma esce dalla sua revisione operativa.
   campi, punteggi, numero di oggetti, soglie, data e modello dell'ultima misura, «Misura» o «Misura di nuovo» (una chiamata, con
   conferma e avviso di elaborazione al centro) e, a richiesta, gli oggetti dell'ultima misura disegnati sull'originale intero con le
   categorie di dettaglio e l'elenco di tutte le misure (specifica `libreria-immagini`, sezione 10).
-- **Proposte SLOP (REAL):** sotto la misura, in sola lettura, le proposte della REAL con lo stato (proposta dal modello, approvata,
-  usata, da rivedere) e il motivo se il modello non ne ha proposte. Sono dati del flusso precedente. Il nuovo wizard prepara
-  scene da descrizioni, parametri e particolarità (specifica `generazione-slop`).
+- **Proposte SLOP (REAL):** rimosse dal dettaglio (decisione del 2026-11-25), perché obsolete. La generazione si gestisce dalla pipeline della galleria, con descrizioni, parametri, particolarità e scene. I dati e le API precedenti restano per compatibilità, senza riquadri di proposte sulle REAL.
 - **Rigenerare una SLOP:** richiede un nuovo batch del wizard «Genera SLOP», con conferma ed esame dell’immagine intera.
 - **Fonte su Commons (REAL):** sopra il corpo del dettaglio, l'ultima data in cui il controllo notturno ha trovato il file oppure,
   se manca, la data della prima mancanza con le azioni possibili (verificare, ritirare o cestinare, correggere la pagina della fonte).

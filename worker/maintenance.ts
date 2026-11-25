@@ -12,13 +12,13 @@ export async function maintenance(env: Env, now = Date.now()) {
   await expireGalleryBatches(env, now);
   const games = await env.DB.prepare("DELETE FROM game_sessions WHERE created_at<?").bind(now - GAME_RETENTION_MS).run();
   await env.DB.prepare("DELETE FROM rate_limits WHERE resets_at<?").bind(now).run();
-  await env.DB.prepare("UPDATE pipeline_jobs SET state='attention',error='Richiesta interrotta o esito incerto: nessuna ripetizione automatica' WHERE state IN ('dispatching','working','accepting') AND updated_at<?")
+  await env.DB.prepare("UPDATE pipeline_jobs SET state='attention',error='Request interrupted or outcome uncertain: no automatic retry' WHERE state IN ('dispatching','working','accepting') AND updated_at<?")
     .bind(new Date(now - 15 * 60_000).toISOString()).run();
   const copies = await sweepRetired(env);
   await sweepGalleryFiles(env).catch(error => console.error("gallery file cleanup", error));
   const interrupted = new Date(now - 10 * 60_000).toISOString();
   await env.DB.batch([
-    env.DB.prepare("UPDATE slop_processes SET state='uncertain',error='Operazione interrotta: nessuna chiamata ripetuta' WHERE state IN ('running','prompting') AND updated_at<?").bind(interrupted),
+    env.DB.prepare("UPDATE slop_processes SET state='uncertain',error='Operation interrupted: no calls repeated' WHERE state IN ('running','prompting') AND updated_at<?").bind(interrupted),
     env.DB.prepare("UPDATE slop_attempts SET status='uncertain' WHERE status IN ('pending','generated') AND updated_at<?").bind(interrupted),
     env.DB.prepare("UPDATE paid_calls SET status='uncertain' WHERE status='pending' AND updated_at<?").bind(interrupted),
   ]);

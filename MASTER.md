@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 39.0.0, aggiornata il 2026-11-25T20:45:04Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 40.0.0, aggiornata il 2026-11-25T22:45:40Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,8 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.60.0:** pipeline completa della galleria, `docs/generazione-slop.md` 17.0.0. Preparazione collettiva delle REAL,
+- **Ramo 1.61.0:** admin interamente in inglese, gallerie e pipeline comprese. Tolte le proposte obsolete dalle REAL, nascosto il relativo contesto, rimosso il vecchio wizard browser delle proposte. Descrizioni, misure e valutazioni nuove in inglese; schema tradotto. Migrazione 0075: contesti standard inglesi, personalizzazioni e cronologia conservate. Nessuna rigenerazione o chiamata reale per tradurre dati salvati.
+- **Integrata in main la 1.60.0 (PR #179):** pipeline completa della galleria, `docs/generazione-slop.md` 17.0.0. Preparazione collettiva delle REAL,
   parametri e particolarità, indici, regole/probabilità rivedibili, cambio ambiente/genere, scene inglesi, formato per candidata,
   generazione dal solo testo, valutazione e correzioni confermate. Workflow senza ripetizioni, maschera visibile e modificabile,
   accettazione umana, trattamento per genere e preparazione comune WebP. Migrazioni 0073 e 0074. Nessuna elaborazione reale avviata.
@@ -109,15 +110,15 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.5.0 |
+| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.9.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.1.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.3.0 |
-| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.0.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.6.0 |
+| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.1.0 |
 | Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 2.0.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 10.5.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 10.9.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.9.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.10.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.4.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note
@@ -156,7 +157,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
   protezioni `media-privacy.ts`.
 - Dashboard: `library.ts` (finestra della galleria, Statistiche e Impostazioni; CSS `library.css`, `database.css`, `admin-navigation.css`,
   `admin-loading.css`, `model-context.css`, `caption-count.css`), gallerie `galleries.ts` e `galleries.css`, pagine dei wizard `gallery-wizard.ts` e `gallery-paths.ts`, wizard REAL `real-wizard.ts` e `real-wizard.css`, wizard SLOP
-  `pipeline.ts` e `pipeline.css` (nuovo flusso completo), `slop-auto.ts` e `slop-auto.css` (avviso di sbilanciamento nelle Statistiche),
+  `pipeline.ts` e `pipeline.css` (nuovo flusso completo), `slop-auto.ts` e `slop-auto.css` (avviso di sbilanciamento in sola lettura nelle Statistiche; nessun wizard precedente),
   `slop-studio.ts` e `slop-studio.css` (recupero delle lavorazioni precedenti), statistiche `stats.ts` e
   `stats.css`, grafico della distribuzione `database-chart.ts`, anteprima a pressione prolungata `image-preview.ts` e
   `image-preview.css`, editor di formato e ritaglio `crop-editor.ts` e
@@ -231,6 +232,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0067 | misure di affollamento e dettaglio delle REAL (`real_measures`), soglie delle gallerie, parte `real_measure` del contesto e chiavi delle soglie predefinite nelle Impostazioni |
 | 0068 | formula delle misure (1 per le esistenti) e nuova proposta di «Misura delle REAL» se quella in vigore è la prima |
 | 0069 | idee di falsificazione delle REAL (`real_ideas`), motivo senza idee, idea nel riferimento REAL-processo, trigger che tengono i riferimenti fino alla fine del processo e segnano l'idea usata, parte `real_ideas` del contesto |
+| 0075 | versioni inglesi dei contesti ancora identici ai predefiniti, con conservazione dei testi personalizzati e della cronologia |
 | 0074 | formato richiesto/restituito e vincolo dei lavori attivi, inclusa l’acquisizione in coda |
 | 0073 | profili e scene privati, regole/probabilità delle gallerie e lavorazioni temporanee con pulizia durevole |
 | 0070 | elimina le Indicazioni SLOP delle gallerie e la revisione registrata sulle idee; nuova proposta di «Premessa e prompt di galleria» se quella in vigore è la 0066 |

@@ -24,7 +24,7 @@ def open_gallery(page, gallery_id):
 def publish(api, token, prefix, real=10, slop=10, seed=0):
     """Uploads, copies (nearest format, spec `copie-di-gioco`), describes, approves and publishes `real` REAL and `slop` SLOP photos; returns their ids by origin."""
     ids = {'REAL': [], 'SLOP': []}
-    gallery_id=make_gallery(api,token,'Galleria '+prefix)
+    gallery_id=make_gallery(api,token,'Gallery '+prefix)
     for index, origin in enumerate(['REAL'] * real + ['SLOP'] * slop):
         picture = Image.new('RGB', (40, 50)); n = seed * 1000 + index
         picture.putdata([((n * 37 + x) % 256, (n * 11 + y * 3) % 256, (n * 5) % 256) for y in range(50) for x in range(40)])
