@@ -148,7 +148,7 @@ with sync_playwright() as p:
         prompt.fill('A riot in a square at dusk, 1968'); prompt.blur()
         expect(dialog.locator('#library-detail-message')).to_have_text('Saved.')
         expect(dialog.locator('#library-regenerate')).to_have_count(0)
-        expect(dialog).to_contain_text('new gallery pipeline job nello studio')
+        expect(dialog).to_contain_text('new job in the gallery pipeline')
         dialog.screenshot(path=str(folder / f'{name}-edit.png'))
         dialog.locator('.library-detail-close button').click()
 
@@ -156,7 +156,7 @@ with sync_playwright() as p:
         page.get_by_role('button', name=f'Open {prefix}-barricate').click()
         dialog.locator('[data-action=remove]').click()
         expect(dialog).to_contain_text('REAL / in Trash')
-        assert 'va in Trash' in confirms[-1], confirms
+        assert 'moved to Trash' in confirms[-1], confirms
         dialog.locator('.library-detail-close button').click()
 
         # The old crop reopens at the same position on the 60×75 canvas with bands.
@@ -200,7 +200,7 @@ with sync_playwright() as p:
         sliders.locator('[data-key=grain]').fill('8')
         expect(sliders.locator('[data-out=grain]')).to_have_text('8.0')
         expect(sliders.locator('[data-status]')).to_have_text('Treatment changed, not saved yet.')
-        expect(sliders.locator('[data-caption=preview]')).to_contain_text('scarto dalla REAL')
+        expect(sliders.locator('[data-caption=preview]')).to_contain_text('difference from REAL')
         # «Seppia» starts from a sepia tint, «Bianco e nero» from none: the two never look alike by accident.
         sliders.locator('[data-key=monochrome]').select_option('sepia')
         expect(sliders.locator('[data-out=cast0]')).to_have_text('15.0');expect(sliders.locator('[data-out=cast2]')).to_have_text('-24.0')
@@ -241,7 +241,7 @@ with sync_playwright() as p:
                     printf('%064x',n), 'image/png', 60, 40, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z' FROM photos""")
             page.reload()
             open_gallery(page, paged)
-            expect(page.locator('#library-counts')).to_contain_text('73 nuove')
+            expect(page.locator('#library-counts')).to_contain_text('73 new')
             expect(page.locator('#library-grid .library-card')).to_have_count(72)
             page.get_by_role('button', name='Load more photos').click()
             expect(page.locator('#library-grid .library-card')).to_have_count(73)

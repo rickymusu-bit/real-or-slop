@@ -155,7 +155,7 @@ with sync_playwright() as p:
         rivoli_card.locator('.library-open').click()
         detail = page.locator('#library-detail')
         expect(detail.locator('.library-tags, #library-tag-input, #library-complete, #library-restore, [data-missing-categories]')).to_have_count(0)
-        expect(detail.locator('[data-stats]')).to_have_text('Vista 0 times / correctly identified 0')
+        expect(detail.locator('[data-stats]')).to_have_text('Viewed 0 times / correctly identified 0')
         detail.locator('.library-detail-close button').click()
         slop=add(page, picture(f'{name}-street.jpg', (40, 40, 190), (300, 300)), 'SLOP')
         slop_label='SLOP '+slop['id'][:8]
@@ -187,7 +187,7 @@ with sync_playwright() as p:
         text_select, image_select = page.locator('#library-models-form [name=text_model]'), page.locator('#library-models-form [name=image_model]')
         expect(text_select).to_have_value('gpt-6.1-sol')
         expect(image_select).to_have_value('gpt-image-2.5-flare')
-        expect(image_select.locator('option[value="gpt-image-2"]')).to_contain_text('dismesso da OpenAI il 10/02/2027')
+        expect(image_select.locator('option[value="gpt-image-2"]')).to_contain_text('retired by OpenAI on 10/02/2027')
         expect(image_select.locator('option[value="gpt-image-2.6-flare"]')).to_have_attribute('disabled', '')
         image_select.select_option('gpt-image-2')
         expect(page.locator('#library-settings-message')).to_have_text('Image model: gpt-image-2.')

@@ -3,6 +3,7 @@ The legacy analysis routes remain retired. The source description is editable in
 from local_db import sql
 from concurrent.futures import ThreadPoolExecutor
 import base64
+import hashlib
 import io
 import json
 import os
@@ -33,7 +34,7 @@ def openai(queue=None):
                                  headers={'Content-Type': 'application/json'})
     with urllib.request.urlopen(req) as r: return json.loads(r.read()).get('log')
 def upload(origin, title='', **params):
-    picture = Image.new('RGB', (48, 32), (len(title) * 9 % 256, 120, 60)); source = io.BytesIO(); picture.save(source, 'PNG')
+    picture = Image.new('RGB', (48, 32), tuple(hashlib.sha256(title.encode()).digest()[:3])); source = io.BytesIO(); picture.save(source, 'PNG')
     status, item = call(f'{API}/upload?' + urllib.parse.urlencode({'gallery_id': gallery_id, 'origin': origin, 'title': title, **params}),
                         raw=source.getvalue(), mime='image/png')
     assert status == 201, item

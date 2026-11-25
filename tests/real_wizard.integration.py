@@ -319,9 +319,9 @@ with sync_playwright() as p:
         page.keyboard.press('Escape')
         page.mouse.click(2, 2)
         expect(processing).to_be_visible()
-        uploads.pop(0).fulfill(status=503, json={'error': 'Copia temporaneamente non disponibile'})
+        uploads.pop(0).fulfill(status=503, json={'error': 'Game copy temporarily unavailable'})
         expect(processing).to_be_hidden()
-        expect(editor.locator('.crop-error')).to_have_text('Copia temporaneamente non disponibile')
+        expect(editor.locator('.crop-error')).to_have_text('Game copy temporarily unavailable')
         page.unroute(copy_route)
         editor.locator('[data-crop=ok]').click()
         expect(page.locator('.rw-message')).to_have_text('Frame saved.')
@@ -345,7 +345,7 @@ with sync_playwright() as p:
         page.get_by_role('button', name='Next: framing').click()
         # Step 4: the summary.
         page.get_by_role('button', name='Next: summary').click()
-        expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Riepilogo')
+        expect(page.locator('#real-wizard .rw-steps li[aria-current=step]')).to_contain_text('Summary')
         expect(page.locator('.rw-final img[data-game-media]')).to_have_count(2)
         expect(page.locator('.rw-final img[data-game-media]').first).to_be_visible()
         expect(page.locator('.rw-final .rs-mark').first).to_be_visible()
@@ -359,7 +359,7 @@ with sync_playwright() as p:
         expect(page.locator('.rw-message')).to_contain_text('Confirm that you have checked')
         page.locator('#rw-rights').check()
         page.get_by_role('button', name='Confirm and publish').click()
-        expect(page.locator('.rw-message')).to_contain_text('2 published images', timeout=30000)
+        expect(page.locator('.rw-message')).to_contain_text('2 images published', timeout=30000)
         published = page.request.get(base + '/api/admin/library?status=published&origin=REAL&q=' + title)
         assert published.ok and {first['id'], second['id']} <= {i['id'] for i in published.json()['items']}
         # Commons is simulated at the browser boundary. The wizard passes the selected gallery,
@@ -444,7 +444,7 @@ with sync_playwright() as p:
             else:
                 assert picture.size == (420, 525) and max(picture.getpixel((210, 20))) < 8 and max(picture.getpixel((210, 504))) < 8
         page.locator(f'[data-rw-image="{first_acquired}"] [data-rw=discard]').click()
-        expect(page.locator('.rw-message')).to_contain_text('Foto tolta dal caricamento')
+        expect(page.locator('.rw-message')).to_contain_text('Photo removed from import')
         discarded = page.request.get(base + '/api/admin/library/' + first_acquired).json()
         assert discarded['gallery_id'] == gallery_id and discarded['status'] == 'trash', discarded
         # A portrait keeps balanced side bands only while the frame is wider than the photograph.
