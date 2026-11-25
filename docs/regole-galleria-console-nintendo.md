@@ -1,12 +1,13 @@
 # Regole della galleria Console portatili Nintendo
 
-Versione 1.0.0, aggiornata il 2026-11-24T09:46:10Z. Specifica di progettazione del prossimo passo della pipeline SLOP.
+Versione 1.1.0, aggiornata il 2026-11-25T15:24:14Z. Regole specifiche del protocollo `generazione-slop` 16.0.0, da integrare.
 
-Sol inventa una variante plausibile e scrive **una scena fotografica completa in inglese**. La scena rappresenta un singolo
-scatto, con una sola console, una posizione fisicamente stabile e un ambiente coerente con la galleria. Sunburst riceve
+Sol sviluppa i parametri estratti e scrive **una scena fotografica completa in inglese**. Può proporre valori nuovi plausibili,
+ma anche mantenere o ripristinare condizioni ordinarie. La scena rappresenta un singolo scatto, con una sola console,
+una posizione fisicamente stabile e un ambiente coerente con la galleria. Sunburst riceve
 il prompt della scena finale. Le regole qui sotto servono a Sol per costruirla e per scegliere quali dettagli rendere visibili.
 
-## Risultati da riprendere nel prossimo test
+## Osservazioni del test del 24 novembre
 
 Nel confronto del 24 novembre, Sol e Sunburst hanno reso visibile il tratto nuovo in tutte e sei le immagini. In entrambe le
 foto dell'Advance SP compaiono due esemplari, aperto e chiuso. Le descrizioni di Sol citavano sia la decorazione esterna sia i
@@ -17,40 +18,54 @@ senza un sostegno visibile, con una composizione da esposizione.
 
 Un documento modificabile dall'owner accompagna ciascuna galleria. Alla preparazione del batch, il Worker salva la revisione
 usata e dà a Sol il documento insieme alla descrizione della REAL di partenza e agli estratti pertinenti della galleria.
-Sol restituisce la novità del soggetto, la scena sui suoi otto assi e il prompt inglese che li rende coerenti in un solo scatto.
+Sol restituisce i cambiamenti effettivi, la scena sui suoi otto assi e il prompt inglese che li rende coerenti in un solo scatto.
 L'owner può rivedere la scena prima di confermare la generazione. Il prompt consegnato a Sunburst contiene i dettagli
-visibili della scena di arrivo, inclusa la novità.
+visibili della scena di arrivo. La prima generazione riceve solo testo; valutazione e correzioni confermate seguono
+la specifica `generazione-slop`. L'uso del documento nel Worker rimane da implementare.
 
 ## Regole per Sol
 
 1. **Tipo del soggetto.** Scegli una sola console, identifica il modello e conserva la geometria e i comandi del modello scelto.
    Se cambi modello, usa una descrizione che documenti quello di arrivo. I comandi entrano nel prompt quando sono visibili.
-2. **Aspetto del soggetto.** Inventa una variazione riconoscibile, come una finitura, una decorazione o un danno con tracce fisiche
-   plausibili. Specifica materiali, colori e stato della console rilevanti nello scatto, inclusi apertura, schermo e accessori visibili.
-   Per un Advance SP decorato sul coperchio, scegli la console chiusa e descrivi il coperchio esterno. Per una novità sui comandi,
-   scegli la console aperta e descrivi le superfici interne visibili dallo stesso punto di vista.
+2. **Aspetto del soggetto.** Applica solo i parametri estratti, separando colore, finitura, edizione, usura, danno,
+   invecchiamento, pulizia, stato visibile e contenuto dello schermo. Non accentuare i graffi quando è prevista usura lieve.
+   Un valore ordinario o l'assenza del tratto è valido. Specifica apertura, display e accessori effettivamente visibili.
+   Per un Advance SP descrivi la faccia esterna se chiuso o le superfici interne visibili se aperto. Non aprire o chiudere
+   implicitamente la console per esibire una decorazione: adatta o scarta la proposta incompatibile con lo stato previsto.
 3. **Persone.** Per questi scatti di oggetti, prevedi di norma zero persone visibili. Se la scena mostra la console in uso, specifica
    il gesto e le mani o le altre parti della persona che entrano nell'inquadratura. La presa deve sostenere il peso della console.
-4. **Ambiente.** Scegli insieme luogo, piano d'appoggio, posizione della console, oggetti secondari e sfondo. Per una foto amatoriale,
-   usa un luogo d'uso o di conservazione riconoscibile, come la scrivania di casa, e pochi oggetti plausibili. Riserva la composizione
-   da vetrina o da catalogo alle scene che seguono quel genere. Il Game Boy Color riposa con il dorso sul piano e lo schermo verso
-   l'alto, oppure sta inclinato grazie a un appoggio visibile o sostenuto da una mano. Per una posa verticale descrivi il sostegno.
+4. **Ambiente.** Mantieni luogo, piano d'appoggio, oggetti secondari e sfondo della descrizione di partenza. Una foto da catalogo
+   può restare da catalogo; una foto amatoriale non deve diventare uno scatto commerciale. La posa varia solo se estratta.
+   Il Game Boy Color riposa con il dorso sul piano e lo schermo verso l'alto, oppure sta inclinato grazie a un appoggio visibile
+   o sostenuto da una mano. Per una posa verticale descrivi il sostegno.
 5. **Punto di vista.** Usa una posizione sola della fotocamera. Dai altezza, angolo e distanza abbastanza precisi da mostrare il
-   tratto nuovo e chiarire il contatto con il piano. Ogni lato e ogni dettaglio citato deve essere visibile da quell'angolo. Varia
-   l'inquadratura e la disposizione rispetto alle REAL consultate e alle altre proposte del batch.
-6. **Luce.** Indica la sorgente principale, la sua direzione e le ombre e i riflessi che la scena rende rilevanti. Una finestra
-   laterale può produrre un riflesso sul guscio o sullo schermo. Il materiale e l'angolo devono spiegare dove appare.
-7. **Tecnica fotografica.** Indica il tipo di scatto e dove cade il fuoco. Per questo test usa una ripresa amatoriale ravvicinata
-   con prospettiva naturale e la novità nitida. Scegli la profondità di campo in modo che appoggio e contesto restino leggibili.
-8. **Resa fotografica.** Indica il colore, il contrasto e la finitura complessiva. Per gli scatti amatoriali del test usa colori
-   naturali, contrasto moderato e una resa coerente con la luce della scena.
+   soggetto e chiarire il contatto con il piano. Ogni lato e ogni dettaglio citato deve essere visibile da quell'angolo. Varia
+   l'inquadratura e la disposizione soltanto quando i parametri relativi sono estratti; segnala una somiglianza eccessiva.
+6. **Luce.** Mantieni la configurazione fisica delle sorgenti nella descrizione della REAL; adatta ombre e riflessi alla nuova
+   geometria, alla fotocamera e ai materiali. Una finestra laterale può produrre un riflesso sul guscio o sullo schermo.
+   Il materiale e l'angolo devono spiegare dove appare.
+7. **Tecnica fotografica.** Mantieni tipo di scatto, fuoco e limitazioni del medium di partenza. Non aggiungere sfocato o
+   illuminazione da studio come miglioramento automatico; conserva il carattere ordinario della foto.
+8. **Resa fotografica.** Mantieni colore, contrasto, esposizione e finitura fotografica della scena. Non imporre una resa
+   comune a tutte le SLOP. Per `screen_content`, scegli contenuti plausibili per console ed epoca; a schermo spento o nascosto
+   il parametro non è applicabile. Evidenzia testi e dati di salvataggio copiati che rendono il risultato troppo riconoscibile.
 
 Prima di consegnare il prompt, verifica che **numero di console, appoggio, lati visibili, sfondo, luce e fuoco** descrivano lo
 stesso scatto. Per ogni asse tieni i dettagli che si possono vedere o che determinano come quello scatto si presenta. Valuta le
-candidate del prossimo test per presenza della novità, unicità del soggetto, appoggio fisico, parti visibili e coerenza del genere
+candidate per cambiamenti effettivi, numero dei soggetti, appoggio fisico, parti visibili e coerenza del genere
 fotografico con la galleria.
 
-## Scene per il prossimo test
+## Limiti osservati il 25 novembre
+
+Il test sulle quattro REAL ha conservato il contesto, ma il generatore ha accentuato i graffi. La riparazione della croce
+con immagine intera e maschera ha eliminato un riflesso sfaccettato, perdendo però dettagli corretti. Non è una riparazione
+accettata. Il contenuto esatto del display era nella descrizione: trattarlo come parametro distinto permette di variarlo.
+Le correzioni sono proposte dal valutatore e richiedono conferma dell'owner, senza loop automatici (specifica `generazione-slop`).
+
+## Esempi illustrativi di scene
+
+Questi esempi precedenti mostrano coerenza interna; non sono valori predefiniti o istruzioni a cambiare sempre l'ambiente.
+Nel protocollo si applicano solo se compatibili con la descrizione di partenza e i parametri estratti.
 
 ### Advance SP avorio con stelle pixelate
 
