@@ -4,7 +4,7 @@ export class PaidError extends HttpError {
   constructor(message: string, public outcome: "failed" | "uncertain") { super(502, message); }
 }
 export async function paid(env: Env, kind: "analysis" | "prompts" | "images" | "evaluation", model: string, body: unknown,
-  links: { process?: string; attempt?: string; image?: string; request?: string; endpoint?: "embeddings" | "images/edits" } = {}): Promise<Record<string, unknown>> {
+  links: { process?: string; attempt?: string; image?: string; request?: string; endpoint?: "images/edits" } = {}): Promise<Record<string, unknown>> {
   if (!env.OPENAI_API_KEY) throw new HttpError(503, "Missing OpenAI key");
   const callId = links.request ?? id(), stamp = new Date().toISOString();
   const claim = await env.DB.prepare(`INSERT INTO paid_calls(id,kind,model,status,created_at,updated_at,process_id,attempt_id,image_id)

@@ -1,13 +1,13 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-26T06:27:12Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-26T07:09:29Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
-## 1.62.0 — 2026-11-26T06:27:12Z
+## 1.62.0 — 2026-11-26T07:09:29Z
 
 - Import REAL, galleria e dettaglio preparano descrizioni e parametri con la coda persistente sul server: una chiamata per originale, massimo confermato, nessuna interruzione cambiando scheda o chiudendo la pagina.
 - Selezione accodata insieme prima dei Workflow, fino a 5000 REAL; stato gratuito e ripresa dell’osservazione al ritorno nel wizard. Descrizioni salvate e lavori attivi riusati; esiti incerti mai ripetuti automaticamente. La vecchia API sincrona rifiuta claim già occupati dalla pipeline.
-- Test desktop/mobile con reload, congelamento del renderer e chiusura del browser; completamento verificato direttamente in D1, con servizi simulati. Ruolo attuale e limiti degli indici documentati. Nessuna migrazione.
+- Test desktop/mobile con reload, congelamento del renderer e chiusura del browser; completamento verificato direttamente in D1, con servizi simulati. Rimossi comandi e API degli indici, identità di ricerca ed embedding degli ambienti. Migrazione 0076 con conservazione di assi, profili, immagini, lavori e cronologia delle chiamate; i riferimenti della scena si scelgono direttamente dai profili della galleria. Schema aggiornato.
 
 ## 1.61.0 — 2026-11-25T22:45:40Z
 

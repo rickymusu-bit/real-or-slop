@@ -57,7 +57,7 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(raw or b'{}')
         if self.path == '/control':
             queue[:] = data.get('queue', []); log.clear(); return self.reply(200, {'ok': True})
-        if self.path not in ('/v1/responses', '/v1/images/generations', '/v1/images/edits', '/v1/embeddings'): return self.reply(404, {})
+        if self.path not in ('/v1/responses', '/v1/images/generations', '/v1/images/edits'): return self.reply(404, {})
         log.append({'authorization': self.headers.get('Authorization'), 'body': data, 'path': self.path})
         behaviour = queue.pop(0) if queue else None
         if behaviour and behaviour.get('delay'): time.sleep(behaviour['delay'])
@@ -69,16 +69,10 @@ class Handler(BaseHTTPRequestHandler):
             if self.path.endswith('/edits'):
                 w,h=data['files']['image[]']['size'];size=f'{w*16}x{h*16}'
             return self.reply(200, {'data': [{'b64_json': picture(size)}], 'usage': {'input_tokens': 50, 'output_tokens': 1056}})
-        if self.path == '/v1/embeddings':
-            vector = (behaviour or {}).get('embedding', [1] + [0] * (data['dimensions'] - 1))
-            return self.reply(200, {'data': [{'index': 0, 'embedding': vector}], 'usage': {'prompt_tokens': 18, 'total_tokens': 18}})
         schema_name = data.get('text', {}).get('format', {}).get('name')
         request = json.loads(data['input'][0]['content'][0]['text']) if schema_name in ('slop_evaluation', 'slop_gallery_proposal') else None
-        if schema_name == 'real_subject_identity' and (behaviour is None or 'delay' in behaviour):
-            behaviour = {'json': {'brand': 'Nintendo', 'family': 'Game Boy', 'model': 'DMG-01'}}
         if schema_name in ('real_visual_description', 'pipeline_profile') and (behaviour is None or 'delay' in behaviour):
-            behaviour = {'json': {'subject': {'brand': 'Nintendo', 'family': 'Game Boy', 'model': 'DMG-01'},
-                                  'sections': {'summary': 'Grey subject with worn edges.',
+            behaviour = {'json': {'sections': {'summary': 'Grey subject with worn edges.',
                                               'subject_type': 'Nintendo Game Boy DMG-01.', 'subject_appearance': 'Worn edges.',
                                               'people': 'No visible people.', 'environment': 'Uniform background.',
                                               'viewpoint': 'Front view.', 'light': 'Soft light from the left.',

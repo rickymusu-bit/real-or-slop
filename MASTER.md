@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 40.1.0, aggiornata il 2026-11-26T06:27:12Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 40.2.0, aggiornata il 2026-11-26T07:09:29Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,7 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.62.0:** descrizioni REAL e parametri preparati nella coda persistente della pipeline anche da Import REAL, galleria e dettaglio. Selezione registrata insieme prima dei Workflow; stato gratuito, ripresa dopo reload e nessuna dipendenza dal browser per proseguire. Nessuna migrazione o elaborazione reale. Test browser desktop/mobile con renderer congelato e pagina chiusa, verifica diretta del completamento in D1 senza polling e nessuna chiamata duplicata. Indici ambientali opzionali per i riferimenti del planner, ruolo documentato.
+- **Ramo 1.62.0:** descrizioni REAL e parametri preparati nella coda persistente della pipeline anche da Import REAL, galleria e dettaglio. Selezione registrata insieme prima dei Workflow; stato gratuito, ripresa dopo reload e nessuna dipendenza dal browser per proseguire. Migrazione 0076 per eliminare gli indici delle descrizioni; nessuna elaborazione reale. Test browser desktop/mobile con renderer congelato e pagina chiusa, verifica diretta del completamento in D1 senza polling e nessuna chiamata duplicata. Rimossi comandi/API di indicizzazione, identità di ricerca ed embedding: il planner usa direttamente i profili già preparati nella galleria. Descrizioni e dati della pipeline conservati.
 - **Integrata in main la 1.61.0 (PR #180):** admin interamente in inglese, gallerie e pipeline comprese. Tolte le proposte obsolete dalle REAL, nascosto il relativo contesto, rimosso il vecchio wizard browser delle proposte. Descrizioni, misure e valutazioni nuove in inglese; schema tradotto. Migrazione 0075: contesti standard inglesi, personalizzazioni e cronologia conservate. Nessuna rigenerazione o chiamata reale per tradurre dati salvati.
 - **Integrata in main la 1.60.0 (PR #179):** pipeline completa della galleria, `docs/generazione-slop.md` 17.0.0. Preparazione collettiva delle REAL,
   parametri e particolarità, indici, regole/probabilità rivedibili, cambio ambiente/genere, scene inglesi, formato per candidata,
@@ -111,13 +111,13 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.10.0 |
+| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.11.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.1.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.7.0 |
-| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.2.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.7.1 |
+| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.3.0 |
 | Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 2.0.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 10.9.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 10.10.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.10.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.4.0 |
@@ -169,8 +169,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera),
   `commons-check.ts` (controllo notturno delle fonti Commons delle REAL), `real-measure.ts` (misura a pagamento di affollamento e
   dettaglio delle REAL, storico, soglie), `real-ideas.ts` (idee di falsificazione delle REAL: proposta a pagamento, revisione,
-  disponibilità per l'estrazione), `real-description.ts` (descrizione visiva privata delle REAL dall'originale intero),
-  `real-index.ts` (identità normalizzata dei soggetti, vettori e ricerca degli ambienti).
+  disponibilità per l'estrazione), `real-description.ts` (descrizione visiva privata delle REAL dall'originale intero).
 - Libreria `library.ts` (stati, modifiche, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   gallerie `galleries.ts`, cancellazione di gallerie e file `gallery-removal.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
@@ -188,7 +187,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 `licenses.ts`, pulizia dei metadati `media-clean.ts`, livelli e punteggio `levels.ts`, costanti legali `legal.ts`, controllo delle
 immagini `editorial.ts` (brief e valutazioni), `image-label.ts` (titolo REAL o ID SLOP), `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
 
-**Test** (`tests/`): unitari `*.test.ts` (`npm test`); regressione browser della coda REAL `real_descriptions_browser.integration.py`; d'integrazione `*.integration.py`, eseguiti da `scripts/integration.py` con il
+**Test** (`tests/`): unitari `*.test.ts` (`npm test`); regressione browser della coda REAL `real_descriptions_browser.integration.py`; preservazione dei dati nella rimozione degli indici `remove-real-indexes-migration.test.ts`; d'integrazione `*.integration.py`, eseguiti da `scripts/integration.py` con il
 modello finto `fake_openai.py` (che simula anche l'API di Commons per il controllo delle fonti) e gli aiuti `catalog.py`, `game_copy.py`, `long_press.py`, `local_db.py` (sole fixture nello SQLite di D1 isolato); `cloudflare-workers.mjs` sostituisce in Node
 il modulo `cloudflare:workers` per i test unitari.
 
@@ -232,6 +231,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0067 | misure di affollamento e dettaglio delle REAL (`real_measures`), soglie delle gallerie, parte `real_measure` del contesto e chiavi delle soglie predefinite nelle Impostazioni |
 | 0068 | formula delle misure (1 per le esistenti) e nuova proposta di «Misura delle REAL» se quella in vigore è la prima |
 | 0069 | idee di falsificazione delle REAL (`real_ideas`), motivo senza idee, idea nel riferimento REAL-processo, trigger che tengono i riferimenti fino alla fine del processo e segnano l'idea usata, parte `real_ideas` del contesto |
+| 0076 | rimuove indici per soggetto, tabella/trigger dei vettori ambientali e identità di ricerca dalle descrizioni; conserva assi, profili, lavori e cronologia; libera solo i claim di indicizzazione e segna incerti i relativi esiti pendenti |
 | 0075 | versioni inglesi dei contesti ancora identici ai predefiniti, con conservazione dei testi personalizzati e della cronologia |
 | 0074 | formato richiesto/restituito e vincolo dei lavori attivi, inclusa l’acquisizione in coda |
 | 0073 | profili e scene privati, regole/probabilità delle gallerie e lavorazioni temporanee con pulizia durevole |

@@ -17,6 +17,9 @@ control([])
 assert call('',auth=False)[0]==401
 assert call('prepare',{'ids':[source['id']],'max_calls':1})[0]==400
 assert control()==[]
+assert 'index' not in call('')[1]
+assert call('index',paid_request(id=source['id'],max_calls=1))[0]==404
+assert control()==[]
 request=paid_request(ids=[source['id']],max_calls=1)
 assert call('prepare',request)[0]==200
 state=wait(lambda s:s['sources'][0]['profile'] is not None and not s['jobs'])

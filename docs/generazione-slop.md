@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 17.2.0
+# Generazione SLOP — specifica 17.3.0
 
-Aggiornata: 2026-11-26T06:27:12Z. Stato: implementata nel ramo 1.62.0, da rilasciare.
+Aggiornata: 2026-11-26T07:09:29Z. Stato: implementata nel ramo 1.62.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -29,7 +29,6 @@ quelle già inviate terminano senza avviare altre fasi. Dopo quindici minuti una
 
 - **Prepara la galleria:** una chiamata per REAL ancora priva di profilo, su originale intero. Salva descrizione inglese,
   identità, genere, parametri osservati e particolarità. Riusa i profili già presenti. I dati sono rivedibili senza chiamate.
-- **Indicizza gli ambienti:** riusa il comando degli indici 1.59.0, con massimo dinamico, mantenendo gli esiti riusciti.
 - **Regole e probabilità:** modificabili per galleria. Ogni probabilità vuota usa la stima automatica; zero disabilita un controllo.
   L'ambiente può restare invariato, variare entro lo stesso genere o cambiare insieme al genere.
 - **Prepara scene:** una chiamata per REAL selezionata e preparata. Le estrazioni e i riferimenti vengono congelati. Sono
@@ -45,7 +44,7 @@ quelle già inviate terminano senza avviare altre fasi. Dopo quindici minuti una
   è calcolata dal browser. Il riferimento del trattamento è campionato fra REAL misurate dello stesso genere di destinazione;
   senza riferimento disponibile la copia parte senza trattamento. Inquadratura e cursori riusano gli editor esistenti.
 
-API private: `GET /api/admin/pipeline/:gallery`; `POST /:gallery/settings`, `/profile`, `/prepare`, `/index`, `/plan`, `/stop`;
+API private: `GET /api/admin/pipeline/:gallery`; `POST /:gallery/settings`, `/profile`, `/prepare`, `/plan`, `/stop`;
 `POST /:gallery/:job/{scene,generate,evaluate,edit,accept,close}`; `GET /:gallery/:job/file` e `?previous=1`.
 Le fasi a pagamento richiedono `confirm`, UUID `request` e `max_calls` esatto. Dal 2026-11-26 la preparazione accetta fino a 5000 REAL in una richiesta: tutta la selezione viene accodata atomicamente prima dell’avvio, senza dipendere da una successione di richieste del browser. Lo stesso comando prepara descrizioni e profili da Import REAL, galleria e dettaglio. `GET /api/admin/pipeline/:gallery/descriptions` espone l’avanzamento senza i profili completi. Il planner conserva il limite di 500 scene per richiesta, con suddivisione delle selezioni maggiori entro il massimo confermato.
 Modelli e qualità sono quelli selezionati nelle Impostazioni; il selettore include GPT-6.2 Sol e Sunburst.
@@ -64,7 +63,7 @@ che debbano essere riprodotte nella SLOP.
 
 Le regole della galleria accompagnano il generatore di testo: modelli compatibili, vincoli fisici e generi fotografici presenti.
 Per Nintendo: `docs/regole-galleria-console-nintendo.md`. Sono costruite sulle REAL, rivedibili dall'owner, non dedotte dal solo
-titolo. Non impongono marcatori visivi comuni a ogni SLOP. Nel planner attuale l’indice semantico degli ambienti cerca fino a tre riferimenti simili se l’ambiente si conserva, diversi se cambia. Le corrispondenze vengono poi confrontate per modello nei profili e filtrate per genere, quando richiesto. Gli indici esatti di marca, famiglia e modello servono alla ricerca privata, ma il planner non li usa come filtri SQL. Senza embedding disponibili il planner ripiega sui profili già preparati: gli indici sono quindi un aiuto opzionale al recupero del contesto, non scelgono la REAL iniziale né regolano probabilità e variazioni. La preparazione iniziale di una REAL non consulta più gli indici. Le statistiche usano le annotazioni disponibili.
+titolo. Non impongono marcatori visivi comuni a ogni SLOP. Decisione dell’owner del 2026-11-26: gli indici delle descrizioni sono rimossi, insieme ai comandi e alle API di indicizzazione (migrazione 0076). Il planner usa direttamente i profili validi e le descrizioni delle altre REAL della stessa galleria, dando precedenza alla stessa categoria di modello. Mantiene lo stesso genere quando non è richiesto un cambio di genere e passa fino a tre descrizioni di supporto. Non esegue ricerca semantica di ambienti né chiamate di embedding. Le scelte e i riferimenti sono congelati nella lavorazione. Il bilanciamento e le probabilità continuano a usare i parametri osservati nei profili, indipendentemente dai riferimenti di supporto. Le statistiche usano le annotazioni disponibili.
 
 ## 3. Parametri controllabili
 

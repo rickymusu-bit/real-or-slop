@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 38.1.0, aggiornata il 2026-11-26T06:27:12Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 38.2.0, aggiornata il 2026-11-26T07:09:29Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -40,6 +40,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   confermate, correzioni scelte dall'owner, accettazione, trattamento e copie di gioco. Le vecchie lavorazioni hanno un riquadro
   di recupero; il nuovo flusso non usa il vecchio ciclo automatico. Ogni foto appartiene a una galleria; le REAL restano giocabili.
   Nessun registro permanente REAL–SLOP. I profili e le particolarità sono privati e non sono tag di navigazione.
+- **Nessun indice delle descrizioni** (2026-11-26). Rimossi comandi, API, identità normalizzate per la ricerca ed embedding degli ambienti. La pipeline usa direttamente descrizioni e profili preparati nella galleria; le distribuzioni restano basate sui parametri osservati. Nessuna chiamata di indicizzazione. Migrazione 0076: elimina solo dati di ricerca obsoleti, conserva assi, profili, immagini e cronologia delle chiamate.
 - **Bilanciamento del dataset.** Il nuovo protocollo (2026-11-25) considera conteggi, distribuzioni dei parametri e combinazioni
   rilevanti della galleria. Le modifiche possono rendere una console più ordinaria. Non forzare novità vistose o unicità a ogni
   SLOP. Le probabilità automatiche sono stime empiriche rivedibili; i pesi considerano i parametri previsti delle SLOP, non una

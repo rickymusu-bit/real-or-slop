@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 6.7.0
+# Dashboard e wizard REAL — specifica 6.7.1
 
-Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T06:27:12Z.
+Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T07:09:29Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -83,7 +83,7 @@ acquisite sono comunque nella libreria privata.
   dimensioni, link alla fonte e alla licenza), «Togli dal caricamento» (sposta nel cestino, ripristinabile dal cestino della galleria).
   «Genera descrizione» descrive il suo originale con il modello. «Genera le descrizioni visive mancanti» lo fa per tutte le REAL
   in caricamento ancora da descrivere. Entrambi chiedono conferma del massimo di chiamate. Le descrizioni salvate si leggono
-  sotto il testo della fonte (specifica `libreria-immagini`, sezione 11). Dal 2026-11-26 i comandi passano alla coda persistente della pipeline: l’intera selezione viene registrata prima dell’avvio e una chiamata per originale prepara anche i parametri SLOP. Il messaggio di avanzamento indica che si può cambiare scheda o chiudere la pagina. Ricaricare il wizard riprende solo l’osservazione dei lavori esistenti; foto descritte e lavorazioni attive non vengono inviate di nuovo. Gli errori restano espliciti, senza tentativi automatici.
+  sotto il testo della fonte (specifica `libreria-immagini`, sezione 11). Dal 2026-11-26 i comandi passano alla coda persistente della pipeline: l’intera selezione viene registrata prima dell’avvio e una chiamata per originale prepara anche i parametri SLOP. Il messaggio di avanzamento indica che si può cambiare scheda o chiudere la pagina. Ricaricare il wizard riprende solo l’osservazione dei lavori esistenti; foto descritte e lavorazioni attive non vengono inviate di nuovo. Gli errori restano espliciti, senza tentativi automatici. Gli indici delle descrizioni e i relativi comandi sono rimossi; la pipeline usa i profili strutturati già preparati (decisione del 2026-11-26).
 - Le modifiche di una foto partono una dopo l'altra, ciascuna con la revisione più recente.
 - Si passa al 3 senza altri requisiti.
 

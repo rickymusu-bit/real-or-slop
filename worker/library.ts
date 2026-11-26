@@ -23,7 +23,6 @@ import { currentCopyCorrect, currentCopyViews, gamesInPlay, retireCopy, reviveCo
 import { galleryThresholds, latestMeasures, measureReal, measuresOf, measureView } from "./real-measure";
 import { ideaRoute, ideasOf, ownIdea, proposeIdeas } from "./real-ideas";
 import { describeReal, undescribedReals } from "./real-description";
-import { indexReal, pendingRealIndex, PENDING_REAL_INDEX, searchRealIndex } from "./real-index";
 import type { VisualDescription } from "../shared/real-description";
 
 const base = "/api/admin/library";
@@ -375,15 +374,13 @@ async function list(env: Env, url: URL) {
   const next = paged && rows.length > limit ? offset + limit : null;
   if (next !== null) rows.pop();
   const more = await extras(env, rows);
-  const countQuery = `SELECT status,origin,count(*) AS n,sum(origin='REAL' AND status<>'trash' AND visual_description IS NULL) AS undescribed,
-    sum(${PENDING_REAL_INDEX}) AS unindexed FROM images i`;
+  const countQuery = `SELECT status,origin,count(*) AS n,sum(origin='REAL' AND status<>'trash' AND visual_description IS NULL) AS undescribed FROM images i`;
   const counts = (await (gallery
     ? env.DB.prepare(countQuery + " WHERE gallery_id=? GROUP BY status,origin").bind(gallery)
-    : env.DB.prepare(countQuery + " GROUP BY status,origin")).all<{ status: string; origin: string; n: number; undescribed: number; unindexed: number }>()).results;
+    : env.DB.prepare(countQuery + " GROUP BY status,origin")).all<{ status: string; origin: string; n: number; undescribed: number }>()).results;
   const undescribed = counts.reduce((total, count) => total + count.undescribed, 0);
-  const unindexed = counts.reduce((total, count) => total + count.unindexed, 0);
   return json({ items: rows.map(r => view(r, more.get(r.id))), counts: counts.map(({ status, origin, n }) => ({ status, origin, n })),
-    undescribed, unindexed, ...(paged ? {next} : {}) });
+    undescribed, ...(paged ? {next} : {}) });
 }
 
 /** Distribution of the approved and published images: REAL and SLOP, approved and published. Free. */
@@ -414,8 +411,6 @@ export async function library(request: Request, env: Env, path: string): Promise
   if (candidate && request.method === "GET") return candidateFile(env, candidate[1], candidate[2]);
   if (path === base + "/distribution" && request.method === "GET") return json(await distribution(env));
   if (path === base + "/undescribed-reals" && request.method === "GET") return json(await undescribedReals(env, url.searchParams.get("gallery")));
-  if (path === base + "/real-index" && request.method === "GET") return json(await searchRealIndex(env, url.searchParams));
-  if (path === base + "/real-index/pending" && request.method === "GET") return json(await pendingRealIndex(env, url.searchParams.get("gallery")));
   if (path === base + "/contexts" || path === base + "/contexts/restore")
     return json(await contextRoute(env, request.method, path.endsWith("/restore"), request.method === "POST" ? await body(request, 20_000) : {}));
   if (path === base + "/models") return json(await modelsRoute(env, request.method, request.method === "PUT" ? await body(request, 500) : {}));
@@ -473,7 +468,7 @@ export async function library(request: Request, env: Env, path: string): Promise
     }
     return json({ done: done.length, failed });
   }
-  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|regenerate|metrics|measure|measures|ideas|description|index-description))?$/);
+  const match = path.match(/^\/api\/admin\/library\/([\w-]{1,64})(?:\/(file|original|copy|approve|publish|withdraw|trash|restore|regenerate|metrics|measure|measures|ideas|description))?$/);
   if (!match) throw new HttpError(404, "Library API not found");
   const row = await find(env, match[1]);
   if (match[2] === "file" || match[2] === "original") {
@@ -514,10 +509,6 @@ export async function library(request: Request, env: Env, path: string): Promise
     if (request.method !== "POST") throw new HttpError(405, "Method not allowed");
     await describeReal(env, row, await body(request, 1000));
     return json(await viewOf(env, row.id));
-  }
-  if (match[2] === "index-description") {
-    if (request.method !== "POST") throw new HttpError(405, "Method not allowed");
-    return json(await indexReal(env, row, await body(request, 1000)));
   }
   if (match[2] === "regenerate") {
     if (request.method !== "POST") throw new HttpError(405, "Method not allowed");

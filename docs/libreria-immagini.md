@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.10.0
+# Libreria delle immagini — specifica 10.11.0
 
-Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T06:27:12Z.
+Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T07:09:29Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -24,7 +24,7 @@ Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è i
   Superano le decisioni del 2026-11-09 (analisi una volta per immagine), del 2026-11-19 (ripetizione dell'analisi, descrizione nei
   risultati) e quella di poche ore prima sulle incertezze.
 - **Proposte delle REAL precedenti:** non più mostrate sulle immagini REAL; conservate per compatibilità delle lavorazioni anteriori alla 1.60.0; il nuovo wizard
-  usa parametri, particolarità e scene della galleria, come descritto in `generazione-slop` 17.0.0.
+  usa parametri, particolarità e scene della galleria, come descritto in `generazione-slop` 17.3.0.
 - **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, numero modificabile dalle Impostazioni, ciascuna solo tre mesi dopo l'ultimo controllo; un
   file sparito da Commons viene **solo segnalato**, mai ritirato o cancellato in automatico (sezione 9).
 - **Affollamento e dettaglio delle REAL** (decisioni del 2026-11-21). Su richiesta, un modello misura quanto è affollata e quanto è
@@ -114,7 +114,7 @@ le immagini al modello con una data URL base64 scritta direttamente nei byte del
 
 ## 6. Chiamate a pagamento e modelli
 
-- Quattro tipi: misure, descrizioni visive e loro indicizzazione (`analysis`, sezioni da 10 a 12), proposte editoriali e prompt SLOP (anche le
+- Quattro tipi: misure e descrizioni visive (`analysis`, sezioni 10 e 11), proposte editoriali e prompt SLOP (anche le
   idee di falsificazione delle REAL; le indicazioni proposte per una galleria sono state tolte il 2026-11-22), immagini SLOP, valutazione SLOP intera. Le SLOP accettate non richiedono altre chiamate. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
 - **Esiti:** risposta valida → `completed`; errore 4xx → `failed`, senza addebito; errore 5xx, timeout o rete → `uncertain`, mai
   ripetuta in automatico. Chiave rifiutata, limite di spesa o credito OpenAI esaurito fermano le serie con un messaggio che rimanda a
@@ -270,29 +270,22 @@ Le informazioni riportate dalla fonte sono distinte dalle osservazioni. Tipo di 
   «Descrivi le REAL» include nuove, approvate e pubblicate ancora prive di descrizione. L'elenco proviene da `GET /undescribed-reals?gallery=`.
   Le miniature prive di descrizione hanno un'icona. Il dettaglio della foto mostra il testo salvato e permette di generarlo se manca.
 - Decisione dell’owner del 2026-11-26: Import REAL, descrizione dalla galleria e dal dettaglio usano la preparazione persistente della pipeline. Una chiamata per foto restituisce descrizione, identità, genere, parametri e particolarità, pronti per il planner SLOP. Il browser conferma il massimo e invia un solo `POST /api/admin/pipeline/:gallery/prepare {confirm, request, ids, max_calls}` per l’intera selezione (fino a 5000 REAL). Il Worker registra tutti i lavori insieme prima di avviare i Workflow, al massimo tre operazioni acquisite. Il lavoro continua con scheda sospesa o pagina chiusa. La pagina osserva solo lo stato gratuito `GET /api/admin/pipeline/:gallery/descriptions` e legge le foto salvate. Ricaricare un’importazione riprende l’osservazione senza nuove conferme o POST a pagamento.
-- L’interfaccia riusa le descrizioni salvate e segue i lavori già attivi, senza accodare duplicati. Un errore o un esito incerto resta segnalato; nessuna ripetizione automatica. Un nuovo tentativo richiede un’altra conferma esplicita. La vecchia rotta sincrona `POST /:id/description` resta compatibile per i client precedenti; il suo claim atomico rifiuta foto già occupate dalla pipeline. Lo stesso vincolo impedisce alla preparazione di sovrapporsi a una descrizione o indicizzazione diretta in corso.
+- L’interfaccia riusa le descrizioni salvate e segue i lavori già attivi, senza accodare duplicati. Un errore o un esito incerto resta segnalato; nessuna ripetizione automatica. Un nuovo tentativo richiede un’altra conferma esplicita. La vecchia rotta sincrona `POST /:id/description` resta compatibile per i client precedenti; il suo claim atomico rifiuta foto già occupate dalla pipeline. Lo stesso vincolo impedisce alla preparazione di sovrapporsi a una descrizione diretta in corso.
 - La migrazione 0071 aggiunge la descrizione e il controllo delle richieste in corso. Il testo si salva con modello, data e versione
   della base comune, separato dalla fonte Commons. La griglia riceve solo lo stato di presenza. Il testo si cancella con la REAL ed
   è disponibile solo in amministrazione. L'approvazione e la pubblicazione funzionano anche in attesa della descrizione.
 
-## 12. Indici dei soggetti e degli ambienti delle REAL
+## 12. Rimozione degli indici delle descrizioni
 
-La nuova descrizione visiva include marca, famiglia e modello del soggetto principale. Un dato sconosciuto o inapplicabile è nullo.
-La migrazione 0072 indicizza in D1 i valori normalizzati per galleria, ignorando differenze di maiuscole, spazi e punteggiatura.
-Il Worker chiede al modello di identificare il soggetto quando ci sono elementi sufficienti. Il testo inglese della descrizione
-serve come riscontro.
+Decisione dell'owner del 2026-11-26: la pipeline usa direttamente descrizioni e profili strutturati delle REAL.
+Non ci sono comandi o API per indicizzare o cercare descrizioni per identità normalizzata o similarità dell'ambiente;
+nessuna chiamata a embedding o backfill. Marca, famiglia e modello restano descritti nell'asse `subject_type` e nei parametri
+pertinenti del profilo; le nuove descrizioni non producono l'oggetto ridondante `subject` con le chiavi di ricerca.
 
-- **Indicizza le descrizioni.** Nella galleria, il comando completa le REAL già descritte fuori dal cestino. La conferma indica il
-  massimo di chiamate. Una chiamata invia il solo asse ambiente a `text-embedding-3-small`, a 256 dimensioni. Per una descrizione
-  precedente con i campi del soggetto ancora assenti, una chiamata al modello testuale li ricava dal campo «Tipo del soggetto» e li
-  salva prima dell'embedding. Un'interruzione lascia disponibili i dati già salvati. Ogni chiamata è registrata come `analysis`.
-- **Ricerca privata.** `GET /api/admin/library/real-index?gallery=…` accetta `brand`, `family`, `model` e `catalogue=0|1`. Con
-  `reference` si confrontano i vettori già salvati con l'ambiente della REAL indicata nella stessa galleria. `order=similar|different`
-  ordina per similarità del coseno. `limit` limita i risultati (8 in automatico, da 1 a 30). Il risultato include i campi del
-  soggetto, il testo dell'ambiente e, se richiesto, il punteggio. La ricerca non effettua chiamate al modello.
-- La lista delle descrizioni da completare è `GET /api/admin/library/real-index/pending?gallery=…`. `POST /:id/index-description`
-  riceve `confirm`, `request`, `gallery_id` e `max_calls`. Soggetto e vettore seguono la REAL tra gallerie. Una modifica al testo
-  dell'ambiente invalida il vettore e l'eliminazione definitiva della REAL lo cancella.
+La migrazione 0076 elimina i tre indici D1 per soggetto, il trigger di invalidazione e `real_environment_vectors`.
+Rimuove solo `subject` dalle descrizioni salvate: assi, indicazioni e provenienza restano, come immagini, copie, profili,
+scene, lavori della pipeline, partite e cronologia delle chiamate. Libera i soli claim `real-index-*` e segna come incerti
+le relative chiamate ancora pendenti, senza ripeterle. La migrazione 0072 rimane nella cronologia delle migrazioni.
 
 ## 13. Profili privati e pipeline della galleria
 
@@ -300,7 +293,7 @@ La 1.60.0 aggiunge `images.pipeline_profile` per genere, quattordici parametri e
 prevista di una SLOP. Il wizard prepara insieme descrizione e profilo con una chiamata per REAL mancante; riusa quelli presenti.
 I profili sono correggibili gratuitamente; le particolarità hanno policy di conservazione, variazione o estrazione. I dati
 restano privati, esclusi dalle risposte del gioco. Le scene SLOP non sono didascalie. Il nuovo protocollo completo e le sue
-conferme sono in `generazione-slop` 17.0.0. Le vecchie idee restano per compatibilità delle lavorazioni precedenti.
+conferme sono in `generazione-slop` 17.3.0. Le vecchie idee restano per compatibilità delle lavorazioni precedenti.
 
 ## Lingua amministrativa e contesti (1.61.0)
 

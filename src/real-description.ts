@@ -4,7 +4,6 @@ import { withPhotoProcessing } from "./photo-processing";
 
 type RequestItem<T> = (path: string, options: RequestInit) => Promise<T>;
 interface Target { id: string; title: string }
-export interface IndexTarget extends Target { max_calls: number }
 
 export function visualDescription(description: VisualDescription): string {
   return `<details class="editorial-description" data-visual-description><summary>Visual description</summary>
@@ -13,27 +12,6 @@ export function visualDescription(description: VisualDescription): string {
     <h4>Scene indicators</h4><dl>${INDICATION_KEYS.map(key => `<dt>${VISUAL_INDICATIONS[key]}</dt>
       <dd>${description.indications[key].applies ? "Yes" : "No"}. <span lang="en">${escape(description.indications[key].reason)}</span></dd>`).join("")}</dl>
     <p class="hint">Generated with ${escape(description.model)}</p></details>`;
-}
-
-async function realPhotoSeries<T extends Target>(targets: T[], verb: string, result: string, run: (target: T) => Promise<void>) {
-  const count = targets.length;
-  return withPhotoProcessing(`${verb} REAL…`, async progress => {
-    let done = 0;
-    const failures: string[] = [];
-    for (const [index, item] of targets.entries()) {
-      progress(`${verb} REAL ${index + 1} of ${count}…`);
-      try {
-        await run(item);
-        done++;
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        failures.push(`${item.title}: ${reason}`);
-        if (reason.startsWith("OpenAI:") || reason === "Missing OpenAI key") break;
-      }
-    }
-    return `${done} of ${count} REAL ${result}.` +
-      (failures.length ? ` ${failures.join(" / ")}` : "");
-  });
 }
 
 interface DescriptionState {
@@ -104,14 +82,4 @@ export async function resumePhotoDescriptions<T>(targets: Target[], galleryId: s
   const pending = state.images.filter(photo => ids.has(photo.id) && !photo.described && photo.job);
   if (!pending.length) return null;
   return followDescriptions(pending, galleryId, request, saved);
-}
-
-export async function indexRealPhotos(targets: IndexTarget[], galleryId: string, request: RequestItem<unknown>) {
-  const max = targets.reduce((total, photo) => total + photo.max_calls, 0);
-  if (!max || !window.confirm(`Index descriptions for ${targets.length} REAL? Maximum ${max} paid ${max === 1 ? "call" : "calls"}.`)) return null;
-  return realPhotoSeries(targets, "Indexing", "indexed", async item => {
-    await request(`/${encodeURIComponent(item.id)}/index-description`, { method: "POST", body: JSON.stringify({
-      confirm: true, request: crypto.randomUUID(), gallery_id: galleryId, max_calls: item.max_calls,
-    }) });
-  });
 }

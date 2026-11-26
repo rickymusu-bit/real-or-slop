@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 10.9.0
+# Foto e gallerie — specifica 10.10.0
 
-Stato: implementata nel ramo 1.61.0, da rilasciare. Aggiornata: 2026-11-25T22:45:40Z.
+Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T07:09:29Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -34,9 +34,7 @@ La griglia 4:5 ha due colonne su mobile. «Carica altre foto» aggiunge le pagin
 - **Descrizione visiva.** Una REAL senza descrizione ha un'icona sulla miniatura. «Descrivi le REAL» include tutte quelle fuori dal
   cestino ancora da descrivere nella galleria aperta, anche se un filtro o la paginazione le nascondono. Si legge la descrizione
   dal dettaglio della foto, dove si può generare se manca (specifica `libreria-immagini`, sezione 11).
-- **Indicizza le descrizioni.** Il comando appare quando una REAL già descritta nella galleria ha ancora dati da indicizzare.
-  Il conteggio abbraccia l'intera galleria fuori dal cestino. La conferma indica il massimo di chiamate per completare gli indici
-  dei soggetti e degli ambienti (specifica `libreria-immagini`, sezione 12).
+- **Indici rimossi** (2026-11-26). Nessun comando «Index descriptions», conteggio di foto da indicizzare o ricerca semantica. Descrizioni e profili restano disponibili alla pipeline (specifica `libreria-immagini`, sezioni 12 e 13).
 - **Seleziona tutte (N)** (decisione dell'owner del 2026-11-15): seleziona tutte le immagini già caricate nella vista con i filtri
   correnti; sparisce quando sono già tutte selezionate. «Deseleziona» nella barra le toglie.
 - **Selezione multipla** (decisione dell’owner del 2026-11-19). La barra sotto la griglia offre «Approva», «Pubblica», «Nel cestino»

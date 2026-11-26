@@ -23,7 +23,7 @@ import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
 import { detailText, MEASURE_FORMULA, type Observation, type Scores } from "../shared/real-measure";
 import type { VisualDescription } from "../shared/real-description";
-import { describePhotos, indexRealPhotos, visualDescription, type IndexTarget } from "./real-description";
+import { describePhotos, visualDescription } from "./real-description";
 
 type Status = "new" | "approved" | "published" | "trash";
 interface Item extends TreatableItem {
@@ -89,7 +89,7 @@ async function bulkUpdate(action: string, ids: string[], fields: Record<string, 
 export async function showLibrary() {
   let galleryList: GalleryList | null = null;
   const galleries = () => galleryList?.galleries || [];
-  let items: Item[] = [], selected = new Set<string>(), open: Item | null = null, busy = false, undescribed = 0, unindexed = 0;
+  let items: Item[] = [], selected = new Set<string>(), open: Item | null = null, busy = false, undescribed = 0;
   const SORT_KEY = "ros-library-sort";
   let sort = { by: "added", order: "desc" };
   try { const saved = JSON.parse(localStorage.getItem(SORT_KEY) || "null") as typeof sort | null;
@@ -119,7 +119,6 @@ export async function showLibrary() {
           <a class="button primary" id="gallery-upload-link">Import REAL</a>
           <a class="button" id="gallery-generation-link">Generate SLOP</a>
           <button type="button" id="library-describe-gallery" hidden>Describe REAL</button>
-          <button type="button" id="library-index-gallery" hidden>Index descriptions</button>
           <button type="button" data-gallery-edit>Edit gallery</button>
         </div>
       </div>
@@ -256,10 +255,9 @@ export async function showLibrary() {
     $("#library-batch-filter").hidden = !filter.batch;
     try {
       const data = await call<{ items: Item[]; next: number | null; counts: { status: string; origin: string; n: number }[];
-        undescribed: number; unindexed: number }>("?" + params);
+        undescribed: number }>("?" + params);
       if (seq !== loadSeq) return;
       undescribed = data.undescribed;
-      unindexed = data.unindexed;
       const added = append ? data.items.filter(item => !items.some(i => i.id === item.id)) : data.items;
       items = append ? [...items, ...added] : added;
       nextPage = data.next;
@@ -304,10 +302,6 @@ export async function showLibrary() {
     describe.hidden = trash || !galleryList?.paid_calls || !undescribed;
     describe.disabled = busy;
     describe.textContent = `Describe REAL (${undescribed})`;
-    const index = $<HTMLButtonElement>("#library-index-gallery");
-    index.hidden = trash || !galleryList?.paid_calls || !unindexed;
-    index.disabled = busy;
-    index.textContent = `Index descriptions (${unindexed})`;
     const chosen = items.filter(item => selected.has(item.id));
     for (const button of bar.querySelectorAll<HTMLButtonElement>("[data-bulk]")) {
       const action = button.dataset.bulk;
@@ -618,17 +612,6 @@ export async function showLibrary() {
     } catch (error) { if (scope === filter.gallery) report(error); }
     finally { busy = false; selectionBar(); }
   };
-  const indexGallery = async () => {
-    const scope = filter.gallery;
-    busy = true; selectionBar();
-    try {
-      const { images } = await call<{ images: IndexTarget[] }>("/real-index/pending?" + new URLSearchParams({ gallery: scope }));
-      if (scope !== filter.gallery) return;
-      const result = images.length ? await indexRealPhotos(images, scope, call) : "Descriptions are already indexed.";
-      if (scope === filter.gallery && result !== null) { await load().catch(report); message(result); }
-    } catch (error) { if (scope === filter.gallery) report(error); }
-    finally { busy = false; selectionBar(); }
-  };
   $("#library-cancel-move").addEventListener("click", () => moveGallery.close());
   moveGallery.addEventListener("submit", event => {
     event.preventDefault();
@@ -688,7 +671,6 @@ export async function showLibrary() {
     }
     if (!button || busy) return;
     if (button.id === "library-describe-gallery") { await describeGallery(); return; }
-    if (button.id === "library-index-gallery") { await indexGallery(); return; }
     if (button.id === "library-select-all") {
       for (const item of items) selected.add(item.id);
       syncSelection();
@@ -875,7 +857,6 @@ export async function showLibrary() {
     selected.clear();
     items = [];
     undescribed = 0;
-    unindexed = 0;
     nextPage = null;
     render();
     $("#library-grid").innerHTML = `<li class="library-grid-loading">${loading("Loading images…")}</li>`;

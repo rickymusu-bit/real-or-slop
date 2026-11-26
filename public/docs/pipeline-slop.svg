@@ -48,17 +48,17 @@
 <polygon fill="#63738c" stroke="#63738c" points="688.16,-128.28 677.79,-126.09 684.53,-134.27 688.16,-128.28"/>
 <text text-anchor="middle" x="753.5" y="-610" font-family="DejaVu Sans" font-size="10.00">same technical recipe</text>
 </g>
-<!-- index -->
+<!-- composition -->
 <g id="node3" class="node">
-<title>index</title>
-<path fill="white" stroke="#cad2e0" d="M494.5,-953C494.5,-953 154.5,-953 154.5,-953 148.5,-953 142.5,-947 142.5,-941 142.5,-941 142.5,-908 142.5,-908 142.5,-902 148.5,-896 154.5,-896 154.5,-896 494.5,-896 494.5,-896 500.5,-896 506.5,-902 506.5,-908 506.5,-908 506.5,-941 506.5,-941 506.5,-947 500.5,-953 494.5,-953"/>
-<text text-anchor="middle" x="324.5" y="-934.4" font-family="DejaVu Sans" font-size="12.00">3 · Gallery indexes and composition</text>
-<text text-anchor="middle" x="324.5" y="-921.4" font-family="DejaVu Sans" font-size="12.00">Subjects · environments · distributions and combinations</text>
+<title>composition</title>
+<path fill="white" stroke="#cad2e0" d="M489,-953C489,-953 160,-953 160,-953 154,-953 148,-947 148,-941 148,-941 148,-908 148,-908 148,-902 154,-896 160,-896 160,-896 489,-896 489,-896 495,-896 501,-902 501,-908 501,-908 501,-941 501,-941 501,-947 495,-953 489,-953"/>
+<text text-anchor="middle" x="324.5" y="-934.4" font-family="DejaVu Sans" font-size="12.00">3 · Gallery composition</text>
+<text text-anchor="middle" x="324.5" y="-921.4" font-family="DejaVu Sans" font-size="12.00">Observed parameters · distributions and combinations</text>
 <text text-anchor="middle" x="324.5" y="-908.4" font-family="DejaVu Sans" font-size="12.00">Gallery&#45;specific rules</text>
 </g>
-<!-- describe&#45;&gt;index -->
+<!-- describe&#45;&gt;composition -->
 <g id="edge2" class="edge">
-<title>describe&#45;&gt;index</title>
+<title>describe&#45;&gt;composition</title>
 <path fill="none" stroke="#63738c" d="M324.5,-985.88C324.5,-978.55 324.5,-970.76 324.5,-963.3"/>
 <polygon fill="#63738c" stroke="#63738c" points="328,-963.06 324.5,-953.06 321,-963.06 328,-963.06"/>
 </g>
@@ -71,9 +71,9 @@
 <text text-anchor="middle" x="324.5" y="-818.4" font-family="DejaVu Sans" font-size="12.00">State, screen content, pose, camera, composition, aspect ratio</text>
 <text text-anchor="middle" x="324.5" y="-805.4" font-family="DejaVu Sans" font-size="12.00">Environment/genre: coordinate dependent changes</text>
 </g>
-<!-- index&#45;&gt;draw -->
+<!-- composition&#45;&gt;draw -->
 <g id="edge3" class="edge">
-<title>index&#45;&gt;draw</title>
+<title>composition&#45;&gt;draw</title>
 <path fill="none" stroke="#63738c" d="M324.5,-895.91C324.5,-888.79 324.5,-880.94 324.5,-873.21"/>
 <polygon fill="#63738c" stroke="#63738c" points="328,-873.17 324.5,-863.17 321,-873.17 328,-873.17"/>
 </g>

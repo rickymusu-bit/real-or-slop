@@ -2,8 +2,6 @@
 import { body, HttpError, id, json, type Env } from "./core";
 import { paid, responseJson } from "./paid";
 import { chosenModel, chosenQuality } from "./models";
-import { searchRealIndex } from "./real-index";
-import { indexReal, pendingRealIndex } from "./real-index";
 import { sweepGalleryFiles } from "./gallery-removal";
 import { findGallery } from "./galleries";
 import { create, find, viewOf, type Row } from "./library";
@@ -184,7 +182,6 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
   if (request.method === "GET" && !target) {
     const accepted = (await env.DB.prepare("SELECT id FROM images WHERE gallery_id=? AND origin='SLOP' AND status<>'trash' AND pipeline_scene IS NOT NULL ORDER BY created_at DESC LIMIT 100").bind(galleryId).all<{id:string}>()).results;
     const images = await Promise.all(accepted.map(r => viewOf(env, r.id)));
-    const index = await pendingRealIndex(env, galleryId);
     await recoverPipeline(env);
     const sources = (await sourceList(env, galleryId)).results;
     const jobs = (await env.DB.prepare("SELECT * FROM pipeline_jobs WHERE gallery_id=? ORDER BY created_at,id").bind(galleryId).all<Job>()).results;
@@ -194,7 +191,7 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
       const counts:Record<string,number>={};for(const p of profiles){const value=key==="genre"?p.genre:p.parameters[key].certainty==="unknown"?"unknown":p.parameters[key].category;counts[value]=(counts[value]||0)+1;}return counts;
     };
     const stats = {real_count:reals.length,slop_count:slops.length,rows:["genre",...PARAMETER_KEYS].map(key=>({key,real:histogram(reals,key as typeof PARAMETER_KEYS[number]|"genre"),slop:histogram(slops,key as typeof PARAMETER_KEYS[number]|"genre")}))};
-    return json({ stats, index, images, settings: settingsOf(gallery.pipeline_settings || null), paid_calls: !!env.OPENAI_API_KEY,
+    return json({ stats, images, settings: settingsOf(gallery.pipeline_settings || null), paid_calls: !!env.OPENAI_API_KEY,
       sources: sources.map(s => ({ id: s.id, title: s.title, revision: s.revision, described: !!s.visual_description, profile: parse(s.pipeline_profile, null), metrics: parse(s.copy_metrics, null), copy: s.copy_key ? {sha256:s.copy_sha256} : null, width: s.width, height: s.height })),
       jobs: jobs.map(j => ({ ...j, snapshot: parse(j.snapshot, null), format: parse(j.format,null), proposal: parse(j.proposal, null), evaluation: parse(j.evaluation, null), file: j.candidate_key ? `/api/admin/pipeline/${galleryId}/${j.id}/file?v=${encodeURIComponent(j.updated_at)}` : null })) });
   }
@@ -204,11 +201,6 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
     if(data.confirm!==true)throw new HttpError(400,"Confirm stopping queued requests");
     const result=await env.DB.prepare("UPDATE pipeline_jobs SET state='attention',error='Canceled before sending to the model',updated_at=? WHERE gallery_id=? AND state IN ('queued','dispatching')").bind(now(),galleryId).run();
     return json({cancelled:result.meta.changes});
-  }
-  if (target === "index") {
-    if (data.confirm !== true || typeof data.request !== "string" || typeof data.id !== "string" || (data.max_calls !== 1 && data.max_calls !== 2)) throw new HttpError(400, "Indexing confirmation required");
-    const row = await find(env, data.id);
-    return json(await indexReal(env, row, {confirm:true, request:data.request, gallery_id:galleryId, max_calls:data.max_calls}));
   }
   if (target === "profile") {
     if (typeof data.id !== "string" || !validProfile(data.profile)) throw new HttpError(400, "Invalid profile");
@@ -238,7 +230,7 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
     if (target === "prepare") {
       const targets = (selected as Source[]).filter(row => !row.visual_description || !validProfile(parse(row.pipeline_profile, null)));
       if (!targets.length) return json({ jobs: [] });
-      if (targets.some(row => row.visual_description_request && row.visual_description_claimed_at && row.visual_description_claimed_at >= new Date(Date.now() - 5 * 60_000).toISOString())) throw new HttpError(409, "A selected REAL is already being described or indexed. Check its progress before starting again.");
+      if (targets.some(row => row.visual_description_request && row.visual_description_claimed_at && row.visual_description_claimed_at >= new Date(Date.now() - 5 * 60_000).toISOString())) throw new HttpError(409, "A selected REAL is already being described. Check its progress before starting again.");
       const [textModel, imageModel, quality] = await Promise.all([chosenModel(env, "text_model"), chosenModel(env, "image_model"), chosenQuality(env)]);
       const settings = settingsOf(gallery.pipeline_settings || null), stamp = now();
       // Persist the entire approved selection atomically before any Workflow starts. Closing the client cannot truncate the batch.
@@ -261,12 +253,7 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
     for (const row of selected as Source[]) {
       const profile = parse<Profile | null>(row.pipeline_profile, null), description = parse<VisualDescription | null>(row.visual_description, null);
       if (!validProfile(profile) || !description) throw new HttpError(409, "Prepare descriptions and parameters first");
-      let referenceRows = rows.filter(r => r.id !== row.id && r.visual_description && r.pipeline_profile);
-      try {
-        const found = await searchRealIndex(env, new URLSearchParams({ gallery: galleryId, reference: row.id, order: settings.environment === "keep" ? "similar" : "different", limit: "3" }));
-        const matched = found.images.map(r => referenceRows.find(x => x.id === r.id)).filter((r): r is Source => !!r);
-        if (matched.length) referenceRows = matched;
-      } catch { /* No paid fallback: exact model/genre matches remain usable before embeddings are ready. */ }
+      const referenceRows = rows.filter(r => r.id !== row.id && r.visual_description && validProfile(parse(r.pipeline_profile, null)));
       referenceRows.sort((a,b) => Number(parse<Profile|null>(b.pipeline_profile,null)?.parameters.model.category === profile?.parameters.model.category) - Number(parse<Profile|null>(a.pipeline_profile,null)?.parameters.model.category === profile?.parameters.model.category));
       const snapshot: Snapshot = { operation: "plan", sourceRevision: row.revision, settings, textModel, imageModel, quality, recent: generated.filter(p=>settings.environment === "change_genre" || p.genre===profile?.genre).slice(-3).map(p=>({genre:p.genre,parameters:p.parameters})),
         ...(profile && description ? { profile, description, variation: variation(profile, population, settings, Math.random, generated), references: referenceRows
