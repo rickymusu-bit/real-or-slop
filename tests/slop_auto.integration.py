@@ -54,7 +54,7 @@ try:
     # The REAL the wizard can add, with their proposals.
     listed=candidates(gallery)
     assert {c['id'] for c in listed['candidates']}=={one['id'],two['id'],unavailable['id']} and listed['max_batch']==10
-    assert all(c['ideas']==[] and c['levels'] is None for c in listed['candidates'])
+    assert all(c['ideas']==[] and 'levels' not in c for c in listed['candidates'])
     # A proposal written by the owner is free and approved at once; at most three per REAL.
     first=own(one['id'],'La stessa piazza vista dall’alto con un mercato inventato.')
     second=own(one['id'],'Un tram d’epoca inventato attraversa la piazza al tramonto.')
@@ -92,7 +92,7 @@ try:
         payload=log['body'];assert payload['text']['format']['name']=='slop_gallery_proposal' and 'Develop the idea' in payload['instructions']
         supplied,picture=payload['input'][0]['content']
         given=json.loads(supplied['text'])
-        assert given['gallery']=={'title':gallery['title'],'description':gallery['description']} and given['levels'] is None
+        assert given['gallery']=={'title':gallery['title'],'description':gallery['description']} and 'levels' not in given
         assert given['idea']['idea']==review['proposal_review']['references'][slot]['real']['idea']['idea']
         source=review['proposal_review']['references'][slot]['real']['id']
         assert base64.b64decode(picture['image_url'].split(',')[1])==call('/'+source+'/original',library=True)[1]

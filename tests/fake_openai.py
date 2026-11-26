@@ -1,4 +1,4 @@
-"""Fake OpenAI for the integration tests: Responses API (measures and ideas of the REAL, SLOP proposals and evaluations), image
+"""Fake OpenAI for the integration tests: Responses API (ideas and descriptions of the REAL, SLOP proposals and evaluations), image
 generation and the list of models, with a control endpoint to queue errors (4xx, 5xx, 429, unreadable answers) and read the log."""
 import base64
 import io
@@ -57,7 +57,7 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(raw or b'{}')
         if self.path == '/control':
             queue[:] = data.get('queue', []); log.clear(); return self.reply(200, {'ok': True})
-        if self.path not in ('/v1/responses', '/v1/images/generations', '/v1/images/edits', '/v1/embeddings'): return self.reply(404, {})
+        if self.path not in ('/v1/responses', '/v1/images/generations', '/v1/images/edits'): return self.reply(404, {})
         log.append({'authorization': self.headers.get('Authorization'), 'body': data, 'path': self.path})
         behaviour = queue.pop(0) if queue else None
         if behaviour and behaviour.get('delay'): time.sleep(behaviour['delay'])
@@ -69,16 +69,10 @@ class Handler(BaseHTTPRequestHandler):
             if self.path.endswith('/edits'):
                 w,h=data['files']['image[]']['size'];size=f'{w*16}x{h*16}'
             return self.reply(200, {'data': [{'b64_json': picture(size)}], 'usage': {'input_tokens': 50, 'output_tokens': 1056}})
-        if self.path == '/v1/embeddings':
-            vector = (behaviour or {}).get('embedding', [1] + [0] * (data['dimensions'] - 1))
-            return self.reply(200, {'data': [{'index': 0, 'embedding': vector}], 'usage': {'prompt_tokens': 18, 'total_tokens': 18}})
         schema_name = data.get('text', {}).get('format', {}).get('name')
         request = json.loads(data['input'][0]['content'][0]['text']) if schema_name in ('slop_evaluation', 'slop_gallery_proposal') else None
-        if schema_name == 'real_subject_identity' and (behaviour is None or 'delay' in behaviour):
-            behaviour = {'json': {'brand': 'Nintendo', 'family': 'Game Boy', 'model': 'DMG-01'}}
         if schema_name in ('real_visual_description', 'pipeline_profile') and (behaviour is None or 'delay' in behaviour):
-            behaviour = {'json': {'subject': {'brand': 'Nintendo', 'family': 'Game Boy', 'model': 'DMG-01'},
-                                  'sections': {'summary': 'Grey subject with worn edges.',
+            behaviour = {'json': {'sections': {'summary': 'Grey subject with worn edges.',
                                               'subject_type': 'Nintendo Game Boy DMG-01.', 'subject_appearance': 'Worn edges.',
                                               'people': 'No visible people.', 'environment': 'Uniform background.',
                                               'viewpoint': 'Front view.', 'light': 'Soft light from the left.',
@@ -103,14 +97,6 @@ class Handler(BaseHTTPRequestHandler):
                  'genre': 'Foto di collezione', 'changes': 'Ambiente e punto di vista'},
                 {'idea': 'Una variante di colore della console in una vetrina, ripresa di tre quarti.',
                  'genre': 'Foto di collezione', 'changes': 'Esemplare, ambiente e punto di vista'}], 'reason': ''}}
-        if schema_name == 'real_measure' and (behaviour is None or 'delay' in behaviour):
-            # A subject with 7 of 14 levels of detail and two plain objects beside it: crowding 29, detail 38.
-            plain = {k: 0 for k in ('text', 'repeated', 'countable', 'texture', 'reflective', 'joints', 'people')}
-            behaviour = {'json': {'subject': {'name': 'Game Boy', 'box': {'x': 0.25, 'y': 0.2, 'width': 0.5, 'height': 0.6},
-                                              'detail': {**plain, 'text': 2, 'repeated': 1, 'countable': 2, 'texture': 1, 'joints': 1}},
-                                  'others': [{'name': 'cartuccia', 'box': {'x': 0.8, 'y': 0.7, 'width': 0.15, 'height': 0.2}, 'detail': plain},
-                                             {'name': 'scatola', 'box': {'x': 0.0, 'y': 0.6, 'width': 0.2, 'height': 0.3}, 'detail': plain}],
-                                  'unlisted': 0}}
         if schema_name == 'slop_gallery_proposal' and (behaviour is None or 'delay' in behaviour):
             behaviour = {'json': {'premise': 'Un bus d’epoca inventato attraversa la piazza riconoscibile.',
                                   'prompt': 'A plausible invented vintage bus crossing a recognizable square in natural light.', 'reason': ''}}

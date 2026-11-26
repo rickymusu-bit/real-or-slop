@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 38.0.0, aggiornata il 2026-11-25T22:45:40Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 38.3.0, aggiornata il 2026-11-26T07:41:10Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -19,8 +19,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 - **Origine nascosta fino alla risposta.** Nessun indizio dell'origine nei file serviti (copie WebP senza metadati, stessa ricetta finale
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
   al browser prima della risposta. Su richiesta confermata, un modello descrive la REAL intera per assi durante il caricamento o dalla
-  galleria (decisione del 2026-11-23, specifica `libreria-immagini`, sezione 11). La descrizione visiva è privata. Il modello misura
-  anche affollamento e dettaglio. Il protocollo adottato il 2026-11-25 (`generazione-slop` 17.0.0, implementata nel ramo 1.60.0) prepara una scena inglese dalle descrizioni, variando zero o più parametri con probabilità da calibrare sulle REAL.
+  galleria (decisione del 2026-11-23, specifica `libreria-immagini`, sezione 11). La descrizione visiva è privata. Il protocollo adottato il 2026-11-25 (`generazione-slop` 17.0.0, implementata nel ramo 1.60.0) prepara una scena inglese dalle descrizioni, variando zero o più parametri con probabilità da calibrare sulle REAL.
   Ambiente e configurazione della luce restano vincolati di default; i cambi di ambiente/genere coordinano gli assi dipendenti; gli assi descrivono la scena, i parametri controllano le variazioni.
   Usura, danno, invecchiamento e pulizia sono separati; il contenuto dello schermo è distinto da acceso/spento. La prima
   generazione riceve solo testo. Il rapporto d'aspetto della foto intera è un parametro, da coordinare con soggetto e genere
@@ -32,13 +31,16 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 - **Dashboard** (decisione del 2026-11-19). Gallerie è la sezione iniziale. Ogni galleria apre la propria griglia e i wizard
   «Carica REAL» e «Genera SLOP» su indirizzi dedicati nella stessa scheda. Il wizard REAL acquisisce dalle ricerche su Commons.
   Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino,
-  cambio galleria e, per le REAL, la misura a pagamento; le vecchie proposte SLOP non compaiono più sulle REAL. La generazione passa dalla pipeline della galleria. La barra lascia visibile la griglia.
+  cambio galleria; le vecchie proposte SLOP non compaiono più sulle REAL. La generazione passa dalla pipeline della galleria. La barra lascia visibile la griglia.
 - **Admin in inglese** (2026-11-25). Tutta l’interfaccia amministrativa, gallerie e pipeline incluse, usa l’inglese: etichette, assi, parametri, conferme, errori e nuovi testi dei modelli. Trascrizioni fotografiche nella lingua originale. Non tradurre automaticamente contenuti dell’owner o dati storici. Il sito pubblico resta in italiano. Le proposte obsolete sono rimosse dal dettaglio delle REAL e il vecchio wizard browser non è più presente; API e dati precedenti restano compatibili per il recupero.
+- **Descrizioni REAL sul server** (2026-11-26). Import REAL, galleria e dettaglio inviano la selezione confermata alla preparazione persistente della pipeline. Tutti i lavori vengono registrati insieme prima dell’avvio, con una chiamata per originale per descrizione e profilo; il browser osserva lo stato e legge i risultati. Scheda in secondo piano, ricaricamento e chiusura della pagina non interrompono la coda. Non ritentare esiti incerti né richiedere nuove chiamate per riprendere l’osservazione. La rotta sincrona precedente resta compatibile, protetta dai claim concorrenti.
 - **Un solo wizard SLOP** (2026-11-25). La 1.60.0 usa la pipeline della specifica `generazione-slop` 17.0.0: preparazione
   collettiva delle REAL, regole e probabilità per galleria, scene inglesi modificabili, generazione testuale e valutazione
   confermate, correzioni scelte dall'owner, accettazione, trattamento e copie di gioco. Le vecchie lavorazioni hanno un riquadro
   di recupero; il nuovo flusso non usa il vecchio ciclo automatico. Ogni foto appartiene a una galleria; le REAL restano giocabili.
   Nessun registro permanente REAL–SLOP. I profili e le particolarità sono privati e non sono tag di navigazione.
+- **Nessun indice delle descrizioni** (2026-11-26). Rimossi comandi, API, identità normalizzate per la ricerca ed embedding degli ambienti. La pipeline usa direttamente descrizioni e profili preparati nella galleria; le distribuzioni restano basate sui parametri osservati. Nessuna chiamata di indicizzazione. Migrazione 0076: elimina solo dati di ricerca obsoleti, conserva assi, profili, immagini e cronologia delle chiamate.
+- **Crowding e detail rimossi** (2026-11-26). Nessuna misurazione a pagamento, punteggio, soglia, avviso o contesto di misurazione nell’admin/API. I vecchi flussi non leggono più questi dati: estrazione uniforme e nessun punteggio nei prompt. La migrazione 0077 rimuove soglie di galleria e impostazioni; osservazioni e contesti storici già pagati restano privati, senza nuove letture/scritture delle misure, e le sole osservazioni si cancellano con la foto. Le misure tecniche `copy_metrics` e il trattamento fotografico restano attivi.
 - **Bilanciamento del dataset.** Il nuovo protocollo (2026-11-25) considera conteggi, distribuzioni dei parametri e combinazioni
   rilevanti della galleria. Le modifiche possono rendere una console più ordinaria. Non forzare novità vistose o unicità a ogni
   SLOP. Le probabilità automatiche sono stime empiriche rivedibili; i pesi considerano i parametri previsti delle SLOP, non una

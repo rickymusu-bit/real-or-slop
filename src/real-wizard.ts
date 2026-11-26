@@ -11,7 +11,7 @@ import { withPhotoProcessing } from "./photo-processing";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
 import type { VisualDescription } from "../shared/real-description";
-import { describePhotos, visualDescription } from "./real-description";
+import { describePhotos, resumePhotoDescriptions, visualDescription } from "./real-description";
 
 type Stage = 1 | 2 | 3 | 4;
 interface Image {
@@ -52,7 +52,7 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string, paid
   acquisition.className = "rw-dialog rw-acquisition";
   acquisition.setAttribute("aria-labelledby", "rw-acquisition-title");
   acquisition.innerHTML = '<h2 id="rw-acquisition-title" tabindex="-1" autofocus>Private import</h2>' +
-    '<p role="status"></p><progress aria-label="Progresso acquisizione photos REAL"></progress><p class="hint"></p>';
+    '<p role="status"></p><progress aria-label="REAL import progress"></progress><p class="hint"></p>';
   const acquisitionCount = acquisition.querySelector<HTMLParagraphElement>('[role="status"]')!;
   const acquisitionProgress = acquisition.querySelector<HTMLProgressElement>("progress")!;
   const acquisitionPhase = acquisition.querySelector<HTMLParagraphElement>(".hint")!;
@@ -100,7 +100,7 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string, paid
     saving = run;
     return run;
   };
-  const progress = () => '<ol class="rw-steps" aria-label="Fasi del caricamento">' +
+  const progress = () => '<ol class="rw-steps" aria-label="Import steps">' +
     ["Select images", "Description", "Framing", "Summary and publication"].map((label, index) =>
       '<li ' + (stage === index + 1 ? 'aria-current="step"' : "") + '><span>' + (index + 1) + "</span>" + label + "</li>").join("") + "</ol>";
   /** A chosen photo: its thumbnail, which opens the Commons page in a new tab, and × to remove it. */
@@ -465,13 +465,23 @@ export async function mountRealWizard(root: HTMLElement, galleryId: string, paid
       stage = images.length && (draft.stage === 2 || draft.stage === 3 || draft.stage === 4) ? draft.stage : 1;
     }
   } catch (error) { notice = errorText(error); }
+  const resumeDescriptions = async () => {
+    busy = true;
+    try {
+      const result = await resumePhotoDescriptions(staged().filter(item => !item.visual_description), galleryId, api<Image>, replace);
+      if (result !== null) notice = result;
+    } catch (error) { notice = errorText(error); }
+    finally { busy = false; render(); }
+  };
   persist(); render();
+  await resumeDescriptions();
   return {
     async sync() {
       if (busy) return;
       const dropped = await syncStaged();
       if (dropped) notice = goneNotice(dropped);
       render();
+      await resumeDescriptions();
     },
   };
 }

@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.9.0
+# Libreria delle immagini — specifica 10.12.0
 
-Stato: implementata nel ramo 1.61.0, da rilasciare. Aggiornata: 2026-11-25T22:45:40Z.
+Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T07:36:58Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -24,17 +24,10 @@ Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è i
   Superano le decisioni del 2026-11-09 (analisi una volta per immagine), del 2026-11-19 (ripetizione dell'analisi, descrizione nei
   risultati) e quella di poche ore prima sulle incertezze.
 - **Proposte delle REAL precedenti:** non più mostrate sulle immagini REAL; conservate per compatibilità delle lavorazioni anteriori alla 1.60.0; il nuovo wizard
-  usa parametri, particolarità e scene della galleria, come descritto in `generazione-slop` 17.0.0.
+  usa parametri, particolarità e scene della galleria, come descritto in `generazione-slop` 17.4.0.
 - **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, numero modificabile dalle Impostazioni, ciascuna solo tre mesi dopo l'ultimo controllo; un
   file sparito da Commons viene **solo segnalato**, mai ritirato o cancellato in automatico (sezione 9).
-- **Affollamento e dettaglio delle REAL** (decisioni del 2026-11-21). Su richiesta, un modello misura quanto è affollata e quanto è
-  dettagliata una REAL, per capire quanto il generatore di immagini farebbe fatica a riprodurne una simile. Il modello osserva soltanto
-  oggetti, riquadri e categorie di dettaglio; i due punteggi da 0 a 100 li calcola il codice. Soglie per galleria con valore
-  predefinito nelle Impostazioni; una REAL oltre una soglia è **solo segnalata**. Le misure guidano anche l'estrazione corretta delle
-  REAL per i batch automatici (specifica `generazione-slop`, sezione 2). Modifica la decisione del
-  2026-11-20 sulle REAL non analizzate. Dopo le prime misure reali,
-  lo stesso giorno: gradi 0, 1 e 2 per ogni categoria e una categoria per persone e anatomia, perché con la prima formula ogni console
-  spuntava tutte le categorie e valeva 100, e le persone, che i generatori sbagliano spesso, abbassavano il dettaglio.
+- **Crowding e detail rimossi** (2026-11-26). Non servono nella pipeline attuale. Rimossi comandi/API, punteggi e soglie, senza nuove chiamate di misura. Restano la cronologia già pagata e le misure tecniche del trattamento (sezione 10).
 - Niente prezzi né budget: ogni chiamata a pagamento si conferma e si registra senza importi; il limite di spesa è quello del progetto
   OpenAI (2026-11-10).
 - Niente didascalie, né nel gioco né nella dashboard; quelle scritte sono state cancellate (2026-11-13).
@@ -114,21 +107,20 @@ le immagini al modello con una data URL base64 scritta direttamente nei byte del
 
 ## 6. Chiamate a pagamento e modelli
 
-- Quattro tipi: misure, descrizioni visive e loro indicizzazione (`analysis`, sezioni da 10 a 12), proposte editoriali e prompt SLOP (anche le
+- Quattro tipi: descrizioni visive (`analysis`, sezione 11), proposte editoriali e prompt SLOP (anche le
   idee di falsificazione delle REAL; le indicazioni proposte per una galleria sono state tolte il 2026-11-22), immagini SLOP, valutazione SLOP intera. Le SLOP accettate non richiedono altre chiamate. Ognuna richiede una **conferma esplicita** (`confirm: true`), senza importi.
 - **Esiti:** risposta valida → `completed`; errore 4xx → `failed`, senza addebito; errore 5xx, timeout o rete → `uncertain`, mai
   ripetuta in automatico. Chiave rifiutata, limite di spesa o credito OpenAI esaurito fermano le serie con un messaggio che rimanda a
   platform.openai.com.
 - **Registro** `paid_calls`: tipo, modello, esito, token, date; nessun importo e collegamenti a immagine, processo e tentativo, azzerati alla cancellazione; nessun archivio delle immagini eliminate.
-- **Modelli:** modello di testo (descrizioni, misure e idee delle REAL, proposte editoriali e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
+- **Modelli:** modello di testo (descrizioni e idee delle REAL, proposte editoriali e valutazione SLOP), modello di immagini e sua qualità si scelgono nelle Impostazioni, tra quelli
   elencati nel codice e presenti nel progetto OpenAI (`GET /v1/models`, in cache per un'ora; se l'elenco non si legge si offrono tutti).
   Ogni chiamata registra il modello usato.
 - Senza il segreto `OPENAI_API_KEY` le chiamate a pagamento sono spente. Nei test solo il modello finto `tests/fake_openai.py`.
 
 ## 7. Contesto dei modelli
 
-- Cinque testi modificabili dalle Impostazioni, fino a 4000 caratteri: **Base comune** (ogni chiamata), **Misura delle REAL**
-  (`real_measure`, sezione 10), **Idee SLOP delle REAL** (`real_ideas`, specifica `generazione-slop`), **Premessa e prompt di galleria** (proposte da originale, titolo e descrizione della fonte) e
+- Quattro testi modificabili dalle Impostazioni, fino a 4000 caratteri: **Base comune** (ogni chiamata), **Idee SLOP delle REAL** (`real_ideas`, specifica `generazione-slop`), **Premessa e prompt di galleria** (proposte da originale, titolo e descrizione della fonte) e
   **Valutazione delle SLOP** (candidata intera). Le versioni
   della parte ritirata «Descrizione delle REAL» (`analysis`) restano nella tabella, non sono offerte e non si ripristinano.
 - Ogni salvataggio di un testo diverso crea una versione datata; ripristinarne una vecchia crea una nuova versione con lo stesso testo.
@@ -208,54 +200,21 @@ controlla solo che la pagina del file esista ancora.
   ricontrollano in circa cento giorni, quindi l'intervallo effettivo supera i tre mesi quando le REAL dovute sono più di quelle
   controllate ogni notte. Alzando il numero (500 = dieci richieste) l'intervallo torna a tre mesi.
 
-## 10. Affollamento e dettaglio delle REAL
+## 10. Crowding e detail ritirati
 
-Decisioni dell'owner del 2026-11-21. Per capire quanto un generatore di immagini farebbe fatica a riprodurre una foto simile, una REAL
-si descrive con due assi correlati ma distinti: l'**affollamento**, cioè quanti oggetti riconoscibili ci sono oltre al soggetto, e il
-**dettaglio**, cioè quanto dettaglio leggibile ha ogni oggetto. Una foto con un solo Game Boy su sfondo neutro è poco affollata ma può
-essere molto dettagliata. Il medium fotografico, terzo asse possibile, riguarda soprattutto le foto di eventi e per ora non si misura.
+Decisione dell'owner del 2026-11-26: crowding e detail non sono usati nella pipeline attuale e vengono rimossi.
+Nessun comando «Measure», punteggio, avviso o soglia nel dettaglio, nella griglia, nella selezione, nel modulo della galleria o nelle Impostazioni.
+`POST /:id/measure` e `GET /:id/measures` sono ritirati (404); il campo `measure` non è più restituito sulle REAL.
+Le API rifiutano `max_crowdedness`, `max_detail`, `crowdedness_threshold`, `detail_threshold` e il contesto `real_measure`.
 
-- **Cosa osserva il modello.** L'originale intero, mai il ritaglio 4:5, con titolo e descrizione della galleria; non riceve titolo né
-  descrizione della fonte della REAL. Restituisce il soggetto, al massimo 30 altri oggetti e il numero di quelli non elencati. Per ogni
-  oggetto: un nome breve, il rettangolo più stretto che lo contiene in coordinate normalizzate (x, y, larghezza, altezza da 0 a 1) e un
-  grado per ciascuna delle sette categorie di dettaglio: scritte e loghi, motivi ripetuti, parti contabili, texture dei materiali,
-  superfici riflettenti o schermi, giunzioni e meccanismi, persone e anatomia (mani, dita, volti, corpi). Sono le cose che i generatori
-  sbagliano più spesso. Grado 0: assente o non leggibile; 1: presente e leggibile; 2: fitto o minuto (scritte piccole o numerose,
-  griglie fitte, molte viti, mani o volti nitidi in primo piano). Non contano superfici e fondi, mobili che fanno da sfondo e oggetti
-  sfocati di cui non si distingue alcun dettaglio; le parti di un oggetto non sono oggetti a sé e una persona è un solo oggetto;
-  oggetti uguali ripetuti contano uno per uno; contano anche gli altri oggetti del tema della galleria. Il modello non descrive e non
-  giudica l'autenticità.
-- **Calcolo** (`shared/real-measure.ts`). Affollamento = 100·n/(n+5), con n gli oggetti oltre al soggetto, elencati o no: 0 oggetti
-  valgono 0, 5 valgono 50, 10 valgono 67, 20 valgono 80. La curva si appiattisce perché oltre una decina di oggetti il conteggio di un
-  modello è poco affidabile. Dettaglio = media della quota di dettaglio di ogni oggetto elencato (somma dei gradi diviso 14), soggetto compreso, pesata
-  sull'area del suo riquadro (ritagliato all'immagine) divisa per l'area di tutti i riquadri, non dell'immagine, perché lo sfondo
-  vuoto non diluisca il dettaglio del soggetto. Senza aree misurabili vale la quota del soggetto. Entrambi arrotondati all'intero.
-  Una console con sei categorie leggibili e nessuna fitta vale 43; arriva a 100 solo con ogni categoria fitta.
-- **Formule.** Ogni misura registra la formula: 1 per le prime misure (sei categorie, presenti o no, quota sulle sei), 2 da questa
-  versione. Le misure di formula 1 restano nello storico con i loro punteggi, ma il dettaglio non è confrontabile: il dettaglio della
-  foto lo dice e «Misura» in gruppo le include fra quelle da misurare.
-- **Chiamata.** `POST /:id/measure {confirm: true, request}`, solo per le REAL fuori dal cestino, con il modello di testo delle
-  Impostazioni e schema JSON rigido; `request` è un UUID del browser che rende impossibile inviare due volte la stessa conferma. Una
-  chiamata per misura, di tipo `analysis` in `paid_calls`, collegata alla foto; esito incerto o risposta non valida non salvano nulla e
-  non si ripetono in automatico. Il testo «Misura delle REAL» (sezione 7) si modifica dalle Impostazioni; l'elenco degli oggetti, il
-  formato dei riquadri e il calcolo restano nel codice.
-- **Conservazione.** Ogni misura resta in `real_measures` con modello, versioni di «Base comune» e «Misura delle REAL», oggetti
-  osservati, punteggi e data, per confrontare misure ripetute e modelli diversi. `GET /:id/measures` le elenca dalla più recente. Si
-  cancellano con la foto. La vista di una REAL porta l'ultima misura, le soglie in vigore e gli assi oltre soglia.
-- **Soglie.** Ogni galleria ha due soglie da 0 a 100 in «Modifica galleria»; vuote, valgono quelle predefinite di Impostazioni →
-  Misure delle REAL: affollamento **67** (dieci oggetti) e dettaglio **100** (nessun limite). Il problema vero è la combinazione dei
-  due assi, quindi si parte larghi e si stringe sui dati. Un valore uguale alla soglia è dentro. Cambiare le soglie non cambia la
-  revisione della galleria e non invalida le proposte SLOP in attesa.
-- **Segnalazione, e basta.** Una REAL misurata oltre una soglia ha un simbolo sulla miniatura, un avviso nell'anteprima a pressione
-  prolungata e nel dettaglio. Resta nel suo stato e nelle estrazioni.
-- **Dashboard.** Il dettaglio di una REAL mostra punteggi, numero di oggetti, soglie, data e modello, il comando «Misura» (una
-  chiamata, con conferma) e, a richiesta, gli oggetti dell'ultima misura disegnati sull'originale con le loro categorie e tutte le
-  misure precedenti. Dalla selezione della galleria, «Misura» misura le REAL selezionate ancora senza misura, una chiamata ciascuna
-  dopo una sola conferma del massimo, una dopo l'altra con la pagina aperta; un problema dell'account OpenAI ferma le restanti. Le REAL
-  già misurate si misurano di nuovo dal dettaglio. Il wizard REAL non misura: le REAL appena acquisite si misurano dalla galleria.
-- **Uso nella generazione.** Le idee di falsificazione ricevono l'ultima misura e l'estrazione automatica è corretta sui due assi
-  (specifica `generazione-slop`, sezioni 1 e 2). La valutazione per asse delle SLOP, discussa con l'owner il 2026-11-21, non è ancora
-  implementata.
+I flussi precedenti rimasti per recupero/compatibilità non leggono più le osservazioni e non inviano punteggi ai modelli.
+La loro estrazione usa un campionamento uniforme senza ripetizioni; la pipeline attuale continua a bilanciare i parametri osservati nei profili.
+La migrazione 0077 elimina le due colonne delle soglie in `galleries` e le due chiavi in `app_settings`.
+La tabella `real_measures` e le versioni storiche del contesto restano private, senza API né nuove scritture applicative, per conservare le osservazioni già pagate.
+Le osservazioni restano legate alla foto e la loro cancellazione segue quella della foto. La cronologia `paid_calls` è conservata.
+
+Le misure tecniche fotografiche in `copy_metrics` — rumore, nitidezza, contrasto, colore — e `copy_treatment` restano attive;
+sono calcolate nel browser senza modelli e usate nel trattamento delle SLOP (specifica `copie-di-gioco`).
 
 ## 11. Descrizione visiva delle REAL
 
@@ -269,31 +228,23 @@ Le informazioni riportate dalla fonte sono distinte dalle osservazioni. Tipo di 
 - «Carica REAL», passo 2, permette di descrivere una foto o tutte quelle in caricamento ancora da descrivere. Nella galleria,
   «Descrivi le REAL» include nuove, approvate e pubblicate ancora prive di descrizione. L'elenco proviene da `GET /undescribed-reals?gallery=`.
   Le miniature prive di descrizione hanno un'icona. Il dettaglio della foto mostra il testo salvato e permette di generarlo se manca.
-- Il browser conferma il massimo e invia `POST /:id/description {confirm, request, gallery_id}` per foto, in sequenza mentre la
-  pagina è aperta. La richiesta è registrata una sola volta. Le chiamate incerte si fermano per quella foto. Una descrizione già
-  salvata si riusa, anche se la foto cambia galleria.
+- Decisione dell’owner del 2026-11-26: Import REAL, descrizione dalla galleria e dal dettaglio usano la preparazione persistente della pipeline. Una chiamata per foto restituisce descrizione, identità, genere, parametri e particolarità, pronti per il planner SLOP. Il browser conferma il massimo e invia un solo `POST /api/admin/pipeline/:gallery/prepare {confirm, request, ids, max_calls}` per l’intera selezione (fino a 5000 REAL). Il Worker registra tutti i lavori insieme prima di avviare i Workflow, al massimo tre operazioni acquisite. Il lavoro continua con scheda sospesa o pagina chiusa. La pagina osserva solo lo stato gratuito `GET /api/admin/pipeline/:gallery/descriptions` e legge le foto salvate. Ricaricare un’importazione riprende l’osservazione senza nuove conferme o POST a pagamento.
+- L’interfaccia riusa le descrizioni salvate e segue i lavori già attivi, senza accodare duplicati. Un errore o un esito incerto resta segnalato; nessuna ripetizione automatica. Un nuovo tentativo richiede un’altra conferma esplicita. La vecchia rotta sincrona `POST /:id/description` resta compatibile per i client precedenti; il suo claim atomico rifiuta foto già occupate dalla pipeline. Lo stesso vincolo impedisce alla preparazione di sovrapporsi a una descrizione diretta in corso.
 - La migrazione 0071 aggiunge la descrizione e il controllo delle richieste in corso. Il testo si salva con modello, data e versione
   della base comune, separato dalla fonte Commons. La griglia riceve solo lo stato di presenza. Il testo si cancella con la REAL ed
   è disponibile solo in amministrazione. L'approvazione e la pubblicazione funzionano anche in attesa della descrizione.
 
-## 12. Indici dei soggetti e degli ambienti delle REAL
+## 12. Rimozione degli indici delle descrizioni
 
-La nuova descrizione visiva include marca, famiglia e modello del soggetto principale. Un dato sconosciuto o inapplicabile è nullo.
-La migrazione 0072 indicizza in D1 i valori normalizzati per galleria, ignorando differenze di maiuscole, spazi e punteggiatura.
-Il Worker chiede al modello di identificare il soggetto quando ci sono elementi sufficienti. Il testo inglese della descrizione
-serve come riscontro.
+Decisione dell'owner del 2026-11-26: la pipeline usa direttamente descrizioni e profili strutturati delle REAL.
+Non ci sono comandi o API per indicizzare o cercare descrizioni per identità normalizzata o similarità dell'ambiente;
+nessuna chiamata a embedding o backfill. Marca, famiglia e modello restano descritti nell'asse `subject_type` e nei parametri
+pertinenti del profilo; le nuove descrizioni non producono l'oggetto ridondante `subject` con le chiavi di ricerca.
 
-- **Indicizza le descrizioni.** Nella galleria, il comando completa le REAL già descritte fuori dal cestino. La conferma indica il
-  massimo di chiamate. Una chiamata invia il solo asse ambiente a `text-embedding-3-small`, a 256 dimensioni. Per una descrizione
-  precedente con i campi del soggetto ancora assenti, una chiamata al modello testuale li ricava dal campo «Tipo del soggetto» e li
-  salva prima dell'embedding. Un'interruzione lascia disponibili i dati già salvati. Ogni chiamata è registrata come `analysis`.
-- **Ricerca privata.** `GET /api/admin/library/real-index?gallery=…` accetta `brand`, `family`, `model` e `catalogue=0|1`. Con
-  `reference` si confrontano i vettori già salvati con l'ambiente della REAL indicata nella stessa galleria. `order=similar|different`
-  ordina per similarità del coseno. `limit` limita i risultati (8 in automatico, da 1 a 30). Il risultato include i campi del
-  soggetto, il testo dell'ambiente e, se richiesto, il punteggio. La ricerca non effettua chiamate al modello.
-- La lista delle descrizioni da completare è `GET /api/admin/library/real-index/pending?gallery=…`. `POST /:id/index-description`
-  riceve `confirm`, `request`, `gallery_id` e `max_calls`. Soggetto e vettore seguono la REAL tra gallerie. Una modifica al testo
-  dell'ambiente invalida il vettore e l'eliminazione definitiva della REAL lo cancella.
+La migrazione 0076 elimina i tre indici D1 per soggetto, il trigger di invalidazione e `real_environment_vectors`.
+Rimuove solo `subject` dalle descrizioni salvate: assi, indicazioni e provenienza restano, come immagini, copie, profili,
+scene, lavori della pipeline, partite e cronologia delle chiamate. Libera i soli claim `real-index-*` e segna come incerti
+le relative chiamate ancora pendenti, senza ripeterle. La migrazione 0072 rimane nella cronologia delle migrazioni.
 
 ## 13. Profili privati e pipeline della galleria
 
@@ -301,7 +252,7 @@ La 1.60.0 aggiunge `images.pipeline_profile` per genere, quattordici parametri e
 prevista di una SLOP. Il wizard prepara insieme descrizione e profilo con una chiamata per REAL mancante; riusa quelli presenti.
 I profili sono correggibili gratuitamente; le particolarità hanno policy di conservazione, variazione o estrazione. I dati
 restano privati, esclusi dalle risposte del gioco. Le scene SLOP non sono didascalie. Il nuovo protocollo completo e le sue
-conferme sono in `generazione-slop` 17.0.0. Le vecchie idee restano per compatibilità delle lavorazioni precedenti.
+conferme sono in `generazione-slop` 17.4.0. Le vecchie idee restano per compatibilità delle lavorazioni precedenti.
 
 ## Lingua amministrativa e contesti (1.61.0)
 

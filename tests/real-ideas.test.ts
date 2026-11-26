@@ -1,42 +1,9 @@
-/** Ideas of falsification (owner decisions of 2026-11-21): the extraction corrected on crowding and detail, and migration 0069, whose
+/** Ideas of falsification (owner decisions of 2026-11-21): migration 0069, whose
  * triggers keep the link between a REAL and its process until the process ends and mark the idea as used when its SLOP is accepted. */
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
-import { binOf, extractionWeights, weightedSample } from "../shared/idea-sampling";
-
-test("scores fall into three bins per axis", () => {
-  assert.deepEqual([0, 33, 34, 66, 67, 100].map(binOf), [0, 0, 1, 1, 2, 2]);
-});
-
-test("a bin with fewer SLOP than its share of REAL weighs more, within 0.25 and 4; no measure weighs 1", () => {
-  const simple = { crowdedness: 0, detail: 40 }, crowded = { crowdedness: 80, detail: 40 };
-  // Half the REAL are crowded, every SLOP so far simple: crowded candidates weigh more than simple ones.
-  const reals = [simple, simple, crowded, crowded], slops = [simple, simple, simple, simple];
-  const [w1, w2, w3] = extractionWeights([simple, crowded, null], reals, slops);
-  assert.ok(w2 > 1 && w1 < 1 && w3 === 1, JSON.stringify([w1, w2, w3]));
-  // With the SLOP matching the REAL, every weight is 1.
-  assert.deepEqual(extractionWeights([simple, crowded], reals, reals), [1, 1]);
-  // Extreme gaps are bounded per axis.
-  const many = Array(200).fill(simple);
-  const [bounded] = extractionWeights([crowded], Array(200).fill(crowded), many);
-  assert.ok(bounded <= 16 + 1e-9 && bounded >= 1, String(bounded));
-});
-
-test("the weighted draw returns distinct indices and favours heavier weights", () => {
-  let seed = 7;
-  const random = () => { seed = (seed * 48271) % 2147483647; return seed / 2147483647; };
-  const picks = [0, 0, 0];
-  for (let n = 0; n < 3000; n++) {
-    const [first] = weightedSample([1, 4, 1], 1, random);
-    picks[first]++;
-  }
-  assert.ok(picks[1] > picks[0] * 2.5 && picks[1] > picks[2] * 2.5, JSON.stringify(picks));
-  const all = weightedSample([1, 2, 3, 4], 4, random);
-  assert.deepEqual([...all].sort(), [0, 1, 2, 3]);
-});
-
 const migrated = () => {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys=ON");

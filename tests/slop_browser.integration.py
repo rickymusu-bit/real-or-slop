@@ -17,6 +17,7 @@ with sync_playwright() as p:
         try:
             control([]);page.goto(BASE+'/admin/gallerie/'+gallery+'/slop');root=page.locator('.pipeline')
             expect(root.get_by_role('heading',name='1. Prepare the gallery')).to_be_visible()
+            expect(root.locator('[data-action=index]')).to_have_count(0)
             assert page.request.get(BASE+'/docs/pipeline-slop.svg').status==200
             root.locator('[data-action=prepare]').click();assert control()==[]
             root.locator('[data-action=prepare]').click()

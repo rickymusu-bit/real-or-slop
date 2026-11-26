@@ -1,6 +1,6 @@
-# Statistiche e Impostazioni — specifica 4.10.0
+# Statistiche e Impostazioni — specifica 4.11.0
 
-Stato: implementata nel ramo 1.61.0, da rilasciare. Aggiornata: 2026-11-25T22:45:40Z.
+Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T07:36:58Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -18,7 +18,7 @@ si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ri
 
 - **Modelli:** modello di testo, modello di immagini (con la data di dismissione dove nota) e qualità delle immagini tra quelle ammesse;
   se il modello scelto non ammette la qualità salvata, si torna a `high`. Il wizard SLOP la conserva nello snapshot del batch.
-- **Contesto dei modelli:** quattro testi visibili (Shared instructions, REAL measurement, Legacy gallery premise and prompt, SLOP evaluation); il contesto obsoleto delle idee delle REAL è nascosto nell’interfaccia. Ogni testo offre versioni,
+- **Contesto dei modelli:** tre testi visibili (Shared instructions, Legacy gallery premise and prompt, SLOP evaluation); il contesto obsoleto delle idee delle REAL è nascosto nell’interfaccia. Ogni testo offre versioni,
   ripristino e proposta del codice; un avviso quando il testo in vigore dei prompt è stato scritto per le gemelle e blocca lo
   studio (specifica `libreria-immagini`, sezione 7).
 - **Classifica:** verifica di un codice partita (soprannome, livello, punteggio, data), Nascondi, Mostra, Cancella (per sempre, per le
@@ -28,9 +28,7 @@ si caricano contesti o modelli: mostra l’esito nella scheda corrente, senza ri
   ritirate e non conta tra le aperte.
 - **Fonti Commons:** REAL controllate ogni notte su Wikimedia Commons (50, da 0 a 500; 0 sospende il controllo), richiesta
   dell'owner del 2026-11-20. Le regole del controllo sono nella specifica `libreria-immagini`, sezione 9.
-- **Misure delle REAL** (decisioni dell'owner del 2026-11-21): soglie predefinite di affollamento (67, da 0 a 100) e di dettaglio
-  (100, da 0 a 100; 100 non pone limiti), valide per le gallerie senza soglie proprie. Salvarle aggiorna anche il segnaposto del modulo
-  della galleria. Regole e calcolo nella specifica `libreria-immagini`, sezione 10.
+- **Crowding e detail rimossi** (2026-11-26): nessun gruppo «REAL measurements» né soglie da configurare. La cronologia delle chiamate resta visibile nelle Statistiche.
 - Dati in `app_settings`; una riga mancante, o un valore fuori dai limiti, vale il predefinito del codice.
 
 ## 3. Statistiche (solo visualizzazione)

@@ -17,12 +17,23 @@ control([])
 assert call('',auth=False)[0]==401
 assert call('prepare',{'ids':[source['id']],'max_calls':1})[0]==400
 assert control()==[]
+assert 'index' not in call('')[1]
+assert call('index',paid_request(id=source['id'],max_calls=1))[0]==404
+assert control()==[]
 request=paid_request(ids=[source['id']],max_calls=1)
 assert call('prepare',request)[0]==200
 state=wait(lambda s:s['sources'][0]['profile'] is not None and not s['jobs'])
 assert len(control())==1 and control()[0]['body']['text']['format']['name']=='pipeline_profile'
 assert state['sources'][0]['profile']['parameters']['aspect_ratio']['value']=='180:120'
 assert call('prepare',request)[0]==200 and len(control())==1  # cached profile never charged twice
+# A stale enqueue can outlive the job that first populated the source. Recheck the cache inside the Workflow before paying.
+cached_job=str(uuid4());stamp='2026-11-26T00:00:00.000Z'
+snapshot={'operation':'profile','sourceRevision':state['sources'][0]['revision'], 'settings':state['settings'],
+          'textModel':'gpt-6.1-sol','imageModel':'gpt-image-2.5-flare','quality':'high'}
+frozen=json.dumps(snapshot).replace("'", "''")
+sql(f"INSERT INTO pipeline_jobs(id,gallery_id,source_id,state,snapshot,request,created_at,updated_at) VALUES('{cached_job}','{gallery['id']}','{source['id']}','queued','{frozen}','{cached_job}','{stamp}','{stamp}')")
+wait(lambda s:not s['jobs'])
+assert len(control())==1, 'A source completed by another preparation must be reused inside the Workflow'
 assert call('plan',paid_request(ids=[source['id']],max_calls=2))[0]==400
 planned=paid_request(ids=[source['id']],max_calls=1)
 assert call('plan',planned)[0]==200

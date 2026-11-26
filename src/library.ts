@@ -21,9 +21,8 @@ import { editFrame } from "./crop-editor";
 import { withPhotoProcessing } from "./photo-processing";
 import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
-import { detailText, MEASURE_FORMULA, type Observation, type Scores } from "../shared/real-measure";
 import type { VisualDescription } from "../shared/real-description";
-import { describePhotos, indexRealPhotos, visualDescription, type IndexTarget } from "./real-description";
+import { describePhotos, visualDescription } from "./real-description";
 
 type Status = "new" | "approved" | "published" | "trash";
 interface Item extends TreatableItem {
@@ -35,17 +34,8 @@ interface Item extends TreatableItem {
   metrics: Metrics | null; treatment: Treatment | null; copy_sha?: string;
   /** REAL only: last nightly check of the Commons page and when the file was found missing (spec `libreria-immagini`, section 9). */
   source_checked_at?: string | null; source_missing_at?: string | null;
-  /** REAL only: latest crowding and detail and the scores above the gallery's thresholds (spec `libreria-immagini`, section 10). */
-  measure?: Measure | null;
   has_visual_description?: boolean; visual_description?: VisualDescription | null;
 }
-interface Measure extends Scores { id: string; model: string; created_at: string; objects: number; formula: number; over: (keyof Scores)[]; limits: Scores | null }
-/** A REAL with no measure, or measured with an earlier formula: the group «Misura» includes it. */
-const toMeasure = (item: Item) => item.origin === "REAL" && (!item.measure || item.measure.formula < MEASURE_FORMULA);
-interface StoredMeasure extends Omit<Measure, "over" | "limits"> { observation: Observation }
-const SCORE_LABEL: Record<keyof Scores, string> = { crowdedness: "crowding", detail: "detail" };
-/** Text of the scores above the thresholds, e.g. «affollamento 80 oltre la soglia di 67». */
-const overText = (m: Measure) => m.over.map(k => `${SCORE_LABEL[k]} ${m[k]} above the threshold of ${m.limits?.[k]}`).join(", ");
 interface ModelOption { id: string; available: boolean | null; qualities?: string[]; shutdown?: string | null }
 interface Models { text_model: string; image_model: string; image_quality: string; text_models: ModelOption[]; image_models: ModelOption[]; note: string }
 interface ContextVersion { id: string; body: string; created_at: string; pipeline: number }
@@ -89,7 +79,7 @@ async function bulkUpdate(action: string, ids: string[], fields: Record<string, 
 export async function showLibrary() {
   let galleryList: GalleryList | null = null;
   const galleries = () => galleryList?.galleries || [];
-  let items: Item[] = [], selected = new Set<string>(), open: Item | null = null, busy = false, undescribed = 0, unindexed = 0;
+  let items: Item[] = [], selected = new Set<string>(), open: Item | null = null, busy = false, undescribed = 0;
   const SORT_KEY = "ros-library-sort";
   let sort = { by: "added", order: "desc" };
   try { const saved = JSON.parse(localStorage.getItem(SORT_KEY) || "null") as typeof sort | null;
@@ -119,7 +109,6 @@ export async function showLibrary() {
           <a class="button primary" id="gallery-upload-link">Import REAL</a>
           <a class="button" id="gallery-generation-link">Generate SLOP</a>
           <button type="button" id="library-describe-gallery" hidden>Describe REAL</button>
-          <button type="button" id="library-index-gallery" hidden>Index descriptions</button>
           <button type="button" data-gallery-edit>Edit gallery</button>
         </div>
       </div>
@@ -150,7 +139,6 @@ export async function showLibrary() {
           <button type="button" data-bulk="restore" hidden>Restore</button>
           <button type="button" data-bulk="delete" class="danger" hidden>Delete permanently</button>
           <button type="button" data-bulk="gallery">Move to gallery</button>
-          <button type="button" data-bulk="measure" hidden>Measure</button>
         </div>
         <button type="button" data-bulk="none">Deselect</button>
       </div>
@@ -195,9 +183,6 @@ export async function showLibrary() {
     <details id="library-games" class="library-vocabulary"><summary>Games</summary>
       <form id="library-games-form" class="library-inline"><label>Maximum open game duration (hours)<input type="number" name="open_game_hours" required></label><button>Save</button></form>
       <p class="hint">After this time, an unfinished game no longer retains copies of withdrawn or modified photos, and its photo may become unavailable. Game levels are defined in code.</p></details>
-    <details id="library-measures" class="library-vocabulary"><summary>REAL measurements</summary>
-      <form id="library-measures-form" class="library-inline"><label>Default crowding threshold<input type="number" name="crowdedness_threshold" required></label><label>Default detail threshold<input type="number" name="detail_threshold" required></label><button>Save</button></form>
-      <p class="hint">On request, a model measures REAL crowding and detail with one paid call per photo. Crowding: 100·n/(n+5), where n is the number of recognizable objects besides the subject (5 objects score 50; 10 score 67). Detail: seven categories per object, graded 0 (absent), 1 (readable) or 2 (dense or tiny), normalized and weighted by object area. REAL above a gallery threshold are flagged in the grid and detail view. Galleries can override these defaults in “Edit gallery”. A threshold of 100 imposes no limit.</p></details>
     <details id="library-sources" class="library-vocabulary"><summary>Commons sources</summary>
       <form id="library-sources-form" class="library-inline"><label>REAL checked each night<input type="number" name="commons_checks_per_night" required></label><button>Save</button></form>
       <p class="hint">Each night, Wikimedia Commons is checked for missing REAL files, starting with the oldest checks. Each photo becomes eligible again after three months. Missing files are only flagged in the gallery. Commons requests cover 50 photos at a time; 0 pauses checks.</p></details></section>
@@ -256,10 +241,9 @@ export async function showLibrary() {
     $("#library-batch-filter").hidden = !filter.batch;
     try {
       const data = await call<{ items: Item[]; next: number | null; counts: { status: string; origin: string; n: number }[];
-        undescribed: number; unindexed: number }>("?" + params);
+        undescribed: number }>("?" + params);
       if (seq !== loadSeq) return;
       undescribed = data.undescribed;
-      unindexed = data.unindexed;
       const added = append ? data.items.filter(item => !items.some(i => i.id === item.id)) : data.items;
       items = append ? [...items, ...added] : added;
       nextPage = data.next;
@@ -281,8 +265,7 @@ export async function showLibrary() {
   const statsLine = (item: Item) => `<span class="db-stats" data-stats>Viewed <strong>${item.stats.views}</strong> ${item.stats.views === 1 ? "time" : "times"} / correctly identified <strong>${item.stats.correct}</strong>${rate(item)}</span>`;
   const preview = (item: Item) => openPreview(item.origin === "REAL"
     ? { src: item.file, alt: imageLabel(item), title: imageLabel(item), description: item.description,
-      link: item.source_url ? { href: item.source_url, label: "Open Commons page" } : undefined,
-      extra: item.measure?.over.length ? `<p class="db-edit-note" data-over-threshold>Above the gallery threshold: ${escape(overText(item.measure))}.</p>` : "" }
+      link: item.source_url ? { href: item.source_url, label: "Open Commons page" } : undefined }
     : { src: item.file, alt: imageLabel(item), title: imageLabel(item),
       extra: (item.prompt ? `<p><span class="image-preview-label">Prompt</span><br><q lang="en">${escape(item.prompt)}</q></p>` : "") });
   const card = (item: Item) => `<li class="library-card${selected.has(item.id) ? " is-selected" : ""}" data-id="${escape(item.id)}">
@@ -292,8 +275,7 @@ export async function showLibrary() {
         ? '<span class="library-description-icon" data-description-missing title="Missing visual description" aria-hidden="true">▤</span>' : ""}
       <span class="library-badges"><span class="badge badge-${item.origin.toLowerCase()}">${item.origin}</span>
       <span class="badge badge-status">${STATE_LABEL[item.status]}</span>${item.source_missing_at
-        ? '<span class="badge badge-warn" data-source-missing title="The file is no longer on Wikimedia Commons">Source removed</span>' : ""}${item.measure?.over.length
-        ? `<span class="badge badge-warn badge-symbol" data-over-threshold role="img" title="${escape("Above the gallery threshold: " + overText(item.measure))}" aria-label="${escape("Above threshold: " + overText(item.measure))}">\u26a0\ufe0e</span>` : ""}</span>
+        ? '<span class="badge badge-warn" data-source-missing title="The file is no longer on Wikimedia Commons">Source removed</span>' : ""}</span>
     </button></li>`;
   const selectionBar = () => {
     const bar = $("#library-selection");
@@ -304,16 +286,11 @@ export async function showLibrary() {
     describe.hidden = trash || !galleryList?.paid_calls || !undescribed;
     describe.disabled = busy;
     describe.textContent = `Describe REAL (${undescribed})`;
-    const index = $<HTMLButtonElement>("#library-index-gallery");
-    index.hidden = trash || !galleryList?.paid_calls || !unindexed;
-    index.disabled = busy;
-    index.textContent = `Index descriptions (${unindexed})`;
     const chosen = items.filter(item => selected.has(item.id));
     for (const button of bar.querySelectorAll<HTMLButtonElement>("[data-bulk]")) {
       const action = button.dataset.bulk;
       if (action === "withdraw") button.hidden = trash || !chosen.some(item => item.status === "published");
       else if (action === "set-approved") button.hidden = trash || !chosen.some(item => item.status === "new");
-      else if (action === "measure") button.hidden = trash || !galleryList?.paid_calls || !chosen.some(toMeasure);
       else if (action !== "none" && action !== "gallery") button.hidden = trash !== (action === "restore" || action === "delete");
       button.disabled = busy || (action === "gallery" && !galleries().some(g => g.id !== filter.gallery));
     }
@@ -368,34 +345,6 @@ export async function showLibrary() {
   const sourceCheck = (item: Item) => item.origin !== "REAL" ? "" : item.source_missing_at
     ? `<p class="db-edit-note" data-source-missing>The file has been missing from Wikimedia Commons since ${day(item.source_missing_at)}. Commons often removes files over rights issues: check the source page. If the license no longer holds, unpublish the photo or move it to Trash. If the file moved, update its source page; it will be checked again next night.</p>`
     : item.source_checked_at ? `<p class="hint" data-source-checked>Source last found on Commons on ${day(item.source_checked_at)}.</p>` : "";
-  /** Warning of a REAL above the thresholds of its gallery: a flag only, the owner decides (owner decision of 2026-11-21). */
-  const overWarning = (item: Item) => item.measure?.over.length ? `<p class="db-edit-note" data-over-threshold>Above the gallery threshold: ${escape(overText(item.measure))}. The image generator may struggle to reproduce a similar photo. Change thresholds in “Edit gallery”.</p>` : "";
-  /** Crowding and detail of a REAL, with the command of the paid measure and, on request, the objects seen and the earlier measures. */
-  const measureBlock = (item: Item) => {
-    if (item.origin !== "REAL") return "";
-    const m = item.measure, paid = !!galleryList?.paid_calls && item.status !== "trash";
-    return `<section class="library-measure" data-measure><h3>Crowding and detail</h3>
-      ${m ? `<p data-measure-values>Crowding <strong>${m.crowdedness}</strong>/100 (${m.objects} ${m.objects === 1 ? "object" : "objects"} besides the subject),
-        detail <strong>${m.detail}</strong>/100${m.limits ? `; gallery thresholds ${m.limits.crowdedness} and ${m.limits.detail}` : ""}.
-        Measured on ${escape(when(m.created_at))} with ${escape(m.model)}.</p>
-        ${m.formula < MEASURE_FORMULA ? '<p class="hint" data-measure-old>Measured with the previous formula (six categories, no grades): detail is not comparable to new measurements. Measure again.</p>' : ""}`
-        : '<p class="hint" data-measure-values>Not measured yet.</p>'}
-      ${paid ? `<p><button type="button" id="library-measure">${m ? "Measure again" : "Measure"} (1 call)</button></p>` : ""}
-      ${m ? '<details data-measure-history><summary>Recognized objects and previous measurements</summary><div data-measure-history-body></div></details>' : ""}
-    </section>`;
-  };
-  /** The objects of the latest measure drawn on the whole original, with their kinds of detail, and every measure of the photo. */
-  const showMeasures = (item: Item, measures: StoredMeasure[], target: HTMLElement) => {
-    const latest = measures[0];
-    if (!latest) { target.innerHTML = '<p class="hint">No measurements.</p>'; return; }
-    const o = latest.observation, objects = [{ ...o.subject, subject: true }, ...o.others.map(x => ({ ...x, subject: false }))];
-    target.innerHTML = `<figure class="measure-figure"><div class="measure-frame" style="aspect-ratio:${item.width}/${item.height}"><img src="${escape(item.original)}" alt="Original of ${escape(imageLabel(item))}" draggable="false">
-      ${objects.map((x, i) => `<span class="measure-box${x.subject ? " is-subject" : ""}" style="left:${x.box.x * 100}%;top:${x.box.y * 100}%;width:${x.box.width * 100}%;height:${x.box.height * 100}%"><b>${i + 1}</b></span>`).join("")}</div>
-      <figcaption class="hint">Boxes from the latest measurement on the full original. The subject is highlighted.</figcaption></figure>
-      <ol class="measure-objects">${objects.map(x => `<li>${x.subject ? "<strong>Subject:</strong> " : ""}${escape(x.name)}: ${escape(detailText(x.detail))}</li>`).join("")}</ol>
-      ${o.unlisted ? `<p class="hint">Other ${o.unlisted} objects counted but not listed.</p>` : ""}
-      <h4>Measurements</h4><ol class="measure-history">${measures.map(m => `<li>${escape(when(m.created_at))}, ${escape(m.model)}: crowding ${m.crowdedness}, detail ${m.detail}, ${m.objects} objects besides the subject${m.formula < MEASURE_FORMULA ? ", previous formula" : ""}</li>`).join("")}</ol>`;
-  };
   const showDetail = (item: Item) => {
     open = item;
     const editable = item.status === "new" || item.status === "approved";
@@ -405,7 +354,7 @@ export async function showLibrary() {
       <h2 id="library-detail-title">${escape(imageLabel(item))}</h2>
       <p class="hint">${item.origin} / ${STATE_LABEL[item.status]} / original ${item.width}×${item.height}${item.copy ? ` / WebP game copy ${item.copy.width}×${item.copy.height}${item.copy.crop ? ", " + FORMAT_LABELS[item.copy.crop.format] : ""}, ${kb(item.copy.bytes)}: this is what players will see` : " / game copy not ready"}</p>
       ${sourceCheck(item)}
-      ${overWarning(item)}
+
       <div class="library-detail-body"><div class="game-media-surface library-preview"><img data-game-media draggable="false" src="${escape(item.file)}" alt="${escape(imageLabel(item))}"></div>
       <div class="library-fields"><p>${statsLine(item)}</p>
       <label>Gallery<select id="library-detail-gallery">${galleryOptions(galleries(), item.gallery_id)}</select></label>
@@ -416,7 +365,6 @@ export async function showLibrary() {
       ${!item.copy && item.status === "new" ? '<p><button type="button" id="library-copy">Prepare game copy</button></p>' : ""}
       ${editable ? '<p><button type="button" id="library-crop">Framing</button></p>' : ""}
       ${measuresBlock(item, editable)}
-      ${measureBlock(item)}
       ${item.origin === "REAL" ? item.visual_description ? visualDescription(item.visual_description)
         : item.has_visual_description ? loading("Loading visual description…")
           : `<section class="editorial-description"><h3>Visual description</h3><p class="hint">Not generated yet.</p>${galleryList?.paid_calls && item.status !== "trash"
@@ -435,15 +383,6 @@ export async function showLibrary() {
     markGameMedia(detail);
   };
   detail.addEventListener("close", () => { open = null; });
-  detail.addEventListener("toggle", event => {
-    const history = event.target as HTMLDetailsElement;
-    if (!history.matches?.("[data-measure-history]") || !history.open || !open) return;
-    const item = open, body = history.querySelector<HTMLElement>("[data-measure-history-body]")!;
-    body.innerHTML = loading();
-    void call<{ measures: StoredMeasure[] }>(`/${encodeURIComponent(item.id)}/measures`)
-      .then(data => { if (open?.id === item.id) showMeasures(item, data.measures, body); })
-      .catch(error => { body.textContent = String(error instanceof Error ? error.message : error); });
-  }, true);
   const detailMessage = (text: string) => { const el = detail.querySelector("#library-detail-message"); if (el) el.textContent = text; };
   detail.addEventListener("change", async event => {
     const gallery = (event.target as HTMLElement).closest<HTMLSelectElement>("#library-detail-gallery");
@@ -469,7 +408,7 @@ export async function showLibrary() {
       try { showDetail(await call<Item>("/" + encodeURIComponent(button.dataset.openSource))); } catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
       return;
     }
-    if (!button || !open || busy || !(button.dataset.action || ["library-copy", "library-regenerate", "library-measure", "library-describe-photo",
+    if (!button || !open || busy || !(button.dataset.action || ["library-copy", "library-regenerate", "library-describe-photo",
       "library-crop", "library-treatment-off", "library-treatment-on", "library-treatment-edit"].includes(button.id))) return;
     const id = open.id;
     busy = true;
@@ -479,13 +418,6 @@ export async function showLibrary() {
         const result = await describePhotos([{ id, title: imageLabel(item) }], item.gallery_id, call<Item>, updated => { open = updated; });
         if (result === null) return;
         detailMessage(result);
-      }
-      else if (button.id === "library-measure") {
-        if (!window.confirm(`Measure crowding and detail for “${imageLabel(open)}” with ${galleryList?.text_model || "the text model"}? One paid call, never repeated automatically.`)) return;
-        const item = open;
-        open = await withPhotoProcessing("Measuring crowding and detail…", () => call<Item>(`/${encodeURIComponent(item.id)}/measure`,
-          { method: "POST", body: JSON.stringify({ confirm: true, request: crypto.randomUUID() }) }));
-        detailMessage("Measurement saved.");
       }
       else if (button.id === "library-copy") {
         const item = open;
@@ -571,42 +503,6 @@ export async function showLibrary() {
       if (filter.gallery === scope) { await load().catch(() => {}); report(error); }
     } finally { busy = false; syncSelection(); }
   };
-  /** Measures, one paid call each, the selected REAL that have no measure yet or only one of an earlier formula; a REAL already
-   * measured with the current formula is measured again from its detail. The calls go one at a time with the page open; an account
-   * problem («OpenAI: …») stops the rest. */
-  const measureSelection = async () => {
-    const chosen = items.filter(item => selected.has(item.id) && item.status !== "trash" && toMeasure(item));
-    if (!chosen.length || busy) return;
-    const already = items.filter(item => selected.has(item.id) && item.origin === "REAL" && !toMeasure(item)).length;
-    if (!window.confirm(`Measure crowding and detail for ${chosen.length} REAL with ${galleryList?.text_model || "the text model"}? ` +
-      `Maximum ${chosen.length} paid ${chosen.length === 1 ? "call" : "calls"}, one per photo, never repeated automatically.` +
-      (already ? ` Le ${already} Previously measured REAL are excluded: measure them again from the detail view.` : ""))) return;
-    const scope = filter.gallery;
-    busy = true; selectionBar();
-    let done = 0;
-    const failed: string[] = [];
-    try {
-      for (const [index, item] of chosen.entries()) {
-        if (filter.gallery !== scope) break;
-        message(`Measuring ${index + 1} of ${chosen.length}…`);
-        try {
-          await call(`/${encodeURIComponent(item.id)}/measure`, { method: "POST", body: JSON.stringify({ confirm: true, request: crypto.randomUUID() }) });
-          done++; selected.delete(item.id);
-        } catch (error) {
-          const text = error instanceof Error ? error.message : String(error);
-          failed.push(`${imageLabel(item)}: ${text}`);
-          if (text.startsWith("OpenAI:")) break;
-        }
-      }
-    } finally {
-      busy = false;
-      if (filter.gallery === scope) {
-        await load().catch(report);
-        message(`${done} ${done === 1 ? "REAL measured" : "REAL measured"}.` + (failed.length ? ` Not measured: ${failed.join(" / ")}` : ""));
-      }
-      syncSelection();
-    }
-  };
   const describeGallery = async () => {
     const scope = filter.gallery;
     busy = true; selectionBar();
@@ -614,17 +510,6 @@ export async function showLibrary() {
       const { images } = await call<{ images: { id: string; title: string }[] }>("/undescribed-reals?" + new URLSearchParams({ gallery: scope }));
       if (scope !== filter.gallery) return;
       const result = images.length ? await describePhotos(images, scope, call<Item>) : "All REAL have a visual description.";
-      if (scope === filter.gallery && result !== null) { await load().catch(report); message(result); }
-    } catch (error) { if (scope === filter.gallery) report(error); }
-    finally { busy = false; selectionBar(); }
-  };
-  const indexGallery = async () => {
-    const scope = filter.gallery;
-    busy = true; selectionBar();
-    try {
-      const { images } = await call<{ images: IndexTarget[] }>("/real-index/pending?" + new URLSearchParams({ gallery: scope }));
-      if (scope !== filter.gallery) return;
-      const result = images.length ? await indexRealPhotos(images, scope, call) : "Descriptions are already indexed.";
       if (scope === filter.gallery && result !== null) { await load().catch(report); message(result); }
     } catch (error) { if (scope === filter.gallery) report(error); }
     finally { busy = false; selectionBar(); }
@@ -688,7 +573,6 @@ export async function showLibrary() {
     }
     if (!button || busy) return;
     if (button.id === "library-describe-gallery") { await describeGallery(); return; }
-    if (button.id === "library-index-gallery") { await indexGallery(); return; }
     if (button.id === "library-select-all") {
       for (const item of items) selected.add(item.id);
       syncSelection();
@@ -696,7 +580,6 @@ export async function showLibrary() {
     }
     const action = button.dataset.bulk;
     if (action === "none") { selected.clear(); syncSelection(); return; }
-    if (action === "measure") { await measureSelection(); return; }
     if (action === "gallery") {
       const options = galleryOptions(galleries().filter(g => g.id !== filter.gallery), "");
       $<HTMLSelectElement>("#library-bulk-gallery").innerHTML = '<option value="">Choose a gallery</option>' + options;
@@ -748,9 +631,8 @@ export async function showLibrary() {
   });
   // Model context: three texts, each saved as a new version; an old version can become the current one again.
   const CONTEXT_LABELS: Record<string, [string, string]> = {
-    base: ["Shared instructions", "Shared instructions for REAL descriptions, measurements and legacy model calls."],
+    base: ["Shared instructions", "Shared instructions for REAL descriptions and legacy model calls."],
     real_ideas: ["Legacy REAL ideas", "Instructions retained for compatibility with the legacy proposal workflow."],
-    real_measure: ["REAL measurement", "Sent with shared instructions, the full original and the gallery title and description. Object lists, boxes, detail categories and score calculations are defined in code."],
     slop_gallery_prompt: ["Legacy gallery premise and prompt", "Retained for legacy jobs. New scene planning uses gallery rules in the pipeline wizard."],
     slop_evaluation: ["SLOP evaluation", "Used for legacy full-candidate evaluations. Current pipeline reviews use the gallery rules and fixed review instructions."],
   };
@@ -821,7 +703,6 @@ export async function showLibrary() {
   numbersForm("#library-thresholds-form", ["max_generation_attempts", "editorial_tolerance"], "Legacy SLOP generation settings saved.");
   numbersForm("#library-games-form", ["open_game_hours"], "Maximum open game duration saved.");
   numbersForm("#library-sources-form", ["commons_checks_per_night"], "Nightly REAL check count saved.");
-  numbersForm("#library-measures-form", ["crowdedness_threshold", "detail_threshold"], "Default crowding and detail thresholds saved.", refreshGalleries);
   statsView = mountStats($<HTMLElement>("#stats-body"), period => call<Stats>("/stats?" + new URLSearchParams({ period })));
   // Leaderboard: check a code, hide or show an entry.
   interface Entry { id: string; nickname: string; level_label: string; score: number; photos: number; balanced_accuracy: number; hidden: boolean; created_at: string }
@@ -875,7 +756,6 @@ export async function showLibrary() {
     selected.clear();
     items = [];
     undescribed = 0;
-    unindexed = 0;
     nextPage = null;
     render();
     $("#library-grid").innerHTML = `<li class="library-grid-loading">${loading("Loading images…")}</li>`;
