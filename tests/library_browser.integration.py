@@ -198,7 +198,7 @@ with sync_playwright() as p:
         page.locator('#library-contexts summary').first.click()
         base_field = page.locator('[data-context=base]')
         expect(base_field).to_have_value(re.compile('^You work on a photographic archive'))
-        expect(page.locator('[data-context]')).to_have_count(4)
+        expect(page.locator('[data-context]')).to_have_count(3)
         expect(page.locator('[data-context=real_measure]')).to_have_count(0)
         expect(page.locator('[data-context=slop_gallery_prompt]')).to_have_value(re.compile('themed gallery'))
         approved = base_field.input_value()
