@@ -234,4 +234,4 @@ for path, data in ((f'/real-index?gallery={gallery_id}&model=DMG-01', None),
 assert openai() == []
 for item in (real, slop, trash):
     call(f'{API}/{item["id"]}/trash', {}); call(f'{API}/{item["id"]}', method='DELETE')
-print('Analysis integration passed: model settings, measures, ideas, visual descriptions; retired indexing makes no calls.')
+print('Analysis integration passed: model settings, ideas and visual descriptions; retired scoring/indexing makes no calls.')

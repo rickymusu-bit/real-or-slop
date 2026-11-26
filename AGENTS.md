@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 38.3.0, aggiornata il 2026-11-26T07:36:58Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 38.3.0, aggiornata il 2026-11-26T07:41:10Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -40,7 +40,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   di recupero; il nuovo flusso non usa il vecchio ciclo automatico. Ogni foto appartiene a una galleria; le REAL restano giocabili.
   Nessun registro permanente REAL–SLOP. I profili e le particolarità sono privati e non sono tag di navigazione.
 - **Nessun indice delle descrizioni** (2026-11-26). Rimossi comandi, API, identità normalizzate per la ricerca ed embedding degli ambienti. La pipeline usa direttamente descrizioni e profili preparati nella galleria; le distribuzioni restano basate sui parametri osservati. Nessuna chiamata di indicizzazione. Migrazione 0076: elimina solo dati di ricerca obsoleti, conserva assi, profili, immagini e cronologia delle chiamate.
-- **Crowding e detail rimossi** (2026-11-26). Nessuna misurazione a pagamento, punteggio, soglia, avviso o contesto di misurazione nell’admin/API. I vecchi flussi non leggono più questi dati: estrazione uniforme e nessun punteggio nei prompt. La migrazione 0077 rimuove soglie di galleria e impostazioni; osservazioni e contesti storici già pagati restano privati, senza nuove letture/scritture delle misure, e si cancellano con la foto. Le misure tecniche `copy_metrics` e il trattamento fotografico restano attivi.
+- **Crowding e detail rimossi** (2026-11-26). Nessuna misurazione a pagamento, punteggio, soglia, avviso o contesto di misurazione nell’admin/API. I vecchi flussi non leggono più questi dati: estrazione uniforme e nessun punteggio nei prompt. La migrazione 0077 rimuove soglie di galleria e impostazioni; osservazioni e contesti storici già pagati restano privati, senza nuove letture/scritture delle misure, e le sole osservazioni si cancellano con la foto. Le misure tecniche `copy_metrics` e il trattamento fotografico restano attivi.
 - **Bilanciamento del dataset.** Il nuovo protocollo (2026-11-25) considera conteggi, distribuzioni dei parametri e combinazioni
   rilevanti della galleria. Le modifiche possono rendere una console più ordinaria. Non forzare novità vistose o unicità a ogni
   SLOP. Le probabilità automatiche sono stime empiriche rivedibili; i pesi considerano i parametri previsti delle SLOP, non una
