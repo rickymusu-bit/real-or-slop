@@ -1,11 +1,15 @@
-# Generazione SLOP — specifica 17.9.0
+# Generazione SLOP — specifica 17.10.0
 
-Aggiornata: 2026-11-26T15:38:09Z. Stato: implementata nel ramo 1.65.0, da rilasciare.
+Aggiornata: 2026-11-26T20:51:42Z. Stato: implementata nel ramo 1.65.1, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
 Schema vettoriale in `docs/assets/pipeline-slop.svg`, sorgente Graphviz in `docs/assets/pipeline-slop.dot`; copia pubblica
-identica in `public/docs/pipeline-slop.svg`, collegata dal wizard.
+identica in `public/docs/pipeline-slop.svg`, collegata dal wizard. Decisione dell'owner del 2026-11-26: a ogni modifica della
+pipeline lo schema si aggiorna nella stessa PR; `npm run diagram:pipeline` rigenera entrambe le copie e la build verifica la
+firma della sorgente e l'identità delle copie. Il flusso segue i quattro passi della pagina, con linguaggio semplice, costi in
+numero di chiamate e separazione fra scelta, conferma e lavoro del modello. La valutazione resta facoltativa e confermata.
+Il comando di rigenerazione richiede Graphviz; il controllo di build usa solo Node e non richiede Graphviz.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -16,8 +20,8 @@ partendo dalle loro descrizioni testuali in inglese. La varietà comprende eleme
 Evitare copie riconoscibili delle REAL e tratti ricorrenti che distinguano il dataset SLOP, per esempio usura sempre accentuata,
 edizioni speciali troppo frequenti o composizioni commerciali sistematiche.
 
-La 1.60.0 sostituisce i controlli del wizard della galleria con il protocollo qui descritto. Una selezione iniziale comprende
-tutte le REAL della galleria fuori dal cestino. Le vecchie API e i processi editoriali restano compatibili per i dati precedenti;
+La 1.60.0 sostituisce i controlli del wizard della galleria con il protocollo qui descritto. L'elenco delle sorgenti comprende
+tutte le REAL della galleria fuori dal cestino; nessuna è preselezionata per la creazione delle scene. Le vecchie API e i processi editoriali restano compatibili per i dati precedenti;
 un riquadro di recupero mostra i processi precedenti ancora da decidere. Il nuovo wizard non usa il vecchio ciclo automatico.
 
 Le migrazioni 0073 e 0074 aggiungono profili e scene privati su `images`, impostazioni su `galleries` e `pipeline_jobs` temporanei.
@@ -47,6 +51,12 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
   una preparazione delle REAL.
 - **Regole e probabilità:** modificabili per galleria. Ogni probabilità vuota usa la stima automatica; zero disabilita un controllo.
   L'ambiente può restare invariato, variare entro lo stesso genere o cambiare insieme al genere.
+- **Scegli le REAL:** nel passo 2 una griglia sempre visibile mostra miniatura e titolo di ogni REAL. Si possono selezionare
+  solo quelle con descrizione e profilo e senza altre lavorazioni; le altre indicano perché sono disabilitate. «Select all ready
+  REAL» seleziona soltanto quelle utilizzabili, «Clear selection» azzera le scelte. Conteggio, stato parziale della selezione
+  collettiva e pulsante scene si aggiornano subito senza ricaricare o cancellare campi ancora in modifica. La selezione resta
+  durante gli aggiornamenti della pagina, viene ripulita per le sorgenti diventate indisponibili e riparte vuota al reload.
+  Il comando invia esclusivamente gli ID selezionati con il massimo corrispondente; zero selezionate disabilita il pulsante.
 - **Prepara scene:** una chiamata per REAL selezionata e preparata. Le estrazioni e i riferimenti vengono congelati. Sono
   mostrate le modifiche e le dipendenze. L'owner modifica i campi della scena, il formato e i parametri previsti senza pagare.
 - **Genera:** una chiamata per scena salvata, anche collettivamente dopo conferma del massimo. Una candidata non è accettata

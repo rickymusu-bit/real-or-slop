@@ -18,7 +18,10 @@ with sync_playwright() as p:
             control([{'delay':4} for _ in range(2)]+[{'delay':1.2} for _ in range(7)]);page.goto(BASE+'/admin/gallerie/'+gallery+'/slop');root=page.locator('.pipeline')
             expect(root.get_by_role('heading',name='1. Prepare the gallery')).to_be_visible()
             expect(root.locator('[data-action=index]')).to_have_count(0)
-            assert page.request.get(BASE+'/docs/pipeline-slop.svg').status==200
+            diagram=page.request.get(BASE+'/docs/pipeline-slop.svg');assert diagram.status==200
+            assert 'Select the REAL photos' in diagram.text() and 'separately confirmed' in diagram.text()
+            expect(root.locator('[data-source]').first).to_be_disabled()  # Not yet prepared.
+            expect(root.locator('[data-selection-count]')).to_contain_text('0 selected')
             root.locator('[data-action=prepare]').click();assert control()==[]
             with page.expect_response(lambda r:r.url.endswith('/prepare') and r.request.method=='POST') as prepared:
                 root.locator('[data-action=prepare]').click()
@@ -41,10 +44,41 @@ with sync_playwright() as p:
             expect(overlay).to_be_visible();expect(overlay).to_contain_text('Observing paid operations already queued')
             assert len(dialogs)==confirmed
             expect(overlay).to_have_count(0,timeout=30000)
-            expect(root.locator('[data-action=plan]')).to_contain_text('Prepare 2 scenes',timeout=30000)
+            # Explicit subset selection is visible and updates the action without a refresh.
+            choices=root.locator('[data-source]');expect(choices).to_have_count(2)
+            expect(choices.first).to_be_enabled()
+            expect(root.locator('[data-action=plan]')).to_be_disabled()
+            expect(root.locator('[data-selection-count]')).to_contain_text('0 selected')
+            choices.first.check();expect(root.locator('[data-action=plan]')).to_contain_text('Prepare 1 scene')
+            expect(root.locator('[data-all]')).to_have_js_property('indeterminate',True)
+            choices.first.uncheck();expect(root.locator('[data-action=plan]')).to_be_disabled()
+            root.locator('[data-all]').check();expect(root.locator('[data-selection-count]')).to_contain_text('2 selected')
+            root.locator('[data-action=clear-selection]').click();expect(choices.first).not_to_be_checked()
+            expect(root.locator('[data-action=plan]')).to_be_disabled()
+            # Keep unsaved fields intact when choosing a source.
+            root.get_by_text('Rules and probabilities',exact=True).click()
+            root.locator('[data-rules]').fill('Unsaved rules stay visible while selecting.')
+            choices.first.check();expect(root.locator('[data-rules]')).to_have_value('Unsaved rules stay visible while selecting.')
+            first_id=choices.first.get_attribute('data-source');second_id=choices.nth(1).get_attribute('data-source')
+            root.locator('[data-action=refresh]').click()
+            expect(root.locator(f'[data-source="{first_id}"]')).to_be_checked()
+            page.screenshot(path=str(folder/(name+'-real-selection.png')),full_page=True)
             assert len(control())==2 and all(x['body']['text']['format']['name']=='pipeline_profile' for x in control())
-            root.locator('[data-action=plan]').click()
+            with page.expect_request(lambda r:r.url.endswith('/plan') and r.method=='POST') as planning:
+                root.locator('[data-action=plan]').click()
+            assert planning.value.post_data_json['ids']==[first_id]
+            assert planning.value.post_data_json['max_calls']==1
             expect(overlay).to_be_visible();expect(overlay).to_contain_text('Preparing English scenes')
+            expect(overlay).to_have_count(0,timeout=30000)
+            expect(root.locator('[data-action=generate]')).to_have_count(1,timeout=30000)
+            expect(root.locator(f'[data-source="{first_id}"]')).to_be_disabled()
+            expect(root.locator(f'[data-source="{second_id}"]')).to_be_enabled()
+            expect(root.locator('[data-selection-count]')).to_contain_text('0 selected')
+            root.locator('[data-all]').check()  # Selects only the remaining ready REAL.
+            expect(root.locator('[data-selection-count]')).to_contain_text('1 selected')
+            with page.expect_request(lambda r:r.url.endswith('/plan') and r.method=='POST') as planning:
+                root.locator('[data-action=plan]').click()
+            assert planning.value.post_data_json['ids']==[second_id]
             expect(overlay).to_have_count(0,timeout=30000)
             expect(root.locator('[data-action=generate]')).to_have_count(2,timeout=30000)
             assert len(control())==4
@@ -94,7 +128,7 @@ with sync_playwright() as p:
             assert len(control())==9 and not errors,errors
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
             page.screenshot(path=str(folder/(name+'-pipeline.png')),full_page=True)
-            assert any('Maximum 2 paid calls' in d for d in dialogs),dialogs
+            assert any('Prepare English scenes? Maximum 1 paid call' in d for d in dialogs),dialogs
             # A failed/uncertain operation releases the page, reports attention and is not paid again on reload.
             control([{'delay':1,'status':503}])
             root.locator('[data-action=evaluate]').first.click()
