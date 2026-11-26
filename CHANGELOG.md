@@ -1,7 +1,13 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-26T07:36:58Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-26T09:07:50Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.63.0 — 2026-11-26T09:07:50Z
+
+- Progresso modale e pagina bloccata durante tutte le fasi a pagamento della pipeline: parametri REAL, scene, generazione, valutazione e correzione. Il blocco dura fino all’esito del server e mostra completati e pendenti; Esc e navigazione sottostante restano bloccati.
+- La finestra conserva lo stop gratuito delle richieste accodate; il ritorno alla pagina riprende solo il monitoraggio dei Workflow. Nessuna ripetizione di chiamate o correzione automatica. Errori ed esiti incerti rilasciano il blocco con segnalazione.
+- Anche le descrizioni da Import REAL, galleria e dettaglio mostrano la finestra prima dell’invio, oltre che durante l’attesa. Test desktop/mobile con modelli simulati; nessuna migrazione.
 
 ## 1.62.0 — 2026-11-26T07:36:58Z
 

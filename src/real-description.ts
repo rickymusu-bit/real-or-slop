@@ -32,8 +32,10 @@ async function preparationRequest<T>(galleryId: string, path: string, data?: unk
 }
 
 /** Only status reads and saved image reads depend on this page. Every paid request is dispatched by a server Workflow. */
-async function followDescriptions<T>(targets: Target[], galleryId: string, request: RequestItem<T>, saved?: (item: T) => void) {
+async function followDescriptions<T>(targets: Target[], galleryId: string, request: RequestItem<T>, saved?: (item: T) => void,
+  start?: () => Promise<unknown>) {
   return withPhotoProcessing("Describing REAL on the server. You can switch tabs or close this page.", async progress => {
+    await start?.();
     const remaining = new Map(targets.map(item => [item.id, item]));
     const failures: string[] = [];
     let done = 0;
@@ -69,9 +71,10 @@ export async function describePhotos<T>(targets: Target[], galleryId: string, re
   if (count) {
     if (!window.confirm(`Describe ${count === 1 ? "this REAL" : count + " REAL"} and prepare SLOP parameters? ` +
       `Maximum ${count} paid ${count === 1 ? "call" : "calls"}, one per photo. The batch continues on the server when you leave this page.`)) return null;
-    await preparationRequest(galleryId, "prepare", { confirm: true, request: crypto.randomUUID(), ids: missing.map(item => item.id), max_calls: count });
   }
-  return followDescriptions(targets, galleryId, request, saved);
+  return followDescriptions(targets, galleryId, request, saved, count ? () => preparationRequest(galleryId, "prepare", {
+    confirm: true, request: crypto.randomUUID(), ids: missing.map(item => item.id), max_calls: count,
+  }) : undefined);
 }
 
 /** Returning to an import observes the existing work without asking for or sending another paid request. */

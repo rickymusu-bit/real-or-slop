@@ -7,6 +7,7 @@ import { measureMissing, prepareItemCopy, type TreatableItem } from "./game-copy
 import { editFrame } from "./crop-editor";
 import { chooseTreatment } from "./treatment-editor";
 import { galleryPhotosPath } from "./gallery-paths";
+import { withPhotoProcessing } from "./photo-processing";
 import "./pipeline.css";
 
 interface Source { id: string; title: string; metrics?:Metrics|null;copy?:{sha256:string|null}|null; profile: Profile | null; described: boolean }
@@ -16,16 +17,60 @@ interface Image extends TreatableItem { width: number; height: number; revision:
 interface State { stats: {real_count:number;slop_count:number;rows:{key:string;real:Record<string,number>;slop:Record<string,number>}[]}; settings: PipelineSettings; sources: Source[]; jobs: Job[]; paid_calls: boolean; images: Image[] }
 const LABELS: Record<string,string> = { queued: "Queued on server", dispatching:"Starting on server", working: "Processing on server", proposal: "Scene awaiting confirmation", candidate: "Image awaiting review",
   review: "Evaluation available", attention: "Needs attention", failed: "Failed to start", accepting: "Accepting image" };
+const ACTIVE_PAID = new Set(["queued", "dispatching", "working"]);
 
 export async function mountPipeline(root: HTMLElement, gallery: string) {
   const api = `/api/admin/pipeline/${encodeURIComponent(gallery)}`;
   let state: State | null = null, busy = false, notice = "", selected = new Set<string>(), initialized = false;
   const call = async <T>(path = "", data?: unknown, base = api): Promise<T> => {
-    const response = await fetch(base + path, { method: data === undefined ? "GET" : "POST", credentials: "same-origin",
+    const response = await fetch(base + path, { method: data === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store",
       headers: { "Content-Type": "application/json" }, body: data === undefined ? undefined : JSON.stringify(data) });
     const value = await response.json(); if (!response.ok) throw Error(value.error || "Request failed"); return value as T;
   };
   const confirmation = (action: string, count: number) => count > 0 && window.confirm(`${action}? Maximum ${count} paid ${count === 1 ? "call" : "calls"}. Uncertain outcomes are not retried automatically.`);
+  const stopQueued = async () => {
+    if (!window.confirm("Cancel requests that have not been sent yet? Operations already in progress will finish without further automatic steps.")) return false;
+    await call("/stop", { confirm: true }); return true;
+  };
+  /** Submit once, then only observe the approved Workflows. The modal outlives the enqueue response. */
+  const paidWork = async (label: string, submit: (jobs: Set<string>) => Promise<void>) => {
+    let finishSubmission!: () => void;
+    const submitted = new Promise<void>(resolve => { finishSubmission = resolve; });
+    return withPhotoProcessing(
+    `${label}. Sending confirmed requests… Work continues on the server if you switch tabs or close this page.`, async progress => {
+      const jobs = new Set<string>();
+      let submissionError: unknown;
+      try { await submit(jobs); }
+      catch (error) {
+        submissionError = error;
+        // A lost enqueue response can still mean the server accepted work. Observe it, never send again.
+        let current: State;
+        try { current = await call<State>(); }
+        catch { throw Error("Cannot confirm server progress. Work may continue on the server; reload to check without repeating paid calls."); }
+        for (const job of current.jobs) if (ACTIVE_PAID.has(job.state)) jobs.add(job.id);
+      } finally { finishSubmission(); }
+      const total = jobs.size, failures: string[] = [];
+      while (jobs.size && root.isConnected) {
+        try { state = await call<State>(); }
+        catch { throw Error("Cannot read server progress. Work continues on the server; reload to resume observation without repeating paid calls."); }
+        for (const id of jobs) {
+          const job = state.jobs.find(item => item.id === id);
+          if (job && ACTIVE_PAID.has(job.state)) continue;
+          if (job && ["attention", "failed"].includes(job.state)) failures.push(job.error || LABELS[job.state]);
+          jobs.delete(id);
+        }
+        progress(`${label}: ${total - jobs.size} of ${total} finished; ${jobs.size} pending on the server.` +
+          " Work continues if you switch tabs or close this page.");
+        if (jobs.size) await new Promise<void>(resolve => window.setTimeout(resolve, 1000));
+      }
+      if (submissionError) throw submissionError;
+      if (failures.length) throw Error(`${failures.length} operations need attention. ${failures.slice(0, 3).join(" / ")}`);
+    }, [{ label: "Stop queued requests", run: async () => {
+      if (!window.confirm("Cancel requests that have not been sent yet? Operations already in progress will finish without further automatic steps.")) return false;
+      // Wait until the confirmed batch is persisted so the stop request cannot race its enqueue.
+      await submitted; await call("/stop", { confirm: true }); return true;
+    } }]);
+  };
   const confirmMask = async (job:Job, index:number):Promise<string|null> => {
     const correction=job.evaluation!.corrections[index],bitmap=await createImageBitmap(await fetch(job.file!).then(r=>r.blob()));
     const dialog=document.createElement("dialog");dialog.className="pipeline-mask";
@@ -91,7 +136,7 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
     const action=button.dataset.action!,job=state.jobs.find(j=>j.id===button.dataset.job), image=state.images.find(i=>i.id===button.dataset.image);
     void act(async()=>{
       if(action==="refresh")return;
-      if(action==="stop"){if(window.confirm("Cancel requests that have not been sent yet? Operations already in progress will finish without further automatic steps."))await call("/stop",{confirm:true});return;}
+      if(action==="stop"){await stopQueued();return;}
       if(action==="settings"){
         const probabilities:PipelineSettings["probabilities"]={};root.querySelectorAll<HTMLInputElement>("[data-probability]").forEach(input=>{if(input.value!=="")probabilities[input.dataset.probability as keyof typeof probabilities]=Number(input.value)/100;});
         await call("/settings",{rules:root.querySelector<HTMLTextAreaElement>("[data-rules]")!.value,probabilities,environment:root.querySelector<HTMLSelectElement>("[data-environment]")!.value,novelty:Number(root.querySelector<HTMLInputElement>("[data-novelty]")!.value)/100});return;
@@ -100,20 +145,36 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
       if(action==="prepare"||action==="plan"){
         const active=new Set(state!.jobs.map(j=>j.source_id));const ids=state!.sources.filter(s=>!active.has(s.id)&&(action==="prepare"?!s.profile:(selected.has(s.id)&&s.profile&&s.described))).map(s=>s.id);
         if(!confirmation(action==="prepare"?"Describe and prepare missing REAL":"Prepare English scenes",ids.length))return;
-        if(action==="prepare"){await call("/prepare",payload({ids,max_calls:ids.length}));return;}for(let at=0;at<ids.length;at+=500){const chunk=ids.slice(at,at+500);await call("/plan",payload({ids:chunk,max_calls:chunk.length}));}return;
+        await paidWork(action === "prepare" ? "Preparing REAL descriptions and parameters" : "Preparing English scenes", async jobs => {
+          const size = action === "prepare" ? ids.length : 500;
+          for (let at = 0; at < ids.length; at += size) {
+            const chunk = ids.slice(at, at + size);
+            const queued = await call<{jobs: string[]}>(`/${action}`, payload({ids:chunk,max_calls:chunk.length}));
+            queued.jobs.forEach(id => jobs.add(id));
+          }
+        }); return;
       }
       if(action==="generate-all"||action==="evaluate-all"){
         const op=action==="generate-all"?"generate":"evaluate",jobs=state!.jobs.filter(j=>j.state===(op==="generate"?"proposal":"candidate"));
         if(op==="generate")for(const j of jobs){const proposal=readScene(j);await call(`/${j.id}/scene`,payload({proposal}));j.proposal=proposal;}
         if(!confirmation(op==="generate"?"Generate all saved scenes":"Evaluate all candidates",jobs.length))return;
-        for(const j of jobs)await call(`/${j.id}/${op}`,payload({max_calls:1,...(op==="generate"?{proposal:j.proposal}:{})}));return;
+        await paidWork(op === "generate" ? "Generating SLOP images" : "Evaluating full images", async pending => {
+          for (const j of jobs) { pending.add(j.id); await call(`/${j.id}/${op}`,payload({max_calls:1,...(op==="generate"?{proposal:j.proposal}:{})})); }
+        }); return;
       }
       if(job){
         if(action==="scene"){await call(`/${job.id}/scene`,payload({proposal:readScene(job)}));return;}
-        if(action==="generate"||action==="evaluate"){if(action==="generate"){job.proposal=readScene(job);await call(`/${job.id}/scene`,payload({proposal:job.proposal}));}if(!confirmation(action==="generate"?"Generate the saved scene":"Evaluate the full image",1))return;await call(`/${job.id}/${action}`,payload({max_calls:1,...(action==="generate"?{proposal:job.proposal}:{})}));return;}
+        if(action==="generate"||action==="evaluate"){if(action==="generate"){job.proposal=readScene(job);await call(`/${job.id}/scene`,payload({proposal:job.proposal}));}if(!confirmation(action==="generate"?"Generate the saved scene":"Evaluate the full image",1))return;
+          await paidWork(action === "generate" ? "Generating SLOP image" : "Evaluating full image", async jobs => {
+            jobs.add(job.id); await call(`/${job.id}/${action}`,payload({max_calls:1,...(action==="generate"?{proposal:job.proposal}:{})}));
+          }); return;
+        }
         if(action==="edit"){
           const index=Number(button.dataset.correction),mask=await confirmMask(job,index);if(!mask)return;
-          await call(`/${job.id}/edit`,payload({max_calls:1,instruction:root.querySelector<HTMLTextAreaElement>(`[data-instruction="${job.id}-${index}"]`)!.value,mask}));return;
+          const instruction = root.querySelector<HTMLTextAreaElement>(`[data-instruction="${job.id}-${index}"]`)!.value;
+          await paidWork("Applying confirmed local correction", async jobs => {
+            jobs.add(job.id); await call(`/${job.id}/edit`,payload({max_calls:1,instruction,mask}));
+          }); return;
         }
         if(action==="accept"||action==="close") {if(!window.confirm(action==="accept"?"Accept this full image? The evaluator’s findings still need to be considered.":"Discard this job and its files?"))return;await call(`/${job.id}/${action}`,payload());return;}
       }
@@ -123,9 +184,16 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
         if(action==="treatment"){const result=await chooseTreatment(image);if(result)await prepareItemCopy(image,undefined,{settings:result.settings});return;}
         if(action==="approve"||action==="publish") {if(!window.confirm(action==="publish"?"Publish the checked copy?":"Have you checked the original and final copy?"))return;await call(`/${image.id}/${action}`,{revision:image.revision},"/api/admin/library");return;}
       }
-    });
+    }).then(resumePaid);
   });
-  await refresh();
-  const timer=window.setInterval(()=>{if(!root.isConnected){clearInterval(timer);return;}if(!busy && state?.jobs.some(j=>["queued","dispatching","working","accepting"].includes(j.state)) && !(root.contains(document.activeElement) && (document.activeElement instanceof HTMLTextAreaElement || document.activeElement instanceof HTMLSelectElement || document.activeElement instanceof HTMLInputElement && document.activeElement.type!=="checkbox")))void refresh().catch(e=>{notice=String(e);});},3000);
-  return {refresh};
+  const resumePaid = async () => {
+    if (busy || !state || !root.isConnected) return;
+    const pending = state.jobs.filter(job => ACTIVE_PAID.has(job.state));
+    if (pending.length) await act(() => paidWork("Observing paid operations already queued", async jobs => {
+      pending.forEach(job => jobs.add(job.id));
+    }));
+  };
+  await refresh(); await resumePaid();
+  const timer=window.setInterval(()=>{if(!root.isConnected){clearInterval(timer);return;}if(!busy && state?.jobs.some(j=>["queued","dispatching","working","accepting"].includes(j.state)) && !(root.contains(document.activeElement) && (document.activeElement instanceof HTMLTextAreaElement || document.activeElement instanceof HTMLSelectElement || document.activeElement instanceof HTMLInputElement && document.activeElement.type!=="checkbox")))void refresh().then(resumePaid).catch(e=>{notice=String(e);});},3000);
+  return {refresh: async () => { await refresh(); await resumePaid(); }};
 }
