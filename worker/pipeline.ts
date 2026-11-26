@@ -10,7 +10,7 @@ import { IMAGE_MARK, jsonWithImage } from "./image-body";
 import { imageMime } from "../shared/image-format";
 import { imageGeometry } from "../shared/image-geometry";
 import { AXES, PARAMETER_KEYS, objectSchema, PROFILE_SCHEMA, PROPOSAL_SCHEMA, REVIEW_SCHEMA, validProfile, variation, imageSize, normalizeCategory,
-  normalizeProfile, vocabulary, type Parameter, type PipelineSettings, type Profile, type Proposal, type Review, type Variation, type Vocabulary } from "../shared/pipeline";
+  normalizeProfile, vocabulary, projectedProfile, type Parameter, type PipelineSettings, type Profile, type Proposal, type Review, type Variation, type Vocabulary } from "../shared/pipeline";
 import type { VisualDescription } from "../shared/real-description";
 
 const now = () => new Date().toISOString();
@@ -26,7 +26,8 @@ interface Snapshot { operation: "profile" | "plan" | "generate" | "evaluate" | "
   recent?: {genre:string;parameters:Profile["parameters"]}[]; vocabulary?: Vocabulary; settings: PipelineSettings; textModel: string; imageModel: string; quality: string; sourceRevision: number;
   correction?: { instruction: string; maskKey: string }; initialOperation?: string;
   /** Profile: rewrite the parameters of an already prepared REAL, keeping its description. */
-  refresh?: boolean }
+  refresh?: boolean;
+  drawContext?: { version: 1; accepted: number; provisional: number } }
 interface Job { id: string; gallery_id: string; source_id: string | null; state: string; snapshot: string; proposal: string | null;
   evaluation: string | null; candidate_key: string | null; previous_key: string | null; image_id: string | null;
   format: string | null; request: string | null; error: string; updated_at: string }
@@ -137,7 +138,7 @@ export async function processPipelineJob(env: Env, jobId: string) {
       await env.DB.prepare("DELETE FROM pipeline_jobs WHERE id=?").bind(job.id).run(); return;
     }
     if (snap.operation === "plan") {
-      const answer = await response(env, job, snap, "pipeline_proposal", `Write a complete self-contained English scene on all eight axes. Input includes a source description, independent selected variation controls, sampled target values, a few relevant descriptions, gallery rules and observed peculiarities. Apply only selected controls; ordinary/absent/same values are valid. Honor each explicit peculiarity policy. preserve retains the detail faithfully while applicable; vary changes that detail coherently even without selecting its broader parameter; draw follows selection of its linked parameter. Default temporary particulars vary save names/progress/times instead of repeating their identifying combination; a deliberate owner preserve policy overrides this default, with copying risk disclosed. Identity particulars such as an official Tribal Edition retain the precise edition name and accurate geometry unless the linked model/edition changes; then adapt and declare the dependency. Use the precise product/edition name, not generic replacement ornament. Do not intensify wear. New plausible values are allowed only for selected controls when novelty=true, within the sampled type/severity; no default special editions or damage. Keep environment and physical light setup when environment=keep. same_genre changes setting and dependent light/support/composition coherently while retaining photographic genre. change_genre may also change technique/rendering and necessary people/handling; explain all dependencies. Source camera/pose remain unless selected or physically necessary and declared. Perspective depends on camera position, never invent source focal length. Preserve aspect ratio unless selected or required by an explicit genre transition; return a numeric w:h ratio. Respect screen state and model capabilities. Describe only visible surfaces in one exposure; stable support, correct hardware, no glass-like controls, invented vents or ports. Avoid recurring polishing, scratches, bokeh or commercial staging. The avoid_repeating records are intended controls of recent accepted SLOPs; avoid repeating their distinctive combinations or replacing identifying save data with a single habitual default. Common ordinary properties may recur. Return the intended resulting profile with coherent updated parameters and peculiarities, plus actual changes and dependencies separately. Preserve identity particulars accurately. For varied temporary details record the new values, never the original identifying combination. ${VOCABULARY_RULE} This applies to the resulting profile and genre. ${snap.settings.rules}`,
+      const answer = await response(env, job, snap, "pipeline_proposal", `Write a complete self-contained English scene on all eight axes. Input includes a source description, selected variation controls, jointly sampled compatible target values, a few relevant descriptions, gallery rules and observed peculiarities. Apply only selected controls; ordinary/absent/same values are valid. Honor each explicit peculiarity policy. preserve retains the detail faithfully while applicable; vary changes that detail coherently even without selecting its broader parameter; draw follows selection of its linked parameter. Default temporary particulars vary save names/progress/times instead of repeating their identifying combination; a deliberate owner preserve policy overrides this default, with copying risk disclosed. Identity particulars such as an official Tribal Edition retain the precise edition name and accurate geometry unless the linked model/edition changes; then adapt and declare the dependency. Use the precise product/edition name, not generic replacement ornament. Do not intensify wear. New plausible values are allowed only for selected controls when novelty=true, within the sampled type/severity; no default special editions or damage. Keep environment and physical light setup when environment=keep. same_genre changes setting and dependent light/support/composition coherently while retaining photographic genre. change_genre may also change technique/rendering and necessary people/handling; explain all dependencies. Source camera/pose remain unless selected or physically necessary and declared. Perspective depends on camera position, never invent source focal length. Preserve aspect ratio unless selected or required by an explicit genre transition; return a numeric w:h ratio. Respect screen state and model capabilities. Describe only visible surfaces in one exposure; stable support, correct hardware, no glass-like controls, invented vents or ports. Avoid recurring polishing, scratches, bokeh or commercial staging. The avoid_repeating records are intended controls of recent accepted SLOPs; avoid repeating their distinctive combinations or replacing identifying save data with a single habitual default. Common ordinary properties may recur. Return the intended resulting profile with coherent updated parameters and peculiarities, plus actual changes and dependencies separately. Preserve identity particulars accurately. For varied temporary details record the new values, never the original identifying combination. ${VOCABULARY_RULE} This applies to the resulting profile and genre. ${snap.settings.rules}`,
         { description: snap.description, profile: snap.profile, variation: snap.variation, relevant: snap.references, avoid_repeating: snap.recent, known_categories: snap.vocabulary ?? {} }, PROPOSAL_SCHEMA);
       if (!validProposal(answer)) throw new HttpError(502, "Incomplete scene");
       answer.profile = normalizeProfile(answer.profile); answer.genre = normalizeCategory(answer.genre);
@@ -319,7 +320,14 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
     const settings = settingsOf(gallery.pipeline_settings || null);
     const [textModel, imageModel, quality] = await Promise.all([chosenModel(env, "text_model"), chosenModel(env, "image_model"), chosenQuality(env)]);
     const stamp = now(), inserts = [];
+    // A repeated request or an occupied REAL contributes no phantom draw to this group.
+    const existing = (await env.DB.prepare("SELECT id,source_id,state FROM pipeline_jobs WHERE gallery_id=?")
+      .bind(galleryId).all<{ id: string; source_id: string | null; state: string }>()).results;
+    const existingIds = new Set(existing.map(j => j.id));
+    const occupied = new Set(existing.filter(j => ["queued", "dispatching", "working", "proposal", "candidate", "review", "accepting"].includes(j.state)).map(j => j.source_id));
+    const balancing = [...generated];
     for (const row of selected as Source[]) {
+      if (existingIds.has(`${data.request}-${row.id}`) || occupied.has(row.id)) continue;
       const entry = preparedById.get(row.id);
       if (!entry) throw new HttpError(409, "Prepare descriptions and parameters first");
       const { profile, description } = entry;
@@ -327,9 +335,12 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
       const references = prepared.filter(p => p.row.id !== row.id && (settings.environment === "change_genre" || p.profile.genre === profile.genre))
         .sort((a, b) => Number(b.profile.parameters.model.category === profile.parameters.model.category) - Number(a.profile.parameters.model.category === profile.parameters.model.category))
         .slice(0, 3).map(p => ({ sections: p.description.sections, profile: p.profile }));
+      const draw = variation(profile, population, settings, Math.random, balancing);
+      const drawContext = { version: 1 as const, accepted: generated.length, provisional: balancing.length - generated.length };
+      balancing.push(projectedProfile(profile, draw));
       const snapshot: Snapshot = { operation: "plan", sourceRevision: row.revision, settings, textModel, imageModel, quality, vocabulary: known,
         recent: generated.filter(p => settings.environment === "change_genre" || p.genre === profile.genre).slice(-3).map(p => ({ genre: p.genre, parameters: p.parameters })),
-        profile, description, variation: variation(profile, population, settings, Math.random, generated), references };
+        profile, description, variation: draw, references, drawContext };
       inserts.push(env.DB.prepare("INSERT OR IGNORE INTO pipeline_jobs(id,gallery_id,source_id,state,snapshot,request,created_at,updated_at) VALUES(?,?,?,'queued',?,?,?,?) RETURNING id")
         .bind(`${data.request}-${row.id}`, galleryId, row.id, JSON.stringify(snapshot), data.request, stamp, stamp));
     }

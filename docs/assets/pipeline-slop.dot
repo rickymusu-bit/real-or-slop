@@ -5,7 +5,7 @@ digraph pipeline {
  real [label="1 · Gallery REAL\nFull originals and credits; missing descriptions flagged"];
  describe [label="2 · English description\nEight axes · observed parameters · photographic genre\nPeculiarities: identity, specimen, temporary state\nTechnical measurements and aspect ratio",fillcolor="#eaf1ff"];
  composition [label="3 · Gallery composition\nObserved parameters · distributions and combinations\nGallery-specific rules"];
- draw [label="4 · Select REAL and draw zero or more variations\nModel, color, finish, edition, wear, damage, ageing, cleanliness\nState, screen content, pose, camera, composition, aspect ratio\nEnvironment/genre: coordinate dependent changes"];
+ draw [label="4 · Select REAL and draw zero or more variations\nModel, color, finish, edition, wear, damage, ageing, cleanliness\nState, screen content, pose, camera, composition, aspect ratio\nJoint compatible donors for selected dependent controls\nBalance against accepted SLOP + earlier draws in this request\nEnvironment/genre: coordinate dependent changes"];
  scene [label="5 · Sol prepares a complete scene on all eight axes\nPlausible novelty and ordinary values · physical constraints\nPeculiarities preserved or varied · explicit changes",fillcolor="#eaf1ff"];
  confirm [label="Review scene and confirm maximum calls",fillcolor="#fff1d6"];
  generate [label="6 · Sunburst /images/generations\nFinal text only · dimensions match the aspect ratio",fillcolor="#eaf1ff"];

@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 17.8.0
+# Generazione SLOP — specifica 17.9.0
 
-Aggiornata: 2026-11-26T13:58:28Z. Stato: implementata nel ramo 1.64.0, da rilasciare.
+Aggiornata: 2026-11-26T15:38:09Z. Stato: implementata nel ramo 1.65.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -161,12 +161,35 @@ Controllare distribuzioni individuali, combinazioni rilevanti e ricorrenze nelle
 conserva tutte le correlazioni delle REAL. Evitare duplicati riconoscibili lasciando che gli elementi comuni nelle REAL siano
 comuni anche nelle SLOP; non imporre unicità a ogni immagine. Scartare o adattare un valore incompatibile dichiarandone il motivo,
 senza introdurre modifiche nascoste degli altri parametri. La stima automatica di selezione per parametro è `clamp(1 − quota_della_categoria_più_frequente, 0.05, 0.4)`.
-I valori vengono campionati dalle REAL compatibili (modello o genere quando necessario), con pesi da 0.25 a 4 per compensare
-sotto/sovrarappresentazione nei parametri previsti delle SLOP accettate e prior proporzionale alle REAL. Dalla 1.64.0 le SLOP
-confrontate sono filtrate come i donatori (stesso modello o genere quando il parametro lo richiede, escluse le categorie ignote),
-e i profili «recenti» passati al planner sono davvero gli ultimi tre accettati in ordine di creazione. Non si presume una
-misura osservata delle SLOP: le distribuzioni mostrate sono quelle richieste. Il controllo delle combinazioni è affidato ai
-vincoli del planner, a pochi profili recenti e alla revisione umana; non è una garanzia statistica o un rilevatore di duplicati. Questi controlli non autorizzano cicli automatici di correzione delle immagini.
+Decisione dell'owner del 2026-11-26: estrazione coerente dei parametri dipendenti e bilanciamento delle scene dello stesso gruppo.
+La selezione resta indipendente per parametro e usa le probabilità configurate; non forza ulteriori modifiche.
+I valori selezionati si estraggono congiuntamente da una stessa REAL per ciascun gruppo:
+- modello, colore, materiale/finitura, edizione/decorazione, stato di funzionamento e contenuto dello schermo;
+- posa, punto di vista, composizione e rapporto d'aspetto;
+- usura, danno, invecchiamento e pulizia restano quattro estrazioni separate.
+
+I campi non selezionati con evidenza nota vincolano il donatore alle categorie iniziali. I campi selezionati richiedono evidenza
+nota su tutto il gruppo: `certainty=unknown`, categorie `unknown` e `unspecified` non sono donatori. Lo schermo appartiene al
+modello estratto dallo stesso donatore, oppure al modello iniziale noto. Estrarre solo il contenuto non rivela uno schermo
+nascosto o inattivo. La fotografia usa lo stesso genere salvo `change_genre`. Se manca una combinazione compatibile si
+conservano i valori iniziali del gruppo: nessun ripiego su modelli o generi diversi e nessun parametro aggiunto alla selezione.
+La compatibilità è per categorie osservate, non una prova di plausibilità fisica; il planner e la revisione restano necessari.
+Il filtro conservativo può ridurre le variazioni effettive quando la galleria è piccola o le annotazioni incomplete.
+
+I pesi correggono sotto/sovrarappresentazione della combinazione dei campi selezionati, entro lo stesso insieme di compatibilità
+per REAL e SLOP, con prior equivalente a cinque osservazioni proporzionali alle REAL e pesi limitati a 0.25–4. Prima delle SLOP,
+le combinazioni conservano le frequenze empiriche dei donatori. La scelta resta casuale, senza quote rigide o unicità imposta.
+Durante una richiesta di pianificazione ogni nuova estrazione aggiunge al conteggio locale una previsione anonima: profilo
+iniziale più valori estratti. Le scene successive considerano quindi SLOP accettate e previsioni precedenti della stessa
+richiesta. `drawContext` registra versione dell'algoritmo, numero di accettate e numero di previsioni precedenti nella snapshot.
+Richieste già registrate e REAL occupate non producono estrazioni provvisorie nuove. Le snapshot già registrate restano immutate
+nei reinvii. Nessun conteggio provvisorio diventa una foto, una statistica pubblica o un registro permanente; chiudere un gruppo
+non lascia riserve da sottrarre. Richieste separate, comprese quelle simultanee o divise dal browser oltre 500 scene, bilanciano
+separatamente: il meccanismo non è una quota globale transazionale.
+
+I profili recenti passati al planner restano gli ultimi tre accettati in ordine di creazione. I conteggi provvisori rappresentano
+l'estrazione, prima degli adattamenti del planner; le distribuzioni delle SLOP accettate rappresentano i parametri previsti,
+non una misura osservata dei pixel. Nessuna nuova chiamata, tassonomia chiusa o correzione automatica delle immagini.
 
 ## 5. Scena finale e generazione
 

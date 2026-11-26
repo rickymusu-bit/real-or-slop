@@ -133,3 +133,29 @@ code,result=call('stop',{'confirm':True});assert code==200 and result['cancelled
 wait(lambda s:all(j['state'] not in ('working','dispatching','queued') for j in s['jobs']))
 assert len(control())<=1,control()
 print('Pipeline queue passed: REAL preparations of a gallery in series and cancellation before the remaining paid requests.')
+
+# A confirmed group records successive provisional intentions, without inventing accepted images.
+balanced=make_gallery('Provisional group balance')
+batch_sources=[real('joint-batch-'+str(n),gallery=balanced['id']) for n in range(3)]
+H.API=BASE+'/api/admin/pipeline/'+balanced['id']+'/'
+control([])
+assert call('prepare',paid_request(ids=[r['id'] for r in batch_sources],max_calls=3))[0]==200
+wait(lambda s:not s['jobs'])
+request=paid_request(ids=[r['id'] for r in batch_sources],max_calls=3)
+assert call('plan',request)[0]==200
+state=wait(lambda s:len(s['jobs'])==3 and all(j['state']=='proposal' for j in s['jobs']))
+frozen={r['id']:r['snapshot'] for r in sql(f"SELECT id,snapshot FROM pipeline_jobs WHERE gallery_id='{balanced['id']}'")}
+contexts=[json.loads(v)['drawContext'] for v in frozen.values()]
+assert sorted(c['provisional'] for c in contexts)==[0,1,2],contexts
+assert all(c['accepted']==0 and c['version']==1 for c in contexts)
+assert state['stats']['slop_count']==0
+calls=len(control());assert calls==6
+assert call('plan',request)[1]['jobs']==[]
+assert {r['id']:r['snapshot'] for r in sql(f"SELECT id,snapshot FROM pipeline_jobs WHERE gallery_id='{balanced['id']}'")}==frozen
+assert len(control())==calls
+for job in state['jobs']:assert call(job['id']+'/close',paid_request())[0]==200
+assert call('plan',paid_request(ids=[batch_sources[0]['id']],max_calls=1))[0]==200
+state=wait(lambda s:len(s['jobs'])==1 and s['jobs'][0]['state']=='proposal')
+context=json.loads(sql(f"SELECT snapshot FROM pipeline_jobs WHERE gallery_id='{balanced['id']}'")[0]['snapshot'])['drawContext']
+assert context['provisional']==context['accepted']==0,context
+print('Pipeline group balance passed: provisional draws accumulate only within the request, retries preserve snapshots and closing leaves no phantom SLOP.')

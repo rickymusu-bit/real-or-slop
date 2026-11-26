@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 38.5.0, aggiornata il 2026-11-26T13:58:28Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 38.6.0, aggiornata il 2026-11-26T15:38:09Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -46,7 +46,9 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   rilevanti della galleria. Le modifiche possono rendere una console più ordinaria. Non forzare novità vistose o unicità a ogni
   SLOP. Le probabilità automatiche sono stime empiriche rivedibili; i pesi considerano i parametri previsti delle SLOP, non una
   misura garantita del loro contenuto. Il controllo delle combinazioni e delle ricorrenze richiede revisione; il 30% del test
-  non è un valore definitivo.
+  non è un valore definitivo. Dal 2026-11-26 i parametri dipendenti estratti condividono un donatore compatibile; i valori non
+  estratti restano vincoli. Le scene della stessa richiesta contano provvisoriamente anche le estrazioni precedenti del gruppo,
+  senza nuove chiamate né riserve permanenti (specifica `generazione-slop` 17.9.0).
 - **Niente tag** (decisione del 2026-11-20). Le foto di una galleria condividono quasi gli stessi tag: la galleria basta a
   raggrupparle. Nessun vocabolario, filtro o distribuzione per tag; approvare non richiede tag. I parametri privati del nuovo
   protocollo non introducono tag di navigazione o didascalie. Il trattamento delle SLOP ricava bianco e nero, seppia o colore
