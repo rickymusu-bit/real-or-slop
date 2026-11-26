@@ -1,7 +1,13 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-26T13:58:28Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-26T15:38:09Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.65.0 — 2026-11-26T15:38:09Z
+
+- Estrazione congiunta di prodotto/schermo e posa/inquadratura/formato: un donatore compatibile per i parametri selezionati del gruppo; campi non estratti conservati, nessun ripiego incompatibile, valori ignoti esclusi. Condizioni fisiche separate e probabilità configurabili conservate.
+- Bilanciamento progressivo all'interno della richiesta: ogni scena tiene conto delle estrazioni precedenti con pesi casuali limitati. Conteggi anonimi temporanei, contesto registrato nella snapshot, reinvii senza nuove riserve, nessuna foto o statistica accettata fittizia.
+- Test delle combinazioni, delle frequenze empiriche e della compensazione progressiva; integrazione per snapshot, reinvio e chiusura. Nessuna migrazione, tassonomia della PR #184 o chiamata aggiuntiva ai modelli.
 
 ## 1.64.0 — 2026-11-26T13:58:28Z
 
