@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 17.3.0
+# Generazione SLOP — specifica 17.4.0
 
-Aggiornata: 2026-11-26T07:09:29Z. Stato: implementata nel ramo 1.62.0, da rilasciare.
+Aggiornata: 2026-11-26T07:36:58Z. Stato: implementata nel ramo 1.62.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -63,7 +63,7 @@ che debbano essere riprodotte nella SLOP.
 
 Le regole della galleria accompagnano il generatore di testo: modelli compatibili, vincoli fisici e generi fotografici presenti.
 Per Nintendo: `docs/regole-galleria-console-nintendo.md`. Sono costruite sulle REAL, rivedibili dall'owner, non dedotte dal solo
-titolo. Non impongono marcatori visivi comuni a ogni SLOP. Decisione dell’owner del 2026-11-26: gli indici delle descrizioni sono rimossi, insieme ai comandi e alle API di indicizzazione (migrazione 0076). Il planner usa direttamente i profili validi e le descrizioni delle altre REAL della stessa galleria, dando precedenza alla stessa categoria di modello. Mantiene lo stesso genere quando non è richiesto un cambio di genere e passa fino a tre descrizioni di supporto. Non esegue ricerca semantica di ambienti né chiamate di embedding. Le scelte e i riferimenti sono congelati nella lavorazione. Il bilanciamento e le probabilità continuano a usare i parametri osservati nei profili, indipendentemente dai riferimenti di supporto. Le statistiche usano le annotazioni disponibili.
+titolo. Non impongono marcatori visivi comuni a ogni SLOP. Decisione dell’owner del 2026-11-26: gli indici delle descrizioni sono rimossi, insieme ai comandi e alle API di indicizzazione (migrazione 0076). Il planner usa direttamente i profili validi e le descrizioni delle altre REAL della stessa galleria, dando precedenza alla stessa categoria di modello. Mantiene lo stesso genere quando non è richiesto un cambio di genere e passa fino a tre descrizioni di supporto. Non esegue ricerca semantica di ambienti né chiamate di embedding. Le scelte e i riferimenti sono congelati nella lavorazione. Il bilanciamento e le probabilità continuano a usare i parametri osservati nei profili, indipendentemente dai riferimenti di supporto. Le statistiche usano le annotazioni disponibili. Crowding e detail sono ritirati dal 2026-11-26: non influiscono sulla pipeline, non vengono misurati né inviati ai modelli. Le misure tecniche per il trattamento restano distinte e attive.
 
 ## 3. Parametri controllabili
 

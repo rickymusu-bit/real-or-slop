@@ -8,7 +8,7 @@ export function mountAdminWorkspace(page: HTMLElement) {
   for (const panel of page.querySelectorAll<HTMLElement>(".admin-panel")) body.append(panel);
   const settings = page.querySelector<HTMLElement>("#admin-settings")!;
   const links = document.createElement("nav"); links.className="settings-index"; links.setAttribute("aria-label","Settings groups");
-  const groups = [["models","Models"],["thresholds","Generation"],["contexts","AI instructions"],["games","Games"],["measures","REAL measurements"],["sources","Commons sources"],["leaderboard","Leaderboard"]];
+  const groups = [["models","Models"],["thresholds","Generation"],["contexts","AI instructions"],["games","Games"],["sources","Commons sources"],["leaderboard","Leaderboard"]];
   for (const [id, label] of groups) {
     const button = document.createElement("button"); button.type="button"; button.textContent=label;
     button.addEventListener("click", () => {

@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 6.7.1
+# Dashboard e wizard REAL — specifica 6.8.0
 
-Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T07:09:29Z.
+Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T07:36:58Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -27,8 +27,7 @@ tre miniature delle foto più recenti fuori dal cestino. I moduli indicano il ca
 
 Selezionando una scheda si apre una finestra con le foto della galleria. La griglia scorre, «Carica altre foto» prosegue l’elenco e ogni
 foto mantiene il dettaglio e l’anteprima. Conteggi, ricerca, filtri e cestino si riferiscono alla galleria aperta (specifica `database-immagini`).
-La finestra si chiude con × o Esc. Da «Modifica galleria» l’owner può cambiare titolo, descrizione e soglie di
-affollamento e dettaglio delle REAL (specifica `libreria-immagini`, sezione 10) oppure scegliere
+La finestra si chiude con × o Esc. Da «Modifica galleria» l’owner può cambiare titolo e descrizione oppure scegliere
 «Elimina galleria». La conferma riguarda la galleria, tutte le sue foto compreso il cestino e le sue generazioni. Dopo l’eliminazione
 si torna all’elenco delle gallerie.
 
@@ -51,8 +50,7 @@ Nelle eccezioni SLOP, «Accetta comunque il tentativo N» è disponibile per ogn
 - **Finestra:** immagine grande, larga quanto la finestra e alta al più il 70% dello schermo; sotto, i testi. Resta aperta finché non si
   tocca la × nell'angolo in alto a destra (o Esc); il tocco sullo sfondo non la chiude.
 - **Contenuti:** risultato di Commons: anteprima da 1280 px, titolo del file, descrizione di Commons (300 caratteri), «Apri la pagina su
-  Commons». REAL della galleria: copia di gioco, titolo, descrizione, link alla fonte e, se misurata oltre le soglie della galleria, l'avviso con
-  gli assi oltre soglia. SLOP della galleria: copia, ID abbreviato e prompt. Immagine della revisione nel wizard SLOP: prompt.
+  Commons». REAL della galleria: copia di gioco, titolo, descrizione, link alla fonte. SLOP della galleria: copia, ID abbreviato e prompt. Immagine della revisione nel wizard SLOP: prompt.
 
 ## 4. Wizard REAL
 

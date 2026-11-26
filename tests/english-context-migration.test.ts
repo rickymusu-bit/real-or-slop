@@ -27,6 +27,6 @@ test("English defaults replace shipped instructions once, preserving owner edits
     db.exec("DELETE FROM model_contexts WHERE part='real_measure'");
     insert.run("measure", "real_measure", legacy.real_measure);
     db.exec(migration);
-    assert.equal(latest("real_measure"), DEFAULTS.real_measure);
+    assert.match(String(latest("real_measure")), /^Measure a photograph/);
   } finally { db.close(); }
 });

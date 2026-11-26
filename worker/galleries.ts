@@ -1,13 +1,9 @@
-/** Gallery editing, readiness for automatic generation and thresholds of crowding and detail of its REAL. The SLOP instructions of a
+/** Gallery editing and readiness for legacy generation. The SLOP instructions of a
  * gallery and their suggestion by a model were retired on 2026-11-22 (owner decision): each REAL has its own ideas. */
-import { numberSettings } from "./app-settings";
 import { HttpError, id, type Env } from "./core";
 import { chosenModel } from "./models";
 
-/** max_crowdedness, max_detail: the gallery's thresholds from 0 to 100, NULL for the default of the settings (spec `libreria-immagini`,
- * section 10). They never change the revision, which pending proposals check. */
-export interface Gallery { id: string; title: string; description: string; revision: number;
-  max_crowdedness: number | null; max_detail: number | null }
+export interface Gallery { id: string; title: string; description: string; revision: number }
 export const GALLERY_DESCRIPTION_MAX = 3000;
 /** The SLOP wizard needs at least one approved or published REAL. */
 const ready = (gallery: {available: number}) => gallery.available > 0;
@@ -46,40 +42,29 @@ function field(value: unknown, max: number, name: string, required = false) {
   if (typeof value !== "string" || value.length > max || (required && !value.trim())) throw new HttpError(400, `Invalid field: ${name}`);
   return value.trim();
 }
-/** A threshold from 0 to 100, or null for the default of the settings. */
-function threshold(value: unknown, name: string): number | null {
-  if (value === undefined || value === null) return null;
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 100) throw new HttpError(400, `Threshold for ${name} from 0 to 100`);
-  return value;
-}
 export async function galleryRoute(env: Env, method: string, target: string, data: Record<string, unknown>) {
   if (!target && method === "GET") {
-    const defaults = await numberSettings(env);
-    return {galleries: await galleryPreviews(env), paid_calls: !!env.OPENAI_API_KEY, text_model: await chosenModel(env, "text_model"),
-      thresholds: {crowdedness: defaults.crowdedness_threshold, detail: defaults.detail_threshold}};
+    return {galleries: await galleryPreviews(env), paid_calls: !!env.OPENAI_API_KEY, text_model: await chosenModel(env, "text_model")};
   }
   if (method === "GET" && /^[\w-]{1,64}$/.test(target)) return { ...await findGallery(env, target), paid_calls: !!env.OPENAI_API_KEY };
   if (method !== "POST" && method !== "PATCH") throw new HttpError(405, "Method not allowed");
   const [key, action] = target.split("/");
   const editing = method === "PATCH" && key && !action;
   if (!editing && (method !== "POST" || target)) throw new HttpError(404, "Gallery API not found");
-  if (Object.keys(data).some(k => !["title", "description", "max_crowdedness", "max_detail", ...(editing ? ["revision"] : [])].includes(k)))
+  if (Object.keys(data).some(k => !["title", "description", ...(editing ? ["revision"] : [])].includes(k)))
     throw new HttpError(400, "Unexpected fields");
   const title = field(data.title, 200, "titolo", true), description = field(data.description ?? "", GALLERY_DESCRIPTION_MAX, "descrizione");
   if (!editing) {
     const key = id();
-    await env.DB.prepare("INSERT INTO galleries(id,title,description,max_crowdedness,max_detail) VALUES(?,?,?,?,?)")
-      .bind(key, title, description, threshold(data.max_crowdedness, "crowding"), threshold(data.max_detail, "detail")).run();
+    await env.DB.prepare("INSERT INTO galleries(id,title,description) VALUES(?,?,?)")
+      .bind(key, title, description).run();
     return findGallery(env, key);
   }
   const gallery = await findGallery(env, key);
   if (data.revision !== gallery.revision) throw new HttpError(409, "Gallery changed: reload the form");
-  const crowdedness = "max_crowdedness" in data ? threshold(data.max_crowdedness, "crowding") : gallery.max_crowdedness;
-  const detail = "max_detail" in data ? threshold(data.max_detail, "detail") : gallery.max_detail;
-  const text = title !== gallery.title || description !== gallery.description;
-  if (!text && crowdedness === gallery.max_crowdedness && detail === gallery.max_detail) return gallery;
-  const updated = await env.DB.prepare(`UPDATE galleries SET title=?,description=?,max_crowdedness=?,max_detail=?,
-    revision=revision+? WHERE id=? AND revision=?`).bind(title, description, crowdedness, detail, text ? 1 : 0, key, gallery.revision).run();
+  if (title === gallery.title && description === gallery.description) return gallery;
+  const updated = await env.DB.prepare(`UPDATE galleries SET title=?,description=?,revision=revision+1 WHERE id=? AND revision=?`)
+    .bind(title, description, key, gallery.revision).run();
   if (!updated.meta.changes) throw new HttpError(409, "Gallery changed: reload the form");
   return findGallery(env, key);
 }

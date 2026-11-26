@@ -1,5 +1,5 @@
 """Dashboard in the browser, desktop and mobile: loading notice, sections, Settings, statistics, sorting, trash of a
-published photo, editing in the detail, crowding and detail of the REAL with the thresholds of the gallery."""
+published photo, editing in the detail, and absence of retired crowding/detail controls."""
 import io
 import os
 import re
@@ -87,52 +87,16 @@ with sync_playwright() as p:
         page.locator('[data-view=library]').click()
         expect(page.locator('#library-analysis')).to_have_count(0)
 
-        # Crowding and detail of the REAL (owner decisions of 2026-11-21): the two new REAL are measured together, one call each, by
-        # the fake model (crowding 29, detail 38).
-        page.get_by_role('checkbox', name=f'Select {name}-rivoli').check()
-        page.get_by_role('checkbox', name=f'Select {name}-spare').check()
-        page.locator('#library-selection [data-bulk=measure]').click()
-        expect(page.locator('#library-message')).to_have_text('2 REAL measured.')
-        assert confirms[-1].startswith('Measure crowding and detail for 2 REAL with gpt-6.1-sol? Maximum 2 paid calls'), confirms[-1]
-        expect(page.locator('#library-selection')).to_be_hidden()
-        expect(page.locator('#library-grid [data-over-threshold]')).to_have_count(0)  # within the defaults, 67 and 100
-        # Thresholds of the gallery from «Modifica galleria»: a REAL above them has the symbol and the warning.
+        # Retired scoring has no commands, gallery thresholds or warnings.
+        expect(page.locator('[data-bulk=measure], [data-over-threshold]')).to_have_count(0)
         page.locator('[data-gallery-edit]').click()
         editor = page.locator('#gallery-editor')
-        expect(editor.locator('[name=max_crowdedness]')).to_have_attribute('placeholder', '67')
-        expect(editor.locator('[name=max_detail]')).to_have_attribute('placeholder', '100')
-        editor.locator('[name=max_crowdedness]').fill('20'); editor.locator('[name=max_detail]').fill('30')
-        editor.get_by_role('button', name='Save changes').click()
-        expect(editor).to_be_hidden()
-        rivoli_symbol = page.locator(f'.library-card:has([aria-label="Open {name}-rivoli"]) [data-over-threshold]')
-        expect(rivoli_symbol).to_have_attribute('title', 'Above the gallery threshold: crowding 29 above the threshold of 20, detail 38 above the threshold of 30')
+        expect(editor.locator('[name=max_crowdedness], [name=max_detail]')).to_have_count(0)
+        editor.locator('[data-gallery-editor-close]').click()
         page.get_by_role('button', name=f'Open {name}-rivoli').click()
         detail = page.locator('#library-detail')
-        expect(detail.locator('p[data-over-threshold]')).to_contain_text('crowding 29 above the threshold of 20, detail 38 above the threshold of 30')
-        expect(detail.locator('[data-measure-values]')).to_contain_text('Crowding 29/100 (2 objects besides the subject), detail 38/100; gallery thresholds 20 and 30.')
-        detail.locator('[data-measure-history] summary').click()
-        expect(detail.locator('.measure-box')).to_have_count(3)
-        expect(detail.locator('.measure-box.is-subject')).to_have_count(1)
-        expect(detail.locator('.measure-objects li').first).to_have_text('Subject: Game Boy: readable text and logos (dense), repeated patterns, countable parts (dense), material textures, joints and mechanisms')
-        expect(detail.locator('.measure-history li')).to_have_count(1)
-        detail.locator('.measure-figure').scroll_into_view_if_needed()
-        detail.screenshot(path=str(folder / f'{name}-measure.png'))
-        # Measuring again from the detail asks for one call and keeps the earlier measure.
-        previous_history = detail.locator('[data-measure-history]').element_handle()
-        detail.locator('#library-measure').click()
-        expect(detail.locator('#library-detail-message')).to_have_text('Measurement saved.')
-        assert confirms[-1].startswith(f'Measure crowding and detail for “{name}-rivoli” with gpt-6.1-sol? One paid call'), confirms[-1]
-        # The notice is written before the gallery reload and detail redraw complete. Open the replacement details, not the old one.
-        page.wait_for_function('(element) => !element.isConnected', arg=previous_history)
-        previous_history.dispose()
-        detail.locator('[data-measure-history] summary').click()
-        expect(detail.locator('.measure-history li')).to_have_count(2)
+        expect(detail.locator('[data-measure], #library-measure')).to_have_count(0)
         detail.locator('.library-detail-close button').click()
-        page.locator('[data-gallery-edit]').click()
-        editor.locator('[name=max_crowdedness]').fill(''); editor.locator('[name=max_detail]').fill('')
-        editor.get_by_role('button', name='Save changes').click()
-        expect(editor).to_be_hidden()
-        expect(page.locator('#library-grid [data-over-threshold]')).to_have_count(0)
 
         # Selecting a new image keeps keyboard focus and shows the matching commands below the scroll viewport.
         spare = page.get_by_role('checkbox', name=f'Select {name}-spare')
@@ -219,12 +183,11 @@ with sync_playwright() as p:
         page.locator('[name=open_game_hours]').fill('0'); page.locator('#library-games-form button').click()
         expect(page.locator('[name=open_game_hours]')).to_have_value('0')  # the browser stops it: minimum 1
         page.locator('[name=open_game_hours]').fill('24')
-        # «Statistiche»: the only paid calls of this run are the measures of the REAL (kind «analysis», with the old analyses).
+        # Statistics remain available without creating any paid measurement.
         page.get_by_role('button', name='Statistics').click()
         stats = page.locator('#stats-body')
         expect(stats.locator('.stat-tile', has_text='games active now')).to_be_visible()
         expect(stats.locator('.stats-calls tbody tr', has_text='Analisi delle photos')).to_have_count(0)
-        expect(stats.locator('.stats-calls tbody tr', has_text='REAL analysis and measurements').first).to_be_visible()
         stats.locator('[data-stats-kind]').select_option('images')
         stats.locator('[data-stats-period]').select_option('7')
         expect(stats.locator('[data-stats-period]')).to_have_value('7')
@@ -236,7 +199,7 @@ with sync_playwright() as p:
         base_field = page.locator('[data-context=base]')
         expect(base_field).to_have_value(re.compile('^You work on a photographic archive'))
         expect(page.locator('[data-context]')).to_have_count(4)
-        expect(page.locator('[data-context=real_measure]')).to_have_value(re.compile('^Measure a photograph'))
+        expect(page.locator('[data-context=real_measure]')).to_have_count(0)
         expect(page.locator('[data-context=slop_gallery_prompt]')).to_have_value(re.compile('themed gallery'))
         approved = base_field.input_value()
         base_field.fill(approved + '\nProva dalla dashboard.')
@@ -253,17 +216,8 @@ with sync_playwright() as p:
         page.screenshot(path=str(folder / f'{name}-settings.png'), full_page=True)
         # No vocabulary of tags in Settings any more.
         expect(page.locator('#library-vocabulary')).to_have_count(0)
-        expect(page.locator('.settings-index button')).to_have_text(['Models', 'Generation', 'AI instructions', 'Games', 'REAL measurements', 'Commons sources', 'Leaderboard'])
-        # Default thresholds of crowding and detail: 67 and 100, from 0 to 100.
-        page.locator('.settings-index button', has_text='REAL measurements').click()
-        expect(page.locator('[name=crowdedness_threshold]')).to_have_value('67')
-        expect(page.locator('[name=detail_threshold]')).to_have_value('100')
-        expect(page.locator('[name=detail_threshold]')).to_have_attribute('max', '100')
-        page.locator('[name=crowdedness_threshold]').fill('60'); page.locator('#library-measures-form button').click()
-        expect(page.locator('#library-settings-message')).to_have_text('Default crowding and detail thresholds saved.')
-        assert page.request.get(base + '/api/admin/library/settings').json()['values']['crowdedness_threshold'] == 60
-        page.locator('[name=crowdedness_threshold]').fill('67'); page.locator('#library-measures-form button').click()
-        expect(page.locator('#library-settings-message')).to_have_text('Default crowding and detail thresholds saved.')
+        expect(page.locator('.settings-index button')).to_have_text(['Models', 'Generation', 'AI instructions', 'Games', 'Commons sources', 'Leaderboard'])
+        expect(page.locator('#library-measures, [name=crowdedness_threshold], [name=detail_threshold]')).to_have_count(0)
         # REAL checked on Commons each night: 50 by default, from 0 (paused) to 500.
         page.locator('.settings-index button', has_text='Commons sources').click()
         checks = page.locator('[name=commons_checks_per_night]')

@@ -1,4 +1,4 @@
-"""Fake OpenAI for the integration tests: Responses API (measures and ideas of the REAL, SLOP proposals and evaluations), image
+"""Fake OpenAI for the integration tests: Responses API (ideas and descriptions of the REAL, SLOP proposals and evaluations), image
 generation and the list of models, with a control endpoint to queue errors (4xx, 5xx, 429, unreadable answers) and read the log."""
 import base64
 import io
@@ -97,14 +97,6 @@ class Handler(BaseHTTPRequestHandler):
                  'genre': 'Foto di collezione', 'changes': 'Ambiente e punto di vista'},
                 {'idea': 'Una variante di colore della console in una vetrina, ripresa di tre quarti.',
                  'genre': 'Foto di collezione', 'changes': 'Esemplare, ambiente e punto di vista'}], 'reason': ''}}
-        if schema_name == 'real_measure' and (behaviour is None or 'delay' in behaviour):
-            # A subject with 7 of 14 levels of detail and two plain objects beside it: crowding 29, detail 38.
-            plain = {k: 0 for k in ('text', 'repeated', 'countable', 'texture', 'reflective', 'joints', 'people')}
-            behaviour = {'json': {'subject': {'name': 'Game Boy', 'box': {'x': 0.25, 'y': 0.2, 'width': 0.5, 'height': 0.6},
-                                              'detail': {**plain, 'text': 2, 'repeated': 1, 'countable': 2, 'texture': 1, 'joints': 1}},
-                                  'others': [{'name': 'cartuccia', 'box': {'x': 0.8, 'y': 0.7, 'width': 0.15, 'height': 0.2}, 'detail': plain},
-                                             {'name': 'scatola', 'box': {'x': 0.0, 'y': 0.6, 'width': 0.2, 'height': 0.3}, 'detail': plain}],
-                                  'unlisted': 0}}
         if schema_name == 'slop_gallery_proposal' and (behaviour is None or 'delay' in behaviour):
             behaviour = {'json': {'premise': 'Un bus d’epoca inventato attraversa la piazza riconoscibile.',
                                   'prompt': 'A plausible invented vintage bus crossing a recognizable square in natural light.', 'reason': ''}}

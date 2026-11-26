@@ -67,8 +67,7 @@ for item in (real, slop):
 # by migration 0066, the gallery prompt from the one saved by 0070 over it; the retired «Descrizione delle REAL» is not offered any more.
 status, contexts = call(f'{API}/contexts'); assert status == 200 and contexts['max'] == 4000, contexts
 parts = {p['part']: p for p in contexts['parts']}
-assert set(parts) == {'base', 'real_measure', 'real_ideas', 'slop_gallery_prompt', 'slop_evaluation'} and all(p['history'] for p in parts.values()), contexts
-assert 'Detail' in parts['real_measure']['current']['body'] and 'people and anatomy' in parts['real_measure']['current']['body'], parts
+assert set(parts) == {'base', 'real_ideas', 'slop_gallery_prompt', 'slop_evaluation'} and all(p['history'] for p in parts.values()), contexts
 assert all(p['proposed'] is None for k,p in parts.items() if k != 'real_ideas'), 'the current texts are the proposals of the code'
 base_text = parts['base']['current']['body']
 assert base_text.startswith('You work on a photographic archive.') and 'English' in base_text, base_text
@@ -108,81 +107,24 @@ assert code == 200 and models['image_model'] == 'gpt-image-2' and models['text_m
 assert call(f'{API}/models', {'text_model': 'gpt-6.1-sol', 'image_model': 'gpt-image-2.5-flare'}, method='PUT')[0] == 200
 assert openai() == []
 
-# Crowding and detail of a REAL: one confirmed paid call, the scores computed by the Worker, every measure kept.
+# Retired scoring cannot produce paid calls or alter current gallery/settings data.
 import uuid
-def measure(item, **extra):
-    return call(f'{API}/{item["id"]}/measure', {'confirm': True, 'request': str(uuid.uuid4()), **extra})
-def calls(): return sql("SELECT count(*) AS n FROM paid_calls WHERE kind='analysis'")[0]['n']
-real = upload('REAL', 'Game Boy su una scrivania')
-slop = upload('SLOP', prompt='A handheld console.', model='gpt-image-2')
-assert real['measure'] is None and 'measure' not in slop
+real = upload('REAL', 'Console without retired scores')
+assert 'measure' not in real
 openai([])
-for wrong in ({}, {'confirm': True}, {'confirm': False, 'request': str(uuid.uuid4())}, {'confirm': True, 'request': 'x'},
-              {'confirm': True, 'request': str(uuid.uuid4()), 'other': 1}):
-    assert call(f'{API}/{real["id"]}/measure', wrong)[0] == 400, wrong
-assert measure(slop)[0] == 409 and openai() == [] and calls() == 0
-status, measured = measure(real)
-assert status == 201, measured
-m = measured['measure']
-assert (m['crowdedness'], m['detail'], m['objects'], m['model'], m['formula']) == (29, 38, 2, 'gpt-6.1-sol', 2), m
-assert m['limits'] == {'crowdedness': 67, 'detail': 100} and m['over'] == [], m
-sent = openai()
-assert len(sent) == 1 and sent[0]['body']['text']['format']['name'] == 'real_measure', sent
-body = sent[0]['body']
-assert body['input'][0]['content'][1]['image_url'].startswith('data:image/png;base64,') and body['input'][0]['content'][1]['detail'] == 'high'
-assert json.loads(body['input'][0]['content'][0]['text']) == {'gallery': {'title': 'Test analysis', 'description': ''}}, body['input'][0]['content'][0]
-assert 'Other objects' in body['instructions'] and body['instructions'].startswith('You work on a photographic archive.')
-assert calls() == 1 and sql("SELECT image_id FROM paid_calls WHERE kind='analysis'")[0]['image_id'] == real['id']
-# The same confirmation sent twice reaches the model once.
-request = str(uuid.uuid4())
-assert call(f'{API}/{real["id"]}/measure', {'confirm': True, 'request': request})[0] == 201
-assert call(f'{API}/{real["id"]}/measure', {'confirm': True, 'request': request})[0] == 409 and calls() == 2
-# Every measure is kept, the latest first, with the objects the model saw and the context versions.
-history = call(f'{API}/{real["id"]}/measures')[1]['measures']
-assert len(history) == 2 and history[0]['observation']['subject']['name'] == 'Game Boy' and len(history[0]['observation']['others']) == 2, history
-measure_context = next(p for p in call(f'{API}/contexts')[1]['parts'] if p['part'] == 'real_measure')['current']['id']
-assert history[0]['measure_context'] == measure_context and history[0]['base_context'], history[0]
-# Thresholds: the gallery's own, else the defaults of the settings; a gallery's thresholds never change its revision.
+assert call(f'{API}/{real["id"]}/measure', {'confirm': True, 'request': str(uuid.uuid4())})[0] == 404
+assert call(f'{API}/{real["id"]}/measures')[0] == 404
+assert openai() == []
 gallery = call(f'{API}/galleries/{gallery_id}')[1]
-assert gallery['max_crowdedness'] is None and gallery['max_detail'] is None
-listing = call(f'{API}/galleries')[1]
-assert listing['thresholds'] == {'crowdedness': 67, 'detail': 100}, listing['thresholds']
-edit = {'title': gallery['title'], 'description': gallery['description'], 'revision': gallery['revision']}
-assert 'slop_instructions' not in gallery and call(f'{API}/galleries/{gallery_id}', {**edit, 'slop_instructions': 'x'}, method='PATCH')[0] == 400
-assert call(f'{API}/galleries/{gallery_id}/suggest', {'confirm': True, 'request': str(uuid.uuid4()), 'revision': gallery['revision']})[0] == 404
-for wrong in (101, -1, 2.5, '50'):
-    assert call(f'{API}/galleries/{gallery_id}', {**edit, 'max_crowdedness': wrong}, method='PATCH')[0] == 400, wrong
-status, changed = call(f'{API}/galleries/{gallery_id}', {**edit, 'max_crowdedness': 20, 'max_detail': 30}, method='PATCH')
-assert status == 200 and (changed['max_crowdedness'], changed['max_detail'], changed['revision']) == (20, 30, gallery['revision']), changed
-m = call(f'{API}/{real["id"]}')[1]['measure']
-assert m['over'] == ['crowdedness', 'detail'] and m['limits'] == {'crowdedness': 20, 'detail': 30}, m
-assert next(i for i in call(f'{API}?' + urllib.parse.urlencode({'gallery': gallery_id}))[1]['items'] if i['id'] == real['id'])['measure']['over'] == ['crowdedness', 'detail']
-status, changed = call(f'{API}/galleries/{gallery_id}', {**edit, 'max_crowdedness': None, 'max_detail': None}, method='PATCH')
-assert status == 200 and changed['max_crowdedness'] is None and changed['revision'] == gallery['revision'], changed
-assert call(f'{API}/settings', {'crowdedness_threshold': 28}, method='PUT')[0] == 200
-for wrong in ({'crowdedness_threshold': 101}, {'detail_threshold': -1}):
-    assert call(f'{API}/settings', wrong, method='PUT')[0] == 400, wrong
-m = call(f'{API}/{real["id"]}')[1]['measure']
-assert m['over'] == ['crowdedness'] and m['limits'] == {'crowdedness': 28, 'detail': 100}, m
-assert call(f'{API}/settings', {'crowdedness_threshold': 67}, method='PUT')[0] == 200
-# A measure of the first formula (six kinds, present or not) still reads, and says which formula it used.
-sql(f"""INSERT INTO real_measures(id,image_id,model,base_context,measure_context,observation,crowdedness,detail,created_at,formula)
-  VALUES('formula-1','{real['id']}','gpt-6.1-sol','b','m','{{"subject":{{"name":"console","box":{{"x":0,"y":0,"width":1,"height":1}},"detail":{{"text":true}}}},"others":[],"unlisted":0}}',0,100,'2000-01-01T00:00:00.000Z',1)""")
-history = call(f'{API}/{real["id"]}/measures')[1]['measures']
-assert history[-1]['id'] == 'formula-1' and history[-1]['formula'] == 1 and history[0]['formula'] == 2, history
-# Failures: an unreadable or malformed answer stores nothing; a server error is uncertain and never repeated.
-before = len(call(f'{API}/{real["id"]}/measures')[1]['measures'])
-openai([{'garbage': True}, {'json': {'subject': {'name': 'x'}, 'others': [], 'unlisted': 0}}, {'status': 500}])
-assert measure(real)[0] == 502 and measure(real)[0] == 502
-status, result = measure(real); assert status == 502 and 'ncertain' in result['error'], result
-assert len(openai()) == 3 and len(call(f'{API}/{real["id"]}/measures')[1]['measures']) == before
-assert sql("SELECT status FROM paid_calls WHERE kind='analysis' ORDER BY created_at DESC LIMIT 1")[0]['status'] == 'uncertain'
-# A photo in the trash is not measured; deleting it deletes its measures.
-call(f'{API}/{real["id"]}/trash', {})
-assert measure(real)[0] == 409
-assert call(f'{API}/{real["id"]}', method='DELETE')[1]['deleted'] == 1
-assert sql(f"SELECT count(*) AS n FROM real_measures WHERE image_id='{real['id']}'")[0]['n'] == 0
-call(f'{API}/{slop["id"]}/trash', {}); call(f'{API}/{slop["id"]}', method='DELETE')
+assert 'max_crowdedness' not in gallery and 'max_detail' not in gallery
+assert 'thresholds' not in call(f'{API}/galleries')[1]
+for key in ('max_crowdedness', 'max_detail'):
+    assert call(f'{API}/galleries/{gallery_id}', {'title': gallery['title'], 'revision': gallery['revision'], key: 50}, method='PATCH')[0] == 400
+for key in ('crowdedness_threshold', 'detail_threshold'):
+    assert key not in call(f'{API}/settings')[1]['values']
+    assert call(f'{API}/settings', {key: 50}, method='PUT')[0] == 400
+assert call(f'{API}/contexts', {'part': 'real_measure', 'body': 'Retired'}, method='POST')[0] == 400
+call(f'{API}/{real["id"]}/trash', {}); call(f'{API}/{real["id"]}', method='DELETE')
 
 # Ideas of falsification (owner decisions of 2026-11-21): one confirmed call, at most three per REAL, approved by the owner.
 def ideas(item, **extra):
@@ -202,7 +144,7 @@ assert status == 201 and [i['state'] for i in item['ideas']] == ['proposed', 'pr
 sent = openai(); body = sent[0]['body']
 assert len(sent) == 1 and body['text']['format']['name'] == 'real_ideas' and body['input'][0]['content'][1]['detail'] == 'high'
 given = json.loads(body['input'][0]['content'][0]['text'])
-assert given['ideas_wanted'] == 3 and given['existing_ideas'] == [] and given['levels'] is None, given
+assert given['ideas_wanted'] == 3 and given['existing_ideas'] == [] and 'levels' not in given, given
 assert given['reference'] == {'title': 'Game Boy per le idee di falsificazione', 'description': ''} and given['gallery'] == {'title': 'Test analysis', 'description': ''}, given
 assert 'never copied' in body['instructions'] and 'Invent any people' in body['instructions']
 assert sql("SELECT count(*) AS n FROM paid_calls WHERE kind='prompts'")[0]['n'] == calls_before + 1

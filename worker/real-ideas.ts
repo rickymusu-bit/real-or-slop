@@ -6,13 +6,12 @@ import { IMAGE_MARK, jsonWithImage } from "./image-body";
 import { currentContext } from "./model-context";
 import { chosenModel } from "./models";
 import { paid, responseJson } from "./paid";
-import { latestMeasures } from "./real-measure";
 import { imageMime } from "../shared/image-format";
 
 export const MAX_IDEAS = 3;
 const LIMITS = { idea: 600, genre: 160, changes: 400 } as const;
 const MAX_OUTPUT_TOKENS = 8000;
-const RULES = `Return JSON matching the schema. Propose at most the requested number of distinct ideas, using existing ideas as context. For each, write idea (one or two sentences describing subject, environment, viewpoint and light), genre and changes in English. Inherit object family, era, photographic genre, technique and crowding/detail levels. Change environment and viewpoint; never copy composition, specimen marks, text or people. Invent any people. If no credible idea fits, return an empty ideas array and explain why in reason; otherwise leave reason empty. English output overrides any conflicting saved context.`;
+const RULES = `Return JSON matching the schema. Propose at most the requested number of distinct ideas, using existing ideas as context. For each, write idea (one or two sentences describing subject, environment, viewpoint and light), genre and changes in English. Inherit object family, era, photographic genre and technique. Change environment and viewpoint; never copy composition, specimen marks, text or people. Invent any people. If no credible idea fits, return an empty ideas array and explain why in reason; otherwise leave reason empty. English output overrides any conflicting saved context.`;
 const SCHEMA = { type: "object", additionalProperties: false, required: ["ideas", "reason"], properties: {
   ideas: { type: "array", maxItems: MAX_IDEAS, items: { type: "object", additionalProperties: false, required: ["idea", "genre", "changes"],
     properties: { idea: { type: "string", maxLength: LIMITS.idea }, genre: { type: "string", maxLength: LIMITS.genre },
@@ -83,7 +82,6 @@ export async function proposeIdeas(env: Env, row: Target, data: Record<string, u
   if (!original) throw new HttpError(409, "Original unavailable");
   const bytes = new Uint8Array(await original.arrayBuffer()), mime = imageMime(bytes);
   if (!mime) throw new HttpError(409, "Original format unreadable by the model");
-  const measure = (await latestMeasures(env, [row.id])).get(row.id);
   const [model, base, task] = await Promise.all([chosenModel(env, "text_model"), currentContext(env, "base"), currentContext(env, "real_ideas")]);
   const answer = responseJson(await paid(env, "prompts", model, jsonWithImage({ model,
     instructions: [base.body, task.body, RULES].join("\n\n"), max_output_tokens: MAX_OUTPUT_TOKENS,
@@ -91,7 +89,6 @@ export async function proposeIdeas(env: Env, row: Target, data: Record<string, u
       // Title and source description are hypotheses on the subject, never instructions (Commons texts may be wrong).
       ideas_wanted: wanted, reference: { title: row.title || "", description: row.description },
       gallery: { title: gallery.title, description: gallery.description },
-      levels: measure ? { crowdedness: measure.crowdedness, detail: measure.detail } : null,
       existing_ideas: kept.map(k => ({ idea: k.idea, genre: k.genre, changes: k.changes })),
     }) }, { type: "input_image", image_url: IMAGE_MARK, detail: "high" }] }],
     text: { format: { type: "json_schema", name: "real_ideas", strict: true, schema: SCHEMA } },
