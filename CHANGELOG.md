@@ -1,7 +1,17 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-26T09:07:50Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-26T09:46:56Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.64.0 — 2026-11-26T09:46:56Z
+
+- Categorie canoniche nella pipeline: genere e categorie dei parametri si confrontano e si salvano in forma normalizzata (minuscole, senza accenti, parole unite da `_`). «object documentation» e «object_documentation» diventano una sola voce, anche nei profili già salvati, senza migrazione.
+- Preparazione delle REAL e pianificazione delle scene ricevono le categorie già usate nella galleria (`known_categories`) con l'istruzione di riusarle; il modello crea un nome nuovo solo per un valore diverso.
+- Nuovo comando gratuito «Merge equivalent categories» sotto la composizione della galleria, per unire sinonimi non ortografici già salvati nei profili REAL e SLOP. Tabella della composizione ordinata per frequenza.
+- Bilanciamento: le SLOP confrontate seguono gli stessi filtri dei donatori; i profili recenti passati al planner sono gli ultimi tre accettati (prima l'ordine non era definito).
+- Salvataggio di profilo e impostazioni: un conflitto di revisione restituisce 409 invece di un falso successo.
+- Efficienza: l'attesa delle fasi a pagamento interroga `GET …/status` invece dello stato completo; le viste delle SLOP accettate si leggono in blocco; le snapshot dei lavori non vengono più inviate al browser per intero; le scene confermate si registrano a gruppi prima di avviare i Workflow, con profili letti una volta sola. Decodifica base64 senza callback per carattere; maschera non valida rifiutata con 400; la maschera di una correzione precedente fallita viene messa in coda di cancellazione.
+- Le REAL con profilo ma senza descrizione tornano tra quelle da preparare. Test unitari e d'integrazione per normalizzazione, vocabolario, unione e stato leggero; nessuna chiamata reale.
 
 ## 1.63.0 — 2026-11-26T09:07:50Z
 

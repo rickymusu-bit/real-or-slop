@@ -42,18 +42,45 @@ export function validProfile(value: unknown): value is Profile {
       && ["identity", "specimen", "temporary"].includes(x.role) && ["preserve", "vary", "draw"].includes(x.policy)
       && ["observed", "inferred", "unknown"].includes(x.certainty));
 }
+/** Canonical balancing key: case, accents, spaces, hyphens and underscores never split one category into several. */
+export function normalizeCategory(value: string): string {
+  return value.normalize("NFKD").replace(/\p{M}+/gu, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "_").replace(/^_+|_+$/g, "") || "unspecified";
+}
+/** Copy with canonical genre and categories; free-text values and peculiarities are untouched. */
+export function normalizeProfile(profile: Profile): Profile {
+  return { ...profile, genre: normalizeCategory(profile.genre), parameters: Object.fromEntries(PARAMETER_KEYS.map(key =>
+    [key, { ...profile.parameters[key], category: normalizeCategory(profile.parameters[key].category) }])) as Profile["parameters"] };
+}
+export type Vocabulary = Partial<Record<Parameter | "genre", string[]>>;
+/** Categories already used in a gallery, most frequent first, so independent model calls can reuse the same names. */
+export function vocabulary(profiles: Profile[], limit = 25): Vocabulary {
+  const out: Vocabulary = {};
+  for (const key of ["genre", ...PARAMETER_KEYS] as const) {
+    const counts = new Map<string, number>();
+    for (const p of profiles) {
+      if (key !== "genre" && p.parameters[key].certainty === "unknown") continue;
+      const category = normalizeCategory(key === "genre" ? p.genre : p.parameters[key].category);
+      counts.set(category, (counts.get(category) || 0) + 1);
+    }
+    if (counts.size) out[key] = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, limit).map(([category]) => category);
+  }
+  return out;
+}
 /** Empirical target sampling includes ordinary/absent values; unknown evidence never means absence. */
 export function variation(source: Profile, population: Profile[], settings: PipelineSettings, random: () => number = Math.random, generated: Profile[] = []): Variation {
   const selected: Parameter[] = [], targets: Variation["targets"] = {};
+  source = normalizeProfile(source); population = population.map(normalizeProfile); generated = generated.map(normalizeProfile);
   for (const key of PARAMETER_KEYS) {
     let donors = population.filter(p => p.parameters[key].certainty !== "unknown");
+    let comparable = generated.filter(p => p.parameters[key].certainty !== "unknown");
     if (["edition_decoration", "material_finish", "operating_state", "screen_content"].includes(key)) {
-      const compatible = donors.filter(p => p.parameters.model.category === (targets.model?.category ?? source.parameters.model.category));
-      if (compatible.length) donors = compatible;
+      const model = targets.model?.category ?? source.parameters.model.category;
+      const compatible = donors.filter(p => p.parameters.model.category === model);
+      if (compatible.length) { donors = compatible; comparable = comparable.filter(p => p.parameters.model.category === model); }
     }
     if (["viewpoint", "composition", "aspect_ratio"].includes(key) && settings.environment !== "change_genre") {
       const sameGenre = donors.filter(p => p.genre === source.genre);
-      if (sameGenre.length) donors = sameGenre;
+      if (sameGenre.length) { donors = sameGenre; comparable = comparable.filter(p => p.genre === source.genre); }
     }
     if (!donors.length) continue;
     const frequencies = new Map<string, number>();
@@ -61,13 +88,14 @@ export function variation(source: Profile, population: Profile[], settings: Pipe
     const automatic = Math.min(.4, Math.max(.05, 1 - Math.max(...frequencies.values()) / donors.length));
     if (random() >= (settings.probabilities[key] ?? automatic)) continue;
     selected.push(key);
-    // Correct under/over-representation of intended accepted SLOP attributes with smoothed, bounded weights.
+    // Correct under/over-representation of intended accepted SLOP attributes with smoothed, bounded weights,
+    // comparing SLOP within the same model/genre scope as the donors.
     const slopCounts = new Map<string,number>();
-    for(const p of generated){const category=p.parameters?.[key]?.category;if(category)slopCounts.set(category,(slopCounts.get(category)||0)+1);}
+    for (const p of comparable) slopCounts.set(p.parameters[key].category, (slopCounts.get(p.parameters[key].category) || 0) + 1);
     const weights = donors.map(p => {
       const category = p.parameters[key].category;
       const realShare = (frequencies.get(category) || 0) / donors.length;
-      const slopShare = ((slopCounts.get(category) || 0) + 5 * realShare) / (generated.length + 5);
+      const slopShare = ((slopCounts.get(category) || 0) + 5 * realShare) / (comparable.length + 5);
       return Math.min(4, Math.max(.25, realShare / slopShare));
     });
     let at = random() * weights.reduce((n, w) => n + w, 0), index = 0;

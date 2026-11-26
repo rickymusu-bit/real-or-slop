@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 17.5.0
+# Generazione SLOP — specifica 17.6.0
 
-Aggiornata: 2026-11-26T09:07:50Z. Stato: implementata nel ramo 1.63.0, da rilasciare.
+Aggiornata: 2026-11-26T09:46:56Z. Stato: implementata nel ramo 1.64.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -37,6 +37,10 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
 
 - **Prepara la galleria:** una chiamata per REAL ancora priva di profilo, su originale intero. Salva descrizione inglese,
   identità, genere, parametri osservati e particolarità. Riusa i profili già presenti. I dati sono rivedibili senza chiamate.
+- **Unisci categorie:** sotto la composizione della galleria, gratuito. L'owner sceglie una caratteristica, spunta le
+  categorie equivalenti e indica il nome unificato; il server lo applica ai profili REAL e SLOP della galleria con un
+  controllo sul testo salvato, senza toccare valori liberi, descrizioni o lavori già congelati. Rifiutato mentre è in corso
+  una preparazione delle REAL.
 - **Regole e probabilità:** modificabili per galleria. Ogni probabilità vuota usa la stima automatica; zero disabilita un controllo.
   L'ambiente può restare invariato, variare entro lo stesso genere o cambiare insieme al genere.
 - **Prepara scene:** una chiamata per REAL selezionata e preparata. Le estrazioni e i riferimenti vengono congelati. Sono
@@ -52,7 +56,7 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
   è calcolata dal browser. Il riferimento del trattamento è campionato fra REAL misurate dello stesso genere di destinazione;
   senza riferimento disponibile la copia parte senza trattamento. Inquadratura e cursori riusano gli editor esistenti.
 
-API private: `GET /api/admin/pipeline/:gallery`; `POST /:gallery/settings`, `/profile`, `/prepare`, `/plan`, `/stop`;
+API private: `GET /api/admin/pipeline/:gallery` e `/status` (solo stato dei lavori, usato durante l’attesa); `POST /:gallery/settings`, `/profile`, `/categories`, `/prepare`, `/plan`, `/stop`;
 `POST /:gallery/:job/{scene,generate,evaluate,edit,accept,close}`; `GET /:gallery/:job/file` e `?previous=1`.
 Le fasi a pagamento richiedono `confirm`, UUID `request` e `max_calls` esatto. Dal 2026-11-26 la preparazione accetta fino a 5000 REAL in una richiesta: tutta la selezione viene accodata atomicamente prima dell’avvio, senza dipendere da una successione di richieste del browser. Lo stesso comando prepara descrizioni e profili da Import REAL, galleria e dettaglio. `GET /api/admin/pipeline/:gallery/descriptions` espone l’avanzamento senza i profili completi. Il planner conserva il limite di 500 scene per richiesta, con suddivisione delle selezioni maggiori entro il massimo confermato.
 Modelli e qualità sono quelli selezionati nelle Impostazioni; il selettore include GPT-6.2 Sol e Sunburst.
@@ -121,6 +125,18 @@ importa il piano d'appoggio del donatore. Usura, danno, invecchiamento e pulizia
 determinabile. Un valore ignoto non prova l'assenza di un fenomeno. Persone, accessori e numero dei soggetti non diventano nuove
 variazioni attive in questo test. I profili sono JSON privati validati, salvati in `images.pipeline_profile`; i controlli sono definiti in `shared/pipeline.ts`.
 
+Categorie canoniche (2026-11-26, segnalazione dell'owner: «object documentation» e «object_documentation» contate come
+categorie diverse). Genere e `category` di ogni parametro sono chiavi di bilanciamento, non testo libero: si salvano e si
+confrontano in forma canonica (minuscole, accenti rimossi, ogni sequenza di caratteri non alfanumerici sostituita da `_`;
+una categoria vuota diventa `unspecified`). La normalizzazione si applica in lettura anche ai profili salvati prima, per
+statistiche, estrazioni, riferimenti, campione del trattamento e accettazione, e in scrittura per profili preparati, modificati
+dall'owner, proposti dal planner e accettati. Il valore libero (`value`) e le particolarità restano invariati. Le chiamate
+di preparazione e di pianificazione ricevono `known_categories`, le categorie già usate nella galleria per genere e parametro
+(fino a 25 per chiave, le più frequenti, escluse le osservazioni ignote), con l'istruzione di riusare il nome esistente quando
+indica la stessa cosa. Per la preparazione l'elenco si legge all'avvio di ogni lavoro, così le REAL dello stesso batch vedono
+le categorie di quelle già completate. Sinonimi non ortografici («catalog product photograph» e «catalog product photography»)
+non vengono fusi automaticamente: li unisce l'owner con il comando gratuito.
+
 ## 4. Estrazione e bilanciamento
 
 Estrarre **zero o più parametri**, ciascuno con probabilità configurabile per galleria. Distinguere la probabilità di modificarlo
@@ -137,7 +153,9 @@ conserva tutte le correlazioni delle REAL. Evitare duplicati riconoscibili lasci
 comuni anche nelle SLOP; non imporre unicità a ogni immagine. Scartare o adattare un valore incompatibile dichiarandone il motivo,
 senza introdurre modifiche nascoste degli altri parametri. La stima automatica di selezione per parametro è `clamp(1 − quota_della_categoria_più_frequente, 0.05, 0.4)`.
 I valori vengono campionati dalle REAL compatibili (modello o genere quando necessario), con pesi da 0.25 a 4 per compensare
-sotto/sovrarappresentazione nei parametri previsti delle SLOP accettate e prior proporzionale alle REAL. Non si presume una
+sotto/sovrarappresentazione nei parametri previsti delle SLOP accettate e prior proporzionale alle REAL. Dalla 1.64.0 le SLOP
+confrontate sono filtrate come i donatori (stesso modello o genere quando il parametro lo richiede, escluse le categorie ignote),
+e i profili «recenti» passati al planner sono davvero gli ultimi tre accettati in ordine di creazione. Non si presume una
 misura osservata delle SLOP: le distribuzioni mostrate sono quelle richieste. Il controllo delle combinazioni è affidato ai
 vincoli del planner, a pochi profili recenti e alla revisione umana; non è una garanzia statistica o un rilevatore di duplicati. Questi controlli non autorizzano cicli automatici di correzione delle immagini.
 

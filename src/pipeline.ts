@@ -21,7 +21,9 @@ const ACTIVE_PAID = new Set(["queued", "dispatching", "working"]);
 
 export async function mountPipeline(root: HTMLElement, gallery: string) {
   const api = `/api/admin/pipeline/${encodeURIComponent(gallery)}`;
-  let state: State | null = null, busy = false, notice = "", selected = new Set<string>(), initialized = false;
+  let state: State | null = null, busy = false, notice = "", selected = new Set<string>(), initialized = false, mergeKey = "genre";
+  const openPanels = new Set<string>();
+  type JobStatus = Pick<Job, "id" | "state" | "error">;
   const call = async <T>(path = "", data?: unknown, base = api): Promise<T> => {
     const response = await fetch(base + path, { method: data === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store",
       headers: { "Content-Type": "application/json" }, body: data === undefined ? undefined : JSON.stringify(data) });
@@ -44,17 +46,19 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
       catch (error) {
         submissionError = error;
         // A lost enqueue response can still mean the server accepted work. Observe it, never send again.
-        let current: State;
-        try { current = await call<State>(); }
+        let current: { jobs: JobStatus[] };
+        try { current = await call<{ jobs: JobStatus[] }>("/status"); }
         catch { throw Error("Cannot confirm server progress. Work may continue on the server; reload to check without repeating paid calls."); }
         for (const job of current.jobs) if (ACTIVE_PAID.has(job.state)) jobs.add(job.id);
       } finally { finishSubmission(); }
       const total = jobs.size, failures: string[] = [];
       while (jobs.size && root.isConnected) {
-        try { state = await call<State>(); }
+        // Light status reads while waiting; the full page state is reloaded once at the end.
+        let status: JobStatus[];
+        try { status = (await call<{ jobs: JobStatus[] }>("/status")).jobs; }
         catch { throw Error("Cannot read server progress. Work continues on the server; reload to resume observation without repeating paid calls."); }
         for (const id of jobs) {
-          const job = state.jobs.find(item => item.id === id);
+          const job = status.find(item => item.id === id);
           if (job && ACTIVE_PAID.has(job.state)) continue;
           if (job && ["attention", "failed"].includes(job.state)) failures.push(job.error || LABELS[job.state]);
           jobs.delete(id);
@@ -103,10 +107,21 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
     for(const axis of AXES)proposal.scene[axis]=form.querySelector<HTMLTextAreaElement>(`[data-axis="${axis}"]`)!.value;
     proposal.genre=form.querySelector<HTMLInputElement>("[data-scene-genre]")!.value;proposal.aspect_ratio=form.querySelector<HTMLInputElement>("[data-scene-ratio]")!.value;proposal.profile=readProfile(proposal.profile,job.id);return proposal;
   };
+  const featureName = (key: string) => PARAMETERS[key as keyof typeof PARAMETERS] || "Photographic genre";
+  const counts = (values: Record<string, number>) => Object.entries(values).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([k, n]) => `${k}: ${n}`).join(", ");
+  /** Free consolidation of synonyms already saved in the gallery profiles (REAL and SLOP). */
+  const mergeForm = (rows: State["stats"]["rows"]) => `<fieldset class="pipeline-merge"><legend>Merge equivalent categories (free)</legend>
+    <p>Categories are stored in canonical form (lowercase, words joined by underscores). Merge names that mean the same thing; free-text values and descriptions are not changed.</p>
+    <label>Feature<select data-merge-key>${rows.map(r => `<option value="${r.key}" ${r.key === mergeKey ? "selected" : ""}>${escape(featureName(r.key))}</option>`).join("")}</select></label>
+    ${rows.map(r => { const all: Record<string, number> = { ...r.real }; for (const [k, n] of Object.entries(r.slop)) all[k] = (all[k] || 0) + n;
+      return `<div data-merge-group="${r.key}" ${r.key === mergeKey ? "" : "hidden"}>${Object.entries(all).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([k, n]) =>
+        `<label><input type="checkbox" data-merge-category value="${escape(k)}"> ${escape(k)} (${n})</label>`).join("") || "<p>No categories yet.</p>"}</div>`; }).join("")}
+    <label>Merged category<input data-merge-into autocomplete="off" placeholder="e.g. object_documentation"></label>
+    <button data-action="merge">Merge selected categories</button></fieldset>`;
   const render = () => {
     if (!state) { root.innerHTML = `<p role="status">${escape(notice || "Loading…")}</p>`; return; }
     const activeSources = new Set(state.jobs.map(j => j.source_id));
-    const pending = state.sources.filter(s => !s.profile && !activeSources.has(s.id));
+    const pending = state.sources.filter(s => (!s.profile || !s.described) && !activeSources.has(s.id));
     const prepared = state.sources.filter(s => s.profile && s.described && !activeSources.has(s.id) && selected.has(s.id));
     root.innerHTML = `<section class="pipeline"><button data-action="refresh">Refresh status</button><p><a href="/docs/pipeline-slop.svg" target="_blank" rel="noopener">Complete pipeline diagram</a> · <a href="${galleryPhotosPath(gallery)}">Gallery photos</a></p>
       <p role="status" data-pipeline-notice>${escape(notice)}</p>
@@ -114,7 +129,7 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
       <button data-action="prepare" ${pending.length && !busy && state.paid_calls ? "" : "disabled"}>Describe and prepare all missing REAL (${pending.length})</button>
       <p>One call per full original: English description, genre, parameters and peculiarities. Distinctive temporary details are varied; model and edition details are preserved.</p>
       <details><summary>REAL and peculiarities</summary><label><input type="checkbox" data-all ${state.sources.every(s => selected.has(s.id)) ? "checked" : ""}> Select all</label>${state.sources.map(s => `<div class="pipeline-source"><label><input type="checkbox" data-source="${s.id}" ${selected.has(s.id) ? "checked" : ""}> ${escape(s.title)} ${s.profile ? "✓" : "— missing parameters"}</label>${s.profile ? `<details><summary>${escape(s.profile.genre)} · ${s.profile.peculiarities.length} peculiarities</summary>${profileFields(s.profile,s.id)}<button data-action="profile" data-source-id="${s.id}">Save parameters and peculiarities</button></details>` : ""}</div>`).join("")}</details>
-      <h2>2. Gallery variations</h2><details><summary>Gallery composition</summary><p>${state.stats.real_count} annotated REAL; ${state.stats.slop_count} SLOP with saved intended parameters. SLOP data describes what was requested, rather than a verified measurement of the output. Check for recurring visual features too.</p><div class="pipeline-table"><table><thead><tr><th>Feature</th><th>Observed in REAL</th><th>Intended in SLOP</th></tr></thead><tbody>${state.stats.rows.map(r=>`<tr><th>${escape(PARAMETERS[r.key as keyof typeof PARAMETERS] || "Photographic genre")}</th><td>${escape(Object.entries(r.real).map(([k,n])=>`${k}: ${n}`).join(" · "))}</td><td>${escape(Object.entries(r.slop).map(([k,n])=>`${k}: ${n}`).join(" · ") || "None" )}</td></tr>`).join("")}</tbody></table></div></details><details><summary>Rules and probabilities</summary><label>Rules for this gallery<textarea data-rules rows="6">${escape(state.settings.rules)}</textarea></label>
+      <h2>2. Gallery variations</h2><details data-panel="composition" ${openPanels.has("composition")?"open":""}><summary>Gallery composition</summary><p>${state.stats.real_count} annotated REAL; ${state.stats.slop_count} SLOP with saved intended parameters. SLOP data describes what was requested, rather than a verified measurement of the output. Check for recurring visual features too.</p><div class="pipeline-table"><table><thead><tr><th>Feature</th><th>Observed in REAL</th><th>Intended in SLOP</th></tr></thead><tbody>${state.stats.rows.map(r=>`<tr><th>${escape(PARAMETERS[r.key as keyof typeof PARAMETERS] || "Photographic genre")}</th><td>${escape(counts(r.real) || "None")}</td><td>${escape(counts(r.slop) || "None")}</td></tr>`).join("")}</tbody></table></div>${mergeForm(state.stats.rows)}</details><details><summary>Rules and probabilities</summary><label>Rules for this gallery<textarea data-rules rows="6">${escape(state.settings.rules)}</textarea></label>
       <label>Environment and genre<select data-environment>${[["keep","Keep environment and light"],["same_genre","Change environment, same genre"],["change_genre","Change environment and genre"]].map(([k,v]) => `<option value="${k}" ${state!.settings.environment===k?"selected":""}>${v}</option>`).join("")}</select></label>
       <label>Chance of plausible new values (%)<input type="number" min="0" max="100" data-novelty value="${state.settings.novelty*100}"></label>
       <p>Leave a probability blank to estimate it from the REAL composition. Ordinary values and the absence of a trait are also sampled. Zero changes are allowed. Frequencies are estimates to review alongside the results.</p>
@@ -130,8 +145,10 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
     root.querySelectorAll<HTMLButtonElement>("button").forEach(b => { if(busy) b.disabled=true; });
   };
   const refresh = async () => { state = await call<State>(); if(!initialized && await measureMissing(state.sources)) state=await call<State>(); if(!initialized) {selected=new Set(state.sources.map(s=>s.id));initialized=true;} render(); };
-  const act = async (work:()=>Promise<void>) => { if(busy)return;busy=true;root.querySelectorAll<HTMLInputElement|HTMLTextAreaElement|HTMLButtonElement|HTMLSelectElement>("input,textarea,button,select").forEach(control=>{control.disabled=true;});try {await work();notice="Status updated.";}catch(e){notice=e instanceof Error?e.message:String(e);}finally{busy=false;await refresh().catch(e=>{notice=String(e);render();});} };
-  root.addEventListener("change",event=>{ const input=event.target as HTMLInputElement;if(input.dataset.source){if(input.checked)selected.add(input.dataset.source);else selected.delete(input.dataset.source);}if(input.hasAttribute("data-all")){selected=input.checked?new Set(state!.sources.map(s=>s.id)):new Set();render();} });
+  const act = async (work:()=>Promise<void>) => { if(busy)return;busy=true;root.querySelectorAll<HTMLInputElement|HTMLTextAreaElement|HTMLButtonElement|HTMLSelectElement>("input,textarea,button,select").forEach(control=>{control.disabled=true;});try {notice="";await work();notice||="Status updated.";}catch(e){notice=e instanceof Error?e.message:String(e);}finally{busy=false;await refresh().catch(e=>{notice=String(e);render();});} };
+  root.addEventListener("toggle",event=>{const panel=(event.target as HTMLElement).dataset?.panel;if(panel){if((event.target as HTMLDetailsElement).open)openPanels.add(panel);else openPanels.delete(panel);}},true);
+  root.addEventListener("change",event=>{ const input=event.target as HTMLInputElement;
+    if(input.hasAttribute("data-merge-key")){mergeKey=input.value;root.querySelectorAll<HTMLElement>("[data-merge-group]").forEach(group=>{group.hidden=group.dataset.mergeGroup!==mergeKey;group.querySelectorAll<HTMLInputElement>("input").forEach(box=>{box.checked=false;});});return;}if(input.dataset.source){if(input.checked)selected.add(input.dataset.source);else selected.delete(input.dataset.source);}if(input.hasAttribute("data-all")){selected=input.checked?new Set(state!.sources.map(s=>s.id)):new Set();render();} });
   root.addEventListener("click",event=>{const button=(event.target as HTMLElement).closest<HTMLButtonElement>("button[data-action]");if(!button||busy||!state)return;
     const action=button.dataset.action!,job=state.jobs.find(j=>j.id===button.dataset.job), image=state.images.find(i=>i.id===button.dataset.image);
     void act(async()=>{
@@ -141,9 +158,16 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
         const probabilities:PipelineSettings["probabilities"]={};root.querySelectorAll<HTMLInputElement>("[data-probability]").forEach(input=>{if(input.value!=="")probabilities[input.dataset.probability as keyof typeof probabilities]=Number(input.value)/100;});
         await call("/settings",{rules:root.querySelector<HTMLTextAreaElement>("[data-rules]")!.value,probabilities,environment:root.querySelector<HTMLSelectElement>("[data-environment]")!.value,novelty:Number(root.querySelector<HTMLInputElement>("[data-novelty]")!.value)/100});return;
       }
+      if(action==="merge"){
+        const group=root.querySelector<HTMLElement>(`[data-merge-group="${mergeKey}"]`),from=[...group?.querySelectorAll<HTMLInputElement>("[data-merge-category]:checked")??[]].map(input=>input.value);
+        const into=root.querySelector<HTMLInputElement>("[data-merge-into]")!.value.trim();
+        if(!from.length||!into)throw Error("Select at least one category and enter the merged name.");
+        if(!window.confirm(`Rename ${from.join(", ")} to “${into}” in all profiles of this gallery? No paid call is made.`))return;
+        const result=await call<{updated:number}>("/categories",{confirm:true,key:mergeKey,from,into});notice=`${result.updated} profiles updated.`;return;
+      }
       if(action==="profile") { const source=button.dataset.sourceId!;await call("/profile",{id:source,profile:readProfile(state!.sources.find(s=>s.id===source)!.profile!,source)});return; }
       if(action==="prepare"||action==="plan"){
-        const active=new Set(state!.jobs.map(j=>j.source_id));const ids=state!.sources.filter(s=>!active.has(s.id)&&(action==="prepare"?!s.profile:(selected.has(s.id)&&s.profile&&s.described))).map(s=>s.id);
+        const active=new Set(state!.jobs.map(j=>j.source_id));const ids=state!.sources.filter(s=>!active.has(s.id)&&(action==="prepare"?(!s.profile||!s.described):(selected.has(s.id)&&s.profile&&s.described))).map(s=>s.id);
         if(!confirmation(action==="prepare"?"Describe and prepare missing REAL":"Prepare English scenes",ids.length))return;
         await paidWork(action === "prepare" ? "Preparing REAL descriptions and parameters" : "Preparing English scenes", async jobs => {
           const size = action === "prepare" ? ids.length : 500;

@@ -84,6 +84,19 @@ assert call('prepare',paid_request(ids=[second['id']],max_calls=1))[0]==200
 revision=call('/galleries/'+gallery['id'],library=True)[1]['revision']
 assert call('/galleries/'+gallery['id'],{'confirm':True,'revision':revision},method='DELETE',library=True)[0]==409
 wait(lambda s:all(s0['profile'] for s0 in s['sources']) and not s['jobs'])
+# Independent preparations receive the gallery's canonical categories, so equivalent names are reused.
+known=json.loads(control()[-1]['body']['input'][0]['content'][0]['text'])['known_categories']
+assert known['genre']==['amateur_snapshot'] and known['damage']==['none'],known
+# Legacy spelling variants are counted as one category; the owner can merge synonyms for free.
+sql(f"UPDATE images SET pipeline_profile=json_set(pipeline_profile,'$.genre','Amateur snapshot') WHERE id='{second['id']}'")
+state=call('')[1];genre=next(r for r in state['stats']['rows'] if r['key']=='genre')
+assert genre['real']=={'amateur_snapshot':2},genre
+assert call('categories',{'confirm':True,'key':'genre','from':[],'into':'x'})[0]==400
+code,merged=call('categories',{'confirm':True,'key':'genre','from':['Amateur-Snapshot'],'into':'Amateur photo'})
+assert code==200 and merged['updated']>=2,merged
+state=call('')[1];genre=next(r for r in state['stats']['rows'] if r['key']=='genre')
+assert genre['real']=={'amateur_photo':2} and all(r['profile']['genre']=='amateur_photo' for r in state['sources']),genre
+assert call('status')[0]==200 and call('status')[1]=={'jobs':[]}
 # An uncertain result stays visible and neither the Workflow nor a repeated request resends it.
 control([{'status':503}]);uncertain=paid_request(ids=[source['id']],max_calls=1)
 assert call('plan',uncertain)[0]==200

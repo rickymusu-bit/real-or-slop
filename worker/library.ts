@@ -115,6 +115,11 @@ export async function viewOf(env: Env, imageIdValue: string) {
   const row = await find(env, imageIdValue);
   return view(row, (await extras(env, [row])).get(row.id), true);
 }
+/** Detailed views of rows already read, with one query per kind of extra instead of one set per image. */
+export async function viewsOf(env: Env, rows: Row[]) {
+  const extra = await extras(env, rows);
+  return rows.map(row => view(row, extra.get(row.id), true));
+}
 /** Adds a new image to the library. The original goes to quarantine; the browser then uploads its game copy. */
 export async function create(env: Env, input: { origin: Origin; title?: string; description?: string; bytes: ArrayBuffer;
   source_url?: string; author?: string; license_name?: string; license_url?: string; prompt?: string; model?: string;
