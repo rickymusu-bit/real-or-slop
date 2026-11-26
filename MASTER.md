@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 40.8.0, aggiornata il 2026-11-26T20:51:42Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 40.9.0, aggiornata il 2026-11-26T22:47:12Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,12 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.65.1:** selezione esplicita delle REAL nel passo 2, con miniature, disponibilità e conteggi immediati; nessuna
+- **Ramo 1.66.0:** confronto e bilanciamento basati sulle osservazioni degli originali SLOP, con conferma di una chiamata per foto,
+  cache e copertura delle mancanti. Contatore anonimo di generazioni riuscite sulle miniature REAL, con riuso consentito e storico
+  precedente non ricostruibile. Le SLOP approvate escono dal passo 4 e restano in galleria. Migrazione additiva 0078;
+  `worker/pipeline.ts`, `src/pipeline.ts`, `worker/library.ts`, `src/library.ts`, statistiche e schema aggiornati. Nessuna chiamata reale.
+
+- **Integrata in main la 1.65.1 (PR #186):** selezione esplicita delle REAL nel passo 2, con miniature, disponibilità e conteggi immediati; nessuna
   preselezione. Schema della pipeline semplificato nei quattro passi della pagina, rigenerazione `scripts/pipeline-diagram.mjs`,
   comando `npm run diagram:pipeline` e controllo in build per sorgente e copie. Regola permanente in `AGENTS.md`. Specifica
   `generazione-slop` 17.10.0. Test browser desktop/mobile per sottoinsiemi, invio degli ID esatti, aggiornamento e campi non salvati.
@@ -121,15 +126,15 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, dati | `docs/libreria-immagini.md` | 10.13.0 |
+| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, dati | `docs/libreria-immagini.md` | 10.14.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.1.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.9.0 |
-| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.10.0 |
+| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 18.0.0 |
 | Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 2.0.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 10.11.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 10.12.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
-| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.11.0 |
+| Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.12.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.4.0 |
 
 **Documenti tolti.** Il 2026-11-14 l'owner ha chiesto di cancellare i documenti che non servono più: le specifiche precedenti, le note

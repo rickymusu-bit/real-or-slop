@@ -71,7 +71,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, {'data': [{'b64_json': picture(size)}], 'usage': {'input_tokens': 50, 'output_tokens': 1056}})
         schema_name = data.get('text', {}).get('format', {}).get('name')
         request = json.loads(data['input'][0]['content'][0]['text']) if schema_name in ('slop_evaluation', 'slop_gallery_proposal') else None
-        if schema_name in ('real_visual_description', 'pipeline_profile') and (behaviour is None or 'delay' in behaviour):
+        if schema_name in ('real_visual_description', 'pipeline_profile', 'pipeline_observation') and (behaviour is None or 'delay' in behaviour):
             behaviour = {'json': {'sections': {'summary': 'Grey subject with worn edges.',
                                               'subject_type': 'Nintendo Game Boy DMG-01.', 'subject_appearance': 'Worn edges.',
                                               'people': 'No visible people.', 'environment': 'Uniform background.',
@@ -80,7 +80,7 @@ class Handler(BaseHTTPRequestHandler):
                                   'indications': {'museum_or_catalog': {'applies': True, 'reason': 'Neutral background.'},
                                                   'unique_or_famous': {'applies': False, 'reason': 'No signs of a unique specimen.'},
                                                   'recognizable_background': {'applies': False, 'reason': 'Uniform background.'}}}}
-        if schema_name == 'pipeline_profile' and behaviour and 'json' in behaviour:
+        if schema_name in ('pipeline_profile','pipeline_observation') and behaviour and 'json' in behaviour:
             keys=['model','colour','material_finish','edition_decoration','wear','damage','ageing','cleanliness','operating_state','screen_content','pose','viewpoint','composition','aspect_ratio']
             profile={'genre':'amateur_snapshot','parameters':{k:{'value':'none' if k in ['damage','ageing','edition_decoration'] else 'ordinary '+k,'category':'none' if k in ['damage','ageing','edition_decoration'] else 'ordinary','certainty':'observed'} for k in keys},'peculiarities':[]}
             profile['parameters']['aspect_ratio']={'value':'3:2','category':'landscape','certainty':'observed'}

@@ -40,6 +40,7 @@ export interface Row {
   copy_metrics: string | null; copy_treatment: string | null; source_checked_at: string | null; source_missing_at: string | null;
   ideas_reason: string;
   visual_description: string | null;
+  slop_generated_count?: number;
 }
 const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
@@ -86,7 +87,7 @@ function view(row: Row, extra: Extra = {}, detail = false) {
     id: row.id, gallery_id: row.gallery_id, origin: row.origin, status: row.status, trashed_from: row.trashed_from,
     // REAL: source description (Commons, corrected by the owner); a SLOP has its prompt and model and no description (2026-11-20).
     ...(row.origin === "REAL" ? { title: row.title, description: row.description, source_url: row.source_url,
-      has_visual_description: !!row.visual_description,
+      has_visual_description: !!row.visual_description, generated_count: row.slop_generated_count ?? 0,
       ...(detail ? { visual_description: parseJson(row.visual_description) as VisualDescription | null } : {}),
       source_checked_at: row.source_checked_at, source_missing_at: row.source_missing_at,
       author: row.author, license_name: row.license_name, license_url: row.license_url,

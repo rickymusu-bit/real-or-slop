@@ -1,6 +1,6 @@
-# Statistiche e Impostazioni — specifica 4.11.0
+# Statistiche e Impostazioni — specifica 4.12.0
 
-Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T07:36:58Z.
+Stato: implementata nel ramo 1.66.0, da rilasciare. Aggiornata: 2026-11-26T22:47:12Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -43,8 +43,8 @@ Periodo: ultimi 7 giorni, ultimi 30 (predefinito) o da sempre; «Aggiorna». API
 - **Partite del periodo**, per livello: iniziate, concluse, non concluse, scadute prima dell'inizio, punteggio medio delle concluse.
 - **Risposte delle partite concluse:** foto giocate, REAL e SLOP riconosciute, accuratezza bilanciata, foto scadute; voci in classifica
   e nascoste.
-- **Chiamate a pagamento:** per tipo («Analisi e misure delle REAL»: le analisi storiche fino al 2026-11-20 e le misure di
-  affollamento e dettaglio dal 2026-11-21 e le descrizioni visive dal 2026-11-23; proposte editoriali e prompt SLOP; immagini; valutazioni) numero, token in ingresso e in uscita, esiti incerti evidenziati;
+- **Chiamate a pagamento:** per tipo («Image analysis and observations»: le analisi storiche fino al 2026-11-20 e le misure di
+  affollamento e dettaglio dal 2026-11-21 e le descrizioni visive dal 2026-11-23, oltre alle osservazioni SLOP dal 2026-11-26; proposte editoriali e prompt SLOP; immagini; valutazioni) numero, token in ingresso e in uscita, esiti incerti evidenziati;
   le ultime 200 chiamate del periodo con filtri per tipo ed esito. Nessun importo.
 - **Equilibrio del catalogo:** REAL e SLOP pubblicate e approvate, quota di REAL tra le pubblicate con la fascia 40–60% e un avviso non
   bloccante fuori fascia, livelli giocabili e foto mancanti agli altri. Le copie nuove sono tutte 4:5.

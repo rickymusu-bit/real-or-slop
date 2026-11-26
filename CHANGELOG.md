@@ -1,7 +1,18 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-26T20:51:42Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-26T22:47:12Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.66.0 — 2026-11-26T22:47:12Z
+
+- Confronto della galleria e bilanciamento delle SLOP accettate basati sulle categorie osservate dagli originali, con schema e
+  convenzioni REAL, senza prompt o parametri richiesti. Osservazione separata, una chiamata confermata per foto; cache, claim,
+  copertura delle mancanti ed esclusione delle foto non osservate. Nessuna lettura automatica a pagamento.
+- Le miniature REAL mostrano quante candidate iniziali sono state generate e salvate dalla 1.66.0, comprese quelle poi scartate;
+  conteggio atomico e idempotente, edit esclusi. Le REAL restano utilizzabili e non si ricostruiscono usi storici sconosciuti.
+- Le SLOP approvate escono dal passo 4 e restano nella galleria, dove si pubblicano. Osservazioni e file restano conservati.
+- Migrazione additiva 0078, schema e specifiche aggiornati; regressioni su osservazioni richieste/osservate diverse, pagamenti
+  duplicati, spostamento concorrente, contatori e uscita dal wizard. Nei test soltanto modelli simulati.
 
 ## 1.65.1 — 2026-11-26T20:51:42Z
 
