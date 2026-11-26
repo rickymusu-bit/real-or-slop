@@ -228,7 +228,7 @@ with sync_playwright() as p:
         assert page.request.get(base + '/api/admin/library/settings').json()['values']['commons_checks_per_night'] == 120
         page.locator('[name=commons_checks_per_night]').fill('50'); page.locator('#library-sources-form button').click()
         expect(page.locator('#library-settings-message')).to_have_text('Nightly REAL check count saved.')
-        expect(page.locator('[data-context-part]')).to_have_count(4)
+        expect(page.locator('[data-context-part]')).to_have_count(3)
         expect(page.locator('[data-context-part=analysis]')).to_have_count(0)
         page.locator('[data-admin-tab=galleries]').click()
         open_gallery(page, gallery_id)
