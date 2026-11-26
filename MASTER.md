@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 40.7.0, aggiornata il 2026-11-26T15:38:09Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 40.8.0, aggiornata il 2026-11-26T20:51:42Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,9 +9,14 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.65.0, sopra la PR #183:** estrazioni congiunte compatibili in `shared/pipeline.ts`, conteggi provvisori per le scene della stessa richiesta in `worker/pipeline.ts`; test di combinazioni, frequenze, reinvii e chiusura. Specifica `generazione-slop` 17.9.0 e schema aggiornati. La PR #184 è chiusa e non è inclusa. Nessuna migrazione o chiamata aggiuntiva.
+- **Ramo 1.65.1:** selezione esplicita delle REAL nel passo 2, con miniature, disponibilità e conteggi immediati; nessuna
+  preselezione. Schema della pipeline semplificato nei quattro passi della pagina, rigenerazione `scripts/pipeline-diagram.mjs`,
+  comando `npm run diagram:pipeline` e controllo in build per sorgente e copie. Regola permanente in `AGENTS.md`. Specifica
+  `generazione-slop` 17.10.0. Test browser desktop/mobile per sottoinsiemi, invio degli ID esatti, aggiornamento e campi non salvati.
 
-- **Ramo 1.64.0:** categorie canoniche nei profili della pipeline (genere e `category` dei parametri): forme che differiscono solo per maiuscole, spazi, trattini o underscore sono una sola categoria in statistiche, estrazioni e prompt, anche per i profili già salvati. Le chiamate di preparazione e pianificazione ricevono il dizionario della galleria; preparazioni di una galleria in serie e comando confermato per riscrivere i parametri di tutte le REAL conservando le descrizioni; comando gratuito «Merge equivalent categories». Corretti: «recenti» non ordinati, salvataggi di profilo e impostazioni che segnalavano successo dopo un conflitto, letture di stato con circa quattro query per SLOP accettata e polling completo ogni secondo, scene accodate una per volta con JSON riletti. Nessuna migrazione né chiamata reale.
+- **Integrata in main la 1.65.0 (PR #185 e #183):** estrazioni congiunte compatibili in `shared/pipeline.ts`, conteggi provvisori per le scene della stessa richiesta in `worker/pipeline.ts`; test di combinazioni, frequenze, reinvii e chiusura. Specifica `generazione-slop` 17.9.0 e schema aggiornati. La PR #184 è chiusa e non è inclusa. Nessuna migrazione o chiamata aggiuntiva.
+
+- **Integrata in main la 1.64.0 (PR #183):** categorie canoniche nei profili della pipeline (genere e `category` dei parametri): forme che differiscono solo per maiuscole, spazi, trattini o underscore sono una sola categoria in statistiche, estrazioni e prompt, anche per i profili già salvati. Le chiamate di preparazione e pianificazione ricevono il dizionario della galleria; preparazioni di una galleria in serie e comando confermato per riscrivere i parametri di tutte le REAL conservando le descrizioni; comando gratuito «Merge equivalent categories». Corretti: «recenti» non ordinati, salvataggi di profilo e impostazioni che segnalavano successo dopo un conflitto, letture di stato con circa quattro query per SLOP accettata e polling completo ogni secondo, scene accodate una per volta con JSON riletti. Nessuna migrazione né chiamata reale.
 - **Integrata in main la 1.63.0 (PR #182):** schermata di progresso modale per tutte le fasi a pagamento della pipeline, inclusi i parametri REAL. Il blocco copre invio e attesa del risultato, con conteggio dei lavori e annullamento gratuito della coda. Ripresa automatica dell’osservazione al ritorno; nessun nuovo invio, valutazione o retry. Import/galleria/dettaglio mostrano il blocco prima dell’accodamento. Test desktop/mobile su blocco, Esc, navigazione, reload, errori e stop. Nessuna migrazione o chiamata reale.
 
 - **Integrata in main la 1.62.0 (PR #181):** descrizioni REAL e parametri preparati nella coda persistente della pipeline anche da Import REAL, galleria e dettaglio. Selezione registrata insieme prima dei Workflow; stato gratuito, ripresa dopo reload e nessuna dipendenza dal browser per proseguire. Migrazione 0076 per eliminare gli indici delle descrizioni; nessuna elaborazione reale. Test browser desktop/mobile con renderer congelato e pagina chiusa, verifica diretta del completamento in D1 senza polling e nessuna chiamata duplicata. Rimossi comandi/API di indicizzazione, identità di ricerca ed embedding: il planner usa direttamente i profili già preparati nella galleria. Descrizioni e dati della pipeline conservati. Rimossi anche crowding/detail da comandi, API, soglie, avvisi, contesti e prompt precedenti; migrazione 0077 con cronologia conservata e misure tecniche di trattamento invariate.
@@ -120,7 +125,7 @@ nome.
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.1.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.9.0 |
-| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.9.0 |
+| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.10.0 |
 | Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 2.0.0 |
 | Foto e gallerie | `docs/database-immagini.md` | 10.11.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |

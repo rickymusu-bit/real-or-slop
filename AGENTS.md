@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 38.6.0, aggiornata il 2026-11-26T15:38:09Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 38.7.0, aggiornata il 2026-11-26T20:51:42Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -108,6 +108,11 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
    registrano le decisioni dell'owner con la data e si citano per nome (specifica `gioco-a-livelli`). I file di codice in uso sono
    elencati in `MASTER.md`, la storia delle versioni dell'app in `CHANGELOG.md`. A ogni modifica si aggiornano la specifica dell'area,
    `MASTER.md` (file e stato) e `CHANGELOG.md`; `AGENTS.md` quando cambiano regole o principi.
+   **Schema della pipeline sempre aggiornato** (richiesta esplicita dell'owner, 2026-11-26): ogni modifica al funzionamento della
+   pipeline deve aggiornare nella stessa PR lo schema `docs/assets/pipeline-slop.dot`, rigenerare `docs/assets/pipeline-slop.svg`
+   e la copia identica `public/docs/pipeline-slop.svg` con `npm run diagram:pipeline` (Graphviz). Seguire i quattro passi del wizard,
+   usare etichette comprensibili, distinguere azioni gratuite, conferme e chiamate a pagamento. La build controlla corrispondenza
+   della sorgente e delle due copie; la revisione verifica l'allineamento del significato con codice e specifica.
 5. **Verifica prima della consegna:** `npm run lint`, `npm test`, `npm run build`, `npm run dry-run`, `npm run test:integration` e, per la
    dashboard e il gioco, `ROS_TEST_BROWSER=1 npm run test:integration` su desktop e mobile. Ogni fase in una PR con anteprima e CI verde.
    **Consegna sempre tramite PR** (preferenza esplicita dell'owner, 2026-11-15): quando le modifiche sono pronte, pubblicare il ramo e

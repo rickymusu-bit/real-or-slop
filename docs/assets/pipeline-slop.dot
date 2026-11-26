@@ -1,24 +1,36 @@
 digraph pipeline {
- graph [rankdir=TB,bgcolor="#f7f8fc",pad="0.4",nodesep="0.35",ranksep="0.45",fontname="DejaVu Sans",label="REAL or SLOP · Complete pipeline",labelloc=t,fontsize=24];
- node [shape=box,style="rounded,filled",fillcolor=white,color="#cad2e0",fontname="DejaVu Sans",fontsize=12,margin="0.18,0.12"];
- edge [color="#63738c",fontname="DejaVu Sans",fontsize=10];
- real [label="1 · Gallery REAL\nFull originals and credits; missing descriptions flagged"];
- describe [label="2 · English description\nEight axes · observed parameters · photographic genre\nPeculiarities: identity, specimen, temporary state\nTechnical measurements and aspect ratio",fillcolor="#eaf1ff"];
- composition [label="3 · Gallery composition\nObserved parameters · distributions and combinations\nGallery-specific rules"];
- draw [label="4 · Select REAL and draw zero or more variations\nModel, color, finish, edition, wear, damage, ageing, cleanliness\nState, screen content, pose, camera, composition, aspect ratio\nJoint compatible donors for selected dependent controls\nBalance against accepted SLOP + earlier draws in this request\nEnvironment/genre: coordinate dependent changes"];
- scene [label="5 · Sol prepares a complete scene on all eight axes\nPlausible novelty and ordinary values · physical constraints\nPeculiarities preserved or varied · explicit changes",fillcolor="#eaf1ff"];
- confirm [label="Review scene and confirm maximum calls",fillcolor="#fff1d6"];
- generate [label="6 · Sunburst /images/generations\nFinal text only · dimensions match the aspect ratio",fillcolor="#eaf1ff"];
- evaluate [label="7 · Evaluator: full image and constraints\nHardware, plausibility, peculiarities and parameter drift\nFindings and suggested edits with benefits and risks",fillcolor="#eaf1ff"];
- decision [shape=diamond,label="Owner decision",fillcolor="#fff1d6"];
- edit [label="Selected and confirmed correction\n/images/edits · full image + local mask\nBefore/after comparison · no automatic loop",fillcolor="#eaf1ff"];
- discard [label="Discard or close",fillcolor="#ffe8e8"];
- accept [label="8 · Accept full image"];
- treatment [label="9 · Photographic treatment, when needed\nSharpness, noise, contrast and color\nREAL references relevant to the target genre\nAdjustable · no uniform filter across all SLOP"];
- copy [label="10 · Shared REAL and SLOP preparation\n4:5 framing · dimensions · same WebP compression\nMetadata removed · common mark"];
- publish [label="11 · Final visual check → Approve → Publish",fillcolor="#e5f5eb"];
- real -> describe [label="confirm missing calls"]; describe -> composition -> draw -> scene -> confirm -> generate -> evaluate -> decision;
- decision -> edit [label="edit: separate confirmation"];edit -> decision [style=dashed,label="human review"];
- decision -> discard [label="discard"];decision -> accept [label="accept"];accept -> treatment -> copy -> publish;
- real -> copy [style=dashed,label="same technical recipe",constraint=false];
+ graph [rankdir=TB,bgcolor="#f8fafc",pad="0.3",nodesep="0.3",ranksep="0.35",fontname="DejaVu Sans",fontsize=22,label="How a SLOP photo is made",labelloc=t,compound=true];
+ node [shape=box,style="rounded,filled",fillcolor=white,color="#94a3b8",fontname="DejaVu Sans",fontsize=15,margin="0.18,0.12"];
+ edge [color="#64748b",fontname="DejaVu Sans",fontsize=12];
+ legend [shape=plaintext,label="Blue = model call · White = free work · Yellow = your decision\nEach paid phase asks for its maximum first.\nCalls with uncertain outcomes are never retried automatically."];
+ subgraph cluster_prepare {
+  label="1. PREPARE THE GALLERY"; color="#cbd5e1"; style=rounded; fontsize=18;
+  real [label="Import REAL photos into a gallery\nKeep originals and source credits"];
+  describe [label="Describe missing REAL photos\n1 confirmed call per photo · full original\nSaves English description + parameters",fillcolor="#dbeafe"];
+  settings [label="Review parameters, rules and variation chances\nOptional: rewrite parameters (1 call per REAL)\nRewrite keeps descriptions; replaces manual profile edits"];
+  real -> describe -> settings;
+ }
+ subgraph cluster_choose {
+  label="2. CHOOSE REAL AND PREPARE SCENES";color="#cbd5e1";style=rounded;fontsize=18;
+  choose [label="Select the REAL photos to start from\nVisible thumbnails · select any ready subset\nOne selected REAL = one new scene"];
+  draw [label="The server draws compatible variations · free\nDependent values share a REAL donor\nLater draws consider earlier choices in this group"];
+  scene [label="Write the new English scenes\n1 confirmed text call per selected REAL",fillcolor="#dbeafe"];
+  review [label="Read and edit each scene · free\nCheck changes, dependencies and photo format"];
+  choose -> draw -> scene -> review;
+ }
+ subgraph cluster_images {
+  label="3. GENERATE AND REVIEW IMAGES";color="#cbd5e1";style=rounded;fontsize=18;
+  generate [label="Generate images from saved scene text\n1 separately confirmed call per scene\nREAL pixels are not sent to the generator",fillcolor="#dbeafe"];
+  inspect [label="Inspect the full image and decide\nAccept it or discard and close · free\nOptional evaluation: 1 confirmed call\nOptional correction: preview mask + confirm 1 call\nAfter an edit, inspect again before deciding",fillcolor="#fef3c7"];
+  generate -> inspect;
+
+ }
+ subgraph cluster_finish {
+  label="4. PREPARE THE GAME COPY";color="#cbd5e1";style=rounded;fontsize=18;
+  copy [label="Adjust treatment and framing · free\nPrepare the shared 4:5 WebP game copy\nCheck both the full image and the copy"];
+  publish [label="Approve, then publish · free\nOnly published photos enter the game",fillcolor="#dcfce7"];
+  copy -> publish;
+ }
+ notes [shape=plaintext,fontsize=12,label="The server continues if the page closes.\nReturning only reads progress. Stop queued requests cancels unsent work.\nAcquired calls finish. No next paid phase starts automatically.\nAccepting an image does not publish it."];
+ legend -> real [style=invis];settings -> choose [style=invis];review -> generate [style=invis];inspect -> copy [style=invis];publish -> notes [style=invis];
 }

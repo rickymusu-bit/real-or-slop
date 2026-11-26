@@ -1,7 +1,18 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-26T15:38:09Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-26T20:51:42Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.65.1 — 2026-11-26T20:51:42Z
+
+- Scelta delle REAL visibile nel passo delle variazioni: miniature, titoli e motivi di indisponibilità; nessuna preselezione,
+  seleziona tutte le pronte e deseleziona. Spunte e pulsante delle scene si aggiornano immediatamente senza perdere modifiche
+  ancora non salvate. La richiesta contiene solo gli ID selezionati e il numero esatto di chiamate confermate.
+- Schema semplificato in quattro passi con costi e decisioni, valutazione facoltativa e nessun passaggio automatico di spesa.
+  Regola permanente: aggiornarlo nella stessa PR di ogni cambio della pipeline. Nuovo comando di rigenerazione con Graphviz;
+  controllo in build della firma della sorgente e delle due copie SVG identiche.
+- Regressione browser desktop/mobile per selezione singola, nessuna selezione, tutte le pronte, sorgenti occupate,
+  aggiornamento della pagina e conservazione dei campi in modifica. Nessuna migrazione né chiamata reale.
 
 ## 1.65.0 — 2026-11-26T15:38:09Z
 
