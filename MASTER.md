@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 40.5.0, aggiornata il 2026-11-26T09:46:56Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 41.0.0, aggiornata il 2026-11-26T11:17:28Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,8 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.64.0:** categorie canoniche nei profili della pipeline (genere e `category` dei parametri): forme che differiscono solo per maiuscole, spazi, trattini o underscore sono una sola categoria in statistiche, estrazioni e prompt, anche per i profili già salvati. Le chiamate di preparazione e pianificazione ricevono il vocabolario della galleria; comando gratuito «Merge equivalent categories». Corretti: «recenti» non ordinati, salvataggi di profilo e impostazioni che segnalavano successo dopo un conflitto, letture di stato con circa quattro query per SLOP accettata e polling completo ogni secondo, scene accodate una per volta con JSON riletti. Nessuna migrazione né chiamata reale.
+- **Ramo 1.65.0 (PR separata, sopra la 1.64.0):** elenchi di categorie chiusi per galleria, proposti con una chiamata testuale e approvati dall'owner, con rimappatura gratuita, classificazione testuale dei profili pendenti e verifica di coerenza. Osservazione alla cieca delle SLOP accettate con l'annotatore delle REAL; confronto REAL/SLOP osservate per caratteristica e combinazione (distanza di variazione totale, test di permutazione, soglie provvisorie). Migrazione 0078. Nessuna chiamata reale.
+- **Ramo 1.64.0 (PR #183):** categorie canoniche nei profili della pipeline (genere e `category` dei parametri): forme che differiscono solo per maiuscole, spazi, trattini o underscore sono una sola categoria in statistiche, estrazioni e prompt, anche per i profili già salvati. Le chiamate di preparazione e pianificazione ricevono il vocabolario della galleria; comando gratuito «Merge equivalent categories». Corretti: «recenti» non ordinati, salvataggi di profilo e impostazioni che segnalavano successo dopo un conflitto, letture di stato con circa quattro query per SLOP accettata e polling completo ogni secondo, scene accodate una per volta con JSON riletti. Nessuna migrazione né chiamata reale.
 - **Integrata in main la 1.63.0 (PR #182):** schermata di progresso modale per tutte le fasi a pagamento della pipeline, inclusi i parametri REAL. Il blocco copre invio e attesa del risultato, con conteggio dei lavori e annullamento gratuito della coda. Ripresa automatica dell’osservazione al ritorno; nessun nuovo invio, valutazione o retry. Import/galleria/dettaglio mostrano il blocco prima dell’accodamento. Test desktop/mobile su blocco, Esc, navigazione, reload, errori e stop. Nessuna migrazione o chiamata reale.
 
 - **Integrata in main la 1.62.0 (PR #181):** descrizioni REAL e parametri preparati nella coda persistente della pipeline anche da Import REAL, galleria e dettaglio. Selezione registrata insieme prima dei Workflow; stato gratuito, ripresa dopo reload e nessuna dipendenza dal browser per proseguire. Migrazione 0076 per eliminare gli indici delle descrizioni; nessuna elaborazione reale. Test browser desktop/mobile con renderer congelato e pagina chiusa, verifica diretta del completamento in D1 senza polling e nessuna chiamata duplicata. Rimossi comandi/API di indicizzazione, identità di ricerca ed embedding: il planner usa direttamente i profili già preparati nella galleria. Descrizioni e dati della pipeline conservati. Rimossi anche crowding/detail da comandi, API, soglie, avvisi, contesti e prompt precedenti; migrazione 0077 con cronologia conservata e misure tecniche di trattamento invariate.
@@ -118,7 +119,7 @@ nome.
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.1.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.9.0 |
-| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.6.0 |
+| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 18.0.0 |
 | Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 2.0.0 |
 | Foto e gallerie | `docs/database-immagini.md` | 10.11.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
@@ -175,7 +176,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 - Libreria `library.ts` (stati, modifiche, distribuzione, copie), partite in corso e copie trattenute `in-play.ts`,
   gallerie `galleries.ts`, cancellazione di gallerie e file `gallery-removal.ts`, contesto dei modelli `model-context.ts`, modelli `models.ts`, Impostazioni `app-settings.ts`, statistiche
   `stats.ts`, registro condiviso delle chiamate `paid.ts`, Commons `commons-editorial.ts`.
-- SLOP: nuovo protocollo `pipeline.ts` e tipi/estrazioni `shared/pipeline.ts`; schema illustrato `docs/assets/pipeline-slop.svg`.
+- SLOP: nuovo protocollo `pipeline.ts`, primitive comuni e annotatore `pipeline-core.ts`, elenchi di categorie, classificazione e osservazione delle SLOP `pipeline-taxonomy.ts`; tipi/estrazioni `shared/pipeline.ts`, elenchi e schemi `shared/taxonomy.ts`, confronto delle distribuzioni `shared/pipeline-metrics.ts`; schema illustrato `docs/assets/pipeline-slop.svg`.
   Compatibilità delle lavorazioni precedenti: rotte `slop.ts`, conteggi del catalogo `slop-references.ts`, generazione e valutazione `slop-generation.ts`, ciclo su Cloudflare
   (Workflow `SlopBatchWorkflow`) `slop-runner.ts`, batch del wizard `slop-auto.ts`, estrazione, REAL disponibili, preparazione,
   correzione e conferma dei prompt `slop-gallery.ts`.
@@ -233,6 +234,7 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0067 | misure di affollamento e dettaglio delle REAL (`real_measures`), soglie delle gallerie, parte `real_measure` del contesto e chiavi delle soglie predefinite nelle Impostazioni |
 | 0068 | formula delle misure (1 per le esistenti) e nuova proposta di «Misura delle REAL» se quella in vigore è la prima |
 | 0069 | idee di falsificazione delle REAL (`real_ideas`), motivo senza idee, idea nel riferimento REAL-processo, trigger che tengono i riferimenti fino alla fine del processo e segnano l'idea usata, parte `real_ideas` del contesto |
+| 0078 | aggiunge `pipeline_taxonomies` (bozza e versione approvata degli elenchi di categorie per galleria) e `images.pipeline_observed` (profilo osservato delle SLOP); nessun dato esistente modificato |
 | 0077 | rimuove le soglie di crowding/detail da gallerie e Impostazioni; conserva osservazioni e contesti storici, foto, profili, misure tecniche, lavori e chiamate |
 | 0076 | rimuove indici per soggetto, tabella/trigger dei vettori ambientali e identità di ricerca dalle descrizioni; conserva assi, profili, lavori e cronologia; libera solo i claim di indicizzazione e segna incerti i relativi esiti pendenti |
 | 0075 | versioni inglesi dei contesti ancora identici ai predefiniti, con conservazione dei testi personalizzati e della cronologia |

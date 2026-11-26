@@ -4,7 +4,9 @@ digraph pipeline {
  edge [color="#63738c",fontname="DejaVu Sans",fontsize=10];
  real [label="1 · Gallery REAL\nFull originals and credits; missing descriptions flagged"];
  describe [label="2 · English description\nEight axes · observed parameters · photographic genre\nPeculiarities: identity, specimen, temporary state\nTechnical measurements and aspect ratio",fillcolor="#eaf1ff"];
- composition [label="3 · Gallery composition\nObserved parameters · distributions and combinations\nGallery-specific rules"];
+ lists [label="Gallery category lists\nModel proposal from observed values (1 call) · owner approval\nFixed condition scales · aliases · closed values + other\nText-only classification of pending profiles",fillcolor="#fff1d6"];
+ composition [label="3 · Gallery composition\nREAL observed · SLOP intended · SLOP observed\nDistance and permutation test per feature and combination\nGallery-specific rules"];
+ observe [label="Blind observation of the accepted SLOP\nSame annotator, schema and lists as the REAL\nNo title, prompt or description · confirmed calls",fillcolor="#eaf1ff"];
  draw [label="4 · Select REAL and draw zero or more variations\nModel, color, finish, edition, wear, damage, ageing, cleanliness\nState, screen content, pose, camera, composition, aspect ratio\nEnvironment/genre: coordinate dependent changes"];
  scene [label="5 · Sol prepares a complete scene on all eight axes\nPlausible novelty and ordinary values · physical constraints\nPeculiarities preserved or varied · explicit changes",fillcolor="#eaf1ff"];
  confirm [label="Review scene and confirm maximum calls",fillcolor="#fff1d6"];
@@ -17,8 +19,10 @@ digraph pipeline {
  treatment [label="9 · Photographic treatment, when needed\nSharpness, noise, contrast and color\nREAL references relevant to the target genre\nAdjustable · no uniform filter across all SLOP"];
  copy [label="10 · Shared REAL and SLOP preparation\n4:5 framing · dimensions · same WebP compression\nMetadata removed · common mark"];
  publish [label="11 · Final visual check → Approve → Publish",fillcolor="#e5f5eb"];
- real -> describe [label="confirm missing calls"]; describe -> composition -> draw -> scene -> confirm -> generate -> evaluate -> decision;
+ real -> describe [label="confirm missing calls"]; describe -> composition;
+ lists -> describe [style=dashed,label="closed categories"]; lists -> composition [style=dashed]; composition -> draw -> scene -> confirm -> generate -> evaluate -> decision;
  decision -> edit [label="edit: separate confirmation"];edit -> decision [style=dashed,label="human review"];
  decision -> discard [label="discard"];decision -> accept [label="accept"];accept -> treatment -> copy -> publish;
+ accept -> observe [label="confirm calls"]; observe -> composition [style=dashed,label="observed distribution",constraint=false];
  real -> copy [style=dashed,label="same technical recipe",constraint=false];
 }

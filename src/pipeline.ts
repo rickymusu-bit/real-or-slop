@@ -3,6 +3,8 @@ import type { Metrics } from "../shared/copy-treatment";
 import { escape } from "../shared/html";
 import { VISUAL_SECTIONS } from "../shared/real-description";
 import { AXES, PARAMETERS, PARAMETER_KEYS, type Profile, type PipelineSettings, type Proposal, type Review } from "../shared/pipeline";
+import { CLASSIFY_BATCH, FIXED, TAXONOMY_KEYS, allowedOf, type Taxonomy, type TaxonomyDraft, type TaxonomyKey, type TaxonomyKeys } from "../shared/taxonomy";
+import { METRIC_THRESHOLDS, compare, otherShare, type Counts } from "../shared/pipeline-metrics";
 import { measureMissing, prepareItemCopy, type TreatableItem } from "./game-copy";
 import { editFrame } from "./crop-editor";
 import { chooseTreatment } from "./treatment-editor";
@@ -14,7 +16,10 @@ interface Source { id: string; title: string; metrics?:Metrics|null;copy?:{sha25
 interface Job { format:{requested_ratio:string;actual_width:number;actual_height:number}|null; id: string; source_id: string | null; state: string; proposal: Proposal | null; evaluation: Review | null;
   file: string | null; previous_key: string | null; error: string; snapshot: { variation?: {selected: string[]}; operation: string } }
 interface Image extends TreatableItem { width: number; height: number; revision: number; status: string; file: string; original: string }
-interface State { stats: {real_count:number;slop_count:number;rows:{key:string;real:Record<string,number>;slop:Record<string,number>}[]}; settings: PipelineSettings; sources: Source[]; jobs: Job[]; paid_calls: boolean; images: Image[] }
+interface Stats { real_count: number; slop_count: number; observed_count: number; unmeasured: string[]; pending: { real: number; slop: number; observed: number };
+  rows: { key: string; real: Counts; slop: Counts; observed: Counts }[]; joints: { keys: [string, string]; real: Counts; observed: Counts }[] }
+interface State { stats: Stats; settings: PipelineSettings; sources: Source[]; jobs: Job[]; paid_calls: boolean; images: Image[];
+  taxonomy: { approved: Taxonomy | null; draft: TaxonomyDraft | null; version: number } }
 const LABELS: Record<string,string> = { queued: "Queued on server", dispatching:"Starting on server", working: "Processing on server", proposal: "Scene awaiting confirmation", candidate: "Image awaiting review",
   review: "Evaluation available", attention: "Needs attention", failed: "Failed to start", accepting: "Accepting image" };
 const ACTIVE_PAID = new Set(["queued", "dispatching", "working"]);
@@ -23,6 +28,8 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
   const api = `/api/admin/pipeline/${encodeURIComponent(gallery)}`;
   let state: State | null = null, busy = false, notice = "", selected = new Set<string>(), initialized = false, mergeKey = "genre";
   const openPanels = new Set<string>();
+  /** Unsaved edits of the draft lists survive the periodic re-render. */
+  let editingKeys: TaxonomyKeys | null = null, editingFor = "";
   type JobStatus = Pick<Job, "id" | "state" | "error">;
   const call = async <T>(path = "", data?: unknown, base = api): Promise<T> => {
     const response = await fetch(base + path, { method: data === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store",
@@ -94,12 +101,61 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
     });
   };
   const payload = (extra: Record<string,unknown> = {}) => ({ confirm: true, request: crypto.randomUUID(), ...extra });
-  const profileFields = (profile:Profile, scope:string) => `<fieldset data-profile-scope="${scope}"><label>Photographic genre<input data-profile-genre value="${escape(profile.genre)}"></label>${PARAMETER_KEYS.map(key=>`<details><summary>${PARAMETERS[key]}</summary><label>Observed or intended value<textarea data-value="${key}" rows="2">${escape(profile.parameters[key].value)}</textarea></label><label>Category for balancing<input data-category="${key}" value="${escape(profile.parameters[key].category)}"></label></details>`).join("")}<h4>Peculiarities</h4>${profile.peculiarities.map((x,i)=>`<label>${escape(x.description)}<select data-policy="${i}">${[["preserve","Preserve faithfully"],["vary","Vary coherently"],["draw","Follow the parameter draw"]].map(([k,v])=>`<option value="${k}" ${x.policy===k?"selected":""}>${v}</option>`).join("")}</select></label>`).join("")}</fieldset>`;
+  const profileFields = (profile:Profile, scope:string) => `<fieldset data-profile-scope="${scope}"><label>Photographic genre${categoryField("genre", profile.genre, "data-profile-genre")}</label>${PARAMETER_KEYS.map(key=>`<details><summary>${PARAMETERS[key]}</summary><label>Observed or intended value<textarea data-value="${key}" rows="2">${escape(profile.parameters[key].value)}</textarea></label><label>Category for balancing${categoryField(key, profile.parameters[key].category)}</label></details>`).join("")}<h4>Peculiarities</h4>${profile.peculiarities.map((x,i)=>`<label>${escape(x.description)}<select data-policy="${i}">${[["preserve","Preserve faithfully"],["vary","Vary coherently"],["draw","Follow the parameter draw"]].map(([k,v])=>`<option value="${k}" ${x.policy===k?"selected":""}>${v}</option>`).join("")}</select></label>`).join("")}</fieldset>`;
   const readProfile = (profile:Profile, scope:string) => {
     const value=structuredClone(profile),form=root.querySelector<HTMLElement>(`[data-profile-scope="${scope}"]`)!;
     value.genre=form.querySelector<HTMLInputElement>("[data-profile-genre]")!.value;
     for(const key of PARAMETER_KEYS) {value.parameters[key].value=form.querySelector<HTMLTextAreaElement>(`[data-value="${key}"]`)!.value;value.parameters[key].category=form.querySelector<HTMLInputElement>(`[data-category="${key}"]`)!.value;}
     value.peculiarities.forEach((x,i)=>{x.policy=form.querySelector<HTMLSelectElement>(`[data-policy="${i}"]`)!.value as typeof x.policy;});return value;
+  };
+  /** With approved lists a category is chosen from them; a legacy value stays visible as pending until classified. */
+  const categoryField = (key: string, value: string, attribute = `data-category="${key}"`) => {
+    const keys = state?.taxonomy.approved?.keys;
+    if (!keys || key === "aspect_ratio") return `<input ${attribute} value="${escape(value)}">`;
+    const allowed = allowedOf(keys, key as TaxonomyKey);
+    return `<select ${attribute}>${allowed.includes(value) ? "" : `<option value="${escape(value)}" selected>${escape(value)} (pending)</option>`}${allowed.map(name => `<option value="${escape(name)}" ${name === value ? "selected" : ""}>${escape(name)}</option>`).join("")}</select>`;
+  };
+  const featureLabel = (key: string) => PARAMETERS[key as keyof typeof PARAMETERS] || "Photographic genre";
+  const taxonomyRow = (key: TaxonomyKey, row: { name: string; definition: string; aliases: string[] }) => {
+    const fixed = !!FIXED[key];
+    return `<div class="pipeline-taxonomy-row" data-taxonomy-row><input data-tx-name data-original="${escape(row.name)}" value="${escape(row.name)}" aria-label="Category name" ${fixed ? "readonly" : ""}>
+      <input data-tx-definition value="${escape(row.definition)}" aria-label="Definition" placeholder="Definition"><input data-tx-aliases value="${escape(row.aliases.join(", "))}" aria-label="Aliases" placeholder="Aliases, comma separated">
+      ${fixed ? "" : `<label><input type="checkbox" data-tx-remove> Remove</label>`}</div>`;
+  };
+  const readTaxonomy = (): TaxonomyKeys | null => {
+    const editor = root.querySelector<HTMLElement>("[data-taxonomy-editor]");
+    if (!editor) return null;
+    return Object.fromEntries(TAXONOMY_KEYS.map(key => [key, [...editor.querySelectorAll<HTMLElement>(`[data-taxonomy-key="${key}"] [data-taxonomy-row]`)]
+      .filter(row => !row.querySelector<HTMLInputElement>("[data-tx-remove]")?.checked).map(row => {
+        const name = row.querySelector<HTMLInputElement>("[data-tx-name]")!, original = name.dataset.original || "";
+        const aliases = row.querySelector<HTMLInputElement>("[data-tx-aliases]")!.value.split(",").map(x => x.trim()).filter(Boolean);
+        // A renamed category keeps its old name as an alias, so stored profiles follow it for free.
+        if (original && name.value.trim() && original !== name.value.trim() && !aliases.includes(original)) aliases.push(original);
+        return { name: name.value.trim(), definition: row.querySelector<HTMLInputElement>("[data-tx-definition]")!.value.trim(), aliases };
+      })])) as TaxonomyKeys;
+  };
+  const pendingTotal = () => state ? state.stats.pending.real + state.stats.pending.slop + state.stats.pending.observed : 0;
+  const taxonomyPanel = () => {
+    const t = state!.taxonomy, approved = t.approved, draft = t.draft, keys = draft && editingKeys && editingFor === draft.proposed_at ? editingKeys : draft?.keys;
+    const consistency = approved?.consistency && approved.consistency.version === approved.version ? `<p>Consistency check (${approved.consistency.items} REAL reclassified from text, ${new Date(approved.consistency.at).toLocaleString()}): ${escape(Object.entries(approved.consistency.agreement).map(([k, v]) => `${featureLabel(k)} ${Math.round((v ?? 0) * 100)}%`).join(", "))}.</p>` : "";
+    const pending = pendingTotal(), calls = Math.ceil(pending / CLASSIFY_BATCH);
+    return `<details data-panel="taxonomy" ${openPanels.has("taxonomy") ? "open" : ""}><summary>Category lists ${approved ? `(version ${approved.version})` : "(not approved)"}</summary>
+      <p>Closed categories make REAL and SLOP comparable. The model proposes the lists from the observed REAL values (1 call); you review and approve them. Renamed categories keep their old name as an alias; removed ones leave their photos waiting for classification.</p>
+      ${approved ? `<p>Approved ${escape(new Date(approved.approved_at).toLocaleString())}.</p>${consistency}` : "<p>No approved lists: categories are free text, normalized and guided by the most frequent names.</p>"}
+      <div class="pipeline-actions"><button data-action="taxonomy-propose" ${state!.paid_calls && state!.stats.real_count && !draft ? "" : "disabled"}>${approved ? "Propose revised lists" : "Propose lists"} (1 call)</button>
+      ${approved && !draft ? `<button data-action="taxonomy-edit">Edit approved lists</button>` : ""}
+      ${approved ? `<button data-action="classify" ${pending && state!.paid_calls ? "" : "disabled"}>Classify ${pending} pending ${pending === 1 ? "profile" : "profiles"} (${calls} ${calls === 1 ? "call" : "calls"})</button>
+      <button data-action="consistency" ${state!.paid_calls && state!.stats.real_count >= 10 ? "" : "disabled"}>Check consistency (1 call)</button>` : ""}</div>
+      ${draft && keys ? `<section data-taxonomy-editor data-draft="${escape(draft.proposed_at)}"><h3>Draft${draft.model ? ` proposed by ${escape(draft.model)}` : ""}</h3>${draft.notes ? `<p>${escape(draft.notes)}</p>` : ""}
+        ${TAXONOMY_KEYS.map(key => `<details data-panel="tx-${key}" ${openPanels.has(`tx-${key}`) ? "open" : ""} data-taxonomy-key="${key}"><summary>${escape(featureLabel(key))} (${keys[key].length})${FIXED[key] ? " · fixed scale" : ""}</summary>
+          ${keys[key].map(row => taxonomyRow(key, row)).join("")}${FIXED[key] ? "" : `<button data-action="taxonomy-add" data-key="${key}">Add category</button>`}</details>`).join("")}
+        <div class="pipeline-actions"><button data-action="taxonomy-save">Save draft</button><button data-action="taxonomy-approve">Approve lists</button><button data-action="taxonomy-discard">Discard draft</button></div></section>` : ""}</details>`;
+  };
+  /** REAL observed versus SLOP observed: distance, permutation p-value and verdict; thresholds are provisional. */
+  const differenceCell = (real: Counts, observed: Counts) => {
+    const c = compare(real, observed);
+    if (c.status === "insufficient") return `<td>Not enough data (${c.real_n} REAL, ${c.slop_n} SLOP; minimum ${METRIC_THRESHOLDS.minimum})</td>`;
+    return `<td class="pipeline-${c.status}">${c.status === "divergent" ? "Divergent" : "No significant difference"}: distance ${c.distance!.toFixed(2)}, p ${c.p!.toFixed(3)}</td>`;
   };
   const description = (job: Job) => `<details><summary>English scene and parameters</summary><p>Selected for variation: ${escape(job.snapshot.variation?.selected.map(k => PARAMETERS[k as keyof typeof PARAMETERS] || k).join(", ") || "none")}</p>${job.proposal ? `<p>${escape(job.proposal.changes)}</p><p>${escape(job.proposal.dependencies)}</p><fieldset data-scene="${job.id}"><label>Target genre<input data-scene-genre value="${escape(job.proposal.genre)}"></label><label>Width:height ratio<input data-scene-ratio value="${escape(job.proposal.aspect_ratio)}"></label>${AXES.map(axis=>`<label>${VISUAL_SECTIONS[axis]}<textarea data-axis="${axis}" rows="3" lang="en">${escape(job.proposal!.scene[axis])}</textarea></label>`).join("")}<details><summary>Intended parameters after variation</summary>${profileFields(job.proposal.profile,job.id)}</details></fieldset>${job.state === "proposal" ? `<button data-action="scene" data-job="${job.id}">Save scene</button>` : ""}` : ""}</details>`;
   const readScene=(job:Job):Proposal=>{
@@ -118,7 +174,11 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
         `<label><input type="checkbox" data-merge-category value="${escape(k)}"> ${escape(k)} (${n})</label>`).join("") || "<p>No categories yet.</p>"}</div>`; }).join("")}
     <label>Merged category<input data-merge-into autocomplete="off" placeholder="e.g. object_documentation"></label>
     <button data-action="merge">Merge selected categories</button></fieldset>`;
+  const observable = () => state ? state.stats.unmeasured.filter(id => !state!.jobs.some(j => j.source_id === id)) : [];
+  const OPERATIONS: Record<string, string> = { taxonomy: "Category list proposal", classify: "Classification", consistency: "Consistency check", observe: "SLOP observation" };
   const render = () => {
+    const editor = root.querySelector<HTMLElement>("[data-taxonomy-editor]");
+    if (editor) { editingKeys = readTaxonomy(); editingFor = editor.dataset.draft || ""; }
     if (!state) { root.innerHTML = `<p role="status">${escape(notice || "Loading…")}</p>`; return; }
     const activeSources = new Set(state.jobs.map(j => j.source_id));
     const pending = state.sources.filter(s => (!s.profile || !s.described) && !activeSources.has(s.id));
@@ -129,14 +189,18 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
       <button data-action="prepare" ${pending.length && !busy && state.paid_calls ? "" : "disabled"}>Describe and prepare all missing REAL (${pending.length})</button>
       <p>One call per full original: English description, genre, parameters and peculiarities. Distinctive temporary details are varied; model and edition details are preserved.</p>
       <details><summary>REAL and peculiarities</summary><label><input type="checkbox" data-all ${state.sources.every(s => selected.has(s.id)) ? "checked" : ""}> Select all</label>${state.sources.map(s => `<div class="pipeline-source"><label><input type="checkbox" data-source="${s.id}" ${selected.has(s.id) ? "checked" : ""}> ${escape(s.title)} ${s.profile ? "✓" : "— missing parameters"}</label>${s.profile ? `<details><summary>${escape(s.profile.genre)} · ${s.profile.peculiarities.length} peculiarities</summary>${profileFields(s.profile,s.id)}<button data-action="profile" data-source-id="${s.id}">Save parameters and peculiarities</button></details>` : ""}</div>`).join("")}</details>
-      <h2>2. Gallery variations</h2><details data-panel="composition" ${openPanels.has("composition")?"open":""}><summary>Gallery composition</summary><p>${state.stats.real_count} annotated REAL; ${state.stats.slop_count} SLOP with saved intended parameters. SLOP data describes what was requested, rather than a verified measurement of the output. Check for recurring visual features too.</p><div class="pipeline-table"><table><thead><tr><th>Feature</th><th>Observed in REAL</th><th>Intended in SLOP</th></tr></thead><tbody>${state.stats.rows.map(r=>`<tr><th>${escape(PARAMETERS[r.key as keyof typeof PARAMETERS] || "Photographic genre")}</th><td>${escape(counts(r.real) || "None")}</td><td>${escape(counts(r.slop) || "None")}</td></tr>`).join("")}</tbody></table></div>${mergeForm(state.stats.rows)}</details><details><summary>Rules and probabilities</summary><label>Rules for this gallery<textarea data-rules rows="6">${escape(state.settings.rules)}</textarea></label>
+      <h2>2. Gallery variations</h2>${taxonomyPanel()}<details data-panel="composition" ${openPanels.has("composition")?"open":""}><summary>Gallery composition</summary><p>${state.stats.real_count} annotated REAL; ${state.stats.slop_count} SLOP with saved intended parameters. “Intended in SLOP” is what was requested; “Observed in SLOP” is what the REAL annotator sees in the accepted image, without knowing its origin. Similar keyword distributions are necessary, not sufficient: check for recurring visual features too.</p><div class="pipeline-table"><table><thead><tr><th>Feature</th><th>Observed in REAL</th><th>Intended in SLOP</th><th>Observed in SLOP</th><th>REAL vs observed SLOP</th></tr></thead><tbody>${state.stats.rows.map(r=>`<tr><th>${escape(featureLabel(r.key))}</th><td>${escape(counts(r.real) || "None")}${state!.taxonomy.approved && otherShare(r.real) > METRIC_THRESHOLDS.other ? `<p class="pipeline-divergent">“other” is ${Math.round(otherShare(r.real) * 100)}% of REAL: review the list.</p>` : ""}</td><td>${escape(counts(r.slop) || "None")}</td><td>${escape(counts(r.observed) || "None")}</td>${differenceCell(r.real, r.observed)}</tr>`).join("")}
+      ${state.stats.joints.map(j=>`<tr><th>${escape(j.keys.map(featureLabel).join(" × "))}</th><td>${escape(counts(j.real) || "None")}</td><td>—</td><td>${escape(counts(j.observed) || "None")}</td>${differenceCell(j.real, j.observed)}</tr>`).join("")}</tbody></table></div>
+      <p>${state.stats.observed_count} SLOP observed blind with the REAL annotator; ${state.stats.unmeasured.length} not yet observed. ${pendingTotal() ? `${pendingTotal()} profiles wait for classification and are excluded.` : ""} Distances compare shares of known categories (0 identical, 1 disjoint); a feature is divergent when the distance is at least ${METRIC_THRESHOLDS.distance} and p &lt; ${METRIC_THRESHOLDS.significance}. Thresholds are provisional.</p>
+      <button data-action="observe" ${observable().length && state.paid_calls ? "" : "disabled"}>Observe ${observable().length} SLOP (${observable().length} ${observable().length === 1 ? "call" : "calls"})</button>
+      ${state.taxonomy.approved ? "" : mergeForm(state.stats.rows)}</details><details><summary>Rules and probabilities</summary><label>Rules for this gallery<textarea data-rules rows="6">${escape(state.settings.rules)}</textarea></label>
       <label>Environment and genre<select data-environment>${[["keep","Keep environment and light"],["same_genre","Change environment, same genre"],["change_genre","Change environment and genre"]].map(([k,v]) => `<option value="${k}" ${state!.settings.environment===k?"selected":""}>${v}</option>`).join("")}</select></label>
       <label>Chance of plausible new values (%)<input type="number" min="0" max="100" data-novelty value="${state.settings.novelty*100}"></label>
       <p>Leave a probability blank to estimate it from the REAL composition. Ordinary values and the absence of a trait are also sampled. Zero changes are allowed. Frequencies are estimates to review alongside the results.</p>
       <div class="pipeline-probabilities">${PARAMETER_KEYS.map(k => `<label>${PARAMETERS[k]} (%)<input type="number" min="0" max="100" data-probability="${k}" placeholder="Automatic" value="${state!.settings.probabilities[k]===undefined ? "" : state!.settings.probabilities[k]!*100}"></label>`).join("")}</div><button data-action="settings">Save rules and probabilities</button></details>
       <button data-action="plan" ${prepared.length && !busy && state.paid_calls ? "" : "disabled"}>Prepare ${prepared.length} ${prepared.length === 1 ? "scene" : "scenes"} from selected REAL</button>
       <h2>3. Scenes and images to review</h2><div class="pipeline-actions"><button data-action="generate-all" ${state.jobs.some(j => j.state==="proposal")&&!busy?"":"disabled"}>Generate all confirmed scenes</button><button data-action="evaluate-all" ${state.jobs.some(j => j.state==="candidate")&&!busy?"":"disabled"}>Evaluate all new candidates</button></div>
-      ${state.jobs.map(j => `<article class="pipeline-job" data-job-card="${j.id}"><h3>${escape(state!.sources.find(s=>s.id===j.source_id)?.title || "SLOP")} · ${escape(LABELS[j.state] || j.state)}</h3>${j.error?`<p role="alert">${escape(j.error)}</p>`:""}${description(j)}
+      ${state.jobs.map(j => `<article class="pipeline-job" data-job-card="${j.id}"><h3>${escape(OPERATIONS[j.snapshot?.operation] || state!.sources.find(s=>s.id===j.source_id)?.title || "SLOP")} · ${escape(LABELS[j.state] || j.state)}</h3>${j.error?`<p role="alert">${escape(j.error)}</p>`:""}${description(j)}
       ${j.format?`<p>Requested ratio: ${escape(j.format.requested_ratio)}. Received dimensions: ${j.format.actual_width} × ${j.format.actual_height}.</p>`:""}${j.file?`<div class="pipeline-views"><figure><img src="${escape(j.file)}" alt="Full candidate"><figcaption>Full candidate</figcaption></figure>${j.previous_key?`<figure><img src="${api}/${j.id}/file?previous=1" alt="Before correction"><figcaption>Before correction</figcaption></figure>`:""}</div>`:""}
       ${j.evaluation?`<section><h4>Original evaluation</h4><p>${escape(j.evaluation.assessment)}</p><ul>${j.evaluation.findings.map(x=>`<li>${escape(x)}</li>`).join("")}</ul><p>Uncertainties: ${escape(j.evaluation.uncertainties.join(" · ") || "none")}</p>${j.evaluation.corrections.map((c,i)=>`<details><summary>Suggestion: ${escape(c.defect)}</summary><p>Benefit: ${escape(c.benefit)}</p><p>Risk: ${escape(c.risk)}</p><textarea data-instruction="${j.id}-${i}" rows="4" aria-label="Correction instruction">${escape(c.instruction)}</textarea><p>The mask covers the area identified by the evaluator. The API may also change pixels outside it: check the entire image after editing.</p><button data-action="edit" data-job="${j.id}" data-correction="${i}" ${["candidate","review"].includes(j.state)?"":"disabled"}>Confirm this correction (1 call)</button></details>`).join("")}</section>`:""}
       <div class="pipeline-actions">${j.state==="proposal"?`<button data-action="generate" data-job="${j.id}">Confirm generation</button>`:""}${["candidate","review"].includes(j.state)?`<button data-action="evaluate" data-job="${j.id}">Request evaluation (1 call)</button>`:""}${j.file && ["candidate","review","attention"].includes(j.state)?`<button data-action="accept" data-job="${j.id}">Accept full image</button>`:""}${!["queued","dispatching","working","accepting"].includes(j.state)?`<button data-action="close" data-job="${j.id}">Discard and close</button>`:""}</div></article>`).join("")}
@@ -150,6 +214,7 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
   root.addEventListener("change",event=>{ const input=event.target as HTMLInputElement;
     if(input.hasAttribute("data-merge-key")){mergeKey=input.value;root.querySelectorAll<HTMLElement>("[data-merge-group]").forEach(group=>{group.hidden=group.dataset.mergeGroup!==mergeKey;group.querySelectorAll<HTMLInputElement>("input").forEach(box=>{box.checked=false;});});return;}if(input.dataset.source){if(input.checked)selected.add(input.dataset.source);else selected.delete(input.dataset.source);}if(input.hasAttribute("data-all")){selected=input.checked?new Set(state!.sources.map(s=>s.id)):new Set();render();} });
   root.addEventListener("click",event=>{const button=(event.target as HTMLElement).closest<HTMLButtonElement>("button[data-action]");if(!button||busy||!state)return;
+    if(button.dataset.action==="taxonomy-add"){button.insertAdjacentHTML("beforebegin",taxonomyRow(button.dataset.key as TaxonomyKey,{name:"",definition:"",aliases:[]}));button.previousElementSibling?.querySelector<HTMLInputElement>("[data-tx-name]")?.focus();return;}
     const action=button.dataset.action!,job=state.jobs.find(j=>j.id===button.dataset.job), image=state.images.find(i=>i.id===button.dataset.image);
     void act(async()=>{
       if(action==="refresh")return;
@@ -157,6 +222,21 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
       if(action==="settings"){
         const probabilities:PipelineSettings["probabilities"]={};root.querySelectorAll<HTMLInputElement>("[data-probability]").forEach(input=>{if(input.value!=="")probabilities[input.dataset.probability as keyof typeof probabilities]=Number(input.value)/100;});
         await call("/settings",{rules:root.querySelector<HTMLTextAreaElement>("[data-rules]")!.value,probabilities,environment:root.querySelector<HTMLSelectElement>("[data-environment]")!.value,novelty:Number(root.querySelector<HTMLInputElement>("[data-novelty]")!.value)/100});return;
+      }
+      if(action==="taxonomy-edit"){await call("/taxonomy/edit",{});editingKeys=null;return;}
+      if(action==="taxonomy-discard"){if(!window.confirm("Discard the draft lists?"))return;await call("/taxonomy/discard",{});editingKeys=null;return;}
+      if(action==="taxonomy-save"||action==="taxonomy-approve"){
+        const keys=readTaxonomy();if(!keys)return;
+        if(action==="taxonomy-approve"&&!window.confirm("Approve these lists? Stored profiles are remapped through names and aliases for free; values that cannot be resolved wait for a confirmed classification."))return;
+        const result=await call<{updated?:number;version?:number}>("/taxonomy/save",{keys,approve:action==="taxonomy-approve"});editingKeys=action==="taxonomy-approve"?null:keys;
+        if(result.version)notice=`Lists approved as version ${result.version}; ${result.updated} profiles remapped.`;return;
+      }
+      if(action==="taxonomy-propose"||action==="classify"||action==="consistency"||action==="observe"){
+        const ids=observable(),count=action==="classify"?Math.ceil(pendingTotal()/CLASSIFY_BATCH):action==="observe"?ids.length:1;
+        const labels:Record<string,[string,string]>={"taxonomy-propose":["Propose category lists","Proposing category lists"],classify:["Classify pending profiles from text","Classifying profiles"],consistency:["Reclassify a sample of REAL to measure consistency","Checking consistency"],observe:["Observe accepted SLOP with the REAL annotator","Observing SLOP"]};
+        if(!confirmation(labels[action][0],count))return;
+        const path=action==="taxonomy-propose"?"/taxonomy/propose":`/${action}`;
+        await paidWork(labels[action][1],async jobs=>{const queued=await call<{jobs:string[]}>(path,payload({max_calls:count,...(action==="observe"?{ids}:{})}));queued.jobs.forEach(id=>jobs.add(id));});return;
       }
       if(action==="merge"){
         const group=root.querySelector<HTMLElement>(`[data-merge-group="${mergeKey}"]`),from=[...group?.querySelectorAll<HTMLInputElement>("[data-merge-category]:checked")??[]].map(input=>input.value);

@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 17.6.0
+# Generazione SLOP — specifica 18.0.0
 
-Aggiornata: 2026-11-26T09:46:56Z. Stato: implementata nel ramo 1.64.0, da rilasciare.
+Aggiornata: 2026-11-26T11:17:28Z. Stato: implementata nel ramo 1.65.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -21,6 +21,8 @@ tutte le REAL della galleria fuori dal cestino. Le vecchie API e i processi edit
 un riquadro di recupero mostra i processi precedenti ancora da decidere. Il nuovo wizard non usa il vecchio ciclo automatico.
 
 Le migrazioni 0073 e 0074 aggiungono profili e scene privati su `images`, impostazioni su `galleries` e `pipeline_jobs` temporanei.
+La 0078 aggiunge `pipeline_taxonomies` (elenchi di categorie per galleria: bozza e versione approvata) e `images.pipeline_observed`
+(profilo osservato delle SLOP accettate, sezione 4.1).
 Ogni lavorazione ha un Workflow e uno stato persistente. Una conferma acquisisce una sola operazione; il Workflow non ritenta
 passi a pagamento. La coda acquisisce al massimo tre operazioni contemporanee. Le richieste ancora in attesa si possono annullare gratuitamente;
 quelle già inviate terminano senza avviare altre fasi. Dopo quindici minuti una richiesta acquisita senza esito passa all'attenzione dell'owner, senza reinvio automatico.
@@ -41,6 +43,11 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
   categorie equivalenti e indica il nome unificato; il server lo applica ai profili REAL e SLOP della galleria con un
   controllo sul testo salvato, senza toccare valori liberi, descrizioni o lavori già congelati. Rifiutato mentre è in corso
   una preparazione delle REAL.
+- **Elenchi di categorie** (sezione 4.1): «Propose lists» (1 chiamata testuale), revisione e approvazione gratuite, «Classify
+  pending profiles» (una chiamata testuale ogni 30 profili), «Check consistency» (1 chiamata). Con elenchi approvati il comando
+  di unione delle categorie è sostituito dall'editor degli elenchi.
+- **Osserva le SLOP:** nella composizione della galleria, una chiamata con immagine per ogni SLOP accettata non ancora osservata,
+  con conferma del numero esatto.
 - **Regole e probabilità:** modificabili per galleria. Ogni probabilità vuota usa la stima automatica; zero disabilita un controllo.
   L'ambiente può restare invariato, variare entro lo stesso genere o cambiare insieme al genere.
 - **Prepara scene:** una chiamata per REAL selezionata e preparata. Le estrazioni e i riferimenti vengono congelati. Sono
@@ -57,6 +64,7 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
   senza riferimento disponibile la copia parte senza trattamento. Inquadratura e cursori riusano gli editor esistenti.
 
 API private: `GET /api/admin/pipeline/:gallery` e `/status` (solo stato dei lavori, usato durante l’attesa); `POST /:gallery/settings`, `/profile`, `/categories`, `/prepare`, `/plan`, `/stop`;
+`POST /:gallery/taxonomy/{propose,save,edit,discard}`, `/classify`, `/consistency`, `/observe`;
 `POST /:gallery/:job/{scene,generate,evaluate,edit,accept,close}`; `GET /:gallery/:job/file` e `?previous=1`.
 Le fasi a pagamento richiedono `confirm`, UUID `request` e `max_calls` esatto. Dal 2026-11-26 la preparazione accetta fino a 5000 REAL in una richiesta: tutta la selezione viene accodata atomicamente prima dell’avvio, senza dipendere da una successione di richieste del browser. Lo stesso comando prepara descrizioni e profili da Import REAL, galleria e dettaglio. `GET /api/admin/pipeline/:gallery/descriptions` espone l’avanzamento senza i profili completi. Il planner conserva il limite di 500 scene per richiesta, con suddivisione delle selezioni maggiori entro il massimo confermato.
 Modelli e qualità sono quelli selezionati nelle Impostazioni; il selettore include GPT-6.2 Sol e Sunburst.
@@ -155,9 +163,58 @@ senza introdurre modifiche nascoste degli altri parametri. La stima automatica d
 I valori vengono campionati dalle REAL compatibili (modello o genere quando necessario), con pesi da 0.25 a 4 per compensare
 sotto/sovrarappresentazione nei parametri previsti delle SLOP accettate e prior proporzionale alle REAL. Dalla 1.64.0 le SLOP
 confrontate sono filtrate come i donatori (stesso modello o genere quando il parametro lo richiede, escluse le categorie ignote),
-e i profili «recenti» passati al planner sono davvero gli ultimi tre accettati in ordine di creazione. Non si presume una
-misura osservata delle SLOP: le distribuzioni mostrate sono quelle richieste. Il controllo delle combinazioni è affidato ai
+e i profili «recenti» passati al planner sono davvero gli ultimi tre accettati in ordine di creazione. I pesi usano i parametri
+previsti; le distribuzioni osservate delle SLOP (sezione 4.1) servono al confronto e alla revisione, non correggono da sole le estrazioni.
+Con elenchi approvati, i parametri di un profilo ancora da classificare non partecipano come donatori. Il controllo delle combinazioni è affidato ai
 vincoli del planner, a pochi profili recenti e alla revisione umana; non è una garanzia statistica o un rilevatore di duplicati. Questi controlli non autorizzano cicli automatici di correzione delle immagini.
+
+### 4.1 Elenchi di categorie e confronto delle distribuzioni
+
+Decisione dell'owner del 2026-11-26: le categorie devono permettere, su più gallerie e su centinaia di foto per galleria, di
+verificare con ragionevole sicurezza che la distribuzione delle SLOP sia simile a quella delle REAL. Le scelte confermate sono:
+elenchi chiusi per galleria rivisti dall'owner, osservazione di tutte le SLOP accettate con lo stesso annotatore delle REAL,
+consegna in una PR separata.
+
+**Osservazione e classificazione separate.** Il valore libero (`value`) è l'osservazione e richiede l'immagine; la categoria è
+una classificazione che si può rifare dal solo testo. Cambiare un elenco non richiede di rimandare le immagini.
+
+**Elenchi.** Usura, danno, invecchiamento e pulizia usano la scala fissa `none/light/moderate/heavy`; lo stato di funzionamento
+`on/off/not_applicable`. Sono comuni a tutte le gallerie e se ne modificano solo gli alias. Genere, modello, colore, materiale,
+edizione, schermo, posa, punto di vista e composizione hanno un elenco per galleria. `aspect_ratio` resta calcolato dai pixel
+(orientamento). Ogni elenco accetta anche `unknown` (nessuna evidenza) e, fuori dalle scale fisse, `other` con un nome suggerito;
+lo schermo anche `not_applicable`. Al massimo 30 categorie per chiave; l'obiettivo è da 3 a 12, ciascuna con almeno
+`max(3, 2% delle REAL)` foto, salvo distinzioni materiali (contraffazione e originale, tipo di prodotto, edizione ufficiale).
+Il modello resta al livello del prodotto; edizioni e decorazioni appartengono a `edition_decoration`.
+
+**Proposta e approvazione.** Una chiamata testuale riceve, per ogni chiave, le categorie osservate nelle REAL con conteggi ed
+esempi e restituisce nomi, definizioni e categorie assorbite (alias). La bozza è corretta senza perdere la chiamata: nomi doppi
+fusi, alias in conflitto scartati. L'owner rinomina (il vecchio nome resta alias), aggiunge, rimuove e unisce, poi approva.
+L'approvazione è rifiutata con operazioni in corso; crea una nuova versione e rimappa gratuitamente tutti i profili REAL, SLOP
+previsti e SLOP osservati della galleria tramite nomi e alias, con controllo sul testo salvato. Ciò che non si risolve resta
+«pending»: escluso dalle distribuzioni e dai donatori finché una classificazione confermata, solo testuale e a gruppi di 30, non
+lo assegna. Il profilo modificato a mano accetta solo valori dell'elenco per le categorie cambiate.
+
+**Annotazione chiusa.** Con elenchi approvati la preparazione delle REAL, il planner e l'osservazione delle SLOP ricevono nomi e
+definizioni e uno schema con valori obbligati. Un valore fuori elenco restituito comunque diventa `other` (o `unknown` sulle scale
+fisse) e il nome resta come suggerimento. Il profilo comprende anche `genre_evidence`, una frase sulle caratteristiche visibili
+che determinano il genere, usata per classificare il genere dal testo.
+
+**SLOP osservate.** Dopo l'accettazione, con conferma del numero esatto di chiamate, ogni SLOP è annotata dall'originale intero
+con istruzioni, schema ed elenchi delle REAL, senza titolo, prompt o descrizione precedente. Si salva solo il profilo, in
+`pipeline_observed`; nessuna descrizione SLOP. Asimmetria nota: le REAL sono annotate anche con il titolo Commons, che può
+rendere più precisa l'identificazione del modello; una divergenza sul modello va letta con questa cautela.
+
+**Confronto.** Il pannello della composizione mostra per ogni chiave REAL osservate, SLOP previste e SLOP osservate, e per le
+combinazioni genere × modello, genere × punto di vista, genere × composizione e modello × colore. REAL e SLOP osservate si confrontano
+con la distanza di variazione totale sulle quote delle categorie note (0 identiche, 1 disgiunte) e un test di permutazione a 1000
+ripetizioni con generatore deterministico. Soglie provvisorie e rivedibili: almeno 20 osservazioni per lato, divergenza con
+distanza ≥ 0,2 e p < 0,05; avviso quando `other` supera il 10% delle REAL. Il calcolo avviene nel browser dai conteggi forniti dal
+Worker. Distribuzioni simili sono una condizione necessaria, non sufficiente: il generatore può avere difetti che le categorie
+non descrivono.
+
+**Coerenza.** «Check consistency» riclassifica dal solo testo, senza le categorie salvate, un campione casuale di 30 REAL già
+classificate (almeno 10) e registra la quota di accordo per chiave sulla versione corrente. Misura la stabilità della
+classificazione testo → categoria, non quella dell'osservazione immagine → valore.
 
 ## 5. Scena finale e generazione
 

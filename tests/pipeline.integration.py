@@ -116,3 +116,71 @@ code,result=call('stop',{'confirm':True});assert code==200 and result['cancelled
 wait(lambda s:all(j['state'] not in ('working','dispatching','queued') for j in s['jobs']))
 assert len(control())<=3,control()
 print('Pipeline queue passed: at most three acquired operations and cancellation before the remaining paid requests.')
+
+# Closed category lists: proposal (1 text call), owner approval with free remapping, text-only classification,
+# closed annotation of new REAL and blind observation of accepted SLOP with the same annotator.
+tax=make_gallery('Taxonomy integration')
+reals=[real('tax-'+str(n),gallery=tax['id']) for n in range(3)]
+H.API=BASE+'/api/admin/pipeline/'+tax['id']+'/'
+control([])
+assert call('prepare',paid_request(ids=[r['id'] for r in reals],max_calls=3))[0]==200
+wait(lambda s:all(x['profile'] for x in s['sources']) and not s['jobs'])
+sql(f"UPDATE images SET pipeline_profile=json_set(pipeline_profile,'$.genre','Amateur Snapshot') WHERE id='{reals[0]['id']}'")
+assert call('taxonomy/propose',{'max_calls':1})[0]==400
+assert call('taxonomy/save',{'keys':{},'approve':True})[0]==409  # nothing to approve yet
+control([])
+assert call('taxonomy/propose',paid_request(max_calls=1))[0]==200
+state=wait(lambda s:s['taxonomy']['draft'] and not s['jobs'])
+assert len(control())==1 and control()[0]['body']['text']['format']['name']=='pipeline_taxonomy'
+assert 'input_image' not in json.dumps(control()[0]['body']['input'])
+observed_input=json.loads(control()[0]['body']['input'][0]['content'][0]['text'])['observed']
+assert observed_input['genre']==[{'category':'amateur_snapshot','count':3,'examples':observed_input['genre'][0]['examples']}],observed_input['genre']
+keys=state['taxonomy']['draft']['keys']
+assert [c['name'] for c in keys['wear']]==['none','light','moderate','heavy'] and [c['name'] for c in keys['genre']]==['amateur_snapshot']
+duplicate=json.loads(json.dumps(keys));duplicate['colour'].append({'name':'Ordinary','definition':'','aliases':[]})
+assert call('taxonomy/save',{'keys':duplicate,'approve':True})[0]==400
+assert state['stats']['rows'][0]['key']=='genre'
+assert call('taxonomy/save',{'keys':keys,'approve':True})[0]==200
+state=call('')[1];assert state['taxonomy']['approved']['version']==1 and state['taxonomy']['draft'] is None
+assert sql(f"SELECT json_extract(pipeline_profile,'$.genre') AS g FROM images WHERE id='{reals[0]['id']}'")[0]['g']=='amateur_snapshot'
+assert call('categories',{'confirm':True,'key':'genre','from':['amateur_snapshot'],'into':'x'})[0]==409
+# A legacy value outside the list waits for a confirmed text-only classification and is excluded from comparisons.
+sql(f"UPDATE images SET pipeline_profile=json_set(pipeline_profile,'$.parameters.colour.category','grey body') WHERE id='{reals[1]['id']}'")
+state=call('')[1];assert state['stats']['pending']['real']==1
+assert next(r for r in state['stats']['rows'] if r['key']=='colour')['real'].get('pending')==1
+assert call('classify',paid_request(max_calls=2))[0]==409
+control([])
+assert call('classify',paid_request(max_calls=1))[0]==200
+state=wait(lambda s:s['stats']['pending']['real']==0 and not s['jobs'])
+assert len(control())==1 and control()[0]['body']['text']['format']['name']=='pipeline_classification'
+assert 'input_image' not in json.dumps(control()[0]['body']['input'])
+assert call('consistency',paid_request(max_calls=1))[0]==409  # fewer than 10 classified REAL
+# New REAL are annotated with closed categories.
+late=real('tax-late',gallery=tax['id']);control([])
+assert call('prepare',paid_request(ids=[late['id']],max_calls=1))[0]==200
+wait(lambda s:all(x['profile'] for x in s['sources']) and not s['jobs'])
+profile_schema=control()[0]['body']['text']['format']['schema']['properties']['profile']['properties']
+assert profile_schema['genre']['enum']==['amateur_snapshot','other','unknown']
+assert 'categories' in json.loads(control()[0]['body']['input'][0]['content'][0]['text'])
+# Accepted SLOP are observed blind, with the REAL annotator and lists, after explicit confirmation.
+control([]);planned=paid_request(ids=[late['id']],max_calls=1)
+assert call('plan',planned)[0]==200
+state=wait(lambda s:bool(s['jobs']) and s['jobs'][0]['state']=='proposal');job=state['jobs'][0]
+assert 'enum' in json.dumps(control()[0]['body']['text']['format']['schema']['properties']['genre'])
+assert call(job['id']+'/generate',paid_request(max_calls=1,proposal=job['proposal']))[0]==200
+state=wait(lambda s:s['jobs'][0]['state']=='candidate');job=state['jobs'][0]
+assert call(job['id']+'/accept',paid_request())[0]==200
+state=call('')[1];slop_id=state['images'][0]['id']
+assert state['stats']['unmeasured']==[slop_id] and state['stats']['observed_count']==0
+control([])
+assert call('observe',paid_request(ids=[slop_id],max_calls=2))[0]==400
+assert call('observe',paid_request(ids=[slop_id],max_calls=1))[0]==200
+state=wait(lambda s:s['stats']['observed_count']==1 and not s['jobs'])
+sent=json.loads(control()[0]['body']['input'][0]['content'][0]['text'])
+assert len(control())==1 and sent['title'] is None and sent['existing'] is None and 'categories' in sent
+assert control()[0]['body']['text']['format']['name']=='pipeline_profile'
+assert sql(f"SELECT visual_description FROM images WHERE id='{slop_id}'")[0]['visual_description'] is None
+assert call('observe',paid_request(ids=[slop_id],max_calls=1))[0]==409  # already observed, never charged twice
+genre=next(r for r in state['stats']['rows'] if r['key']=='genre')
+assert genre['observed']=={'amateur_snapshot':1} and state['stats']['unmeasured']==[]
+print('Pipeline category lists passed: proposal, owner approval with free remapping, pending classification, closed annotation, blind SLOP observation.')

@@ -1,5 +1,5 @@
 """Gallery pipeline on desktop/mobile: all call gates, scenes, masks, owner acceptance and final game copies."""
-import re,shutil,time
+import json,re,shutil,time
 from playwright.sync_api import sync_playwright,expect
 from editorial_helpers import *
 folder=Path('artifacts/slop-browser');folder.mkdir(parents=True,exist_ok=True)
@@ -95,6 +95,33 @@ with sync_playwright() as p:
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
             page.screenshot(path=str(folder/(name+'-pipeline.png')),full_page=True)
             assert any('Maximum 2 paid calls' in d for d in dialogs),dialogs
+            # Category lists: one confirmed proposal, free editing (rename keeps an alias, added category), approval with
+            # remapping, closed category selectors, then blind observation of the accepted SLOP after its own confirmation.
+            control([])
+            root.locator('[data-panel=taxonomy] > summary').click()
+            root.locator('[data-action=taxonomy-propose]').click()
+            expect(overlay).to_have_count(0,timeout=30000)
+            editor=root.locator('[data-taxonomy-editor]');expect(editor).to_be_visible(timeout=30000)
+            assert len(control())==1 and control()[0]['body']['text']['format']['name']=='pipeline_taxonomy'
+            genre=editor.locator('[data-taxonomy-key=genre]');genre.locator('summary').click()
+            genre.locator('[data-tx-name]').first.fill('Casual snapshot')
+            genre.locator('[data-action=taxonomy-add]').click()
+            genre.locator('[data-tx-name]').last.fill('Studio product photo');genre.locator('[data-tx-definition]').last.fill('Seamless background and controlled light.')
+            page.screenshot(path=str(folder/(name+'-taxonomy.png')),full_page=True)
+            root.locator('[data-action=taxonomy-approve]').click()
+            expect(root.locator('[data-pipeline-notice]')).to_contain_text('approved as version 1')
+            genres=sql(f"SELECT json_extract(pipeline_profile,'$.genre') AS g FROM images WHERE gallery_id='{gallery}' AND pipeline_profile IS NOT NULL")
+            assert {g['g'] for g in genres}=={'casual_snapshot'},genres
+            expect(root.locator('select[data-profile-genre]').first).to_have_value('casual_snapshot')
+            composition=root.locator('[data-panel=composition]')
+            if not composition.evaluate('(d) => d.open'):composition.locator('summary').first.click()
+            expect(root.locator('[data-action=observe]')).to_contain_text('Observe 1 SLOP')
+            root.locator('[data-action=observe]').click()
+            expect(overlay).to_be_visible();expect(overlay).to_have_count(0,timeout=30000)
+            expect(composition).to_contain_text('1 SLOP observed blind',timeout=30000)
+            assert len(control())==2 and json.loads(control()[1]['body']['input'][0]['content'][0]['text'])['title'] is None
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1') and not errors,errors
+            page.screenshot(path=str(folder/(name+'-composition.png')),full_page=True)
             # A failed/uncertain operation releases the page, reports attention and is not paid again on reload.
             control([{'delay':1,'status':503}])
             root.locator('[data-action=evaluate]').first.click()

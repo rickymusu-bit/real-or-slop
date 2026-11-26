@@ -84,7 +84,28 @@ class Handler(BaseHTTPRequestHandler):
             keys=['model','colour','material_finish','edition_decoration','wear','damage','ageing','cleanliness','operating_state','screen_content','pose','viewpoint','composition','aspect_ratio']
             profile={'genre':'amateur_snapshot','parameters':{k:{'value':'none' if k in ['damage','ageing','edition_decoration'] else 'ordinary '+k,'category':'none' if k in ['damage','ageing','edition_decoration'] else 'ordinary','certainty':'observed'} for k in keys},'peculiarities':[]}
             profile['parameters']['aspect_ratio']={'value':'3:2','category':'landscape','certainty':'observed'}
+            # With approved gallery lists the schema closes every category: answer inside it, as strict mode would.
+            schema=data['text']['format']['schema']['properties']['profile']['properties']
+            def closed(value, field):
+                allowed=field.get('enum')
+                return value if not allowed or value in allowed else 'other' if 'other' in allowed else allowed[0]
+            profile['genre']=closed(profile['genre'],schema['genre']);profile['genre_suggestion']='';profile['genre_evidence']='Casual handheld photograph of an object.'
+            for k,v in profile['parameters'].items():v['category']=closed(v['category'],schema['parameters']['properties'][k]['properties']['category']);v['suggestion']=''
             behaviour['json']['profile']=profile
+        if schema_name == 'pipeline_taxonomy' and (behaviour is None or 'delay' in behaviour):
+            inp=json.loads(data['input'][0]['content'][0]['text']);keys={}
+            for k,observed in inp['observed'].items():
+                names=[o['category'] for o in observed]
+                if k in inp['fixed']:
+                    fixed=inp['fixed'][k];keys[k]=[{'name':n,'definition':'','includes':[c for c in names if c==n or (n==fixed[0] and c not in fixed)]} for n in fixed]
+                else:keys[k]=[{'name':c,'definition':'Observed '+c+'.','includes':[c]} for c in names]
+            behaviour={'json':{'notes':'Fake lists.','keys':keys}}
+        if schema_name == 'pipeline_classification' and (behaviour is None or 'delay' in behaviour):
+            inp=json.loads(data['input'][0]['content'][0]['text']);item_schema=data['text']['format']['schema']['properties']['items']['items']['properties']
+            def pick(k,previous):
+                allowed=item_schema[k]['properties']['category']['enum'];listed=[a for a in allowed if a not in ('other','unknown','not_applicable')]
+                return previous if previous in allowed else (listed[0] if listed else allowed[0])
+            behaviour={'json':{'items':[{'id':it['id'],**{k:{'category':pick(k,(it[k] or {}).get('previous')),'suggestion':''} for k in item_schema if k!='id'}} for it in inp['items']]}}
         if schema_name == 'pipeline_proposal' and (behaviour is None or 'delay' in behaviour):
             inp=json.loads(data['input'][0]['content'][0]['text'])
             sections=inp['description']['sections']

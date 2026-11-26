@@ -8,24 +8,17 @@ export type Parameter = keyof typeof PARAMETERS;
 export const PARAMETER_KEYS = Object.keys(PARAMETERS) as Parameter[];
 export const AXES = ["subject_type", "subject_appearance", "people", "environment", "viewpoint", "light", "technique", "rendering"] as const;
 export type Scene = Record<typeof AXES[number], string>;
-export interface Attribute { value: string; category: string; certainty: "observed" | "inferred" | "unknown" }
+export interface Attribute { value: string; category: string; certainty: "observed" | "inferred" | "unknown"; suggestion?: string }
 export interface Peculiarity { description: string; region: string; parameter: Parameter; role: "identity" | "specimen" | "temporary";
   policy: "preserve" | "vary" | "draw"; certainty: "observed" | "inferred" | "unknown" }
-export interface Profile { genre: string; parameters: Record<Parameter, Attribute>; peculiarities: Peculiarity[] }
+export interface Profile { genre: string; genre_suggestion?: string; genre_evidence?: string; parameters: Record<Parameter, Attribute>; peculiarities: Peculiarity[] }
 export interface PipelineSettings { rules: string; probabilities: Partial<Record<Parameter, number>>;
   environment: "keep" | "same_genre" | "change_genre"; novelty: number }
 export interface Variation { selected: Parameter[]; targets: Partial<Record<Parameter, Attribute>>; environment: PipelineSettings["environment"]; novelty: boolean }
 export const objectSchema = (properties: Record<string, unknown>) => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
 const string = { type: "string" };
-const certainty = { type: "string", enum: ["observed", "inferred", "unknown"] };
-export const PROFILE_SCHEMA = objectSchema({ genre: string, parameters: objectSchema(Object.fromEntries(PARAMETER_KEYS.map(key => [key,
-  objectSchema({ value: string, category: string, certainty })]))), peculiarities: { type: "array", items: objectSchema({
-  description: string, region: string, parameter: { type: "string", enum: PARAMETER_KEYS }, role: { type: "string", enum: ["identity", "specimen", "temporary"] },
-  policy: { type: "string", enum: ["preserve", "vary", "draw"] }, certainty,
-}) } });
 export const SCENE_SCHEMA = objectSchema(Object.fromEntries(AXES.map(axis => [axis, string])));
 export interface Proposal { profile: Profile; scene: Scene; changes: string; dependencies: string; genre: string; aspect_ratio: string }
-export const PROPOSAL_SCHEMA = objectSchema({ profile: PROFILE_SCHEMA, scene: SCENE_SCHEMA, changes: string, dependencies: string, genre: string, aspect_ratio: string });
 export interface Correction { defect: string; region: { x: number; y: number; width: number; height: number };
   instruction: string; benefit: string; risk: string }
 export interface Review { findings: string[]; uncertainties: string[]; assessment: string; corrections: Correction[] }

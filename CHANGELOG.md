@@ -1,7 +1,16 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-26T09:46:56Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-26T11:17:28Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.65.0 — 2026-11-26T11:17:28Z
+
+- Elenchi di categorie chiusi per galleria: scale fisse per usura, danno, invecchiamento, pulizia e stato di funzionamento; elenchi della galleria per genere, modello, colore, materiale, edizione, schermo, posa, punto di vista e composizione, con `other` + suggerimento e `unknown`.
+- «Propose lists»: una chiamata testuale propone nomi, definizioni e alias dai valori osservati nelle REAL. L'owner modifica e approva; l'approvazione rimappa gratis tutti i profili tramite nomi e alias e versiona l'elenco. I valori non risolti restano pendenti, esclusi da statistiche e donatori, fino a «Classify pending profiles» (solo testo, 30 profili per chiamata).
+- Con elenchi approvati preparazione REAL, planner e osservazione SLOP usano schemi a valori obbligati; il profilo aggiunge `genre_evidence`. L'editor dei parametri propone i valori dell'elenco.
+- «Observe SLOP»: ogni SLOP accettata si annota alla cieca dall'originale intero con istruzioni, schema ed elenchi delle REAL (una chiamata confermata per SLOP); si salva solo il profilo in `pipeline_observed`.
+- Composizione della galleria: REAL osservate, SLOP previste e SLOP osservate per caratteristica e per quattro combinazioni, con distanza di variazione totale e test di permutazione; soglie provvisorie (20 osservazioni, distanza 0,2, p 0,05, `other` oltre 10%). «Check consistency» misura l'accordo di una riclassificazione testuale su 30 REAL.
+- Migrazione 0078. Schema della pipeline aggiornato. Test unitari, HTTP e browser desktop/mobile con OpenAI simulato; nessuna chiamata reale.
 
 ## 1.64.0 — 2026-11-26T09:46:56Z
 
