@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 17.7.0
+# Generazione SLOP — specifica 17.8.0
 
-Aggiornata: 2026-11-26T13:03:07Z. Stato: implementata nel ramo 1.64.0, da rilasciare.
+Aggiornata: 2026-11-26T13:58:28Z. Stato: implementata nel ramo 1.64.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -22,7 +22,7 @@ un riquadro di recupero mostra i processi precedenti ancora da decidere. Il nuov
 
 Le migrazioni 0073 e 0074 aggiungono profili e scene privati su `images`, impostazioni su `galleries` e `pipeline_jobs` temporanei.
 Ogni lavorazione ha un Workflow e uno stato persistente. Una conferma acquisisce una sola operazione; il Workflow non ritenta
-passi a pagamento. La coda acquisisce al massimo tre operazioni contemporanee. Le richieste ancora in attesa si possono annullare gratuitamente;
+passi a pagamento. La coda acquisisce al massimo tre operazioni contemporanee; le preparazioni delle REAL di una stessa galleria (descrizione e parametri, anche in riscrittura) una alla volta, decisione dell'owner del 2026-11-26, perché ognuna legga il dizionario scritto dalla precedente. Le operazioni in attesa di una galleria non bloccano le altre gallerie né le altre fasi. Le richieste ancora in attesa si possono annullare gratuitamente;
 quelle già inviate terminano senza avviare altre fasi. Dopo quindici minuti una richiesta acquisita senza esito passa all'attenzione dell'owner, senza reinvio automatico.
 
 ### Progresso e blocco della pagina
@@ -37,6 +37,10 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
 
 - **Prepara la galleria:** una chiamata per REAL ancora priva di profilo, su originale intero. Salva descrizione inglese,
   identità, genere, parametri osservati e particolarità. Riusa i profili già presenti. I dati sono rivedibili senza chiamate.
+- **Riscrivi i parametri di tutte le REAL** (decisione dell'owner del 2026-11-26): una chiamata con immagine per REAL senza
+  altri lavori attivi, confermata con il numero esatto, eseguita in serie. Conserva la descrizione, che resta un riferimento da
+  verificare sull'immagine, e sostituisce parametri, particolarità e politiche modificate dall'owner. Le REAL con un altro lavoro
+  attivo sono saltate e segnalate, senza addebito. Durante la preparazione di una galleria la pianificazione delle scene è rifiutata.
 - **Unisci categorie:** sotto la composizione della galleria, gratuito. L'owner sceglie una caratteristica, spunta le
   categorie equivalenti e indica il nome unificato; il server lo applica ai profili REAL e SLOP della galleria con un
   controllo sul testo salvato, senza toccare valori liberi, descrizioni o lavori già congelati. Rifiutato mentre è in corso
@@ -137,8 +141,9 @@ l'istruzione di riusare il nome esistente quando indica la stessa cosa. Una cate
 snake_case minuscolo, sostantivo singolare che nomina la classe e non l'esemplare, senza articoli, date o conteggi, senza parole
 che appartengono a un altro parametro (il modello non contiene colore, edizione o condizione; il genere non nomina il soggetto),
 nello stesso stile delle voci esistenti; i dettagli precisi stanno in `value`. Il formato tipografico è comunque imposto dal
-codice con la normalizzazione. Per la preparazione l'elenco si legge all'avvio di ogni lavoro, così le REAL dello stesso batch vedono
-le categorie di quelle già completate. Sinonimi non ortografici («catalog product photograph» e «catalog product photography»)
+codice con la normalizzazione. Per la preparazione l'elenco si legge all'avvio di ogni lavoro, in serie, così ogni REAL vede le
+categorie di quelle già completate; le REAL ancora in coda di preparazione sono escluse, quindi una riscrittura ricostruisce il
+dizionario solo dai profili già riscritti. Sinonimi non ortografici («catalog product photograph» e «catalog product photography»)
 non vengono fusi automaticamente: li unisce l'owner con il comando gratuito.
 
 ## 4. Estrazione e bilanciamento

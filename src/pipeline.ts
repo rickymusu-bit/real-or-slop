@@ -123,11 +123,13 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
     const activeSources = new Set(state.jobs.map(j => j.source_id));
     const pending = state.sources.filter(s => (!s.profile || !s.described) && !activeSources.has(s.id));
     const prepared = state.sources.filter(s => s.profile && s.described && !activeSources.has(s.id) && selected.has(s.id));
+    const rewritable = state.sources.filter(s => !activeSources.has(s.id));
     root.innerHTML = `<section class="pipeline"><button data-action="refresh">Refresh status</button><p><a href="/docs/pipeline-slop.svg" target="_blank" rel="noopener">Complete pipeline diagram</a> · <a href="${galleryPhotosPath(gallery)}">Gallery photos</a></p>
       <p role="status" data-pipeline-notice>${escape(notice)}</p>
       <h2>1. Prepare the gallery</h2><button data-action="stop" ${state.jobs.some(j=>["queued","dispatching"].includes(j.state))?"":"disabled"}>Stop queued requests</button><p>${state.sources.length} REAL · ${pending.length} without parameters · ${state.jobs.filter(j => ["working","dispatching","queued"].includes(j.state)).length} operations in progress.</p>
       <button data-action="prepare" ${pending.length && !busy && state.paid_calls ? "" : "disabled"}>Describe and prepare all missing REAL (${pending.length})</button>
-      <p>One call per full original: English description, genre, parameters and peculiarities. Distinctive temporary details are varied; model and edition details are preserved.</p>
+      <button data-action="refresh-parameters" ${rewritable.length && !busy && state.paid_calls ? "" : "disabled"}>Rewrite parameters of all REAL (${rewritable.length})</button>
+      <p>One call per full original: English description, genre, parameters and peculiarities. Distinctive temporary details are varied; model and edition details are preserved. Preparations of a gallery run one at a time, so each one reuses the categories written by the previous ones. A rewrite keeps the descriptions, replaces parameters and peculiarities, and rebuilds the category dictionary from the rewritten REAL only.</p>
       <details><summary>REAL and peculiarities</summary><label><input type="checkbox" data-all ${state.sources.every(s => selected.has(s.id)) ? "checked" : ""}> Select all</label>${state.sources.map(s => `<div class="pipeline-source"><label><input type="checkbox" data-source="${s.id}" ${selected.has(s.id) ? "checked" : ""}> ${escape(s.title)} ${s.profile ? "✓" : "— missing parameters"}</label>${s.profile ? `<details><summary>${escape(s.profile.genre)} · ${s.profile.peculiarities.length} peculiarities</summary>${profileFields(s.profile,s.id)}<button data-action="profile" data-source-id="${s.id}">Save parameters and peculiarities</button></details>` : ""}</div>`).join("")}</details>
       <h2>2. Gallery variations</h2><details data-panel="composition" ${openPanels.has("composition")?"open":""}><summary>Gallery composition</summary><p>${state.stats.real_count} annotated REAL; ${state.stats.slop_count} SLOP with saved intended parameters. SLOP data describes what was requested, rather than a verified measurement of the output. Check for recurring visual features too.</p><div class="pipeline-table"><table><thead><tr><th>Feature</th><th>Observed in REAL</th><th>Intended in SLOP</th></tr></thead><tbody>${state.stats.rows.map(r=>`<tr><th>${escape(PARAMETERS[r.key as keyof typeof PARAMETERS] || "Photographic genre")}</th><td>${escape(counts(r.real) || "None")}</td><td>${escape(counts(r.slop) || "None")}</td></tr>`).join("")}</tbody></table></div>${mergeForm(state.stats.rows)}</details><details><summary>Rules and probabilities</summary><label>Rules for this gallery<textarea data-rules rows="6">${escape(state.settings.rules)}</textarea></label>
       <label>Environment and genre<select data-environment>${[["keep","Keep environment and light"],["same_genre","Change environment, same genre"],["change_genre","Change environment and genre"]].map(([k,v]) => `<option value="${k}" ${state!.settings.environment===k?"selected":""}>${v}</option>`).join("")}</select></label>
@@ -166,6 +168,17 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
         const result=await call<{updated:number}>("/categories",{confirm:true,key:mergeKey,from,into});notice=`${result.updated} profiles updated.`;return;
       }
       if(action==="profile") { const source=button.dataset.sourceId!;await call("/profile",{id:source,profile:readProfile(state!.sources.find(s=>s.id===source)!.profile!,source)});return; }
+      if(action==="refresh-parameters"){
+        const active=new Set(state!.jobs.map(j=>j.source_id)),ids=state!.sources.filter(s=>!active.has(s.id)).map(s=>s.id);
+        if(!confirmation("Rewrite the parameters of every REAL in this gallery, one at a time? Edited categories and peculiarity policies will be replaced",ids.length))return;
+        let skipped=0;
+        await paidWork("Rewriting REAL parameters", async jobs => {
+          const queued = await call<{jobs: string[]; skipped?: number}>("/prepare", payload({ids,max_calls:ids.length,refresh:true}));
+          queued.jobs.forEach(id => jobs.add(id)); skipped = queued.skipped || 0;
+        });
+        if(skipped)notice=`${skipped} REAL with another active job were skipped and not charged.`;
+        return;
+      }
       if(action==="prepare"||action==="plan"){
         const active=new Set(state!.jobs.map(j=>j.source_id));const ids=state!.sources.filter(s=>!active.has(s.id)&&(action==="prepare"?(!s.profile||!s.described):(selected.has(s.id)&&s.profile&&s.described))).map(s=>s.id);
         if(!confirmation(action==="prepare"?"Describe and prepare missing REAL":"Prepare English scenes",ids.length))return;

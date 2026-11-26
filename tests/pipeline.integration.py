@@ -97,6 +97,23 @@ assert code==200 and merged['updated']>=2,merged
 state=call('')[1];genre=next(r for r in state['stats']['rows'] if r['key']=='genre')
 assert genre['real']=={'amateur_photo':2} and all(r['profile']['genre']=='amateur_photo' for r in state['sources']),genre
 assert call('status')[0]==200 and call('status')[1]=={'jobs':[]}
+# Rewriting the parameters of every REAL: one call each, strictly one at a time, descriptions kept,
+# and a dictionary rebuilt only from the profiles already rewritten (the REAL still queued are left out).
+before={r['id']:r['visual_description'] for r in sql(f"SELECT id,visual_description FROM images WHERE gallery_id='{gallery['id']}' AND origin='REAL'")}
+ids=[x['id'] for x in call('')[1]['sources']];control([{'delay':.5} for _ in ids])
+code,rewrite=call('prepare',paid_request(ids=ids,max_calls=len(ids),refresh=True))
+assert code==200 and len(rewrite['jobs'])==len(ids)==2 and rewrite['skipped']==0,rewrite
+for _ in range(40):
+    state=call('')[1];assert sum(j['state'] in ('working','dispatching') for j in state['jobs'])<=1,state['jobs']
+    if not state['jobs']:break
+    time.sleep(.1)
+state=wait(lambda s:not s['jobs'])
+calls=control();assert len(calls)==2,calls
+sent=[json.loads(c['body']['input'][0]['content'][0]['text']) for c in calls]
+assert sent[0]['known_categories']=={} and sent[1]['known_categories']['genre']==['amateur_snapshot'],sent
+assert sent[0]['existing'] is not None and 'sections' not in calls[0]['body']['text']['format']['schema']['properties']
+after={r['id']:r['visual_description'] for r in sql(f"SELECT id,visual_description FROM images WHERE gallery_id='{gallery['id']}' AND origin='REAL'")}
+assert after==before and all(x['profile']['genre']=='amateur_snapshot' for x in state['sources'])
 # An uncertain result stays visible and neither the Workflow nor a repeated request resends it.
 control([{'status':503}]);uncertain=paid_request(ids=[source['id']],max_calls=1)
 assert call('plan',uncertain)[0]==200
@@ -111,8 +128,8 @@ queued_sources=[real('pipeline-queue-'+str(n),gallery=gallery['id']) for n in ra
 control([{'delay':2} for _ in range(4)])
 assert call('prepare',paid_request(ids=[s['id'] for s in queued_sources],max_calls=4))[0]==200
 state=call('')[1]
-assert sum(j['state'] in ('working','dispatching') for j in state['jobs'])<=3
-code,result=call('stop',{'confirm':True});assert code==200 and result['cancelled']>=1,result
+assert sum(j['state'] in ('working','dispatching') for j in state['jobs'])<=1  # preparations of one gallery run in series
+code,result=call('stop',{'confirm':True});assert code==200 and result['cancelled']>=3,result
 wait(lambda s:all(j['state'] not in ('working','dispatching','queued') for j in s['jobs']))
-assert len(control())<=3,control()
-print('Pipeline queue passed: at most three acquired operations and cancellation before the remaining paid requests.')
+assert len(control())<=1,control()
+print('Pipeline queue passed: REAL preparations of a gallery in series and cancellation before the remaining paid requests.')
