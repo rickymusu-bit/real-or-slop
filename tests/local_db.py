@@ -3,12 +3,13 @@ Product behaviour is always exercised through HTTP. Never accepts another databa
 Wrangler/Miniflare's locked version stores local D1 in SQLite; fail closed if that layout changes.
 """
 import os
+from contextlib import closing
 import re
 import sqlite3
 from pathlib import Path
 
 
-def sql(command):
+def database_path():
     state = Path(os.environ['ROS_TEST_STATE']).resolve()
     if state != (Path.cwd() / '.wrangler/integration').resolve():
         raise RuntimeError('Fixture SQL requires the dedicated integration state')
@@ -16,7 +17,21 @@ def sql(command):
              if re.fullmatch(r'[a-f0-9]{64}\.sqlite', p.name)]
     if len(files) != 1 or not files[0].resolve().is_relative_to(state):
         raise RuntimeError('Expected exactly one isolated local D1 SQLite database')
-    with sqlite3.connect(files[0].resolve().as_uri() + '?mode=rw', uri=True, timeout=30) as db:
+    return files[0].resolve()
+
+
+def read(command):
+    """Observe background Workflows without taking the write lock used for fixture mutations."""
+    if not command.lstrip().upper().startswith('SELECT '):
+        raise RuntimeError('Read-only fixture inspection requires SELECT')
+    with closing(sqlite3.connect(database_path().as_uri() + '?mode=ro', uri=True, timeout=30)) as db:
+        db.row_factory = sqlite3.Row
+        db.execute('PRAGMA query_only=ON')
+        return [dict(row) for row in db.execute(command)]
+
+
+def sql(command):
+    with sqlite3.connect(database_path().as_uri() + '?mode=rw', uri=True, timeout=30) as db:
         db.row_factory = sqlite3.Row
         db.execute('PRAGMA foreign_keys=ON')
         db.execute('BEGIN IMMEDIATE')

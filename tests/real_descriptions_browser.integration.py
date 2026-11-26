@@ -5,8 +5,9 @@ from uuid import uuid4
 import shutil
 import time
 from pathlib import Path
+from local_db import read
 from playwright.sync_api import expect, sync_playwright
-from editorial_helpers import BASE, TOKEN, control, make_gallery, real, sql
+from editorial_helpers import BASE, TOKEN, control, make_gallery, real
 
 folder = Path('artifacts/real-descriptions-browser'); folder.mkdir(parents=True, exist_ok=True)
 def eventually(check, message):
@@ -42,7 +43,7 @@ with sync_playwright() as p:
             'confirm': True, 'request': str(uuid4()), 'gallery_id': gallery})
         assert direct.status == 409, direct.text()
         # All eight jobs exist before the start response is acknowledged, with at most three acquired operations.
-        jobs = sql(f"SELECT state,count(*) AS n FROM pipeline_jobs WHERE gallery_id='{gallery}' GROUP BY state")
+        jobs = read(f"SELECT state,count(*) AS n FROM pipeline_jobs WHERE gallery_id='{gallery}' GROUP BY state")
         assert sum(row['n'] for row in jobs) == 8, jobs
         assert sum(row['n'] for row in jobs if row['state'] in ('working', 'dispatching')) <= 3, jobs
         # Reload resumes free observation; no new confirmation or POST is issued.
@@ -52,16 +53,16 @@ with sync_playwright() as p:
         # Freeze the renderer: neither JavaScript callbacks nor polling can drive the next photo.
         cdp = context.new_cdp_session(page)
         cdp.send('Page.setWebLifecycleState', {'state': 'frozen'})
-        eventually(lambda: sql(f"SELECT count(*) AS n FROM images WHERE gallery_id='{gallery}' AND visual_description IS NOT NULL")[0]['n'] >= 3,
+        eventually(lambda: read(f"SELECT count(*) AS n FROM images WHERE gallery_id='{gallery}' AND visual_description IS NOT NULL")[0]['n'] >= 3,
                    'No descriptions completed while the browser was frozen')
         assert len(control()) >= 3
         context.close()
         # Read local D1 directly; no admin status GET can dispatch the remaining queued work.
-        eventually(lambda: sql(f"SELECT count(*) AS n FROM images WHERE gallery_id='{gallery}' AND visual_description IS NOT NULL AND pipeline_profile IS NOT NULL")[0]['n'] == 8,
+        eventually(lambda: read(f"SELECT count(*) AS n FROM images WHERE gallery_id='{gallery}' AND visual_description IS NOT NULL AND pipeline_profile IS NOT NULL")[0]['n'] == 8,
                    'The remaining descriptions did not finish after the browser closed')
         assert len(control()) == 8, control()
         assert all(call['body']['text']['format']['name'] == 'pipeline_profile' for call in control())
-        assert not sql(f"SELECT id FROM pipeline_jobs WHERE gallery_id='{gallery}'"), 'Successful jobs must release temporary source links'
+        assert not read(f"SELECT id FROM pipeline_jobs WHERE gallery_id='{gallery}'"), 'Successful jobs must release temporary source links'
         # A restored import reads the saved descriptions without spending again.
         restored = browser.new_context(**options, http_credentials={'username': 'owner', 'password': TOKEN})
         restored.add_init_script('sessionStorage.setItem(' + json.dumps(draft_key) + ', ' + json.dumps(json.dumps(draft)) + ')')
