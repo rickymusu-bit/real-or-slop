@@ -55,3 +55,7 @@ test("spelling variants of one category are a single donor category when samplin
   }
   assert.deepEqual([...sampled].sort(), ["light_wear", "none"]);
 });
+test("the dictionary sends every existing keyword of an ordinary gallery, not only the most frequent", () => {
+  const many = Array.from({ length: 60 }, (_, i) => { const p = profile("none"); p.parameters.model.category = `model_${i}`; return p; });
+  assert.equal(vocabulary(many).model?.length, 60);
+});

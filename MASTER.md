@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 40.5.0, aggiornata il 2026-11-26T09:46:56Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 40.5.1, aggiornata il 2026-11-26T13:03:07Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -118,7 +118,7 @@ nome.
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.1.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.9.0 |
-| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.6.0 |
+| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.7.0 |
 | Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 2.0.0 |
 | Foto e gallerie | `docs/database-immagini.md` | 10.11.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |

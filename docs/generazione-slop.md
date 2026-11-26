@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 17.6.0
+# Generazione SLOP — specifica 17.7.0
 
-Aggiornata: 2026-11-26T09:46:56Z. Stato: implementata nel ramo 1.64.0, da rilasciare.
+Aggiornata: 2026-11-26T13:03:07Z. Stato: implementata nel ramo 1.64.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -132,8 +132,12 @@ una categoria vuota diventa `unspecified`). La normalizzazione si applica in let
 statistiche, estrazioni, riferimenti, campione del trattamento e accettazione, e in scrittura per profili preparati, modificati
 dall'owner, proposti dal planner e accettati. Il valore libero (`value`) e le particolarità restano invariati. Le chiamate
 di preparazione e di pianificazione ricevono `known_categories`, le categorie già usate nella galleria per genere e parametro
-(fino a 25 per chiave, le più frequenti, escluse le osservazioni ignote), con l'istruzione di riusare il nome esistente quando
-indica la stessa cosa. Per la preparazione l'elenco si legge all'avvio di ogni lavoro, così le REAL dello stesso batch vedono
+(dizionario completo per chiave, ordinato per frequenza, escluse le osservazioni ignote; limite tecnico di 200 voci), con
+l'istruzione di riusare il nome esistente quando indica la stessa cosa. Una categoria nuova segue un formato fisso: inglese,
+snake_case minuscolo, sostantivo singolare che nomina la classe e non l'esemplare, senza articoli, date o conteggi, senza parole
+che appartengono a un altro parametro (il modello non contiene colore, edizione o condizione; il genere non nomina il soggetto),
+nello stesso stile delle voci esistenti; i dettagli precisi stanno in `value`. Il formato tipografico è comunque imposto dal
+codice con la normalizzazione. Per la preparazione l'elenco si legge all'avvio di ogni lavoro, così le REAL dello stesso batch vedono
 le categorie di quelle già completate. Sinonimi non ortografici («catalog product photograph» e «catalog product photography»)
 non vengono fusi automaticamente: li unisce l'owner con il comando gratuito.
 

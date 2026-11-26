@@ -52,8 +52,9 @@ export function normalizeProfile(profile: Profile): Profile {
     [key, { ...profile.parameters[key], category: normalizeCategory(profile.parameters[key].category) }])) as Profile["parameters"] };
 }
 export type Vocabulary = Partial<Record<Parameter | "genre", string[]>>;
-/** Categories already used in a gallery, most frequent first, so independent model calls can reuse the same names. */
-export function vocabulary(profiles: Profile[], limit = 25): Vocabulary {
+/** Dictionary of the categories already used in a gallery, most frequent first, so independent model calls reuse the same names.
+ * The cap only bounds pathological galleries: ordinary ones send every existing keyword. */
+export function vocabulary(profiles: Profile[], limit = 200): Vocabulary {
   const out: Vocabulary = {};
   for (const key of ["genre", ...PARAMETER_KEYS] as const) {
     const counts = new Map<string, number>();
