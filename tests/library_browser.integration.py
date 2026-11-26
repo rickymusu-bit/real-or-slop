@@ -118,9 +118,13 @@ with sync_playwright() as p:
         detail.locator('.measure-figure').scroll_into_view_if_needed()
         detail.screenshot(path=str(folder / f'{name}-measure.png'))
         # Measuring again from the detail asks for one call and keeps the earlier measure.
+        previous_history = detail.locator('[data-measure-history]').element_handle()
         detail.locator('#library-measure').click()
         expect(detail.locator('#library-detail-message')).to_have_text('Measurement saved.')
         assert confirms[-1].startswith(f'Measure crowding and detail for “{name}-rivoli” with gpt-6.1-sol? One paid call'), confirms[-1]
+        # The notice is written before the gallery reload and detail redraw complete. Open the replacement details, not the old one.
+        page.wait_for_function('(element) => !element.isConnected', arg=previous_history)
+        previous_history.dispose()
         detail.locator('[data-measure-history] summary').click()
         expect(detail.locator('.measure-history li')).to_have_count(2)
         detail.locator('.library-detail-close button').click()
