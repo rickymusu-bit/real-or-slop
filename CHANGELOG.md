@@ -1,7 +1,24 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-26T09:07:50Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-26T15:38:09Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.65.0 — 2026-11-26T15:38:09Z
+
+- Estrazione congiunta di prodotto/schermo e posa/inquadratura/formato: un donatore compatibile per i parametri selezionati del gruppo; campi non estratti conservati, nessun ripiego incompatibile, valori ignoti esclusi. Condizioni fisiche separate e probabilità configurabili conservate.
+- Bilanciamento progressivo all'interno della richiesta: ogni scena tiene conto delle estrazioni precedenti con pesi casuali limitati. Conteggi anonimi temporanei, contesto registrato nella snapshot, reinvii senza nuove riserve, nessuna foto o statistica accettata fittizia.
+- Test delle combinazioni, delle frequenze empiriche e della compensazione progressiva; integrazione per snapshot, reinvio e chiusura. Nessuna migrazione, tassonomia della PR #184 o chiamata aggiuntiva ai modelli.
+
+## 1.64.0 — 2026-11-26T13:58:28Z
+
+- Categorie canoniche nella pipeline: genere e categorie dei parametri si confrontano e si salvano in forma normalizzata (minuscole, senza accenti, parole unite da `_`). «object documentation» e «object_documentation» diventano una sola voce, anche nei profili già salvati, senza migrazione.
+- Preparazione delle REAL e pianificazione delle scene ricevono il dizionario completo delle categorie già usate nella galleria (`known_categories`, ordinato per frequenza) con l'istruzione di riusarle; un nome nuovo è ammesso solo per un valore diverso e segue un formato fisso (inglese, snake_case, sostantivo singolare della classe, senza parole di altri parametri).
+- Preparazioni delle REAL di una galleria in serie: ognuna legge il dizionario scritto dalla precedente, senza nomi diversi creati in parallelo per lo stesso valore; le altre gallerie e fasi non aspettano. Nuovo comando «Rewrite parameters of all REAL»: una chiamata confermata per REAL, descrizioni conservate, parametri e particolarità riscritti, dizionario ricostruito solo dai profili già riscritti; REAL con altri lavori attivi saltate senza addebito. Pianificazione rifiutata durante la preparazione.
+- Nuovo comando gratuito «Merge equivalent categories» sotto la composizione della galleria, per unire sinonimi non ortografici già salvati nei profili REAL e SLOP. Tabella della composizione ordinata per frequenza.
+- Bilanciamento: le SLOP confrontate seguono gli stessi filtri dei donatori; i profili recenti passati al planner sono gli ultimi tre accettati (prima l'ordine non era definito).
+- Salvataggio di profilo e impostazioni: un conflitto di revisione restituisce 409 invece di un falso successo.
+- Efficienza: l'attesa delle fasi a pagamento interroga `GET …/status` invece dello stato completo; le viste delle SLOP accettate si leggono in blocco; le snapshot dei lavori non vengono più inviate al browser per intero; le scene confermate si registrano a gruppi prima di avviare i Workflow, con profili letti una volta sola. Decodifica base64 senza callback per carattere; maschera non valida rifiutata con 400; la maschera di una correzione precedente fallita viene messa in coda di cancellazione.
+- Le REAL con profilo ma senza descrizione tornano tra quelle da preparare. Test unitari e d'integrazione per normalizzazione, vocabolario, unione e stato leggero; nessuna chiamata reale.
 
 ## 1.63.0 — 2026-11-26T09:07:50Z
 

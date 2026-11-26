@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 38.4.0, aggiornata il 2026-11-26T09:07:50Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 38.6.0, aggiornata il 2026-11-26T15:38:09Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -33,7 +33,7 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino,
   cambio galleria; le vecchie proposte SLOP non compaiono più sulle REAL. La generazione passa dalla pipeline della galleria. La barra lascia visibile la griglia.
 - **Admin in inglese** (2026-11-25). Tutta l’interfaccia amministrativa, gallerie e pipeline incluse, usa l’inglese: etichette, assi, parametri, conferme, errori e nuovi testi dei modelli. Trascrizioni fotografiche nella lingua originale. Non tradurre automaticamente contenuti dell’owner o dati storici. Il sito pubblico resta in italiano. Le proposte obsolete sono rimosse dal dettaglio delle REAL e il vecchio wizard browser non è più presente; API e dati precedenti restano compatibili per il recupero.
-- **Descrizioni REAL sul server** (2026-11-26). Import REAL, galleria e dettaglio inviano la selezione confermata alla preparazione persistente della pipeline. Tutti i lavori vengono registrati insieme prima dell’avvio, con una chiamata per originale per descrizione e profilo; il browser osserva lo stato e legge i risultati. Scheda in secondo piano, ricaricamento e chiusura della pagina non interrompono la coda. Non ritentare esiti incerti né richiedere nuove chiamate per riprendere l’osservazione. La rotta sincrona precedente resta compatibile, protetta dai claim concorrenti.
+- **Descrizioni REAL sul server** (2026-11-26). Import REAL, galleria e dettaglio inviano la selezione confermata alla preparazione persistente della pipeline. Tutti i lavori vengono registrati insieme prima dell’avvio, con una chiamata per originale per descrizione e profilo; il browser osserva lo stato e legge i risultati. Scheda in secondo piano, ricaricamento e chiusura della pagina non interrompono la coda. Non ritentare esiti incerti né richiedere nuove chiamate per riprendere l’osservazione. La rotta sincrona precedente resta compatibile, protetta dai claim concorrenti. Le preparazioni di una stessa galleria si eseguono in serie (2026-11-26), perché ognuna riusi il dizionario delle categorie scritto dalle precedenti; la riscrittura dei parametri di tutte le REAL è un comando confermato che conserva le descrizioni.
 - **Progresso bloccante delle chiamate a pagamento** (2026-11-26). Preparazione dei parametri REAL, scene, immagini, valutazioni e correzioni mostrano una finestra modale dall’invio confermato fino all’esito dei Workflow, con avanzamento. Il resto della pagina è inerte e Esc non chiude la finestra. Dentro resta disponibile l’annullamento gratuito delle richieste in coda, dopo il loro accodamento; le chiamate già inviate terminano. Tornare alla pagina riprende solo l’osservazione dei lavori attivi, senza invii o spese nuovi. Errori/esiti incerti restano segnalati senza retry. Scheda nascosta e chiusura del browser non fermano il server.
 - **Un solo wizard SLOP** (2026-11-25). La 1.60.0 usa la pipeline della specifica `generazione-slop` 17.0.0: preparazione
   collettiva delle REAL, regole e probabilità per galleria, scene inglesi modificabili, generazione testuale e valutazione
@@ -46,7 +46,9 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   rilevanti della galleria. Le modifiche possono rendere una console più ordinaria. Non forzare novità vistose o unicità a ogni
   SLOP. Le probabilità automatiche sono stime empiriche rivedibili; i pesi considerano i parametri previsti delle SLOP, non una
   misura garantita del loro contenuto. Il controllo delle combinazioni e delle ricorrenze richiede revisione; il 30% del test
-  non è un valore definitivo.
+  non è un valore definitivo. Dal 2026-11-26 i parametri dipendenti estratti condividono un donatore compatibile; i valori non
+  estratti restano vincoli. Le scene della stessa richiesta contano provvisoriamente anche le estrazioni precedenti del gruppo,
+  senza nuove chiamate né riserve permanenti (specifica `generazione-slop` 17.9.0).
 - **Niente tag** (decisione del 2026-11-20). Le foto di una galleria condividono quasi gli stessi tag: la galleria basta a
   raggrupparle. Nessun vocabolario, filtro o distribuzione per tag; approvare non richiede tag. I parametri privati del nuovo
   protocollo non introducono tag di navigazione o didascalie. Il trattamento delle SLOP ricava bianco e nero, seppia o colore

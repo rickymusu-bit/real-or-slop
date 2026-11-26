@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 17.5.0
+# Generazione SLOP — specifica 17.9.0
 
-Aggiornata: 2026-11-26T09:07:50Z. Stato: implementata nel ramo 1.63.0, da rilasciare.
+Aggiornata: 2026-11-26T15:38:09Z. Stato: implementata nel ramo 1.65.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -22,7 +22,7 @@ un riquadro di recupero mostra i processi precedenti ancora da decidere. Il nuov
 
 Le migrazioni 0073 e 0074 aggiungono profili e scene privati su `images`, impostazioni su `galleries` e `pipeline_jobs` temporanei.
 Ogni lavorazione ha un Workflow e uno stato persistente. Una conferma acquisisce una sola operazione; il Workflow non ritenta
-passi a pagamento. La coda acquisisce al massimo tre operazioni contemporanee. Le richieste ancora in attesa si possono annullare gratuitamente;
+passi a pagamento. La coda acquisisce al massimo tre operazioni contemporanee; le preparazioni delle REAL di una stessa galleria (descrizione e parametri, anche in riscrittura) una alla volta, decisione dell'owner del 2026-11-26, perché ognuna legga il dizionario scritto dalla precedente. Le operazioni in attesa di una galleria non bloccano le altre gallerie né le altre fasi. Le richieste ancora in attesa si possono annullare gratuitamente;
 quelle già inviate terminano senza avviare altre fasi. Dopo quindici minuti una richiesta acquisita senza esito passa all'attenzione dell'owner, senza reinvio automatico.
 
 ### Progresso e blocco della pagina
@@ -37,6 +37,14 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
 
 - **Prepara la galleria:** una chiamata per REAL ancora priva di profilo, su originale intero. Salva descrizione inglese,
   identità, genere, parametri osservati e particolarità. Riusa i profili già presenti. I dati sono rivedibili senza chiamate.
+- **Riscrivi i parametri di tutte le REAL** (decisione dell'owner del 2026-11-26): una chiamata con immagine per REAL senza
+  altri lavori attivi, confermata con il numero esatto, eseguita in serie. Conserva la descrizione, che resta un riferimento da
+  verificare sull'immagine, e sostituisce parametri, particolarità e politiche modificate dall'owner. Le REAL con un altro lavoro
+  attivo sono saltate e segnalate, senza addebito. Durante la preparazione di una galleria la pianificazione delle scene è rifiutata.
+- **Unisci categorie:** sotto la composizione della galleria, gratuito. L'owner sceglie una caratteristica, spunta le
+  categorie equivalenti e indica il nome unificato; il server lo applica ai profili REAL e SLOP della galleria con un
+  controllo sul testo salvato, senza toccare valori liberi, descrizioni o lavori già congelati. Rifiutato mentre è in corso
+  una preparazione delle REAL.
 - **Regole e probabilità:** modificabili per galleria. Ogni probabilità vuota usa la stima automatica; zero disabilita un controllo.
   L'ambiente può restare invariato, variare entro lo stesso genere o cambiare insieme al genere.
 - **Prepara scene:** una chiamata per REAL selezionata e preparata. Le estrazioni e i riferimenti vengono congelati. Sono
@@ -52,7 +60,7 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
   è calcolata dal browser. Il riferimento del trattamento è campionato fra REAL misurate dello stesso genere di destinazione;
   senza riferimento disponibile la copia parte senza trattamento. Inquadratura e cursori riusano gli editor esistenti.
 
-API private: `GET /api/admin/pipeline/:gallery`; `POST /:gallery/settings`, `/profile`, `/prepare`, `/plan`, `/stop`;
+API private: `GET /api/admin/pipeline/:gallery` e `/status` (solo stato dei lavori, usato durante l’attesa); `POST /:gallery/settings`, `/profile`, `/categories`, `/prepare`, `/plan`, `/stop`;
 `POST /:gallery/:job/{scene,generate,evaluate,edit,accept,close}`; `GET /:gallery/:job/file` e `?previous=1`.
 Le fasi a pagamento richiedono `confirm`, UUID `request` e `max_calls` esatto. Dal 2026-11-26 la preparazione accetta fino a 5000 REAL in una richiesta: tutta la selezione viene accodata atomicamente prima dell’avvio, senza dipendere da una successione di richieste del browser. Lo stesso comando prepara descrizioni e profili da Import REAL, galleria e dettaglio. `GET /api/admin/pipeline/:gallery/descriptions` espone l’avanzamento senza i profili completi. Il planner conserva il limite di 500 scene per richiesta, con suddivisione delle selezioni maggiori entro il massimo confermato.
 Modelli e qualità sono quelli selezionati nelle Impostazioni; il selettore include GPT-6.2 Sol e Sunburst.
@@ -121,6 +129,23 @@ importa il piano d'appoggio del donatore. Usura, danno, invecchiamento e pulizia
 determinabile. Un valore ignoto non prova l'assenza di un fenomeno. Persone, accessori e numero dei soggetti non diventano nuove
 variazioni attive in questo test. I profili sono JSON privati validati, salvati in `images.pipeline_profile`; i controlli sono definiti in `shared/pipeline.ts`.
 
+Categorie canoniche (2026-11-26, segnalazione dell'owner: «object documentation» e «object_documentation» contate come
+categorie diverse). Genere e `category` di ogni parametro sono chiavi di bilanciamento, non testo libero: si salvano e si
+confrontano in forma canonica (minuscole, accenti rimossi, ogni sequenza di caratteri non alfanumerici sostituita da `_`;
+una categoria vuota diventa `unspecified`). La normalizzazione si applica in lettura anche ai profili salvati prima, per
+statistiche, estrazioni, riferimenti, campione del trattamento e accettazione, e in scrittura per profili preparati, modificati
+dall'owner, proposti dal planner e accettati. Il valore libero (`value`) e le particolarità restano invariati. Le chiamate
+di preparazione e di pianificazione ricevono `known_categories`, le categorie già usate nella galleria per genere e parametro
+(dizionario completo per chiave, ordinato per frequenza, escluse le osservazioni ignote; limite tecnico di 200 voci), con
+l'istruzione di riusare il nome esistente quando indica la stessa cosa. Una categoria nuova segue un formato fisso: inglese,
+snake_case minuscolo, sostantivo singolare che nomina la classe e non l'esemplare, senza articoli, date o conteggi, senza parole
+che appartengono a un altro parametro (il modello non contiene colore, edizione o condizione; il genere non nomina il soggetto),
+nello stesso stile delle voci esistenti; i dettagli precisi stanno in `value`. Il formato tipografico è comunque imposto dal
+codice con la normalizzazione. Per la preparazione l'elenco si legge all'avvio di ogni lavoro, in serie, così ogni REAL vede le
+categorie di quelle già completate; le REAL ancora in coda di preparazione sono escluse, quindi una riscrittura ricostruisce il
+dizionario solo dai profili già riscritti. Sinonimi non ortografici («catalog product photograph» e «catalog product photography»)
+non vengono fusi automaticamente: li unisce l'owner con il comando gratuito.
+
 ## 4. Estrazione e bilanciamento
 
 Estrarre **zero o più parametri**, ciascuno con probabilità configurabile per galleria. Distinguere la probabilità di modificarlo
@@ -136,10 +161,35 @@ Controllare distribuzioni individuali, combinazioni rilevanti e ricorrenze nelle
 conserva tutte le correlazioni delle REAL. Evitare duplicati riconoscibili lasciando che gli elementi comuni nelle REAL siano
 comuni anche nelle SLOP; non imporre unicità a ogni immagine. Scartare o adattare un valore incompatibile dichiarandone il motivo,
 senza introdurre modifiche nascoste degli altri parametri. La stima automatica di selezione per parametro è `clamp(1 − quota_della_categoria_più_frequente, 0.05, 0.4)`.
-I valori vengono campionati dalle REAL compatibili (modello o genere quando necessario), con pesi da 0.25 a 4 per compensare
-sotto/sovrarappresentazione nei parametri previsti delle SLOP accettate e prior proporzionale alle REAL. Non si presume una
-misura osservata delle SLOP: le distribuzioni mostrate sono quelle richieste. Il controllo delle combinazioni è affidato ai
-vincoli del planner, a pochi profili recenti e alla revisione umana; non è una garanzia statistica o un rilevatore di duplicati. Questi controlli non autorizzano cicli automatici di correzione delle immagini.
+Decisione dell'owner del 2026-11-26: estrazione coerente dei parametri dipendenti e bilanciamento delle scene dello stesso gruppo.
+La selezione resta indipendente per parametro e usa le probabilità configurate; non forza ulteriori modifiche.
+I valori selezionati si estraggono congiuntamente da una stessa REAL per ciascun gruppo:
+- modello, colore, materiale/finitura, edizione/decorazione, stato di funzionamento e contenuto dello schermo;
+- posa, punto di vista, composizione e rapporto d'aspetto;
+- usura, danno, invecchiamento e pulizia restano quattro estrazioni separate.
+
+I campi non selezionati con evidenza nota vincolano il donatore alle categorie iniziali. I campi selezionati richiedono evidenza
+nota su tutto il gruppo: `certainty=unknown`, categorie `unknown` e `unspecified` non sono donatori. Lo schermo appartiene al
+modello estratto dallo stesso donatore, oppure al modello iniziale noto. Estrarre solo il contenuto non rivela uno schermo
+nascosto o inattivo. La fotografia usa lo stesso genere salvo `change_genre`. Se manca una combinazione compatibile si
+conservano i valori iniziali del gruppo: nessun ripiego su modelli o generi diversi e nessun parametro aggiunto alla selezione.
+La compatibilità è per categorie osservate, non una prova di plausibilità fisica; il planner e la revisione restano necessari.
+Il filtro conservativo può ridurre le variazioni effettive quando la galleria è piccola o le annotazioni incomplete.
+
+I pesi correggono sotto/sovrarappresentazione della combinazione dei campi selezionati, entro lo stesso insieme di compatibilità
+per REAL e SLOP, con prior equivalente a cinque osservazioni proporzionali alle REAL e pesi limitati a 0.25–4. Prima delle SLOP,
+le combinazioni conservano le frequenze empiriche dei donatori. La scelta resta casuale, senza quote rigide o unicità imposta.
+Durante una richiesta di pianificazione ogni nuova estrazione aggiunge al conteggio locale una previsione anonima: profilo
+iniziale più valori estratti. Le scene successive considerano quindi SLOP accettate e previsioni precedenti della stessa
+richiesta. `drawContext` registra versione dell'algoritmo, numero di accettate e numero di previsioni precedenti nella snapshot.
+Richieste già registrate e REAL occupate non producono estrazioni provvisorie nuove. Le snapshot già registrate restano immutate
+nei reinvii. Nessun conteggio provvisorio diventa una foto, una statistica pubblica o un registro permanente; chiudere un gruppo
+non lascia riserve da sottrarre. Richieste separate, comprese quelle simultanee o divise dal browser oltre 500 scene, bilanciano
+separatamente: il meccanismo non è una quota globale transazionale.
+
+I profili recenti passati al planner restano gli ultimi tre accettati in ordine di creazione. I conteggi provvisori rappresentano
+l'estrazione, prima degli adattamenti del planner; le distribuzioni delle SLOP accettate rappresentano i parametri previsti,
+non una misura osservata dei pixel. Nessuna nuova chiamata, tassonomia chiusa o correzione automatica delle immagini.
 
 ## 5. Scena finale e generazione
 
