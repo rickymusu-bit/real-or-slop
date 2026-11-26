@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 40.0.0, aggiornata il 2026-11-25T22:45:40Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 40.1.0, aggiornata il 2026-11-26T06:27:12Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,8 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.61.0:** admin interamente in inglese, gallerie e pipeline comprese. Tolte le proposte obsolete dalle REAL, nascosto il relativo contesto, rimosso il vecchio wizard browser delle proposte. Descrizioni, misure e valutazioni nuove in inglese; schema tradotto. Migrazione 0075: contesti standard inglesi, personalizzazioni e cronologia conservate. Nessuna rigenerazione o chiamata reale per tradurre dati salvati.
+- **Ramo 1.62.0:** descrizioni REAL e parametri preparati nella coda persistente della pipeline anche da Import REAL, galleria e dettaglio. Selezione registrata insieme prima dei Workflow; stato gratuito, ripresa dopo reload e nessuna dipendenza dal browser per proseguire. Nessuna migrazione o elaborazione reale. Test browser desktop/mobile con renderer congelato e pagina chiusa, verifica diretta del completamento in D1 senza polling e nessuna chiamata duplicata. Indici ambientali opzionali per i riferimenti del planner, ruolo documentato.
+- **Integrata in main la 1.61.0 (PR #180):** admin interamente in inglese, gallerie e pipeline comprese. Tolte le proposte obsolete dalle REAL, nascosto il relativo contesto, rimosso il vecchio wizard browser delle proposte. Descrizioni, misure e valutazioni nuove in inglese; schema tradotto. Migrazione 0075: contesti standard inglesi, personalizzazioni e cronologia conservate. Nessuna rigenerazione o chiamata reale per tradurre dati salvati.
 - **Integrata in main la 1.60.0 (PR #179):** pipeline completa della galleria, `docs/generazione-slop.md` 17.0.0. Preparazione collettiva delle REAL,
   parametri e particolarità, indici, regole/probabilità rivedibili, cambio ambiente/genere, scene inglesi, formato per candidata,
   generazione dal solo testo, valutazione e correzioni confermate. Workflow senza ripetizioni, maschera visibile e modificabile,
@@ -110,11 +111,11 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.9.0 |
+| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, affollamento e dettaglio, dati | `docs/libreria-immagini.md` | 10.10.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.1.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.6.0 |
-| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.1.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.7.0 |
+| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.2.0 |
 | Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 2.0.0 |
 | Foto e gallerie | `docs/database-immagini.md` | 10.9.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
@@ -162,8 +163,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
   `stats.css`, grafico della distribuzione `database-chart.ts`, anteprima a pressione prolungata `image-preview.ts` e
   `image-preview.css`, editor di formato e ritaglio `crop-editor.ts` e
   `crop-editor.css`, avviso di elaborazione `photo-processing.ts` e `admin-loading.css`, cursori del trattamento delle SLOP con anteprima
-  `treatment-editor.ts` e `treatment-editor.css`, copie di gioco preparate nel browser `game-copy.ts`, lettura e generazione delle
-  descrizioni visive `real-description.ts`.
+  `treatment-editor.ts` e `treatment-editor.css`, copie di gioco preparate nel browser `game-copy.ts`, lettura delle descrizioni visive, invio alla coda del server e osservazione gratuita `real-description.ts`.
 
 **Worker** Cloudflare (`worker/`, ingresso `index.ts`):
 - `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera),
@@ -188,7 +188,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
 `licenses.ts`, pulizia dei metadati `media-clean.ts`, livelli e punteggio `levels.ts`, costanti legali `legal.ts`, controllo delle
 immagini `editorial.ts` (brief e valutazioni), `image-label.ts` (titolo REAL o ID SLOP), `image-dimensions.ts`, `image-format.ts`, `image-geometry.ts`, precaricamento `preloading.ts`, `html.ts`.
 
-**Test** (`tests/`): unitari `*.test.ts` (`npm test`); d'integrazione `*.integration.py`, eseguiti da `scripts/integration.py` con il
+**Test** (`tests/`): unitari `*.test.ts` (`npm test`); regressione browser della coda REAL `real_descriptions_browser.integration.py`; d'integrazione `*.integration.py`, eseguiti da `scripts/integration.py` con il
 modello finto `fake_openai.py` (che simula anche l'API di Commons per il controllo delle fonti) e gli aiuti `catalog.py`, `game_copy.py`, `long_press.py`, `local_db.py` (sole fixture nello SQLite di D1 isolato); `cloudflare-workers.mjs` sostituisce in Node
 il modulo `cloudflare:workers` per i test unitari.
 

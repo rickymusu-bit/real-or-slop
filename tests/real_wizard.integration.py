@@ -394,7 +394,7 @@ with sync_playwright() as p:
             page.get_by_role('button', name='Next: description').click()
         acquisition = page.get_by_role('dialog', name='Private import')
         count = acquisition.get_by_role('status')
-        progress = acquisition.get_by_role('progressbar', name='Progresso acquisizione photos REAL')
+        progress = acquisition.get_by_role('progressbar', name='REAL import progress')
         expect(count).to_have_text('Photos imported: 0 of 3')
         expect(progress).to_have_attribute('max', '3')
         expect(progress).to_have_attribute('value', '0')

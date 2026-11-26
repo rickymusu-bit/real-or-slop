@@ -36,7 +36,7 @@ try:
                 except OSError: time.sleep(.4)
             else: raise RuntimeError('Worker locale non pronto; vedere artifacts/integration-worker.log')
             scripts = ['tests/library.integration.py', 'tests/analysis.integration.py', 'tests/slop.integration.py', 'tests/database.integration.py', 'tests/game.integration.py', 'tests/stats.integration.py']
-            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.integration.py', 'tests/real_wizard.integration.py', 'tests/slop_browser.integration.py', 'tests/database_browser.integration.py', 'tests/game_browser.integration.py'])
+            if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.extend(['tests/library_browser.integration.py', 'tests/real_wizard.integration.py', 'tests/real_descriptions_browser.integration.py', 'tests/slop_browser.integration.py', 'tests/database_browser.integration.py', 'tests/game_browser.integration.py'])
             scripts.append('tests/slop_auto.integration.py')
             scripts.append('tests/pipeline.integration.py')
             if os.environ.get('ROS_TEST_BROWSER') == '1': scripts.append('tests/slop_auto_browser.integration.py')

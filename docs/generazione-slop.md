@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 17.1.0
+# Generazione SLOP — specifica 17.2.0
 
-Aggiornata: 2026-11-25T22:45:40Z. Stato: implementata nel ramo 1.61.0, da rilasciare.
+Aggiornata: 2026-11-26T06:27:12Z. Stato: implementata nel ramo 1.62.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -47,8 +47,7 @@ quelle già inviate terminano senza avviare altre fasi. Dopo quindici minuti una
 
 API private: `GET /api/admin/pipeline/:gallery`; `POST /:gallery/settings`, `/profile`, `/prepare`, `/index`, `/plan`, `/stop`;
 `POST /:gallery/:job/{scene,generate,evaluate,edit,accept,close}`; `GET /:gallery/:job/file` e `?previous=1`.
-Le fasi a pagamento richiedono `confirm`, UUID `request` e `max_calls` esatto. Preparazione e scene lavorano su elenchi fino a
-500 REAL per richiesta; l'interfaccia suddivide selezioni maggiori senza superare il massimo confermato complessivamente.
+Le fasi a pagamento richiedono `confirm`, UUID `request` e `max_calls` esatto. Dal 2026-11-26 la preparazione accetta fino a 5000 REAL in una richiesta: tutta la selezione viene accodata atomicamente prima dell’avvio, senza dipendere da una successione di richieste del browser. Lo stesso comando prepara descrizioni e profili da Import REAL, galleria e dettaglio. `GET /api/admin/pipeline/:gallery/descriptions` espone l’avanzamento senza i profili completi. Il planner conserva il limite di 500 scene per richiesta, con suddivisione delle selezioni maggiori entro il massimo confermato.
 Modelli e qualità sono quelli selezionati nelle Impostazioni; il selettore include GPT-6.2 Sol e Sunburst.
 
 ## 2. Descrizioni, assi e regole della galleria
@@ -65,8 +64,7 @@ che debbano essere riprodotte nella SLOP.
 
 Le regole della galleria accompagnano il generatore di testo: modelli compatibili, vincoli fisici e generi fotografici presenti.
 Per Nintendo: `docs/regole-galleria-console-nintendo.md`. Sono costruite sulle REAL, rivedibili dall'owner, non dedotte dal solo
-titolo. Non impongono marcatori visivi comuni a ogni SLOP. Gli indici di soggetto (marca, famiglia, modello) e ambiente recuperano
-le descrizioni pertinenti senza inviare tutta la galleria a ogni generazione. Le statistiche usano le annotazioni disponibili.
+titolo. Non impongono marcatori visivi comuni a ogni SLOP. Nel planner attuale l’indice semantico degli ambienti cerca fino a tre riferimenti simili se l’ambiente si conserva, diversi se cambia. Le corrispondenze vengono poi confrontate per modello nei profili e filtrate per genere, quando richiesto. Gli indici esatti di marca, famiglia e modello servono alla ricerca privata, ma il planner non li usa come filtri SQL. Senza embedding disponibili il planner ripiega sui profili già preparati: gli indici sono quindi un aiuto opzionale al recupero del contesto, non scelgono la REAL iniziale né regolano probabilità e variazioni. La preparazione iniziale di una REAL non consulta più gli indici. Le statistiche usano le annotazioni disponibili.
 
 ## 3. Parametri controllabili
 

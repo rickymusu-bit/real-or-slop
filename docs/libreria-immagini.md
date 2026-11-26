@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.9.0
+# Libreria delle immagini — specifica 10.10.0
 
-Stato: implementata nel ramo 1.61.0, da rilasciare. Aggiornata: 2026-11-25T22:45:40Z.
+Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T06:27:12Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -269,9 +269,8 @@ Le informazioni riportate dalla fonte sono distinte dalle osservazioni. Tipo di 
 - «Carica REAL», passo 2, permette di descrivere una foto o tutte quelle in caricamento ancora da descrivere. Nella galleria,
   «Descrivi le REAL» include nuove, approvate e pubblicate ancora prive di descrizione. L'elenco proviene da `GET /undescribed-reals?gallery=`.
   Le miniature prive di descrizione hanno un'icona. Il dettaglio della foto mostra il testo salvato e permette di generarlo se manca.
-- Il browser conferma il massimo e invia `POST /:id/description {confirm, request, gallery_id}` per foto, in sequenza mentre la
-  pagina è aperta. La richiesta è registrata una sola volta. Le chiamate incerte si fermano per quella foto. Una descrizione già
-  salvata si riusa, anche se la foto cambia galleria.
+- Decisione dell’owner del 2026-11-26: Import REAL, descrizione dalla galleria e dal dettaglio usano la preparazione persistente della pipeline. Una chiamata per foto restituisce descrizione, identità, genere, parametri e particolarità, pronti per il planner SLOP. Il browser conferma il massimo e invia un solo `POST /api/admin/pipeline/:gallery/prepare {confirm, request, ids, max_calls}` per l’intera selezione (fino a 5000 REAL). Il Worker registra tutti i lavori insieme prima di avviare i Workflow, al massimo tre operazioni acquisite. Il lavoro continua con scheda sospesa o pagina chiusa. La pagina osserva solo lo stato gratuito `GET /api/admin/pipeline/:gallery/descriptions` e legge le foto salvate. Ricaricare un’importazione riprende l’osservazione senza nuove conferme o POST a pagamento.
+- L’interfaccia riusa le descrizioni salvate e segue i lavori già attivi, senza accodare duplicati. Un errore o un esito incerto resta segnalato; nessuna ripetizione automatica. Un nuovo tentativo richiede un’altra conferma esplicita. La vecchia rotta sincrona `POST /:id/description` resta compatibile per i client precedenti; il suo claim atomico rifiuta foto già occupate dalla pipeline. Lo stesso vincolo impedisce alla preparazione di sovrapporsi a una descrizione o indicizzazione diretta in corso.
 - La migrazione 0071 aggiunge la descrizione e il controllo delle richieste in corso. Il testo si salva con modello, data e versione
   della base comune, separato dalla fonte Commons. La griglia riceve solo lo stato di presenza. Il testo si cancella con la REAL ed
   è disponibile solo in amministrazione. L'approvazione e la pubblicazione funzionano anche in attesa della descrizione.

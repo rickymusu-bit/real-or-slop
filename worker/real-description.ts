@@ -86,7 +86,8 @@ export async function describeReal(env: Env, row: Row, data: Record<string, unkn
   const [claim] = await env.DB.batch([
     env.DB.prepare(`UPDATE images SET visual_description_request=?,visual_description_claimed_at=?
       WHERE id=? AND gallery_id=? AND status<>'trash' AND visual_description IS NULL
-        AND (visual_description_request IS NULL OR visual_description_claimed_at<?)`)
+        AND (visual_description_request IS NULL OR visual_description_claimed_at<?)
+        AND NOT EXISTS(SELECT 1 FROM pipeline_jobs WHERE source_id=images.id AND state IN ('queued','dispatching','working','proposal','candidate','review','accepting'))`)
       .bind(request, stamp, row.id, gallery.id, stale),
     env.DB.prepare(`UPDATE paid_calls SET status='uncertain',updated_at=? WHERE image_id=? AND id LIKE 'describe-%'
       AND status='pending' AND updated_at<?`).bind(stamp, row.id, stale),

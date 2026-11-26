@@ -101,7 +101,7 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
       if(action==="prepare"||action==="plan"){
         const active=new Set(state!.jobs.map(j=>j.source_id));const ids=state!.sources.filter(s=>!active.has(s.id)&&(action==="prepare"?!s.profile:(selected.has(s.id)&&s.profile&&s.described))).map(s=>s.id);
         if(!confirmation(action==="prepare"?"Describe and prepare missing REAL":"Prepare English scenes",ids.length))return;
-        for(let at=0;at<ids.length;at+=500){const chunk=ids.slice(at,at+500);await call("/"+action,payload({ids:chunk,max_calls:chunk.length}));}return;
+        if(action==="prepare"){await call("/prepare",payload({ids,max_calls:ids.length}));return;}for(let at=0;at<ids.length;at+=500){const chunk=ids.slice(at,at+500);await call("/plan",payload({ids:chunk,max_calls:chunk.length}));}return;
       }
       if(action==="generate-all"||action==="evaluate-all"){
         const op=action==="generate-all"?"generate":"evaluate",jobs=state!.jobs.filter(j=>j.state===(op==="generate"?"proposal":"candidate"));

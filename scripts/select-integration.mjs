@@ -4,7 +4,7 @@ import {appendFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
 
 export const ALL = ['pipeline', 'library', 'analysis', 'slop', 'database', 'game', 'stats',
-  'library_browser', 'real_wizard', 'slop_browser', 'database_browser', 'game_browser', 'slop_auto', 'slop_auto_browser'];
+  'library_browser', 'real_wizard', 'real_descriptions_browser', 'slop_browser', 'database_browser', 'game_browser', 'slop_auto', 'slop_auto_browser'];
 const BROWSER = ALL.filter(s => s.includes('browser') || s === 'real_wizard');
 export function select(files, full = false) {
   if (full || !files.length) return ALL;
