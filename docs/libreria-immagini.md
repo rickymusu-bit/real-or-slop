@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.12.0
+# Libreria delle immagini — specifica 10.13.0
 
-Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T07:36:58Z.
+Stato: implementata nel ramo 1.63.0, da rilasciare. Aggiornata: 2026-11-26T09:07:50Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -24,7 +24,7 @@ Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è i
   Superano le decisioni del 2026-11-09 (analisi una volta per immagine), del 2026-11-19 (ripetizione dell'analisi, descrizione nei
   risultati) e quella di poche ore prima sulle incertezze.
 - **Proposte delle REAL precedenti:** non più mostrate sulle immagini REAL; conservate per compatibilità delle lavorazioni anteriori alla 1.60.0; il nuovo wizard
-  usa parametri, particolarità e scene della galleria, come descritto in `generazione-slop` 17.4.0.
+  usa parametri, particolarità e scene della galleria, come descritto in `generazione-slop` 17.5.0.
 - **Controllo notturno delle fonti Commons** (2026-11-20): 50 REAL a notte, numero modificabile dalle Impostazioni, ciascuna solo tre mesi dopo l'ultimo controllo; un
   file sparito da Commons viene **solo segnalato**, mai ritirato o cancellato in automatico (sezione 9).
 - **Crowding e detail rimossi** (2026-11-26). Non servono nella pipeline attuale. Rimossi comandi/API, punteggi e soglie, senza nuove chiamate di misura. Restano la cronologia già pagata e le misure tecniche del trattamento (sezione 10).
@@ -249,10 +249,10 @@ le relative chiamate ancora pendenti, senza ripeterle. La migrazione 0072 rimane
 ## 13. Profili privati e pipeline della galleria
 
 La 1.60.0 aggiunge `images.pipeline_profile` per genere, quattordici parametri e particolarità, e `pipeline_scene` per la scena
-prevista di una SLOP. Il wizard prepara insieme descrizione e profilo con una chiamata per REAL mancante; riusa quelli presenti.
+prevista di una SLOP. Il wizard prepara insieme descrizione e profilo con una chiamata per REAL mancante; riusa quelli presenti. Dal 2026-11-26 la pagina resta bloccata da una finestra di progresso dall’invio fino all’esito della preparazione, con stop gratuito della coda e ripresa dell’osservazione al ritorno. Lo stesso blocco copre tutte le altre fasi a pagamento della pipeline.
 I profili sono correggibili gratuitamente; le particolarità hanno policy di conservazione, variazione o estrazione. I dati
 restano privati, esclusi dalle risposte del gioco. Le scene SLOP non sono didascalie. Il nuovo protocollo completo e le sue
-conferme sono in `generazione-slop` 17.4.0. Le vecchie idee restano per compatibilità delle lavorazioni precedenti.
+conferme sono in `generazione-slop` 17.5.0. Le vecchie idee restano per compatibilità delle lavorazioni precedenti.
 
 ## Lingua amministrativa e contesti (1.61.0)
 

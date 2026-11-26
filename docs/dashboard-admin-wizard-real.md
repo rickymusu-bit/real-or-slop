@@ -1,6 +1,6 @@
-# Dashboard e wizard REAL — specifica 6.8.0
+# Dashboard e wizard REAL — specifica 6.9.0
 
-Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T07:36:58Z.
+Stato: implementata nel ramo 1.63.0, da rilasciare. Aggiornata: 2026-11-26T09:07:50Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -51,6 +51,8 @@ Nelle eccezioni SLOP, «Accetta comunque il tentativo N» è disponibile per ogn
   tocca la × nell'angolo in alto a destra (o Esc); il tocco sullo sfondo non la chiude.
 - **Contenuti:** risultato di Commons: anteprima da 1280 px, titolo del file, descrizione di Commons (300 caratteri), «Apri la pagina su
   Commons». REAL della galleria: copia di gioco, titolo, descrizione, link alla fonte. SLOP della galleria: copia, ID abbreviato e prompt. Immagine della revisione nel wizard SLOP: prompt.
+
+Dal 2026-11-26 le fasi a pagamento della pipeline SLOP, inclusa la preparazione dei parametri REAL, usano la finestra modale «Processing photo» fino all’esito dei Workflow, con conteggio dei completati e pagina bloccata. La finestra consente lo stop gratuito della coda, impedisce chiusura con Esc e navigazione sottostante, e torna al rientro sulla pagina se il server sta ancora lavorando. I comandi di descrizione REAL mostrano il blocco già durante l’invio della selezione. Nessuna osservazione o ripresa genera nuove chiamate (specifica `generazione-slop`, sezione 1).
 
 ## 4. Wizard REAL
 

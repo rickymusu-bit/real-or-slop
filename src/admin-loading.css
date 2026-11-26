@@ -8,4 +8,5 @@
 .photo-processing { position: fixed; inset: 0; margin: auto; max-width: min(28rem, calc(100vw - 2rem)); padding: 1.25rem; }
 .photo-processing::backdrop { background: rgb(0 0 0 / 65%); }
 .photo-processing .admin-loading { color: var(--text); margin: 0; }
+.photo-processing > button { margin-top: 1rem; }
 html:has(.photo-processing[open]) { overflow: hidden; }

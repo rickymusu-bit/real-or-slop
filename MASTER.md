@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 40.3.0, aggiornata il 2026-11-26T07:36:58Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 40.4.0, aggiornata il 2026-11-26T09:07:50Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,9 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.62.0:** descrizioni REAL e parametri preparati nella coda persistente della pipeline anche da Import REAL, galleria e dettaglio. Selezione registrata insieme prima dei Workflow; stato gratuito, ripresa dopo reload e nessuna dipendenza dal browser per proseguire. Migrazione 0076 per eliminare gli indici delle descrizioni; nessuna elaborazione reale. Test browser desktop/mobile con renderer congelato e pagina chiusa, verifica diretta del completamento in D1 senza polling e nessuna chiamata duplicata. Rimossi comandi/API di indicizzazione, identità di ricerca ed embedding: il planner usa direttamente i profili già preparati nella galleria. Descrizioni e dati della pipeline conservati. Rimossi anche crowding/detail da comandi, API, soglie, avvisi, contesti e prompt precedenti; migrazione 0077 con cronologia conservata e misure tecniche di trattamento invariate.
+- **Ramo 1.63.0:** schermata di progresso modale per tutte le fasi a pagamento della pipeline, inclusi i parametri REAL. Il blocco copre invio e attesa del risultato, con conteggio dei lavori e annullamento gratuito della coda. Ripresa automatica dell’osservazione al ritorno; nessun nuovo invio, valutazione o retry. Import/galleria/dettaglio mostrano il blocco prima dell’accodamento. Test desktop/mobile su blocco, Esc, navigazione, reload, errori e stop. Nessuna migrazione o chiamata reale.
+
+- **Integrata in main la 1.62.0 (PR #181):** descrizioni REAL e parametri preparati nella coda persistente della pipeline anche da Import REAL, galleria e dettaglio. Selezione registrata insieme prima dei Workflow; stato gratuito, ripresa dopo reload e nessuna dipendenza dal browser per proseguire. Migrazione 0076 per eliminare gli indici delle descrizioni; nessuna elaborazione reale. Test browser desktop/mobile con renderer congelato e pagina chiusa, verifica diretta del completamento in D1 senza polling e nessuna chiamata duplicata. Rimossi comandi/API di indicizzazione, identità di ricerca ed embedding: il planner usa direttamente i profili già preparati nella galleria. Descrizioni e dati della pipeline conservati. Rimossi anche crowding/detail da comandi, API, soglie, avvisi, contesti e prompt precedenti; migrazione 0077 con cronologia conservata e misure tecniche di trattamento invariate.
 - **Integrata in main la 1.61.0 (PR #180):** admin interamente in inglese, gallerie e pipeline comprese. Tolte le proposte obsolete dalle REAL, nascosto il relativo contesto, rimosso il vecchio wizard browser delle proposte. Descrizioni, misure e valutazioni nuove in inglese; schema tradotto. Migrazione 0075: contesti standard inglesi, personalizzazioni e cronologia conservate. Nessuna rigenerazione o chiamata reale per tradurre dati salvati.
 - **Integrata in main la 1.60.0 (PR #179):** pipeline completa della galleria, `docs/generazione-slop.md` 17.0.0. Preparazione collettiva delle REAL,
   parametri e particolarità, indici, regole/probabilità rivedibili, cambio ambiente/genere, scene inglesi, formato per candidata,
@@ -111,11 +113,11 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, dati | `docs/libreria-immagini.md` | 10.12.0 |
+| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, dati | `docs/libreria-immagini.md` | 10.13.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.1.0 |
-| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.8.0 |
-| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.4.0 |
+| Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.9.0 |
+| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 17.5.0 |
 | Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 2.0.0 |
 | Foto e gallerie | `docs/database-immagini.md` | 10.11.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
@@ -162,7 +164,7 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
   `slop-studio.ts` e `slop-studio.css` (recupero delle lavorazioni precedenti), statistiche `stats.ts` e
   `stats.css`, grafico della distribuzione `database-chart.ts`, anteprima a pressione prolungata `image-preview.ts` e
   `image-preview.css`, editor di formato e ritaglio `crop-editor.ts` e
-  `crop-editor.css`, avviso di elaborazione `photo-processing.ts` e `admin-loading.css`, cursori del trattamento delle SLOP con anteprima
+  `crop-editor.css`, avviso di elaborazione con azioni gratuite di coda `photo-processing.ts` e `admin-loading.css`, cursori del trattamento delle SLOP con anteprima
   `treatment-editor.ts` e `treatment-editor.css`, copie di gioco preparate nel browser `game-copy.ts`, lettura delle descrizioni visive, invio alla coda del server e osservazione gratuita `real-description.ts`.
 
 **Worker** Cloudflare (`worker/`, ingresso `index.ts`):

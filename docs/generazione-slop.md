@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 17.4.0
+# Generazione SLOP — specifica 17.5.0
 
-Aggiornata: 2026-11-26T07:36:58Z. Stato: implementata nel ramo 1.62.0, da rilasciare.
+Aggiornata: 2026-11-26T09:07:50Z. Stato: implementata nel ramo 1.63.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -24,6 +24,14 @@ Le migrazioni 0073 e 0074 aggiungono profili e scene privati su `images`, impost
 Ogni lavorazione ha un Workflow e uno stato persistente. Una conferma acquisisce una sola operazione; il Workflow non ritenta
 passi a pagamento. La coda acquisisce al massimo tre operazioni contemporanee. Le richieste ancora in attesa si possono annullare gratuitamente;
 quelle già inviate terminano senza avviare altre fasi. Dopo quindici minuti una richiesta acquisita senza esito passa all'attenzione dell'owner, senza reinvio automatico.
+
+### Progresso e blocco della pagina
+
+Decisione dell’owner del 2026-11-26: ogni operazione a pagamento blocca la pagina dall’invio confermato fino al termine dei lavori sul server, compresa la generazione dei parametri REAL. La finestra di progresso mostra fase, completati sul totale e richieste pendenti. Il dialogo modale blocca puntatore, tastiera e navigazione sottostanti; Esc non lo chiude.
+
+Il browser accoda una sola volta e osserva lo stato con letture gratuite: la risposta «queued» non chiude la finestra. La preparazione REAL, le scene, la generazione, la valutazione e gli interventi locali usano lo stesso comportamento, singolarmente o in gruppo. La maschera di correzione e la conferma del massimo precedono sempre l’avvio della spesa. Nessuna fase successiva viene avviata da sola.
+
+La finestra offre «Stop queued requests»: dopo che l’accodamento è completo, la conferma annulla gratuitamente ciò che non è stato inviato; i lavori acquisiti terminano. Le operazioni ferme o fallite si segnalano e rilasciano il blocco. Un errore di lettura del progresso indica che il server può continuare: tornare alla pagina riprende l’osservazione, senza ritentare richieste a pagamento. Anche reload, scheda nascosta e chiusura del browser lasciano proseguire il server. I lavori già attivi vengono osservati in una nuova finestra modale al ritorno, senza nuove conferme di spesa.
 
 ### Comandi e conferme
 
