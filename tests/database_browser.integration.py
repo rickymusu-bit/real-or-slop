@@ -76,7 +76,7 @@ with sync_playwright() as p:
         expect(cards).to_have_count(1)
         card = page.locator(f'.library-card:has([aria-label="Open {prefix}-barricate"])')
         # The card: thumbnail, origin and state only; views in the detail.
-        expect(card.locator('.badge')).to_have_text(['REAL', 'published', 'Source removed'])
+        expect(card.locator('.badge')).to_have_text(['REAL', 'published', '0 SLOP generated', 'Source removed'])
         for hidden in ('.db-tag', '.library-card-title', '[data-stats]'): expect(card.locator(hidden)).to_have_count(0)
         expect(card.locator('[data-source-missing]')).to_have_text('Source removed')
         card.locator('.library-open').click()
