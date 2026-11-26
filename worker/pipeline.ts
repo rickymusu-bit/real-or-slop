@@ -21,7 +21,7 @@ const base64Bytes = (text: string) => { const raw = atob(text), bytes = new Uint
 const VOCABULARY_RULE = " known_categories is the dictionary of categories already used in this gallery for the genre and each parameter, most frequent first. Reuse the exact listed category whenever it denotes the same thing, even if your own wording would differ. Create a new category only for a genuinely different value, following this format: English, lowercase snake_case, singular noun phrase naming the class rather than the specimen; no articles, punctuation, dates or counts; no words that belong to another parameter (a model category never contains colour, edition or condition; a genre never names the subject); the same naming style as the existing entries. Precise details belong in value, not in category.";
 const ATTRIBUTE_RULES = ' English atomic observed attributes, genre as a short consistent category, and peculiarities. For wear, damage, ageing and cleanliness use category none/light/moderate/heavy/unknown, separately. Other categories are normalized concise values, not donor scenes. Attribute certainty is observed/inferred/unknown; unknown never means absent. aspect_ratio is oriented original width:height, provided in input. For screen_content describe actual menu/game, language, save values and layout. A switched-off or concealed screen has category not_applicable. Peculiarities identify edition/model details (identity: preserve), individual specimen marks (specimen: draw), and identifying temporary details such as a save name/time (temporary: vary). Name exact official editions; do not describe a generic tribal pattern in place of a named Tribal Edition.';
 const DEFAULTS: PipelineSettings = { rules: "Describe one coherent photographic scene. Preserve model-specific visible hardware and stable physical support. Use the precise name of an official edition rather than generic substitute decoration. Distinguish identity-defining details from specimen-specific or temporary details. Avoid exaggerated scratches, showroom staging or beautiful lighting unless appropriate to the target genre.", probabilities: {}, environment: "keep", novelty: .1 };
-interface Source extends Row { pipeline_profile: string | null; pipeline_observed: string | null; slop_generated_count: number; visual_description_request: string | null; visual_description_claimed_at: string | null }
+interface Source extends Row { pipeline_profile: string | null; pipeline_slop_observation: string | null; slop_generated_count: number; visual_description_request: string | null; visual_description_claimed_at: string | null }
 interface Snapshot { operation: "profile" | "plan" | "generate" | "evaluate" | "edit" | "observe"; description?: VisualDescription; profile?: Profile;
   variation?: Variation; references?: { sections: VisualDescription["sections"]; profile: Profile }[];
   recent?: {genre:string;parameters:Profile["parameters"]}[]; vocabulary?: Vocabulary; settings: PipelineSettings; textModel: string; imageModel: string; quality: string; sourceRevision: number;
@@ -117,7 +117,7 @@ export async function processPipelineJob(env: Env, jobId: string) {
       throw new HttpError(409, "Photo changed: create a new job");
     if (snap.operation === "observe") {
       if (!source || source.origin !== "SLOP") throw new HttpError(409, "SLOP unavailable");
-      if (profileOf(source.pipeline_observed)) {
+      if (profileOf(source.pipeline_slop_observation)) {
         await env.DB.prepare("DELETE FROM pipeline_jobs WHERE id=?").bind(job.id).run(); return;
       }
       const file = await env.QUARANTINE.get(source.original_key); if (!file) throw new HttpError(404, "Missing original");
@@ -129,8 +129,8 @@ export async function processPipelineJob(env: Env, jobId: string) {
       if (!validProfile(answer.profile)) throw new HttpError(502, "Incomplete observation");
       const profile = normalizeProfile(answer.profile);
       profile.parameters.aspect_ratio = { value: `${source.width}:${source.height}`, category: source.width > source.height ? "landscape" : source.width < source.height ? "portrait" : "square", certainty: "observed" };
-      const saved = await env.DB.prepare(`UPDATE images SET pipeline_observed=? WHERE id=? AND gallery_id=? AND status<>'trash' AND original_key=? AND pipeline_observed IS ?`)
-        .bind(JSON.stringify({ ...profile, observation: { model: snap.textModel, at: now() } }), source.id, job.gallery_id, source.original_key, source.pipeline_observed).run();
+      const saved = await env.DB.prepare(`UPDATE images SET pipeline_slop_observation=? WHERE id=? AND gallery_id=? AND status<>'trash' AND original_key=? AND pipeline_slop_observation IS ?`)
+        .bind(JSON.stringify({ ...profile, observation: { model: snap.textModel, at: now() } }), source.id, job.gallery_id, source.original_key, source.pipeline_slop_observation).run();
       if (!saved.meta.changes) throw new HttpError(409, "SLOP changed during observation: result not applied");
       await env.DB.prepare("DELETE FROM pipeline_jobs WHERE id=?").bind(job.id).run(); return;
     }
@@ -248,10 +248,10 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
     const jobs = (await env.DB.prepare("SELECT * FROM pipeline_jobs WHERE gallery_id=? ORDER BY created_at,id").bind(galleryId).all<Job>()).results;
     const profiles = new Map(sources.map(r => [r.id, profileOf(r.pipeline_profile)]));
     const reals = [...profiles.values()].filter((p): p is Profile => !!p);
-    const slopRows = (await env.DB.prepare("SELECT id,pipeline_observed FROM images WHERE gallery_id=? AND origin='SLOP' AND status<>'trash' ORDER BY created_at,id")
-      .bind(galleryId).all<{ id: string; pipeline_observed: string | null }>()).results;
-    const slops = slopRows.map(r => profileOf(r.pipeline_observed)).filter((p): p is Profile => !!p);
-    const unobserved = slopRows.filter(r => !profileOf(r.pipeline_observed)).map(r => r.id);
+    const slopRows = (await env.DB.prepare("SELECT id,pipeline_slop_observation FROM images WHERE gallery_id=? AND origin='SLOP' AND status<>'trash' ORDER BY created_at,id")
+      .bind(galleryId).all<{ id: string; pipeline_slop_observation: string | null }>()).results;
+    const slops = slopRows.map(r => profileOf(r.pipeline_slop_observation)).filter((p): p is Profile => !!p);
+    const unobserved = slopRows.filter(r => !profileOf(r.pipeline_slop_observation)).map(r => r.id);
     const histogram = (profiles:Profile[], key:typeof PARAMETER_KEYS[number] | "genre") => {
       const counts:Record<string,number>={};for(const p of profiles){const value=key==="genre"?p.genre:p.parameters[key].certainty==="unknown"?"unknown":p.parameters[key].category;counts[value]=(counts[value]||0)+1;}return counts;
     };
@@ -287,10 +287,10 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
     if (!from.size) return json({ updated: 0 });
     if (await env.DB.prepare("SELECT 1 FROM pipeline_jobs WHERE gallery_id=? AND state IN ('queued','dispatching','working') AND json_extract(snapshot,'$.operation') IN ('profile','observe')").bind(galleryId).first())
       throw new HttpError(409, "Wait for annotations in progress");
-    const rows = (await env.DB.prepare("SELECT id,pipeline_profile,pipeline_observed FROM images WHERE gallery_id=? AND (pipeline_profile IS NOT NULL OR pipeline_observed IS NOT NULL)")
-      .bind(galleryId).all<{ id: string; pipeline_profile: string | null; pipeline_observed: string | null }>()).results;
+    const rows = (await env.DB.prepare("SELECT id,pipeline_profile,pipeline_slop_observation FROM images WHERE gallery_id=? AND (pipeline_profile IS NOT NULL OR pipeline_slop_observation IS NOT NULL)")
+      .bind(galleryId).all<{ id: string; pipeline_profile: string | null; pipeline_slop_observation: string | null }>()).results;
     const writes = [];
-    for (const row of rows) for (const field of ["pipeline_profile", "pipeline_observed"] as const) {
+    for (const row of rows) for (const field of ["pipeline_profile", "pipeline_slop_observation"] as const) {
       const profile = profileOf(row[field]);
       if (!profile || !from.has(key === "genre" ? profile.genre : profile.parameters[key].category)) continue;
       if (key === "genre") profile.genre = into; else profile.parameters[key].category = into;
@@ -314,18 +314,18 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
   if (target === "observe") {
     if (!Array.isArray(data.ids) || !data.ids.length || data.ids.length > 500 || new Set(data.ids).size !== data.ids.length || data.max_calls !== data.ids.length)
       throw new HttpError(400, "Confirm the exact number of calls, one per SLOP");
-    const rows = (await env.DB.prepare(`SELECT id,revision,pipeline_observed FROM images WHERE gallery_id=? AND origin='SLOP' AND status<>'trash'
-      AND id IN (SELECT value FROM json_each(?))`).bind(galleryId, JSON.stringify(data.ids)).all<{ id: string; revision: number; pipeline_observed: string | null }>()).results;
+    const rows = (await env.DB.prepare(`SELECT id,revision,pipeline_slop_observation FROM images WHERE gallery_id=? AND origin='SLOP' AND status<>'trash'
+      AND id IN (SELECT value FROM json_each(?))`).bind(galleryId, JSON.stringify(data.ids)).all<{ id: string; revision: number; pipeline_slop_observation: string | null }>()).results;
     if (rows.length !== data.ids.length) throw new HttpError(409, "SLOP selection changed");
-    const targets = rows.filter(row => !profileOf(row.pipeline_observed));
+    const targets = rows.filter(row => !profileOf(row.pipeline_slop_observation));
     const [textModel, imageModel, quality] = await Promise.all([chosenModel(env, "text_model"), chosenModel(env, "image_model"), chosenQuality(env)]);
     const stamp = now(), jobs: string[] = [];
     for (let at = 0; at < targets.length; at += 50) {
       const results = await env.DB.batch<{ id: string }>(targets.slice(at, at + 50).map(row => env.DB.prepare(`INSERT OR IGNORE INTO pipeline_jobs
         (id,gallery_id,source_id,state,snapshot,request,created_at,updated_at) SELECT ?,?,?,'queued',?,?,?,?
-        WHERE EXISTS(SELECT 1 FROM images WHERE id=? AND gallery_id=? AND origin='SLOP' AND status<>'trash' AND pipeline_observed IS ?) RETURNING id`)
+        WHERE EXISTS(SELECT 1 FROM images WHERE id=? AND gallery_id=? AND origin='SLOP' AND status<>'trash' AND pipeline_slop_observation IS ?) RETURNING id`)
         .bind(`${data.request}-${row.id}`, galleryId, row.id, JSON.stringify({ operation: "observe", sourceRevision: row.revision, settings: settingsOf(null), textModel, imageModel, quality }), data.request, stamp, stamp,
-          row.id, galleryId, row.pipeline_observed)));
+          row.id, galleryId, row.pipeline_slop_observation)));
       for (const result of results) jobs.push(...result.results.map(r => r.id));
     }
     await dispatchPipeline(env); return json({ jobs });
@@ -361,8 +361,8 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
       return json({ jobs: inserted.map(job => job.id), skipped: targets.length - inserted.length });
     }
     // Oldest first, so the last entries really are the most recently accepted SLOP.
-    const generated = (await env.DB.prepare("SELECT pipeline_observed FROM images WHERE gallery_id=? AND origin='SLOP' AND status<>'trash' AND pipeline_observed IS NOT NULL ORDER BY created_at,id").bind(galleryId).all<{pipeline_observed:string}>()).results
-      .map(r => profileOf(r.pipeline_observed)).filter((p): p is Profile => !!p);
+    const generated = (await env.DB.prepare("SELECT pipeline_slop_observation FROM images WHERE gallery_id=? AND origin='SLOP' AND status<>'trash' AND pipeline_slop_observation IS NOT NULL ORDER BY created_at,id").bind(galleryId).all<{pipeline_slop_observation:string}>()).results
+      .map(r => profileOf(r.pipeline_slop_observation)).filter((p): p is Profile => !!p);
     const prepared = rows.flatMap(r => { const profile = profiles.get(r.id), description = parse<VisualDescription | null>(r.visual_description, null);
       return profile && description ? [{ row: r, profile, description }] : []; });
     const preparedById = new Map(prepared.map(p => [p.row.id, p]));

@@ -1,6 +1,6 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-26T22:47:12Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-26T22:57:37Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
 ## 1.66.0 — 2026-11-26T22:47:12Z
@@ -11,7 +11,8 @@ I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella c
 - Le miniature REAL mostrano quante candidate iniziali sono state generate e salvate dalla 1.66.0, comprese quelle poi scartate;
   conteggio atomico e idempotente, edit esclusi. Le REAL restano utilizzabili e non si ricostruiscono usi storici sconosciuti.
 - Le SLOP approvate escono dal passo 4 e restano nella galleria, dove si pubblicano. Osservazioni e file restano conservati.
-- Migrazione additiva 0078, schema e specifiche aggiornati; regressioni su osservazioni richieste/osservate diverse, pagamenti
+- Migrazione additiva 0078 con campo distinto dalla colonna della PR #184 presente nell’anteprima condivisa; i dati
+  precedenti restano intatti. Schema e specifiche aggiornati; regressioni su osservazioni richieste/osservate diverse, pagamenti
   duplicati, spostamento concorrente, contatori e uscita dal wizard. Nei test soltanto modelli simulati.
 
 ## 1.65.1 — 2026-11-26T20:51:42Z

@@ -1,6 +1,6 @@
 # Generazione SLOP â€” specifica 18.0.0
 
-Aggiornata: 2026-11-26T22:47:12Z. Stato: implementata nel ramo 1.66.0, da rilasciare.
+Aggiornata: 2026-11-26T22:57:37Z. Stato: implementata nel ramo 1.66.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -216,7 +216,7 @@ pubblicate. Nessuna osservazione parte accettando o approvando. L'osservazione Ã
 L'annotatore usa schema e convenzioni degli attributi REAL e il vocabolario dei profili REAL della galleria; riceve solo
 immagine originale, dimensioni e vocabolario. Non riceve titolo, REAL ispiratrice, prompt, scena, parametri richiesti,
 valutazione o regole di variazione. Non scrive una descrizione SLOP. Orientamento e rapporto del profilo sono calcolati dalle
-dimensioni effettive del file. Profili e metadati di osservazione (modello e data) sono privati in `images.pipeline_observed`;
+dimensioni effettive del file. Profili e metadati di osservazione (modello e data) sono privati in `images.pipeline_slop_observation`;
 `images.pipeline_profile` resta il profilo richiesto, utile a ricostruire la scena ma escluso dal confronto e dai pesi.
 
 La tabella confronta osservazioni REAL e osservazioni SLOP con conteggio della copertura: osservate sul totale, elenco delle

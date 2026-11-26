@@ -1,6 +1,6 @@
 # Libreria delle immagini — specifica 10.14.0
 
-Stato: implementata nel ramo 1.66.0, da rilasciare. Aggiornata: 2026-11-26T22:47:12Z.
+Stato: implementata nel ramo 1.66.0, da rilasciare. Aggiornata: 2026-11-26T22:57:37Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -261,7 +261,7 @@ La migrazione 0075 aggiunge versioni inglesi dei soli contesti ancora uguali ai 
 ## 14. Osservazioni SLOP e conteggio delle generazioni (2026-11-26)
 
 Le categorie del confronto di galleria e del bilanciamento si ricavano da una chiamata confermata sull'originale SLOP intero,
-con le convenzioni REAL, senza prompt o profilo richiesto. `pipeline_observed` conserva profilo, modello e data, mai una descrizione
+con le convenzioni REAL, senza prompt o profilo richiesto. `pipeline_slop_observation` conserva profilo, modello e data, mai una descrizione
 SLOP; il profilo richiesto resta distinto. Cache e claim impediscono invii duplicati, gli esiti incerti non si ripetono.
 La specifica `generazione-slop` 18.0.0, sezione 4.1, definisce conferme, copertura e concorrenza. I dati sono privati e si eliminano
 con la foto. Le osservazioni mancanti si indicano e non contribuiscono al confronto o al bilanciamento.

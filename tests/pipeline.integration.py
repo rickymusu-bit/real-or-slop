@@ -196,7 +196,7 @@ print('Pipeline group balance passed: provisional draws accumulate only within t
 
 # A photo moved during a paid observation cannot receive the old gallery's annotation.
 H.API=BASE+'/api/admin/pipeline/'+gallery['id']+'/'
-sql(f"UPDATE images SET pipeline_observed=NULL WHERE id='{slop}'")
+sql(f"UPDATE images SET pipeline_slop_observation=NULL WHERE id='{slop}'")
 control([{'delay':1}]);req=paid_request(ids=[slop],max_calls=1)
 code,queued=call('observe',req);assert code==200
 observation_job=queued['jobs'][0]
@@ -207,7 +207,7 @@ else:raise AssertionError('Observation did not start')
 photo=call('/'+slop,library=True)[1]
 assert call('/'+slop,{'revision':photo['revision'],'gallery_id':other['id']},method='PATCH',library=True)[0]==200
 state=wait(lambda s:any(j['id']==observation_job and j['state']=='attention' for j in s['jobs']))
-assert sql(f"SELECT pipeline_observed FROM images WHERE id='{slop}'")[0]['pipeline_observed'] is None
+assert sql(f"SELECT pipeline_slop_observation FROM images WHERE id='{slop}'")[0]['pipeline_slop_observation'] is None
 assert len(control())==1
 assert call('observe',req)[0]==409  # Wrong gallery after the move: no repeat.
 print('Observed SLOP concurrency passed: moved photo not written with an old-gallery result and no automatic repeat.')

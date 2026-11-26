@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 40.9.0, aggiornata il 2026-11-26T22:47:12Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 40.9.0, aggiornata il 2026-11-26T22:57:37Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
