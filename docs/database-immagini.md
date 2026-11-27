@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 10.13.0
+# Foto e gallerie — specifica 11.0.0
 
-Stato: implementata nel ramo 1.67.0, da rilasciare. Aggiornata: 2026-11-27T07:05:36Z.
+Stato: implementata nel ramo 1.68.0, da rilasciare. Aggiornata: 2026-11-27T08:14:46Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -122,11 +122,12 @@ coda durevole. Le gallerie con operazioni accodate/in corso non possono essere e
 
 Le SLOP approvate dal passo 4 del wizard escono da quel passo e restano qui, pronte per la pubblicazione esplicita.
 L'uscita dal wizard non cancella originali, copie o osservazioni. Le REAL già usate restano selezionabili; il contatore aiuta
-l'owner a distribuire l'uso. «Observe SLOP (N)» nella barra della galleria osserva tutte le mancanti fuori dal cestino,
-anche pubblicate e oltre la pagina corrente; la selezione e il dettaglio permettono sottoinsiemi e singole foto. Il dettaglio indica
-se i parametri sono osservati o esclusi dal confronto. Conferma del massimo, progresso bloccante, stop gratuito della coda e
-ripresa dei soli lavori già attivi al ritorno, senza ritirare foto pubblicate. Il comando resta visibile nel passo 2 del wizard
-sopra la composizione (specifica `generazione-slop` 18.1.0).
+l'owner a distribuire l'uso. Approvare una SLOP avvia automaticamente l’osservazione dell’originale mancante: al massimo una
+chiamata per foto, già autorizzata dall’approvazione. La barra di selezione indica il massimo; il dettaglio mostra lo stato.
+Non ci sono pulsanti «Observe SLOP» o conferme separate. Progresso bloccante e ripresa dopo reload seguono solo la coda già
+registrata sul server. Approvazione singola, in gruppo e pubblicazione in gruppo di foto nuove condividono il flusso.
+Cache e claim durevole impediscono chiamate duplicate e retry incerti (migrazione 0080, specifica `generazione-slop` 19.0.0).
+Gli adeguamenti necessari al pregresso sono eseguiti dall’agente tramite API, senza comandi temporanei nell’admin.
 
 Migrazione 0079: i contatori includono gli usi precedenti verificabili da generazione e successiva valutazione concluse prima
 della 0078. Edit contati una volta, baseline numerica anonima e nessuna genealogia REAL–SLOP. Gli usi senza prove restano esclusi.

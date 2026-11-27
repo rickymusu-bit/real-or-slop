@@ -1,7 +1,17 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-27T07:05:36Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-27T08:14:46Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.68.0 — 2026-11-27T08:14:46Z
+
+- Osservazione SLOP automatica all’approvazione, nel wizard, nel dettaglio, nelle azioni in gruppo e nelle API: massimo una
+  chiamata per originale mancante, senza pulsanti «Observe SLOP» o conferma separata. Progresso bloccante e ripresa gratuita.
+- Approvazione, claim durevole e lavoro salvati insieme. Migrazione 0080 conserva anche i tentativi storici e impedisce retry
+  automatici dopo esiti incerti o chiusura dei lavori. Cache valida riusata e configurazione verificata prima dell’approvazione.
+- Regola permanente: gli adeguamenti del pregresso dopo modifiche della pipeline sono eseguiti dall’agente tramite API,
+  senza pulsanti temporanei. Verificate le tre SLOP di produzione già osservate e i tre usi REAL recuperati; nessuna duplicazione.
+- Schema e specifiche aggiornati; regressioni per approvazione singola/in gruppo, concorrenza e riapertura dopo esito incerto.
 
 ## 1.67.0 — 2026-11-27T07:05:36Z
 
