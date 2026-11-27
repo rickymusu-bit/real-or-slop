@@ -80,6 +80,9 @@ print('Pipeline passed: cached gallery profiles, controlled variations, text-onl
 slop=state['images'][0]['id']
 assert state['stats']['slop_total']==1 and state['stats']['slop_count']==0 and state['stats']['unobserved']==[slop]
 assert all(not row['slop'] for row in state['stats']['rows'])
+assert call('observations',auth=False)[0]==401
+assert call('observations')[1]=={'images':[{'id':slop,'observed':False,'job':None}]}
+assert call('/'+slop,library=True)[1]['has_slop_observation'] is False
 sql(f"UPDATE images SET pipeline_profile=json_set(pipeline_profile,'$.parameters.damage.category','heavy','$.parameters.damage.value','Requested heavy damage') WHERE id='{slop}'")
 assert call('observe',{'ids':[slop],'max_calls':1})[0]==400
 assert call('observe',paid_request(ids=[slop],max_calls=2))[0]==400
@@ -88,6 +91,8 @@ observation=paid_request(ids=[slop],max_calls=1)
 assert call('observe',observation)[0]==200
 state=wait(lambda s:not s['jobs'] and s['stats']['slop_count']==1)
 assert len(control())==1
+assert call('observations')[1]=={'images':[{'id':slop,'observed':True,'job':None}]}
+assert call('/'+slop,library=True)[1]['has_slop_observation'] is True
 sent=json.loads(control()[0]['body']['input'][0]['content'][0]['text'])
 assert set(sent)=={'width','height','known_categories'} and 'input_image' in json.dumps(control()[0]['body']['input'])
 assert next(row for row in state['stats']['rows'] if row['key']=='damage')['slop']=={'none':1}

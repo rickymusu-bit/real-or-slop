@@ -12,8 +12,8 @@ digraph pipeline {
  }
  subgraph cluster_choose {
   label="2. CHOOSE REAL AND PREPARE SCENES";color="#cbd5e1";style=rounded;fontsize=18;
-  choose [label="Select the REAL photos to start from\nVisible thumbnails · select any ready subset\nOne selected REAL = one new scene\nThumbnails show successful generation counts"];
-  coverage [label="Compare REAL and accepted SLOP observations\nMissing observations are shown and excluded\nOptional: observe originals (1 confirmed call per SLOP)",fillcolor="#dbeafe"];
+  choose [label="Select the REAL photos to start from\nVisible thumbnails · select any ready subset\nOne selected REAL = one new scene\nThumbnails show successful generation counts\nIncludes verified older jobs; each edit is not a new use"];
+  coverage [label="Compare REAL and accepted SLOP observations\nMissing observations are shown and excluded\nObserve originals from this wizard OR the gallery\nAlso works on already published photos\n1 confirmed call per missing SLOP",fillcolor="#dbeafe"];
   draw [label="The server draws compatible variations · free\nDependent values share a REAL donor\nBalance against observed SLOP + earlier group draws"];
   scene [label="Write the new English scenes\n1 confirmed text call per selected REAL",fillcolor="#dbeafe"];
   review [label="Read and edit each scene · free\nCheck changes, dependencies and photo format"];

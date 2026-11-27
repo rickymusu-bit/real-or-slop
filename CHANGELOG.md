@@ -1,7 +1,17 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-26T22:57:37Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-27T07:05:36Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.67.0 — 2026-11-27T07:05:36Z
+
+- Osservazione SLOP dalla galleria, dalla selezione e dal dettaglio, anche per le foto già pubblicate prima dell'aggiornamento,
+  senza ritirarle. Copertura su tutta la galleria, stato per foto, conferma del massimo e progresso persistente con stop della coda;
+  riapertura senza nuovi invii. Comando visibile anche sopra la composizione del wizard.
+- Migrazione 0079: recupero gratuito e idempotente dei conteggi storici dimostrati dai registri delle chiamate, con una sola
+  generazione per lavorazione anche se corretta più volte. Richiede una valutazione conclusa prima della 0078 come prova di
+  candidata già salvata. Conserva i conteggi recenti e non crea legami REAL–SLOP; usi senza prove esclusi.
+- Schema e specifiche aggiornati. Regressioni su recupero, duplicati, confine temporale e osservazione di SLOP pubblicate.
 
 ## 1.66.0 — 2026-11-26T22:47:12Z
 

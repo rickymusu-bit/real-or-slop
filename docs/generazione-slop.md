@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 18.0.0
+# Generazione SLOP — specifica 18.1.0
 
-Aggiornata: 2026-11-26T22:57:37Z. Stato: implementata nel ramo 1.66.0, da rilasciare.
+Aggiornata: 2026-11-27T07:05:36Z. Stato: implementata nel ramo 1.67.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -56,9 +56,9 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
   REAL» seleziona soltanto quelle utilizzabili, «Clear selection» azzera le scelte. Conteggio, stato parziale della selezione
   collettiva e pulsante scene si aggiornano subito senza ricaricare o cancellare campi ancora in modifica. La selezione resta
   durante gli aggiornamenti della pagina, viene ripulita per le sorgenti diventate indisponibili e riparte vuota al reload.
-  Le miniature mostrano il numero di generazioni iniziali riuscite e registrate dalla 1.66.0, incluse candidate poi scartate;
-  correzioni e chiamate fallite/incerte non incrementano il contatore. Le REAL restano riutilizzabili; i vecchi usi non si
-  ricostruiscono perché i legami sono stati eliminati. Si conserva solo il totale sulla REAL, senza legame permanente alle SLOP.
+  Le miniature mostrano il numero di generazioni iniziali riuscite e registrate dalla 1.66.0 più gli usi storici verificati (sezione 4.2), incluse candidate poi scartate;
+  correzioni e chiamate fallite/incerte non incrementano il contatore. Le REAL restano riutilizzabili; gli usi senza prove
+  sufficienti restano esclusi. Si conservano solo totale e baseline numerica sulla REAL, senza legame permanente alle SLOP.
   Il comando invia esclusivamente gli ID selezionati con il massimo corrispondente; zero selezionate disabilita il pulsante.
 - **Prepara scene:** una chiamata per REAL selezionata e preparata. Le estrazioni e i riferimenti vengono congelati. Sono
   mostrate le modifiche e le dipendenze. L'owner modifica i campi della scena, il formato e i parametri previsti senza pagare.
@@ -209,8 +209,10 @@ non si usa il profilo richiesto come ripiego. Nessuna tassonomia chiusa o correz
 ### 4.1 Osservazione delle SLOP e copertura del confronto
 
 Decisione dell'owner del 2026-11-26: l'analisi della galleria usa le categorie **osservate nelle SLOP**, non quelle richieste.
-Dopo l'accettazione l'owner può osservare una SLOP dal passo 4 o tutte quelle ancora prive di osservazione dal riquadro
-Gallery composition. Una conferma esplicita autorizza una chiamata per originale intero, anche per foto già approvate o
+Dopo l'accettazione l'owner può osservare una SLOP dal passo 4. Dal 2026-11-27 il comando «Observe SLOP (N)» è visibile
+anche nella barra della galleria: riguarda tutte le SLOP fuori dal cestino ancora senza osservazione, indipendentemente da
+filtri e paginazione. La selezione permette un sottoinsieme; il dettaglio mostra lo stato e il comando per la singola foto,
+anche pubblicata, senza «Edit photo» o ritiro dal gioco. Nel passo 2 il comando è visibile sopra «Gallery composition». Una conferma esplicita autorizza una chiamata per originale intero, anche per foto già approvate o
 pubblicate. Nessuna osservazione parte accettando o approvando. L'osservazione è distinta dalla valutazione qualitativa.
 
 L'annotatore usa schema e convenzioni degli attributi REAL e il vocabolario dei profili REAL della galleria; riceve solo
@@ -232,7 +234,24 @@ di approvazione non invalida la lettura dell'originale. Il registro pagato usa `
 
 Migrazione 0078: aggiunge osservazioni e contatore alle foto e una claim del conteggio sui lavori. La registrazione della
 prima candidata e l'incremento sulla REAL avvengono nella stessa transazione, al massimo una volta per lavoro; gli edit non
-incrementano. Nessuna cancellazione di dati esistenti. I contatori partono da zero e le osservazioni da null, senza chiamate.
+incrementano. Nessuna cancellazione di dati esistenti. I contatori della 0078 partono da zero e le osservazioni da null, senza chiamate.
+
+La galleria legge `GET /api/admin/pipeline/:gallery/observations`: ID, presenza di un profilo valido e stato/errore del lavoro,
+senza profili o snapshot. Durante l'osservazione mostra progresso bloccante e stop gratuito delle richieste in coda; tornando
+alla galleria segue solo i lavori attivi, senza conferme né invii nuovi. Errori ed esiti incerti richiedono revisione nella pipeline.
+
+### 4.2 Recupero dei conteggi precedenti (2026-11-27)
+
+La migrazione 0079 recupera gratuitamente un minimo verificabile dai `paid_calls` già esistenti. Una lavorazione conta solo
+se la sua chiave nel formato `pipeline-<UUID richiesta scena>-<UUID REAL>-<UUID operazione>` identifica una REAL ancora presente,
+una chiamata immagini è conclusa e una successiva valutazione è conclusa prima dell'applicazione della 0078 (`d1_migrations.applied_at`).
+La valutazione prova che la candidata era già stata salvata prima del nuovo contatore. Generazione ed edit della stessa lavorazione
+contano una volta; esiti incerti, soli prompt, chiavi non valide e chiamate senza questa prova sono esclusi. Il dato non equivale
+al numero di SLOP pubblicate. Non si ricostruisce alcun abbinamento REAL–SLOP accettata.
+
+`slop_legacy_generated_count` conserva solo la baseline numerica già aggiunta a `slop_generated_count`, così il recupero non
+somma due volte gli stessi usi e preserva i conteggi nuovi. Originali, copie, osservazioni, stati, revisioni e registro pagato restano
+intatti. Le osservazioni SLOP restano da richiedere con conferma: non sono ricavate dai prompt né dai registri.
 
 ## 5. Scena finale e generazione
 

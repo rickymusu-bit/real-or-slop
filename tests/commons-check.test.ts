@@ -30,6 +30,7 @@ const NOW = Date.parse("2026-11-20T03:17:00.000Z");
 const page = (name: string) => "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent(name);
 function setup() {
   const db = new DatabaseSync(":memory:");
+  db.exec("CREATE TABLE d1_migrations(id INTEGER PRIMARY KEY,name TEXT,applied_at TEXT)");
   for (const file of readdirSync("migrations").sort()) db.exec(readFileSync("migrations/" + file, "utf8"));
   db.exec("INSERT INTO galleries(id,title) VALUES('g','Strade')");
   let n = 0;

@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 38.8.0, aggiornata il 2026-11-26T22:47:12Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 38.9.0, aggiornata il 2026-11-27T07:05:36Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -40,7 +40,9 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   confermate, correzioni scelte dall'owner, accettazione, trattamento e copie di gioco. Le vecchie lavorazioni hanno un riquadro
   di recupero; il nuovo flusso non usa il vecchio ciclo automatico. Ogni foto appartiene a una galleria; le REAL restano giocabili.
   Nessun registro permanente REAL–SLOP. Dal 2026-11-26 ogni REAL conserva soltanto un contatore anonimo delle generazioni
-  iniziali riuscite da questa versione, comprese le candidate poi scartate; resta riutilizzabile. Nessun recupero storico inventato. I profili e le particolarità sono privati e non sono tag di navigazione.
+  iniziali riuscite, comprese le candidate poi scartate; resta riutilizzabile. Dal 2026-11-27 si recuperano anche gli usi
+  storici dimostrabili dai registri, una volta per lavorazione con immagine e valutazione concluse prima della 0078;
+  baseline anonima separata per non duplicare il conteggio. Nessun recupero storico inventato o legame con SLOP accettate. I profili e le particolarità sono privati e non sono tag di navigazione.
 - **Approvazione nel wizard** (2026-11-26). Le SLOP approvate escono dal passo 4 e restano nella galleria, dove si pubblicano.
   Il passo 4 mostra soltanto le SLOP nuove da preparare; approvare non cancella foto o osservazioni.
 - **Nessun indice delle descrizioni** (2026-11-26). Rimossi comandi, API, identità normalizzate per la ricerca ed embedding degli ambienti. La pipeline usa direttamente descrizioni e profili preparati nella galleria; le distribuzioni restano basate sui parametri osservati. Nessuna chiamata di indicizzazione. Migrazione 0076: elimina solo dati di ricerca obsoleti, conserva assi, profili, immagini e cronologia delle chiamate.
