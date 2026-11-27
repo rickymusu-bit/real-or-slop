@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.13.0
+# Libreria delle immagini — specifica 10.14.0
 
-Stato: implementata nel ramo 1.63.0, da rilasciare. Aggiornata: 2026-11-26T09:07:50Z.
+Stato: implementata nel ramo 1.66.0, da rilasciare. Aggiornata: 2026-11-26T22:57:37Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -257,3 +257,16 @@ conferme sono in `generazione-slop` 17.5.0. Le vecchie idee restano per compatib
 ## Lingua amministrativa e contesti (1.61.0)
 
 La migrazione 0075 aggiunge versioni inglesi dei soli contesti ancora uguali ai predefiniti della 1.60.0. Non riscrive la cronologia né i testi personalizzati. I nuovi predefiniti inglesi restano caricabili come proposta. Le istruzioni fisse delle descrizioni, delle misure e delle valutazioni impongono output inglese anche con contesti precedenti. Non si rigenerano descrizioni o immagini già salvate e non partono chiamate a pagamento per il cambio lingua.
+
+## 14. Osservazioni SLOP e conteggio delle generazioni (2026-11-26)
+
+Le categorie del confronto di galleria e del bilanciamento si ricavano da una chiamata confermata sull'originale SLOP intero,
+con le convenzioni REAL, senza prompt o profilo richiesto. `pipeline_slop_observation` conserva profilo, modello e data, mai una descrizione
+SLOP; il profilo richiesto resta distinto. Cache e claim impediscono invii duplicati, gli esiti incerti non si ripetono.
+La specifica `generazione-slop` 18.0.0, sezione 4.1, definisce conferme, copertura e concorrenza. I dati sono privati e si eliminano
+con la foto. Le osservazioni mancanti si indicano e non contribuiscono al confronto o al bilanciamento.
+
+Ogni REAL conserva soltanto `slop_generated_count`: numero di candidate iniziali generate e salvate dalla 1.66.0, comprese quelle
+poi scartate. Gli edit non incrementano. Il conteggio è idempotente e atomico con la registrazione della prima candidata, non
+crea legami permanenti REAL–SLOP e non impedisce il riuso. Le miniature admin lo mostrano, avvertendo che gli usi precedenti non
+sono ricostruibili. Migrazione 0078 additiva; nessuna chiamata o elaborazione dei dati già salvati.

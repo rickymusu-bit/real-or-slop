@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 17.10.0
+# Generazione SLOP — specifica 18.0.0
 
-Aggiornata: 2026-11-26T20:51:42Z. Stato: implementata nel ramo 1.65.1, da rilasciare.
+Aggiornata: 2026-11-26T22:57:37Z. Stato: implementata nel ramo 1.66.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -56,6 +56,9 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
   REAL» seleziona soltanto quelle utilizzabili, «Clear selection» azzera le scelte. Conteggio, stato parziale della selezione
   collettiva e pulsante scene si aggiornano subito senza ricaricare o cancellare campi ancora in modifica. La selezione resta
   durante gli aggiornamenti della pagina, viene ripulita per le sorgenti diventate indisponibili e riparte vuota al reload.
+  Le miniature mostrano il numero di generazioni iniziali riuscite e registrate dalla 1.66.0, incluse candidate poi scartate;
+  correzioni e chiamate fallite/incerte non incrementano il contatore. Le REAL restano riutilizzabili; i vecchi usi non si
+  ricostruiscono perché i legami sono stati eliminati. Si conserva solo il totale sulla REAL, senza legame permanente alle SLOP.
   Il comando invia esclusivamente gli ID selezionati con il massimo corrispondente; zero selezionate disabilita il pulsante.
 - **Prepara scene:** una chiamata per REAL selezionata e preparata. Le estrazioni e i riferimenti vengono congelati. Sono
   mostrate le modifiche e le dipendenze. L'owner modifica i campi della scena, il formato e i parametri previsti senza pagare.
@@ -68,9 +71,10 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
   mediante coda durevole. L'accettazione non prepara, approva o pubblica la copia automaticamente.
 - **Copia, trattamento, approvazione e pubblicazione:** comandi distinti, gratuiti. La misura tecnica delle copie REAL mancanti
   è calcolata dal browser. Il riferimento del trattamento è campionato fra REAL misurate dello stesso genere di destinazione;
-  senza riferimento disponibile la copia parte senza trattamento. Inquadratura e cursori riusano gli editor esistenti.
+  senza riferimento disponibile la copia parte senza trattamento. Approvare fa uscire la SLOP dal passo 4, senza eliminarla;
+  si ritrova nella galleria e da lì si pubblica. Il passo 4 mostra tutte le SLOP di pipeline nuove, senza il vecchio limite di 100. Inquadratura e cursori riusano gli editor esistenti.
 
-API private: `GET /api/admin/pipeline/:gallery` e `/status` (solo stato dei lavori, usato durante l’attesa); `POST /:gallery/settings`, `/profile`, `/categories`, `/prepare`, `/plan`, `/stop`;
+API private: `GET /api/admin/pipeline/:gallery` e `/status` (solo stato dei lavori, usato durante l’attesa); `POST /:gallery/settings`, `/profile`, `/categories`, `/prepare`, `/plan`, `/observe`, `/stop`;
 `POST /:gallery/:job/{scene,generate,evaluate,edit,accept,close}`; `GET /:gallery/:job/file` e `?previous=1`.
 Le fasi a pagamento richiedono `confirm`, UUID `request` e `max_calls` esatto. Dal 2026-11-26 la preparazione accetta fino a 5000 REAL in una richiesta: tutta la selezione viene accodata atomicamente prima dell’avvio, senza dipendere da una successione di richieste del browser. Lo stesso comando prepara descrizioni e profili da Import REAL, galleria e dettaglio. `GET /api/admin/pipeline/:gallery/descriptions` espone l’avanzamento senza i profili completi. Il planner conserva il limite di 500 scene per richiesta, con suddivisione delle selezioni maggiori entro il massimo confermato.
 Modelli e qualità sono quelli selezionati nelle Impostazioni; il selettore include GPT-6.2 Sol e Sunburst.
@@ -190,16 +194,45 @@ I pesi correggono sotto/sovrarappresentazione della combinazione dei campi selez
 per REAL e SLOP, con prior equivalente a cinque osservazioni proporzionali alle REAL e pesi limitati a 0.25–4. Prima delle SLOP,
 le combinazioni conservano le frequenze empiriche dei donatori. La scelta resta casuale, senza quote rigide o unicità imposta.
 Durante una richiesta di pianificazione ogni nuova estrazione aggiunge al conteggio locale una previsione anonima: profilo
-iniziale più valori estratti. Le scene successive considerano quindi SLOP accettate e previsioni precedenti della stessa
+iniziale più valori estratti. Le scene successive considerano quindi SLOP accettate già osservate e previsioni precedenti della stessa
 richiesta. `drawContext` registra versione dell'algoritmo, numero di accettate e numero di previsioni precedenti nella snapshot.
 Richieste già registrate e REAL occupate non producono estrazioni provvisorie nuove. Le snapshot già registrate restano immutate
 nei reinvii. Nessun conteggio provvisorio diventa una foto, una statistica pubblica o un registro permanente; chiudere un gruppo
 non lascia riserve da sottrarre. Richieste separate, comprese quelle simultanee o divise dal browser oltre 500 scene, bilanciano
 separatamente: il meccanismo non è una quota globale transazionale.
 
-I profili recenti passati al planner restano gli ultimi tre accettati in ordine di creazione. I conteggi provvisori rappresentano
-l'estrazione, prima degli adattamenti del planner; le distribuzioni delle SLOP accettate rappresentano i parametri previsti,
-non una misura osservata dei pixel. Nessuna nuova chiamata, tassonomia chiusa o correzione automatica delle immagini.
+I profili recenti passati al planner sono le osservazioni degli ultimi tre accettati misurati, in ordine di creazione.
+I conteggi provvisori della singola richiesta rappresentano soltanto l'estrazione prima degli adattamenti del planner e non
+entrono nelle statistiche del catalogo. Il catalogo si confronta e si bilancia solo sulle osservazioni disponibili delle SLOP;
+non si usa il profilo richiesto come ripiego. Nessuna tassonomia chiusa o correzione automatica delle immagini.
+
+### 4.1 Osservazione delle SLOP e copertura del confronto
+
+Decisione dell'owner del 2026-11-26: l'analisi della galleria usa le categorie **osservate nelle SLOP**, non quelle richieste.
+Dopo l'accettazione l'owner può osservare una SLOP dal passo 4 o tutte quelle ancora prive di osservazione dal riquadro
+Gallery composition. Una conferma esplicita autorizza una chiamata per originale intero, anche per foto già approvate o
+pubblicate. Nessuna osservazione parte accettando o approvando. L'osservazione è distinta dalla valutazione qualitativa.
+
+L'annotatore usa schema e convenzioni degli attributi REAL e il vocabolario dei profili REAL della galleria; riceve solo
+immagine originale, dimensioni e vocabolario. Non riceve titolo, REAL ispiratrice, prompt, scena, parametri richiesti,
+valutazione o regole di variazione. Non scrive una descrizione SLOP. Orientamento e rapporto del profilo sono calcolati dalle
+dimensioni effettive del file. Profili e metadati di osservazione (modello e data) sono privati in `images.pipeline_slop_observation`;
+`images.pipeline_profile` resta il profilo richiesto, utile a ricostruire la scena ma escluso dal confronto e dai pesi.
+
+La tabella confronta osservazioni REAL e osservazioni SLOP con conteggio della copertura: osservate sul totale, elenco delle
+mancanti e comando per osservarle. Le foto fuori dal cestino contano anche mentre si prepara la copia o dopo approvazione e
+pubblicazione. Le foto non misurate non forniscono evidenza e sono escluse dai pesi delle SLOP accettate e dai recenti.
+Le categorie con certezza ignota non diventano evidenza di assenza. Le osservazioni sono giudizi del modello, non una garanzia.
+
+Gli invii sono persistenti e confermati con UUID e massimo esatto, fino a 500 SLOP per richiesta; il browser divide le selezioni
+maggiori entro il massimo confermato. Cache e claim concorrente impediscono un secondo addebito per una foto già osservata.
+Incertezza e fallimento restano visibili senza reinvio automatico. Il salvataggio controlla galleria, originale, cestino e testo
+osservato precedente, così non applica il risultato a una foto spostata o cambiata durante la chiamata. Modificare copia o stato
+di approvazione non invalida la lettura dell'originale. Il registro pagato usa `analysis`; nessun importo.
+
+Migrazione 0078: aggiunge osservazioni e contatore alle foto e una claim del conteggio sui lavori. La registrazione della
+prima candidata e l'incremento sulla REAL avvengono nella stessa transazione, al massimo una volta per lavoro; gli edit non
+incrementano. Nessuna cancellazione di dati esistenti. I contatori partono da zero e le osservazioni da null, senza chiamate.
 
 ## 5. Scena finale e generazione
 

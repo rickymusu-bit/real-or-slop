@@ -12,11 +12,12 @@ digraph pipeline {
  }
  subgraph cluster_choose {
   label="2. CHOOSE REAL AND PREPARE SCENES";color="#cbd5e1";style=rounded;fontsize=18;
-  choose [label="Select the REAL photos to start from\nVisible thumbnails · select any ready subset\nOne selected REAL = one new scene"];
-  draw [label="The server draws compatible variations · free\nDependent values share a REAL donor\nLater draws consider earlier choices in this group"];
+  choose [label="Select the REAL photos to start from\nVisible thumbnails · select any ready subset\nOne selected REAL = one new scene\nThumbnails show successful generation counts"];
+  coverage [label="Compare REAL and accepted SLOP observations\nMissing observations are shown and excluded\nOptional: observe originals (1 confirmed call per SLOP)",fillcolor="#dbeafe"];
+  draw [label="The server draws compatible variations · free\nDependent values share a REAL donor\nBalance against observed SLOP + earlier group draws"];
   scene [label="Write the new English scenes\n1 confirmed text call per selected REAL",fillcolor="#dbeafe"];
   review [label="Read and edit each scene · free\nCheck changes, dependencies and photo format"];
-  choose -> draw -> scene -> review;
+  coverage -> choose -> draw -> scene -> review;
  }
  subgraph cluster_images {
   label="3. GENERATE AND REVIEW IMAGES";color="#cbd5e1";style=rounded;fontsize=18;
@@ -28,9 +29,9 @@ digraph pipeline {
  subgraph cluster_finish {
   label="4. PREPARE THE GAME COPY";color="#cbd5e1";style=rounded;fontsize=18;
   copy [label="Adjust treatment and framing · free\nPrepare the shared 4:5 WebP game copy\nCheck both the full image and the copy"];
-  publish [label="Approve, then publish · free\nOnly published photos enter the game",fillcolor="#dcfce7"];
+  publish [label="Approve · free: the photo leaves this wizard\nFind it in the gallery and publish it there\nOnly published photos enter the game",fillcolor="#dcfce7"];
   copy -> publish;
  }
  notes [shape=plaintext,fontsize=12,label="The server continues if the page closes.\nReturning only reads progress. Stop queued requests cancels unsent work.\nAcquired calls finish. No next paid phase starts automatically.\nAccepting an image does not publish it."];
- legend -> real [style=invis];settings -> choose [style=invis];review -> generate [style=invis];inspect -> copy [style=invis];publish -> notes [style=invis];
+ legend -> real [style=invis];settings -> coverage [style=invis];review -> generate [style=invis];inspect -> copy [style=invis];publish -> notes [style=invis];
 }

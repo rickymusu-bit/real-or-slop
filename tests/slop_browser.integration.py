@@ -122,10 +122,29 @@ with sync_playwright() as p:
             assert control()[-1]['body']['files']['image[]']['size']==control()[-1]['body']['files']['mask']['size']
             root.locator('[data-job-card]').first.locator('[data-action=accept]').click()
             accepted=root.locator('[data-accepted-image]');expect(accepted).to_have_count(1)
+            accepted_id=accepted.get_attribute('data-accepted-image')
+            expect(root.locator('[data-generated-count]')).to_have_text(['1 SLOP generated','1 SLOP generated'])
+            root.get_by_text('Gallery composition',exact=True).click()
+            expect(root.get_by_role('columnheader',name='Observed in SLOP',exact=True)).to_be_visible()
+            expect(root.locator('[data-action=observe-all]')).to_have_text('Observe 1 SLOP (1 call)')
+            root.locator('[data-action=observe-all]').click()
+            expect(overlay).to_be_visible();expect(overlay).to_contain_text('Observing SLOP parameters')
+            expect(overlay).to_have_count(0,timeout=30000)
+            assert len(control())==10 and control()[-1]['body']['text']['format']['name']=='pipeline_observation'
+            sent=json.loads(control()[-1]['body']['input'][0]['content'][0]['text'])
+            assert set(sent)=={'width','height','known_categories'},sent
+            expect(root.locator('[data-action=observe-all]')).to_be_disabled()
             accepted.locator('[data-action=copy]').click();expect(accepted.locator('[data-action=approve]')).to_be_enabled(timeout=30000)
-            accepted.locator('[data-action=approve]').click();expect(accepted.locator('[data-action=publish]')).to_be_visible()
-            accepted.locator('[data-action=publish]').click();expect(accepted.get_by_role('heading')).to_contain_text('published')
-            assert len(control())==9 and not errors,errors
+            accepted.locator('[data-action=approve]').click();expect(accepted).to_have_count(0)
+            expect(root.locator('[data-pipeline-notice]')).to_contain_text('Find it in the gallery')
+            status=call('/'+accepted_id,library=True)[1];assert status['status']=='approved'
+            page.goto(BASE+'/admin?gallery='+gallery)
+            expect(page.locator('.library-card[data-id="'+accepted_id+'"]')).to_be_visible()
+            expect(page.locator('.library-card[data-id="'+first_id+'"] [data-generated-count]')).to_have_text('1 SLOP generated')
+            assert call('/'+accepted_id+'/publish',{'revision':status['revision']},library=True)[0]==200
+            assert call('/'+accepted_id,library=True)[1]['status']=='published'
+            page.goto(BASE+'/admin/gallerie/'+gallery+'/slop');expect(root.get_by_role('heading',name='1. Prepare the gallery')).to_be_visible();expect(root.locator('[data-accepted-image]')).to_have_count(0)
+            assert len(control())==10 and not errors,errors
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
             page.screenshot(path=str(folder/(name+'-pipeline.png')),full_page=True)
             assert any('Prepare English scenes? Maximum 1 paid call' in d for d in dialogs),dialogs

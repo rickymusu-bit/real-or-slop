@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 10.11.0
+# Foto e gallerie — specifica 10.12.0
 
-Stato: implementata nel ramo 1.62.0, da rilasciare. Aggiornata: 2026-11-26T07:36:58Z.
+Stato: implementata nel ramo 1.66.0, da rilasciare. Aggiornata: 2026-11-26T22:47:12Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -28,7 +28,8 @@ La griglia 4:5 ha due colonne su mobile. «Carica altre foto» aggiunge le pagin
 - **Filtri:** origine (REAL e SLOP, REAL, SLOP). I parametri API `tag`, `tags`, `match` e `incomplete` sono rifiutati. Non esiste un filtro per gruppo (decisione del 2026-11-17); il parametro API `group` è rifiutato. Il filtro «Batch automatico in corso» arriva dal riquadro dei batch. Decisione dell’owner del 2026-11-17: rimossi dalla dashboard i tre checkbox «Copia da rifare in 4:5», «REAL senza descrizione» e «Senza Genere, Colore o Supporto», insieme al loro stato e ai parametri inviati dal browser.
 - **Ordinamento:** data di aggiunta, visualizzazioni o accuratezza, decrescente o crescente, ricordato nel browser; per l'accuratezza le
   foto mai viste vanno in fondo.
-- **Schede:** miniatura (copia di gioco), origine e stato, casella di selezione. Tocco breve: dettaglio. Pressione prolungata: anteprima
+- **Schede:** miniatura (copia di gioco), origine e stato, casella di selezione. Le REAL mostrano anche il numero di SLOP
+  generate e salvate dalla 1.66.0, comprese candidate poi scartate; gli edit non contano e gli usi precedenti non sono noti. Tocco breve: dettaglio. Pressione prolungata: anteprima
   grande (specifica `dashboard-admin-wizard-real`, sezione 3).
 - **Descrizione visiva.** Una REAL senza descrizione ha un'icona sulla miniatura. «Descrivi le REAL» include tutte quelle fuori dal
   cestino ancora da descrivere nella galleria aperta, anche se un filtro o la paginazione le nascondono. Si legge la descrizione
@@ -118,3 +119,8 @@ Le lavorazioni temporanee collegano una REAL alla candidata solo durante la revi
 la candidata entra in libreria solo all'accettazione dell'owner. I riferimenti di lavorazione vengono eliminati al termine;
 profili e scene previsti non contengono un ID permanente della REAL di partenza. Trigger registrano i file da rimuovere nella
 coda durevole. Le gallerie con operazioni accodate/in corso non possono essere eliminate.
+
+Le SLOP approvate dal passo 4 del wizard escono da quel passo e restano qui, pronte per la pubblicazione esplicita.
+L'uscita dal wizard non cancella originali, copie o osservazioni. Le REAL già usate restano selezionabili; il contatore aiuta
+l'owner a distribuire l'uso. Le osservazioni SLOP e la loro copertura si gestiscono nel riquadro della composizione della galleria
+nel wizard (specifica `generazione-slop` 18.0.0).

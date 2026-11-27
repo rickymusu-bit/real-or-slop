@@ -47,6 +47,8 @@ generation=paid_request(max_calls=1,proposal=job['proposal'])
 assert call(job['id']+'/generate',generation)[0]==200
 state=wait(lambda s:s['jobs'][0]['state']=='candidate');job=state['jobs'][0]
 assert len(control())==3
+assert state['sources'][0]['generated_count']==1
+assert call('/'+source['id'],library=True)[1]['generated_count']==1
 assert control()[-1]['path']=='/v1/images/generations'
 assert 'image' not in control()[-1]['body'] and 'mask' not in control()[-1]['body']
 assert control()[-1]['body']['size']=='1536x1024'
@@ -64,6 +66,7 @@ state=wait(lambda s:s['jobs'][0]['state']=='candidate');job=state['jobs'][0]
 assert len(control())==5 and control()[-1]['path']=='/v1/images/edits'
 assert control()[-1]['body']['files']['image[]']['size']==list(image.size)
 assert control()[-1]['body']['files']['mask']['size']==list(image.size)
+assert state['sources'][0]['generated_count']==1  # Edits do not count as new SLOP generations.
 assert job['previous_key'] and job['evaluation'] # original review retained, no automatic re-evaluation
 assert call(job['id']+'/file?previous=1')[0]==200
 assert call(job['id']+'/accept',paid_request())[0]==200
@@ -72,6 +75,37 @@ assert state['images'][0]['status']=='new' and state['images'][0]['copy'] is Non
 assert len(control())==5
 assert sql("SELECT count(*) AS n FROM pipeline_jobs WHERE gallery_id='"+gallery['id']+"'")[0]['n']==0
 print('Pipeline passed: cached gallery profiles, controlled variations, text-only images, owner-gated evaluation/edits, full-image mask, acceptance without source genealogy.')
+
+# Gallery comparison and balancing use observations, never requested attributes.
+slop=state['images'][0]['id']
+assert state['stats']['slop_total']==1 and state['stats']['slop_count']==0 and state['stats']['unobserved']==[slop]
+assert all(not row['slop'] for row in state['stats']['rows'])
+sql(f"UPDATE images SET pipeline_profile=json_set(pipeline_profile,'$.parameters.damage.category','heavy','$.parameters.damage.value','Requested heavy damage') WHERE id='{slop}'")
+assert call('observe',{'ids':[slop],'max_calls':1})[0]==400
+assert call('observe',paid_request(ids=[slop],max_calls=2))[0]==400
+control([])
+observation=paid_request(ids=[slop],max_calls=1)
+assert call('observe',observation)[0]==200
+state=wait(lambda s:not s['jobs'] and s['stats']['slop_count']==1)
+assert len(control())==1
+sent=json.loads(control()[0]['body']['input'][0]['content'][0]['text'])
+assert set(sent)=={'width','height','known_categories'} and 'input_image' in json.dumps(control()[0]['body']['input'])
+assert next(row for row in state['stats']['rows'] if row['key']=='damage')['slop']=={'none':1}
+assert call('observe',observation)[1]['jobs']==[] and len(control())==1
+assert sql(f"SELECT visual_description FROM images WHERE id='{slop}'")[0]['visual_description'] is None
+assert call('plan',paid_request(ids=[source['id']],max_calls=1))[0]==200
+state=wait(lambda s:bool(s['jobs']) and s['jobs'][0]['state']=='proposal')
+observed_job=state['jobs'][0]
+frozen=json.loads(sql(f"SELECT snapshot FROM pipeline_jobs WHERE id='{observed_job['id']}'")[0]['snapshot'])
+assert frozen['drawContext']['accepted']==1
+assert frozen['recent'][0]['parameters']['damage']['category']=='none'
+assert call(observed_job['id']+'/close',paid_request())[0]==200
+# Approving hides the SLOP from step 4 without losing it or its observed profile from the gallery.
+code,data=call('/'+slop+'/copy',raw=game_copy(call('/'+slop+'/original',library=True)[1]),library=True);assert code==201,(code,data)
+assert call('/'+slop+'/approve',{'revision':data['revision']},library=True)[0]==200
+assert call('')[1]['images']==[] and call('')[1]['stats']['slop_count']==1
+assert call('/'+slop,library=True)[1]['status']=='approved'
+print('Observed SLOP passed: confirmed blind original observation, actual categories for comparison and balancing, cached calls, usage count and approval exit.')
 
 # A source cannot be substituted from another gallery; no model request is spent.
 other=make_gallery('Other pipeline gallery');foreign=real('foreign-pipeline',gallery=other['id'])
@@ -159,3 +193,47 @@ state=wait(lambda s:len(s['jobs'])==1 and s['jobs'][0]['state']=='proposal')
 context=json.loads(sql(f"SELECT snapshot FROM pipeline_jobs WHERE gallery_id='{balanced['id']}'")[0]['snapshot'])['drawContext']
 assert context['provisional']==context['accepted']==0,context
 print('Pipeline group balance passed: provisional draws accumulate only within the request, retries preserve snapshots and closing leaves no phantom SLOP.')
+
+# A photo moved during a paid observation cannot receive the old gallery's annotation.
+H.API=BASE+'/api/admin/pipeline/'+gallery['id']+'/'
+sql(f"UPDATE images SET pipeline_slop_observation=NULL WHERE id='{slop}'")
+control([{'delay':1}]);req=paid_request(ids=[slop],max_calls=1)
+code,queued=call('observe',req);assert code==200
+observation_job=queued['jobs'][0]
+for _ in range(100):
+    if control():break
+    time.sleep(.02)
+else:raise AssertionError('Observation did not start')
+photo=call('/'+slop,library=True)[1]
+assert call('/'+slop,{'revision':photo['revision'],'gallery_id':other['id']},method='PATCH',library=True)[0]==200
+state=wait(lambda s:any(j['id']==observation_job and j['state']=='attention' for j in s['jobs']))
+assert sql(f"SELECT pipeline_slop_observation FROM images WHERE id='{slop}'")[0]['pipeline_slop_observation'] is None
+assert len(control())==1
+assert call('observe',req)[0]==409  # Wrong gallery after the move: no repeat.
+print('Observed SLOP concurrency passed: moved photo not written with an old-gallery result and no automatic repeat.')
+
+# Uncertain observations never resend themselves or a repeated UUID.
+H.API=BASE+'/api/admin/pipeline/'+other['id']+'/'
+control([{'status':503}]);uncertain_observation=paid_request(ids=[slop],max_calls=1)
+code,queued=call('observe',uncertain_observation);assert code==200
+uncertain_id=queued['jobs'][0]
+state=wait(lambda s:any(j['id']==uncertain_id and j['state']=='attention' for j in s['jobs']))
+assert call('observe',uncertain_observation)[1]['jobs']==[]
+assert len(control())==1 and state['stats']['slop_count']==0
+# Failed initial generations do not count. A successful candidate still counts after it is discarded.
+H.API=BASE+'/api/admin/pipeline/'+balanced['id']+'/'
+state=call('')[1];failed_job=state['jobs'][0]
+control([{'status':503}])
+assert call(failed_job['id']+'/generate',paid_request(max_calls=1,proposal=failed_job['proposal']))[0]==200
+wait(lambda s:s['jobs'][0]['state']=='attention')
+assert call('/'+batch_sources[0]['id'],library=True)[1]['generated_count']==0
+assert call(failed_job['id']+'/close',paid_request())[0]==200
+control([])
+assert call('plan',paid_request(ids=[batch_sources[0]['id']],max_calls=1))[0]==200
+state=wait(lambda s:s['jobs'][0]['state']=='proposal');discarded=state['jobs'][0]
+assert call(discarded['id']+'/generate',paid_request(max_calls=1,proposal=discarded['proposal']))[0]==200
+wait(lambda s:s['jobs'][0]['state']=='candidate')
+assert call(discarded['id']+'/close',paid_request())[0]==200
+assert call('/'+batch_sources[0]['id'],library=True)[1]['generated_count']==1
+assert call('')[1]['stats']['slop_total']==0
+print('Observation uncertainty and usage passed: no automatic repeats, failed generations excluded, discarded successful candidates counted.')

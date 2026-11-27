@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 38.7.0, aggiornata il 2026-11-26T20:51:42Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 38.8.0, aggiornata il 2026-11-26T22:47:12Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -39,13 +39,17 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   collettiva delle REAL, regole e probabilità per galleria, scene inglesi modificabili, generazione testuale e valutazione
   confermate, correzioni scelte dall'owner, accettazione, trattamento e copie di gioco. Le vecchie lavorazioni hanno un riquadro
   di recupero; il nuovo flusso non usa il vecchio ciclo automatico. Ogni foto appartiene a una galleria; le REAL restano giocabili.
-  Nessun registro permanente REAL–SLOP. I profili e le particolarità sono privati e non sono tag di navigazione.
+  Nessun registro permanente REAL–SLOP. Dal 2026-11-26 ogni REAL conserva soltanto un contatore anonimo delle generazioni
+  iniziali riuscite da questa versione, comprese le candidate poi scartate; resta riutilizzabile. Nessun recupero storico inventato. I profili e le particolarità sono privati e non sono tag di navigazione.
+- **Approvazione nel wizard** (2026-11-26). Le SLOP approvate escono dal passo 4 e restano nella galleria, dove si pubblicano.
+  Il passo 4 mostra soltanto le SLOP nuove da preparare; approvare non cancella foto o osservazioni.
 - **Nessun indice delle descrizioni** (2026-11-26). Rimossi comandi, API, identità normalizzate per la ricerca ed embedding degli ambienti. La pipeline usa direttamente descrizioni e profili preparati nella galleria; le distribuzioni restano basate sui parametri osservati. Nessuna chiamata di indicizzazione. Migrazione 0076: elimina solo dati di ricerca obsoleti, conserva assi, profili, immagini e cronologia delle chiamate.
 - **Crowding e detail rimossi** (2026-11-26). Nessuna misurazione a pagamento, punteggio, soglia, avviso o contesto di misurazione nell’admin/API. I vecchi flussi non leggono più questi dati: estrazione uniforme e nessun punteggio nei prompt. La migrazione 0077 rimuove soglie di galleria e impostazioni; osservazioni e contesti storici già pagati restano privati, senza nuove letture/scritture delle misure, e le sole osservazioni si cancellano con la foto. Le misure tecniche `copy_metrics` e il trattamento fotografico restano attivi.
 - **Bilanciamento del dataset.** Il nuovo protocollo (2026-11-25) considera conteggi, distribuzioni dei parametri e combinazioni
   rilevanti della galleria. Le modifiche possono rendere una console più ordinaria. Non forzare novità vistose o unicità a ogni
-  SLOP. Le probabilità automatiche sono stime empiriche rivedibili; i pesi considerano i parametri previsti delle SLOP, non una
-  misura garantita del loro contenuto. Il controllo delle combinazioni e delle ricorrenze richiede revisione; il 30% del test
+  SLOP. Dal 2026-11-26 confronto e pesi usano i parametri osservati sull’originale SLOP intero con chiamata confermata,
+  senza prompt o profilo richiesto. Le SLOP non osservate sono indicate ed escluse, mai rimpiazzate con i valori richiesti.
+  Le probabilità automatiche sono stime empiriche rivedibili; anche le osservazioni dei modelli restano fallibili. Il controllo delle combinazioni e delle ricorrenze richiede revisione; il 30% del test
   non è un valore definitivo. Dal 2026-11-26 i parametri dipendenti estratti condividono un donatore compatibile; i valori non
   estratti restano vincoli. Le scene della stessa richiesta contano provvisoriamente anche le estrazioni precedenti del gruppo,
   senza nuove chiamate né riserve permanenti (specifica `generazione-slop` 17.9.0).

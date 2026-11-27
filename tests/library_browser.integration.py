@@ -117,8 +117,8 @@ with sync_playwright() as p:
         assert 'checked the rights and license' in confirms[-1]
         expect(page.locator('.library-card', has=spare).locator('.badge-status')).to_have_text('approved')
         rivoli_card = page.locator(f'.library-card:has([aria-label="Open {name}-rivoli"])')
-        # A card shows only thumbnail, origin and state; views are in the detail. No tags anywhere (2026-11-20).
-        expect(rivoli_card.locator('.badge')).to_have_text(['REAL', 'new'])
+        # REAL cards include the tracked generation counter; views stay in the detail. No tags anywhere (2026-11-20).
+        expect(rivoli_card.locator('.badge')).to_have_text(['REAL', 'new', '0 SLOP generated'])
         for hidden in ('.db-tag', '.library-card-title', '[data-stats]'): expect(rivoli_card.locator(hidden)).to_have_count(0)
         rivoli_card.locator('.library-open').click()
         detail = page.locator('#library-detail')
