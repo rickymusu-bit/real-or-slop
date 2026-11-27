@@ -1,7 +1,17 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-27T15:29:55Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-27T16:50:59Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.70.0 — 2026-11-27T16:50:59Z
+
+- Accettare una SLOP nel passo 3 prepara subito la copia di gioco 4:5 con trattamento nel browser, con codificatore condiviso.
+- Passo 4 dedicato alla revisione finale: confronto con l’originale, modifica di trattamento/inquadratura e approvazione singola
+  o in gruppo. Le copie mancanti restano nel passo 3 e si completano al ritorno senza modelli né sovrascrivere copie salvate.
+- Metadati aggiornati nella risposta di accettazione; upload condizionato per preservare scelte manuali e file concorrenti.
+  Schema e specifiche aggiornati. Nessuna migrazione e nessuna chiamata reale ai modelli.
+- Adeguate via API le due SLOP già accettate senza copia: stesso codificatore browser, trattamento e 4:5 verificati su R2;
+  originali e stato di approvazione conservati, nessun pulsante temporaneo.
 
 ## 1.69.0 — 2026-11-27T15:29:55Z
 

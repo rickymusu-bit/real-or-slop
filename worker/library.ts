@@ -181,6 +181,8 @@ async function storeCopy(request: Request, env: Env, row: Row) {
   if (row.status !== "new" && row.status !== "approved") throw new HttpError(409, row.status === "published"
     ? "Published image: start editing to withdraw it from the game" : "Image in Trash: restore it to change the copy");
   const query = new URL(request.url).searchParams, asked = query.get("crop"), force = query.get("force") === "1";
+  const ifMissing = query.get("if_missing") === "1";
+  if (ifMissing && row.copy_key) return json({ ...(await viewOf(env, row.id)), already_prepared: true });
   let crop;
   try { crop = asked === null ? centredCrop(row.width, row.height) : parseCrop(asked); } catch { throw new HttpError(400, "Image too small for a game copy"); }
   const invalid = cropError(row.width, row.height, crop);
@@ -219,10 +221,16 @@ async function storeCopy(request: Request, env: Env, row: Row) {
   if (!sameFile) await env.QUARANTINE.put(key, copy.bytes, { httpMetadata: { contentType: GAME_COPY.mime }, customMetadata: { sha256: hash } });
   // The record describes the bytes just uploaded; absence of a treatment cannot preserve a previous treatment record.
   const result = await env.DB.prepare(`UPDATE images SET copy_key=?,copy_sha256=?,copy_width=?,copy_height=?,copy_bytes=?,copy_crop=?,
-    copy_metrics=?,copy_treatment=?,revision=revision+1,updated_at=? WHERE id=? AND revision=? AND status IN ('new','approved')`)
+    copy_metrics=?,copy_treatment=?,revision=revision+1,updated_at=? WHERE id=? AND revision=? AND status IN ('new','approved') AND (?=0 OR copy_key IS NULL)`)
     .bind(key, hash, actual.width, actual.height, copy.bytes.length, JSON.stringify(crop), metrics ? JSON.stringify(metrics) : null,
-      treatment ? JSON.stringify(treatment) : null, now(), row.id, row.revision).run();
-  if (!result.meta.changes) { if (!sameFile) await env.QUARANTINE.delete(key); throw new HttpError(409, "Image changed elsewhere: reload"); }
+      treatment ? JSON.stringify(treatment) : null, now(), row.id, row.revision, ifMissing ? 1 : 0).run();
+  if (!result.meta.changes) {
+    const current = await env.DB.prepare("SELECT copy_key FROM images WHERE id=?").bind(row.id).first<{copy_key: string | null}>();
+    // Two equal encodings can share a key: never remove the file the other upload just committed.
+    if (!sameFile && current?.copy_key !== key) await env.QUARANTINE.delete(key);
+    if (ifMissing && current?.copy_key) return json({ ...(await viewOf(env, row.id)), already_prepared: true });
+    throw new HttpError(409, "Image changed elsewhere: reload");
+  }
   if (row.copy_key && !sameFile) await env.QUARANTINE.delete(row.copy_key);
   return json({ ...(await viewOf(env, row.id)), already_prepared: false }, 201);
 }

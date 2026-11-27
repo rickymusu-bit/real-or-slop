@@ -341,7 +341,7 @@ with sync_playwright() as p:
         expect(page.locator('#wizard-gallery-name')).to_have_text('Test library_browser')
         # One wizard for every SLOP (owner decision of 2026-11-22): steps from the gallery to the review, no manual mode.
         expect(page.locator('[data-generation-mode], [data-manual=prompt]')).to_have_count(0)
-        expect(page.locator('.pipeline h2')).to_have_text(['1. Prepare the gallery', '2. Gallery variations', '3. Scenes and images to review', '4. Treatment and game copies'])
+        expect(page.locator('.pipeline h2')).to_have_text(['1. Prepare the gallery', '2. Gallery variations', '3. Scenes and images to review', '4. Final review and approval'])
         assert page.evaluate("""() => document.querySelector('#wizard-gallery-name').getBoundingClientRect().bottom
             < document.querySelector('.pipeline').getBoundingClientRect().top""")
         expect(page.locator('[data-auto=start]')).to_have_count(0)

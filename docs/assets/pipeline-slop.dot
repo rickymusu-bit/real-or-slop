@@ -23,17 +23,18 @@ digraph pipeline {
   label="3. GENERATE AND REVIEW IMAGES";color="#cbd5e1";style=rounded;fontsize=18;
   generate [label="Generate images from saved scene text\n1 separately confirmed call per scene\nREAL pixels are not sent to the generator",fillcolor="#dbeafe"];
   inspect [label="Inspect the full image and decide\nAccept it or discard and close · free\nOptional evaluation: 1 confirmed call\nOptional correction: preview mask + confirm 1 call\nAfter an edit, inspect again before deciding",fillcolor="#fef3c7"];
-  generate -> inspect;
+  copy [label="Accept: automatically prepare the game copy · free\nBrowser applies treatment + shared 4:5 WebP encoding\nStart with the full photo and black bars\nMissing reference: show untreated fallback"] ;
+  generate -> inspect -> copy;
 
  }
  subgraph cluster_finish {
-  label="4. PREPARE THE GAME COPY";color="#cbd5e1";style=rounded;fontsize=18;
-  copy [label="Adjust treatment and framing · free\nPrepare the shared 4:5 WebP game copy\nCheck both the full image and the copy"];
+  label="4. FINAL REVIEW AND APPROVAL";color="#cbd5e1";style=rounded;fontsize=18;
+  final_review [label="Review the ready game copy beside the full image\nAdjust treatment or framing if needed · free"];
   approve [label="Select checked SLOP game copies\nApprove one photo or the selected group\nPhotos without a ready copy cannot be selected\nApproved photos leave this wizard",fillcolor="#fef3c7"];
   observe [label="Automatically observe the full SLOP original\nAt most 1 model call, included in approval\nReuse saved observations · no separate confirmation",fillcolor="#dbeafe"];
   publish [label="Find the photo in the gallery and publish it · free\nOnly published photos enter the game",fillcolor="#dcfce7"];
-  copy -> approve -> observe -> publish;
+  final_review -> approve -> observe -> publish;
  }
- notes [shape=plaintext,fontsize=12,label="The server continues if the page closes.\nReturning only reads progress. Stop queued requests cancels unsent work.\nAcquired calls finish. Approval starts observation; other phases stay separately confirmed.\nAccepting an image does not publish it."];
- legend -> real [style=invis];settings -> coverage [style=invis];review -> generate [style=invis];inspect -> copy [style=invis];publish -> notes [style=invis];
+ notes [shape=plaintext,fontsize=12,label="Paid work continues on the server if the page closes.\nBrowser copies need an open page; missing copies resume on return.\nSaved copies and your adjustments are kept. Stop cancels unsent paid work.\nAcquired calls finish. Approval starts observation; other phases stay separately confirmed.\nAccepting an image does not publish it."];
+ legend -> real [style=invis];settings -> coverage [style=invis];review -> generate [style=invis];copy -> final_review [style=invis];publish -> notes [style=invis];
 }

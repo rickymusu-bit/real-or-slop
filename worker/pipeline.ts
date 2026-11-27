@@ -5,7 +5,7 @@ import { dispatchPipeline, recoverPipeline, startPipeline } from "./pipeline-que
 import { chosenModel, chosenQuality } from "./models";
 import { sweepGalleryFiles } from "./gallery-removal";
 import { findGallery } from "./galleries";
-import { create, find, viewsOf, type Row } from "./library";
+import { create, find, viewOf, viewsOf, type Row } from "./library";
 import { instructions as descriptionInstructions, schema as descriptionSchema, readDescription } from "./real-description";
 import { IMAGE_MARK, jsonWithImage } from "./image-body";
 import { imageMime } from "../shared/image-format";
@@ -419,7 +419,7 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
         .bind(JSON.stringify(normalizeProfile({ ...proposal.profile, genre: proposal.genre })), JSON.stringify({ proposal, variation: snap.variation }), JSON.stringify({ target_metrics: sample ? parse(sample.copy_metrics, null) : null, acceptance: { by: "owner" } }), result.id).run();
       await env.DB.prepare("DELETE FROM pipeline_jobs WHERE id=?").bind(job.id).run();
       await sweepGalleryFiles(env).catch(error=>console.error("pipeline cleanup",error));
-      return json(result);
+      return json(await viewOf(env, result.id));
     } catch (error) { await env.DB.prepare("UPDATE pipeline_jobs SET state='attention',error=? WHERE id=?").bind(error instanceof Error ? error.message : "Error", job.id).run(); throw error; }
   }
   const allowed = action === "generate" ? ["proposal"] : action === "evaluate" ? ["candidate", "review"] : action === "edit" ? ["candidate", "review"] : [];

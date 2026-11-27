@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 19.1.0
+# Generazione SLOP — specifica 19.2.0
 
-Aggiornata: 2026-11-27T15:29:55Z. Stato: implementata nel ramo 1.69.0, da rilasciare.
+Aggiornata: 2026-11-27T16:50:59Z. Stato: implementata nel ramo 1.70.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -68,20 +68,27 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
   modificabile. Solo la conferma finale autorizza una chiamata a `images/edits`. La valutazione precedente resta visibile;
   nessuna valutazione aggiuntiva viene avviata. Il prima/dopo viene conservato fino alla decisione.
 - **Accetta:** trasferisce l'immagine intera nella libreria come nuova. Elimina il riferimento alla REAL e i file temporanei
-  mediante coda durevole. L'accettazione non prepara, approva o pubblica la copia automaticamente.
-- **Copia, trattamento e pubblicazione:** comandi distinti, gratuiti. L’approvazione SLOP include l’osservazione automatica
+  mediante coda durevole. Decisione dell’owner del 2026-11-27: subito dopo l’accettazione nel passo 3, il browser prepara
+  automaticamente la copia di gioco WebP 4:5 con trattamento, senza nuove chiamate ai modelli. L’originale intero centrato
+  con bande nere è l’inquadratura iniziale. Un avviso blocca i comandi durante la preparazione. L’API di accettazione restituisce
+  i metadati aggiornati, comprese le misure del riferimento del trattamento appena salvate. Non approva né pubblica.
+  Se il browser si chiude o l’upload fallisce, la foto accettata resta nel passo 3 con stato/errore; al ritorno o con il normale
+  aggiornamento si completa soltanto la copia mancante. Nessuna nuova accettazione, generazione o valutazione. Un errore non
+  causa tentativi continui nella stessa pagina. Le copie già salvate e le scelte dell’owner sono conservate.
+- **Revisione finale e pubblicazione:** il passo 4 mostra solo le copie pronte; permette di confrontarle con l’originale,
+  modificare gratuitamente trattamento o inquadratura e approvare. Non contiene un comando per preparare la copia. L’approvazione SLOP include l’osservazione automatica
   dell’originale mancante, al massimo una chiamata; un profilo valido viene riusato. La misura tecnica delle copie REAL mancanti
   è calcolata dal browser. Il riferimento del trattamento è campionato fra REAL misurate dello stesso genere di destinazione;
   senza riferimento disponibile la copia parte senza trattamento. Approvare fa uscire la SLOP dal passo 4, senza eliminarla;
   si ritrova nella galleria e da lì si pubblica. Dal 2026-11-27 il passo 4 permette di selezionare le SLOP con copia pronta:
   spunte individuali, «Select all ready SLOP», «Clear SLOP selection» e «Approve N selected SLOP». Nessuna preselezione;
-  selezione parziale e conteggi si aggiornano subito senza cancellare campi ancora in modifica. Le foto senza copia sono disabilitate.
+  selezione parziale e conteggi si aggiornano subito senza cancellare campi ancora in modifica. Le foto senza copia restano nel passo 3, fuori dalla selezione finale.
   La scelta resta durante gli aggiornamenti, si ripulisce per foto approvate/rimosse/non più pronte e riparte vuota al reload.
   Una sola conferma verifica che l’owner abbia controllato originali e copie dell’intero gruppo; nessuna conferma separata per
   l’osservazione automatica, al massimo una chiamata per foto non osservata. `POST /api/admin/library/bulk` usa solo gli ID scelti
   con `action=set-approved`, in richieste di massimo 500 foto. Il server ricontrolla stato e copia. Le approvate escono dal passo;
   gli esiti parziali indicano ID e motivo senza bloccare le altre. Il progresso segue solo le foto approvate o dall’esito d’invio
-  incerto, senza osservazioni aggiuntive sulle foto esplicitamente rifiutate. Il passo 4 mostra tutte le SLOP di pipeline nuove, senza il vecchio limite di 100. Inquadratura e cursori riusano gli editor esistenti.
+  incerto, senza osservazioni aggiuntive sulle foto esplicitamente rifiutate. Il passo 4 mostra tutte le SLOP di pipeline nuove con copia pronta, senza il vecchio limite di 100. Inquadratura e cursori riusano gli editor esistenti.
 
 API private: `GET /api/admin/pipeline/:gallery` e `/status` (solo stato dei lavori, usato durante l’attesa); `POST /:gallery/settings`, `/profile`, `/categories`, `/prepare`, `/plan`, `/observe`, `/stop`;
 `POST /:gallery/:job/{scene,generate,evaluate,edit,accept,close}`; `GET /:gallery/:job/file` e `?previous=1`.
@@ -397,7 +404,7 @@ preciso, come GBA SP Tribal Edition, viene preferito a descrizioni generiche sos
 esatta dei disegni dal solo testo non è garantita. I dati identificativi temporanei, come nome e combinazione dei progressi
 in un salvataggio, vengono variati coerentemente; non si impone di eliminare sempre lo spagnolo né di spegnere tutti gli schermi.
 
-Dopo accettazione, trattamento regolabile quando serve e preparazione comune WebP 4:5; controllo visivo finale prima di approvare
+All’accettazione nel passo 3 si prepara subito la copia comune WebP 4:5 con trattamento; nel passo 4 trattamento e inquadratura restano regolabili durante il controllo visivo finale prima di approvare
 e pubblicare. Nessun rumore o sfocatura uniforme viene imposto a tutte le SLOP. Il genere di destinazione guida il campione
 tecnico e non la sola REAL di partenza. Senza misure pertinenti non si inventa un trattamento.
 

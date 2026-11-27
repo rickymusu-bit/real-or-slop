@@ -264,3 +264,19 @@ assert status == 200 and gone['source_missing_at'] is None and gone['source_chec
 for item in (present, gone):
     call(f'{API}/{item["id"]}/trash', {}); assert call(f'{API}/{item["id"]}', method='DELETE')[0] == 200
 print('Library integration 1.9.0 passed: no captions; no initial view; trash withdraws a published photo; level game seeded; copies with 4:5 crop, ND refused; add, copy, edit kept approved, publish, play without captions, withdraw with the game in progress, trash, delete with every row and file, upload again, bulk.')
+
+# Automatic copy uploads only fill a missing copy and preserve an already reviewed frame/treatment.
+from concurrent.futures import ThreadPoolExecutor
+raw=photo((49,137,201),size=(80,100),exif=False)
+code,item,_=upload(raw,title='Automatic copy concurrency');assert code==201
+encoded=game_copy(raw)
+with ThreadPoolExecutor(max_workers=2) as pool:
+    responses=list(pool.map(lambda _:copy(item['id'],encoded,query='?if_missing=1'),range(2)))
+assert all(response[0] in (200,201) for response in responses),responses
+saved=call(f'{API}/{item["id"]}')[1]
+assert saved['revision']==1 and saved['copy'] and call(f'{API}/{item["id"]}/file')[0]==200
+# Even a stale/invalid new body cannot replace a copy already saved by another tab.
+code,kept,_=copy(item['id'],b'not an image',query='?if_missing=1');assert code==200 and kept['already_prepared']
+assert kept['revision']==saved['revision'] and kept['copy']==saved['copy'] and kept['treatment']==saved['treatment']
+call(f'{API}/{item["id"]}/trash',{});assert call(f'{API}/{item["id"]}',method='DELETE')[1]['deleted']==1
+print('Automatic copy upload passed: concurrent fill-only uploads, stored file retained, existing copy/frame/treatment unchanged.')

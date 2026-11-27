@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 41.1.0, aggiornata il 2026-11-27T15:29:55Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 41.2.0, aggiornata il 2026-11-27T16:50:59Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,14 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.69.0:** selezione delle SLOP pronte nel passo 4, seleziona tutte, deseleziona e approvazione in gruppo degli ID
+- **Ramo 1.70.0:** copia 4:5 con trattamento preparata automaticamente nel browser subito dopo l’accettazione nel passo 3.
+  Passo 4 dedicato alla revisione finale, modifica di trattamento/inquadratura e approvazione singola o in gruppo.
+  Ripresa delle copie mancanti al ritorno, upload condizionato e copie esistenti conservate. API di accettazione con metadati
+  aggiornati. Schema e specifiche aggiornati; nessuna migrazione o nuova chiamata ai modelli per le copie.
+  Adeguamento via API delle due SLOP già accettate senza copia: WebP 4:5 trattati con il codificatore Chromium condiviso,
+  metadati validati, aggiornamento condizionato e SHA verificato su R2; stato nuovo e originali conservati.
+
+- **Integrata in main la 1.69.0 (PR #190):** selezione delle SLOP pronte nel passo 4, seleziona tutte, deseleziona e approvazione in gruppo degli ID
   scelti tramite l’API bulk esistente. Osservazione automatica inclusa, conteggio del massimo e risultati parziali; copie mancanti
   disabilitate. `src/pipeline.ts`, `src/pipeline.css`, `src/slop-observation.ts`, test browser desktop/mobile e schema aggiornati.
   Nessuna migrazione o adeguamento dei dati preesistenti; nessuna chiamata reale. Specifica `generazione-slop` 19.1.0.
@@ -145,13 +152,13 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, dati | `docs/libreria-immagini.md` | 11.0.0 |
+| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, dati | `docs/libreria-immagini.md` | 11.1.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
-| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.1.0 |
+| Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.2.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.9.0 |
-| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 19.1.0 |
+| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 19.2.0 |
 | Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 2.0.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 11.1.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 11.2.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.12.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.4.0 |
