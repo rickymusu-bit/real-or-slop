@@ -23,7 +23,7 @@ import { FORMAT_LABELS, type Crop } from "../shared/game-copy";
 import { markGameMedia } from "./media-mark";
 import type { VisualDescription } from "../shared/real-description";
 import { describePhotos, visualDescription } from "./real-description";
-import { observationState, observeSlops } from "./slop-observation";
+import { followSlopObservations } from "./slop-observation";
 
 type Status = "new" | "approved" | "published" | "trash";
 interface Item extends TreatableItem {
@@ -80,7 +80,7 @@ async function bulkUpdate(action: string, ids: string[], fields: Record<string, 
 export async function showLibrary() {
   let galleryList: GalleryList | null = null;
   const galleries = () => galleryList?.galleries || [];
-  let items: Item[] = [], selected = new Set<string>(), open: Item | null = null, busy = false, undescribed = 0, unobserved = 0;
+  let items: Item[] = [], selected = new Set<string>(), open: Item | null = null, busy = false, undescribed = 0;
   const SORT_KEY = "ros-library-sort";
   let sort = { by: "added", order: "desc" };
   try { const saved = JSON.parse(localStorage.getItem(SORT_KEY) || "null") as typeof sort | null;
@@ -110,7 +110,6 @@ export async function showLibrary() {
           <a class="button primary" id="gallery-upload-link">Import REAL</a>
           <a class="button" id="gallery-generation-link">Generate SLOP</a>
           <button type="button" id="library-describe-gallery" hidden>Describe REAL</button>
-          <button type="button" id="library-observe-gallery" hidden>Observe SLOP</button>
           <button type="button" data-gallery-edit>Edit gallery</button>
         </div>
       </div>
@@ -132,7 +131,7 @@ export async function showLibrary() {
     </div>
     <div class="gallery-workspace-footer">
       <div id="library-selection" class="library-selection" role="group" aria-label="Actions for selected photos" hidden>
-        <strong id="library-selection-count" aria-live="polite"></strong>
+        <strong id="library-selection-count" aria-live="polite"></strong><p id="library-approval-note" hidden></p>
         <div class="library-selection-actions">
           <button type="button" data-bulk="set-approved">Approve</button>
           <button type="button" data-bulk="set-published">Publish</button>
@@ -140,7 +139,6 @@ export async function showLibrary() {
           <button type="button" data-bulk="trash" aria-label="Move to Trash">Move to Trash</button>
           <button type="button" data-bulk="restore" hidden>Restore</button>
           <button type="button" data-bulk="delete" class="danger" hidden>Delete permanently</button>
-          <button type="button" data-bulk="observe" hidden>Observe SLOP</button>
           <button type="button" data-bulk="gallery">Move to gallery</button>
         </div>
         <button type="button" data-bulk="none">Deselect</button>
@@ -243,11 +241,10 @@ export async function showLibrary() {
     });
     $("#library-batch-filter").hidden = !filter.batch;
     try {
-      const [data, observations] = await Promise.all([call<{ items: Item[]; next: number | null; counts: { status: string; origin: string; n: number }[];
-        undescribed: number }>("?" + params), observationState(filter.gallery)]);
+      const data = await call<{ items: Item[]; next: number | null; counts: { status: string; origin: string; n: number }[];
+        undescribed: number }>("?" + params);
       if (seq !== loadSeq) return;
       undescribed = data.undescribed;
-      unobserved = observations.images.filter(photo => !photo.observed).length;
       const added = append ? data.items.filter(item => !items.some(i => i.id === item.id)) : data.items;
       items = append ? [...items, ...added] : added;
       nextPage = data.next;
@@ -290,15 +287,13 @@ export async function showLibrary() {
     describe.hidden = trash || !galleryList?.paid_calls || !undescribed;
     describe.disabled = busy;
     describe.textContent = `Describe REAL (${undescribed})`;
-    const observe = $<HTMLButtonElement>("#library-observe-gallery");
-    observe.hidden = trash || !galleryList?.paid_calls || !unobserved;
-    observe.disabled = busy;
-    observe.textContent = `Observe SLOP (${unobserved})`;
     const chosen = items.filter(item => selected.has(item.id));
+    const missing = chosen.filter(item => item.origin === "SLOP" && item.status === "new" && !item.has_slop_observation).length;
+    $("#library-approval-note").hidden = !missing;
+    $("#library-approval-note").textContent = `Approval includes automatic observation: at most ${missing} model ${missing === 1 ? "call" : "calls"}, one per SLOP.`;
     for (const button of bar.querySelectorAll<HTMLButtonElement>("[data-bulk]")) {
       const action = button.dataset.bulk;
-      if (action === "observe") button.hidden = trash || !galleryList?.paid_calls || !chosen.some(item => item.origin === "SLOP" && !item.has_slop_observation);
-      else if (action === "withdraw") button.hidden = trash || !chosen.some(item => item.status === "published");
+      if (action === "withdraw") button.hidden = trash || !chosen.some(item => item.status === "published");
       else if (action === "set-approved") button.hidden = trash || !chosen.some(item => item.status === "new");
       else if (action !== "none" && action !== "gallery") button.hidden = trash !== (action === "restore" || action === "delete");
       button.disabled = busy || (action === "gallery" && !galleries().some(g => g.id !== filter.gallery));
@@ -380,13 +375,12 @@ export async function showLibrary() {
             ? '<button type="button" id="library-describe-photo">Generate description (1 call)</button>' : ""}</section>` : ""}
       ${item.origin === "SLOP" ? `<section class="editorial-description" data-slop-observation><h3>Observed parameters</h3><p>${item.has_slop_observation
         ? "Observed from the full original. Included in gallery comparison and balancing."
-        : "Not observed yet. Excluded from gallery comparison and balancing."}</p>${!item.has_slop_observation && galleryList?.paid_calls && item.status !== "trash"
-          ? '<button type="button" id="library-observe-photo">Observe parameters (1 call)</button>' : ""}</section>` : ""}
+        : "Observation starts automatically on approval. Pending or failed observations are excluded from gallery comparison and balancing."}</p></section>` : ""}
       ${fields.map(([key, label, max, area]) => `<label>${label}${area
         ? `<textarea data-field="${key}" maxlength="${max}" rows="3" ${editable ? "" : "readonly"}>${escape(item[key])}</textarea>`
         : `<input data-field="${key}" maxlength="${max}" value="${escape(item[key])}" ${editable ? "" : "readonly"}>`}</label>`).join("")}
       ${editable && item.origin === "SLOP" ? '<p class="hint">To regenerate, move this SLOP to Trash and start a new job in the gallery pipeline.</p>' : ""}
-      <div class="library-actions">${item.status === "new" ? `${item.origin === "REAL" ? `<label><input type="checkbox" id="library-rights" ${item.rights_confirmed ? "checked" : ""}> I have checked rights and license</label>` : ""}<button type="button" data-action="approve" class="primary">Approve</button>` : ""}
+      <div class="library-actions">${item.status === "new" ? `${item.origin === "REAL" ? `<label><input type="checkbox" id="library-rights" ${item.rights_confirmed ? "checked" : ""}> I have checked rights and license</label>` : ""}<button type="button" data-action="approve" class="primary">Approve</button>${item.origin === "SLOP" ? "<p>Approval automatically observes the full original: at most one model call per SLOP.</p>" : ""}` : ""}
         ${item.status === "approved" ? '<button type="button" data-action="publish" class="primary">Publish to game</button>' : ""}
         ${item.status === "published" ? '<button type="button" data-action="withdraw">Unpublish</button><button type="button" data-action="remove">Delete (move to Trash)</button>' : ""}
         ${item.status === "trash" ? '<button type="button" data-action="restore">Restore</button><button type="button" data-action="delete" class="danger">Delete permanently</button>'
@@ -421,18 +415,12 @@ export async function showLibrary() {
       try { showDetail(await call<Item>("/" + encodeURIComponent(button.dataset.openSource))); } catch (error) { detailMessage(String(error instanceof Error ? error.message : error)); }
       return;
     }
-    if (!button || !open || busy || !(button.dataset.action || ["library-copy", "library-regenerate", "library-describe-photo", "library-observe-photo",
+    if (!button || !open || busy || !(button.dataset.action || ["library-copy", "library-regenerate", "library-describe-photo",
       "library-crop", "library-treatment-off", "library-treatment-on", "library-treatment-edit"].includes(button.id))) return;
     const id = open.id;
     busy = true;
     try {
-      if (button.id === "library-observe-photo") {
-        const result = await observeSlops(open.gallery_id, [id]);
-        if (result === null) return;
-        open = await call<Item>("/" + encodeURIComponent(id));
-        detailMessage(result);
-      }
-      else if (button.id === "library-describe-photo") {
+      if (button.id === "library-describe-photo") {
         const item = open;
         const result = await describePhotos([{ id, title: imageLabel(item) }], item.gallery_id, call<Item>, updated => { open = updated; });
         if (result === null) return;
@@ -474,8 +462,16 @@ export async function showLibrary() {
         open = await call<Item>(`/${encodeURIComponent(open.id)}/trash`, { method: "POST", body: "{}" });
       }
 
-      else if (button.dataset.action) open = await call<Item>(`/${encodeURIComponent(open.id)}/${button.dataset.action}`, { method: "POST",
-        body: JSON.stringify(button.dataset.action === "approve" ? { rights_confirmed: Boolean(detail.querySelector<HTMLInputElement>("#library-rights")?.checked) } : {}) });
+      else if (button.dataset.action) {
+        const item = open;
+        const update = async () => { open = await call<Item>(`/${encodeURIComponent(item.id)}/${button.dataset.action}`, { method: "POST",
+          body: JSON.stringify(button.dataset.action === "approve" ? { rights_confirmed: Boolean(detail.querySelector<HTMLInputElement>("#library-rights")?.checked) } : {}) }); };
+        if (button.dataset.action === "approve" && item.origin === "SLOP") {
+          const result = await followSlopObservations(item.gallery_id, [id], update);
+          open = await call<Item>("/" + encodeURIComponent(id));
+          if (result) detailMessage(result);
+        } else await update();
+      }
       await load();
       // The detail is drawn again: the last message stays.
       const said = detail.querySelector("#library-detail-message")?.textContent || "";
@@ -491,7 +487,6 @@ export async function showLibrary() {
     const chosen = items.filter(item => selected.has(item.id) && (action !== "withdraw" || item.status === "published")
       && (action !== "set-approved" || item.status === "new"));
     if (!chosen.length || busy) return;
-    if (action === "observe") { await observeGallery(chosen.filter(item => item.origin === "SLOP" && item.status !== "trash").map(item => item.id)); return; }
     const scope = filter.gallery, ids = chosen.map(item => item.id);
     const rights = ["set-approved", "set-published"].includes(action)
       && chosen.some(item => item.status === "new" && item.origin === "REAL" && !item.rights_confirmed);
@@ -506,10 +501,13 @@ export async function showLibrary() {
     selectionBar();
     message("Updating…");
     try {
-      const result = await bulkUpdate(action, ids, {
+      let result!: Awaited<ReturnType<typeof bulkUpdate>>;
+      const update = async () => { result = await bulkUpdate(action, ids, {
         ...(rights ? { rights_confirmed: true } : {}),
         ...(destination ? { gallery_id: destination } : {}),
-      });
+      }); };
+      const approvingSlop = ["set-approved", "set-published"].includes(action) ? chosen.filter(item => item.origin === "SLOP" && item.status === "new").map(item => item.id) : [];
+      const observed = approvingSlop.length ? await followSlopObservations(scope, approvingSlop, update) : (await update(), null);
       if (filter.gallery !== scope) return;
       const failures = new Set(result.failed.map(item => item.id));
       for (const id of ids) if (!failures.has(id)) selected.delete(id);
@@ -517,20 +515,11 @@ export async function showLibrary() {
       if (filter.gallery !== scope) return;
       message(action === "delete"
         ? `${result.deleted} permanently deleted.` + (result.postponed ? ` ${result.postponed} remain in Trash because they are in games in progress.` : "")
-        : `${result.done} ${action === "gallery" ? "moved" : "updated"}.` +
+        : `${result.done} ${action === "gallery" ? "moved" : "updated"}.` + (observed ? ` ${observed}` : "") +
           (result.failed.length ? ` ${result.failed.length} operations failed. ${[...new Set(result.failed.map(item => item.error))].join(" / ")}` : ""));
     } catch (error) {
       if (filter.gallery === scope) { await load().catch(() => {}); report(error); }
     } finally { busy = false; syncSelection(); }
-  };
-  const observeGallery = async (ids?: string[], resume = false) => {
-    const scope = filter.gallery;
-    busy = true; selectionBar();
-    try {
-      const result = await observeSlops(scope, ids, resume);
-      if (scope === filter.gallery && result !== null) { await load(); message(result); }
-    } catch (error) { if (scope === filter.gallery) report(error); }
-    finally { busy = false; selectionBar(); }
   };
   const describeGallery = async () => {
     const scope = filter.gallery;
@@ -601,7 +590,6 @@ export async function showLibrary() {
       return;
     }
     if (!button || busy) return;
-    if (button.id === "library-observe-gallery") { await observeGallery(); return; }
     if (button.id === "library-describe-gallery") { await describeGallery(); return; }
     if (button.id === "library-select-all") {
       for (const item of items) selected.add(item.id);
@@ -810,7 +798,9 @@ export async function showLibrary() {
       $(".gallery-workspace-scroll").scrollTop = 0;
     }
     await load();
-    await observeGallery(undefined, true);
+    busy = true; selectionBar();
+    try { const result = await followSlopObservations(id); if (result && filter.gallery === id) { await load(); message(result); } }
+    finally { busy = false; selectionBar(); }
   };
   const closeGallery = () => {
     if (!galleryDialog.open) return;

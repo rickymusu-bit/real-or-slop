@@ -15,7 +15,7 @@ with sync_playwright() as p:
             else:dialog.accept()
         page.on('dialog',answer)
         try:
-            control([{'delay':4} for _ in range(2)]+[{'delay':1.2} for _ in range(7)]);page.goto(BASE+'/admin/gallerie/'+gallery+'/slop');root=page.locator('.pipeline')
+            control([{'delay':4} for _ in range(2)]+[{'delay':1.2} for _ in range(8)]);page.goto(BASE+'/admin/gallerie/'+gallery+'/slop');root=page.locator('.pipeline')
             expect(root.get_by_role('heading',name='1. Prepare the gallery')).to_be_visible()
             expect(root.locator('[data-action=index]')).to_have_count(0)
             diagram=page.request.get(BASE+'/docs/pipeline-slop.svg');assert diagram.status==200
@@ -114,6 +114,8 @@ with sync_playwright() as p:
             card.locator('[data-action=edit]').click();expect(page.locator('.pipeline-mask[open]')).to_be_visible()
             page.screenshot(path=str(folder/(name+'-mask.png')),full_page=True)
             page.locator('[data-mask-cancel]').click();assert len(control())==8
+            # The free action refreshes the cards after cancelling: wait before toggling the new details.
+            expect(root.locator('[data-action=refresh]')).to_be_enabled()
             card=root.locator('[data-job-card]').first;card.get_by_text('Suggestion: Small local detail.',exact=True).click();card.locator('[data-action=edit]').click();page.locator('[data-mask-confirm]').click()
             expect(overlay).to_be_visible();expect(overlay).to_contain_text('Applying confirmed local correction')
             expect(overlay).to_have_count(0,timeout=30000)
@@ -126,16 +128,17 @@ with sync_playwright() as p:
             expect(root.locator('[data-generated-count]')).to_have_text(['1 SLOP generated','1 SLOP generated'])
             root.get_by_text('Gallery composition',exact=True).click()
             expect(root.get_by_role('columnheader',name='Observed in SLOP',exact=True)).to_be_visible()
-            expect(root.locator('[data-action=observe-all]')).to_have_text('Observe 1 SLOP (1 call)')
-            root.locator('[data-action=observe-all]').click()
-            expect(overlay).to_be_visible();expect(overlay).to_contain_text('Observing SLOP parameters')
-            expect(overlay).to_have_count(0,timeout=30000)
+            expect(root.locator('[data-action=observe-all], [data-action=observe-image]')).to_have_count(0)
+            assert len(control())==9  # Accepting and preparing the copy do not observe the original yet.
+            accepted.locator('[data-action=copy]').click();expect(accepted.locator('[data-action=approve]')).to_be_enabled(timeout=30000)
+            confirmations=len(dialogs)
+            accepted.locator('[data-action=approve]').click()
+            expect(overlay).to_be_visible();expect(overlay).to_contain_text('observing parameters')
+            expect(overlay).to_have_count(0,timeout=30000);expect(accepted).to_have_count(0)
+            assert len(dialogs)==confirmations+1  # Only the existing approval check, no observation confirmation.
             assert len(control())==10 and control()[-1]['body']['text']['format']['name']=='pipeline_observation'
             sent=json.loads(control()[-1]['body']['input'][0]['content'][0]['text'])
             assert set(sent)=={'width','height','known_categories'},sent
-            expect(root.locator('[data-action=observe-all]')).to_be_disabled()
-            accepted.locator('[data-action=copy]').click();expect(accepted.locator('[data-action=approve]')).to_be_enabled(timeout=30000)
-            accepted.locator('[data-action=approve]').click();expect(accepted).to_have_count(0)
             expect(root.locator('[data-pipeline-notice]')).to_contain_text('Find it in the gallery')
             status=call('/'+accepted_id,library=True)[1];assert status['status']=='approved'
             page.goto(BASE+'/admin?gallery='+gallery)
@@ -170,60 +173,46 @@ with sync_playwright() as p:
             expect(root.locator('[data-pipeline-notice]')).to_contain_text('need attention')
             assert len(control())<=3,control()
             assert not errors,errors
-            # Three pre-update published SLOP, with no pipeline scene, are observable directly in the gallery.
-            historical=make_gallery('Published observation '+name)['id'];published=[]
+            # Gallery detail and bulk approval start observation without a dedicated command or confirmation.
+            historical=make_gallery('Automatic observation '+name)['id'];published=[]
             for n in range(3):
-                photo=real('published-observe-'+name+'-'+str(n),gallery=historical)
-                sql("UPDATE images SET origin='SLOP',title=NULL,prompt='Requested scene must not guide observation',model='fake' WHERE id='"+photo['id']+"'")
-                assert call('/'+photo['id']+'/publish',{'revision':photo['revision']},library=True)[0]==200
+                photo=real('auto-observe-'+name+'-'+str(n),gallery=historical)
+                sql("UPDATE images SET origin='SLOP',title=NULL,status='new',approved_at=NULL,prompt='Requested scene must not guide observation',model='fake' WHERE id='"+photo['id']+"'")
                 published.append(photo['id'])
             real('observation-real-'+name,gallery=historical)
-            control([{'delay':4},{'delay':1},{'delay':1}])
+            control([{'delay':4},{'delay':1.2},{'delay':1.2}])
             page.goto(BASE+'/admin?gallery='+historical)
-            gallery_observe=page.locator('#library-observe-gallery')
-            expect(gallery_observe).to_have_text('Observe SLOP (3)');expect(gallery_observe).to_be_enabled()
-            # Cancellation is free, including for published photos.
-            dismiss[0]=True;gallery_observe.click();assert control()==[]
-            expect(gallery_observe).to_be_enabled()
-            # Detail observation does not require Edit photo or change publication/revision.
+            expect(page.locator('[id^=library-observe], [data-bulk=observe]')).to_have_count(0)
             first=published[0];before=call('/'+first,library=True)[1]
             page.locator('[data-open="'+first+'"]').click()
-            detail=page.locator('#library-detail');expect(detail.locator('[data-slop-observation]')).to_contain_text('Not observed yet')
-            with page.expect_request(lambda r:r.url.endswith('/observe') and r.method=='POST') as observed:
-                detail.locator('#library-observe-photo').click()
-            assert observed.value.post_data_json['ids']==[first] and observed.value.post_data_json['max_calls']==1
-            expect(overlay).to_be_visible();page.screenshot(path=str(folder/(name+'-published-observation-progress.png')),full_page=True)
-            confirmations=len(dialogs);page.reload();expect(overlay).to_be_visible()
+            detail=page.locator('#library-detail');expect(detail.locator('[data-slop-observation]')).to_contain_text('automatically on approval')
+            confirmations=len(dialogs)
+            with page.expect_request(lambda r:r.url.endswith('/'+first+'/approve') and r.method=='POST'):
+                detail.locator('[data-action=approve]').click()
+            expect(overlay).to_be_visible();assert len(dialogs)==confirmations
+            page.screenshot(path=str(folder/(name+'-automatic-observation-progress.png')),full_page=True)
+            page.reload();expect(overlay).to_be_visible()
             expect(overlay).to_have_count(0,timeout=30000);assert len(dialogs)==confirmations and len(control())==1
             after=call('/'+first,library=True)[1]
-            assert after['has_slop_observation'] and after['status']=='published' and after['revision']==before['revision']
-            expect(gallery_observe).to_have_text('Observe SLOP (2)')
-            # Selected observations operate only on selected missing SLOP.
-            page.locator('[data-select="'+published[1]+'"]').check()
-            with page.expect_request(lambda r:r.url.endswith('/observe') and r.method=='POST') as observed:
-                page.locator('[data-bulk=observe]').click()
-            assert observed.value.post_data_json['ids']==[published[1]]
-            expect(overlay).to_have_count(0,timeout=30000);expect(gallery_observe).to_have_text('Observe SLOP (1)')
-            page.locator('[data-bulk=none]').click()
-            # Gallery action ignores filters/pagination, including a view displaying only REAL.
-            page.get_by_text('Filters and sorting',exact=True).click()
-            page.locator('#library-origin').select_option('REAL')
-            expect(page.locator('#library-grid .library-card')).to_have_count(1)
-            with page.expect_request(lambda r:r.url.endswith('/observe') and r.method=='POST') as observed:
-                gallery_observe.click()
-            assert observed.value.post_data_json['ids']==[published[2]]
-            expect(overlay).to_have_count(0,timeout=30000);expect(gallery_observe).to_be_hidden()
-            assert len(control())==3 and all(x['body']['text']['format']['name']=='pipeline_observation' for x in control())
+            assert after['has_slop_observation'] and after['status']=='approved' and after['revision']==before['revision']+1
+            assert call('/'+first+'/publish',{'revision':after['revision']},library=True)[0]==200
+            assert len(control())==1
+            for photo_id in published[1:]:page.locator('[data-select="'+photo_id+'"]').check()
+            with page.expect_request(lambda r:r.url.endswith('/bulk') and r.method=='POST') as approved:
+                page.locator('[data-bulk=set-approved]').click()
+            assert set(approved.value.post_data_json['ids'])==set(published[1:])
+            expect(overlay).to_be_visible();expect(overlay).to_have_count(0,timeout=30000)
+            assert len(dialogs)==confirmations and len(control())==3
             for photo_id in published:
-                photo=call('/'+photo_id,library=True)[1];assert photo['status']=='published' and photo['has_slop_observation']
-            page.locator('#library-origin').select_option('SLOP')
-            expect(page.locator('#library-grid .library-card')).to_have_count(3)
+                photo=call('/'+photo_id,library=True)[1];assert photo['has_slop_observation']
+                if photo['status']=='approved':assert call('/'+photo_id+'/publish',{'revision':photo['revision']},library=True)[0]==200
+            assert len(control())==3 and all(x['body']['text']['format']['name']=='pipeline_observation' for x in control())
             page.locator('[data-open="'+first+'"]').click()
             expect(detail.locator('[data-slop-observation]')).to_contain_text('Observed from the full original')
-            expect(detail.locator('#library-observe-photo')).to_have_count(0)
-            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1') and not errors,errors
+            expect(page.locator('[id^=library-observe], [data-bulk=observe]')).to_have_count(0)
             detail.locator('[data-slop-observation]').scroll_into_view_if_needed()
-            page.screenshot(path=str(folder/(name+'-published-observation.png')),full_page=True)
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1') and not errors,errors
+            page.screenshot(path=str(folder/(name+'-automatic-observation.png')),full_page=True)
         finally:context.close()
     browser.close()
 print('Pipeline browser passed on desktop/mobile: blocking paid progress, resume without resubmission, cancellation and failure release, gallery-wide profiles, free scene edits, text-only generation, gated evaluation, concrete mask confirmation, final copy, approval and publication.')

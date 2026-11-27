@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 10.15.0
+# Libreria delle immagini — specifica 11.0.0
 
-Stato: implementata nel ramo 1.67.0, da rilasciare. Aggiornata: 2026-11-27T07:05:36Z.
+Stato: implementata nel ramo 1.68.0, da rilasciare. Aggiornata: 2026-11-27T08:14:46Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -260,10 +260,10 @@ La migrazione 0075 aggiunge versioni inglesi dei soli contesti ancora uguali ai 
 
 ## 14. Osservazioni SLOP e conteggio delle generazioni (2026-11-26)
 
-Le categorie del confronto di galleria e del bilanciamento si ricavano da una chiamata confermata sull'originale SLOP intero,
+Le categorie del confronto di galleria e del bilanciamento si ricavano da una osservazione automatica dell'originale SLOP intero all'approvazione,
 con le convenzioni REAL, senza prompt o profilo richiesto. `pipeline_slop_observation` conserva profilo, modello e data, mai una descrizione
 SLOP; il profilo richiesto resta distinto. Cache e claim impediscono invii duplicati, gli esiti incerti non si ripetono.
-La specifica `generazione-slop` 18.1.0, sezione 4.1, definisce conferme, copertura e concorrenza. I dati sono privati e si eliminano
+La specifica `generazione-slop` 19.0.0, sezione 4.1, definisce conferme, copertura e concorrenza. I dati sono privati e si eliminano
 con la foto. Le osservazioni mancanti si indicano e non contribuiscono al confronto o al bilanciamento.
 
 Ogni REAL conserva `slop_generated_count`: numero di candidate iniziali generate e salvate dalla 1.66.0, comprese quelle
@@ -271,8 +271,11 @@ poi scartate. Gli edit non incrementano. Il conteggio è idempotente e atomico c
 crea legami permanenti REAL–SLOP e non impedisce il riuso. Le miniature admin lo mostrano. La migrazione 0079 aggiunge
 la baseline anonima `slop_legacy_generated_count` e recupera solo lavorazioni storiche con immagine conclusa e successiva
 valutazione conclusa prima della 0078. Gli edit contano una volta; nuovi conteggi preservati, nessun abbinamento a SLOP accettate.
-Il risultato è un minimo verificato, non una stima degli usi sconosciuti (specifica `generazione-slop` 18.1.0, sezione 4.2).
+Il risultato è un minimo verificato, non una stima degli usi sconosciuti (specifica `generazione-slop` 19.0.0, sezione 4.2).
 
-Il comando «Observe SLOP (N)» della galleria, la selezione e il dettaglio consentono l'osservazione delle SLOP già approvate o
-pubblicate senza ritirarle. Un massimo confermato di una chiamata per originale mancante; progresso bloccante, stop della coda,
-ripresa gratuita al ritorno. L'API admin espone `has_slop_observation`, mai il profilo privato al gioco.
+L’approvazione SLOP include l’osservazione automatica, al massimo una chiamata per originale mancante, senza comando o conferma
+separati. Il server salva approvazione, claim durevole e lavoro nello stesso batch; il browser segue solo il progresso. La
+migrazione 0080 conserva i tentativi precedenti, anche se il lavoro temporaneo è già stato chiuso, per non ripetere esiti incerti.
+Un’osservazione valida viene riusata. Dettaglio, selezione, wizard e API condividono il comportamento; pubblicare una foto già
+osservata non aggiunge chiamate. Gli adeguamenti del pregresso sono a cura dell’agente tramite API, senza pulsanti temporanei.
+L’API admin espone `has_slop_observation`, mai il profilo privato al gioco.

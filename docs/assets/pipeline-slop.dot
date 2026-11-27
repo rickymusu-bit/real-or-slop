@@ -2,7 +2,7 @@ digraph pipeline {
  graph [rankdir=TB,bgcolor="#f8fafc",pad="0.3",nodesep="0.3",ranksep="0.35",fontname="DejaVu Sans",fontsize=22,label="How a SLOP photo is made",labelloc=t,compound=true];
  node [shape=box,style="rounded,filled",fillcolor=white,color="#94a3b8",fontname="DejaVu Sans",fontsize=15,margin="0.18,0.12"];
  edge [color="#64748b",fontname="DejaVu Sans",fontsize=12];
- legend [shape=plaintext,label="Blue = model call · White = free work · Yellow = your decision\nEach paid phase asks for its maximum first.\nCalls with uncertain outcomes are never retried automatically."];
+ legend [shape=plaintext,label="Blue = model call · White = free work · Yellow = your decision\nPaid phases show their maximum. Approval includes observation.\nCalls with uncertain outcomes are never retried automatically."];
  subgraph cluster_prepare {
   label="1. PREPARE THE GALLERY"; color="#cbd5e1"; style=rounded; fontsize=18;
   real [label="Import REAL photos into a gallery\nKeep originals and source credits"];
@@ -13,7 +13,7 @@ digraph pipeline {
  subgraph cluster_choose {
   label="2. CHOOSE REAL AND PREPARE SCENES";color="#cbd5e1";style=rounded;fontsize=18;
   choose [label="Select the REAL photos to start from\nVisible thumbnails · select any ready subset\nOne selected REAL = one new scene\nThumbnails show successful generation counts\nIncludes verified older jobs; each edit is not a new use"];
-  coverage [label="Compare REAL and accepted SLOP observations\nMissing observations are shown and excluded\nObserve originals from this wizard OR the gallery\nAlso works on already published photos\n1 confirmed call per missing SLOP",fillcolor="#dbeafe"];
+  coverage [label="Compare REAL and accepted SLOP observations\nMissing observations are shown and excluded\nSLOP are observed automatically at approval\nExisting observations are reused",fillcolor="#dbeafe"];
   draw [label="The server draws compatible variations · free\nDependent values share a REAL donor\nBalance against observed SLOP + earlier group draws"];
   scene [label="Write the new English scenes\n1 confirmed text call per selected REAL",fillcolor="#dbeafe"];
   review [label="Read and edit each scene · free\nCheck changes, dependencies and photo format"];
@@ -29,9 +29,11 @@ digraph pipeline {
  subgraph cluster_finish {
   label="4. PREPARE THE GAME COPY";color="#cbd5e1";style=rounded;fontsize=18;
   copy [label="Adjust treatment and framing · free\nPrepare the shared 4:5 WebP game copy\nCheck both the full image and the copy"];
-  publish [label="Approve · free: the photo leaves this wizard\nFind it in the gallery and publish it there\nOnly published photos enter the game",fillcolor="#dcfce7"];
-  copy -> publish;
+  approve [label="Approve the checked game copy\nThe photo leaves this wizard",fillcolor="#fef3c7"];
+  observe [label="Automatically observe the full SLOP original\nAt most 1 model call, included in approval\nReuse saved observations · no separate confirmation",fillcolor="#dbeafe"];
+  publish [label="Find the photo in the gallery and publish it · free\nOnly published photos enter the game",fillcolor="#dcfce7"];
+  copy -> approve -> observe -> publish;
  }
- notes [shape=plaintext,fontsize=12,label="The server continues if the page closes.\nReturning only reads progress. Stop queued requests cancels unsent work.\nAcquired calls finish. No next paid phase starts automatically.\nAccepting an image does not publish it."];
+ notes [shape=plaintext,fontsize=12,label="The server continues if the page closes.\nReturning only reads progress. Stop queued requests cancels unsent work.\nAcquired calls finish. Approval starts observation; other phases stay separately confirmed.\nAccepting an image does not publish it."];
  legend -> real [style=invis];settings -> coverage [style=invis];review -> generate [style=invis];inspect -> copy [style=invis];publish -> notes [style=invis];
 }

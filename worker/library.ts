@@ -23,6 +23,7 @@ import { currentCopyCorrect, currentCopyViews, gamesInPlay, retireCopy, reviveCo
 import { ideaRoute, ideasOf, ownIdea, proposeIdeas } from "./real-ideas";
 import { describeReal, undescribedReals } from "./real-description";
 import type { VisualDescription } from "../shared/real-description";
+import { approvalObservation, dispatchPipeline } from "./pipeline-queue";
 import { validProfile } from "../shared/pipeline";
 
 const base = "/api/admin/library";
@@ -43,6 +44,7 @@ export interface Row {
   visual_description: string | null;
   slop_generated_count?: number;
   pipeline_slop_observation?: string | null;
+  slop_observation_request?: string | null;
 }
 const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
@@ -272,9 +274,11 @@ export async function transition(env: Env, row: Row, action: string, data: Recor
       throw new HttpError(409, "No derivatives (ND) license: the game copy is a modified version");
     if (row.origin === "REAL" && data.rights_confirmed !== true && row.rights_confirmed !== 1)
       throw new HttpError(409, "Confirm you have checked the photo’s rights and license");
-    const result = await env.DB.prepare(`UPDATE images SET status='approved',approved_at=?,rights_confirmed=CASE WHEN origin='REAL' THEN 1 ELSE rights_confirmed END,
-      revision=revision+1,updated_at=? WHERE id=? AND status='new' AND copy_key IS NOT NULL`).bind(stamp, stamp, row.id).run();
+    const observation = await approvalObservation(env, row);
+    const [result] = await env.DB.batch([env.DB.prepare(`UPDATE images SET status='approved',approved_at=?,rights_confirmed=CASE WHEN origin='REAL' THEN 1 ELSE rights_confirmed END,
+      revision=revision+1,updated_at=? WHERE id=? AND status='new' AND revision=? AND copy_key IS NOT NULL`).bind(stamp, stamp, row.id, row.revision), ...observation]);
     if (!result.meta.changes) throw new HttpError(409, "Image changed: reload");
+    if (observation.length) await dispatchPipeline(env);
   } else if (action === "publish") {
     if (row.status === "published") return;
     if (row.status !== "approved" || !row.copy_key) throw new HttpError(409, "Only approved images can be published");

@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 18.1.0
+# Generazione SLOP — specifica 19.0.0
 
-Aggiornata: 2026-11-27T07:05:36Z. Stato: implementata nel ramo 1.67.0, da rilasciare.
+Aggiornata: 2026-11-27T08:14:46Z. Stato: implementata nel ramo 1.68.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -25,7 +25,7 @@ tutte le REAL della galleria fuori dal cestino; nessuna è preselezionata per la
 un riquadro di recupero mostra i processi precedenti ancora da decidere. Il nuovo wizard non usa il vecchio ciclo automatico.
 
 Le migrazioni 0073 e 0074 aggiungono profili e scene privati su `images`, impostazioni su `galleries` e `pipeline_jobs` temporanei.
-Ogni lavorazione ha un Workflow e uno stato persistente. Una conferma acquisisce una sola operazione; il Workflow non ritenta
+Ogni lavorazione ha un Workflow e uno stato persistente. Le fasi manuali richiedono conferma; l’approvazione include l’osservazione automatica mancante. Il Workflow non ritenta
 passi a pagamento. La coda acquisisce al massimo tre operazioni contemporanee; le preparazioni delle REAL di una stessa galleria (descrizione e parametri, anche in riscrittura) una alla volta, decisione dell'owner del 2026-11-26, perché ognuna legga il dizionario scritto dalla precedente. Le operazioni in attesa di una galleria non bloccano le altre gallerie né le altre fasi. Le richieste ancora in attesa si possono annullare gratuitamente;
 quelle già inviate terminano senza avviare altre fasi. Dopo quindici minuti una richiesta acquisita senza esito passa all'attenzione dell'owner, senza reinvio automatico.
 
@@ -69,14 +69,15 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
   nessuna valutazione aggiuntiva viene avviata. Il prima/dopo viene conservato fino alla decisione.
 - **Accetta:** trasferisce l'immagine intera nella libreria come nuova. Elimina il riferimento alla REAL e i file temporanei
   mediante coda durevole. L'accettazione non prepara, approva o pubblica la copia automaticamente.
-- **Copia, trattamento, approvazione e pubblicazione:** comandi distinti, gratuiti. La misura tecnica delle copie REAL mancanti
+- **Copia, trattamento e pubblicazione:** comandi distinti, gratuiti. L’approvazione SLOP include l’osservazione automatica
+  dell’originale mancante, al massimo una chiamata; un profilo valido viene riusato. La misura tecnica delle copie REAL mancanti
   è calcolata dal browser. Il riferimento del trattamento è campionato fra REAL misurate dello stesso genere di destinazione;
   senza riferimento disponibile la copia parte senza trattamento. Approvare fa uscire la SLOP dal passo 4, senza eliminarla;
   si ritrova nella galleria e da lì si pubblica. Il passo 4 mostra tutte le SLOP di pipeline nuove, senza il vecchio limite di 100. Inquadratura e cursori riusano gli editor esistenti.
 
 API private: `GET /api/admin/pipeline/:gallery` e `/status` (solo stato dei lavori, usato durante l’attesa); `POST /:gallery/settings`, `/profile`, `/categories`, `/prepare`, `/plan`, `/observe`, `/stop`;
 `POST /:gallery/:job/{scene,generate,evaluate,edit,accept,close}`; `GET /:gallery/:job/file` e `?previous=1`.
-Le fasi a pagamento richiedono `confirm`, UUID `request` e `max_calls` esatto. Dal 2026-11-26 la preparazione accetta fino a 5000 REAL in una richiesta: tutta la selezione viene accodata atomicamente prima dell’avvio, senza dipendere da una successione di richieste del browser. Lo stesso comando prepara descrizioni e profili da Import REAL, galleria e dettaglio. `GET /api/admin/pipeline/:gallery/descriptions` espone l’avanzamento senza i profili completi. Il planner conserva il limite di 500 scene per richiesta, con suddivisione delle selezioni maggiori entro il massimo confermato.
+Le fasi manuali a pagamento richiedono `confirm`, UUID `request` e `max_calls` esatto. L’osservazione automatica inclusa nell’approvazione usa la claim del server (sezione 4.1). Dal 2026-11-26 la preparazione accetta fino a 5000 REAL in una richiesta: tutta la selezione viene accodata atomicamente prima dell’avvio, senza dipendere da una successione di richieste del browser. Lo stesso comando prepara descrizioni e profili da Import REAL, galleria e dettaglio. `GET /api/admin/pipeline/:gallery/descriptions` espone l’avanzamento senza i profili completi. Il planner conserva il limite di 500 scene per richiesta, con suddivisione delle selezioni maggiori entro il massimo confermato.
 Modelli e qualità sono quelli selezionati nelle Impostazioni; il selettore include GPT-6.2 Sol e Sunburst.
 
 ## 2. Descrizioni, assi e regole della galleria
@@ -209,11 +210,17 @@ non si usa il profilo richiesto come ripiego. Nessuna tassonomia chiusa o correz
 ### 4.1 Osservazione delle SLOP e copertura del confronto
 
 Decisione dell'owner del 2026-11-26: l'analisi della galleria usa le categorie **osservate nelle SLOP**, non quelle richieste.
-Dopo l'accettazione l'owner può osservare una SLOP dal passo 4. Dal 2026-11-27 il comando «Observe SLOP (N)» è visibile
-anche nella barra della galleria: riguarda tutte le SLOP fuori dal cestino ancora senza osservazione, indipendentemente da
-filtri e paginazione. La selezione permette un sottoinsieme; il dettaglio mostra lo stato e il comando per la singola foto,
-anche pubblicata, senza «Edit photo» o ritiro dal gioco. Nel passo 2 il comando è visibile sopra «Gallery composition». Una conferma esplicita autorizza una chiamata per originale intero, anche per foto già approvate o
-pubblicate. Nessuna osservazione parte accettando o approvando. L'osservazione è distinta dalla valutazione qualitativa.
+Decisione dell’owner del 2026-11-27: ogni SLOP viene osservata **automaticamente quando è approvata**, dal wizard, dal dettaglio,
+dalle azioni in gruppo e dalle API. L’approvazione autorizza al massimo una chiamata per originale mancante, senza conferma
+separata. L’interfaccia indica questa conseguenza dell’approvazione; non presenta pulsanti «Observe SLOP». Accettare una candidata
+o prepararne la copia non avvia ancora l’osservazione. Un profilo già valido viene riusato.
+
+Lo stato approvato, la claim `images.slop_observation_request` e il lavoro sono scritti nella stessa transazione. Un’approvazione
+concorrente/stale non accoda altri lavori. La coda condivisa avvia il Workflow sul server anche se la pagina viene chiusa; una
+claim durevole conserva il primo tentativo anche dopo errore, annullamento o chiusura del lavoro. Non vengono creati retry automatici.
+La migrazione 0080 conserva anche le richieste precedenti trovate nei lavori o nel registro delle chiamate. Se mancano modello,
+Workflow o archivio privato, un’approvazione che richiede una nuova osservazione fallisce prima di cambiare lo stato della foto.
+L’osservazione è distinta dalla valutazione qualitativa e non modifica la pubblicazione.
 
 L'annotatore usa schema e convenzioni degli attributi REAL e il vocabolario dei profili REAL della galleria; riceve solo
 immagine originale, dimensioni e vocabolario. Non riceve titolo, REAL ispiratrice, prompt, scena, parametri richiesti,
@@ -221,13 +228,13 @@ valutazione o regole di variazione. Non scrive una descrizione SLOP. Orientament
 dimensioni effettive del file. Profili e metadati di osservazione (modello e data) sono privati in `images.pipeline_slop_observation`;
 `images.pipeline_profile` resta il profilo richiesto, utile a ricostruire la scena ma escluso dal confronto e dai pesi.
 
-La tabella confronta osservazioni REAL e osservazioni SLOP con conteggio della copertura: osservate sul totale, elenco delle
-mancanti e comando per osservarle. Le foto fuori dal cestino contano anche mentre si prepara la copia o dopo approvazione e
+La tabella confronta osservazioni REAL e osservazioni SLOP con conteggio della copertura: osservate sul totale ed elenco delle
+mancanti. Le nuove si osservano all’approvazione; gli adeguamenti del pregresso si gestiscono operativamente tramite API. Le foto fuori dal cestino contano anche mentre si prepara la copia o dopo approvazione e
 pubblicazione. Le foto non misurate non forniscono evidenza e sono escluse dai pesi delle SLOP accettate e dai recenti.
 Le categorie con certezza ignota non diventano evidenza di assenza. Le osservazioni sono giudizi del modello, non una garanzia.
 
-Gli invii sono persistenti e confermati con UUID e massimo esatto, fino a 500 SLOP per richiesta; il browser divide le selezioni
-maggiori entro il massimo confermato. Cache e claim concorrente impediscono un secondo addebito per una foto già osservata.
+Gli invii automatici sono persistenti, con UUID e una sola operazione per foto. L’API operativa `POST /:gallery/observe` resta
+disponibile per adeguamenti autorizzati, con UUID e massimo esatto fino a 500 SLOP per richiesta; non è collegata a pulsanti admin. Cache e claim concorrente impediscono un secondo addebito per una foto già osservata.
 Incertezza e fallimento restano visibili senza reinvio automatico. Il salvataggio controlla galleria, originale, cestino e testo
 osservato precedente, così non applica il risultato a una foto spostata o cambiata durante la chiamata. Modificare copia o stato
 di approvazione non invalida la lettura dell'originale. Il registro pagato usa `analysis`; nessun importo.
@@ -236,7 +243,7 @@ Migrazione 0078: aggiunge osservazioni e contatore alle foto e una claim del con
 prima candidata e l'incremento sulla REAL avvengono nella stessa transazione, al massimo una volta per lavoro; gli edit non
 incrementano. Nessuna cancellazione di dati esistenti. I contatori della 0078 partono da zero e le osservazioni da null, senza chiamate.
 
-La galleria legge `GET /api/admin/pipeline/:gallery/observations`: ID, presenza di un profilo valido e stato/errore del lavoro,
+Il browser legge soltanto `GET /api/admin/pipeline/:gallery/observations`: ID, presenza di un profilo valido e stato/errore del lavoro,
 senza profili o snapshot. Durante l'osservazione mostra progresso bloccante e stop gratuito delle richieste in coda; tornando
 alla galleria segue solo i lavori attivi, senza conferme né invii nuovi. Errori ed esiti incerti richiedono revisione nella pipeline.
 
@@ -251,7 +258,10 @@ al numero di SLOP pubblicate. Non si ricostruisce alcun abbinamento REAL–SLOP 
 
 `slop_legacy_generated_count` conserva solo la baseline numerica già aggiunta a `slop_generated_count`, così il recupero non
 somma due volte gli stessi usi e preserva i conteggi nuovi. Originali, copie, osservazioni, stati, revisioni e registro pagato restano
-intatti. Le osservazioni SLOP restano da richiedere con conferma: non sono ricavate dai prompt né dai registri.
+intatti. Gli adeguamenti necessari alle foto preesistenti dopo una modifica o un bug fix della pipeline sono a cura dell’agente tramite
+API (autorizzazione permanente dell’owner del 2026-11-27). Prima si controllano cache, lavori e chiamate precedenti; si eseguono
+solo le operazioni mancanti, senza reinvii incerti o pulsanti temporanei di recupero. Le osservazioni si ricavano dagli originali,
+mai dai prompt o dai registri. Le tre SLOP pubblicate risultano già osservate alla verifica del 2026-11-27: nessuna nuova chiamata.
 
 ## 5. Scena finale e generazione
 

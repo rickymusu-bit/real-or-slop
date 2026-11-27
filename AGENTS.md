@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 38.9.0, aggiornata il 2026-11-27T07:05:36Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 39.0.0, aggiornata il 2026-11-27T08:14:46Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -44,13 +44,15 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   storici dimostrabili dai registri, una volta per lavorazione con immagine e valutazione concluse prima della 0078;
   baseline anonima separata per non duplicare il conteggio. Nessun recupero storico inventato o legame con SLOP accettate. I profili e le particolarità sono privati e non sono tag di navigazione.
 - **Approvazione nel wizard** (2026-11-26). Le SLOP approvate escono dal passo 4 e restano nella galleria, dove si pubblicano.
+  Dal 2026-11-27 approvazione e accodamento dell’osservazione sono atomici sul server; la claim sopravvive alla chiusura del lavoro.
   Il passo 4 mostra soltanto le SLOP nuove da preparare; approvare non cancella foto o osservazioni.
 - **Nessun indice delle descrizioni** (2026-11-26). Rimossi comandi, API, identità normalizzate per la ricerca ed embedding degli ambienti. La pipeline usa direttamente descrizioni e profili preparati nella galleria; le distribuzioni restano basate sui parametri osservati. Nessuna chiamata di indicizzazione. Migrazione 0076: elimina solo dati di ricerca obsoleti, conserva assi, profili, immagini e cronologia delle chiamate.
 - **Crowding e detail rimossi** (2026-11-26). Nessuna misurazione a pagamento, punteggio, soglia, avviso o contesto di misurazione nell’admin/API. I vecchi flussi non leggono più questi dati: estrazione uniforme e nessun punteggio nei prompt. La migrazione 0077 rimuove soglie di galleria e impostazioni; osservazioni e contesti storici già pagati restano privati, senza nuove letture/scritture delle misure, e le sole osservazioni si cancellano con la foto. Le misure tecniche `copy_metrics` e il trattamento fotografico restano attivi.
 - **Bilanciamento del dataset.** Il nuovo protocollo (2026-11-25) considera conteggi, distribuzioni dei parametri e combinazioni
   rilevanti della galleria. Le modifiche possono rendere una console più ordinaria. Non forzare novità vistose o unicità a ogni
-  SLOP. Dal 2026-11-26 confronto e pesi usano i parametri osservati sull’originale SLOP intero con chiamata confermata,
-  senza prompt o profilo richiesto. Le SLOP non osservate sono indicate ed escluse, mai rimpiazzate con i valori richiesti.
+  SLOP. Dal 2026-11-26 confronto e pesi usano i parametri osservati sull’originale SLOP intero con osservazione autorizzata,
+  senza prompt o profilo richiesto. Dal 2026-11-27 l’approvazione SLOP include automaticamente un’osservazione
+  dell’originale ancora mancante, al massimo una chiamata per foto, senza pulsante o conferma separati. Le SLOP non osservate sono indicate ed escluse, mai rimpiazzate con i valori richiesti.
   Le probabilità automatiche sono stime empiriche rivedibili; anche le osservazioni dei modelli restano fallibili. Il controllo delle combinazioni e delle ricorrenze richiede revisione; il 30% del test
   non è un valore definitivo. Dal 2026-11-26 i parametri dipendenti estratti condividono un donatore compatibile; i valori non
   estratti restano vincoli. Le scene della stessa richiesta contano provvisoriamente anche le estrazioni precedenti del gruppo,
@@ -85,6 +87,11 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
 - **Chiamate a pagamento:** solo con conferma esplicita dell'owner del **numero massimo** previsto per la fase, registrate in
   `paid_calls` senza importi, esiti incerti mai ripetuti in automatico; niente prezzi né budget, il limite è quello del progetto
   OpenAI. Le valutazioni previste sono comprese nel massimo; una proposta del valutatore non autorizza la spesa per correggere.
+  Autorizzazione permanente dell’owner del 2026-11-27: l’approvazione SLOP include l’osservazione automatica mancante (massimo
+  una chiamata per originale); gli adeguamenti necessari alle foto già presenti dopo modifiche o bug fix della pipeline sono
+  eseguiti dall’agente tramite API, riusando i risultati disponibili e limitando le chiamate alle foto necessarie. Non richiedono
+  un nuovo consenso né pulsanti di recupero nell’interfaccia. Prima si verifica lo stato; esiti incerti mai ripetuti automaticamente.
+  Questa autorizzazione non estende la spesa a esperimenti, nuove generazioni o correzioni e non autorizza merge/deploy.
   Nei test software solo modelli finti; gli esperimenti reali richiedono conferma esplicita.
 - **Libreria come un file system:** nessun lotto, archivio o registro delle eliminazioni; svuotare il cestino cancella ogni riga e ogni
   file dell'immagine.

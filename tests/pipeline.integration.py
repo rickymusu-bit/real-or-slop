@@ -242,3 +242,45 @@ assert call(discarded['id']+'/close',paid_request())[0]==200
 assert call('/'+batch_sources[0]['id'],library=True)[1]['generated_count']==1
 assert call('')[1]['stats']['slop_total']==0
 print('Observation uncertainty and usage passed: no automatic repeats, failed generations excluded, discarded successful candidates counted.')
+
+# Approval is the only normal UI entry point: queue once on the server, including bulk/direct API approvals.
+auto_gallery=make_gallery('Automatic approval API')['id'];H.API=BASE+'/api/admin/pipeline/'+auto_gallery+'/'
+def new_slop(label):
+    photo=real(label,gallery=auto_gallery)
+    sql("UPDATE images SET origin='SLOP',title=NULL,status='new',approved_at=NULL,prompt='Requested heavy damage',model='fake' WHERE id='"+photo['id']+"'")
+    return photo
+photo=new_slop('auto-direct');control([{'delay':1}])
+assert call('/'+photo['id']+'/approve',{},library=True)[0]==200
+assert sql("SELECT slop_observation_request AS claim FROM images WHERE id='"+photo['id']+"'")[0]['claim']
+state=wait(lambda s:s['stats']['slop_count']==1 and not s['jobs'])
+assert len(control())==1 and control()[0]['body']['text']['format']['name']=='pipeline_observation'
+assert call('/'+photo['id']+'/approve',{},library=True)[0]==409
+assert call('/bulk',{'action':'set-approved','ids':[photo['id']]},library=True)[0]==200
+assert call('/'+photo['id']+'/publish',{},library=True)[0]==200
+assert len(control())==1 and call('/'+photo['id'],library=True)[1]['has_slop_observation']
+
+# An uncertain automatic call keeps its durable claim even if its temporary job is closed.
+failed=new_slop('auto-uncertain');control([{'status':503}])
+assert call('/'+failed['id']+'/approve',{},library=True)[0]==200
+state=wait(lambda s:any(j['state']=='attention' and j['source_id']==failed['id'] for j in s['jobs']))
+job=next(j for j in state['jobs'] if j['source_id']==failed['id'])
+claim=sql("SELECT slop_observation_request AS claim FROM images WHERE id='"+failed['id']+"'")[0]['claim'];assert claim
+assert call(job['id']+'/close',paid_request())[0]==200
+sql("UPDATE images SET status='new',approved_at=NULL WHERE id='"+failed['id']+"'")
+assert call('/'+failed['id']+'/approve',{},library=True)[0]==200
+assert sql("SELECT slop_observation_request AS claim FROM images WHERE id='"+failed['id']+"'")[0]['claim']==claim
+assert len(control())==1 and not call('')[1]['jobs']
+
+# Concurrent approvals and a bulk approve+publish cannot acquire more than one observation per photo.
+from concurrent.futures import ThreadPoolExecutor
+concurrent=new_slop('auto-concurrent');control([{'delay':1}])
+with ThreadPoolExecutor(max_workers=2) as pool:
+    results=list(pool.map(lambda _:call('/'+concurrent['id']+'/approve',{},library=True)[0],range(2)))
+assert sorted(results)==[200,409],results
+state=wait(lambda s:s['stats']['slop_count']==2 and not s['jobs']);assert len(control())==1
+batch=[new_slop('auto-bulk-'+str(n))['id'] for n in range(4)];control([{'delay':1} for _ in batch])
+assert call('/bulk',{'action':'set-published','ids':batch},library=True)[1]['done']==4
+state=wait(lambda s:s['stats']['slop_count']==6 and not s['jobs']);assert len(control())==4
+for image in batch:
+    item=call('/'+image,library=True)[1];assert item['has_slop_observation'] and item['status']=='published'
+print('Automatic observation passed: direct/bulk approval, publication, one call per photo, concurrent guards, persistent uncertain claim and no retry after job closure.')
