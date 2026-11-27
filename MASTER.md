@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 41.2.0, aggiornata il 2026-11-27T16:50:59Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 42.0.1, aggiornata il 2026-11-27T19:39:55Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,16 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.70.0:** copia 4:5 con trattamento preparata automaticamente nel browser subito dopo l’accettazione nel passo 3.
+- **Ramo 1.71.0:** contatori delle sole SLOP attualmente approvate/pubblicate sulle REAL, con riferimento privato nullable
+  `slop_source_id` (0081), conteggio derivato e copertura delle attribuzioni storiche mancanti. Verifica API di produzione:
+  10 approvate/pubblicate senza collegamenti residui nei registri. Il successivo confronto di originali e scene ha ricostruito
+  tutte le dieci associazioni: salvate via API nei metadati privati, con motivazione e hash di entrambi gli originali. La 0082
+  trasferisce solo le revisioni verificate nei conteggi al merge. File e stati conservati; nessuna chiamata reale ai modelli.
+  Ambiente/genere automatici sui divari osservati, contesto fotografico congiunto e conteggi provvisori per gruppo; motivazione
+  nel passo 3. `shared/pipeline.ts`, `worker/pipeline.ts`, `worker/library.ts`, `worker/slop-generation.ts`, miniature e test aggiornati.
+  Schema aggiornato; nessuna nuova chiamata ai modelli o modifica dei lavori già confermati.
+
+- **Integrata in main la 1.70.0 (PR #191):** copia 4:5 con trattamento preparata automaticamente nel browser subito dopo l’accettazione nel passo 3.
   Passo 4 dedicato alla revisione finale, modifica di trattamento/inquadratura e approvazione singola o in gruppo.
   Ripresa delle copie mancanti al ritorno, upload condizionato e copie esistenti conservate. API di accettazione con metadati
   aggiornati. Schema e specifiche aggiornati; nessuna migrazione o nuova chiamata ai modelli per le copie.
@@ -152,13 +161,13 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, dati | `docs/libreria-immagini.md` | 11.1.0 |
+| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, dati | `docs/libreria-immagini.md` | 11.2.1 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.2.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.9.0 |
-| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 19.2.0 |
+| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 20.0.1 |
 | Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 2.0.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 11.2.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 11.3.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.12.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.4.0 |
@@ -272,6 +281,11 @@ il modulo `cloudflare:workers` per i test unitari.
 | 0067 | misure di affollamento e dettaglio delle REAL (`real_measures`), soglie delle gallerie, parte `real_measure` del contesto e chiavi delle soglie predefinite nelle Impostazioni |
 | 0068 | formula delle misure (1 per le esistenti) e nuova proposta di «Misura delle REAL» se quella in vigore è la prima |
 | 0069 | idee di falsificazione delle REAL (`real_ideas`), motivo senza idee, idea nel riferimento REAL-processo, trigger che tengono i riferimenti fino alla fine del processo e segnano l'idea usata, parte `real_ideas` del contesto |
+| 0082 | recupero delle attribuzioni ricostruite con revisione di originali/scene, metodo esplicito e verifica degli hash; preserva i collegamenti esistenti |
+| 0081 | riferimento privato nullable REAL–SLOP per conteggio delle approvate, recupero solo esatto e ambiente/genere automatici |
+| 0080 | claim durevole dell’osservazione automatica SLOP all’approvazione |
+| 0079 | recupero numerico delle generazioni storiche dimostrate dai registri, senza attribuzioni inventate |
+| 0078 | osservazioni SLOP e contatore delle generazioni riuscite, con claim per lavorazione |
 | 0077 | rimuove le soglie di crowding/detail da gallerie e Impostazioni; conserva osservazioni e contesti storici, foto, profili, misure tecniche, lavori e chiamate |
 | 0076 | rimuove indici per soggetto, tabella/trigger dei vettori ambientali e identità di ricerca dalle descrizioni; conserva assi, profili, lavori e cronologia; libera solo i claim di indicizzazione e segna incerti i relativi esiti pendenti |
 | 0075 | versioni inglesi dei contesti ancora identici ai predefiniti, con conservazione dei testi personalizzati e della cronologia |

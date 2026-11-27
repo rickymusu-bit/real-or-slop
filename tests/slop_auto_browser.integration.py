@@ -19,8 +19,8 @@ with sync_playwright() as p:
             expect(page.locator('#library-detail-message')).to_have_text('Gallery updated.');page.locator('#library-detail').get_by_role('button',name='Close',exact=True).click();page.locator('[data-gallery-close]').click();open_gallery(page,target)
             page.get_by_role('link',name='Generate SLOP').click();root=page.locator('.pipeline');expect(root.get_by_role('heading',name='1. Prepare the gallery')).to_be_visible()
             expect(root.locator('[data-source]')).to_have_count(1);assert control()==[]
-            root.get_by_text('Rules and probabilities',exact=True).click();root.locator('[data-rules]').fill('Mantieni i dettagli hardware e varia i dati temporanei.');root.locator('[data-environment]').select_option('change_genre');root.locator('[data-probability=damage]').fill('5');root.locator('[data-action=settings]').click()
-            page.reload();root.get_by_text('Rules and probabilities',exact=True).click();expect(root.locator('[data-environment]')).to_have_value('change_genre');expect(root.locator('[data-probability=damage]')).to_have_value('5')
+            root.get_by_text('Rules and probabilities',exact=True).click();root.locator('[data-rules]').fill('Mantieni i dettagli hardware e varia i dati temporanei.');expect(root.locator('[data-environment]')).to_have_count(0);expect(root.locator('[data-environment-auto]')).to_be_visible();root.locator('[data-probability=damage]').fill('5');root.locator('[data-action=settings]').click()
+            page.reload();root.get_by_text('Rules and probabilities',exact=True).click();expect(root.locator('[data-environment]')).to_have_count(0);expect(root.locator('[data-environment-auto]')).to_contain_text('automatically');expect(root.locator('[data-probability=damage]')).to_have_value('5')
             assert control()==[];assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
             page.screenshot(path=str(folder/(name+'-gallery-rules.png')),full_page=True)
             assert not errors,errors

@@ -118,7 +118,7 @@ with sync_playwright() as p:
         expect(page.locator('.library-card', has=spare).locator('.badge-status')).to_have_text('approved')
         rivoli_card = page.locator(f'.library-card:has([aria-label="Open {name}-rivoli"])')
         # REAL cards include the tracked generation counter; views stay in the detail. No tags anywhere (2026-11-20).
-        expect(rivoli_card.locator('.badge')).to_have_text(['REAL', 'new', '0 SLOP generated'])
+        expect(rivoli_card.locator('.badge')).to_have_text(['REAL', 'new', '0 approved SLOP'])
         for hidden in ('.db-tag', '.library-card-title', '[data-stats]'): expect(rivoli_card.locator(hidden)).to_have_count(0)
         rivoli_card.locator('.library-open').click()
         detail = page.locator('#library-detail')

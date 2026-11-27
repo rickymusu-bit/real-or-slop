@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 11.1.0
+# Libreria delle immagini — specifica 11.2.1
 
-Stato: implementata nel ramo 1.70.0, da rilasciare. Aggiornata: 2026-11-27T16:50:59Z.
+Stato: implementata nel ramo 1.71.0, da rilasciare. Aggiornata: 2026-11-27T19:39:55Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -263,7 +263,7 @@ conferme sono in `generazione-slop` 17.5.0. Le vecchie idee restano per compatib
 
 La migrazione 0075 aggiunge versioni inglesi dei soli contesti ancora uguali ai predefiniti della 1.60.0. Non riscrive la cronologia né i testi personalizzati. I nuovi predefiniti inglesi restano caricabili come proposta. Le istruzioni fisse delle descrizioni, delle misure e delle valutazioni impongono output inglese anche con contesti precedenti. Non si rigenerano descrizioni o immagini già salvate e non partono chiamate a pagamento per il cambio lingua.
 
-## 14. Osservazioni SLOP e conteggio delle generazioni (2026-11-26)
+## 14. Osservazioni SLOP e conteggio delle approvate (2026-11-26)
 
 Le categorie del confronto di galleria e del bilanciamento si ricavano da una osservazione automatica dell'originale SLOP intero all'approvazione,
 con le convenzioni REAL, senza prompt o profilo richiesto. `pipeline_slop_observation` conserva profilo, modello e data, mai una descrizione
@@ -271,12 +271,14 @@ SLOP; il profilo richiesto resta distinto. Cache e claim impediscono invii dupli
 La specifica `generazione-slop` 19.0.0, sezione 4.1, definisce conferme, copertura e concorrenza. I dati sono privati e si eliminano
 con la foto. Le osservazioni mancanti si indicano e non contribuiscono al confronto o al bilanciamento.
 
-Ogni REAL conserva `slop_generated_count`: numero di candidate iniziali generate e salvate dalla 1.66.0, comprese quelle
-poi scartate. Gli edit non incrementano. Il conteggio è idempotente e atomico con la registrazione della prima candidata, non
-crea legami permanenti REAL–SLOP e non impedisce il riuso. Le miniature admin lo mostrano. La migrazione 0079 aggiunge
-la baseline anonima `slop_legacy_generated_count` e recupera solo lavorazioni storiche con immagine conclusa e successiva
-valutazione conclusa prima della 0078. Gli edit contano una volta; nuovi conteggi preservati, nessun abbinamento a SLOP accettate.
-Il risultato è un minimo verificato, non una stima degli usi sconosciuti (specifica `generazione-slop` 19.0.0, sezione 4.2).
+Le miniature REAL mostrano `approved_count`: SLOP attualmente approvate/pubblicate con riferimento privato `slop_source_id`
+alla REAL (migrazione 0081). Il conteggio derivato segue spostamenti, cestino, ripristino ed eliminazione, senza incrementi duplicati.
+Il riferimento non entra nel gioco e diventa null eliminando la REAL; la SLOP rimane. Le vecchie approvate prive di attribuzione
+sono segnalate separatamente nel wizard. Il confronto verificato di originali e scene ha ricostruito le dieci associazioni
+storiche: salvate via API nei metadati privati, vengono trasferite dalla 0082 solo con metodo, verifica e hash corrispondenti
+(`generazione-slop` 20.0.1, sezione 4.2). Nessuna attribuzione da soli contatori o somiglianze generiche. Le REAL restano riutilizzabili.
+`slop_generated_count` e la baseline storica della 0079 restano dati compatibili nelle API; non sono il numero di approvate
+né sono mostrati. Ambiente e genere dei nuovi lavori sono scelti automaticamente dai profili osservati (`generazione-slop` 20.0.0).
 
 L’approvazione SLOP include l’osservazione automatica, al massimo una chiamata per originale mancante, senza comando o conferma
 separati. Il server salva approvazione, claim durevole e lavoro nello stesso batch; il browser segue solo il progresso. La

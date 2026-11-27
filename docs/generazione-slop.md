@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 19.2.0
+# Generazione SLOP — specifica 20.0.1
 
-Aggiornata: 2026-11-27T16:50:59Z. Stato: implementata nel ramo 1.70.0, da rilasciare.
+Aggiornata: 2026-11-27T19:39:55Z. Stato: implementata nel ramo 1.71.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -50,15 +50,16 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
   controllo sul testo salvato, senza toccare valori liberi, descrizioni o lavori già congelati. Rifiutato mentre è in corso
   una preparazione delle REAL.
 - **Regole e probabilità:** modificabili per galleria. Ogni probabilità vuota usa la stima automatica; zero disabilita un controllo.
-  L'ambiente può restare invariato, variare entro lo stesso genere o cambiare insieme al genere.
+  Ambiente e genere sono scelti automaticamente dalle differenze osservate; nessun selettore manuale.
 - **Scegli le REAL:** nel passo 2 una griglia sempre visibile mostra miniatura e titolo di ogni REAL. Si possono selezionare
   solo quelle con descrizione e profilo e senza altre lavorazioni; le altre indicano perché sono disabilitate. «Select all ready
   REAL» seleziona soltanto quelle utilizzabili, «Clear selection» azzera le scelte. Conteggio, stato parziale della selezione
   collettiva e pulsante scene si aggiornano subito senza ricaricare o cancellare campi ancora in modifica. La selezione resta
   durante gli aggiornamenti della pagina, viene ripulita per le sorgenti diventate indisponibili e riparte vuota al reload.
-  Le miniature mostrano il numero di generazioni iniziali riuscite e registrate dalla 1.66.0 più gli usi storici verificati (sezione 4.2), incluse candidate poi scartate;
-  correzioni e chiamate fallite/incerte non incrementano il contatore. Le REAL restano riutilizzabili; gli usi senza prove
-  sufficienti restano esclusi. Si conservano solo totale e baseline numerica sulla REAL, senza legame permanente alle SLOP.
+  Le miniature mostrano «N approved SLOP»: solo SLOP attualmente approvate o pubblicate attribuite alla REAL. Nuove,
+  candidate scartate, errori ed edit non contano; cestino/eliminazione sottraggono e ripristino riaggiunge quando torna lo stato
+  approvato. Il riferimento privato `slop_source_id` viene salvato all’accettazione; non rende la REAL inutilizzabile. Le SLOP
+  approvate senza riferimento conservato sono indicate separatamente nella pagina, mai distribuite per somiglianza o data.
   Il comando invia esclusivamente gli ID selezionati con il massimo corrispondente; zero selezionate disabilita il pulsante.
 - **Prepara scene:** una chiamata per REAL selezionata e preparata. Le estrazioni e i riferimenti vengono congelati. Sono
   mostrate le modifiche e le dipendenze. L'owner modifica i campi della scena, il formato e i parametri previsti senza pagare.
@@ -67,8 +68,8 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
 - **Correggi:** ogni proposta apre un'anteprima della maschera sull'immagine intera, con benefici e rischi e zona rettangolare
   modificabile. Solo la conferma finale autorizza una chiamata a `images/edits`. La valutazione precedente resta visibile;
   nessuna valutazione aggiuntiva viene avviata. Il prima/dopo viene conservato fino alla decisione.
-- **Accetta:** trasferisce l'immagine intera nella libreria come nuova. Elimina il riferimento alla REAL e i file temporanei
-  mediante coda durevole. Decisione dell’owner del 2026-11-27: subito dopo l’accettazione nel passo 3, il browser prepara
+- **Accetta:** trasferisce l’immagine intera nella libreria come nuova e conserva il solo riferimento privato `slop_source_id`
+  per contare le approvate. Chiude il lavoro e rimuove i suoi riferimenti temporanei e file mediante coda durevole. Decisione dell’owner del 2026-11-27: subito dopo l’accettazione nel passo 3, il browser prepara
   automaticamente la copia di gioco WebP 4:5 con trattamento, senza nuove chiamate ai modelli. L’originale intero centrato
   con bande nere è l’inquadratura iniziale. Un avviso blocca i comandi durante la preparazione. L’API di accettazione restituisce
   i metadati aggiornati, comprese le misure del riferimento del trattamento appena salvate. Non approva né pubblica.
@@ -109,7 +110,7 @@ che debbano essere riprodotte nella SLOP.
 
 Le regole della galleria accompagnano il generatore di testo: modelli compatibili, vincoli fisici e generi fotografici presenti.
 Per Nintendo: `docs/regole-galleria-console-nintendo.md`. Sono costruite sulle REAL, rivedibili dall'owner, non dedotte dal solo
-titolo. Non impongono marcatori visivi comuni a ogni SLOP. Decisione dell’owner del 2026-11-26: gli indici delle descrizioni sono rimossi, insieme ai comandi e alle API di indicizzazione (migrazione 0076). Il planner usa direttamente i profili validi e le descrizioni delle altre REAL della stessa galleria, dando precedenza alla stessa categoria di modello. Mantiene lo stesso genere quando non è richiesto un cambio di genere e passa fino a tre descrizioni di supporto. Non esegue ricerca semantica di ambienti né chiamate di embedding. Le scelte e i riferimenti sono congelati nella lavorazione. Il bilanciamento e le probabilità continuano a usare i parametri osservati nei profili, indipendentemente dai riferimenti di supporto. Le statistiche usano le annotazioni disponibili. Crowding e detail sono ritirati dal 2026-11-26: non influiscono sulla pipeline, non vengono misurati né inviati ai modelli. Le misure tecniche per il trattamento restano distinte e attive.
+titolo. Non impongono marcatori visivi comuni a ogni SLOP. Decisione dell’owner del 2026-11-26: gli indici delle descrizioni sono rimossi, insieme ai comandi e alle API di indicizzazione (migrazione 0076). Il planner usa direttamente i profili validi e le descrizioni delle altre REAL della stessa galleria, dando precedenza alla stessa categoria di modello. Usa il genere scelto automaticamente e passa fino a tre descrizioni di supporto, dando precedenza al contesto congiunto estratto e poi alla categoria di modello. Non esegue ricerca semantica di ambienti né chiamate di embedding. Le scelte e i riferimenti sono congelati nella lavorazione. Il bilanciamento e le probabilità continuano a usare i parametri osservati nei profili, indipendentemente dai riferimenti di supporto. Le statistiche usano le annotazioni disponibili. Crowding e detail sono ritirati dal 2026-11-26: non influiscono sulla pipeline, non vengono misurati né inviati ai modelli. Le misure tecniche per il trattamento restano distinte e attive.
 
 ### Informazioni nel passo 3 e controllo della diversità
 
@@ -120,7 +121,7 @@ il rapporto richiesto e le dimensioni ricevute, più il prima dopo una correzion
 difetti, incertezze e interventi suggeriti con beneficio, rischio e istruzione locale. Nessuna valutazione è inventata in sua assenza.
 
 Per aumentare lo scostamento dalla REAL, nel passo 2 si aumentano le probabilità dei parametri che si desidera variare.
-«Environment and genre» permette anche il cambio di ambiente nello stesso genere o insieme al genere. «Chance of plausible
+Ambiente e genere seguono automaticamente gli squilibri osservati; la decisione e la motivazione sono mostrate nel passo 3. «Chance of plausible
 new values (%)» controlla la probabilità di consentire valori nuovi nei soli parametri selezionati: non è un cursore generale
 di distanza né il numero di parametri cambiati. Un parametro estratto può comunque ricevere un valore ordinario o uguale
 alla sorgente, e i vincoli di compatibilità restano validi. Si salvano le impostazioni prima di preparare nuove scene;
@@ -193,6 +194,29 @@ non vengono fusi automaticamente: li unisce l'owner con il comando gratuito.
 
 ## 4. Estrazione e bilanciamento
 
+### Ambiente e genere automatici (2026-11-27)
+
+Ogni nuova pianificazione usa `environment=auto`, anche se una galleria o un vecchio client conserva un modo manuale.
+L’API resta compatibile con i vecchi valori in scrittura ma li salva come automatici; le scene già confermate conservano
+snapshot e decisione. Nessuna chiamata ai modelli viene avviata per cambiare questa impostazione.
+
+Si confrontano proporzioni, non totali grezzi, sui profili REAL validi e sulle sole osservazioni SLOP valide fuori dal cestino.
+Prima si considera il genere: si confronta la distanza assoluta delle distribuzioni dopo l’aggiunta di una foto del genere
+iniziale con quella dopo l’aggiunta di ciascun genere presente nelle REAL. Si cambia solo per un miglioramento stretto;
+fra destinazioni equivalenti il campionamento conserva le frequenze REAL. Senza osservazioni SLOP o genere noto si conserva.
+Poi, entro il genere scelto, lo stesso confronto usa la combinazione osservata di posa, punto di vista, composizione e rapporto
+(dati ignoti esclusi). Una combinazione migliore attiva `same_genre`; un genere diverso attiva `change_genre`; altrimenti `keep`.
+Non esiste una tassonomia osservata separata degli ambienti: la decisione sull’ambiente deriva da genere e contesto fotografico,
+non da categorie inventate a partire dai prompt. Il planner adatta ambiente, luce e sostegno usando una descrizione REAL del
+contesto scelto, conserva l’identità del soggetto e dichiara gli adattamenti necessari. La plausibilità resta da verificare.
+
+Il genere di destinazione e la motivazione sono congelati in `variation.genre` e `variation.balance`, visibili nel passo 3.
+Un risultato del planner con genere diverso viene segnalato, senza retry a pagamento. Le previsioni delle scene precedenti
+nel gruppo aggiornano anche genere e contesto, senza sostituire le osservazioni nelle statistiche persistenti.
+Le altre probabilità e il controllo delle novità restano modificabili. Il trattamento usa sempre una REAL misurata del genere
+finale di destinazione. Le distribuzioni sono stime fallibili, non una prova di equivalenza visiva degli insiemi.
+
+
 Estrarre **zero o più parametri**, ciascuno con probabilità configurabile per galleria. Distinguere la probabilità di modificarlo
 dalla distribuzione del nuovo valore: include valori ordinari, assenza del tratto e valori uguali al punto di partenza.
 Modificare non significa intensificare: una console danneggiata può diventare integra, una personalizzata può diventare standard.
@@ -207,7 +231,9 @@ conserva tutte le correlazioni delle REAL. Evitare duplicati riconoscibili lasci
 comuni anche nelle SLOP; non imporre unicità a ogni immagine. Scartare o adattare un valore incompatibile dichiarandone il motivo,
 senza introdurre modifiche nascoste degli altri parametri. La stima automatica di selezione per parametro è `clamp(1 − quota_della_categoria_più_frequente, 0.05, 0.4)`.
 Decisione dell'owner del 2026-11-26: estrazione coerente dei parametri dipendenti e bilanciamento delle scene dello stesso gruppo.
-La selezione resta indipendente per parametro e usa le probabilità configurate; non forza ulteriori modifiche.
+La selezione ordinaria resta indipendente per parametro e usa le probabilità configurate. Una transizione automatica di contesto
+seleziona esplicitamente posa, punto di vista, composizione e rapporto d’aspetto congiunti, anche se le loro probabilità ordinarie
+sono zero: sono dipendenze dichiarate del cambio, non variazioni nascoste.
 I valori selezionati si estraggono congiuntamente da una stessa REAL per ciascun gruppo:
 - modello, colore, materiale/finitura, edizione/decorazione, stato di funzionamento e contenuto dello schermo;
 - posa, punto di vista, composizione e rapporto d'aspetto;
@@ -216,7 +242,7 @@ I valori selezionati si estraggono congiuntamente da una stessa REAL per ciascun
 I campi non selezionati con evidenza nota vincolano il donatore alle categorie iniziali. I campi selezionati richiedono evidenza
 nota su tutto il gruppo: `certainty=unknown`, categorie `unknown` e `unspecified` non sono donatori. Lo schermo appartiene al
 modello estratto dallo stesso donatore, oppure al modello iniziale noto. Estrarre solo il contenuto non rivela uno schermo
-nascosto o inattivo. La fotografia usa lo stesso genere salvo `change_genre`. Se manca una combinazione compatibile si
+nascosto o inattivo. La fotografia usa il genere scelto automaticamente; le lavorazioni storiche conservano il modo congelato. Se manca una combinazione compatibile si
 conservano i valori iniziali del gruppo: nessun ripiego su modelli o generi diversi e nessun parametro aggiunto alla selezione.
 La compatibilità è per categorie osservate, non una prova di plausibilità fisica; il planner e la revisione restano necessari.
 Il filtro conservativo può ridurre le variazioni effettive quando la galleria è piccola o le annotazioni incomplete.
@@ -277,7 +303,33 @@ Il browser legge soltanto `GET /api/admin/pipeline/:gallery/observations`: ID, p
 senza profili o snapshot. Durante l'osservazione mostra progresso bloccante e stop gratuito delle richieste in coda; tornando
 alla galleria segue solo i lavori attivi, senza conferme né invii nuovi. Errori ed esiti incerti richiedono revisione nella pipeline.
 
-### 4.2 Recupero dei conteggi precedenti (2026-11-27)
+### 4.2 Conteggio delle approvate e copertura storica (2026-11-27)
+
+Decisione dell’owner: mostrare quante SLOP approvate provengono da ciascuna REAL. La migrazione 0081 aggiunge il riferimento
+privato nullable `images.slop_source_id`, impostato all’accettazione anche per le lavorazioni precedenti che conservano una
+sorgente esatta. Questo sostituisce la regola precedente che eliminava qualsiasi relazione all’accettazione. Il conteggio
+`approved_count` è una query su SLOP in stato `approved` o `published`, anche se spostate in un’altra galleria; non aumenta
+per rigenerazioni, edit o approvazioni ripetute. Cestino e cancellazione escludono; ripristino in stato approvato riaggiunge.
+Eliminare una REAL azzera il riferimento con `ON DELETE SET NULL`, conservando la SLOP e segnalandone l’attribuzione mancante.
+Le API pubbliche del gioco non espongono il riferimento. Il campo non è il campione tecnico del trattamento.
+
+Si recuperano solo collegamenti esatti ancora presenti nei lavori; ambiguità o lavori già cancellati restano senza sorgente.
+La pagina mostra `unattributed_approved` per le approvate/pubblicate della galleria prive di attribuzione. La verifica dei
+registri non ha trovato collegamenti residui per le dieci SLOP presenti; il successivo confronto degli originali, delle scene
+salvate, delle descrizioni REAL e dei controlli variati ha però permesso di ricostruire tutte e dieci le associazioni. Le edizioni,
+gli accessori, i menu e gli ambienti distintivi concordano; anche i contatori delle sorgenti sono compatibili.
+
+Recupero operativo del 2026-11-27: salvate tramite API le dieci attribuzioni verificate in `generation_slot.source_attribution`,
+con metodo `original_scene_review`, flag `verified`, data, motivazione e SHA-256 di entrambi gli originali. Aggiornamento
+condizionato a revisione e metadati letti, preservando gli altri campi, i file e gli stati. Nessuna chiamata ai modelli.
+La migrazione 0082 trasferisce solo queste revisioni esplicite in `slop_source_id`, verificando che entrambi gli originali
+corrispondano e la sorgente sia ancora una REAL; non sovrascrive collegamenti già conservati. È idempotente, ignora JSON
+non validi e revisioni non verificate, e non deduce nuove associazioni da soli contatori o somiglianze generiche.
+Le coppie private non vengono pubblicate nel repository. Le eventuali attribuzioni ancora ambigue restano segnalate;
+nessun pulsante temporaneo. I contatori delle generazioni restano compatibili nelle API ma non sono più mostrati.
+
+#### Registro numerico precedente
+
 
 La migrazione 0079 recupera gratuitamente un minimo verificabile dai `paid_calls` già esistenti. Una lavorazione conta solo
 se la sua chiave nel formato `pipeline-<UUID richiesta scena>-<UUID REAL>-<UUID operazione>` identifica una REAL ancora presente,
@@ -351,8 +403,9 @@ in automatico. La proposta del valutatore e la decisione dell'owner restano dist
 
 Le descrizioni e i parametri sono privati; la scena intermedia SLOP serve al prompt e non diventa didascalia pubblica. Nei risultati
 restano prompt e modello SLOP, crediti e fonte REAL. Restano validi regole sui contenuti, appartenenza alla galleria, ricetta comune
-WebP 4:5 e passaggi separati di approvazione/pubblicazione. Le REAL restano giocabili. I riferimenti per la lavorazione non
-introducono un registro permanente REAL–SLOP; si eliminano al termine del processo secondo le regole della libreria.
+WebP 4:5 e passaggi separati di approvazione/pubblicazione. Le REAL restano giocabili. Le lavorazioni e i riferimenti temporanei
+si eliminano al termine; dal 2026-11-27 resta soltanto il riferimento privato alla sorgente per il conteggio delle approvate
+(sezione 4.2). Non viene inviato al gioco né usato come riferimento del trattamento.
 
 ## 8. Evidenze e limiti dei test
 

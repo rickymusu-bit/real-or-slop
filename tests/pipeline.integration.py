@@ -47,7 +47,7 @@ generation=paid_request(max_calls=1,proposal=job['proposal'])
 assert call(job['id']+'/generate',generation)[0]==200
 state=wait(lambda s:s['jobs'][0]['state']=='candidate');job=state['jobs'][0]
 assert len(control())==3
-assert state['sources'][0]['generated_count']==1
+assert state['sources'][0]['generated_count']==1 and state['sources'][0]['approved_count']==0
 assert call('/'+source['id'],library=True)[1]['generated_count']==1
 assert control()[-1]['path']=='/v1/images/generations'
 assert 'image' not in control()[-1]['body'] and 'mask' not in control()[-1]['body']
@@ -66,7 +66,7 @@ state=wait(lambda s:s['jobs'][0]['state']=='candidate');job=state['jobs'][0]
 assert len(control())==5 and control()[-1]['path']=='/v1/images/edits'
 assert control()[-1]['body']['files']['image[]']['size']==list(image.size)
 assert control()[-1]['body']['files']['mask']['size']==list(image.size)
-assert state['sources'][0]['generated_count']==1  # Edits do not count as new SLOP generations.
+assert state['sources'][0]['generated_count']==1 and state['sources'][0]['approved_count']==0  # Edits do not count as new SLOP generations.
 assert job['previous_key'] and job['evaluation'] # original review retained, no automatic re-evaluation
 assert call(job['id']+'/file?previous=1')[0]==200
 accepted_response=call(job['id']+'/accept',paid_request());assert accepted_response[0]==200
@@ -74,8 +74,10 @@ assert 'target_metrics' in accepted_response[1]['generation']['slot']
 state=call('')[1];assert not state['jobs'] and len(state['images'])==1
 assert state['images'][0]['status']=='new' and state['images'][0]['copy'] is None
 assert len(control())==5
+assert state['sources'][0]['approved_count']==0
+assert sql(f"SELECT slop_source_id FROM images WHERE id='{state['images'][0]['id']}'")[0]['slop_source_id']==source['id']
 assert sql("SELECT count(*) AS n FROM pipeline_jobs WHERE gallery_id='"+gallery['id']+"'")[0]['n']==0
-print('Pipeline passed: cached gallery profiles, controlled variations, text-only images, owner-gated evaluation/edits, full-image mask, acceptance without source genealogy.')
+print('Pipeline passed: cached gallery profiles, controlled variations, text-only images, owner-gated evaluation/edits, full-image mask, acceptance with private source attribution.')
 
 # Gallery comparison and balancing use observations, never requested attributes.
 slop=state['images'][0]['id']
@@ -111,6 +113,12 @@ code,data=call('/'+slop+'/copy',raw=game_copy(call('/'+slop+'/original',library=
 assert call('/'+slop+'/approve',{'revision':data['revision']},library=True)[0]==200
 assert call('')[1]['images']==[] and call('')[1]['stats']['slop_count']==1
 assert call('/'+slop,library=True)[1]['status']=='approved'
+assert call('/'+source['id'],library=True)[1]['approved_count']==1
+assert call('')[1]['sources'][0]['approved_count']==1
+for action,expected in [('publish',1),('withdraw',1),('trash',0),('restore',1)]:
+    assert call('/'+slop+'/'+action,{},library=True)[0]==200
+    assert call('/'+source['id'],library=True)[1]['approved_count']==expected
+assert call('')[1]['sources'][0]['approved_count']==1
 print('Observed SLOP passed: confirmed blind original observation, actual categories for comparison and balancing, cached calls, usage count and approval exit.')
 
 # A source cannot be substituted from another gallery; no model request is spent.
@@ -285,3 +293,25 @@ state=wait(lambda s:s['stats']['slop_count']==6 and not s['jobs']);assert len(co
 for image in batch:
     item=call('/'+image,library=True)[1];assert item['has_slop_observation'] and item['status']=='published'
 print('Automatic observation passed: direct/bulk approval, publication, one call per photo, concurrent guards, persistent uncertain claim and no retry after job closure.')
+
+# New plans ignore saved manual switches and compare observed genres, never requested ones.
+automatic=make_gallery('Automatic environment balance')
+auto_sources=[real('automatic-context-'+str(n),gallery=automatic['id']) for n in range(2)]
+H.API=BASE+'/api/admin/pipeline/'+automatic['id']+'/'
+control([]);assert call('prepare',paid_request(ids=[s['id'] for s in auto_sources],max_calls=2))[0]==200
+wait(lambda s:not s['jobs'])
+a=auto_sources[0]['id'];b=auto_sources[1]['id']
+sql(f"UPDATE images SET pipeline_profile=json_set(pipeline_profile,'$.genre','studio','$.parameters.aspect_ratio.value','2:3','$.parameters.aspect_ratio.category','portrait') WHERE id='{b}'")
+observed=real('automatic-observed',gallery=automatic['id'])
+sql(f"UPDATE images SET origin='SLOP',title=NULL,pipeline_slop_observation=(SELECT pipeline_profile FROM images WHERE id='{a}'),pipeline_profile=(SELECT pipeline_profile FROM images WHERE id='{b}') WHERE id='{observed['id']}'")
+sql(f"UPDATE galleries SET pipeline_settings='{{\"environment\":\"keep\",\"rules\":\"Retain hardware identity\",\"probabilities\":{{}},\"novelty\":0}}' WHERE id='{automatic['id']}'")
+assert call('')[1]['settings']['environment']=='auto'
+control([]);request=paid_request(ids=[a],max_calls=1);assert call('plan',request)[0]==200
+state=wait(lambda s:s['jobs'] and s['jobs'][0]['state']=='proposal');job=state['jobs'][0]
+assert job['snapshot']['variation']['environment']=='change_genre' and job['snapshot']['variation']['genre']=='studio',job
+assert job['proposal']['genre']=='studio' and job['proposal']['aspect_ratio']=='2:3'
+sent=json.loads(control()[0]['body']['input'][0]['content'][0]['text'])
+assert sent['relevant'][0]['profile']['genre']=='studio' and sent['variation']['balance']
+assert len(control())==1 and call('plan',request)[1]['jobs']==[]
+assert call(job['id']+'/close',paid_request())[0]==200
+print('Automatic environment passed: observed genre deficits, saved manual setting normalized, coherent reference/format, frozen decisions and no repeated calls.')
