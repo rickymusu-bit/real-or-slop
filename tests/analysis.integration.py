@@ -42,13 +42,14 @@ def upload(origin, title='', **params):
 def patch(item, change):
     return call(f'{API}/{item["id"]}', {'revision': item['revision'], **change}, method='PATCH')
 
-# The paid analysis of the REAL is gone: no route, no fields, no call.
+# Retired REAL analysis adds no calls; earlier suites may have observed approved SLOP.
+paid_before = sql('SELECT count(*) AS n FROM paid_calls')[0]['n']
 openai([])
 real = upload('REAL', 'Place de la République, 1968', description='Manifestanti e polizia in place de la République.')
 slop = upload('SLOP', prompt='A street at dusk.', description='Nota che non viene salvata.', model='gpt-image-2')
 for path, body in ((f'/{real["id"]}/analyze', {'confirm': True}), ('/analysis', None), (f'/{real["id"]}/categories', {'confirm': True})):
     assert call(API + path, body, method='POST' if body else 'GET')[0] == 404, path
-assert openai() == [] and sql('SELECT count(*) AS n FROM paid_calls')[0]['n'] == 0
+assert openai() == [] and sql('SELECT count(*) AS n FROM paid_calls')[0]['n'] == paid_before
 for retired in ('real_description', 'real_description_provenance', 'commons_description', 'analysis', 'tags'):
     assert retired not in real and retired not in slop, retired
 # A REAL keeps its source description, editable; a SLOP has prompt and model and no description.
