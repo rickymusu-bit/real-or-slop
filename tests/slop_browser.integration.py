@@ -114,6 +114,8 @@ with sync_playwright() as p:
             card.locator('[data-action=edit]').click();expect(page.locator('.pipeline-mask[open]')).to_be_visible()
             page.screenshot(path=str(folder/(name+'-mask.png')),full_page=True)
             page.locator('[data-mask-cancel]').click();assert len(control())==8
+            # The free action refreshes the cards after cancelling: wait before toggling the new details.
+            expect(root.locator('[data-action=refresh]')).to_be_enabled()
             card=root.locator('[data-job-card]').first;card.get_by_text('Suggestion: Small local detail.',exact=True).click();card.locator('[data-action=edit]').click();page.locator('[data-mask-confirm]').click()
             expect(overlay).to_be_visible();expect(overlay).to_contain_text('Applying confirmed local correction')
             expect(overlay).to_have_count(0,timeout=30000)
