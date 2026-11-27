@@ -69,7 +69,8 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
   nessuna valutazione aggiuntiva viene avviata. Il prima/dopo viene conservato fino alla decisione.
 - **Accetta:** trasferisce l'immagine intera nella libreria come nuova. Elimina il riferimento alla REAL e i file temporanei
   mediante coda durevole. L'accettazione non prepara, approva o pubblica la copia automaticamente.
-- **Copia, trattamento, approvazione e pubblicazione:** comandi distinti, gratuiti. La misura tecnica delle copie REAL mancanti
+- **Copia, trattamento e pubblicazione:** comandi distinti, gratuiti. L’approvazione SLOP include l’osservazione automatica
+  dell’originale mancante, al massimo una chiamata; un profilo valido viene riusato. La misura tecnica delle copie REAL mancanti
   è calcolata dal browser. Il riferimento del trattamento è campionato fra REAL misurate dello stesso genere di destinazione;
   senza riferimento disponibile la copia parte senza trattamento. Approvare fa uscire la SLOP dal passo 4, senza eliminarla;
   si ritrova nella galleria e da lì si pubblica. Il passo 4 mostra tutte le SLOP di pipeline nuove, senza il vecchio limite di 100. Inquadratura e cursori riusano gli editor esistenti.
