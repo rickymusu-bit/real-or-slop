@@ -10,6 +10,7 @@ I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella c
   o in gruppo. Le copie mancanti restano nel passo 3 e si completano al ritorno senza modelli né sovrascrivere copie salvate.
 - Metadati aggiornati nella risposta di accettazione; upload condizionato per preservare scelte manuali e file concorrenti.
   Schema e specifiche aggiornati. Nessuna migrazione e nessuna chiamata reale ai modelli.
+- Test dei crediti del gioco compatibile anche con partite estratte interamente REAL o interamente SLOP.
 - Adeguate via API le due SLOP già accettate senza copia: stesso codificatore browser, trattamento e 4:5 verificati su R2;
   originali e stato di approvazione conservati, nessun pulsante temporaneo.
 
