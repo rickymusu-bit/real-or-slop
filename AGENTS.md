@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 39.0.0, aggiornata il 2026-11-27T08:14:46Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 39.1.0, aggiornata il 2026-11-27T15:29:55Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -45,6 +45,8 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   baseline anonima separata per non duplicare il conteggio. Nessun recupero storico inventato o legame con SLOP accettate. I profili e le particolarità sono privati e non sono tag di navigazione.
 - **Approvazione nel wizard** (2026-11-26). Le SLOP approvate escono dal passo 4 e restano nella galleria, dove si pubblicano.
   Dal 2026-11-27 approvazione e accodamento dell’osservazione sono atomici sul server; la claim sopravvive alla chiusura del lavoro.
+  Dal 2026-11-27 il passo 4 consente selezione individuale, seleziona tutte le copie pronte e approvazione in gruppo;
+  si approvano solo gli ID selezionati con copia pronta. Le foto senza copia restano disabilitate e gli errori parziali sono visibili.
   Il passo 4 mostra soltanto le SLOP nuove da preparare; approvare non cancella foto o osservazioni.
 - **Nessun indice delle descrizioni** (2026-11-26). Rimossi comandi, API, identità normalizzate per la ricerca ed embedding degli ambienti. La pipeline usa direttamente descrizioni e profili preparati nella galleria; le distribuzioni restano basate sui parametri osservati. Nessuna chiamata di indicizzazione. Migrazione 0076: elimina solo dati di ricerca obsoleti, conserva assi, profili, immagini e cronologia delle chiamate.
 - **Crowding e detail rimossi** (2026-11-26). Nessuna misurazione a pagamento, punteggio, soglia, avviso o contesto di misurazione nell’admin/API. I vecchi flussi non leggono più questi dati: estrazione uniforme e nessun punteggio nei prompt. La migrazione 0077 rimuove soglie di galleria e impostazioni; osservazioni e contesti storici già pagati restano privati, senza nuove letture/scritture delle misure, e le sole osservazioni si cancellano con la foto. Le misure tecniche `copy_metrics` e il trattamento fotografico restano attivi.

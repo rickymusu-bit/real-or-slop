@@ -14,7 +14,7 @@ import "./pipeline.css";
 interface Source { generated_count: number; id: string; title: string; metrics?:Metrics|null;copy?:{sha256:string|null}|null; profile: Profile | null; described: boolean }
 interface Job { format:{requested_ratio:string;actual_width:number;actual_height:number}|null; id: string; source_id: string | null; state: string; proposal: Proposal | null; evaluation: Review | null;
   file: string | null; previous_key: string | null; error: string; snapshot: { variation?: {selected: string[]}; operation: string } }
-interface Image extends TreatableItem { width: number; height: number; revision: number; status: string; file: string; original: string }
+interface Image extends TreatableItem { has_slop_observation?: boolean; width: number; height: number; revision: number; status: string; file: string; original: string }
 interface State { stats: {real_count:number;slop_count:number;slop_total:number;unobserved:string[];rows:{key:string;real:Record<string,number>;slop:Record<string,number>}[]}; settings: PipelineSettings; sources: Source[]; jobs: Job[]; paid_calls: boolean; images: Image[] }
 const LABELS: Record<string,string> = { queued: "Queued on server", dispatching:"Starting on server", working: "Processing on server", proposal: "Scene awaiting confirmation", candidate: "Image awaiting review",
   review: "Evaluation available", attention: "Needs attention", failed: "Failed to start", accepting: "Accepting image" };
@@ -23,6 +23,7 @@ const ACTIVE_PAID = new Set(["queued", "dispatching", "working"]);
 export async function mountPipeline(root: HTMLElement, gallery: string) {
   const api = `/api/admin/pipeline/${encodeURIComponent(gallery)}`;
   let state: State | null = null, busy = false, notice = "", selected = new Set<string>(), initialized = false, mergeKey = "genre";
+  let selectedImages = new Set<string>();
   const openPanels = new Set<string>();
   type JobStatus = Pick<Job, "id" | "state" | "error">;
   const call = async <T>(path = "", data?: unknown, base = api): Promise<T> => {
@@ -153,9 +154,12 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
       ${j.format?`<p>Requested ratio: ${escape(j.format.requested_ratio)}. Received dimensions: ${j.format.actual_width} × ${j.format.actual_height}.</p>`:""}${j.file?`<div class="pipeline-views"><figure><img src="${escape(j.file)}" alt="Full candidate"><figcaption>Full candidate</figcaption></figure>${j.previous_key?`<figure><img src="${api}/${j.id}/file?previous=1" alt="Before correction"><figcaption>Before correction</figcaption></figure>`:""}</div>`:""}
       ${j.evaluation?`<section><h4>Original evaluation</h4><p>${escape(j.evaluation.assessment)}</p><ul>${j.evaluation.findings.map(x=>`<li>${escape(x)}</li>`).join("")}</ul><p>Uncertainties: ${escape(j.evaluation.uncertainties.join(" · ") || "none")}</p>${j.evaluation.corrections.map((c,i)=>`<details><summary>Suggestion: ${escape(c.defect)}</summary><p>Benefit: ${escape(c.benefit)}</p><p>Risk: ${escape(c.risk)}</p><textarea data-instruction="${j.id}-${i}" rows="4" aria-label="Correction instruction">${escape(c.instruction)}</textarea><p>The mask covers the area identified by the evaluator. The API may also change pixels outside it: check the entire image after editing.</p><button data-action="edit" data-job="${j.id}" data-correction="${i}" ${["candidate","review"].includes(j.state)?"":"disabled"}>Confirm this correction (1 call)</button></details>`).join("")}</section>`:""}
       <div class="pipeline-actions">${j.state==="proposal"?`<button data-action="generate" data-job="${j.id}">Confirm generation</button>`:""}${["candidate","review"].includes(j.state)?`<button data-action="evaluate" data-job="${j.id}">Request evaluation (1 call)</button>`:""}${j.file && ["candidate","review","attention"].includes(j.state)?`<button data-action="accept" data-job="${j.id}">Accept full image</button>`:""}${!["queued","dispatching","working","accepting"].includes(j.state)?`<button data-action="close" data-job="${j.id}">Discard and close</button>`:""}</div></article>`).join("")}
-      <h2>4. Treatment and game copies</h2><p>Adjust treatment if needed, check the frame and 4:5 copy, then approve. Approved SLOP leave this step and can be found and published in the <a href="${galleryPhotosPath(gallery)}">gallery</a>. A technical reference is sampled from measured REAL of the same genre; without a reference, the copy starts without treatment.</p>
-      ${state.images.map(i=>`<article class="pipeline-job" data-accepted-image="${i.id}"><h3>SLOP · ${escape(i.status)}</h3><div class="pipeline-views"><img src="${escape(i.original)}" alt="Accepted original"><img src="${escape(i.file)}" alt="Game copy to check"></div><div class="pipeline-actions"><button data-action="copy" data-image="${i.id}">Prepare 4:5 copy</button><button data-action="frame" data-image="${i.id}">Framing</button><button data-action="treatment" data-image="${i.id}" ${i.treatment || i.generation?.slot?.target_metrics ? "" : "disabled"}>Adjust treatment</button>${i.status==="new"?`<button data-action="approve" data-image="${i.id}" ${i.copy?"":"disabled"}>Approve after checking</button>`:""}</div></article>`).join("")}</section>`;
-    syncSelection();
+      <section class="pipeline-selection" aria-labelledby="pipeline-approval-title"><h2 id="pipeline-approval-title">4. Treatment and game copies</h2><p>Adjust treatment if needed, check the frame and 4:5 copy, then approve. Approved SLOP leave this step and can be found and published in the <a href="${galleryPhotosPath(gallery)}">gallery</a>. A technical reference is sampled from measured REAL of the same genre; without a reference, the copy starts without treatment.</p>
+      <div class="pipeline-actions"><label><input type="checkbox" data-images-all> Select all ready SLOP</label><button data-action="clear-image-selection">Clear SLOP selection</button></div>
+      <p role="status" data-image-selection-count></p><p data-image-observation-limit></p>
+      <button data-action="approve-selected" disabled>Approve selected SLOP</button>
+      ${state.images.map(i=>`<article class="pipeline-job" data-accepted-image="${i.id}"><h3>SLOP · ${escape(i.status)}</h3><label class="pipeline-image-choice"><input type="checkbox" data-select-image="${i.id}" ${selectedImages.has(i.id) ? "checked" : ""} ${i.status === "new" && i.copy ? "" : "disabled"}> Select SLOP ${escape(i.id.slice(0,8))}</label>${!i.copy ? '<p>Prepare and check the 4:5 game copy before selecting this SLOP for approval.</p>' : ""}<div class="pipeline-views"><img src="${escape(i.original)}" alt="Accepted original"><img src="${escape(i.file)}" alt="Game copy to check"></div><div class="pipeline-actions"><button data-action="copy" data-image="${i.id}">Prepare 4:5 copy</button><button data-action="frame" data-image="${i.id}">Framing</button><button data-action="treatment" data-image="${i.id}" ${i.treatment || i.generation?.slot?.target_metrics ? "" : "disabled"}>Adjust treatment</button>${i.status==="new"?`<button data-action="approve" data-image="${i.id}" ${i.copy?"":"disabled"}>Approve after checking</button>`:""}</div></article>`).join("")}</section></section>`;
+    syncSelection(); syncImageSelection();
     root.querySelectorAll<HTMLButtonElement>("button").forEach(b => { if(busy) b.disabled=true; });
   };
   const readySources = () => state ? state.sources.filter(s => s.profile && s.described && !state!.jobs.some(j => j.source_id === s.id)) : [];
@@ -171,17 +175,55 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
     if (plan) { plan.textContent = `Prepare ${count} ${count === 1 ? "scene" : "scenes"} from selected REAL`; plan.disabled = !count || busy || !state!.paid_calls; }
     root.querySelectorAll<HTMLInputElement>("[data-source]").forEach(input => { input.checked = selected.has(input.dataset.source!); });
   };
+  const readyImages = () => state ? state.images.filter(image => image.status === "new" && image.copy) : [];
+  const syncImageSelection = () => {
+    const ready = readyImages(), available = new Set(ready.map(image => image.id));
+    selectedImages = new Set([...selectedImages].filter(id => available.has(id)));
+    const count = selectedImages.size, all = root.querySelector<HTMLInputElement>("[data-images-all]");
+    if (all) { all.checked = !!ready.length && count === ready.length; all.indeterminate = count > 0 && count < ready.length; all.disabled = busy || !ready.length; }
+    const status = root.querySelector<HTMLElement>("[data-image-selection-count]");
+    if (status) status.textContent = `${count} selected · ${ready.length} ready · ${state!.images.length} SLOP in this step`;
+    const limit = root.querySelector<HTMLElement>("[data-image-observation-limit]");
+    const missing = ready.filter(image => selectedImages.has(image.id) && !image.has_slop_observation).length;
+    if (limit) limit.textContent = `Approval includes automatic observation: at most ${missing} model ${missing === 1 ? "call" : "calls"}. Saved observations are reused.`;
+    const approve = root.querySelector<HTMLButtonElement>("[data-action=approve-selected]");
+    if (approve) { approve.textContent = `Approve ${count} selected SLOP`; approve.disabled = busy || !count; }
+    const clear = root.querySelector<HTMLButtonElement>("[data-action=clear-image-selection]");
+    if (clear) clear.disabled = busy || !count;
+    root.querySelectorAll<HTMLInputElement>("[data-select-image]").forEach(input => {
+      input.checked = selectedImages.has(input.dataset.selectImage!); input.disabled = busy || !available.has(input.dataset.selectImage!);
+      input.closest("[data-accepted-image]")?.classList.toggle("is-selected", input.checked);
+    });
+  };
   const refresh = async () => { state = await call<State>(); if(!initialized && await measureMissing(state.sources)) state=await call<State>(); initialized=true; render(); };
   const act = async (work:()=>Promise<void>) => { if(busy)return;busy=true;root.querySelectorAll<HTMLInputElement|HTMLTextAreaElement|HTMLButtonElement|HTMLSelectElement>("input,textarea,button,select").forEach(control=>{control.disabled=true;});try {notice="";await work();notice||="Status updated.";}catch(e){notice=e instanceof Error?e.message:String(e);}finally{busy=false;await refresh().catch(e=>{notice=String(e);render();});} };
   root.addEventListener("toggle",event=>{const panel=(event.target as HTMLElement).dataset?.panel;if(panel){if((event.target as HTMLDetailsElement).open)openPanels.add(panel);else openPanels.delete(panel);}},true);
   root.addEventListener("change",event=>{ const input=event.target as HTMLInputElement;
-    if(input.hasAttribute("data-merge-key")){mergeKey=input.value;root.querySelectorAll<HTMLElement>("[data-merge-group]").forEach(group=>{group.hidden=group.dataset.mergeGroup!==mergeKey;group.querySelectorAll<HTMLInputElement>("input").forEach(box=>{box.checked=false;});});return;}if(input.dataset.source){if(input.checked)selected.add(input.dataset.source);else selected.delete(input.dataset.source);syncSelection();return;}if(input.hasAttribute("data-all")){selected=input.checked?new Set(readySources().map(s=>s.id)):new Set();syncSelection();} });
+    if(input.dataset.selectImage){if(input.checked)selectedImages.add(input.dataset.selectImage);else selectedImages.delete(input.dataset.selectImage);syncImageSelection();return;}if(input.hasAttribute("data-images-all")){selectedImages=input.checked?new Set(readyImages().map(image=>image.id)):new Set();syncImageSelection();return;}if(input.hasAttribute("data-merge-key")){mergeKey=input.value;root.querySelectorAll<HTMLElement>("[data-merge-group]").forEach(group=>{group.hidden=group.dataset.mergeGroup!==mergeKey;group.querySelectorAll<HTMLInputElement>("input").forEach(box=>{box.checked=false;});});return;}if(input.dataset.source){if(input.checked)selected.add(input.dataset.source);else selected.delete(input.dataset.source);syncSelection();return;}if(input.hasAttribute("data-all")){selected=input.checked?new Set(readySources().map(s=>s.id)):new Set();syncSelection();} });
   root.addEventListener("click",event=>{const button=(event.target as HTMLElement).closest<HTMLButtonElement>("button[data-action]");if(!button||busy||!state)return;
+    if(button.dataset.action==="clear-image-selection"){selectedImages.clear();syncImageSelection();return;}
     if(button.dataset.action==="clear-selection"){selected.clear();syncSelection();return;}
     const action=button.dataset.action!,job=state.jobs.find(j=>j.id===button.dataset.job), image=state.images.find(i=>i.id===button.dataset.image);
     void act(async()=>{
       if(action==="refresh")return;
       if(action==="stop"){await stopQueued();return;}
+      if(action==="approve-selected") {
+        const ids = readyImages().filter(image => selectedImages.has(image.id)).map(image => image.id);
+        if (!ids.length || !window.confirm(`Have you checked the originals and final 4:5 copies of all ${ids.length} selected SLOP? Approve them together?`)) return;
+        const pending = [...ids], failures: { id: string; error: string }[] = [];
+        let done = 0;
+        const observed = await followSlopObservations(gallery, pending, async () => {
+          for (let at = 0; at < ids.length; at += 500) {
+            const result = await call<{done: number; failed: {id: string; error: string}[]}>("/bulk", {action: "set-approved", ids: ids.slice(at, at + 500)}, "/api/admin/library");
+            done += result.done; failures.push(...result.failed);
+            for (const failed of result.failed) { const index = pending.indexOf(failed.id); if (index >= 0) pending.splice(index, 1); }
+          }
+        });
+        for (const id of pending) selectedImages.delete(id);
+        notice = `${done} SLOP approved. Find them in the gallery to publish them.` + (observed ? ` ${observed}` : "") +
+          (failures.length ? ` ${failures.length} not approved: ${failures.map(failure => `${failure.id}: ${failure.error}`).join(" / ")}` : "");
+        return;
+      }
       if(action==="settings"){
         const probabilities:PipelineSettings["probabilities"]={};root.querySelectorAll<HTMLInputElement>("[data-probability]").forEach(input=>{if(input.value!=="")probabilities[input.dataset.probability as keyof typeof probabilities]=Number(input.value)/100;});
         await call("/settings",{rules:root.querySelector<HTMLTextAreaElement>("[data-rules]")!.value,probabilities,environment:root.querySelector<HTMLSelectElement>("[data-environment]")!.value,novelty:Number(root.querySelector<HTMLInputElement>("[data-novelty]")!.value)/100});return;

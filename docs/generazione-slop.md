@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 19.0.0
+# Generazione SLOP — specifica 19.1.0
 
-Aggiornata: 2026-11-27T08:14:46Z. Stato: implementata nel ramo 1.68.0, da rilasciare.
+Aggiornata: 2026-11-27T15:29:55Z. Stato: implementata nel ramo 1.69.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -73,7 +73,15 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
   dell’originale mancante, al massimo una chiamata; un profilo valido viene riusato. La misura tecnica delle copie REAL mancanti
   è calcolata dal browser. Il riferimento del trattamento è campionato fra REAL misurate dello stesso genere di destinazione;
   senza riferimento disponibile la copia parte senza trattamento. Approvare fa uscire la SLOP dal passo 4, senza eliminarla;
-  si ritrova nella galleria e da lì si pubblica. Il passo 4 mostra tutte le SLOP di pipeline nuove, senza il vecchio limite di 100. Inquadratura e cursori riusano gli editor esistenti.
+  si ritrova nella galleria e da lì si pubblica. Dal 2026-11-27 il passo 4 permette di selezionare le SLOP con copia pronta:
+  spunte individuali, «Select all ready SLOP», «Clear SLOP selection» e «Approve N selected SLOP». Nessuna preselezione;
+  selezione parziale e conteggi si aggiornano subito senza cancellare campi ancora in modifica. Le foto senza copia sono disabilitate.
+  La scelta resta durante gli aggiornamenti, si ripulisce per foto approvate/rimosse/non più pronte e riparte vuota al reload.
+  Una sola conferma verifica che l’owner abbia controllato originali e copie dell’intero gruppo; nessuna conferma separata per
+  l’osservazione automatica, al massimo una chiamata per foto non osservata. `POST /api/admin/library/bulk` usa solo gli ID scelti
+  con `action=set-approved`, in richieste di massimo 500 foto. Il server ricontrolla stato e copia. Le approvate escono dal passo;
+  gli esiti parziali indicano ID e motivo senza bloccare le altre. Il progresso segue solo le foto approvate o dall’esito d’invio
+  incerto, senza osservazioni aggiuntive sulle foto esplicitamente rifiutate. Il passo 4 mostra tutte le SLOP di pipeline nuove, senza il vecchio limite di 100. Inquadratura e cursori riusano gli editor esistenti.
 
 API private: `GET /api/admin/pipeline/:gallery` e `/status` (solo stato dei lavori, usato durante l’attesa); `POST /:gallery/settings`, `/profile`, `/categories`, `/prepare`, `/plan`, `/observe`, `/stop`;
 `POST /:gallery/:job/{scene,generate,evaluate,edit,accept,close}`; `GET /:gallery/:job/file` e `?previous=1`.
@@ -95,6 +103,21 @@ che debbano essere riprodotte nella SLOP.
 Le regole della galleria accompagnano il generatore di testo: modelli compatibili, vincoli fisici e generi fotografici presenti.
 Per Nintendo: `docs/regole-galleria-console-nintendo.md`. Sono costruite sulle REAL, rivedibili dall'owner, non dedotte dal solo
 titolo. Non impongono marcatori visivi comuni a ogni SLOP. Decisione dell’owner del 2026-11-26: gli indici delle descrizioni sono rimossi, insieme ai comandi e alle API di indicizzazione (migrazione 0076). Il planner usa direttamente i profili validi e le descrizioni delle altre REAL della stessa galleria, dando precedenza alla stessa categoria di modello. Mantiene lo stesso genere quando non è richiesto un cambio di genere e passa fino a tre descrizioni di supporto. Non esegue ricerca semantica di ambienti né chiamate di embedding. Le scelte e i riferimenti sono congelati nella lavorazione. Il bilanciamento e le probabilità continuano a usare i parametri osservati nei profili, indipendentemente dai riferimenti di supporto. Le statistiche usano le annotazioni disponibili. Crowding e detail sono ritirati dal 2026-11-26: non influiscono sulla pipeline, non vengono misurati né inviati ai modelli. Le misure tecniche per il trattamento restano distinte e attive.
+
+### Informazioni nel passo 3 e controllo della diversità
+
+Il passo 3 mostra lo stato della lavorazione e, in «English scene and parameters», i controlli selezionati per la variazione,
+le modifiche previste, le dipendenze, il genere, il formato e la scena sugli otto assi. «Intended parameters after variation»
+contiene il profilo richiesto, distinto da quello osservato sulla SLOP dopo l’approvazione. Sono visibili la candidata intera,
+il rapporto richiesto e le dimensioni ricevute, più il prima dopo una correzione. Se richiesta, la valutazione mostra giudizio,
+difetti, incertezze e interventi suggeriti con beneficio, rischio e istruzione locale. Nessuna valutazione è inventata in sua assenza.
+
+Per aumentare lo scostamento dalla REAL, nel passo 2 si aumentano le probabilità dei parametri che si desidera variare.
+«Environment and genre» permette anche il cambio di ambiente nello stesso genere o insieme al genere. «Chance of plausible
+new values (%)» controlla la probabilità di consentire valori nuovi nei soli parametri selezionati: non è un cursore generale
+di distanza né il numero di parametri cambiati. Un parametro estratto può comunque ricevere un valore ordinario o uguale
+alla sorgente, e i vincoli di compatibilità restano validi. Si salvano le impostazioni prima di preparare nuove scene;
+quelle già preparate conservano lo snapshot precedente, pur restando modificabili manualmente.
 
 ## 3. Parametri controllabili
 
