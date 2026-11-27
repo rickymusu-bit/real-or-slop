@@ -35,6 +35,9 @@ test("recover verified old jobs once, collapse edits, and preserve new counts an
     const backwards = job(sources[0]); call(backwards, "images", later); call(backwards, "evaluation", old);
     const invalid = `malformed-job-key-with-36-characters!!-${sources[0]}`; call(invalid, "images"); call(invalid, "evaluation", later);
     const invalidRequest = job(sources[0]); call(invalidRequest, "images", old, "completed", "x".repeat(36)); call(invalidRequest, "evaluation", later);
+    const extraHyphen = `${randomUUID().replace(/^./, "-")}-${sources[0]}`;
+    call(extraHyphen, "images"); call(extraHyphen, "evaluation", later);
+    const badSuffix = job(sources[0]); call(badSuffix, "images", old, "completed", randomUUID().replace(/^./, "-")); call(badSuffix, "evaluation", later);
     const slop = job(sources[3]); call(slop, "images"); call(slop, "evaluation", later);
     const deleted = job(randomUUID()); call(deleted, "images"); call(deleted, "evaluation", later);
     const ledger = db.prepare("SELECT * FROM paid_calls ORDER BY id").all();
