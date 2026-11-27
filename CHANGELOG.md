@@ -1,7 +1,16 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-27T08:14:46Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-27T15:29:55Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.69.0 — 2026-11-27T15:29:55Z
+
+- Passo 4 della pipeline: selezione individuale delle SLOP, seleziona tutte le copie pronte, deseleziona e approvazione collettiva.
+  Conteggio e selezione parziale immediati; nessuna preselezione o perdita dei campi in modifica quando si cambiano le spunte.
+- Approvati solo gli ID scelti con copia pronta, tramite API bulk esistente. Osservazione automatica inclusa e risultati parziali
+  visibili; le foto rifiutate esplicitamente non entrano nell’attesa dell’osservazione. Le approvate escono dal wizard.
+- Schema e specifiche aggiornati, compresa la distinzione tra parametri previsti nel passo 3 e osservati dopo l’approvazione
+  e l’effetto dei controlli di diversità. Nessuna migrazione, adeguamento del pregresso o chiamata reale.
 
 ## 1.68.0 — 2026-11-27T08:14:46Z
 

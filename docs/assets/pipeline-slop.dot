@@ -29,7 +29,7 @@ digraph pipeline {
  subgraph cluster_finish {
   label="4. PREPARE THE GAME COPY";color="#cbd5e1";style=rounded;fontsize=18;
   copy [label="Adjust treatment and framing · free\nPrepare the shared 4:5 WebP game copy\nCheck both the full image and the copy"];
-  approve [label="Approve the checked game copy\nThe photo leaves this wizard",fillcolor="#fef3c7"];
+  approve [label="Select checked SLOP game copies\nApprove one photo or the selected group\nPhotos without a ready copy cannot be selected\nApproved photos leave this wizard",fillcolor="#fef3c7"];
   observe [label="Automatically observe the full SLOP original\nAt most 1 model call, included in approval\nReuse saved observations · no separate confirmation",fillcolor="#dbeafe"];
   publish [label="Find the photo in the gallery and publish it · free\nOnly published photos enter the game",fillcolor="#dcfce7"];
   copy -> approve -> observe -> publish;

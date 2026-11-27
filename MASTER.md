@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 41.0.0, aggiornata il 2026-11-27T08:14:46Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 41.1.0, aggiornata il 2026-11-27T15:29:55Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,7 +9,12 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.68.0:** osservazione SLOP automatica all’approvazione, dal wizard, dal dettaglio e dalle operazioni in gruppo/API;
+- **Ramo 1.69.0:** selezione delle SLOP pronte nel passo 4, seleziona tutte, deseleziona e approvazione in gruppo degli ID
+  scelti tramite l’API bulk esistente. Osservazione automatica inclusa, conteggio del massimo e risultati parziali; copie mancanti
+  disabilitate. `src/pipeline.ts`, `src/pipeline.css`, `src/slop-observation.ts`, test browser desktop/mobile e schema aggiornati.
+  Nessuna migrazione o adeguamento dei dati preesistenti; nessuna chiamata reale. Specifica `generazione-slop` 19.1.0.
+
+- **Integrata in main la 1.68.0 (PR #189):** osservazione SLOP automatica all’approvazione, dal wizard, dal dettaglio e dalle operazioni in gruppo/API;
   al massimo una chiamata per originale mancante, senza pulsanti o conferme dedicate. `worker/pipeline-queue.ts` condivide
   la coda e registra la claim nello stesso batch dell’approvazione. Migrazione 0080: claim durevole, compresi tentativi precedenti,
   per impedire retry automatici dopo esiti incerti o chiusura dei lavori. Progresso e ripresa leggono soltanto lo stato.
@@ -144,9 +149,9 @@ nome.
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.1.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.9.0 |
-| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 19.0.0 |
+| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 19.1.0 |
 | Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 2.0.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 11.0.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 11.1.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.12.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.4.0 |

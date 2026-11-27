@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 11.0.0
+# Foto e gallerie — specifica 11.1.0
 
-Stato: implementata nel ramo 1.68.0, da rilasciare. Aggiornata: 2026-11-27T08:14:46Z.
+Stato: implementata nel ramo 1.69.0, da rilasciare. Aggiornata: 2026-11-27T15:29:55Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -120,6 +120,8 @@ la candidata entra in libreria solo all'accettazione dell'owner. I riferimenti d
 profili e scene previsti non contengono un ID permanente della REAL di partenza. Trigger registrano i file da rimuovere nella
 coda durevole. Le gallerie con operazioni accodate/in corso non possono essere eliminate.
 
+Il passo 4 del wizard consente selezione singola o di tutte le SLOP con copia pronta e approvazione in gruppo, con conferma
+del controllo delle copie, osservazione automatica e indicazione degli errori parziali. L’API bulk esistente ricontrolla ogni foto.
 Le SLOP approvate dal passo 4 del wizard escono da quel passo e restano qui, pronte per la pubblicazione esplicita.
 L'uscita dal wizard non cancella originali, copie o osservazioni. Le REAL già usate restano selezionabili; il contatore aiuta
 l'owner a distribuire l'uso. Approvare una SLOP avvia automaticamente l’osservazione dell’originale mancante: al massimo una

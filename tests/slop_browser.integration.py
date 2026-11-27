@@ -213,6 +213,63 @@ with sync_playwright() as p:
             detail.locator('[data-slop-observation]').scroll_into_view_if_needed()
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1') and not errors,errors
             page.screenshot(path=str(folder/(name+'-automatic-observation.png')),full_page=True)
+            # Step 4: select only checked copies; approve an exact subset together, then handle partial failures.
+            bulk_gallery=make_gallery('Step 4 bulk '+name)['id'];bulk_ids=[]
+            for n in range(4):
+                photo=real('step4-bulk-'+name+'-'+str(n),gallery=bulk_gallery)
+                sql("UPDATE images SET origin='SLOP',title=NULL,status='new',approved_at=NULL,pipeline_scene='{}',prompt='Bulk approval fixture',model='fake' WHERE id='"+photo['id']+"'")
+                bulk_ids.append(photo['id'])
+            sql("UPDATE images SET copy_key=NULL,copy_sha256=NULL,copy_width=NULL,copy_height=NULL,copy_bytes=NULL,copy_crop=NULL,copy_metrics=NULL WHERE id='"+bulk_ids[3]+"'")
+            control([{'delay':2},{'delay':1.2}])
+            page.goto(BASE+'/admin/gallerie/'+bulk_gallery+'/slop')
+            expect(root.locator('[data-select-image]')).to_have_count(4)
+            expect(root.locator('[data-action=approve-selected]')).to_be_disabled()
+            expect(root.locator('[data-select-image="'+bulk_ids[3]+'"]')).to_be_disabled()
+            root.get_by_text('Rules and probabilities',exact=True).click()
+            root.locator('[data-rules]').fill('Unsaved rules survive SLOP selection.')
+            root.locator('[data-images-all]').check()
+            expect(root.locator('[data-image-selection-count]')).to_contain_text('3 selected · 3 ready · 4 SLOP')
+            root.locator('[data-action=clear-image-selection]').click()
+            expect(root.locator('[data-action=approve-selected]')).to_be_disabled()
+            for photo_id in bulk_ids[:2]:root.locator('[data-select-image="'+photo_id+'"]').check()
+            expect(root.locator('[data-images-all]')).to_have_js_property('indeterminate',True)
+            expect(root.locator('[data-rules]')).to_have_value('Unsaved rules survive SLOP selection.')
+            expect(root.locator('[data-image-observation-limit]')).to_contain_text('at most 2 model calls')
+            dismiss[0]=True;root.locator('[data-action=approve-selected]').click()
+            expect(root.locator('[data-image-selection-count]')).to_contain_text('2 selected')
+            expect(root.locator('[data-action=refresh]')).to_be_enabled()
+            assert control()==[]
+            root.locator('[data-action=refresh]').click()
+            expect(root.locator('[data-select-image="'+bulk_ids[0]+'"]')).to_be_checked()
+            expect(root.locator('[data-action=refresh]')).to_be_enabled()
+            page.screenshot(path=str(folder/(name+'-step4-selection.png')),full_page=True)
+            confirmations=len(dialogs)
+            with page.expect_request(lambda r:r.url.endswith('/bulk') and r.method=='POST') as approved:
+                root.locator('[data-action=approve-selected]').click()
+            assert approved.value.post_data_json['action']=='set-approved'
+            assert set(approved.value.post_data_json['ids'])==set(bulk_ids[:2])
+            expect(overlay).to_be_visible();expect(overlay).to_have_count(0,timeout=30000)
+            expect(root.locator('[data-accepted-image]')).to_have_count(2)
+            expect(root.locator('[data-pipeline-notice]')).to_contain_text('2 SLOP approved')
+            assert len(dialogs)==confirmations+1 and len(control())==2
+            for photo_id in bulk_ids[:2]:
+                photo=call('/'+photo_id,library=True)[1];assert photo['status']=='approved' and photo['has_slop_observation']
+            for photo_id in bulk_ids[2:]:assert call('/'+photo_id,library=True)[1]['status']=='new'
+            # A copy removed in another session is rejected by the server without blocking the other selected photo.
+            fourth=root.locator('[data-accepted-image="'+bulk_ids[3]+'"]')
+            fourth.locator('[data-action=copy]').click()
+            expect(fourth.locator('[data-select-image]')).to_be_enabled(timeout=30000)
+            root.locator('[data-images-all]').check()
+            sql("UPDATE images SET copy_key=NULL,copy_sha256=NULL,copy_width=NULL,copy_height=NULL,copy_bytes=NULL,copy_crop=NULL,copy_metrics=NULL WHERE id='"+bulk_ids[2]+"'")
+            control([{'delay':1.2}]);root.locator('[data-action=approve-selected]').click()
+            expect(overlay).to_be_visible();expect(overlay).to_have_count(0,timeout=30000)
+            expect(root.locator('[data-pipeline-notice]')).to_contain_text('1 not approved')
+            expect(root.locator('[data-pipeline-notice]')).not_to_contain_text('No observation is pending')
+            expect(root.locator('[data-accepted-image]')).to_have_count(1)
+            expect(root.locator('[data-select-image="'+bulk_ids[2]+'"]')).to_be_disabled()
+            assert len(control())==1 and call('/'+bulk_ids[2],library=True)[1]['status']=='new'
+            assert call('/'+bulk_ids[3],library=True)[1]['status']=='approved'
+            assert not errors,errors
         finally:context.close()
     browser.close()
 print('Pipeline browser passed on desktop/mobile: blocking paid progress, resume without resubmission, cancellation and failure release, gallery-wide profiles, free scene edits, text-only generation, gated evaluation, concrete mask confirmation, final copy, approval and publication.')

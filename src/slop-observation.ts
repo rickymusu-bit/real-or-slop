@@ -32,7 +32,9 @@ export async function followSlopObservations(gallery: string, ids?: string[], ap
     try { await approve?.(); } catch (error) { submissionError = error; }
     finally { submitted(); }
     const state = initial || await observationState(gallery);
-    const photos = targets || state.images.filter(photo => !selected || selected.has(photo.id));
+    // A bulk approver can remove explicitly failed IDs; unknown outcomes keep their IDs for recovery.
+    const approved = ids ? new Set(ids) : null;
+    const photos = targets || state.images.filter(photo => !approved || approved.has(photo.id));
     const remaining = new Set(photos.map(photo => photo.id)), failures: string[] = [];
     let done = 0;
     while (remaining.size) {
