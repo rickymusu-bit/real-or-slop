@@ -1,6 +1,6 @@
 # Generazione SLOP — specifica 20.0.0
 
-Aggiornata: 2026-11-27T17:38:54Z. Stato: implementata nel ramo 1.71.0, da rilasciare.
+Aggiornata: 2026-11-27T17:56:18Z. Stato: implementata nel ramo 1.71.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -68,8 +68,8 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
 - **Correggi:** ogni proposta apre un'anteprima della maschera sull'immagine intera, con benefici e rischi e zona rettangolare
   modificabile. Solo la conferma finale autorizza una chiamata a `images/edits`. La valutazione precedente resta visibile;
   nessuna valutazione aggiuntiva viene avviata. Il prima/dopo viene conservato fino alla decisione.
-- **Accetta:** trasferisce l'immagine intera nella libreria come nuova. Elimina il riferimento alla REAL e i file temporanei
-  mediante coda durevole. Decisione dell’owner del 2026-11-27: subito dopo l’accettazione nel passo 3, il browser prepara
+- **Accetta:** trasferisce l’immagine intera nella libreria come nuova e conserva il solo riferimento privato `slop_source_id`
+  per contare le approvate. Chiude il lavoro e rimuove i suoi riferimenti temporanei e file mediante coda durevole. Decisione dell’owner del 2026-11-27: subito dopo l’accettazione nel passo 3, il browser prepara
   automaticamente la copia di gioco WebP 4:5 con trattamento, senza nuove chiamate ai modelli. L’originale intero centrato
   con bande nere è l’inquadratura iniziale. Un avviso blocca i comandi durante la preparazione. L’API di accettazione restituisce
   i metadati aggiornati, comprese le misure del riferimento del trattamento appena salvate. Non approva né pubblica.
