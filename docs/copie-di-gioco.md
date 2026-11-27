@@ -1,7 +1,8 @@
-# Copie di gioco — specifica 13.1.0
+# Copie di gioco — specifica 13.2.0
 
-Stato: implementata nel ramo 1.60.0, da rilasciare. Aggiornata: 2026-11-25T20:45:04Z.
-è il passo 7 del wizard «Genera SLOP» (specifica `generazione-slop`).
+Stato: implementata nel ramo 1.70.0, da rilasciare. Aggiornata: 2026-11-27T16:50:59Z.
+Nella pipeline SLOP la copia nasce all’accettazione nel passo 3; il passo 4 è la revisione finale prima dell’approvazione
+(specifica `generazione-slop`, decisione dell’owner del 2026-11-27).
 
 ## 1. Decisioni dell'owner
 
@@ -59,8 +60,14 @@ di testo non sceglie più il formato.
   (`POST /:id/copy?crop=…`, misure e trattamento nelle intestazioni `X-Copy-Metrics` e `X-Copy-Treatment`); il Worker toglie i
   metadati e rifiuta un file non WebP, con dimensioni diverse da quelle della ricetta (o del lato lungo del trattamento), oltre 4 MB,
   o un trattamento non valido (sezione 4). Le stesse inquadratura e trattamento non rifanno la copia, salvo `force=1`.
-- **Quando nasce:** al passo 1 del wizard REAL, subito dopo l'acquisizione; per una SLOP accettata, all'apertura della revisione
-  nello studio o del batch automatico (il Workflow del ciclo non la prepara più); con «Prepara la copia di gioco» nel dettaglio del
+  La preparazione automatica usa `if_missing=1`: una copia già salvata viene restituita senza modifiche; il confronto atomico
+  impedisce a due schede di sovrascriversi. Un upload concorrente perdente non cancella il file usato dalla copia vincente.
+- **Quando nasce:** al passo 1 del wizard REAL, subito dopo l'acquisizione; per una SLOP della pipeline, subito dopo
+  l’accettazione nel passo 3, con trattamento automatico e foto intera centrata nel 4:5. Al ritorno nella pagina si completano
+  anche le accettate senza copia, comprese quelle precedenti; lo stato/errore resta nel passo 3 finché la copia è pronta.
+  Il passo 4 consente solo revisione, modifica di trattamento/inquadratura e approvazione. La preparazione richiede il browser
+  aperto e non chiama modelli. Le copie esistenti e le scelte manuali non vengono rifatte. Per i vecchi flussi, all’apertura
+  della revisione nello studio o del batch automatico (il Workflow del ciclo non la prepara); con «Prepara la copia di gioco» nel dettaglio del
   Database per un'immagine senza copia. Le copie senza misure della versione corrente si misurano in background aprendo il Database.
 - **Un solo codificatore** per REAL e SLOP, quello del browser dell'owner: due codificatori diversi (Images sul server per alcune,
   il browser per altre) potrebbero distinguere l'origine dalla compressione. Usare sempre lo stesso browser (Chrome, Edge o Firefox:

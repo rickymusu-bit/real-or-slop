@@ -14,7 +14,7 @@ import "./pipeline.css";
 interface Source { generated_count: number; id: string; title: string; metrics?:Metrics|null;copy?:{sha256:string|null}|null; profile: Profile | null; described: boolean }
 interface Job { format:{requested_ratio:string;actual_width:number;actual_height:number}|null; id: string; source_id: string | null; state: string; proposal: Proposal | null; evaluation: Review | null;
   file: string | null; previous_key: string | null; error: string; snapshot: { variation?: {selected: string[]}; operation: string } }
-interface Image extends TreatableItem { has_slop_observation?: boolean; width: number; height: number; revision: number; status: string; file: string; original: string }
+interface Image extends TreatableItem { gallery_id: string; has_slop_observation?: boolean; width: number; height: number; revision: number; status: string; file: string; original: string }
 interface State { stats: {real_count:number;slop_count:number;slop_total:number;unobserved:string[];rows:{key:string;real:Record<string,number>;slop:Record<string,number>}[]}; settings: PipelineSettings; sources: Source[]; jobs: Job[]; paid_calls: boolean; images: Image[] }
 const LABELS: Record<string,string> = { queued: "Queued on server", dispatching:"Starting on server", working: "Processing on server", proposal: "Scene awaiting confirmation", candidate: "Image awaiting review",
   review: "Evaluation available", attention: "Needs attention", failed: "Failed to start", accepting: "Accepting image" };
@@ -24,6 +24,7 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
   const api = `/api/admin/pipeline/${encodeURIComponent(gallery)}`;
   let state: State | null = null, busy = false, notice = "", selected = new Set<string>(), initialized = false, mergeKey = "genre";
   let selectedImages = new Set<string>();
+  const copyFailures = new Map<string, string>();
   const openPanels = new Set<string>();
   type JobStatus = Pick<Job, "id" | "state" | "error">;
   const call = async <T>(path = "", data?: unknown, base = api): Promise<T> => {
@@ -31,6 +32,30 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
       headers: { "Content-Type": "application/json" }, body: data === undefined ? undefined : JSON.stringify(data) });
     const value = await response.json(); if (!response.ok) throw Error(value.error || "Request failed"); return value as T;
   };
+  /** Canvas work is free and resumes from accepted photos, never by accepting/generating again. */
+  const prepareCopies = async (images: Image[], accept?: () => Promise<Image>) => withPhotoProcessing(
+    "Accepting SLOP and preparing treated 4:5 game copies in this browser…", async progress => {
+      const targets = accept ? [await accept()] : images;
+      let done = 0;
+      const failures: string[] = [];
+      for (const image of targets) {
+        progress(`Preparing 4:5 game copies: ${done} of ${targets.length} ready. Reopening the wizard resumes missing copies.`);
+        try {
+          const current = await call<Image>(`/${image.id}`, undefined, "/api/admin/library");
+          if (current.gallery_id !== gallery) throw Error("Photo moved out of this gallery");
+          if (!current.copy) {
+            if (current.status !== "new") throw Error("Photo is no longer awaiting final review");
+            await prepareItemCopy<Image>(current, undefined, { ifMissing: true });
+          }
+          copyFailures.delete(image.id); done++;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          copyFailures.set(image.id, message); failures.push(`${image.id}: ${message}`);
+        }
+      }
+      return `${done} game ${done === 1 ? "copy ready" : "copies ready"} for final review.` +
+        (failures.length ? ` Not prepared: ${failures.join(" / ")}. Reopen the wizard to resume free copy preparation.` : "");
+    });
   const confirmation = (action: string, count: number) => count > 0 && window.confirm(`${action}? Maximum ${count} paid ${count === 1 ? "call" : "calls"}. Uncertain outcomes are not retried automatically.`);
   const stopQueued = async () => {
     if (!window.confirm("Cancel requests that have not been sent yet? Operations already in progress will finish without further automatic steps.")) return false;
@@ -154,11 +179,12 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
       ${j.format?`<p>Requested ratio: ${escape(j.format.requested_ratio)}. Received dimensions: ${j.format.actual_width} × ${j.format.actual_height}.</p>`:""}${j.file?`<div class="pipeline-views"><figure><img src="${escape(j.file)}" alt="Full candidate"><figcaption>Full candidate</figcaption></figure>${j.previous_key?`<figure><img src="${api}/${j.id}/file?previous=1" alt="Before correction"><figcaption>Before correction</figcaption></figure>`:""}</div>`:""}
       ${j.evaluation?`<section><h4>Original evaluation</h4><p>${escape(j.evaluation.assessment)}</p><ul>${j.evaluation.findings.map(x=>`<li>${escape(x)}</li>`).join("")}</ul><p>Uncertainties: ${escape(j.evaluation.uncertainties.join(" · ") || "none")}</p>${j.evaluation.corrections.map((c,i)=>`<details><summary>Suggestion: ${escape(c.defect)}</summary><p>Benefit: ${escape(c.benefit)}</p><p>Risk: ${escape(c.risk)}</p><textarea data-instruction="${j.id}-${i}" rows="4" aria-label="Correction instruction">${escape(c.instruction)}</textarea><p>The mask covers the area identified by the evaluator. The API may also change pixels outside it: check the entire image after editing.</p><button data-action="edit" data-job="${j.id}" data-correction="${i}" ${["candidate","review"].includes(j.state)?"":"disabled"}>Confirm this correction (1 call)</button></details>`).join("")}</section>`:""}
       <div class="pipeline-actions">${j.state==="proposal"?`<button data-action="generate" data-job="${j.id}">Confirm generation</button>`:""}${["candidate","review"].includes(j.state)?`<button data-action="evaluate" data-job="${j.id}">Request evaluation (1 call)</button>`:""}${j.file && ["candidate","review","attention"].includes(j.state)?`<button data-action="accept" data-job="${j.id}">Accept full image</button>`:""}${!["queued","dispatching","working","accepting"].includes(j.state)?`<button data-action="close" data-job="${j.id}">Discard and close</button>`:""}</div></article>`).join("")}
-      <section class="pipeline-selection" aria-labelledby="pipeline-approval-title"><h2 id="pipeline-approval-title">4. Treatment and game copies</h2><p>Adjust treatment if needed, check the frame and 4:5 copy, then approve. Approved SLOP leave this step and can be found and published in the <a href="${galleryPhotosPath(gallery)}">gallery</a>. A technical reference is sampled from measured REAL of the same genre; without a reference, the copy starts without treatment.</p>
+      ${state.images.filter(image=>!image.copy).map(image=>`<article class="pipeline-job pipeline-pending-copy" data-pending-copy="${image.id}"><h3>Accepted SLOP · game copy pending</h3><p>The original is saved. Its 4:5 game copy is prepared automatically in this browser before final review.</p>${copyFailures.has(image.id)?`<p role="alert">${escape(copyFailures.get(image.id))}. Reopen the wizard to resume preparation.</p>`:""}<img src="${escape(image.original)}" alt="Accepted original awaiting game copy"></article>`).join("")}
+      <section class="pipeline-selection" aria-labelledby="pipeline-approval-title"><h2 id="pipeline-approval-title">4. Final review and approval</h2><p>The 4:5 game copy is prepared automatically when you accept the full image in step 3. Check the original and finished copy, adjust treatment or framing if needed, then approve. Approved SLOP leave this step and can be found and published in the <a href="${galleryPhotosPath(gallery)}">gallery</a>.</p>
       <div class="pipeline-actions"><label><input type="checkbox" data-images-all> Select all ready SLOP</label><button data-action="clear-image-selection">Clear SLOP selection</button></div>
       <p role="status" data-image-selection-count></p><p data-image-observation-limit></p>
       <button data-action="approve-selected" disabled>Approve selected SLOP</button>
-      ${state.images.map(i=>`<article class="pipeline-job" data-accepted-image="${i.id}"><h3>SLOP · ${escape(i.status)}</h3><label class="pipeline-image-choice"><input type="checkbox" data-select-image="${i.id}" ${selectedImages.has(i.id) ? "checked" : ""} ${i.status === "new" && i.copy ? "" : "disabled"}> Select SLOP ${escape(i.id.slice(0,8))}</label>${!i.copy ? '<p>Prepare and check the 4:5 game copy before selecting this SLOP for approval.</p>' : ""}<div class="pipeline-views"><img src="${escape(i.original)}" alt="Accepted original"><img src="${escape(i.file)}" alt="Game copy to check"></div><div class="pipeline-actions"><button data-action="copy" data-image="${i.id}">Prepare 4:5 copy</button><button data-action="frame" data-image="${i.id}">Framing</button><button data-action="treatment" data-image="${i.id}" ${i.treatment || i.generation?.slot?.target_metrics ? "" : "disabled"}>Adjust treatment</button>${i.status==="new"?`<button data-action="approve" data-image="${i.id}" ${i.copy?"":"disabled"}>Approve after checking</button>`:""}</div></article>`).join("")}</section></section>`;
+      ${readyImages().map(i=>`<article class="pipeline-job" data-accepted-image="${i.id}"><h3>SLOP · ${escape(i.status)}</h3><label class="pipeline-image-choice"><input type="checkbox" data-select-image="${i.id}" ${selectedImages.has(i.id) ? "checked" : ""} ${i.status === "new" && i.copy ? "" : "disabled"}> Select SLOP ${escape(i.id.slice(0,8))}</label><p data-copy-treatment>${i.treatment ? i.treatment.off ? "Photographic treatment is off." : i.treatment.settings ? "Owner-adjusted photographic treatment applied." : "Automatic photographic treatment applied." : "No matching measured REAL was available: the game copy has no automatic treatment."}</p><div class="pipeline-views"><img src="${escape(i.original)}" alt="Accepted original"><img src="${escape(i.file)}" alt="Game copy to check"></div><div class="pipeline-actions"><button data-action="frame" data-image="${i.id}">Framing</button><button data-action="treatment" data-image="${i.id}" ${i.treatment || i.generation?.slot?.target_metrics ? "" : "disabled"}>Adjust treatment</button>${i.status==="new"?`<button data-action="approve" data-image="${i.id}" ${i.copy?"":"disabled"}>Approve after checking</button>`:""}</div></article>`).join("")}</section></section>`;
     syncSelection(); syncImageSelection();
     root.querySelectorAll<HTMLButtonElement>("button").forEach(b => { if(busy) b.disabled=true; });
   };
@@ -182,7 +208,7 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
     const count = selectedImages.size, all = root.querySelector<HTMLInputElement>("[data-images-all]");
     if (all) { all.checked = !!ready.length && count === ready.length; all.indeterminate = count > 0 && count < ready.length; all.disabled = busy || !ready.length; }
     const status = root.querySelector<HTMLElement>("[data-image-selection-count]");
-    if (status) status.textContent = `${count} selected · ${ready.length} ready · ${state!.images.length} SLOP in this step`;
+    if (status) status.textContent = `${count} selected · ${ready.length} ready · ${ready.length} SLOP in final review`;
     const limit = root.querySelector<HTMLElement>("[data-image-observation-limit]");
     const missing = ready.filter(image => selectedImages.has(image.id) && !image.has_slop_observation).length;
     if (limit) limit.textContent = `Approval includes automatic observation: at most ${missing} model ${missing === 1 ? "call" : "calls"}. Saved observations are reused.`;
@@ -205,7 +231,7 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
     if(button.dataset.action==="clear-selection"){selected.clear();syncSelection();return;}
     const action=button.dataset.action!,job=state.jobs.find(j=>j.id===button.dataset.job), image=state.images.find(i=>i.id===button.dataset.image);
     void act(async()=>{
-      if(action==="refresh")return;
+      if(action==="refresh"){copyFailures.clear();return;}
       if(action==="stop"){await stopQueued();return;}
       if(action==="approve-selected") {
         const ids = readyImages().filter(image => selectedImages.has(image.id)).map(image => image.id);
@@ -281,15 +307,19 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
             jobs.add(job.id); await call(`/${job.id}/edit`,payload({max_calls:1,instruction,mask}));
           }); return;
         }
-        if(action==="accept"||action==="close") {if(!window.confirm(action==="accept"?"Accept this full image? The evaluator’s findings still need to be considered.":"Discard this job and its files?"))return;await call(`/${job.id}/${action}`,payload());return;}
+        if(action==="accept"||action==="close") {
+          if(!window.confirm(action==="accept"?"Accept this full image and prepare its treated 4:5 game copy? The evaluator’s findings still need to be considered.":"Discard this job and its files?"))return;
+          if(action==="accept") notice = await prepareCopies([], () => call<Image>(`/${job.id}/accept`,payload()));
+          else await call(`/${job.id}/close`,payload());
+          return;
+        }
       }
       if(image){
-        if(action==="copy"){await prepareItemCopy(image);return;}
         if(action==="frame"){await editFrame(image);return;}
-        if(action==="treatment"){const result=await chooseTreatment(image);if(result)await prepareItemCopy(image,undefined,{settings:result.settings});return;}
+        if(action==="treatment"){const result=await chooseTreatment(image);if(result)await withPhotoProcessing("Applying photographic treatment to the game copy…",()=>prepareItemCopy(image,undefined,{settings:result.settings}));return;}
         if(action==="approve"||action==="publish") {if(!window.confirm(action==="publish"?"Publish the checked copy?":"Have you checked the original and final copy?"))return;const observed=action==="approve"?await followSlopObservations(gallery,[image.id],()=>call(`/${image.id}/approve`,{revision:image.revision},"/api/admin/library")):(await call(`/${image.id}/${action}`,{revision:image.revision},"/api/admin/library"),null);if(action==="approve")notice="SLOP approved. Find it in the gallery to publish it. "+(observed||"");return;}
       }
-    }).then(resumePaid);
+    }).then(resumeWork);
   });
   const resumePaid = async () => {
     if (busy || !state || !root.isConnected) return;
@@ -298,7 +328,15 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
       pending.forEach(job => jobs.add(job.id));
     }));
   };
-  await refresh(); await resumePaid();
-  const timer=window.setInterval(()=>{if(!root.isConnected){clearInterval(timer);return;}if(!busy && state?.jobs.some(j=>["queued","dispatching","working","accepting"].includes(j.state)) && !(root.contains(document.activeElement) && (document.activeElement instanceof HTMLTextAreaElement || document.activeElement instanceof HTMLSelectElement || document.activeElement instanceof HTMLInputElement && document.activeElement.type!=="checkbox")))void refresh().then(resumePaid).catch(e=>{notice=String(e);});},3000);
-  return {refresh: async () => { await refresh(); await resumePaid(); }};
+  const resumeWork = async () => {
+    await resumePaid();
+    if (busy || !state || !root.isConnected) return;
+    const pending = state.images.filter(image => !image.copy && !copyFailures.has(image.id));
+    if (!pending.length) return;
+    const previous = notice;
+    await act(async () => { const result = await prepareCopies(pending); notice = [previous, result].filter(Boolean).join(" "); });
+  };
+  await refresh(); await resumeWork();
+  const timer=window.setInterval(()=>{if(!root.isConnected){clearInterval(timer);return;}if(!busy && state?.jobs.some(j=>["queued","dispatching","working","accepting"].includes(j.state)) && !(root.contains(document.activeElement) && (document.activeElement instanceof HTMLTextAreaElement || document.activeElement instanceof HTMLSelectElement || document.activeElement instanceof HTMLInputElement && document.activeElement.type!=="checkbox")))void refresh().then(resumeWork).catch(e=>{notice=String(e);});},3000);
+  return {refresh: async () => { await refresh(); await resumeWork(); }};
 }

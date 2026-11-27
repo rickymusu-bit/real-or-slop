@@ -1,8 +1,13 @@
-# Libreria delle immagini — specifica 11.0.0
+# Libreria delle immagini — specifica 11.1.0
 
-Stato: implementata nel ramo 1.68.0, da rilasciare. Aggiornata: 2026-11-27T08:14:46Z.
+Stato: implementata nel ramo 1.70.0, da rilasciare. Aggiornata: 2026-11-27T16:50:59Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
+
+La preparazione automatica SLOP subito dopo l’accettazione usa `POST /api/admin/library/:id/copy?if_missing=1`
+(con crop e intestazioni tecniche standard): se una copia esiste già, viene restituita senza alterarla. Il salvataggio è
+condizionato atomicamente all’assenza della copia; upload concorrenti non cancellano il file referenziato dal vincitore.
+Il passo 4 del wizard è revisione finale delle copie già pronte, con trattamento e inquadratura modificabili.
 
 ## 1. Decisioni dell'owner
 

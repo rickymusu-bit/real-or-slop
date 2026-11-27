@@ -38,7 +38,7 @@ export async function chooseTreatment(item: TreatableItem, title = ""): Promise<
     const limit = key.startsWith("cast") ? limits.cast : limits[key as Scalar];
     return `<label class="treatment-slider" data-row="${key}"><span>${label}</span><input type="range" data-key="${key}" min="${limit.min}" max="${limit.max}" step="${limit.step}"><output data-out="${key}"></output></label>`;
   };
-  dialog.innerHTML = `<h2>Trattamento</h2><p class="hint">${title ? `«${safe(title)}». ` : ""}Sliders start at the treatment suggested by the saved photographic measurements (${MONOCHROME.find(([v]) => v === plan.monochrome)![1].toLowerCase()}). The preview is calculated on this page and is not saved until you choose “Save treatment”.</p>
+  dialog.innerHTML = `<h2>Photographic treatment</h2><p class="hint">${title ? `«${safe(title)}». ` : ""}Sliders start at the treatment suggested by the saved photographic measurements (${MONOCHROME.find(([v]) => v === plan.monochrome)![1].toLowerCase()}). The preview is calculated on this page and is not saved until you choose “Save treatment”.</p>
     <div class="treatment-views"><figure><canvas data-view="preview" aria-label="Treated copy preview"></canvas><figcaption data-caption="preview">Preview</figcaption></figure>
     <aside class="treatment-target"><h3>Photographic target</h3><p>${metricText(plan.sample.metrics)}</p><p>Measurements saved in the process, independent of the reference photo.</p></aside></div>
     <p class="hint" role="status" data-status></p>

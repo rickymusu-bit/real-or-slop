@@ -69,7 +69,8 @@ assert control()[-1]['body']['files']['mask']['size']==list(image.size)
 assert state['sources'][0]['generated_count']==1  # Edits do not count as new SLOP generations.
 assert job['previous_key'] and job['evaluation'] # original review retained, no automatic re-evaluation
 assert call(job['id']+'/file?previous=1')[0]==200
-assert call(job['id']+'/accept',paid_request())[0]==200
+accepted_response=call(job['id']+'/accept',paid_request());assert accepted_response[0]==200
+assert 'target_metrics' in accepted_response[1]['generation']['slot']
 state=call('')[1];assert not state['jobs'] and len(state['images'])==1
 assert state['images'][0]['status']=='new' and state['images'][0]['copy'] is None
 assert len(control())==5

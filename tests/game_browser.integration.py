@@ -93,20 +93,23 @@ try:
             expect(page.locator('.results .score')).to_be_visible(timeout=15000)
             expect(page.locator('.credit')).to_have_count(10)
             expect(page.locator('.credit .play-caption')).to_have_count(0)
-            expect(page.locator('.credit .credit-prompt').first).to_contain_text('A street scene')
             reals = page.locator('.credit:not(:has(.credit-prompt))').count()  # REAL or SLOP is a coin at each position
             # REAL: the credits only; SLOP: prompt and model (owner decisions of 2026-11-20).
             expect(page.locator('.credit .credit-description')).to_have_count(0)
             expect(page.locator('.credits')).not_to_contain_text('Testo Commons della foto')
             expect(page.locator('.credit .credit-model')).to_have_count(10 - reals)
-            expect(page.locator('.credit .credit-model').first).to_have_text('Modello gpt-image-2')
+            if reals < 10:
+                expect(page.locator('.credit .credit-prompt').first).to_contain_text('A street scene')
+                expect(page.locator('.credit .credit-model').first).to_have_text('Modello gpt-image-2')
             expect(page.locator('.credit:not(:has(.credit-prompt)) .credit-model')).to_have_count(0)
             links = page.locator('.credits').get_by_role('link', name='Foto originale')
             expect(links).to_have_count(reals)
-            expect(links.first).to_have_attribute('href', re.compile(r'^https://commons\.wikimedia\.org/wiki/File:gb-\d+\.jpg$'))
-            expect(page.locator('.credit-source').first).to_contain_text('Autore: Autrice ')
             expect(page.locator('.credits').get_by_role('link', name='CC BY 4.0')).to_have_count(reals)
-            expect(page.locator('.credit-changes').first).to_contain_text('Adattata al formato 4:5 e ricompressa')
+            # Every position is a coin toss: a legitimate game can contain only one origin.
+            if reals:
+                expect(links.first).to_have_attribute('href', re.compile(r'^https://commons\.wikimedia\.org/wiki/File:gb-\d+\.jpg$'))
+                expect(page.locator('.credit-source').first).to_contain_text('Autore: Autrice ')
+                expect(page.locator('.credit-changes').first).to_contain_text('Adattata al formato 4:5 e ricompressa')
             # The photos of the list are whole: the box has the copy's format.
             page.locator('.credit-image img').first.scroll_into_view_if_needed()
             page.wait_for_function("document.querySelector('.credit-image img').naturalWidth > 0")

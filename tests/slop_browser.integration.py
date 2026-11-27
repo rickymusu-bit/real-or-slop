@@ -122,7 +122,9 @@ with sync_playwright() as p:
             expect(root.get_by_alt_text('Before correction')).to_be_visible(timeout=30000)
             assert len(control())==9 and control()[-1]['path']=='/v1/images/edits'
             assert control()[-1]['body']['files']['image[]']['size']==control()[-1]['body']['files']['mask']['size']
-            root.locator('[data-job-card]').first.locator('[data-action=accept]').click()
+            with page.expect_request(lambda r:'/copy?' in r.url and 'if_missing=1' in r.url and r.method=='POST'):
+                root.locator('[data-job-card]').first.locator('[data-action=accept]').click()
+            expect(overlay).to_have_count(0,timeout=30000)
             accepted=root.locator('[data-accepted-image]');expect(accepted).to_have_count(1)
             accepted_id=accepted.get_attribute('data-accepted-image')
             expect(root.locator('[data-generated-count]')).to_have_text(['1 SLOP generated','1 SLOP generated'])
@@ -130,7 +132,29 @@ with sync_playwright() as p:
             expect(root.get_by_role('columnheader',name='Observed in SLOP',exact=True)).to_be_visible()
             expect(root.locator('[data-action=observe-all], [data-action=observe-image]')).to_have_count(0)
             assert len(control())==9  # Accepting and preparing the copy do not observe the original yet.
-            accepted.locator('[data-action=copy]').click();expect(accepted.locator('[data-action=approve]')).to_be_enabled(timeout=30000)
+            expect(accepted.locator('[data-action=copy]')).to_have_count(0)
+            expect(root.get_by_role('heading',name='4. Final review and approval')).to_be_visible()
+            prepared=call('/'+accepted_id,library=True)[1]
+            assert prepared['copy']['crop']['format']=='4:5' and abs(prepared['copy']['width']/prepared['copy']['height']-.8)<.02
+            assert prepared['treatment'] and not prepared['treatment']['off'] and prepared['treatment']['applied']
+            # Final review still edits treatment and framing; reopening must preserve the saved copy and choices.
+            accepted.locator('[data-action=treatment]').click()
+            treatment=page.get_by_role('dialog',name='Game copy treatment')
+            expect(treatment).to_be_visible()
+            treatment.locator('[data-key=monochrome]').select_option('black-and-white')
+            treatment.locator('[data-treatment=ok]').click();expect(treatment).to_have_count(0)
+            expect(root.locator('[data-action=refresh]')).to_be_enabled()
+            changed=call('/'+accepted_id,library=True)[1];assert changed['treatment']['settings']['monochrome']=='black-and-white'
+            accepted.locator('[data-action=frame]').click()
+            framing=page.get_by_role('dialog',name='Game copy framing');expect(framing).to_be_visible()
+            framing.locator('[data-crop=cancel]').click();expect(framing).to_have_count(0)
+            expect(root.locator('[data-action=refresh]')).to_be_enabled()
+            page.reload();expect(accepted).to_have_count(1)
+            expect(root.locator('[data-action=refresh]')).to_be_enabled()
+            preserved=call('/'+accepted_id,library=True)[1]
+            assert preserved['revision']==changed['revision'] and preserved['copy']['sha256']==changed['copy']['sha256']
+            assert preserved['treatment']==changed['treatment'] and len(control())==9
+            expect(accepted.locator('[data-action=approve]')).to_be_enabled()
             confirmations=len(dialogs)
             accepted.locator('[data-action=approve]').click()
             expect(overlay).to_be_visible();expect(overlay).to_contain_text('observing parameters')
@@ -223,12 +247,16 @@ with sync_playwright() as p:
             control([{'delay':2},{'delay':1.2}])
             page.goto(BASE+'/admin/gallerie/'+bulk_gallery+'/slop')
             expect(root.locator('[data-select-image]')).to_have_count(4)
+            expect(overlay).to_have_count(0,timeout=30000)
+            recovered=call('/'+bulk_ids[3],library=True)[1]
+            assert recovered['copy']['crop']['format']=='4:5' and recovered['status']=='new'
+            assert control()==[]  # Missing copies resume for free, never by repeating acceptance or generation.
             expect(root.locator('[data-action=approve-selected]')).to_be_disabled()
-            expect(root.locator('[data-select-image="'+bulk_ids[3]+'"]')).to_be_disabled()
+            expect(root.locator('[data-select-image="'+bulk_ids[3]+'"]')).to_be_enabled()
             root.get_by_text('Rules and probabilities',exact=True).click()
             root.locator('[data-rules]').fill('Unsaved rules survive SLOP selection.')
             root.locator('[data-images-all]').check()
-            expect(root.locator('[data-image-selection-count]')).to_contain_text('3 selected · 3 ready · 4 SLOP')
+            expect(root.locator('[data-image-selection-count]')).to_contain_text('4 selected · 4 ready · 4 SLOP')
             root.locator('[data-action=clear-image-selection]').click()
             expect(root.locator('[data-action=approve-selected]')).to_be_disabled()
             for photo_id in bulk_ids[:2]:root.locator('[data-select-image="'+photo_id+'"]').check()
@@ -256,9 +284,6 @@ with sync_playwright() as p:
                 photo=call('/'+photo_id,library=True)[1];assert photo['status']=='approved' and photo['has_slop_observation']
             for photo_id in bulk_ids[2:]:assert call('/'+photo_id,library=True)[1]['status']=='new'
             # A copy removed in another session is rejected by the server without blocking the other selected photo.
-            fourth=root.locator('[data-accepted-image="'+bulk_ids[3]+'"]')
-            fourth.locator('[data-action=copy]').click()
-            expect(fourth.locator('[data-select-image]')).to_be_enabled(timeout=30000)
             root.locator('[data-images-all]').check()
             sql("UPDATE images SET copy_key=NULL,copy_sha256=NULL,copy_width=NULL,copy_height=NULL,copy_bytes=NULL,copy_crop=NULL,copy_metrics=NULL WHERE id='"+bulk_ids[2]+"'")
             control([{'delay':1.2}]);root.locator('[data-action=approve-selected]').click()
@@ -266,10 +291,24 @@ with sync_playwright() as p:
             expect(root.locator('[data-pipeline-notice]')).to_contain_text('1 not approved')
             expect(root.locator('[data-pipeline-notice]')).not_to_contain_text('No observation is pending')
             expect(root.locator('[data-accepted-image]')).to_have_count(1)
-            expect(root.locator('[data-select-image="'+bulk_ids[2]+'"]')).to_be_disabled()
+            expect(root.locator('[data-select-image="'+bulk_ids[2]+'"]')).to_be_enabled(timeout=30000)
+            expect(root.locator('[data-action=refresh]')).to_be_enabled()
+            assert call('/'+bulk_ids[2],library=True)[1]['copy']
             assert len(control())==1 and call('/'+bulk_ids[2],library=True)[1]['status']=='new'
             assert call('/'+bulk_ids[3],library=True)[1]['status']=='approved'
             assert not errors,errors
+            resume_gallery=make_gallery('Resume copy '+name)['id'];orphan=real('resume-copy-'+name,gallery=resume_gallery)
+            sql("UPDATE images SET origin='SLOP',title=NULL,status='new',approved_at=NULL,pipeline_scene='{}',copy_key=NULL,copy_sha256=NULL,copy_width=NULL,copy_height=NULL,copy_bytes=NULL,copy_crop=NULL,copy_metrics=NULL WHERE id='"+orphan['id']+"'")
+            control([])
+            page.route('**/api/admin/library/*/copy?*',lambda route:route.abort('failed'))
+            page.goto(BASE+'/admin/gallerie/'+resume_gallery+'/slop')
+            expect(root.locator('[data-pending-copy]')).to_have_count(1)
+            expect(root.locator('[data-pipeline-notice]')).to_contain_text('Not prepared',timeout=30000)
+            expect(root.locator('[data-accepted-image]')).to_have_count(0)
+            page.unroute('**/api/admin/library/*/copy?*');page.reload()
+            expect(root.locator('[data-accepted-image]')).to_have_count(1,timeout=30000)
+            expect(root.locator('[data-pending-copy]')).to_have_count(0)
+            assert call('/'+orphan['id'],library=True)[1]['copy'] and control()==[]
         finally:context.close()
     browser.close()
 print('Pipeline browser passed on desktop/mobile: blocking paid progress, resume without resubmission, cancellation and failure release, gallery-wide profiles, free scene edits, text-only generation, gated evaluation, concrete mask confirmation, final copy, approval and publication.')

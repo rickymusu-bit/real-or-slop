@@ -168,13 +168,13 @@ export function proposalOf(base: ImageData, plan: TreatmentPlan, long: number): 
 
 /** Encodes `source` (or the stored original) along `crop` (whole photo by default) with the treatment of `plan` for a SLOP, and stores
  * it as the game copy of library image `imageId`; `force` stores it even with the same crop and treatment. Returns the item. */
-export async function prepareLibraryCopy<T>(imageId: string, source?: Blob, crop?: Crop, plan?: TreatmentPlan | null, force = false): Promise<T> {
+export async function prepareLibraryCopy<T>(imageId: string, source?: Blob, crop?: Crop, plan?: TreatmentPlan | null, force = false, ifMissing = false): Promise<T> {
   if (!/^[\w-]{1,64}$/.test(imageId)) throw Error("Invalid image");
   const file = source || await originalOf(imageId);
   const { copy, metrics, treatment, frame } = await encodeGameCopy(file, crop, plan);
   const headers: Record<string, string> = { "Content-Type": GAME_COPY.mime, "X-Copy-Metrics": JSON.stringify(metrics) };
   if (treatment) headers["X-Copy-Treatment"] = JSON.stringify(treatment);
-  const upload = await fetch(API + encodeURIComponent(imageId) + "/copy?" + new URLSearchParams({ crop: cropQuery(frame), ...(force ? { force: "1" } : {}) }),
+  const upload = await fetch(API + encodeURIComponent(imageId) + "/copy?" + new URLSearchParams({ crop: cropQuery(frame), ...(force ? { force: "1" } : {}), ...(ifMissing ? { if_missing: "1" } : {}) }),
     { method: "POST", credentials: "same-origin", headers, body: copy });
   const result = await upload.json().catch(() => ({})) as T & { error?: string };
   if (!upload.ok) throw Error(result.error || "Game copy was not saved");
@@ -182,8 +182,8 @@ export async function prepareLibraryCopy<T>(imageId: string, source?: Blob, crop
 }
 
 /** The copy of a library item with its treatment, using the chosen frame, the stored frame or the whole photo. */
-export async function prepareItemCopy<T>(item: TreatableItem, crop?: Crop, asked: { off?: boolean; settings?: Settings | null; force?: boolean } = {}): Promise<T> {
-  return prepareLibraryCopy<T>(item.id, undefined, crop || item.copy?.crop || undefined, await treatmentPlan(item, asked), asked.force);
+export async function prepareItemCopy<T>(item: TreatableItem, crop?: Crop, asked: { off?: boolean; settings?: Settings | null; force?: boolean; ifMissing?: boolean } = {}): Promise<T> {
+  return prepareLibraryCopy<T>(item.id, undefined, crop || item.copy?.crop || undefined, await treatmentPlan(item, asked), asked.force, asked.ifMissing);
 }
 
 /** Saves the owner's choice from the frame editor: a new copy when the crop changed; the same item when it did not. */
