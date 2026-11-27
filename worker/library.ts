@@ -23,6 +23,7 @@ import { currentCopyCorrect, currentCopyViews, gamesInPlay, retireCopy, reviveCo
 import { ideaRoute, ideasOf, ownIdea, proposeIdeas } from "./real-ideas";
 import { describeReal, undescribedReals } from "./real-description";
 import type { VisualDescription } from "../shared/real-description";
+import { validProfile } from "../shared/pipeline";
 
 const base = "/api/admin/library";
 const MAX_PIXELS = 32_000_000;
@@ -41,6 +42,7 @@ export interface Row {
   ideas_reason: string;
   visual_description: string | null;
   slop_generated_count?: number;
+  pipeline_slop_observation?: string | null;
 }
 const now = () => new Date().toISOString();
 const sha256 = async (bytes: ArrayBuffer | Uint8Array) =>
@@ -93,7 +95,7 @@ function view(row: Row, extra: Extra = {}, detail = false) {
       author: row.author, license_name: row.license_name, license_url: row.license_url,
       // Ideas of falsification and why the model proposed none (specification `generazione-slop`, section 2).
       ideas: extra.ideas ?? [], ideas_reason: row.ideas_reason }
-      : { prompt: row.prompt, model: row.model }),
+      : { prompt: row.prompt, model: row.model, has_slop_observation: validProfile(parseJson(row.pipeline_slop_observation ?? null)) }),
     width: row.width, height: row.height, original_mime: row.original_mime, original_sha256: row.original_sha256,
     copy: row.copy_key ? { sha256: row.copy_sha256, width: row.copy_width, height: row.copy_height, bytes: row.copy_bytes, crop: cropOf(row) } : null,
     no_derivatives: row.origin === "REAL" && isNoDerivatives(row.license_name, row.license_url),

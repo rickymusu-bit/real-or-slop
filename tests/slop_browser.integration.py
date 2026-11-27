@@ -170,6 +170,60 @@ with sync_playwright() as p:
             expect(root.locator('[data-pipeline-notice]')).to_contain_text('need attention')
             assert len(control())<=3,control()
             assert not errors,errors
+            # Three pre-update published SLOP, with no pipeline scene, are observable directly in the gallery.
+            historical=make_gallery('Published observation '+name)['id'];published=[]
+            for n in range(3):
+                photo=real('published-observe-'+name+'-'+str(n),gallery=historical)
+                sql("UPDATE images SET origin='SLOP',title=NULL,prompt='Requested scene must not guide observation',model='fake' WHERE id='"+photo['id']+"'")
+                assert call('/'+photo['id']+'/publish',{'revision':photo['revision']},library=True)[0]==200
+                published.append(photo['id'])
+            real('observation-real-'+name,gallery=historical)
+            control([{'delay':4},{'delay':1},{'delay':1}])
+            page.goto(BASE+'/admin?gallery='+historical)
+            gallery_observe=page.locator('#library-observe-gallery')
+            expect(gallery_observe).to_have_text('Observe SLOP (3)');expect(gallery_observe).to_be_enabled()
+            # Cancellation is free, including for published photos.
+            dismiss[0]=True;gallery_observe.click();assert control()==[]
+            expect(gallery_observe).to_be_enabled()
+            # Detail observation does not require Edit photo or change publication/revision.
+            first=published[0];before=call('/'+first,library=True)[1]
+            page.locator('[data-open="'+first+'"]').click()
+            detail=page.locator('#library-detail');expect(detail.locator('[data-slop-observation]')).to_contain_text('Not observed yet')
+            with page.expect_request(lambda r:r.url.endswith('/observe') and r.method=='POST') as observed:
+                detail.locator('#library-observe-photo').click()
+            assert observed.value.post_data_json['ids']==[first] and observed.value.post_data_json['max_calls']==1
+            expect(overlay).to_be_visible();page.screenshot(path=str(folder/(name+'-published-observation-progress.png')),full_page=True)
+            confirmations=len(dialogs);page.reload();expect(overlay).to_be_visible()
+            expect(overlay).to_have_count(0,timeout=30000);assert len(dialogs)==confirmations and len(control())==1
+            after=call('/'+first,library=True)[1]
+            assert after['has_slop_observation'] and after['status']=='published' and after['revision']==before['revision']
+            expect(gallery_observe).to_have_text('Observe SLOP (2)')
+            # Selected observations operate only on selected missing SLOP.
+            page.locator('[data-select="'+published[1]+'"]').check()
+            with page.expect_request(lambda r:r.url.endswith('/observe') and r.method=='POST') as observed:
+                page.locator('[data-bulk=observe]').click()
+            assert observed.value.post_data_json['ids']==[published[1]]
+            expect(overlay).to_have_count(0,timeout=30000);expect(gallery_observe).to_have_text('Observe SLOP (1)')
+            page.locator('[data-bulk=none]').click()
+            # Gallery action ignores filters/pagination, including a view displaying only REAL.
+            page.get_by_text('Filters and sorting',exact=True).click()
+            page.locator('#library-origin').select_option('REAL')
+            expect(page.locator('#library-grid .library-card')).to_have_count(1)
+            with page.expect_request(lambda r:r.url.endswith('/observe') and r.method=='POST') as observed:
+                gallery_observe.click()
+            assert observed.value.post_data_json['ids']==[published[2]]
+            expect(overlay).to_have_count(0,timeout=30000);expect(gallery_observe).to_be_hidden()
+            assert len(control())==3 and all(x['body']['text']['format']['name']=='pipeline_observation' for x in control())
+            for photo_id in published:
+                photo=call('/'+photo_id,library=True)[1];assert photo['status']=='published' and photo['has_slop_observation']
+            page.locator('#library-origin').select_option('SLOP')
+            expect(page.locator('#library-grid .library-card')).to_have_count(3)
+            page.locator('[data-open="'+first+'"]').click()
+            expect(detail.locator('[data-slop-observation]')).to_contain_text('Observed from the full original')
+            expect(detail.locator('#library-observe-photo')).to_have_count(0)
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1') and not errors,errors
+            detail.locator('[data-slop-observation]').scroll_into_view_if_needed()
+            page.screenshot(path=str(folder/(name+'-published-observation.png')),full_page=True)
         finally:context.close()
     browser.close()
 print('Pipeline browser passed on desktop/mobile: blocking paid progress, resume without resubmission, cancellation and failure release, gallery-wide profiles, free scene edits, text-only generation, gated evaluation, concrete mask confirmation, final copy, approval and publication.')

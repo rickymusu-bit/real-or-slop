@@ -1,6 +1,6 @@
 # Mappa del progetto
 
-Versione 40.9.0, aggiornata il 2026-11-26T22:57:37Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 40.10.0, aggiornata il 2026-11-27T07:05:36Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 
 Questa mappa dice dove si trova ogni cosa e a che punto è il progetto: quali file sono in uso, quali specifiche sono vigenti, come si
@@ -9,9 +9,15 @@ in `CHANGELOG.md`.
 
 ## Stato
 
-- **Ramo 1.66.0:** confronto e bilanciamento basati sulle osservazioni degli originali SLOP, con conferma di una chiamata per foto,
+- **Ramo 1.67.0:** osservazione SLOP accessibile nella galleria, nel dettaglio e sulla selezione, anche per le foto già pubblicate;
+  progresso persistente e ripresa gratuita senza nuovi invii. `src/slop-observation.ts`, API leggera di stato in `worker/pipeline.ts`.
+  Migrazione 0079: recupero anonimo e idempotente dei soli usi storici dimostrati da generazione e valutazione concluse prima
+  della 0078; edit contati una volta, nessuna genealogia. La verifica in sola lettura della produzione conferma tre usi recuperabili.
+  Schema e specifiche aggiornati. Nessuna chiamata reale o modifica remota eseguita in sviluppo.
+
+- **Integrata in main la 1.66.0 (PR #187):** confronto e bilanciamento basati sulle osservazioni degli originali SLOP, con conferma di una chiamata per foto,
   cache e copertura delle mancanti. Contatore anonimo di generazioni riuscite sulle miniature REAL, con riuso consentito e storico
-  precedente non ricostruibile. Le SLOP approvate escono dal passo 4 e restano in galleria. Migrazione additiva 0078;
+  precedente inizialmente escluso. Le SLOP approvate escono dal passo 4 e restano in galleria. Migrazione additiva 0078;
   `worker/pipeline.ts`, `src/pipeline.ts`, `worker/library.ts`, `src/library.ts`, statistiche e schema aggiornati. Nessuna chiamata reale.
 
 - **Integrata in main la 1.65.1 (PR #186):** selezione esplicita delle REAL nel passo 2, con miniature, disponibilità e conteggi immediati; nessuna
@@ -126,13 +132,13 @@ nome.
 
 | Area | Specifica | Versione |
 |---|---|---|
-| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, dati | `docs/libreria-immagini.md` | 10.14.0 |
+| Libreria, stati, chiamate a pagamento, modelli, contesto dei modelli, controllo delle fonti, dati | `docs/libreria-immagini.md` | 10.15.0 |
 | Contenuti delle SLOP, marchio, metadati, trasparenza | `docs/contenuti-e-trasparenza.md` | 1.4.2 |
 | Copie di gioco, formati, inquadratura, misure e trattamento delle SLOP | `docs/copie-di-gioco.md` | 13.1.0 |
 | Dashboard, anteprima a pressione prolungata, wizard REAL | `docs/dashboard-admin-wizard-real.md` | 6.9.0 |
-| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 18.0.0 |
+| Protocollo SLOP adottato, parametri, valutazione e correzioni; stato del wizard | `docs/generazione-slop.md` | 18.1.0 |
 | Vincoli fotografici specifici della galleria Nintendo | `docs/regole-galleria-console-nintendo.md` | 2.0.0 |
-| Foto e gallerie | `docs/database-immagini.md` | 10.12.0 |
+| Foto e gallerie | `docs/database-immagini.md` | 10.13.0 |
 | Partita a livelli e classifica | `docs/gioco-a-livelli.md` | 4.0.0 |
 | Statistiche e Impostazioni | `docs/statistiche-impostazioni.md` | 4.12.0 |
 | Privacy e note legali | `docs/privacy-note-legali.md` | 1.4.0 |
@@ -178,7 +184,8 @@ Nomi stabili, senza versione (`AGENTS.md`, regola 3); nel repository ci sono sol
   `stats.css`, grafico della distribuzione `database-chart.ts`, anteprima a pressione prolungata `image-preview.ts` e
   `image-preview.css`, editor di formato e ritaglio `crop-editor.ts` e
   `crop-editor.css`, avviso di elaborazione con azioni gratuite di coda `photo-processing.ts` e `admin-loading.css`, cursori del trattamento delle SLOP con anteprima
-  `treatment-editor.ts` e `treatment-editor.css`, copie di gioco preparate nel browser `game-copy.ts`, lettura delle descrizioni visive, invio alla coda del server e osservazione gratuita `real-description.ts`.
+  `treatment-editor.ts` e `treatment-editor.css`, copie di gioco preparate nel browser `game-copy.ts`, lettura delle descrizioni visive, invio alla coda del server e osservazione gratuita `real-description.ts`;
+  `slop-observation.ts` per osservazione confermata e ripresa gratuita delle SLOP dalla galleria.
 
 **Worker** Cloudflare (`worker/`, ingresso `index.ts`):
 - `core.ts` (accesso admin, errori), `storage.ts` (file del gioco senza metadati), `maintenance.ts` (manutenzione giornaliera),

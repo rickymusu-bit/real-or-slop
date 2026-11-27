@@ -234,6 +234,16 @@ export async function pipelineRoute(request: Request, env: Env): Promise<Respons
     for (const job of jobs) if (!latest.has(job.source_id)) latest.set(job.source_id, job);
     return json({ images: sources.map(source => ({ ...source, described: !!source.described, job: latest.get(source.id) || null })) });
   }
+  if (request.method === "GET" && target === "observations" && !action) {
+    await recoverPipeline(env);
+    const images = (await env.DB.prepare("SELECT id,pipeline_slop_observation FROM images WHERE gallery_id=? AND origin='SLOP' AND status<>'trash' ORDER BY created_at,id")
+      .bind(galleryId).all<{ id: string; pipeline_slop_observation: string | null }>()).results;
+    const jobs = (await env.DB.prepare(`SELECT id,source_id,state,error FROM pipeline_jobs WHERE gallery_id=? AND json_extract(snapshot,'$.operation')='observe' ORDER BY created_at DESC,rowid DESC`)
+      .bind(galleryId).all<{ id: string; source_id: string; state: string; error: string }>()).results;
+    const latest = new Map<string, typeof jobs[number]>();
+    for (const job of jobs) if (!latest.has(job.source_id)) latest.set(job.source_id, job);
+    return json({ images: images.map(photo => ({ id: photo.id, observed: !!profileOf(photo.pipeline_slop_observation), job: latest.get(photo.id) || null })) });
+  }
   if (request.method === "GET" && target === "status" && !action) {
     // Light polling for the progress dialog: job states only, without views, profiles or snapshots.
     await recoverPipeline(env);

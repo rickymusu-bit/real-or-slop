@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 10.12.0
+# Foto e gallerie — specifica 10.13.0
 
-Stato: implementata nel ramo 1.66.0, da rilasciare. Aggiornata: 2026-11-26T22:47:12Z.
+Stato: implementata nel ramo 1.67.0, da rilasciare. Aggiornata: 2026-11-27T07:05:36Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -29,7 +29,7 @@ La griglia 4:5 ha due colonne su mobile. «Carica altre foto» aggiunge le pagin
 - **Ordinamento:** data di aggiunta, visualizzazioni o accuratezza, decrescente o crescente, ricordato nel browser; per l'accuratezza le
   foto mai viste vanno in fondo.
 - **Schede:** miniatura (copia di gioco), origine e stato, casella di selezione. Le REAL mostrano anche il numero di SLOP
-  generate e salvate dalla 1.66.0, comprese candidate poi scartate; gli edit non contano e gli usi precedenti non sono noti. Tocco breve: dettaglio. Pressione prolungata: anteprima
+  generate e salvate dalla 1.66.0 più gli usi storici verificati dalla 0079, comprese candidate poi scartate; gli edit non contano. Tocco breve: dettaglio. Pressione prolungata: anteprima
   grande (specifica `dashboard-admin-wizard-real`, sezione 3).
 - **Descrizione visiva.** Una REAL senza descrizione ha un'icona sulla miniatura. «Descrivi le REAL» include tutte quelle fuori dal
   cestino ancora da descrivere nella galleria aperta, anche se un filtro o la paginazione le nascondono. Si legge la descrizione
@@ -122,5 +122,11 @@ coda durevole. Le gallerie con operazioni accodate/in corso non possono essere e
 
 Le SLOP approvate dal passo 4 del wizard escono da quel passo e restano qui, pronte per la pubblicazione esplicita.
 L'uscita dal wizard non cancella originali, copie o osservazioni. Le REAL già usate restano selezionabili; il contatore aiuta
-l'owner a distribuire l'uso. Le osservazioni SLOP e la loro copertura si gestiscono nel riquadro della composizione della galleria
-nel wizard (specifica `generazione-slop` 18.0.0).
+l'owner a distribuire l'uso. «Observe SLOP (N)» nella barra della galleria osserva tutte le mancanti fuori dal cestino,
+anche pubblicate e oltre la pagina corrente; la selezione e il dettaglio permettono sottoinsiemi e singole foto. Il dettaglio indica
+se i parametri sono osservati o esclusi dal confronto. Conferma del massimo, progresso bloccante, stop gratuito della coda e
+ripresa dei soli lavori già attivi al ritorno, senza ritirare foto pubblicate. Il comando resta visibile nel passo 2 del wizard
+sopra la composizione (specifica `generazione-slop` 18.1.0).
+
+Migrazione 0079: i contatori includono gli usi precedenti verificabili da generazione e successiva valutazione concluse prima
+della 0078. Edit contati una volta, baseline numerica anonima e nessuna genealogia REAL–SLOP. Gli usi senza prove restano esclusi.
