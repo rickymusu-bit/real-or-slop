@@ -35,7 +35,7 @@ interface Item extends TreatableItem {
   metrics: Metrics | null; treatment: Treatment | null; copy_sha?: string;
   /** REAL only: last nightly check of the Commons page and when the file was found missing (spec `libreria-immagini`, section 9). */
   source_checked_at?: string | null; source_missing_at?: string | null;
-  has_slop_observation?: boolean; generated_count?: number; has_visual_description?: boolean; visual_description?: VisualDescription | null;
+  has_slop_observation?: boolean; approved_count?: number; generated_count?: number; has_visual_description?: boolean; visual_description?: VisualDescription | null;
 }
 interface ModelOption { id: string; available: boolean | null; qualities?: string[]; shutdown?: string | null }
 interface Models { text_model: string; image_model: string; image_quality: string; text_models: ModelOption[]; image_models: ModelOption[]; note: string }
@@ -275,7 +275,7 @@ export async function showLibrary() {
       <img src="${escape(item.file)}" alt="" loading="lazy" draggable="false">${item.origin === "REAL" && !item.has_visual_description
         ? '<span class="library-description-icon" data-description-missing title="Missing visual description" aria-hidden="true">▤</span>' : ""}
       <span class="library-badges"><span class="badge badge-${item.origin.toLowerCase()}">${item.origin}</span>
-      <span class="badge badge-status">${STATE_LABEL[item.status]}</span>${item.origin === "REAL" ? `<span class="badge" data-generated-count title="Successful initial generations, including verified historical uses; edits count only once">${item.generated_count ?? 0} SLOP generated</span>` : ""}${item.source_missing_at
+      <span class="badge badge-status">${STATE_LABEL[item.status]}</span>${item.origin === "REAL" ? `<span class="badge" data-approved-count title="Currently approved or published SLOP attributed to this REAL; older SLOP without retained source attribution are excluded">${item.approved_count ?? 0} approved SLOP</span>` : ""}${item.source_missing_at
         ? '<span class="badge badge-warn" data-source-missing title="The file is no longer on Wikimedia Commons">Source removed</span>' : ""}</span>
     </button></li>`;
   const selectionBar = () => {

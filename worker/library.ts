@@ -83,7 +83,7 @@ function parseSlot(value: string | null): unknown {
   try { return value ? JSON.parse(value) : null; } catch { return null; }
 }
 const parseJson = (value: string | null): unknown => { try { return value ? JSON.parse(value) : null; } catch { return null; } };
-interface Extra { stats?: { views: number; correct: number }; in_play?: number;
+interface Extra { approved_count?: number; stats?: { views: number; correct: number }; in_play?: number;
   ideas?: Awaited<ReturnType<typeof ideasOf>> extends Map<string, infer T> ? T : never }
 function view(row: Row, extra: Extra = {}, detail = false) {
   const v = row.copy_sha256 ? row.copy_sha256.slice(0, 12) : row.original_sha256.slice(0, 12);
@@ -91,7 +91,7 @@ function view(row: Row, extra: Extra = {}, detail = false) {
     id: row.id, gallery_id: row.gallery_id, origin: row.origin, status: row.status, trashed_from: row.trashed_from,
     // REAL: source description (Commons, corrected by the owner); a SLOP has its prompt and model and no description (2026-11-20).
     ...(row.origin === "REAL" ? { title: row.title, description: row.description, source_url: row.source_url,
-      has_visual_description: !!row.visual_description, generated_count: row.slop_generated_count ?? 0,
+      has_visual_description: !!row.visual_description, approved_count: extra.approved_count ?? 0, generated_count: row.slop_generated_count ?? 0,
       ...(detail ? { visual_description: parseJson(row.visual_description) as VisualDescription | null } : {}),
       source_checked_at: row.source_checked_at, source_missing_at: row.source_missing_at,
       author: row.author, license_name: row.license_name, license_url: row.license_url,
@@ -110,11 +110,19 @@ function view(row: Row, extra: Extra = {}, detail = false) {
     stats: extra.stats || { views: 0, correct: 0 }, in_play: extra.in_play || 0,
   };
 }
+/** Counts follow current state, including moves/restores/deletion; no mutable lifetime approval counter. */
+export async function approvedCounts(env: Env, ids: string[]) {
+  if (!ids.length) return new Map<string, number>();
+  const rows = await env.DB.prepare(`SELECT slop_source_id AS id,COUNT(*) AS n FROM images
+    WHERE origin='SLOP' AND status IN ('approved','published') AND slop_source_id IN (SELECT value FROM json_each(?)) GROUP BY slop_source_id`)
+    .bind(JSON.stringify(ids)).all<{id:string;n:number}>();
+  return new Map(rows.results.map(row => [row.id, row.n]));
+}
 async function extras(env: Env, rows: readonly Pick<Row, "id" | "origin" | "gallery_id">[]): Promise<Map<string, Extra>> {
   const ids = rows.map(r => r.id), real = rows.filter(r => r.origin === "REAL");
-  const [stats, playing, ideas] = await Promise.all([statsOf(env, ids), gamesInPlay(env, ids), ideasOf(env, real.map(r => r.id))]);
+  const [stats, playing, ideas, approved] = await Promise.all([statsOf(env, ids), gamesInPlay(env, ids), ideasOf(env, real.map(r => r.id)), approvedCounts(env, real.map(r => r.id))]);
   return new Map(rows.map(r => [r.id, { stats: stats.get(r.id), in_play: playing.get(r.id),
-    ideas: ideas.get(r.id) }]));
+    ideas: ideas.get(r.id), approved_count: approved.get(r.id) }]));
 }
 export async function viewOf(env: Env, imageIdValue: string) {
   const row = await find(env, imageIdValue);

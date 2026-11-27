@@ -127,7 +127,7 @@ with sync_playwright() as p:
             expect(overlay).to_have_count(0,timeout=30000)
             accepted=root.locator('[data-accepted-image]');expect(accepted).to_have_count(1)
             accepted_id=accepted.get_attribute('data-accepted-image')
-            expect(root.locator('[data-generated-count]')).to_have_text(['1 SLOP generated','1 SLOP generated'])
+            expect(root.locator('[data-approved-count]')).to_have_text(['0 approved SLOP','0 approved SLOP'])
             root.get_by_text('Gallery composition',exact=True).click()
             expect(root.get_by_role('columnheader',name='Observed in SLOP',exact=True)).to_be_visible()
             expect(root.locator('[data-action=observe-all], [data-action=observe-image]')).to_have_count(0)
@@ -165,9 +165,10 @@ with sync_playwright() as p:
             assert set(sent)=={'width','height','known_categories'},sent
             expect(root.locator('[data-pipeline-notice]')).to_contain_text('Find it in the gallery')
             status=call('/'+accepted_id,library=True)[1];assert status['status']=='approved'
+            expect(root.locator('[data-approved-count]')).to_have_text(['1 approved SLOP','0 approved SLOP'])
             page.goto(BASE+'/admin?gallery='+gallery)
             expect(page.locator('.library-card[data-id="'+accepted_id+'"]')).to_be_visible()
-            expect(page.locator('.library-card[data-id="'+first_id+'"] [data-generated-count]')).to_have_text('1 SLOP generated')
+            expect(page.locator('.library-card[data-id="'+first_id+'"] [data-approved-count]')).to_have_text('1 approved SLOP')
             assert call('/'+accepted_id+'/publish',{'revision':status['revision']},library=True)[0]==200
             assert call('/'+accepted_id,library=True)[1]['status']=='published'
             page.goto(BASE+'/admin/gallerie/'+gallery+'/slop');expect(root.get_by_role('heading',name='1. Prepare the gallery')).to_be_visible();expect(root.locator('[data-accepted-image]')).to_have_count(0)
@@ -280,6 +281,7 @@ with sync_playwright() as p:
             expect(root.locator('[data-accepted-image]')).to_have_count(2)
             expect(root.locator('[data-pipeline-notice]')).to_contain_text('2 SLOP approved')
             assert len(dialogs)==confirmations+1 and len(control())==2
+            expect(root.locator('[data-unattributed-approved]')).to_contain_text('2 approved or published SLOP')
             for photo_id in bulk_ids[:2]:
                 photo=call('/'+photo_id,library=True)[1];assert photo['status']=='approved' and photo['has_slop_observation']
             for photo_id in bulk_ids[2:]:assert call('/'+photo_id,library=True)[1]['status']=='new'

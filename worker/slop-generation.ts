@@ -95,6 +95,9 @@ async function materialize(env: Env, p: Process, batch: Batch, bytes: Uint8Array
     gallery_id: batch.gallery_id,
     generation: {batch: batch.id, quality: config.quality,
       slot: {index: p.slot, target_metrics: config.target_metrics || null, process: p.id, ...(p.premise ? {} : {brief: parse(p.brief, null), brief_hash: p.brief_hash}), evaluation, ...(acceptance ? {acceptance} : {}), attempts: p.attempts}} });
+  await env.DB.prepare(`UPDATE images SET slop_source_id=(SELECT s.source_id FROM slop_gallery_sources s
+    JOIN images r ON r.id=s.source_id AND r.origin='REAL' WHERE s.process_id=?) WHERE id=? AND slop_source_id IS NULL`)
+    .bind(p.id, image.id).run();
   await env.DB.prepare("UPDATE slop_processes SET image_id=?,state='accepted',updated_at=? WHERE id=?").bind(image.id, now(), p.id).run();
   return {...image, process: {id: p.id, state: "accepted", attempts: p.attempts}};
 }

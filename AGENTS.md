@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 39.2.0, aggiornata il 2026-11-27T16:50:59Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 40.0.0, aggiornata il 2026-11-27T17:38:54Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -20,7 +20,8 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   e stesso formato per REAL e SLOP), nell'interfaccia (marchio «RS» su tutte, nessun testo durante la partita) o nei dati inviati
   al browser prima della risposta. Su richiesta confermata, un modello descrive la REAL intera per assi durante il caricamento o dalla
   galleria (decisione del 2026-11-23, specifica `libreria-immagini`, sezione 11). La descrizione visiva è privata. Il protocollo adottato il 2026-11-25 (`generazione-slop` 17.0.0, implementata nel ramo 1.60.0) prepara una scena inglese dalle descrizioni, variando zero o più parametri con probabilità da calibrare sulle REAL.
-  Ambiente e configurazione della luce restano vincolati di default; i cambi di ambiente/genere coordinano gli assi dipendenti; gli assi descrivono la scena, i parametri controllano le variazioni.
+  Dal 2026-11-27 ambiente e genere sono scelti automaticamente per ridurre gli squilibri osservati REAL–SLOP, con
+  contesto fotografico congiunto e motivazione visibile; senza miglioramento o dati sufficienti si mantengono. I cambi coordinano gli assi dipendenti; gli assi descrivono la scena, i parametri controllano le variazioni.
   Usura, danno, invecchiamento e pulizia sono separati; il contenuto dello schermo è distinto da acceso/spento. La prima
   generazione riceve solo testo. Il rapporto d'aspetto della foto intera è un parametro, da coordinare con soggetto e genere
   fotografico e applicare alle dimensioni API; se non estratto si conserva. Le copie di gioco restano 4:5.
@@ -39,10 +40,13 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   collettiva delle REAL, regole e probabilità per galleria, scene inglesi modificabili, generazione testuale e valutazione
   confermate, correzioni scelte dall'owner, accettazione, trattamento e copie di gioco. Le vecchie lavorazioni hanno un riquadro
   di recupero; il nuovo flusso non usa il vecchio ciclo automatico. Ogni foto appartiene a una galleria; le REAL restano giocabili.
-  Nessun registro permanente REAL–SLOP. Dal 2026-11-26 ogni REAL conserva soltanto un contatore anonimo delle generazioni
-  iniziali riuscite, comprese le candidate poi scartate; resta riutilizzabile. Dal 2026-11-27 si recuperano anche gli usi
-  storici dimostrabili dai registri, una volta per lavorazione con immagine e valutazione concluse prima della 0078;
-  baseline anonima separata per non duplicare il conteggio. Nessun recupero storico inventato o legame con SLOP accettate. I profili e le particolarità sono privati e non sono tag di navigazione.
+  Decisione dell’owner del 2026-11-27: le miniature contano solo SLOP attualmente approvate o pubblicate, non tutte le generazioni.
+  Per renderlo affidabile si conserva il solo riferimento privato nullable `images.slop_source_id` alla REAL di partenza;
+  questa richiesta sostituisce il precedente divieto di conservare tale relazione. Non entra nel gioco, non impedisce il riuso,
+  non si eredita come riferimento del trattamento e diventa null se la REAL viene eliminata. Stato, cestino, ripristino e
+  cancellazione aggiornano il conteggio derivato; mai incrementi duplicati all’approvazione. I vecchi contatori delle generazioni
+  restano dati compatibili, esclusi dall’interfaccia. Legami storici cancellati non si inventano: si indica la copertura mancante.
+  I profili e le particolarità sono privati e non sono tag di navigazione.
 - **Approvazione nel wizard** (2026-11-26). Le SLOP approvate escono dal passo 4 e restano nella galleria, dove si pubblicano.
   Dal 2026-11-27 approvazione e accodamento dell’osservazione sono atomici sul server; la claim sopravvive alla chiusura del lavoro.
   Dal 2026-11-27 il passo 4 consente selezione individuale, seleziona tutte le copie pronte e approvazione in gruppo;

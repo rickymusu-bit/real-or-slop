@@ -119,3 +119,34 @@ test("a group's provisional choices correct later draws and never mutate sources
   assert.equal(accepted.length, 0); assert.equal(JSON.stringify([a, b]), before);
   assert.equal(balancing[0].parameters.model.category, a.parameters.model.category);
 });
+
+const auto: PipelineSettings = { ...settings, environment: "auto" };
+test("automatic genre selection corrects observed surplus and projects the chosen genre into the group", () => {
+  const a = profile("none"), b = profile("heavy"); b.genre = "studio";
+  const draw = variation(a, [a, b], auto, () => .2, Array(8).fill(a));
+  assert.equal(draw.environment, "change_genre"); assert.equal(draw.genre, "studio");
+  assert.equal(projectedProfile(a, draw).genre, "studio");
+  assert.equal(draw.targets.damage, undefined); // A context transition never changes hardware or condition implicitly.
+  assert.match(draw.balance!, /distribution gap/);
+});
+test("automatic context changes use a joint observed donor in the same genre", () => {
+  const a = profile("none"), b = profile("none");
+  for (const key of ["pose", "viewpoint", "composition", "aspect_ratio"] as const) b.parameters[key] = { value: "different " + key, category: "different", certainty: "observed" };
+  const draw = variation(a, [a, b], auto, () => .1, Array(8).fill(a));
+  assert.equal(draw.environment, "same_genre"); assert.equal(draw.genre, a.genre);
+  for (const key of ["pose", "viewpoint", "composition", "aspect_ratio"] as const) assert.deepEqual(draw.targets[key], b.parameters[key]);
+  assert.equal(draw.targets.model, undefined);
+});
+test("balanced or missing observations do not force environment/genre changes; unknown context is not evidence", () => {
+  const a = profile("none"), b = profile("none"); b.genre = "studio";
+  for (const observed of [[], [a, b]]) assert.equal(variation(a, [a, b], auto, () => .2, observed).environment, "keep");
+  const unknown = profile("none"); unknown.parameters.composition.certainty = "unknown";
+  assert.equal(variation(a, [a, unknown], auto, () => .2, Array(8).fill(a)).environment, "keep");
+});
+test("automatic group transitions use previous provisional genres rather than repeatedly filling the same deficit", () => {
+  const a = profile("none"), b = profile("none"); b.genre = "studio";
+  const balancing = [a, a, a, a], genres: string[] = [];
+  for (let n = 0; n < 12; n++) { const draw = variation(a, [a, b], auto, () => .5, balancing); balancing.push(projectedProfile(a, draw)); genres.push(draw.genre!); }
+  assert.equal(balancing.filter(p => p.genre === "studio").length, 8);
+  assert.ok(genres.includes("snapshot") && genres.includes("studio"));
+});

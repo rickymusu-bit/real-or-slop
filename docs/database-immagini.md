@@ -1,6 +1,6 @@
-# Foto e gallerie — specifica 11.2.0
+# Foto e gallerie — specifica 11.3.0
 
-Stato: implementata nel ramo 1.70.0, da rilasciare. Aggiornata: 2026-11-27T16:50:59Z.
+Stato: implementata nel ramo 1.71.0, da rilasciare. Aggiornata: 2026-11-27T17:38:54Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -133,5 +133,8 @@ registrata sul server. Approvazione singola, in gruppo e pubblicazione in gruppo
 Cache e claim durevole impediscono chiamate duplicate e retry incerti (migrazione 0080, specifica `generazione-slop` 19.0.0).
 Gli adeguamenti necessari al pregresso sono eseguiti dall’agente tramite API, senza comandi temporanei nell’admin.
 
-Migrazione 0079: i contatori includono gli usi precedenti verificabili da generazione e successiva valutazione concluse prima
-della 0078. Edit contati una volta, baseline numerica anonima e nessuna genealogia REAL–SLOP. Gli usi senza prove restano esclusi.
+Le miniature REAL mostrano `approved_count`: sole SLOP attualmente approvate o pubblicate attribuite alla sorgente.
+Nuove, scartate e cestinate sono escluse; ripristino e cancellazione aggiornano il conteggio. La migrazione 0081 conserva
+il solo riferimento privato `slop_source_id` alle nuove accettazioni, nullo eliminando la REAL senza eliminare la SLOP.
+Le approvate senza attribuzione sono indicate separatamente nel wizard; nessun recupero storico per supposizione.
+I contatori anonimi delle generazioni 0078/0079 restano compatibili nelle API ma non sono mostrati nelle miniature.

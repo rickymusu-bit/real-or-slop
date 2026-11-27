@@ -13,8 +13,8 @@ export interface Peculiarity { description: string; region: string; parameter: P
   policy: "preserve" | "vary" | "draw"; certainty: "observed" | "inferred" | "unknown" }
 export interface Profile { genre: string; parameters: Record<Parameter, Attribute>; peculiarities: Peculiarity[] }
 export interface PipelineSettings { rules: string; probabilities: Partial<Record<Parameter, number>>;
-  environment: "keep" | "same_genre" | "change_genre"; novelty: number }
-export interface Variation { selected: Parameter[]; targets: Partial<Record<Parameter, Attribute>>; environment: PipelineSettings["environment"]; novelty: boolean }
+  environment: "auto" | "keep" | "same_genre" | "change_genre"; novelty: number }
+export interface Variation { selected: Parameter[]; targets: Partial<Record<Parameter, Attribute>>; environment: Exclude<PipelineSettings["environment"], "auto">; novelty: boolean; genre?: string; balance?: string }
 export const objectSchema = (properties: Record<string, unknown>) => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
 const string = { type: "string" };
 const certainty = { type: "string", enum: ["observed", "inferred", "unknown"] };
@@ -77,28 +77,62 @@ const knownAttribute = (attribute: Attribute) => attribute.certainty !== "unknow
   && !["unknown", "unspecified"].includes(attribute.category);
 /** Anonymous provisional intent, used only while drawing a confirmed group of scenes. */
 export function projectedProfile(source: Profile, draw: Variation): Profile {
-  return normalizeProfile({ ...source, parameters: { ...source.parameters, ...draw.targets } });
+  return normalizeProfile({ ...source, genre: draw.genre ?? source.genre, parameters: { ...source.parameters, ...draw.targets } });
+}
+const CONTEXT_KEYS: readonly Parameter[] = ["pose", "viewpoint", "composition", "aspect_ratio"];
+/** Prefer a destination only when it reduces the next-photo distribution gap compared with keeping the source.
+ * Equal improvements preserve empirical REAL frequencies. No observed SLOP means no evidence for a forced transition. */
+function destination(source: Profile, population: Profile[], generated: Profile[], signature: (p: Profile) => string | null, random: () => number): Profile | undefined {
+  const real = population.filter(p => signature(p) !== null), slop = generated.filter(p => signature(p) !== null);
+  const initial = signature(source);
+  if (!real.length || !slop.length || initial === null) return;
+  const counts = (items: Profile[]) => { const out = new Map<string, number>(); for (const p of items) { const key = signature(p)!; out.set(key, (out.get(key) ?? 0) + 1); } return out; };
+  const r = counts(real), s = counts(slop);
+  // Adding a photo changes only its category term; the other absolute-distance terms cancel between destinations.
+  const delta = (key: string) => { const count = (s.get(key) ?? 0) / (slop.length + 1), target = (r.get(key) ?? 0) / real.length;
+    return Math.abs(count + 1 / (slop.length + 1) - target) - Math.abs(count - target); };
+  const baseline = delta(initial), scores = new Map([...r.keys()].map(key => [key, delta(key)])), best = Math.min(...scores.values());
+  if (best >= baseline - 1e-9) return;
+  const choices = real.filter(p => scores.get(signature(p)!)! <= best + 1e-9);
+  return choices[Math.min(choices.length - 1, Math.floor(random() * choices.length))];
+}
+/** Genre first, then the jointly observed photographic context within that genre. Hardware identity stays independent. */
+function automaticContext(source: Profile, population: Profile[], generated: Profile[], random: () => number) {
+  const genreKey = (p: Profile) => ["unknown", "unspecified"].includes(p.genre) ? null : p.genre;
+  const genre = destination(source, population, generated, genreKey, random);
+  const targetGenre = genre?.genre ?? source.genre;
+  const real = population.filter(p => p.genre === targetGenre), slop = generated.filter(p => p.genre === targetGenre);
+  const signature = (p: Profile) => CONTEXT_KEYS.every(k => knownAttribute(p.parameters[k])) ? JSON.stringify(CONTEXT_KEYS.map(k => p.parameters[k].category)) : null;
+  // On a genre transition the selected REAL supplies a coherent context; otherwise only a measured context deficit changes it.
+  const context = genre ? (signature(genre) ? genre : undefined) : destination(source, real, slop, signature, random);
+  return { genre: targetGenre, context, environment: genre ? "change_genre" as const : context ? "same_genre" as const : "keep" as const,
+    balance: genre ? "Change genre to reduce its observed REAL–SLOP distribution gap." : context ? "Change environment and photographic context within the genre to reduce the observed context gap." : "Keep environment and genre: no supported transition improves the observed distribution gap." };
 }
 /** Empirical sampling preserves observed combinations, without forcing additional controls to change. */
 export function variation(source: Profile, population: Profile[], settings: PipelineSettings, random: () => number = Math.random, generated: Profile[] = []): Variation {
   source = normalizeProfile(source); population = population.map(normalizeProfile); generated = generated.map(normalizeProfile);
+  const automatic = settings.environment === "auto" ? automaticContext(source, population, generated, random) : undefined;
+  const environment = automatic?.environment ?? (settings.environment === "auto" ? "keep" : settings.environment);
+  const targetGenre = automatic?.genre ?? source.genre;
   const selected: Parameter[] = [], targets: Variation["targets"] = {};
+  if (automatic?.context) for (const key of CONTEXT_KEYS) { selected.push(key); targets[key] = automatic.context.parameters[key]; }
   // Selection probabilities remain per parameter; compatible target values are drawn together afterwards.
   const requested = new Set(PARAMETER_KEYS.filter(key => {
+    if (automatic?.context && CONTEXT_KEYS.includes(key)) return false;
     let donors = population.filter(p => knownAttribute(p.parameters[key]));
     if (["edition_decoration", "material_finish", "operating_state", "screen_content"].includes(key)) {
       const matching = donors.filter(p => p.parameters.model.category === source.parameters.model.category);
       if (matching.length) donors = matching;
     }
-    if (["viewpoint", "composition", "aspect_ratio"].includes(key) && settings.environment !== "change_genre") {
-      const matching = donors.filter(p => p.genre === source.genre);
+    if (["viewpoint", "composition", "aspect_ratio"].includes(key) && environment !== "change_genre") {
+      const matching = donors.filter(p => p.genre === targetGenre);
       if (matching.length) donors = matching;
     }
     if (!donors.length) return false;
     const counts = new Map<string, number>();
     for (const p of donors) counts.set(p.parameters[key].category, (counts.get(p.parameters[key].category) || 0) + 1);
-    const automatic = Math.min(.4, Math.max(.05, 1 - Math.max(...counts.values()) / donors.length));
-    return random() < (settings.probabilities[key] ?? automatic);
+    const automaticProbability = Math.min(.4, Math.max(.05, 1 - Math.max(...counts.values()) / donors.length));
+    return random() < (settings.probabilities[key] ?? automaticProbability);
   }));
   for (const group of DRAW_GROUPS) {
     const keys = group.filter(key => requested.has(key));
@@ -110,7 +144,7 @@ export function variation(source: Profile, population: Profile[], settings: Pipe
       // A screen belongs to a known fixed model, or to the model drawn from this same donor.
       && (!keys.some(key => key === "operating_state" || key === "screen_content") || requested.has("model")
         || knownAttribute(model) && knownAttribute(p.parameters.model) && p.parameters.model.category === model.category)
-      && (group[0] !== "pose" || settings.environment === "change_genre" || p.genre === source.genre)
+      && (group[0] !== "pose" || (environment === "change_genre" && !automatic) || p.genre === targetGenre)
       // Varying content alone must not reveal a concealed screen or turn on an inactive one.
       && (!keys.includes("screen_content") || requested.has("operating_state") || source.parameters.screen_content.category !== "not_applicable"
         || p.parameters.screen_content.category === "not_applicable");
@@ -132,7 +166,7 @@ export function variation(source: Profile, population: Profile[], settings: Pipe
     while (index < weights.length - 1 && at >= weights[index]) at -= weights[index++];
     for (const key of keys) { selected.push(key); targets[key] = donors[index].parameters[key]; }
   }
-  return { selected: PARAMETER_KEYS.filter(key => selected.includes(key)), targets, environment: settings.environment, novelty: random() < settings.novelty };
+  return { selected: PARAMETER_KEYS.filter(key => selected.includes(key)), targets, environment, novelty: random() < settings.novelty, ...(automatic ? { genre: targetGenre, balance: automatic.balance } : {}) };
 }
 /** The API dimensions follow the target ratio; record approximation, never silently force landscape. */
 export function imageSize(ratio: string): string {

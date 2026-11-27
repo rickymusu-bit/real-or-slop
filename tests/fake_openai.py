@@ -88,7 +88,8 @@ class Handler(BaseHTTPRequestHandler):
         if schema_name == 'pipeline_proposal' and (behaviour is None or 'delay' in behaviour):
             inp=json.loads(data['input'][0]['content'][0]['text'])
             sections=inp['description']['sections']
-            behaviour={'json':{'profile':inp['profile'],'scene':{k:sections[k] for k in ['subject_type','subject_appearance','people','environment','viewpoint','light','technique','rendering']},'changes':'Ordinary coherent changes.','dependencies':'No hidden dependency.','genre':inp['profile']['genre'],'aspect_ratio':inp['profile']['parameters']['aspect_ratio']['value']}}
+            target=json.loads(json.dumps(inp['profile']));target['parameters'].update(inp['variation']['targets']);target['genre']=inp['variation'].get('genre',target['genre'])
+            behaviour={'json':{'profile':target,'scene':{k:sections[k] for k in ['subject_type','subject_appearance','people','environment','viewpoint','light','technique','rendering']},'changes':'Ordinary coherent changes.','dependencies':'No hidden dependency.','genre':target['genre'],'aspect_ratio':target['parameters']['aspect_ratio']['value']}}
         if schema_name == 'pipeline_review' and (behaviour is None or 'delay' in behaviour):
             behaviour={'json':{'findings':[],'uncertainties':['Mock cannot inspect hardware.'],'assessment':'Owner review required.','corrections':[{'defect':'Small local detail.','region':{'x':.2,'y':.2,'width':.2,'height':.2},'instruction':'Repair only the masked area using the whole image for context.','benefit':'More plausible detail.','risk':'May alter nearby pixels.'}]}}
         if schema_name == 'real_ideas' and (behaviour is None or 'delay' in behaviour):
