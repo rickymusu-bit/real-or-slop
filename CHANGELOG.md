@@ -1,6 +1,6 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-27T17:38:54Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-27T19:39:55Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
 
 ## 1.71.0 — 2026-11-27T17:38:54Z
@@ -10,7 +10,8 @@ I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella c
 - Ambiente e genere automatici per ridurre i divari osservati REAL–SLOP, con contesto fotografico congiunto, dati ignoti esclusi,
   motivazione visibile e conteggi provvisori durante la preparazione del gruppo. Tolto il selettore manuale.
 - Schema e specifiche aggiornati. Verificato il pregresso tramite API: 10 approvate/pubblicate senza collegamenti recuperabili;
-  nessuna attribuzione inventata, scrittura remota o chiamata reale ai modelli.
+  il confronto successivo di originali e scene ha ricostruito tutte le dieci associazioni. Salvate via API nei metadati privati,
+  con motivazione e hash; la 0082 le trasferisce nei conteggi al merge. File e stati conservati; nessuna chiamata reale ai modelli.
 
 ## 1.70.0 — 2026-11-27T16:50:59Z
 

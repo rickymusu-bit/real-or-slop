@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 11.2.0
+# Libreria delle immagini — specifica 11.2.1
 
-Stato: implementata nel ramo 1.71.0, da rilasciare. Aggiornata: 2026-11-27T17:38:54Z.
+Stato: implementata nel ramo 1.71.0, da rilasciare. Aggiornata: 2026-11-27T19:39:55Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -274,7 +274,9 @@ con la foto. Le osservazioni mancanti si indicano e non contribuiscono al confro
 Le miniature REAL mostrano `approved_count`: SLOP attualmente approvate/pubblicate con riferimento privato `slop_source_id`
 alla REAL (migrazione 0081). Il conteggio derivato segue spostamenti, cestino, ripristino ed eliminazione, senza incrementi duplicati.
 Il riferimento non entra nel gioco e diventa null eliminando la REAL; la SLOP rimane. Le vecchie approvate prive di attribuzione
-sono segnalate separatamente nel wizard; nessuna deduzione da data, prompt o contatori. Le REAL restano riutilizzabili.
+sono segnalate separatamente nel wizard. Il confronto verificato di originali e scene ha ricostruito le dieci associazioni
+storiche: salvate via API nei metadati privati, vengono trasferite dalla 0082 solo con metodo, verifica e hash corrispondenti
+(`generazione-slop` 20.0.1, sezione 4.2). Nessuna attribuzione da soli contatori o somiglianze generiche. Le REAL restano riutilizzabili.
 `slop_generated_count` e la baseline storica della 0079 restano dati compatibili nelle API; non sono il numero di approvate
 né sono mostrati. Ambiente e genere dei nuovi lavori sono scelti automaticamente dai profili osservati (`generazione-slop` 20.0.0).
 

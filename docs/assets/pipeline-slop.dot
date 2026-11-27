@@ -12,7 +12,7 @@ digraph pipeline {
  }
  subgraph cluster_choose {
   label="2. CHOOSE REAL AND PREPARE SCENES";color="#cbd5e1";style=rounded;fontsize=18;
-  choose [label="Select the REAL photos to start from\nVisible thumbnails · select any ready subset\nOne selected REAL = one new scene\nThumbnails count currently approved/published SLOP\nDiscarded candidates do not count\nOlder SLOP with lost source links are shown separately"];
+  choose [label="Select the REAL photos to start from\nVisible thumbnails · select any ready subset\nOne selected REAL = one new scene\nThumbnails count currently approved/published SLOP\nDiscarded candidates do not count\nVerified older source links are recovered\nMissing attributions are shown separately"];
   coverage [label="Compare REAL and accepted SLOP observations\nMissing observations are shown and excluded\nSLOP are observed automatically at approval\nExisting observations are reused",fillcolor="#dbeafe"];
   draw [label="Automatically choose environment and genre · free\nChange only when observed distributions improve\nUse a joint photographic context from REAL\nBalance against observations + earlier group draws"];
   scene [label="Write the new English scenes\n1 confirmed text call per selected REAL",fillcolor="#dbeafe"];

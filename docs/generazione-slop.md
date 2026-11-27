@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 20.0.0
+# Generazione SLOP — specifica 20.0.1
 
-Aggiornata: 2026-11-27T17:56:18Z. Stato: implementata nel ramo 1.71.0, da rilasciare.
+Aggiornata: 2026-11-27T19:39:55Z. Stato: implementata nel ramo 1.71.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -314,9 +314,19 @@ Eliminare una REAL azzera il riferimento con `ON DELETE SET NULL`, conservando l
 Le API pubbliche del gioco non espongono il riferimento. Il campo non è il campione tecnico del trattamento.
 
 Si recuperano solo collegamenti esatti ancora presenti nei lavori; ambiguità o lavori già cancellati restano senza sorgente.
-La pagina mostra `unattributed_approved` per le approvate/pubblicate della galleria prive di attribuzione. Verifica operativa
-in sola lettura della produzione: 10 SLOP approvate/pubblicate, zero collegamenti esatti residui. Nessun backfill inventato e
-nessun pulsante temporaneo. I precedenti contatori di generazioni restano compatibili nelle API ma non sono più mostrati.
+La pagina mostra `unattributed_approved` per le approvate/pubblicate della galleria prive di attribuzione. La verifica dei
+registri non ha trovato collegamenti residui per le dieci SLOP presenti; il successivo confronto degli originali, delle scene
+salvate, delle descrizioni REAL e dei controlli variati ha però permesso di ricostruire tutte e dieci le associazioni. Le edizioni,
+gli accessori, i menu e gli ambienti distintivi concordano; anche i contatori delle sorgenti sono compatibili.
+
+Recupero operativo del 2026-11-27: salvate tramite API le dieci attribuzioni verificate in `generation_slot.source_attribution`,
+con metodo `original_scene_review`, flag `verified`, data, motivazione e SHA-256 di entrambi gli originali. Aggiornamento
+condizionato a revisione e metadati letti, preservando gli altri campi, i file e gli stati. Nessuna chiamata ai modelli.
+La migrazione 0082 trasferisce solo queste revisioni esplicite in `slop_source_id`, verificando che entrambi gli originali
+corrispondano e la sorgente sia ancora una REAL; non sovrascrive collegamenti già conservati. È idempotente, ignora JSON
+non validi e revisioni non verificate, e non deduce nuove associazioni da soli contatori o somiglianze generiche.
+Le coppie private non vengono pubblicate nel repository. Le eventuali attribuzioni ancora ambigue restano segnalate;
+nessun pulsante temporaneo. I contatori delle generazioni restano compatibili nelle API ma non sono più mostrati.
 
 #### Registro numerico precedente
 
