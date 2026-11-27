@@ -2,6 +2,7 @@
 the game checks, and removes it afterwards."""
 import io
 import json
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -19,6 +20,21 @@ def make_gallery(api, token, title):
 
 def open_gallery(page, gallery_id):
     page.locator(f'[data-gallery-open="{gallery_id}"]').click()
+
+
+def wait_observed(api, token, gallery_id, ids):
+    """Fixture readiness: background approval work must finish before direct fixture SQL or UI actions."""
+    if not ids: return
+    pipeline = api.removesuffix('/library') + '/pipeline'
+    deadline = time.monotonic() + 40
+    while time.monotonic() < deadline:
+        state = _call(pipeline, token, '/' + gallery_id + '/observations')
+        selected = [photo for photo in state['images'] if photo['id'] in ids]
+        if len(selected) == len(ids) and all(photo['observed'] and not photo['job'] for photo in selected): return
+        failures = [photo for photo in selected if photo['job'] and photo['job']['state'] not in ('queued','dispatching','working')]
+        assert not failures, failures
+        time.sleep(.1)
+    raise AssertionError('Fixture observations did not finish: ' + str(selected))
 
 
 def publish(api, token, prefix, real=10, slop=10, seed=0):
@@ -40,6 +56,7 @@ def publish(api, token, prefix, real=10, slop=10, seed=0):
         _call(api, token, f'/{item["id"]}/approve', {'rights_confirmed': True})
         _call(api, token, f'/{item["id"]}/publish', {})
         ids[origin].append(item['id'])
+    wait_observed(api, token, gallery_id, ids['SLOP'])
     return ids
 
 def remove(api, token, ids):

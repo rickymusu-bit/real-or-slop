@@ -10,7 +10,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from PIL import Image
-from catalog import make_gallery, open_gallery
+from catalog import make_gallery, open_gallery, wait_observed
 from game_copy import game_copy
 from playwright.sync_api import expect, sync_playwright
 from long_press import long_press
@@ -39,6 +39,7 @@ def seed(prefix, origin, title, number, publish, prompt='', description=''):
     item = call(f'{API}/{item["id"]}/copy', raw=webp(source), mime='image/webp')
     item = call(f'{API}/{item["id"]}/approve', {'rights_confirmed': True})
     if publish: item = call(f'{API}/{item["id"]}/publish', {})
+    if origin == 'SLOP': wait_observed(API, token, gallery_id, [item['id']])
     return item
 
 with sync_playwright() as p:
