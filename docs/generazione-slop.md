@@ -1,6 +1,6 @@
-# Generazione SLOP — specifica 20.0.1
+# Generazione SLOP — specifica 20.1.0
 
-Aggiornata: 2026-11-27T19:39:55Z. Stato: implementata nel ramo 1.71.0, da rilasciare.
+Aggiornata: 2026-11-28T13:36:02Z. Stato: implementata nel ramo 1.72.0, da rilasciare.
 
 ![Schema completo della pipeline](assets/pipeline-slop.svg)
 
@@ -41,22 +41,28 @@ La finestra offre «Stop queued requests»: dopo che l’accodamento è completo
 
 - **Prepara la galleria:** una chiamata per REAL ancora priva di profilo, su originale intero. Salva descrizione inglese,
   identità, genere, parametri osservati e particolarità. Riusa i profili già presenti. I dati sono rivedibili senza chiamate.
-- **Riscrivi i parametri di tutte le REAL** (decisione dell'owner del 2026-11-26): una chiamata con immagine per REAL senza
-  altri lavori attivi, confermata con il numero esatto, eseguita in serie. Conserva la descrizione, che resta un riferimento da
-  verificare sull'immagine, e sostituisce parametri, particolarità e politiche modificate dall'owner. Le REAL con un altro lavoro
-  attivo sono saltate e segnalate, senza addebito. Durante la preparazione di una galleria la pianificazione delle scene è rifiutata.
+- **Parametri REAL già preparati:** consultabili in sola lettura. Decisione dell’owner del 2026-11-28: rimossi dal wizard
+  i comandi legacy di riscrittura collettiva e di salvataggio manuale dei profili sorgente. La preparazione dei dati mancanti
+  resta disponibile; i profili esistenti non vengono rigenerati. Le API `/profile` e `/prepare` con `refresh:true` restano
+  compatibili per operazioni autorizzate, senza pulsanti nell’interfaccia. Durante la preparazione la pianificazione è rifiutata.
 - **Unisci categorie:** sotto la composizione della galleria, gratuito. L'owner sceglie una caratteristica, spunta le
   categorie equivalenti e indica il nome unificato; il server lo applica ai profili REAL e SLOP della galleria con un
   controllo sul testo salvato, senza toccare valori liberi, descrizioni o lavori già congelati. Rifiutato mentre è in corso
   una preparazione delle REAL.
 - **Regole e probabilità:** modificabili per galleria. Ogni probabilità vuota usa la stima automatica; zero disabilita un controllo.
   Ambiente e genere sono scelti automaticamente dalle differenze osservate; nessun selettore manuale.
-- **Scegli le REAL:** nel passo 2 una griglia sempre visibile mostra miniatura e titolo di ogni REAL. Si possono selezionare
+- **Scegli le REAL:** nel passo 2 una griglia sempre visibile mostra miniature senza titoli Commons, data di acquisizione e conteggio delle approvate. Si possono selezionare
   solo quelle con descrizione e profilo e senza altre lavorazioni; le altre indicano perché sono disabilitate. «Select all ready
   REAL» seleziona soltanto quelle utilizzabili, «Clear selection» azzera le scelte. Conteggio, stato parziale della selezione
   collettiva e pulsante scene si aggiornano subito senza ricaricare o cancellare campi ancora in modifica. La selezione resta
   durante gli aggiornamenti della pagina, viene ripulita per le sorgenti diventate indisponibili e riparte vuota al reload.
-  Le miniature mostrano «N approved SLOP»: solo SLOP attualmente approvate o pubblicate attribuite alla REAL. Nuove,
+  «Sort REAL by» offre data di acquisizione più recente/più vecchia e numero di SLOP approvate crescente/decrescente.
+  Predefinito: acquisizione più recente. A parità di conteggio precedono le acquisizioni recenti; a parità di data l’ID
+  stabilizza l’ordine. Il cambio d’ordine sposta le schede esistenti senza ricaricare dati, perdere selezioni o campi in modifica,
+  e non invia chiamate ai modelli. L’ordinamento resta agli aggiornamenti della pagina, mentre al reload riparte dal predefinito.
+  La data è `created_at`, inclusa nell’API delle sorgenti; non è la data storica dichiarata da Commons. Il titolo resta nei dati
+  e nei dettagli della foto, ma non viene inserito nelle miniature, nei loro tooltip o nel nome accessibile del checkbox.
+  Solo qui le miniature mostrano «N approved SLOP»: solo SLOP attualmente approvate o pubblicate attribuite alla REAL. Nuove,
   candidate scartate, errori ed edit non contano; cestino/eliminazione sottraggono e ripristino riaggiunge quando torna lo stato
   approvato. Il riferimento privato `slop_source_id` viene salvato all’accettazione; non rende la REAL inutilizzabile. Le SLOP
   approvate senza riferimento conservato sono indicate separatamente nella pagina, mai distribuite per somiglianza o data.

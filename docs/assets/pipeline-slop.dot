@@ -7,12 +7,12 @@ digraph pipeline {
   label="1. PREPARE THE GALLERY"; color="#cbd5e1"; style=rounded; fontsize=18;
   real [label="Import REAL photos into a gallery\nKeep originals and source credits"];
   describe [label="Describe missing REAL photos\n1 confirmed call per photo · full original\nSaves English description + parameters",fillcolor="#dbeafe"];
-  settings [label="Review parameters, rules and variation chances\nOptional: rewrite parameters (1 call per REAL)\nRewrite keeps descriptions; replaces manual profile edits"];
+  settings [label="Read prepared REAL parameters · free\nReview rules and variation chances\nNo legacy parameter rewrite controls"];
   real -> describe -> settings;
  }
  subgraph cluster_choose {
   label="2. CHOOSE REAL AND PREPARE SCENES";color="#cbd5e1";style=rounded;fontsize=18;
-  choose [label="Select the REAL photos to start from\nVisible thumbnails · select any ready subset\nOne selected REAL = one new scene\nThumbnails count currently approved/published SLOP\nDiscarded candidates do not count\nVerified older source links are recovered\nMissing attributions are shown separately"];
+  choose [label="Select the REAL photos to start from\nThumbnails without Commons titles\nSort by date added or approved SLOP count\nKeep selections and unsaved fields when sorting\nOne selected REAL = one new scene\nApproval counts appear only in this wizard\nDiscarded candidates do not count\nVerified older source links are recovered\nMissing attributions are shown separately"];
   coverage [label="Compare REAL and accepted SLOP observations\nMissing observations are shown and excluded\nSLOP are observed automatically at approval\nExisting observations are reused",fillcolor="#dbeafe"];
   draw [label="Automatically choose environment and genre · free\nChange only when observed distributions improve\nUse a joint photographic context from REAL\nBalance against observations + earlier group draws"];
   scene [label="Write the new English scenes\n1 confirmed text call per selected REAL",fillcolor="#dbeafe"];

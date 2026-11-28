@@ -36,3 +36,6 @@
 .pipeline-image-choice:has(input:disabled) {opacity:.65;}
 
 .pipeline-pending-copy img {display:block;max-width:100%;max-height:300px;object-fit:contain;}
+
+.pipeline-source-sort {display:block;margin:.7rem 0;}
+.pipeline-source dt {font-weight:600;} .pipeline-source dd {margin:0 0 .6rem;}

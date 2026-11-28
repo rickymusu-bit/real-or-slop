@@ -18,6 +18,8 @@ with sync_playwright() as p:
             control([{'delay':4} for _ in range(2)]+[{'delay':1.2} for _ in range(8)]);page.goto(BASE+'/admin/gallerie/'+gallery+'/slop');root=page.locator('.pipeline')
             expect(root.get_by_role('heading',name='1. Prepare the gallery')).to_be_visible()
             expect(root.locator('[data-action=index]')).to_have_count(0)
+            expect(root.locator('[data-action=refresh-parameters], [data-action=profile]')).to_have_count(0)
+            expect(root.locator('[data-panel=parameters] input, [data-panel=parameters] textarea, [data-panel=parameters] select')).to_have_count(0)
             diagram=page.request.get(BASE+'/docs/pipeline-slop.svg');assert diagram.status==200
             assert 'Select the REAL photos' in diagram.text() and 'separately confirmed' in diagram.text()
             expect(root.locator('[data-source]').first).to_be_disabled()  # Not yet prepared.
@@ -46,6 +48,7 @@ with sync_playwright() as p:
             expect(overlay).to_have_count(0,timeout=30000)
             # Explicit subset selection is visible and updates the action without a refresh.
             choices=root.locator('[data-source]');expect(choices).to_have_count(2)
+            expect(root.locator('[data-panel=parameters] input, [data-panel=parameters] textarea, [data-panel=parameters] select')).to_have_count(0)
             expect(choices.first).to_be_enabled()
             expect(root.locator('[data-action=plan]')).to_be_disabled()
             expect(root.locator('[data-selection-count]')).to_contain_text('0 selected')
@@ -60,8 +63,26 @@ with sync_playwright() as p:
             root.locator('[data-rules]').fill('Unsaved rules stay visible while selecting.')
             choices.first.check();expect(root.locator('[data-rules]')).to_have_value('Unsaved rules stay visible while selecting.')
             first_id=choices.first.get_attribute('data-source');second_id=choices.nth(1).get_attribute('data-source')
+            # Sorting moves existing cards without losing selections or any unsaved fields.
+            ordering=root.get_by_label('Sort REAL by',exact=True)
+            expect(ordering).to_have_value('date_desc')
+            order=lambda:choices.evaluate_all('(inputs)=>inputs.map(input=>input.dataset.source)')
+            sources=page.request.get(BASE+'/api/admin/pipeline/'+gallery).json()['sources']
+            assert [r['id'] for r in sorted(sources,key=lambda r:r['created_at'],reverse=True)]==[first_id,second_id]
+            expect(root.locator('[data-source-card] time')).to_have_count(2)
+            for source in sources:assert source['title'] not in root.locator('[data-source-grid]').inner_text()
+            expect(root.locator('[data-source-card] [title]')).to_have_count(0)
+            for mode,expected in [('date_asc',[second_id,first_id]),('approved_asc',[first_id,second_id]),('approved_desc',[first_id,second_id]),('date_desc',[first_id,second_id])]:
+                ordering.select_option(mode)
+                assert order()==expected
+                expect(root.locator(f'[data-source="{first_id}"]')).to_be_checked()
+                expect(root.locator('[data-rules]')).to_have_value('Unsaved rules stay visible while selecting.')
+                expect(root.locator('[data-selection-count]')).to_contain_text('1 selected')
+            assert len(control())==2  # Sorting is local and never sends model calls.
+
             root.locator('[data-action=refresh]').click()
             expect(root.locator(f'[data-source="{first_id}"]')).to_be_checked()
+            expect(root.locator('[data-source-sort]')).to_have_value('date_desc')
             page.screenshot(path=str(folder/(name+'-real-selection.png')),full_page=True)
             assert len(control())==2 and all(x['body']['text']['format']['name']=='pipeline_profile' for x in control())
             with page.expect_request(lambda r:r.url.endswith('/plan') and r.method=='POST') as planning:
@@ -166,9 +187,19 @@ with sync_playwright() as p:
             expect(root.locator('[data-pipeline-notice]')).to_contain_text('Find it in the gallery')
             status=call('/'+accepted_id,library=True)[1];assert status['status']=='approved'
             expect(root.locator('[data-approved-count]')).to_have_text(['1 approved SLOP','0 approved SLOP'])
+            if not root.locator('[data-rules]').is_visible():root.get_by_text('Rules and probabilities',exact=True).click()
+            root.locator('[data-rules]').fill('Unsaved approved-count ordering.')
+            root.locator(f'[data-source="{first_id}"]').check()
+            for mode,expected in [('approved_asc',[second_id,first_id]),('approved_desc',[first_id,second_id]),('date_asc',[second_id,first_id]),('date_desc',[first_id,second_id])]:
+                root.locator('[data-source-sort]').select_option(mode)
+                assert choices.evaluate_all('(inputs)=>inputs.map(input=>input.dataset.source)')==expected
+                expect(root.locator(f'[data-source="{first_id}"]')).to_be_checked()
+                expect(root.locator('[data-rules]')).to_have_value('Unsaved approved-count ordering.')
+            assert len(control())==10
+
             page.goto(BASE+'/admin?gallery='+gallery)
             expect(page.locator('.library-card[data-id="'+accepted_id+'"]')).to_be_visible()
-            expect(page.locator('.library-card[data-id="'+first_id+'"] [data-approved-count]')).to_have_text('1 approved SLOP')
+            expect(page.locator('#db-images [data-approved-count]')).to_have_count(0)
             assert call('/'+accepted_id+'/publish',{'revision':status['revision']},library=True)[0]==200
             assert call('/'+accepted_id,library=True)[1]['status']=='published'
             page.goto(BASE+'/admin/gallerie/'+gallery+'/slop');expect(root.get_by_role('heading',name='1. Prepare the gallery')).to_be_visible();expect(root.locator('[data-accepted-image]')).to_have_count(0)
