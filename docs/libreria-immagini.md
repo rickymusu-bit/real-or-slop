@@ -1,6 +1,6 @@
-# Libreria delle immagini — specifica 11.2.1
+# Libreria delle immagini — specifica 11.3.0
 
-Stato: implementata nel ramo 1.71.0, da rilasciare. Aggiornata: 2026-11-27T19:39:55Z.
+Stato: implementata nel ramo 1.72.0, da rilasciare. Aggiornata: 2026-11-28T13:36:02Z.
 
 Decisione dell’owner del 2026-11-25: tutta l’interfaccia amministrativa è in inglese, incluse gallerie, wizard REAL, pipeline SLOP, assi, parametri, conferme, errori, statistiche, impostazioni e schema della pipeline. I nuovi testi dei modelli sono in inglese; le scritte visibili nelle foto si trascrivono nella lingua originale. Titoli, descrizioni delle fonti, regole personalizzate e dati storici conservano la lingua salvata. Il sito pubblico resta in italiano.
 
@@ -255,7 +255,8 @@ le relative chiamate ancora pendenti, senza ripeterle. La migrazione 0072 rimane
 
 La 1.60.0 aggiunge `images.pipeline_profile` per genere, quattordici parametri e particolarità, e `pipeline_scene` per la scena
 prevista di una SLOP. Il wizard prepara insieme descrizione e profilo con una chiamata per REAL mancante; riusa quelli presenti. Dal 2026-11-26 la pagina resta bloccata da una finestra di progresso dall’invio fino all’esito della preparazione, con stop gratuito della coda e ripresa dell’osservazione al ritorno. Lo stesso blocco copre tutte le altre fasi a pagamento della pipeline.
-I profili sono correggibili gratuitamente; le particolarità hanno policy di conservazione, variazione o estrazione. I dati
+Dal 2026-11-28 il wizard mostra i profili REAL già preparati in sola lettura, senza comandi legacy di riscrittura o salvataggio
+manuale; le API restano compatibili. Le particolarità conservano le policy salvate di conservazione, variazione o estrazione. I dati
 restano privati, esclusi dalle risposte del gioco. Le scene SLOP non sono didascalie. Il nuovo protocollo completo e le sue
 conferme sono in `generazione-slop` 17.5.0. Le vecchie idee restano per compatibilità delle lavorazioni precedenti.
 
@@ -271,8 +272,9 @@ SLOP; il profilo richiesto resta distinto. Cache e claim impediscono invii dupli
 La specifica `generazione-slop` 19.0.0, sezione 4.1, definisce conferme, copertura e concorrenza. I dati sono privati e si eliminano
 con la foto. Le osservazioni mancanti si indicano e non contribuiscono al confronto o al bilanciamento.
 
-Le miniature REAL mostrano `approved_count`: SLOP attualmente approvate/pubblicate con riferimento privato `slop_source_id`
-alla REAL (migrazione 0081). Il conteggio derivato segue spostamenti, cestino, ripristino ed eliminazione, senza incrementi duplicati.
+Il solo wizard di generazione SLOP mostra `approved_count` sulle miniature REAL: SLOP attualmente approvate/pubblicate
+con riferimento privato `slop_source_id` alla REAL (migrazione 0081). Dal 2026-11-28 la griglia della galleria non mostra
+questo badge; il dato resta nelle API. Il conteggio derivato segue spostamenti, cestino, ripristino ed eliminazione, senza incrementi duplicati.
 Il riferimento non entra nel gioco e diventa null eliminando la REAL; la SLOP rimane. Le vecchie approvate prive di attribuzione
 sono segnalate separatamente nel wizard. Il confronto verificato di originali e scene ha ricostruito le dieci associazioni
 storiche: salvate via API nei metadati privati, vengono trasferite dalla 0082 solo con metodo, verifica e hash corrispondenti

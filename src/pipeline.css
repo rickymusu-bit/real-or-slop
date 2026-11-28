@@ -10,7 +10,7 @@
 .pipeline-views figure { margin:0;flex:1;min-width:200px; }
 .pipeline-views img { display:block;max-width:100%;max-height:400px;object-fit:contain; }
 .pipeline-views>img { width:calc(50% - .5rem); }
-.pipeline-source { margin:.7rem 0; }
+.pipeline-source { margin:.7rem 0; overflow-wrap:anywhere; }
 @media(max-width:600px) { .pipeline-job {padding:.6rem;} .pipeline-views>img {width:100%;} }
 
 .pipeline-table {overflow-x:auto;} .pipeline td,.pipeline th {text-align:left;padding:.5rem;border-bottom:1px solid #ccd3df;}
@@ -36,3 +36,6 @@
 .pipeline-image-choice:has(input:disabled) {opacity:.65;}
 
 .pipeline-pending-copy img {display:block;max-width:100%;max-height:300px;object-fit:contain;}
+
+.pipeline-source-sort {display:block;margin:.7rem 0;}
+.pipeline-source dt {font-weight:600;} .pipeline-source dd {margin:0 0 .6rem;}

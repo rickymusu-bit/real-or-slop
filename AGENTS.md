@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Versione 40.0.0, aggiornata il 2026-11-27T17:38:54Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
+Versione 40.1.0, aggiornata il 2026-11-28T13:36:02Z. Percorsi relativi alla radice del repository; le versioni precedenti sono nella
 cronologia git.
 Valgono per Codex e per Claude Code (`CLAUDE.md` importa questo file).
 
@@ -34,13 +34,17 @@ comportamento di ogni area, `CHANGELOG.md` per la storia delle versioni.
   Le altre sezioni sono Statistiche e Impostazioni. Nella galleria la selezione offre approvazione, pubblicazione, cestino,
   cambio galleria; le vecchie proposte SLOP non compaiono più sulle REAL. La generazione passa dalla pipeline della galleria. La barra lascia visibile la griglia.
 - **Admin in inglese** (2026-11-25). Tutta l’interfaccia amministrativa, gallerie e pipeline incluse, usa l’inglese: etichette, assi, parametri, conferme, errori e nuovi testi dei modelli. Trascrizioni fotografiche nella lingua originale. Non tradurre automaticamente contenuti dell’owner o dati storici. Il sito pubblico resta in italiano. Le proposte obsolete sono rimosse dal dettaglio delle REAL e il vecchio wizard browser non è più presente; API e dati precedenti restano compatibili per il recupero.
-- **Descrizioni REAL sul server** (2026-11-26). Import REAL, galleria e dettaglio inviano la selezione confermata alla preparazione persistente della pipeline. Tutti i lavori vengono registrati insieme prima dell’avvio, con una chiamata per originale per descrizione e profilo; il browser osserva lo stato e legge i risultati. Scheda in secondo piano, ricaricamento e chiusura della pagina non interrompono la coda. Non ritentare esiti incerti né richiedere nuove chiamate per riprendere l’osservazione. La rotta sincrona precedente resta compatibile, protetta dai claim concorrenti. Le preparazioni di una stessa galleria si eseguono in serie (2026-11-26), perché ognuna riusi il dizionario delle categorie scritto dalle precedenti; la riscrittura dei parametri di tutte le REAL è un comando confermato che conserva le descrizioni.
+- **Descrizioni REAL sul server** (2026-11-26). Import REAL, galleria e dettaglio inviano la selezione confermata alla preparazione persistente della pipeline. Tutti i lavori vengono registrati insieme prima dell’avvio, con una chiamata per originale per descrizione e profilo; il browser osserva lo stato e legge i risultati. Scheda in secondo piano, ricaricamento e chiusura della pagina non interrompono la coda. Non ritentare esiti incerti né richiedere nuove chiamate per riprendere l’osservazione. La rotta sincrona precedente resta compatibile, protetta dai claim concorrenti. Le preparazioni di una stessa galleria si eseguono in serie (2026-11-26), perché ognuna riusi il dizionario delle categorie scritto dalle precedenti; la riscrittura dei parametri di tutte le REAL resta un’API legacy confermata che conserva le descrizioni. Dal 2026-11-28
+  il wizard non presenta comandi di riscrittura collettiva o modifica manuale dei parametri REAL già preparati: li mostra in sola lettura.
 - **Progresso bloccante delle chiamate a pagamento** (2026-11-26). Preparazione dei parametri REAL, scene, immagini, valutazioni e correzioni mostrano una finestra modale dall’invio confermato fino all’esito dei Workflow, con avanzamento. Il resto della pagina è inerte e Esc non chiude la finestra. Dentro resta disponibile l’annullamento gratuito delle richieste in coda, dopo il loro accodamento; le chiamate già inviate terminano. Tornare alla pagina riprende solo l’osservazione dei lavori attivi, senza invii o spese nuovi. Errori/esiti incerti restano segnalati senza retry. Scheda nascosta e chiusura del browser non fermano il server.
 - **Un solo wizard SLOP** (2026-11-25). La 1.60.0 usa la pipeline della specifica `generazione-slop` 17.0.0: preparazione
   collettiva delle REAL, regole e probabilità per galleria, scene inglesi modificabili, generazione testuale e valutazione
   confermate, correzioni scelte dall'owner, accettazione, trattamento e copie di gioco. Le vecchie lavorazioni hanno un riquadro
   di recupero; il nuovo flusso non usa il vecchio ciclo automatico. Ogni foto appartiene a una galleria; le REAL restano giocabili.
-  Decisione dell’owner del 2026-11-27: le miniature contano solo SLOP attualmente approvate o pubblicate, non tutte le generazioni.
+  Decisione dell’owner del 2026-11-27: si contano solo SLOP attualmente approvate o pubblicate, non tutte le generazioni.
+  Dal 2026-11-28 questi conteggi si mostrano solo sulle REAL nel wizard di generazione SLOP, senza badge nella galleria.
+  La selezione delle REAL ha miniature senza titoli Commons e ordinamento per data di acquisizione o numero di approvate,
+  in entrambe le direzioni; cambiare ordine conserva selezioni e campi non salvati.
   Per renderlo affidabile si conserva il solo riferimento privato nullable `images.slop_source_id` alla REAL di partenza;
   questa richiesta sostituisce il precedente divieto di conservare tale relazione. Non entra nel gioco, non impedisce il riuso,
   non si eredita come riferimento del trattamento e diventa null se la REAL viene eliminata. Stato, cestino, ripristino e

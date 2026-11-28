@@ -1,7 +1,15 @@
 # Registro delle versioni
 
-Aggiornato: 2026-11-27T19:39:55Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
+Aggiornato: 2026-11-28T13:36:02Z. Una voce per versione dell'app, dalla più recente; le versioni dei documenti sono in `MASTER.md`.
 I documenti citati nelle voci precedenti al riordino del 2026-11-14 sono nella cronologia git.
+
+## 1.72.0 — 2026-11-28T13:36:02Z
+
+- Conteggio delle SLOP approvate/pubblicate visibile solo sulle REAL nel wizard di generazione, rimosso dalle miniature in galleria.
+- Miniature sorgente senza titoli Commons, con data di acquisizione e ordinamento per data o approvate, in entrambe le direzioni.
+  Selezioni e campi non salvati conservati cambiando ordine, senza chiamate ai modelli.
+- Rimossi i comandi legacy di riscrittura collettiva e salvataggio manuale dei parametri REAL: profili sorgente consultabili
+  in sola lettura, preparazione dei dati mancanti e API compatibili. Schema e specifiche aggiornati. Nessuna migrazione.
 
 ## 1.71.0 — 2026-11-27T17:38:54Z
 

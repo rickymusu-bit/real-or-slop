@@ -11,7 +11,7 @@ import { galleryPhotosPath } from "./gallery-paths";
 import { withPhotoProcessing } from "./photo-processing";
 import "./pipeline.css";
 
-interface Source { approved_count: number; id: string; title: string; metrics?:Metrics|null;copy?:{sha256:string|null}|null; profile: Profile | null; described: boolean }
+interface Source { created_at: string; approved_count: number; id: string; title: string; metrics?:Metrics|null;copy?:{sha256:string|null}|null; profile: Profile | null; described: boolean }
 interface Job { format:{requested_ratio:string;actual_width:number;actual_height:number}|null; id: string; source_id: string | null; state: string; proposal: Proposal | null; evaluation: Review | null;
   file: string | null; previous_key: string | null; error: string; snapshot: { variation?: {selected: string[];environment?:string;genre?:string;balance?:string}; operation: string } }
 interface Image extends TreatableItem { gallery_id: string; has_slop_observation?: boolean; width: number; height: number; revision: number; status: string; file: string; original: string }
@@ -20,11 +20,15 @@ const LABELS: Record<string,string> = { queued: "Queued on server", dispatching:
   review: "Evaluation available", attention: "Needs attention", failed: "Failed to start", accepting: "Accepting image" };
 const ACTIVE_PAID = new Set(["queued", "dispatching", "working"]);
 
+const SOURCE_SORTS = { date_desc: "Date added: newest first", date_asc: "Date added: oldest first",
+  approved_asc: "Approved SLOP: fewest first", approved_desc: "Approved SLOP: most first" } as const;
+type SourceSort = keyof typeof SOURCE_SORTS;
 export async function mountPipeline(root: HTMLElement, gallery: string) {
   const api = `/api/admin/pipeline/${encodeURIComponent(gallery)}`;
   let state: State | null = null, busy = false, notice = "", selected = new Set<string>(), initialized = false, mergeKey = "genre";
   let selectedImages = new Set<string>();
   const copyFailures = new Map<string, string>();
+  let sourceSort: SourceSort = "date_desc";
   const openPanels = new Set<string>();
   type JobStatus = Pick<Job, "id" | "state" | "error">;
   const call = async <T>(path = "", data?: unknown, base = api): Promise<T> => {
@@ -145,19 +149,34 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
         `<label><input type="checkbox" data-merge-category value="${escape(k)}"> ${escape(k)} (${n})</label>`).join("") || "<p>No categories yet.</p>"}</div>`; }).join("")}
     <label>Merged category<input data-merge-into autocomplete="off" placeholder="e.g. object_documentation"></label>
     <button data-action="merge">Merge selected categories</button></fieldset>`;
+  const orderedSources = () => [...(state?.sources ?? [])].sort((a, b) => {
+    const added = (s: Source) => Date.parse(s.created_at) || 0;
+    const date = added(b) - added(a), id = a.id.localeCompare(b.id);
+    if (sourceSort === "date_asc") return -date || id;
+    if (sourceSort === "approved_asc") return a.approved_count - b.approved_count || date || id;
+    if (sourceSort === "approved_desc") return b.approved_count - a.approved_count || date || id;
+    return date || id;
+  });
+  // Move existing cards so sorting preserves selections, focus outside the grid, and unsaved scene/rule fields.
+  const reorderSources = () => {
+    const grid = root.querySelector<HTMLElement>("[data-source-grid]");
+    if (!grid) return;
+    const cards = new Map([...grid.querySelectorAll<HTMLElement>("[data-source-card]")].map(card => [card.dataset.sourceCard, card]));
+    for (const source of orderedSources()) { const card = cards.get(source.id); if (card) grid.append(card); }
+  };
+  const sourceParameters = (p: Profile) => `<dl>${PARAMETER_KEYS.map(key => `<dt>${PARAMETERS[key]}</dt><dd>${escape(p.parameters[key].value)} · ${escape(p.parameters[key].category)}</dd>`).join("")}</dl>
+    <ul>${p.peculiarities.map(x => `<li>${escape(x.description)} · ${escape(x.policy)}</li>`).join("")}</ul>`;
   const render = () => {
     if (!state) { root.innerHTML = `<p role="status">${escape(notice || "Loading…")}</p>`; return; }
     const activeSources = new Set(state.jobs.map(j => j.source_id));
     const pending = state.sources.filter(s => (!s.profile || !s.described) && !activeSources.has(s.id));
     const prepared = state.sources.filter(s => s.profile && s.described && !activeSources.has(s.id) && selected.has(s.id));
-    const rewritable = state.sources.filter(s => !activeSources.has(s.id));
     root.innerHTML = `<section class="pipeline"><button data-action="refresh">Refresh status</button><p><a href="/docs/pipeline-slop.svg" target="_blank" rel="noopener">Complete pipeline diagram</a> · <a href="${galleryPhotosPath(gallery)}">Gallery photos</a></p>
       <p role="status" data-pipeline-notice>${escape(notice)}</p>
       <h2>1. Prepare the gallery</h2><button data-action="stop" ${state.jobs.some(j=>["queued","dispatching"].includes(j.state))?"":"disabled"}>Stop queued requests</button><p>${state.sources.length} REAL · ${pending.length} without parameters · ${state.jobs.filter(j => ["working","dispatching","queued"].includes(j.state)).length} operations in progress.</p>
       <button data-action="prepare" ${pending.length && !busy && state.paid_calls ? "" : "disabled"}>Describe and prepare all missing REAL (${pending.length})</button>
-      <button data-action="refresh-parameters" ${rewritable.length && !busy && state.paid_calls ? "" : "disabled"}>Rewrite parameters of all REAL (${rewritable.length})</button>
-      <p>One call per full original: English description, genre, parameters and peculiarities. Distinctive temporary details are varied; model and edition details are preserved. Preparations of a gallery run one at a time, so each one reuses the categories written by the previous ones. A rewrite keeps the descriptions, replaces parameters and peculiarities, and rebuilds the category dictionary from the rewritten REAL only.</p>
-      <details data-panel="parameters" ${openPanels.has("parameters") ? "open" : ""}><summary>REAL parameters and peculiarities</summary>${state.sources.map(s => `<div class="pipeline-source"><h3>${escape(s.title)}</h3>${s.profile ? `<details><summary>${escape(s.profile.genre)} · ${s.profile.peculiarities.length} peculiarities</summary>${profileFields(s.profile,s.id)}<button data-action="profile" data-source-id="${s.id}">Save parameters and peculiarities</button></details>` : "<p>Prepare this REAL to review its parameters.</p>"}</div>`).join("")}</details>
+      <p>One call per full original: English description, genre, parameters and peculiarities. Distinctive temporary details are varied; model and edition details are preserved. Preparations of a gallery run one at a time, so each one reuses the categories written by the previous ones.</p>
+      <details data-panel="parameters" ${openPanels.has("parameters") ? "open" : ""}><summary>REAL parameters and peculiarities</summary>${state.sources.map(s => `<div class="pipeline-source"><h3>${escape(s.title)}</h3>${s.profile ? `<details><summary>${escape(s.profile.genre)} · ${s.profile.peculiarities.length} peculiarities</summary>${sourceParameters(s.profile)}</details>` : "<p>Prepare this REAL to review its parameters.</p>"}</div>`).join("")}</details>
       <h2>2. Gallery variations</h2>${state.unattributed_approved ? `<p role="status" data-unattributed-approved>${state.unattributed_approved} approved or published SLOP have no retained source attribution. They are excluded from per-REAL counts; historical links are not guessed.</p>` : ""}<p>${state.stats.slop_count} of ${state.stats.slop_total} SLOP observed. Approving a SLOP automatically observes its full original, at most one model call.</p><details data-panel="composition" ${openPanels.has("composition")?"open":""}><summary>Gallery composition</summary><p>${state.stats.real_count} annotated REAL; ${state.stats.slop_count} of ${state.stats.slop_total} SLOP observed from their full originals. Requested parameters are excluded from this comparison and accepted-image balancing. ${state.stats.unobserved.length} SLOP still need observation. Check for recurring visual features too.</p><div class="pipeline-table"><table><thead><tr><th>Feature</th><th>Observed in REAL</th><th>Observed in SLOP</th></tr></thead><tbody>${state.stats.rows.map(r=>`<tr><th>${escape(PARAMETERS[r.key as keyof typeof PARAMETERS] || "Photographic genre")}</th><td>${escape(counts(r.real) || "None")}</td><td>${escape(counts(r.slop) || "None")}</td></tr>`).join("")}</tbody></table></div><p>One automatic call per full SLOP original at approval, using the REAL attribute conventions and vocabulary. The observer receives no prompt, requested profile or source photo. Photos without an observation are excluded; approval starts the observation automatically.</p>${mergeForm(state.stats.rows)}</details><details><summary>Rules and probabilities</summary><label>Rules for this gallery<textarea data-rules rows="6">${escape(state.settings.rules)}</textarea></label>
       <p data-environment-auto>Environment and genre are chosen automatically to reduce differences between the observed REAL and SLOP mix. They are kept when a change would not improve the balance or observations are missing.</p>
       <label>Chance of plausible new values (%)<input type="number" min="0" max="100" data-novelty value="${state.settings.novelty*100}"></label>
@@ -168,10 +187,11 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
       <p>Choose the photos to use as starting points. Each selected REAL prepares one scene; image generation is confirmed later.</p><p>Counts show currently approved or published SLOP attributed to each REAL. New images and discarded candidates do not count. Older SLOP with missing source attribution are reported separately. You can reuse every REAL.</p>
       <div class="pipeline-actions"><label><input type="checkbox" data-all> Select all ready REAL</label><button data-action="clear-selection">Clear selection</button></div>
       <p role="status" data-selection-count></p>
-      <div class="pipeline-source-grid">${state.sources.map(s => {
+      <label class="pipeline-source-sort">Sort REAL by<select data-source-sort ${busy ? "disabled" : ""}>${Object.entries(SOURCE_SORTS).map(([value, label]) => `<option value="${value}" ${sourceSort === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+      <div class="pipeline-source-grid" data-source-grid>${orderedSources().map(s => {
         const ready = !!s.profile && s.described && !activeSources.has(s.id);
         const reason = activeSources.has(s.id) ? "Finish or close its current job first" : !s.profile || !s.described ? "Prepare this REAL first" : "Ready for a new scene";
-        return `<label class="pipeline-source-choice"><img src="/api/admin/library/${encodeURIComponent(s.id)}/file" alt="" loading="lazy"><span><input type="checkbox" data-source="${s.id}" ${selected.has(s.id) ? "checked" : ""} ${ready ? "" : "disabled"}> ${escape(s.title)}</span><small data-approved-count>${s.approved_count} approved SLOP</small><small>${reason}</small></label>`;
+        return `<label class="pipeline-source-choice" data-source-card="${s.id}"><img src="/api/admin/library/${encodeURIComponent(s.id)}/file" alt="" loading="lazy"><span><input type="checkbox" aria-label="Select REAL ${escape(s.id.slice(0,8))}" data-source="${s.id}" ${selected.has(s.id) ? "checked" : ""} ${ready ? "" : "disabled"}></span><small><time datetime="${escape(s.created_at)}">Added ${escape(new Date(s.created_at).toLocaleString("en-GB", {dateStyle:"medium", timeStyle:"short"}))}</time></small><small data-approved-count>${s.approved_count} approved SLOP</small><small>${reason}</small></label>`;
       }).join("")}</div>
       <button data-action="plan" ${prepared.length && !busy && state.paid_calls ? "" : "disabled"}>Prepare ${prepared.length} ${prepared.length === 1 ? "scene" : "scenes"} from selected REAL</button></section>
       <h2>3. Scenes and images to review</h2><div class="pipeline-actions"><button data-action="generate-all" ${state.jobs.some(j => j.state==="proposal")&&!busy?"":"disabled"}>Generate all confirmed scenes</button><button data-action="evaluate-all" ${state.jobs.some(j => j.state==="candidate")&&!busy?"":"disabled"}>Evaluate all new candidates</button></div>
@@ -225,6 +245,7 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
   const act = async (work:()=>Promise<void>) => { if(busy)return;busy=true;root.querySelectorAll<HTMLInputElement|HTMLTextAreaElement|HTMLButtonElement|HTMLSelectElement>("input,textarea,button,select").forEach(control=>{control.disabled=true;});try {notice="";await work();notice||="Status updated.";}catch(e){notice=e instanceof Error?e.message:String(e);}finally{busy=false;await refresh().catch(e=>{notice=String(e);render();});} };
   root.addEventListener("toggle",event=>{const panel=(event.target as HTMLElement).dataset?.panel;if(panel){if((event.target as HTMLDetailsElement).open)openPanels.add(panel);else openPanels.delete(panel);}},true);
   root.addEventListener("change",event=>{ const input=event.target as HTMLInputElement;
+    if(input.hasAttribute("data-source-sort")){if(Object.hasOwn(SOURCE_SORTS,input.value)){sourceSort=input.value as SourceSort;reorderSources();}return;}
     if(input.dataset.selectImage){if(input.checked)selectedImages.add(input.dataset.selectImage);else selectedImages.delete(input.dataset.selectImage);syncImageSelection();return;}if(input.hasAttribute("data-images-all")){selectedImages=input.checked?new Set(readyImages().map(image=>image.id)):new Set();syncImageSelection();return;}if(input.hasAttribute("data-merge-key")){mergeKey=input.value;root.querySelectorAll<HTMLElement>("[data-merge-group]").forEach(group=>{group.hidden=group.dataset.mergeGroup!==mergeKey;group.querySelectorAll<HTMLInputElement>("input").forEach(box=>{box.checked=false;});});return;}if(input.dataset.source){if(input.checked)selected.add(input.dataset.source);else selected.delete(input.dataset.source);syncSelection();return;}if(input.hasAttribute("data-all")){selected=input.checked?new Set(readySources().map(s=>s.id)):new Set();syncSelection();} });
   root.addEventListener("click",event=>{const button=(event.target as HTMLElement).closest<HTMLButtonElement>("button[data-action]");if(!button||busy||!state)return;
     if(button.dataset.action==="clear-image-selection"){selectedImages.clear();syncImageSelection();return;}
@@ -260,18 +281,6 @@ export async function mountPipeline(root: HTMLElement, gallery: string) {
         if(!from.length||!into)throw Error("Select at least one category and enter the merged name.");
         if(!window.confirm(`Rename ${from.join(", ")} to “${into}” in all profiles of this gallery? No paid call is made.`))return;
         const result=await call<{updated:number}>("/categories",{confirm:true,key:mergeKey,from,into});notice=`${result.updated} profiles updated.`;return;
-      }
-      if(action==="profile") { const source=button.dataset.sourceId!;await call("/profile",{id:source,profile:readProfile(state!.sources.find(s=>s.id===source)!.profile!,source)});return; }
-      if(action==="refresh-parameters"){
-        const active=new Set(state!.jobs.map(j=>j.source_id)),ids=state!.sources.filter(s=>!active.has(s.id)).map(s=>s.id);
-        if(!confirmation("Rewrite the parameters of every REAL in this gallery, one at a time? Edited categories and peculiarity policies will be replaced",ids.length))return;
-        let skipped=0;
-        await paidWork("Rewriting REAL parameters", async jobs => {
-          const queued = await call<{jobs: string[]; skipped?: number}>("/prepare", payload({ids,max_calls:ids.length,refresh:true}));
-          queued.jobs.forEach(id => jobs.add(id)); skipped = queued.skipped || 0;
-        });
-        if(skipped)notice=`${skipped} REAL with another active job were skipped and not charged.`;
-        return;
       }
       if(action==="prepare"||action==="plan"){
         const active=new Set(state!.jobs.map(j=>j.source_id));const ids=state!.sources.filter(s=>!active.has(s.id)&&(action==="prepare"?(!s.profile||!s.described):(selected.has(s.id)&&s.profile&&s.described))).map(s=>s.id);
