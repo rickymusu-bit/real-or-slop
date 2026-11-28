@@ -64,7 +64,7 @@ with sync_playwright() as p:
             choices.first.check();expect(root.locator('[data-rules]')).to_have_value('Unsaved rules stay visible while selecting.')
             first_id=choices.first.get_attribute('data-source');second_id=choices.nth(1).get_attribute('data-source')
             # Sorting moves existing cards without losing selections or any unsaved fields.
-            ordering=root.get_by_label('Sort REAL by',exact=True)
+            ordering=root.get_by_role('combobox',name='Sort REAL by',exact=True)
             expect(ordering).to_have_value('date_desc')
             order=lambda:choices.evaluate_all('(inputs)=>inputs.map(input=>input.dataset.source)')
             sources=page.request.get(BASE+'/api/admin/pipeline/'+gallery).json()['sources']
